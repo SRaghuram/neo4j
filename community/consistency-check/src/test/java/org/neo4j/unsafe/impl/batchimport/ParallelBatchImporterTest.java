@@ -42,9 +42,9 @@ import java.util.UUID;
 import java.util.concurrent.locks.LockSupport;
 
 import org.neo4j.collection.pool.Pool;
-import org.neo4j.consistency.ConsistencyCheckService;
-import org.neo4j.consistency.ConsistencyCheckService.Result;
-import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.consistency.oldCC.ConsistencyCheckService;
+import org.neo4j.consistency.oldCC.ConsistencyCheckService.Result;
+import org.neo4j.consistency.oldCC.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.function.Function;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -83,7 +83,6 @@ import org.neo4j.unsafe.impl.batchimport.store.io.Monitor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import static org.neo4j.function.Functions.constant;
 import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;

@@ -72,10 +72,10 @@ public class StoreFactory
     public static final String SCHEMA_STORE_NAME = ".schemastore.db";
     public static final String RELATIONSHIP_GROUP_STORE_NAME = ".relationshipgroupstore.db";
     public static final String COUNTS_STORE = ".counts.db";
-    private final Config config;
+    protected final Config config;
     @SuppressWarnings( "deprecation" )
     private final IdGeneratorFactory idGeneratorFactory;
-    private final FileSystemAbstraction fileSystemAbstraction;
+    protected final FileSystemAbstraction fileSystemAbstraction;
     private final StringLogger stringLogger;
     private final StoreVersionMismatchHandler versionMismatchHandler;
     private final File neoStoreFileName;
@@ -242,10 +242,10 @@ public class StoreFactory
     }
 
     @SuppressWarnings( "deprecation" )
-    private PropertyStore newPropertyStore( File propertyStringStore, File propertyArrayStore, File propertyStore,
+    protected PropertyStore newPropertyStore( File propertyStringStore, File propertyArrayStore, File propertyStore,
                                             File propertyKeysStore )
     {
-        PropertyKeyTokenStore propertyKeyTokenStore = newPropertyKeyTokenStore( propertyKeysStore );
+        PropertyKeyTokenStore propertyKeyTokenStore = propertyKeysStore == null ? null :newPropertyKeyTokenStore( propertyKeysStore );
         DynamicStringStore stringPropertyStore = newDynamicStringStore( propertyStringStore, IdType.STRING_BLOCK );
         DynamicArrayStore arrayPropertyStore = newDynamicArrayStore( propertyArrayStore, IdType.ARRAY_BLOCK );
         return new PropertyStore( propertyStore, config, idGeneratorFactory,

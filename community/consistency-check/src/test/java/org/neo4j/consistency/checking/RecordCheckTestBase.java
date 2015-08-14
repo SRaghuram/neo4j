@@ -19,9 +19,19 @@
  */
 package org.neo4j.consistency.checking;
 
-import org.neo4j.consistency.report.ConsistencyReport;
-import org.neo4j.consistency.store.DiffRecordAccess;
-import org.neo4j.consistency.store.RecordAccess;
+import org.neo4j.consistency.old.checking.CheckerEngine;
+import org.neo4j.consistency.old.checking.DynamicRecordCheck;
+import org.neo4j.consistency.old.checking.DynamicStore;
+import org.neo4j.consistency.old.checking.NeoStoreCheck;
+import org.neo4j.consistency.old.checking.NodeRecordCheck;
+import org.neo4j.consistency.old.checking.PrimitiveRecordCheck;
+import org.neo4j.consistency.old.checking.PropertyKeyTokenRecordCheck;
+import org.neo4j.consistency.old.checking.RecordCheck;
+import org.neo4j.consistency.old.checking.RelationshipRecordCheck;
+import org.neo4j.consistency.old.checking.RelationshipTypeTokenRecordCheck;
+import org.neo4j.consistency.old.report.ConsistencyReport;
+import org.neo4j.consistency.old.store.DiffRecordAccess;
+import org.neo4j.consistency.old.store.RecordAccess;
 import org.neo4j.consistency.store.RecordAccessStub;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.RecordStore;

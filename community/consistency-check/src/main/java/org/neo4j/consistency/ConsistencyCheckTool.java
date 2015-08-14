@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2015 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
@@ -22,10 +22,12 @@ package org.neo4j.consistency;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.consistency.checking.full.FullCheckNewUtils;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Args;
@@ -57,17 +59,127 @@ public class ConsistencyCheckTool
         void pull();
     }
 
-    public static void main( String[] args )
+    public static void main( String[] args ) throws IOException
     {
+        args = checkToolType( args );
+        switch ( FullCheckType.toolType )
+        {
+        case Legacy_Consistency_Check:
+            org.neo4j.consistency.oldCC.ConsistencyCheckTool.main( args );
+            break;
+        case New_Fast_Consistency_Check:
+            executeNewCC( args );
+            break;
+        case PropertyStore_Reorg:
+            org.neo4j.propertystorereorg.PropertystoreReorgTool.main( args );
+            //executeNewCC( args );
+            break;
+        }
+    }
+
+    private static String[] checkToolType( String[] args )
+    {
+        ArrayList<String> argsN = new ArrayList<String>();
+        for ( int i = 0; i < args.length; i++ )
+        {
+            String arg = args[i];
+            if ( args[i].startsWith( "-" ) || args[i].startsWith( "--" ) )
+            {
+                int offset = args[i].startsWith( "--" ) ? 2 : 1;
+                arg = args[i].substring( offset );
+            }
+            if ( arg.equalsIgnoreCase( FullCheckType.LEGACY ) )
+                FullCheckType.toolType = FullCheckType.ToolTypes.Legacy_Consistency_Check;
+            else if ( arg.equalsIgnoreCase( FullCheckType.COMMAND ) )
+            {
+                FullCheckType.toolType = FullCheckType.ToolTypes.PropertyStore_Reorg;
+                argsN.add( args[i++] );
+                argsN.add( args[i] );
+            }
+            else
+                argsN.add( args[i] );
+        }
+        return argsN.toArray( new String[0] );
+    }
+
+    public static void executeNewCC( String[] args ) throws IOException
+    {
+        // New CC 
+        int index = 0;
+        FullCheckNewUtils.Init();
+        ArrayList<String> argsN = new ArrayList<String>();
+        String graphDBString = null;
+        boolean error = false;
+        while ( index < args.length && !error )
+        {
+            if ( args[index].startsWith( "-" ) || args[index].startsWith( "--" ) )
+            {
+                int offset = args[index].startsWith( "--" ) ? 2 : 1;
+                String arg = args[index].substring( offset );
+                if ( arg.equalsIgnoreCase( "propowner" ) || arg.equalsIgnoreCase( "recovery" ) )
+                    argsN.add( args[index++] );
+                else if ( arg.equalsIgnoreCase( "config" ) )
+                {
+                    argsN.add( args[index++] );
+                    argsN.add( args[index++] );
+                }
+                else if ( arg.toLowerCase().startsWith( "cclog" ) )
+                {
+                    FullCheckNewUtils.setLogFile( args[index++], args[index++] );
+                }
+                else if ( arg.toLowerCase().startsWith( "verbose" ) )
+                {
+                    FullCheckNewUtils.setVerbose( true );
+                    index++;
+                }
+                else
+                    error = true;
+            }
+            else if ( graphDBString == null )
+                graphDBString = args[index++];
+            else
+            {
+                error = true;
+                System.out.println( "Error in parameters - " + args[index] + "\n" );
+            }
+        }
+        if ( error || graphDBString == null )
+        {
+            ConsistencyCheckTool tool = new ConsistencyCheckTool( new ConsistencyCheckService(), System.err );
+            System.out.println( usageNewCC( tool.getClass() ) );
+            return;
+        }
+        String[] graphDBs = graphDBString.split( ";" );
+        long[] totalTimeTaken = new long[graphDBs.length];
+        for ( int i = 0; i < graphDBs.length; i++ )
+        {
+            try
+            {
+                argsN.add( graphDBs[i] );
+                totalTimeTaken[i] = executeTool( argsN.toArray( new String[0] ) );
+                argsN.remove( argsN.size() - 1 );
+                FullCheckNewUtils.printProgressMsg( graphDBs, totalTimeTaken, i );
+            }
+            catch ( ToolFailureException e )
+            {
+                e.exitTool();
+            }
+            if ( FullCheckNewUtils.isVerbose() )
+                System.out.println( "===========================================================" );
+        }
+    }
+
+    private static long executeTool( String... args ) throws ToolFailureException, IOException
+    {
+        long timeTaken = 0;
+        ;
+        FullCheckNewUtils.startTime = System.currentTimeMillis();
         ConsistencyCheckTool tool = new ConsistencyCheckTool( new ConsistencyCheckService(), System.err );
-        try
-        {
-            tool.run( args );
-        }
-        catch ( ToolFailureException e )
-        {
-            e.exitTool();
-        }
+        tool.run( args );
+        timeTaken = (System.currentTimeMillis() - FullCheckNewUtils.startTime);
+        System.out.println( "Time taken for " + FullCheckType.ToolTypes.New_Fast_Consistency_Check.name() + " to ["
+                + "Full Consistency Check ]:[" + timeTaken + "] ms" );
+        return timeTaken;
     }
 
     private final ConsistencyCheckService consistencyCheckService;
@@ -92,14 +204,14 @@ public class ConsistencyCheckTool
         this.exitHandle = exitHandle;
     }
 
-    void run( String... args ) throws ToolFailureException
+    void run( String... args ) throws ToolFailureException, IOException
     {
         Args arguments = Args.withFlags( RECOVERY, PROP_OWNER ).parse( args );
         String storeDir = determineStoreDirectory( arguments );
+        System.out.println( "------------>[" + FullCheckType.ToolTypes.New_Fast_Consistency_Check.name() + "] "
+                + storeDir + "<---------------" );
         Config tuningConfiguration = readTuningConfiguration( storeDir, arguments );
-
         attemptRecoveryOrCheckStateOfLogicalLogs( arguments, storeDir );
-
         StringLogger logger = StringLogger.SYSTEM;
         try
         {
@@ -114,6 +226,7 @@ public class ConsistencyCheckTool
         {
             logger.flush();
         }
+        FullCheckNewUtils.NewCCCache.close();
     }
 
     private void attemptRecoveryOrCheckStateOfLogicalLogs( Args arguments, String storeDir )
@@ -133,7 +246,6 @@ public class ConsistencyCheckTool
                             "Consider allowing the database to recover before running the consistency check.",
                             "Consistency checking will continue, abort if you wish to perform recovery first.",
                             "To perform recovery before checking consistency, use the '--recovery' flag." ) );
-
                     exitHandle.pull();
                 }
             }
@@ -147,10 +259,6 @@ public class ConsistencyCheckTool
     private String determineStoreDirectory( Args arguments ) throws ToolFailureException
     {
         List<String> unprefixedArguments = arguments.orphans();
-        if ( unprefixedArguments.size() != 1 )
-        {
-            throw new ToolFailureException( usage() );
-        }
         String storeDir = unprefixedArguments.get( 0 );
         if ( !new File( storeDir ).isDirectory() )
         {
@@ -162,7 +270,6 @@ public class ConsistencyCheckTool
     private Config readTuningConfiguration( String storeDir, Args arguments ) throws ToolFailureException
     {
         Map<String,String> specifiedProperties = stringMap();
-
         String propertyFilePath = arguments.get( CONFIG, null );
         if ( propertyFilePath != null )
         {
@@ -181,15 +288,33 @@ public class ConsistencyCheckTool
         return new Config( specifiedProperties, GraphDatabaseSettings.class, ConsistencyCheckSettings.class );
     }
 
+    private static final String usageMsg =
+            " [-propowner] [-recovery] [-cclog[:console] <logfile>] [-config <neo4j.properties>] [-command getstats| fixpropertystore] [-verbose] [-legacy] <storedir>[;<storedir>]"
+                    + "\nWHERE:   <storedir>        is the path to the store(s) to check, separated by ;"
+                    + "\n         -recovery          to perform recovery on the store before checking"
+                    + "\n         -property_reorg    to rearrange property/string/array store for optimal performance before checking"
+                    + "\n         <neo4j.properties> is the location of an optional properties file"
+                    + "\n                            containing tuning parameters for the consistency check"
+                    + "\n         -cclog:console <logfile> log file to store messages for new consistency check."
+                    + "\n				Optional 'console' is to print on console in addition to logs"
+                    + "\n         -legacy        when present it runs exactly as older version of consistency check"
+                    + "\n         -command getstats  to analyse and display the scatter characteristics of property store"
+                    + "\n         -command fixpropertystore - this is to reorganize property/array/string store optimally"
+                    + "\n         -verbose           to print the detailed error messages";
+
     private String usage()
     {
-        return lines(
-                Args.jarUsage( getClass(), "[-propowner] [-recovery] [-config <neo4j.properties>] <storedir>" ),
-                "WHERE:   <storedir>         is the path to the store to check",
-                "         -recovery          to perform recovery on the store before checking",
-                "         <neo4j.properties> is the location of an optional properties file",
-                "                            containing tuning parameters for the consistency check"
-        );
+        return usageNewCC( getClass() );
+    }
+
+    private static String usageNewCC( Class className )
+    {
+        StringBuilder usage =
+                new StringBuilder(
+                        "USAGE: java -cp \"neo4j-consistencycheck-new-2.2.3.jar;<2.2.x install Dir>/lib/*.jar\" " );
+        usage.append( ' ' ).append( className.getCanonicalName() );
+        usage.append( lines( usageMsg ) );
+        return usage.toString();
     }
 
     private static String lines( String... content )
@@ -221,7 +346,6 @@ public class ConsistencyCheckTool
             {
                 getCause().printStackTrace( System.err );
             }
-
             exitHandle.pull();
         }
     }

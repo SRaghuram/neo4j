@@ -17,12 +17,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.consistency.checking.full;
+package org.neo4j.consistency.oldCC.checking.full;
 
-import org.neo4j.consistency.checking.RecordCheck;
-import org.neo4j.consistency.checking.index.IndexAccessors;
-import org.neo4j.consistency.report.ConsistencyReport;
-import org.neo4j.consistency.report.ConsistencyReporter;
+import org.neo4j.consistency.oldCC.checking.RecordCheck;
+import org.neo4j.consistency.oldCC.checking.index.IndexAccessors;
+import org.neo4j.consistency.oldCC.report.ConsistencyReport;
+import org.neo4j.consistency.oldCC.report.ConsistencyReporter;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 
 public class NodeToLabelIndexesProcessor implements RecordProcessor<NodeRecord>

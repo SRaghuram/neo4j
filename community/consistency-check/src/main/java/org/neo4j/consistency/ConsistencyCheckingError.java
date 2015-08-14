@@ -19,6 +19,7 @@
  */
 package org.neo4j.consistency;
 
+import org.neo4j.consistency.checking.RecordType;
 import org.neo4j.consistency.report.ConsistencySummaryStatistics;
 import org.neo4j.kernel.impl.store.DataInconsistencyError;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;

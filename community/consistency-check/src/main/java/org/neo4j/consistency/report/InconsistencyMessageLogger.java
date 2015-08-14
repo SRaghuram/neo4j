@@ -19,7 +19,7 @@
  */
 package org.neo4j.consistency.report;
 
-import org.neo4j.consistency.RecordType;
+import org.neo4j.consistency.checking.RecordType;
 import org.neo4j.helpers.ObjectUtil;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.util.StringLogger;

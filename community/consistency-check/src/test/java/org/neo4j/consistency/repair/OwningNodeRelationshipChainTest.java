@@ -23,7 +23,9 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Test;
-
+import org.neo4j.consistency.old.repair.OwningNodeRelationshipChain;
+import org.neo4j.consistency.old.repair.RecordSet;
+import org.neo4j.consistency.old.repair.RelationshipChainExplorer;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
@@ -31,7 +33,6 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
 
 public class OwningNodeRelationshipChainTest

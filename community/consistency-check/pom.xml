@@ -52,11 +52,6 @@ the relevant Commercial Agreement.
   <dependencies>
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-kernel</artifactId>
-      <version>${neo4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.neo4j</groupId>
       <artifactId>neo4j-lucene-index</artifactId>
       <version>${neo4j.version}</version>
     </dependency>
@@ -72,9 +67,7 @@ the relevant Commercial Agreement.
     <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-kernel</artifactId>
-      <version>${neo4j.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
+      <version>2.2.4-SNAPSHOT</version>
     </dependency>
 
     <dependency>

@@ -20,9 +20,11 @@
 package org.neo4j.consistency.report;
 
 import org.junit.Test;
-
-import org.neo4j.consistency.RecordType;
-import org.neo4j.consistency.checking.ComparativeRecordChecker;
+import org.neo4j.consistency.old.RecordType;
+import org.neo4j.consistency.old.checking.ComparativeRecordChecker;
+import org.neo4j.consistency.old.report.ConsistencyReporter;
+import org.neo4j.consistency.old.report.InconsistencyReport;
+import org.neo4j.consistency.old.report.PendingReferenceCheck;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 
 import static org.junit.Assert.assertEquals;

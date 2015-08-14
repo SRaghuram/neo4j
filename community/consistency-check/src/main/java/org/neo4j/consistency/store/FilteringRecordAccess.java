@@ -32,26 +32,27 @@ import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 import static java.util.Arrays.asList;
-
 import static org.neo4j.consistency.checking.full.MultiPassStore.recordInCurrentPass;
 import static org.neo4j.consistency.store.RecordReference.SkippingReference.skipReference;
 
 public class FilteringRecordAccess extends DelegatingRecordAccess
 {
     private final Set<MultiPassStore> potentiallySkippableStores = EnumSet.noneOf( MultiPassStore.class );
-    private final int iPass;
-    private final long recordsPerPass;
     private final MultiPassStore currentStore;
+    private final StoreAccess storeAccess;
 
-    public FilteringRecordAccess( DiffRecordAccess delegate, final int iPass,
-                                  final long recordsPerPass, MultiPassStore currentStore,
-                                  MultiPassStore... potentiallySkippableStores )
+    public FilteringRecordAccess( DiffRecordAccess delegate, StoreAccess storeAccess,
+            MultiPassStore currentStore, MultiPassStore... potentiallySkippableStores )
     {
         super( delegate );
-        this.iPass = iPass;
-        this.recordsPerPass = recordsPerPass;
         this.currentStore = currentStore;
+        this.storeAccess = storeAccess;
         this.potentiallySkippableStores.addAll( asList( potentiallySkippableStores ) );
+    }
+    
+    public StoreAccess getStoreAccess()
+    {
+        return storeAccess;
     }
 
     enum Mode
@@ -104,7 +105,7 @@ public class FilteringRecordAccess extends DelegatingRecordAccess
     {
         if ( shouldSkip( id, MultiPassStore.PROPERTY_KEYS ) )
         {
-            return skipReference();
+                return skipReference();
         }
         return super.propertyKey( id );
     }
@@ -114,7 +115,7 @@ public class FilteringRecordAccess extends DelegatingRecordAccess
     {
         if ( shouldSkip( id, MultiPassStore.STRINGS ) )
         {
-            return skipReference();
+                return skipReference();
         }
         return super.string( id );
     }
@@ -124,7 +125,7 @@ public class FilteringRecordAccess extends DelegatingRecordAccess
     {
         if ( shouldSkip( id, MultiPassStore.ARRAYS ) )
         {
-            return skipReference();
+                return skipReference();
         }
         return super.array( id );
     }
@@ -149,14 +150,15 @@ public class FilteringRecordAccess extends DelegatingRecordAccess
         return super.nodeLabels( id );
     }
 
-    private boolean shouldSkip( long id, MultiPassStore store )
+    @Override
+    public boolean shouldSkip( long id, MultiPassStore store )
     {
-        return potentiallySkippableStores.contains( store ) &&
-                (!isCurrentStore( store ) || !recordInCurrentPass( id, iPass, recordsPerPass ));
+            return potentiallySkippableStores.contains( store ) && (currentStore != store);
     }
 
-    private boolean isCurrentStore( MultiPassStore store )
+
+    public RecordReference<RelationshipRecord> skipRel()
     {
-        return currentStore == store;
+        return skipReference();
     }
 }

@@ -20,12 +20,12 @@
 package org.neo4j.consistency.checking.full;
 
 import org.junit.Test;
-
-import org.neo4j.consistency.RecordType;
-import org.neo4j.consistency.checking.DynamicStore;
-import org.neo4j.consistency.checking.PrimitiveRecordCheck;
-import org.neo4j.consistency.checking.RecordCheck;
-import org.neo4j.consistency.report.ConsistencyReport;
+import org.neo4j.consistency.old.RecordType;
+import org.neo4j.consistency.old.checking.DynamicStore;
+import org.neo4j.consistency.old.checking.PrimitiveRecordCheck;
+import org.neo4j.consistency.old.checking.RecordCheck;
+import org.neo4j.consistency.old.checking.full.OwnerCheck;
+import org.neo4j.consistency.old.report.ConsistencyReport;
 import org.neo4j.consistency.store.RecordAccessStub;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.kernel.impl.store.PropertyType;
@@ -41,7 +41,6 @@ import static org.junit.Assert.assertSame;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
-
 import static org.neo4j.consistency.checking.DynamicRecordCheckTest.configureDynamicStore;
 import static org.neo4j.consistency.checking.RecordCheckTestBase.NONE;
 import static org.neo4j.consistency.checking.RecordCheckTestBase.array;

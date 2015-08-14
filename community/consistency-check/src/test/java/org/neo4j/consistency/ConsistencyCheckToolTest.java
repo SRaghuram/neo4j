@@ -28,8 +28,10 @@ import java.util.Properties;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-
-import org.neo4j.consistency.checking.full.TaskExecutionOrder;
+import org.neo4j.consistency.old.ConsistencyCheckService;
+import org.neo4j.consistency.old.ConsistencyCheckSettings;
+import org.neo4j.consistency.old.ConsistencyCheckTool;
+import org.neo4j.consistency.old.checking.full.TaskExecutionOrder;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -59,7 +61,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.graphdb.DynamicLabel.label;
 import static org.neo4j.test.EphemeralFileSystemRule.shutdownDbAction;
 

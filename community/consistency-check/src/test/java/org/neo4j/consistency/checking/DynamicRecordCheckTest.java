@@ -23,8 +23,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.junit.runners.Suite;
-
-import org.neo4j.consistency.report.ConsistencyReport;
+import org.neo4j.consistency.old.checking.DynamicRecordCheck;
+import org.neo4j.consistency.old.checking.DynamicStore;
+import org.neo4j.consistency.old.report.ConsistencyReport;
 import org.neo4j.kernel.impl.store.AbstractDynamicStore;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.SchemaStore;
@@ -34,7 +35,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.consistency.store.RecordAccessStub.SCHEMA_RECORD_TYPE;
 
 @RunWith(Suite.class)

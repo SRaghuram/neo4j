@@ -35,7 +35,7 @@ public class SchemaStoreProcessorTask<R extends AbstractBaseRecord> extends Stor
                                      TaskExecutionOrder order, StoreProcessor singlePassProcessor, StoreProcessor...
             multiPassProcessors )
     {
-        super( store, builderPrefix, builder, order, singlePassProcessor, multiPassProcessors );
+        super( "SchemaStoreProcessor", store, builderPrefix, builder, order, singlePassProcessor, multiPassProcessors );
         this.schemaRecordCheck = schemaRecordCheck;
     }
 

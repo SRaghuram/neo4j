@@ -20,8 +20,8 @@
 package org.neo4j.consistency.checking;
 
 import org.junit.Test;
-
-import org.neo4j.consistency.report.ConsistencyReport;
+import org.neo4j.consistency.old.checking.PropertyKeyTokenRecordCheck;
+import org.neo4j.consistency.old.report.ConsistencyReport;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
 

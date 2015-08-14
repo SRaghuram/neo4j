@@ -22,20 +22,24 @@ package org.neo4j.consistency.checking.full;
 import java.io.IOException;
 import java.util.Iterator;
 
+import org.neo4j.consistency.store.StoreAccess;
 import org.neo4j.kernel.api.direct.BoundedIterable;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 
 import static org.neo4j.kernel.impl.store.RecordStore.IN_USE;
-import static org.neo4j.kernel.impl.store.RecordStore.Scanner.scan;
+import static org.neo4j.consistency.checking.full.StoreProcessorTask.Scanner.scan;
 
 public class IterableStore<RECORD extends AbstractBaseRecord> implements BoundedIterable<RECORD>
 {
     private final RecordStore<RECORD> store;
+    private boolean forward = true;
+    private StoreAccess storeAccess;
 
-    public IterableStore( RecordStore<RECORD> store )
+    public IterableStore( RecordStore<RECORD> store, StoreAccess storeAccess )
     {
         this.store = store;
+        this.storeAccess = storeAccess;
     }
 
     @Override
@@ -52,6 +56,11 @@ public class IterableStore<RECORD extends AbstractBaseRecord> implements Bounded
     @Override
     public Iterator<RECORD> iterator()
     {
-        return scan( store, IN_USE ).iterator();
+        return scan( store, storeAccess, forward, IN_USE ).iterator();
+    }
+    
+    public void setDirection(boolean forward )
+    {
+    	this.forward = forward;
     }
 }

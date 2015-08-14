@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Random;
 
 import org.junit.Test;
+import org.neo4j.consistency.old.store.paging.Cart;
+import org.neo4j.consistency.old.store.paging.Page;
+import org.neo4j.consistency.old.store.paging.PageReplacementStrategy;
 
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.core.IsNot.not;

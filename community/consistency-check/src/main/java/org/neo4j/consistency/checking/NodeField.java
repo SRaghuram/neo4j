@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2015 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
@@ -19,8 +19,14 @@
  */
 package org.neo4j.consistency.checking;
 
+import org.neo4j.consistency.checking.CheckerEngine;
+import org.neo4j.consistency.checking.ComparativeRecordChecker;
+import org.neo4j.consistency.checking.RecordField;
+import org.neo4j.consistency.checking.full.FullCheckNewUtils;
+import org.neo4j.consistency.checking.full.MultiPassStore;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.store.DiffRecordAccess;
+import org.neo4j.consistency.store.DirectRecordReference;
 import org.neo4j.consistency.store.RecordAccess;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.Record;
@@ -185,11 +191,6 @@ enum NodeField implements
 
     public abstract boolean isFirst( RelationshipRecord relationship );
 
-    public boolean hasRelationship( NodeRecord node )
-    {
-        return node.getNextRel() != Record.NO_NEXT_RELATIONSHIP.intValue();
-    }
-
     @Override
     public void checkConsistency( RelationshipRecord relationship,
                                   CheckerEngine<RelationshipRecord, ConsistencyReport.RelationshipConsistencyReport> engine,
@@ -200,8 +201,17 @@ enum NodeField implements
             illegalNode( engine.report() );
         }
         else
-        {
-            engine.comparativeCheck( records.node( valueFrom( relationship ) ), this );
+        {       	
+        	// build the node record from cached values with only valid fields as id, inUse, and nextRel.
+        	NodeRecord node = new NodeRecord(valueFrom( relationship ));
+        	long cacheFields[] = FullCheckNewUtils.NewCCCache.getFromCache(node.getId());
+        	node.setInUse(cacheFields[0] != 0 ? true : false);
+        	node.setNextRel(cacheFields[2]);
+        	node.setReal(false);
+            if ( !((RecordAccess)records).shouldSkip( node.getId(), MultiPassStore.NODES ) )
+            {
+            	engine.comparativeCheck(new DirectRecordReference<NodeRecord>( node, records )  , this );
+            }    
         }
     }
 
@@ -220,6 +230,8 @@ enum NodeField implements
             {
                 if ( node.getNextRel() != relationship.getId() )
                 {
+                	node = (NodeRecord)((DirectRecordReference<NodeRecord>)records.node( node.getId())).record();
+                		
                     if ( node.isDense() )
                     {
                         // TODO verify that the appropriate group refers back to the relationship
@@ -229,10 +241,19 @@ enum NodeField implements
                         noBackReference( engine.report(), node );
                     }
                 }
+                else
+	            {  
+	            	if (relationship.getFirstNode() != relationship.getSecondNode())
+	            	{
+	            		long cacheFields[] = FullCheckNewUtils.NewCCCache.getFromCache(node.getId());
+	            		cacheFields[1] = 1;
+	            		FullCheckNewUtils.NewCCCache.putToCache(node.getId(), cacheFields);
+	            	}
+	            }
             }
             else
             {
-                if ( !hasRelationship( node ) )
+                if ( node.getNextRel() == Record.NO_NEXT_RELATIONSHIP.intValue() )
                 {
                     noChain( engine.report(), node );
                 }

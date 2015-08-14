@@ -17,33 +17,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.consistency;
+package org.neo4j.consistency.oldCC.store.paging;
 
-public enum RecordType
+public interface PageReplacementStrategy
 {
-    NEO_STORE, SCHEMA,
-    NODE,
+    <PAYLOAD, PAGE extends Page<PAYLOAD>> PAYLOAD acquire( PAGE page, Storage<PAYLOAD, PAGE> storage )
+            throws PageLoadFailureException;
 
-    PROPERTY,
-    PROPERTY_KEY,
-    PROPERTY_KEY_NAME,
-    STRING_PROPERTY,
-    ARRAY_PROPERTY,
+    <PAYLOAD> void forceEvict( Page<PAYLOAD> page );
 
-    RELATIONSHIP,
-    RELATIONSHIP_TYPE,
-    RELATIONSHIP_TYPE_NAME,
-
-    RELATIONSHIP_GROUP,
-
-    LABEL,
-    LABEL_NAME,
-
-    NODE_DYNAMIC_LABEL,
-
-    // Below are non-native records
-
-    LABEL_SCAN_DOCUMENT,
-    INDEX,
-    COUNTS,
+    public interface Storage<PAYLOAD, PAGE extends Page<PAYLOAD>>
+    {
+        PAYLOAD load( PAGE page ) throws PageLoadFailureException;
+    }
 }

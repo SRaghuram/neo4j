@@ -25,16 +25,18 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
-import org.neo4j.consistency.checking.full.FullCheck;
-import org.neo4j.consistency.report.ConsistencySummaryStatistics;
+import org.neo4j.consistency.checking.full.FullCheckNewUtils;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.consistency.report.ConsistencySummaryStatistics;
+import org.neo4j.consistency.store.StoreAccess;
+import org.neo4j.consistency.store.StoreFactory;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.index.lucene.LuceneLabelScanStoreBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.DefaultIdGeneratorFactory;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.direct.DirectStoreAccess;
 import org.neo4j.kernel.api.impl.index.DirectoryFactory;
 import org.neo4j.kernel.api.impl.index.LuceneSchemaIndexProvider;
@@ -43,8 +45,6 @@ import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.store.NeoStore;
-import org.neo4j.kernel.impl.store.StoreAccess;
-import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.monitoring.Monitors;
 
@@ -53,6 +53,8 @@ import static org.neo4j.kernel.impl.store.StoreFactory.configForStoreDir;
 public class ConsistencyCheckService
 {
     private final Date timestamp;
+    static StoreAccess storeAccess;
+    private static StoreFactory factory;
 
     public ConsistencyCheckService()
     {
@@ -77,8 +79,10 @@ public class ConsistencyCheckService
 
         try
         {
-            return runFullConsistencyCheck(
+            Result result = runFullConsistencyCheck(
                     storeDir, tuningConfiguration, progressFactory, logger, fileSystem, pageCache );
+            
+            return result;
         }
         finally
         {
@@ -101,7 +105,7 @@ public class ConsistencyCheckService
             throws ConsistencyCheckIncompleteException
     {
         Monitors monitors = new Monitors();
-        StoreFactory factory = new StoreFactory(
+        factory = new StoreFactory(
                 tuningConfiguration,
                 new DefaultIdGeneratorFactory(),
                 pageCache, fileSystem, logger,
@@ -115,18 +119,23 @@ public class ConsistencyCheckService
         try ( NeoStore neoStore = factory.newNeoStore( false ) )
         {
             neoStore.makeStoreOk();
-            StoreAccess store = new StoreAccess( neoStore );
+            
+            //StoreAccess 
+            org.neo4j.kernel.impl.store.StoreAccess storeAccess = new org.neo4j.kernel.impl.store.StoreAccess( neoStore );
             LabelScanStore labelScanStore = null;
             try
             {
 
                 labelScanStore = new LuceneLabelScanStoreBuilder(
-                        storeDir, store.getRawNeoStore(), fileSystem, logger ).build();
+                        storeDir, storeAccess.getRawNeoStore(), fileSystem, logger ).build();
                 SchemaIndexProvider indexes = new LuceneSchemaIndexProvider(
                         DirectoryFactory.PERSISTENT,
                         tuningConfiguration );
-                DirectStoreAccess stores = new DirectStoreAccess( store, labelScanStore, indexes );
-                FullCheck check = new FullCheck( tuningConfiguration, progressFactory );
+                
+                StoreAccess storeAccessNew = new StoreAccess( storeAccess );
+                FullCheckNewUtils.setFactory(factory, neoStore, fileSystem, storeAccessNew);
+                DirectStoreAccess stores = new DirectStoreAccess( storeAccessNew, labelScanStore, indexes );
+                org.neo4j.consistency.checking.full.FullCheck check = new org.neo4j.consistency.checking.full.FullCheck( tuningConfiguration, progressFactory );
                 summary = check.execute( stores, StringLogger.tee( logger, report ) );
             }
             finally
@@ -143,6 +152,7 @@ public class ConsistencyCheckService
                     logger.error( "Failure during shutdown of label scan store", e );
                 }
             }
+            neoStore.close();
         }
         finally
         {
@@ -154,7 +164,6 @@ public class ConsistencyCheckService
             logger.logMessage( String.format( "See '%s' for a detailed consistency report.", reportFile.getPath() ) );
             return Result.FAILURE;
         }
-
         return Result.SUCCESS;
     }
 
@@ -196,5 +205,10 @@ public class ConsistencyCheckService
         {
             return this.successful;
         }
+    }
+ 
+    public static StoreFactory getStoreFactory()
+    {
+        return factory;
     }
 }

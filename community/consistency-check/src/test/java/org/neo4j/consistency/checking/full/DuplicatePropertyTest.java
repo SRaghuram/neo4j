@@ -20,10 +20,9 @@
 package org.neo4j.consistency.checking.full;
 
 import org.junit.Test;
-
-import org.neo4j.consistency.checking.ChainCheck;
-import org.neo4j.consistency.checking.CheckerEngine;
-import org.neo4j.consistency.report.ConsistencyReport;
+import org.neo4j.consistency.old.checking.ChainCheck;
+import org.neo4j.consistency.old.checking.CheckerEngine;
+import org.neo4j.consistency.old.report.ConsistencyReport;
 import org.neo4j.consistency.store.RecordAccessStub;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
@@ -33,7 +32,6 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
-
 import static org.neo4j.consistency.checking.RecordCheckTestBase.inUse;
 
 public class DuplicatePropertyTest

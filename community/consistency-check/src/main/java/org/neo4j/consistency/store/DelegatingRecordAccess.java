@@ -19,6 +19,7 @@
  */
 package org.neo4j.consistency.store;
 
+import org.neo4j.consistency.checking.full.MultiPassStore;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NeoStoreRecord;
@@ -192,5 +193,11 @@ public class DelegatingRecordAccess implements DiffRecordAccess
     public RelationshipGroupRecord changedRelationshipGroup( long id )
     {
         return delegate.changedRelationshipGroup( id );
+    }
+
+    @Override
+    public boolean shouldSkip(long id, MultiPassStore store) {
+        // TODO Auto-generated method stub
+        return true;
     }
 }

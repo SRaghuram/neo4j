@@ -26,11 +26,14 @@ import java.util.Queue;
 
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import org.neo4j.consistency.checking.CheckerEngine;
-import org.neo4j.consistency.checking.ComparativeRecordChecker;
-import org.neo4j.consistency.report.ConsistencyReport;
-import org.neo4j.consistency.report.PendingReferenceCheck;
+import org.neo4j.consistency.old.checking.CheckerEngine;
+import org.neo4j.consistency.old.checking.ComparativeRecordChecker;
+import org.neo4j.consistency.old.report.ConsistencyReport;
+import org.neo4j.consistency.old.report.PendingReferenceCheck;
+import org.neo4j.consistency.old.store.DiffRecordAccess;
+import org.neo4j.consistency.old.store.DirectRecordReference;
+import org.neo4j.consistency.old.store.RecordAccess;
+import org.neo4j.consistency.old.store.RecordReference;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
@@ -44,7 +47,6 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 
 import static java.util.Collections.singletonMap;
-
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;

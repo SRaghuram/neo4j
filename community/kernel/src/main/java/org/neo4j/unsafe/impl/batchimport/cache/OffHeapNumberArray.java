@@ -24,7 +24,7 @@ import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
 /**
  * Base class for common functionality for any {@link NumberArray} where the data lives off-heap.
  */
-abstract class OffHeapNumberArray implements NumberArray
+public abstract class OffHeapNumberArray implements NumberArray
 {
     protected final long address;
     protected final long length;

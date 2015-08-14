@@ -21,9 +21,9 @@ package org.neo4j.consistency.store;
 
 import java.io.File;
 
-import org.neo4j.consistency.ConsistencyCheckService;
-import org.neo4j.consistency.ConsistencyCheckSettings;
-import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.consistency.old.ConsistencyCheckService;
+import org.neo4j.consistency.old.ConsistencyCheckSettings;
+import org.neo4j.consistency.old.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.kernel.configuration.Config;

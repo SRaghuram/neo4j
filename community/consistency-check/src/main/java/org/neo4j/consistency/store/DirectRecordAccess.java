@@ -19,8 +19,15 @@
  */
 package org.neo4j.consistency.store;
 
+import org.neo4j.consistency.checking.full.MultiPassStore;
+import org.neo4j.kernel.IdType;
+import org.neo4j.kernel.impl.store.CommonAbstractStore;
+import org.neo4j.kernel.impl.store.DynamicArrayStore;
+import org.neo4j.kernel.impl.store.DynamicStringStore;
+import org.neo4j.kernel.impl.store.NodeStore;
+import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.RecordStore;
-import org.neo4j.kernel.impl.store.StoreAccess;
+import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
@@ -34,7 +41,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 
 public class DirectRecordAccess implements DiffRecordAccess
 {
-    final StoreAccess access;
+    StoreAccess access = null;
 
     public DirectRecordAccess( StoreAccess access )
     {
@@ -125,10 +132,6 @@ public class DirectRecordAccess implements DiffRecordAccess
         return referenceTo( access.getPropertyKeyNameStore(), id );
     }
 
-    <RECORD extends AbstractBaseRecord> RecordReference<RECORD> referenceTo( RecordStore<RECORD> store, long id )
-    {
-        return new DirectRecordReference<>( store.forceGetRecord( id ), this );
-    }
 
     @Override
     public RecordReference<NeoStoreRecord> graph()
@@ -201,4 +204,22 @@ public class DirectRecordAccess implements DiffRecordAccess
     {
         return null;
     }
+
+    @Override
+    public boolean shouldSkip(long id, MultiPassStore store) {
+        // TODO Auto-generated method stub
+        return true;
+    }
+    
+    public StoreAccess getStoreAccess()
+    {
+        return access;
+    }
+    
+    <RECORD extends AbstractBaseRecord> RecordReference<RECORD> referenceTo( RecordStore<RECORD> store, long id )
+    {
+        return new DirectRecordReference<>(StoreAccess.getRecord(store, id, access), this);
+    }
+    
+    
 }

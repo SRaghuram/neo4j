@@ -30,7 +30,7 @@ import static org.neo4j.kernel.impl.store.NodeLabelsField.firstDynamicLabelRecor
 import static org.neo4j.kernel.impl.store.NodeStore.readOwnerFromDynamicLabelsRecord;
 
 /**
- * Used by {@link org.neo4j.consistency.checking.full.FullCheck} to verify orphanage for node dynamic label records.
+ * Used by {@link org.neo4j.consistency.oldCC.checking.full.FullCheck} to verify orphanage for node dynamic label records.
  *
  * Actual list of labels is verified from {@link NodeRecordCheck}
  */

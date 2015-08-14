@@ -20,6 +20,8 @@
 package org.neo4j.consistency.checking.full;
 
 import org.junit.Test;
+import org.neo4j.consistency.old.checking.full.RecordProcessor;
+import org.neo4j.consistency.old.checking.full.RecordScanner;
 import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.kernel.api.direct.BoundedIterable;

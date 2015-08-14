@@ -896,4 +896,9 @@ public abstract class CommonAbstractStore implements IdSequence, AutoCloseable
         public static final Setting<Boolean> rebuild_idgenerators_fast =
                 GraphDatabaseSettings.rebuild_idgenerators_fast;
     }
+
+ 	public int getPageSize()
+    {
+        return this.pageCache.pageSize();
+    }
 }

@@ -26,13 +26,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.neo4j.consistency.RecordType;
+import org.neo4j.consistency.FullCheckType;
 import org.neo4j.consistency.checking.CheckDecorator;
 import org.neo4j.consistency.checking.CheckerEngine;
 import org.neo4j.consistency.checking.ComparativeRecordChecker;
 import org.neo4j.consistency.checking.DynamicStore;
 import org.neo4j.consistency.checking.OwningRecordCheck;
 import org.neo4j.consistency.checking.RecordCheck;
+import org.neo4j.consistency.checking.RecordType;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.RelationshipGroupConsistencyReport;
 import org.neo4j.consistency.store.DiffRecordAccess;
@@ -55,11 +56,10 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.kernel.impl.store.record.TokenRecord;
 
 import static java.util.Collections.unmodifiableMap;
-
-import static org.neo4j.consistency.RecordType.ARRAY_PROPERTY;
-import static org.neo4j.consistency.RecordType.PROPERTY_KEY_NAME;
-import static org.neo4j.consistency.RecordType.RELATIONSHIP_TYPE_NAME;
-import static org.neo4j.consistency.RecordType.STRING_PROPERTY;
+import static org.neo4j.consistency.checking.RecordType.ARRAY_PROPERTY;
+import static org.neo4j.consistency.checking.RecordType.PROPERTY_KEY_NAME;
+import static org.neo4j.consistency.checking.RecordType.RELATIONSHIP_TYPE_NAME;
+import static org.neo4j.consistency.checking.RecordType.STRING_PROPERTY;
 
 class OwnerCheck implements CheckDecorator
 {
@@ -70,6 +70,7 @@ class OwnerCheck implements CheckDecorator
     {
         this.owners = active ? new ConcurrentHashMap<Long, PropertyOwner>( 16, 0.75f, 4 ) : null;
         this.dynamics = active ? initialize( stores ) : null;
+        FullCheckNewUtils.NewCCCache.resetFieldOffsets(1, 63);
     }
 
     private static Map<RecordType, ConcurrentMap<Long, DynamicOwner>> initialize( DynamicStore[] stores )

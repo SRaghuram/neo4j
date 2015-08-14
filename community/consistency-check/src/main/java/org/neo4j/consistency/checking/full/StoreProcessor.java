@@ -19,15 +19,20 @@
  */
 package org.neo4j.consistency.checking.full;
 
-import org.neo4j.consistency.RecordType;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
+
 import org.neo4j.consistency.checking.AbstractStoreProcessor;
 import org.neo4j.consistency.checking.CheckDecorator;
 import org.neo4j.consistency.checking.RecordCheck;
+import org.neo4j.consistency.checking.RecordType;
 import org.neo4j.consistency.checking.SchemaRecordCheck;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.DynamicLabelConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.RelationshipGroupConsistencyReport;
+import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.kernel.impl.store.RecordStore;
+import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -41,88 +46,134 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
  * Full check works by spawning StoreProcessorTasks that call StoreProcessor. StoreProcessor.applyFiltered()
  * then scans the store and in turn calls down to store.accept which then knows how to check the given record.
  */
-class StoreProcessor extends AbstractStoreProcessor
+public class StoreProcessor extends AbstractStoreProcessor
 {
     private final ConsistencyReport.Reporter report;
     private SchemaRecordCheck schemaRecordCheck;
+    private int[] cacheFields = null;
+    private FullCheckNewUtils.Stages stage;
+    protected volatile boolean shouldStop;
+    
 
     public StoreProcessor( CheckDecorator decorator, ConsistencyReport.Reporter report )
     {
         super( decorator );
         this.report = report;
         this.schemaRecordCheck = null;
+        this.stage = null;
     }
 
-    @SuppressWarnings("UnusedParameters")
-    protected void checkSchema( RecordType type, RecordStore<DynamicRecord> store, DynamicRecord schema, RecordCheck
-            <DynamicRecord, ConsistencyReport.SchemaConsistencyReport> checker )
+    public StoreProcessor( CheckDecorator decorator, ConsistencyReport.Reporter report,
+            FullCheckNewUtils.Stages stage )
+    {
+        super( decorator );
+        this.report = report;
+        this.schemaRecordCheck = null;
+        this.stage = stage;
+    }
+
+    public void setCacheFields( int... cacheFields )
+    {
+        if ( cacheFields != null )
+            this.cacheFields = cacheFields;
+    }
+
+    public int[] getCacheFields()
+    {
+        return cacheFields;
+    }
+
+    public FullCheckNewUtils.Stages getStage()
+    {
+        return stage;
+    }
+
+    public int getStageIndex()
+    {
+        return stage == null ? -1 : stage.ordinal();
+    }
+
+    public void setCache()
+    {
+        if ( cacheFields != null && cacheFields.length > 0 )
+        {
+            FullCheckNewUtils.NewCCCache.resetFieldOffsets( cacheFields );
+        }
+    }
+
+    public boolean isParallel()
+    {
+        return stage == null ? false : stage.isParallel( stage );
+    }
+
+    @SuppressWarnings( "UnusedParameters" )
+    protected void checkSchema( RecordType type, RecordStore<DynamicRecord> store, DynamicRecord schema,
+            RecordCheck<DynamicRecord,ConsistencyReport.SchemaConsistencyReport> checker )
     {
         report.forSchema( schema, checker );
     }
 
     @Override
     protected void checkNode( RecordStore<NodeRecord> store, NodeRecord node,
-                              RecordCheck<NodeRecord, ConsistencyReport.NodeConsistencyReport> checker )
+            RecordCheck<NodeRecord,ConsistencyReport.NodeConsistencyReport> checker )
     {
         report.forNode( node, checker );
     }
 
     @Override
     protected void checkRelationship( RecordStore<RelationshipRecord> store, RelationshipRecord rel,
-                                      RecordCheck<RelationshipRecord, ConsistencyReport.RelationshipConsistencyReport> checker )
+            RecordCheck<RelationshipRecord,ConsistencyReport.RelationshipConsistencyReport> checker )
     {
+        FullCheckNewUtils.checkRel( stage, rel );
         report.forRelationship( rel, checker );
     }
 
     @Override
     protected void checkProperty( RecordStore<PropertyRecord> store, PropertyRecord property,
-                                  RecordCheck<PropertyRecord, ConsistencyReport.PropertyConsistencyReport> checker )
+            RecordCheck<PropertyRecord,ConsistencyReport.PropertyConsistencyReport> checker )
     {
         report.forProperty( property, checker );
     }
 
     @Override
     protected void checkRelationshipTypeToken( RecordStore<RelationshipTypeTokenRecord> store,
-                                               RelationshipTypeTokenRecord relationshipType,
-                                               RecordCheck<RelationshipTypeTokenRecord,
-                                                       ConsistencyReport.RelationshipTypeConsistencyReport> checker )
+            RelationshipTypeTokenRecord relationshipType,
+            RecordCheck<RelationshipTypeTokenRecord,ConsistencyReport.RelationshipTypeConsistencyReport> checker )
     {
         report.forRelationshipTypeName( relationshipType, checker );
     }
 
     @Override
     protected void checkLabelToken( RecordStore<LabelTokenRecord> store, LabelTokenRecord label,
-                                    RecordCheck<LabelTokenRecord, ConsistencyReport.LabelTokenConsistencyReport>
-                                            checker )
+            RecordCheck<LabelTokenRecord,ConsistencyReport.LabelTokenConsistencyReport> checker )
     {
         report.forLabelName( label, checker );
     }
 
     @Override
     protected void checkPropertyKeyToken( RecordStore<PropertyKeyTokenRecord> store, PropertyKeyTokenRecord key,
-                                          RecordCheck<PropertyKeyTokenRecord,
-                                          ConsistencyReport.PropertyKeyTokenConsistencyReport> checker )
+            RecordCheck<PropertyKeyTokenRecord,ConsistencyReport.PropertyKeyTokenConsistencyReport> checker )
     {
         report.forPropertyKey( key, checker );
     }
 
     @Override
     protected void checkDynamic( RecordType type, RecordStore<DynamicRecord> store, DynamicRecord string,
-                                 RecordCheck<DynamicRecord, ConsistencyReport.DynamicConsistencyReport> checker )
+            RecordCheck<DynamicRecord,ConsistencyReport.DynamicConsistencyReport> checker )
     {
         report.forDynamicBlock( type, string, checker );
     }
 
     @Override
     protected void checkDynamicLabel( RecordType type, RecordStore<DynamicRecord> store, DynamicRecord string,
-                                      RecordCheck<DynamicRecord, DynamicLabelConsistencyReport> checker )
+            RecordCheck<DynamicRecord,DynamicLabelConsistencyReport> checker )
     {
         report.forDynamicLabelBlock( type, string, checker );
     }
 
     @Override
     protected void checkRelationshipGroup( RecordStore<RelationshipGroupRecord> store, RelationshipGroupRecord record,
-            RecordCheck<RelationshipGroupRecord, RelationshipGroupConsistencyReport> checker )
+            RecordCheck<RelationshipGroupRecord,RelationshipGroupConsistencyReport> checker )
     {
         report.forRelationshipGroup( record, checker );
     }
@@ -137,12 +188,16 @@ class StoreProcessor extends AbstractStoreProcessor
     {
         if ( null == schemaRecordCheck )
         {
-
             super.processSchema( store, schema );
         }
         else
         {
             checkSchema( RecordType.SCHEMA, store, schema, schemaRecordCheck );
         }
+    }
+
+    public ConsistencyReport.Reporter getReporter()
+    {
+        return report;
     }
 }

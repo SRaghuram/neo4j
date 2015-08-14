@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2015 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
@@ -19,6 +19,10 @@
  */
 package org.neo4j.consistency.checking;
 
+import org.neo4j.consistency.checking.CheckerEngine;
+import org.neo4j.consistency.checking.ComparativeRecordChecker;
+import org.neo4j.consistency.checking.LabelChainWalker;
+import org.neo4j.consistency.checking.RecordField;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.NodeConsistencyReport;
 import org.neo4j.consistency.store.DiffRecordAccess;
@@ -36,27 +40,48 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 import static java.util.Arrays.sort;
 
-class NodeRecordCheck extends PrimitiveRecordCheck<NodeRecord, ConsistencyReport.NodeConsistencyReport>
+public class NodeRecordCheck extends PrimitiveRecordCheck<NodeRecord, ConsistencyReport.NodeConsistencyReport>
 {
     static NodeRecordCheck forSparseNodes()
     {
-        return new NodeRecordCheck( RelationshipField.NEXT_REL, LabelsField.LABELS );
+        return new NodeRecordCheck( true, /*RelationshipField.NEXT_REL,*/ LabelsField.LABELS );
+    }
+    
+    static NodeRecordCheck forSparseNodes(boolean firstProperty)
+    {
+        return new NodeRecordCheck( firstProperty,/*RelationshipField.NEXT_REL,*/ LabelsField.LABELS );
     }
 
     static NodeRecordCheck forDenseNodes()
     {
-        return new NodeRecordCheck( RelationshipGroupField.NEXT_GROUP, LabelsField.LABELS );
+        return new NodeRecordCheck( true, RelationshipGroupField.NEXT_GROUP, LabelsField.LABELS );
+    } 
+    
+    static NodeRecordCheck forDenseNodes(boolean firstProperty)
+    {
+        return new NodeRecordCheck( firstProperty, RelationshipGroupField.NEXT_GROUP, LabelsField.LABELS );
+    }
+    
+    public static NodeRecordCheck toCheckNextRel(boolean firstProperty)
+    {
+    	return new NodeRecordCheck( firstProperty, RelationshipField.NEXT_REL );
+    }
+    
+    public static NodeRecordCheck toCheckNextRelationshipGroup(boolean firstProperty)
+    {
+    	 //return new NodeRecordCheck( RelationshipGroupField.NEXT_GROUP );
+    	return new NodeRecordCheck(firstProperty, RelationshipGroupField.NEXT_GROUP );
     }
 
     @SafeVarargs
-    private NodeRecordCheck( RecordField<NodeRecord, ConsistencyReport.NodeConsistencyReport>... fields )
+	NodeRecordCheck( boolean firstProperty, RecordField<NodeRecord, ConsistencyReport.NodeConsistencyReport>... fields )
     {
-        super( fields );
+        super( firstProperty, fields );
     }
 
-    NodeRecordCheck()
+    public NodeRecordCheck()
     {
-        super( RelationshipField.NEXT_REL, LabelsField.LABELS );
+        super( true, RelationshipField.NEXT_REL, LabelsField.LABELS );
     }
 
     private enum RelationshipGroupField implements RecordField<NodeRecord, ConsistencyReport.NodeConsistencyReport>,
@@ -235,20 +260,7 @@ class NodeRecordCheck extends PrimitiveRecordCheck<NodeRecord, ConsistencyReport
                 {
                     engine.comparativeCheck( records.label( (int) labelId ), this );
                 }
-                // This first loop, before sorting happens, verifies that labels are ordered like they are supposed to
-                boolean outOfOrder = false;
-                for ( int i = 1; i < labelIds.length; i++ )
-                {
-                    if ( labelIds[i -1] > labelIds[i])
-                    {
-                        engine.report().labelsOutOfOrder( labelIds[i-1], labelIds[i] );
-                        outOfOrder = true;
-                    }
-                }
-                if ( outOfOrder )
-                {
-                    sort( labelIds );
-                }
+                sort( labelIds );
                 for ( int i = 1; i < labelIds.length; i++ )
                 {
                     if ( labelIds[i - 1] == labelIds[i] )

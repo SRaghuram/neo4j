@@ -25,9 +25,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.junit.runners.Suite;
-
-import org.neo4j.consistency.store.DiffRecordAccess;
-import org.neo4j.consistency.store.RecordReference;
+import org.neo4j.consistency.old.checking.full.MultiPassStore;
+import org.neo4j.consistency.old.store.DiffRecordAccess;
+import org.neo4j.consistency.old.store.RecordReference;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
@@ -42,8 +42,7 @@ import static org.junit.Assert.assertSame;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
-
-import static org.neo4j.consistency.store.RecordReference.SkippingReference.skipReference;
+import static org.neo4j.consistency.old.store.RecordReference.SkippingReference.skipReference;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({

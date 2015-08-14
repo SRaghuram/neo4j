@@ -19,7 +19,6 @@
  */
 package org.neo4j.consistency.checking;
 
-import org.neo4j.consistency.RecordType;
 import org.neo4j.consistency.store.DiffRecordAccess;
 import org.neo4j.consistency.store.RecordAccess;
 import org.neo4j.consistency.store.RecordReference;

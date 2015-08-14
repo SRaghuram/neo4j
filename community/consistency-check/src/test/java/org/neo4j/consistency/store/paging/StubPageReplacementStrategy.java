@@ -19,6 +19,10 @@
  */
 package org.neo4j.consistency.store.paging;
 
+import org.neo4j.consistency.old.store.paging.Page;
+import org.neo4j.consistency.old.store.paging.PageLoadFailureException;
+import org.neo4j.consistency.old.store.paging.PageReplacementStrategy;
+
 public class StubPageReplacementStrategy implements PageReplacementStrategy
 {
     @Override

@@ -19,13 +19,13 @@
  */
 package org.neo4j.consistency.checking.full;
 
-import org.neo4j.consistency.RecordType;
-import org.neo4j.consistency.checking.RecordCheck;
-import org.neo4j.consistency.report.ConsistencyReport;
-import org.neo4j.consistency.report.ConsistencyReport.RelationshipGroupConsistencyReport;
-import org.neo4j.consistency.store.synthetic.CountsEntry;
-import org.neo4j.consistency.store.synthetic.IndexEntry;
-import org.neo4j.consistency.store.synthetic.LabelScanDocument;
+import org.neo4j.consistency.old.RecordType;
+import org.neo4j.consistency.old.checking.RecordCheck;
+import org.neo4j.consistency.old.report.ConsistencyReport;
+import org.neo4j.consistency.old.report.ConsistencyReport.RelationshipGroupConsistencyReport;
+import org.neo4j.consistency.old.store.synthetic.CountsEntry;
+import org.neo4j.consistency.old.store.synthetic.IndexEntry;
+import org.neo4j.consistency.old.store.synthetic.LabelScanDocument;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;

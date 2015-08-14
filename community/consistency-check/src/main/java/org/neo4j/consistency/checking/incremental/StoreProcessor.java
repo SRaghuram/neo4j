@@ -19,9 +19,9 @@
  */
 package org.neo4j.consistency.checking.incremental;
 
-import org.neo4j.consistency.RecordType;
 import org.neo4j.consistency.checking.AbstractStoreProcessor;
 import org.neo4j.consistency.checking.RecordCheck;
+import org.neo4j.consistency.checking.RecordType;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.DynamicLabelConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.RelationshipGroupConsistencyReport;

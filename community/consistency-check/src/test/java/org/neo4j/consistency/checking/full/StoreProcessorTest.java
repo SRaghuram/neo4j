@@ -22,9 +22,9 @@ package org.neo4j.consistency.checking.full;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import org.neo4j.consistency.checking.CheckDecorator;
-import org.neo4j.consistency.report.ConsistencyReport;
+import org.neo4j.consistency.old.checking.CheckDecorator;
+import org.neo4j.consistency.old.checking.full.StoreProcessor;
+import org.neo4j.consistency.old.report.ConsistencyReport;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 

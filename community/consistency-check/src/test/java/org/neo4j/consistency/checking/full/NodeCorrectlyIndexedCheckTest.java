@@ -30,9 +30,11 @@ import java.util.Set;
 
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
-import org.neo4j.consistency.checking.CheckerEngine;
-import org.neo4j.consistency.checking.index.IndexAccessors;
-import org.neo4j.consistency.report.ConsistencyReport;
+import org.neo4j.consistency.old.checking.CheckerEngine;
+import org.neo4j.consistency.old.checking.full.NodeCorrectlyIndexedCheck;
+import org.neo4j.consistency.old.checking.full.PropertyReader;
+import org.neo4j.consistency.old.checking.index.IndexAccessors;
+import org.neo4j.consistency.old.report.ConsistencyReport;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.direct.BoundedIterable;
@@ -52,9 +54,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
-
 import static java.util.Arrays.asList;
-
 import static org.neo4j.collection.primitive.PrimitiveLongCollections.emptyIterator;
 import static org.neo4j.kernel.api.properties.Property.stringProperty;
 import static org.neo4j.kernel.impl.store.record.IndexRule.constraintIndexRule;

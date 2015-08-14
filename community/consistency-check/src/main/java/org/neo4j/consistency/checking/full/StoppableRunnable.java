@@ -19,7 +19,11 @@
  */
 package org.neo4j.consistency.checking.full;
 
+import org.neo4j.consistency.checking.full.FullCheckNewUtils;
+
 public interface StoppableRunnable extends Runnable
 {
     void stopScanning();
+    public String getName();
+    public FullCheckNewUtils.Stages getStage();
 }

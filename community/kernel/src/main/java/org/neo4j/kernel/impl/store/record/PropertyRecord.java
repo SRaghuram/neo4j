@@ -203,6 +203,14 @@ public class PropertyRecord extends Abstract64BitRecord implements Iterable<Prop
         }
         return null;
     }
+    
+    public PropertyBlock[] getPropertyBlocks( )
+    {
+    	PropertyBlock[] blocks = new PropertyBlock[blockRecordsCursor];
+        for ( int i = 0; i < blockRecordsCursor; i++ )
+            blocks[i] = blockRecords[i];
+        return blocks;
+    }
 
     public PropertyBlock removePropertyBlock( int keyIndex )
     {

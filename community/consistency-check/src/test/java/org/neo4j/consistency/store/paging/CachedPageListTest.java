@@ -24,6 +24,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
 import org.junit.Test;
+import org.neo4j.consistency.old.store.paging.CachedPageList;
+import org.neo4j.consistency.old.store.paging.Page;
 
 public class CachedPageListTest
 {

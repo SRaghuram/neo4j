@@ -24,7 +24,8 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.neo4j.consistency.report.ConsistencyReport;
+import org.neo4j.consistency.old.checking.NodeRecordCheck;
+import org.neo4j.consistency.old.report.ConsistencyReport;
 import org.neo4j.kernel.impl.store.DynamicArrayStore;
 import org.neo4j.kernel.impl.store.DynamicNodeLabels;
 import org.neo4j.kernel.impl.store.DynamicRecordAllocator;

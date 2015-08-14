@@ -19,9 +19,9 @@
  */
 package org.neo4j.consistency.checking.full;
 
-import org.neo4j.consistency.RecordType;
 import org.neo4j.consistency.checking.CheckerEngine;
 import org.neo4j.consistency.checking.ComparativeRecordChecker;
+import org.neo4j.consistency.checking.RecordType;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.report.PendingReferenceCheck;
 import org.neo4j.consistency.store.RecordAccess;

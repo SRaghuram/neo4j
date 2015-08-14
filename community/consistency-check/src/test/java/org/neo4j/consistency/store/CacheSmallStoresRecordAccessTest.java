@@ -23,7 +23,10 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Test;
-
+import org.neo4j.consistency.old.store.CacheSmallStoresRecordAccess;
+import org.neo4j.consistency.old.store.DiffRecordAccess;
+import org.neo4j.consistency.old.store.DirectRecordReference;
+import org.neo4j.consistency.old.store.RecordReference;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;

@@ -22,30 +22,34 @@ package org.neo4j.consistency.checking.full;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.neo4j.consistency.checking.NodeRecordCheck;
+import org.neo4j.consistency.checking.RelationshipRecordCheck;
 import org.neo4j.consistency.checking.SchemaRecordCheck;
+import org.neo4j.consistency.checking.full.IndexCheck;
+import org.neo4j.consistency.checking.full.MultiPassStore;
+import org.neo4j.consistency.checking.full.StoppableRunnable;
 import org.neo4j.consistency.checking.index.IndexAccessors;
 import org.neo4j.consistency.checking.index.IndexEntryProcessor;
 import org.neo4j.consistency.checking.index.IndexIterator;
 import org.neo4j.consistency.checking.labelscan.LabelScanCheck;
 import org.neo4j.consistency.checking.labelscan.LabelScanDocumentProcessor;
 import org.neo4j.consistency.report.ConsistencyReporter;
+import org.neo4j.consistency.store.StoreAccess;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
-import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.SchemaStorage;
-import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.IndexRule;
+import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 import static java.lang.String.format;
-
 import static org.neo4j.consistency.checking.full.MultiPassStore.ARRAYS;
 import static org.neo4j.consistency.checking.full.MultiPassStore.LABELS;
 import static org.neo4j.consistency.checking.full.MultiPassStore.NODES;
 import static org.neo4j.consistency.checking.full.MultiPassStore.PROPERTIES;
-import static org.neo4j.consistency.checking.full.MultiPassStore.PROPERTY_KEYS;
 import static org.neo4j.consistency.checking.full.MultiPassStore.RELATIONSHIPS;
 import static org.neo4j.consistency.checking.full.MultiPassStore.RELATIONSHIP_GROUPS;
 import static org.neo4j.consistency.checking.full.MultiPassStore.STRINGS;
@@ -55,101 +59,127 @@ public class ConsistencyCheckTasks
     private final ProgressMonitorFactory.MultiPartBuilder progress;
     private final TaskExecutionOrder order;
     private final StoreProcessor processor;
+    private StoreAccess nativeStores = null;
+    private MultiPassStore.FactoryNew multiPass;
+    private ConsistencyReporter reporter;
+    private LabelScanStore labelScanStore;
+    private IndexAccessors indexes;
 
     ConsistencyCheckTasks( ProgressMonitorFactory.MultiPartBuilder progress, TaskExecutionOrder order,
-                           StoreProcessor processor )
+            StoreProcessor processor, StoreAccess nativeStores, LabelScanStore labelScanStore,
+            IndexAccessors indexes, MultiPassStore.FactoryNew multiPass, ConsistencyReporter reporter )
     {
         this.progress = progress;
         this.order = order;
         this.processor = processor;
+        this.nativeStores = nativeStores;
+        this.multiPass = multiPass;
+        this.reporter = reporter;
+        this.labelScanStore = labelScanStore;
+        this.indexes = indexes;
     }
 
-    public List<StoppableRunnable> createTasks(
-            StoreAccess nativeStores, LabelScanStore labelScanStore, IndexAccessors indexes,
-            MultiPassStore.Factory multiPass, ConsistencyReporter reporter,
-            boolean checkLabelScanStore, boolean checkIndexes, boolean checkGraph )
+    public List<StoppableRunnable> createTasksForFullCheck( boolean checkLabelScanStore, boolean checkIndexes,
+            boolean checkGraph )
     {
         List<StoppableRunnable> tasks = new ArrayList<>();
-
         if ( checkGraph )
         {
-            tasks.add( create( nativeStores.getNodeStore(),
-                    multiPass.processors( LABELS, PROPERTIES, RELATIONSHIPS, RELATIONSHIP_GROUPS ) ) );
-
-            tasks.add( create( nativeStores.getRelationshipStore(),
-                    multiPass.processors(  NODES, PROPERTIES, RELATIONSHIPS  ) ) );
-
-            tasks.add( create( nativeStores.getPropertyStore(),
-                    multiPass.processors(  PROPERTIES, STRINGS, ARRAYS, PROPERTY_KEYS ) ) );
-
-            tasks.add( create( nativeStores.getStringStore(), multiPass.processors( STRINGS ) ) );
-
-            tasks.add( create( nativeStores.getArrayStore(), multiPass.processors( ARRAYS ) ) );
-
-            tasks.add( create( nativeStores.getRelationshipGroupStore(), multiPass.processors( RELATIONSHIP_GROUPS ) ) );
+            StoreProcessor processor =
+                    multiPass.processor( FullCheckNewUtils.Stages.Stage1_NS_PropsLabels, PROPERTIES, 1, 63 );
+            multiPass.reDecorateNode( processor, null, true );
+            tasks.add( create( FullCheckNewUtils.Stages.Stage1_NS_PropsLabels.name(), nativeStores.getNodeStore(),
+                    processor ) );
+            //ReltionshipStore pass - check label counts using cached labels, check properties, skip nodes and relationships
+            processor = multiPass.processor( FullCheckNewUtils.Stages.Stage2_RS_Labels, LABELS );
+            multiPass.reDecorateRelationship( processor, RelationshipRecordCheck.RelationshipRecordCheckPass1( false ) );
+            tasks.add( create( FullCheckNewUtils.Stages.Stage2_RS_Labels.name(), nativeStores.getRelationshipStore(),
+                    processor ) );
+            //NodeStore pass - just cache nextRel and inUse
+            tasks.add( create( FullCheckNewUtils.Stages.Stage3_NS_NextRel.name(), nativeStores.getNodeStore(),
+                    new StoreProcessor[] {new CacheProcessor( FullCheckNewUtils.Stages.Stage3_NS_NextRel,
+                            CacheProcessor.CacheAction.GET_NEXTREL, nativeStores, 1, 1, 35 )} ) );
+            //RelationshipStore pass - check nodes inUse, FirstInFirst, FirstInSecond using cached info
+            processor = multiPass.processor( FullCheckNewUtils.Stages.Stage4_RS_NextRel, NODES );
+            multiPass.reDecorateRelationship( processor, RelationshipRecordCheck.RelationshipRecordCheckPass2( true ) );
+            tasks.add( create( FullCheckNewUtils.Stages.Stage4_RS_NextRel.name(), nativeStores.getRelationshipStore(),
+                    processor ) );
+            //NodeStore pass - just cache nextRel and inUse
+            multiPass.reDecorateNode( processor, NodeRecordCheck.toCheckNextRel( false ), true );
+            multiPass.reDecorateNode( processor, NodeRecordCheck.toCheckNextRelationshipGroup( false ), false );
+            tasks.add( create( FullCheckNewUtils.Stages.Stage5_Check_NextRel.name(), nativeStores.getNodeStore(),
+                    new CacheProcessor( FullCheckNewUtils.Stages.Stage5_Check_NextRel,
+                            CacheProcessor.CacheAction.CHECK_NEXTREL, nativeStores, processor ) ) );
+            // source chain
+            //RelationshipStore pass - forward scan of source chain using the cache.
+            processor = multiPass.processor( FullCheckNewUtils.Stages.Stage6_RS_Forward, RELATIONSHIPS, 1, 1, 35, 35 );
+            multiPass.reDecorateRelationship( processor,
+                    RelationshipRecordCheck.RelationshipRecordCheckSourceChain( false ) );
+            tasks.add( create( FullCheckNewUtils.Stages.Stage6_RS_Forward.name(), nativeStores.getRelationshipStore(),
+                    processor ) );
+            //RelationshipStore pass - reverse scan of source chain using the cache.            
+            processor = multiPass.processor( FullCheckNewUtils.Stages.Stage7_RS_Backward, RELATIONSHIPS );
+            processor.reverseDirection();
+            multiPass.reDecorateRelationship( processor,
+                    RelationshipRecordCheck.RelationshipRecordCheckSourceChain( false ) );
+            tasks.add( create( FullCheckNewUtils.Stages.Stage7_RS_Backward.name(), nativeStores.getRelationshipStore(),
+                    processor ) );
+            //tasks.add( create( FullCheckNewUtils.Stages.Stage8_PS_Props.name(), nativeStores.getPropertyStore(),
+            //        multiPass.processor(FullCheckNewUtils.Stages.Stage8_PS_Props, PROPERTIES)));//, STRINGS, ARRAYS, PROPERTY_KEYS ) ) ); 
+            tasks.add( new RecordScanner<>( new IterableStore<>( nativeStores.getNodeStore(), nativeStores ),
+                    FullCheckNewUtils.Stages.Stage8_PS_Props.name(), progress,
+                    new PropertyAndNode2LabelIndexProcessor( reporter, (checkIndexes ? indexes : null), new PropertyReader( nativeStores ) ),
+                    FullCheckNewUtils.Stages.Stage8_PS_Props ) );
+            
+            tasks.add( create( "StrStore-Str", nativeStores.getStringStore(), multiPass.processors( STRINGS ) ) );
+            tasks.add( create( "ArrayStore-Arrays", nativeStores.getArrayStore(), multiPass.processors( ARRAYS ) ) );
+            tasks.add( create( "RelGrpSt-RelGrp", nativeStores.getRelationshipGroupStore(),
+                    multiPass.processors( RELATIONSHIP_GROUPS ) ) );
         }
-
         // The schema store is verified in multiple passes that share state since it fits into memory
         // and we care about the consistency of back references (cf. SemanticCheck)
-
         // PASS 1: Dynamic record chains
-        tasks.add( create( nativeStores.getSchemaStore() ));
-
+        tasks.add( create( "SchemaStore", nativeStores.getSchemaStore() ) );
         // PASS 2: Rule integrity and obligation build up
-        final SchemaRecordCheck schemaCheck = new SchemaRecordCheck( new SchemaStorage( nativeStores.getSchemaStore() ) );
-        tasks.add( new SchemaStoreProcessorTask<>(
-                nativeStores.getSchemaStore(), "check_rules", schemaCheck, progress, order,
-                processor, processor ) );
-
+        final SchemaRecordCheck schemaCheck =
+                new SchemaRecordCheck( new SchemaStorage( nativeStores.getSchemaStore() ) );
+        tasks.add( new SchemaStoreProcessorTask<>( nativeStores.getSchemaStore(), "check_rules", schemaCheck, progress,
+                order, processor, processor ) );
         // PASS 3: Obligation verification and semantic rule uniqueness
-        tasks.add( new SchemaStoreProcessorTask<>(
-                nativeStores.getSchemaStore(), "check_obligations", schemaCheck.forObligationChecking(), progress, order,
-                processor, processor ) );
-
+        tasks.add( new SchemaStoreProcessorTask<>( nativeStores.getSchemaStore(), "check_obligations", schemaCheck
+                .forObligationChecking(), progress, order, processor, processor ) );
         if ( checkGraph )
         {
-            tasks.add( create( nativeStores.getRelationshipTypeTokenStore() ) );
-            tasks.add( create( nativeStores.getPropertyKeyTokenStore() ) );
-            tasks.add( create( nativeStores.getLabelTokenStore() ) );
-            tasks.add( create( nativeStores.getRelationshipTypeNameStore() ) );
-            tasks.add( create( nativeStores.getPropertyKeyNameStore() ) );
-            tasks.add( create( nativeStores.getLabelNameStore() ) );
-            tasks.add( create( nativeStores.getNodeDynamicLabelStore() ) );
+            tasks.add( create( "RelationshipTypeTokenStore", nativeStores.getRelationshipTypeTokenStore() ) );
+            tasks.add( create( "PropertyKeyTokenStore", nativeStores.getPropertyKeyTokenStore() ) );
+            tasks.add( create( "LabelTokenStore", nativeStores.getLabelTokenStore() ) );
+            tasks.add( create( "RelationshipTypeNameStore", nativeStores.getRelationshipTypeNameStore() ) );
+            tasks.add( create( "PropertyKeyNameStore", nativeStores.getPropertyKeyNameStore() ) );
+            tasks.add( create( "LabelNameStore", nativeStores.getLabelNameStore() ) );
+            tasks.add( create( "NodeDynamicLabelStore", nativeStores.getNodeDynamicLabelStore() ) );
         }
-
         if ( checkLabelScanStore )
         {
-            tasks.add( new RecordScanner<>( new IterableStore<>( nativeStores.getNodeStore() ),
-                    "NodeStoreToLabelScanStore",
-                    progress, new NodeToLabelScanRecordProcessor( reporter, labelScanStore ) ) );
+            tasks.add( new RecordScanner<>( new IterableStore<>( nativeStores.getNodeStore(), nativeStores ),
+                    "NodeStoreToLabelScanStore", progress,
+                    new NodeToLabelScanRecordProcessor( reporter, labelScanStore ),
+                    FullCheckNewUtils.Stages.Stage9_NS_LabelCounts ) );
         }
-
-        if ( checkIndexes )
-        {
-            tasks.add( new RecordScanner<>( new IterableStore<>( nativeStores.getNodeStore() ), "NodeStoreToIndexes",
-                    progress, new NodeToLabelIndexesProcessor( reporter, indexes, new PropertyReader(
-                            (PropertyStore) nativeStores.getPropertyStore(), (NodeStore) nativeStores.getNodeStore() ) ) ) );
-        }
-
         int iPass = 0;
         for ( ConsistencyReporter filteredReporter : multiPass.reporters( order, NODES ) )
         {
             if ( checkLabelScanStore )
             {
-                tasks.add( new RecordScanner<>( labelScanStore.newAllEntriesReader(),
-                        format( "LabelScanStore_%d", iPass ), progress, new LabelScanDocumentProcessor(
-                        filteredReporter,
-                        new LabelScanCheck() ) ) );
+                tasks.add( new RecordScanner<>( labelScanStore.newAllEntriesReader(), format( "LabelScanStore_%d",
+                        iPass ), progress, new LabelScanDocumentProcessor( filteredReporter, new LabelScanCheck() ) ) );
             }
-
             if ( checkIndexes )
             {
                 for ( IndexRule indexRule : indexes.rules() )
                 {
-                    tasks.add( new RecordScanner<>( new IndexIterator( indexes.accessorFor( indexRule ) ),
-                            format( "Index_%d_%d", indexRule.getId(), iPass ), progress,
-                            new IndexEntryProcessor( filteredReporter,
-                            new IndexCheck( indexRule ) ) ) );
+                    tasks.add( new RecordScanner<>( new IndexIterator( indexes.accessorFor( indexRule ) ), format(
+                            "Index_%d_%d", indexRule.getId(), iPass ), progress, new IndexEntryProcessor(
+                            filteredReporter, new IndexCheck( indexRule ) ) ) );
                 }
             }
             iPass++;
@@ -157,16 +187,28 @@ public class ConsistencyCheckTasks
         return tasks;
     }
 
-    private <RECORD extends AbstractBaseRecord> StoreProcessorTask<RECORD> create( RecordStore<RECORD> input )
+    private <RECORD extends AbstractBaseRecord> StoreProcessorTask<RECORD> create( String name,
+            RecordStore<RECORD> input )
     {
-        return new StoreProcessorTask<>(
-                input, progress, order, processor, processor );
+        return new StoreProcessorTask<>( name, input, progress, order, processor, processor );
     }
 
-    private <RECORD extends AbstractBaseRecord> StoreProcessorTask<RECORD> create( RecordStore<RECORD> input,
-            StoreProcessor[] processors )
+    private <RECORD extends AbstractBaseRecord> StoreProcessorTask<RECORD> create( String name,
+            RecordStore<RECORD> input, StoreProcessor[] processors )
     {
-        return new StoreProcessorTask<>(
-                input, progress, order, processor, processors );
+        StoreProcessorTask<RECORD> storeProcessorTask =
+                new StoreProcessorTask<RECORD>( name, input, progress, order, processors[0], processors );
+        storeProcessorTask.setStoreAccess( nativeStores );
+        return storeProcessorTask;
+    }
+
+    private <RECORD extends AbstractBaseRecord> StoreProcessorTask<RECORD> create( String name,
+            RecordStore<RECORD> input, StoreProcessor processor )
+    {
+        StoreProcessorTask<RECORD> storeProcessorTask =
+                new StoreProcessorTask<RECORD>( name, input, progress, order, processor,
+                        new StoreProcessor[] {processor} );
+        storeProcessorTask.setStoreAccess( nativeStores );
+        return storeProcessorTask;
     }
 }

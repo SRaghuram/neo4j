@@ -60,6 +60,8 @@ public class ConsistencyCheckSettings
     @Description( "Execution order of store cross-checks to be used when running consistency check" )
     public static final Setting<TaskExecutionOrder> consistency_check_execution_order =
             setting( "consistency_check_execution_order", options( TaskExecutionOrder.class ), TaskExecutionOrder.MULTI_PASS.name() );
+    public static final Setting<TaskExecutionOrder> consistency_check_execution_order_new =
+            setting( "consistency_check_execution_order", options( TaskExecutionOrder.class ), TaskExecutionOrder.MULTI_PASS.name() );
 
     @SuppressWarnings("unchecked")
     @Description("File name for inconsistencies log file. If not specified, logs to a file in the store directory.")

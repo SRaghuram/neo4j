@@ -20,8 +20,8 @@
 package org.neo4j.consistency.checking;
 
 import org.junit.Test;
-
-import org.neo4j.consistency.report.ConsistencyReport;
+import org.neo4j.consistency.old.checking.NeoStoreCheck;
+import org.neo4j.consistency.old.report.ConsistencyReport;
 import org.neo4j.kernel.impl.store.record.NeoStoreRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 

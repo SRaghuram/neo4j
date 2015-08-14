@@ -27,11 +27,12 @@ import org.neo4j.consistency.checking.CheckerEngine;
 import org.neo4j.consistency.checking.ComparativeRecordChecker;
 import org.neo4j.consistency.checking.OwningRecordCheck;
 import org.neo4j.consistency.report.ConsistencyReport;
+import org.neo4j.consistency.report.ConsistencyReporter;
 import org.neo4j.consistency.report.ConsistencyReport.NodeConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.RelationshipConsistencyReport;
-import org.neo4j.consistency.report.ConsistencyReporter;
 import org.neo4j.consistency.store.DiffRecordAccess;
 import org.neo4j.consistency.store.RecordAccess;
+import org.neo4j.consistency.store.StoreAccess;
 import org.neo4j.consistency.store.synthetic.CountsEntry;
 import org.neo4j.helpers.Predicate;
 import org.neo4j.helpers.collection.MultiSet;
@@ -39,7 +40,9 @@ import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.kernel.impl.api.CountsAccessor;
 import org.neo4j.kernel.impl.api.CountsVisitor;
+import org.neo4j.kernel.impl.store.NodeLabelsField;
 import org.neo4j.kernel.impl.store.NodeStore;
+import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.counts.keys.CountsKey;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -58,6 +61,8 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
     private final Predicate<NodeRecord> nodeCountBuildCondition = new MultiPassAvoidanceCondition<>();
     private final Predicate<RelationshipRecord> relationshipCountBuildCondition = new MultiPassAvoidanceCondition<>();
     private final NodeStore nodeStore;
+    private final RelationshipStore relationshipStore;
+    private final StoreAccess storeAccess;
     private final CountsEntry.CheckAdapter CHECK_NODE_COUNT = new CountsEntry.CheckAdapter()
     {
         @Override
@@ -116,15 +121,18 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
         }
     };
 
-    public CountsBuilderDecorator( NodeStore nodeStore )
+    public CountsBuilderDecorator( StoreAccess storeAccess )
     {
-        this.nodeStore = nodeStore;
+        this.storeAccess = storeAccess ;
+        this.nodeStore = (NodeStore)storeAccess.getNodeStore();
+        this.relationshipStore = (RelationshipStore)storeAccess.getRelationshipStore();
     }
 
     @Override
     public OwningRecordCheck<NodeRecord,NodeConsistencyReport> decorateNodeChecker(
             OwningRecordCheck<NodeRecord,NodeConsistencyReport> checker )
     {
+    	((MultiPassAvoidanceCondition)nodeCountBuildCondition).setTerminationId(nodeStore.getHighId());
         return new NodeCounts( nodeStore, nodeCounts, nodeCountBuildCondition, checker );
     }
 
@@ -132,7 +140,8 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
     public OwningRecordCheck<RelationshipRecord,RelationshipConsistencyReport> decorateRelationshipChecker(
             OwningRecordCheck<RelationshipRecord,RelationshipConsistencyReport> checker )
     {
-        return new RelationshipCounts( nodeStore, relationshipCounts, relationshipCountBuildCondition, checker );
+    	((MultiPassAvoidanceCondition)relationshipCountBuildCondition).setTerminationId(relationshipStore.getHighId());
+        return new RelationshipCounts( storeAccess, relationshipCounts, relationshipCountBuildCondition, checker );
     }
 
     public void checkCounts( CountsAccessor counts, final ConsistencyReporter reporter, ProgressMonitorFactory
@@ -206,15 +215,18 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
             if ( countUpdateCondition.accept( record ) )
             {
                 if ( record.inUse() )
-                {
-                    final Set<Long> labels = labelsFor( nodeStore, engine, records, record.getId()
-                    );
+                {               	
+                	FullCheckNewUtils.NewCCCache.putToCache(record.getId(), new long[]{1,  record.getLabelField()});
+                	final Set<Long> labels = labelsFor( nodeStore, engine, records, record.getId());
+                	synchronized(counts)
+	                {
                     counts.add( nodeKey( WILDCARD ) );
                     for ( long label : labels )
                     {
                         counts.add( nodeKey( (int) label ) );
                     }
                 }
+            }
             }
             inner.check( record, engine, records );
         }
@@ -237,11 +249,11 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
         private final Predicate<RelationshipRecord> countUpdateCondition;
         private final OwningRecordCheck<RelationshipRecord,RelationshipConsistencyReport> inner;
 
-        public RelationshipCounts( NodeStore nodeStore, MultiSet<CountsKey> counts,
+        public RelationshipCounts( StoreAccess storeAccess, MultiSet<CountsKey> counts,
                                    Predicate<RelationshipRecord> countUpdateCondition,
                                    OwningRecordCheck<RelationshipRecord,RelationshipConsistencyReport> inner )
         {
-            this.nodeStore = nodeStore;
+            this.nodeStore = (NodeStore)storeAccess.getNodeStore();
             this.counts = counts;
             this.countUpdateCondition = countUpdateCondition;
             this.inner = inner;
@@ -263,18 +275,33 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
             {
                 if ( record.inUse() )
                 {
-                    final Set<Long> firstNodeLabels = labelsFor( nodeStore, engine, records, record.getFirstNode() );
-                    final Set<Long> secondNodeLabels = labelsFor( nodeStore, engine, records, record.getSecondNode() );
+                	Set<Long> firstNodeLabels = null, secondNodeLabels = null;
+                          		
+            		long firstLabelsField = FullCheckNewUtils.NewCCCache.getFromCache(record.getFirstNode())[1];
+            		if (NodeLabelsField.fieldPointsToDynamicRecordOfLabels(firstLabelsField))
+                		firstNodeLabels = labelsFor( nodeStore, engine, records, record.getFirstNode() );
+                	else
+                		firstNodeLabels = NodeLabelReader.getListOfLabels(firstLabelsField );
+   
+                	long secondLabelsField = FullCheckNewUtils.NewCCCache.getFromCache(record.getSecondNode())[1];                		            	
+                	if (NodeLabelsField.fieldPointsToDynamicRecordOfLabels(secondLabelsField))	
+                		secondNodeLabels = labelsFor( nodeStore, engine, records, record.getSecondNode() );
+                	else
+                		secondNodeLabels = NodeLabelReader.getListOfLabels(secondLabelsField );
+                	
                     final int type = record.getType();
-
+                    synchronized(counts)
+                    {
                     counts.add( relationshipKey( WILDCARD, WILDCARD, WILDCARD ) );
                     counts.add( relationshipKey( WILDCARD, type, WILDCARD ) );
+	                    if (firstNodeLabels != null)
                     for ( long firstLabel : firstNodeLabels )
                     {
                         counts.add( relationshipKey( (int) firstLabel, WILDCARD, WILDCARD ) );
                         counts.add( relationshipKey( (int) firstLabel, type, WILDCARD ) );
                     }
 
+	                    if (secondNodeLabels != null)
                     for ( long secondLabel : secondNodeLabels )
                     {
                         counts.add( relationshipKey( WILDCARD, WILDCARD, (int) secondLabel ) );
@@ -294,6 +321,7 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
                     }
                 }
             }
+			}
             inner.check( record, engine, records );
         }
 
@@ -309,7 +337,7 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
     private static class MultiPassAvoidanceCondition<T extends AbstractBaseRecord> implements Predicate<T>
     {
         private boolean started = false, done = false;
-
+        private long terminationId;
         @Override
         public boolean accept( T record )
         {
@@ -318,6 +346,12 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
                 return false;
             }
 
+            if ( record.getLongId() == terminationId)
+            {
+            	done = true;
+            	return true;
+            }
+            
             if ( record.getLongId() == 0 )
             {
                 if ( started )
@@ -332,6 +366,10 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
             }
             return true;
         }
+
+		public void setTerminationId(long id) {
+			terminationId = id -1;			
+		}
     }
 
     private static Set<Long> labelsFor( NodeStore nodeStore,

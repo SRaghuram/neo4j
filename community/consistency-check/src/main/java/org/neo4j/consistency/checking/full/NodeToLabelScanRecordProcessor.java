@@ -20,6 +20,7 @@
 package org.neo4j.consistency.checking.full;
 
 import org.neo4j.consistency.checking.RecordCheck;
+import org.neo4j.consistency.checking.full.RecordProcessor;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReporter;
 import org.neo4j.kernel.api.labelscan.LabelScanReader;

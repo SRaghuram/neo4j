@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2015 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
@@ -19,11 +19,31 @@
  */
 package org.neo4j.consistency.checking;
 
-import org.neo4j.consistency.RecordType;
+import java.util.Iterator;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import org.neo4j.consistency.checking.CheckDecorator;
+import org.neo4j.consistency.checking.DynamicRecordCheck;
+import org.neo4j.consistency.checking.DynamicStore;
+import org.neo4j.consistency.checking.LabelTokenRecordCheck;
+import org.neo4j.consistency.checking.NodeDynamicLabelOrphanChainStartCheck;
+import org.neo4j.consistency.checking.PropertyKeyTokenRecordCheck;
+import org.neo4j.consistency.checking.RecordCheck;
+import org.neo4j.consistency.checking.RelationshipGroupRecordCheck;
+import org.neo4j.consistency.checking.RelationshipTypeTokenRecordCheck;
+import org.neo4j.consistency.checking.full.Distributor;
+import org.neo4j.consistency.checking.full.FullCheckNewUtils;
+import org.neo4j.consistency.checking.full.StoreProcessorTask.Scanner;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.NodeConsistencyReport;
+import org.neo4j.consistency.store.StoreAccess;
+import org.neo4j.helpers.progress.ProgressListener;
+import org.neo4j.helpers.Predicate;
 import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.impl.store.RecordStore;
+import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -34,21 +54,21 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 
 import static java.lang.String.format;
-
 import static org.neo4j.consistency.checking.DynamicStore.ARRAY;
 import static org.neo4j.consistency.checking.DynamicStore.NODE_LABEL;
 import static org.neo4j.consistency.checking.DynamicStore.SCHEMA;
 
 public abstract class AbstractStoreProcessor extends RecordStore.Processor<RuntimeException>
 {
-    private final RecordCheck<NodeRecord, ConsistencyReport.NodeConsistencyReport> sparseNodeChecker;
-    private final RecordCheck<NodeRecord, NodeConsistencyReport> denseNodeChecker;
-    private final RecordCheck<RelationshipRecord, ConsistencyReport.RelationshipConsistencyReport> relationshipChecker;
-    private final RecordCheck<PropertyRecord, ConsistencyReport.PropertyConsistencyReport> propertyChecker;
-    private final RecordCheck<PropertyKeyTokenRecord, ConsistencyReport.PropertyKeyTokenConsistencyReport> propertyKeyTokenChecker;
-    private final RecordCheck<RelationshipTypeTokenRecord, ConsistencyReport.RelationshipTypeConsistencyReport> relationshipTypeTokenChecker;
-    private final RecordCheck<LabelTokenRecord, ConsistencyReport.LabelTokenConsistencyReport> labelTokenChecker;
-    private final RecordCheck<RelationshipGroupRecord, ConsistencyReport.RelationshipGroupConsistencyReport> relationshipGroupChecker;
+    private RecordCheck<NodeRecord,ConsistencyReport.NodeConsistencyReport> sparseNodeChecker;
+    private RecordCheck<NodeRecord,NodeConsistencyReport> denseNodeChecker;
+    private RecordCheck<RelationshipRecord,ConsistencyReport.RelationshipConsistencyReport> relationshipChecker;
+    private RecordCheck<PropertyRecord,ConsistencyReport.PropertyConsistencyReport> propertyChecker;
+    private RecordCheck<PropertyKeyTokenRecord,ConsistencyReport.PropertyKeyTokenConsistencyReport> propertyKeyTokenChecker;
+    private RecordCheck<RelationshipTypeTokenRecord,ConsistencyReport.RelationshipTypeConsistencyReport> relationshipTypeTokenChecker;
+    private RecordCheck<LabelTokenRecord,ConsistencyReport.LabelTokenConsistencyReport> labelTokenChecker;
+    private RecordCheck<RelationshipGroupRecord,ConsistencyReport.RelationshipGroupConsistencyReport> relationshipGroupChecker;
+    private int qSize = 10000;
 
     public AbstractStoreProcessor()
     {
@@ -57,55 +77,97 @@ public abstract class AbstractStoreProcessor extends RecordStore.Processor<Runti
 
     public AbstractStoreProcessor( CheckDecorator decorator )
     {
+        if ( decorator == null )
+        {
+            this.sparseNodeChecker = null;
+            this.denseNodeChecker = null;
+            this.relationshipChecker = null;
+            this.propertyChecker = null;
+            this.propertyKeyTokenChecker = null;
+            this.relationshipTypeTokenChecker = null;
+            this.labelTokenChecker = null;
+            this.relationshipGroupChecker = null;
+            return;
+        }
         this.sparseNodeChecker = decorator.decorateNodeChecker( NodeRecordCheck.forSparseNodes() );
         this.denseNodeChecker = decorator.decorateNodeChecker( NodeRecordCheck.forDenseNodes() );
         this.relationshipChecker = decorator.decorateRelationshipChecker( new RelationshipRecordCheck() );
         this.propertyChecker = decorator.decoratePropertyChecker( new PropertyRecordCheck() );
         this.propertyKeyTokenChecker = decorator.decoratePropertyKeyTokenChecker( new PropertyKeyTokenRecordCheck() );
-        this.relationshipTypeTokenChecker = decorator.decorateRelationshipTypeTokenChecker( new
-                RelationshipTypeTokenRecordCheck() );
+        this.relationshipTypeTokenChecker =
+                decorator.decorateRelationshipTypeTokenChecker( new RelationshipTypeTokenRecordCheck() );
         this.labelTokenChecker = decorator.decorateLabelTokenChecker( new LabelTokenRecordCheck() );
         this.relationshipGroupChecker = decorator.decorateRelationshipGroupChecker( new RelationshipGroupRecordCheck() );
     }
 
-    protected abstract void checkNode(
-            RecordStore<NodeRecord> store, NodeRecord node,
-            RecordCheck<NodeRecord, ConsistencyReport.NodeConsistencyReport> checker );
+    private boolean forward = true;
 
-    protected abstract void checkRelationship(
-            RecordStore<RelationshipRecord> store, RelationshipRecord rel,
-            RecordCheck<RelationshipRecord, ConsistencyReport.RelationshipConsistencyReport> checker );
+    public boolean getDirection()
+    {
+        return forward;
+    }
 
-    protected abstract void checkProperty(
-            RecordStore<PropertyRecord> store, PropertyRecord property,
-            RecordCheck<PropertyRecord, ConsistencyReport.PropertyConsistencyReport> checker );
+    public boolean reverseDirection()
+    {
+        forward = !forward;
+        return forward;
+    }
 
-    protected abstract void checkRelationshipTypeToken(
-            RecordStore<RelationshipTypeTokenRecord> store,
+    public void setQSize( int qSize )
+    {
+        this.qSize = qSize;
+    }
+
+    public void reDecorateRelationship( CheckDecorator decorator, RelationshipRecordCheck newDecorator )
+    {
+        this.relationshipChecker = decorator.decorateRelationshipChecker( (RelationshipRecordCheck) newDecorator );
+    }
+
+    public void reDecorateNode( CheckDecorator decorator, NodeRecordCheck newDecorator, boolean sparseNode )
+    {
+        if ( newDecorator == null )
+        {
+            this.sparseNodeChecker = decorator.decorateNodeChecker( NodeRecordCheck.forSparseNodes( false ) );
+            this.denseNodeChecker = decorator.decorateNodeChecker( NodeRecordCheck.forDenseNodes( false ) );
+        }
+        else
+        {
+            if ( sparseNode )
+                this.sparseNodeChecker = decorator.decorateNodeChecker( newDecorator );
+            else
+                this.denseNodeChecker = decorator.decorateNodeChecker( newDecorator );
+        }
+    }
+
+    protected abstract void checkNode( RecordStore<NodeRecord> store, NodeRecord node,
+            RecordCheck<NodeRecord,ConsistencyReport.NodeConsistencyReport> checker );
+
+    protected abstract void checkRelationship( RecordStore<RelationshipRecord> store, RelationshipRecord rel,
+            RecordCheck<RelationshipRecord,ConsistencyReport.RelationshipConsistencyReport> checker );
+
+    protected abstract void checkProperty( RecordStore<PropertyRecord> store, PropertyRecord property,
+            RecordCheck<PropertyRecord,ConsistencyReport.PropertyConsistencyReport> checker );
+
+    protected abstract void checkRelationshipTypeToken( RecordStore<RelationshipTypeTokenRecord> store,
             RelationshipTypeTokenRecord record,
-            RecordCheck<RelationshipTypeTokenRecord, ConsistencyReport.RelationshipTypeConsistencyReport> checker );
+            RecordCheck<RelationshipTypeTokenRecord,ConsistencyReport.RelationshipTypeConsistencyReport> checker );
 
-    protected abstract void checkLabelToken(
-            RecordStore<LabelTokenRecord> store,
-            LabelTokenRecord record,
-            RecordCheck<LabelTokenRecord, ConsistencyReport.LabelTokenConsistencyReport> checker );
+    protected abstract void checkLabelToken( RecordStore<LabelTokenRecord> store, LabelTokenRecord record,
+            RecordCheck<LabelTokenRecord,ConsistencyReport.LabelTokenConsistencyReport> checker );
 
-    protected abstract void checkPropertyKeyToken(
-            RecordStore<PropertyKeyTokenRecord> store, PropertyKeyTokenRecord record,
-            RecordCheck<PropertyKeyTokenRecord,
-                    ConsistencyReport.PropertyKeyTokenConsistencyReport> checker );
+    protected abstract void checkPropertyKeyToken( RecordStore<PropertyKeyTokenRecord> store,
+            PropertyKeyTokenRecord record,
+            RecordCheck<PropertyKeyTokenRecord,ConsistencyReport.PropertyKeyTokenConsistencyReport> checker );
 
-    protected abstract void checkDynamic(
-            RecordType type, RecordStore<DynamicRecord> store, DynamicRecord string,
-            RecordCheck<DynamicRecord, ConsistencyReport.DynamicConsistencyReport> checker );
+    protected abstract void checkDynamic( RecordType type, RecordStore<DynamicRecord> store, DynamicRecord string,
+            RecordCheck<DynamicRecord,ConsistencyReport.DynamicConsistencyReport> checker );
 
-    protected abstract void checkDynamicLabel(
-            RecordType type, RecordStore<DynamicRecord> store, DynamicRecord string,
-            RecordCheck<DynamicRecord, ConsistencyReport.DynamicLabelConsistencyReport> checker );
+    protected abstract void checkDynamicLabel( RecordType type, RecordStore<DynamicRecord> store, DynamicRecord string,
+            RecordCheck<DynamicRecord,ConsistencyReport.DynamicLabelConsistencyReport> checker );
 
-    protected abstract void checkRelationshipGroup(
-            RecordStore<RelationshipGroupRecord> store, RelationshipGroupRecord record,
-            RecordCheck<RelationshipGroupRecord, ConsistencyReport.RelationshipGroupConsistencyReport> checker );
+    protected abstract void checkRelationshipGroup( RecordStore<RelationshipGroupRecord> store,
+            RelationshipGroupRecord record,
+            RecordCheck<RelationshipGroupRecord,ConsistencyReport.RelationshipGroupConsistencyReport> checker );
 
     @Override
     public void processSchema( RecordStore<DynamicRecord> store, DynamicRecord schema )
@@ -114,17 +176,35 @@ public abstract class AbstractStoreProcessor extends RecordStore.Processor<Runti
         checkDynamic( RecordType.SCHEMA, store, schema, new DynamicRecordCheck( store, SCHEMA ) );
     }
 
+    private int sparse = 0, dense = 0;
+
     @Override
     public final void processNode( RecordStore<NodeRecord> store, NodeRecord node )
     {
         if ( node.isDense() )
         {
+            dense++;
             checkNode( store, node, denseNodeChecker );
         }
         else
         {
+            sparse++;
             checkNode( store, node, sparseNodeChecker );
         }
+        /*if (node.getLongId() % 100000 == 0)
+        {
+        	System.out.println("Disk I/Os -"+ConsistencyCheckService.getNeoStore().getAccessStatsStr());
+        	System.out.println("Dense:["+dense+"] Sparse ["+sparse+"]");
+        	dense = sparse = 0;
+        	StringBuilder str = new StringBuilder();
+        	for (int i = 0; i < FullCheckNewUtils.Fields.length; i++)
+        	{
+        		if (FullCheckNewUtils.Fields[i] > 0)
+        			str.append("["+i+":"+ FullCheckNewUtils.Fields[i]+"] ");
+        		FullCheckNewUtils.Fields[i] = 0;
+        	}
+        	System.out.println("Check times -"+ str.toString());
+        }*/
     }
 
     @Override
@@ -183,14 +263,14 @@ public abstract class AbstractStoreProcessor extends RecordStore.Processor<Runti
 
     @Override
     public final void processRelationshipTypeToken( RecordStore<RelationshipTypeTokenRecord> store,
-                                                    RelationshipTypeTokenRecord record )
+            RelationshipTypeTokenRecord record )
     {
         checkRelationshipTypeToken( store, record, relationshipTypeTokenChecker );
     }
 
     @Override
-    public final void processPropertyKeyToken( RecordStore<PropertyKeyTokenRecord> store,
-                                               PropertyKeyTokenRecord record )
+    public final void
+            processPropertyKeyToken( RecordStore<PropertyKeyTokenRecord> store, PropertyKeyTokenRecord record )
     {
         checkPropertyKeyToken( store, record, propertyKeyTokenChecker );
     }
@@ -207,4 +287,165 @@ public abstract class AbstractStoreProcessor extends RecordStore.Processor<Runti
     {
         checkRelationshipGroup( store, record, relationshipGroupChecker );
     }
+
+    public RecordCheck<PropertyRecord,ConsistencyReport.PropertyConsistencyReport> getPropertyChecker()
+    {
+        return this.propertyChecker;
+    }
+
+    //-------------------------start - Parallel logic -------------------------------------
+    static long recordsPerCPU = 0;
+
+    public static boolean withinBounds( long id )
+    {
+        if ( recordsPerCPU > 0
+                && (id > (threadIndex.get() + 1) * recordsPerCPU || id < threadIndex.get() * recordsPerCPU) )
+            return false;
+        return true;
+    }
+
+    public <R extends AbstractBaseRecord> String applyFilteredParallel( RecordStore<R> store, StoreAccess storeAccess, 
+            Distributor<R> distributor, Predicate<? super R>... filters ) throws RuntimeException
+    {
+        return applyFilteredParallel( store, storeAccess, distributor, ProgressListener.NONE, filters );
+    }
+
+    public <R extends AbstractBaseRecord> String applyFilteredParallel( RecordStore<R> store, StoreAccess storeAccess, 
+            Distributor<R> distributor, ProgressListener progressListener, Predicate<? super R>... filters )
+            throws RuntimeException
+    {
+        return applyParallel( store, storeAccess, distributor, progressListener, filters );
+    }
+
+    private <R extends AbstractBaseRecord> String applyParallel( RecordStore<R> store, StoreAccess storeAccess, Distributor<R> distributor,
+            ProgressListener progressListener, Predicate<? super R>... filters ) throws RuntimeException
+    {
+        int MAX_THREADS = distributor.getNumThreads();
+        recordsPerCPU = distributor.getRecordsPerCPU();
+        RecordCheckWorker<R>[] worker = new RecordCheckWorker[MAX_THREADS];
+        ArrayBlockingQueue<R>[] recordQ = new ArrayBlockingQueue[MAX_THREADS];
+        CountDownLatch startLatch = new CountDownLatch( 1 );
+        CountDownLatch endLatch = new CountDownLatch( MAX_THREADS );
+        StringBuilder msgs = new StringBuilder();
+        for ( int threadId = 0; threadId < MAX_THREADS; threadId++ )
+        {
+            recordQ[threadId] = new ArrayBlockingQueue<R>( qSize );
+            worker[threadId] =
+                    new RecordCheckWorker<R>( threadId, startLatch, endLatch, recordQ[threadId], store, this );
+            worker[threadId].start();
+        }
+        try
+        {
+            startLatch.countDown();
+            //--            
+            int[] recsProcessed = new int[MAX_THREADS];
+            int total = 0;
+            int[] qIndex = null;
+            int entryCount = 0;
+            Iterable<R> iterator = Scanner.scan( store, storeAccess, this.getDirection(), filters );
+            for ( R record : iterator )
+            {
+                total++;
+                try
+                {
+                    qIndex = distributor.whichQ( record, qIndex );
+                    for ( int i = 0; i < qIndex.length; i++ )
+                    {
+                        while ( !recordQ[qIndex[i]].offer( record, 100, TimeUnit.MILLISECONDS ) )
+                            qIndex[i] = (qIndex[i] + 1) % qIndex.length;
+                        recsProcessed[qIndex[i]]++;
+                    }
+                }
+                catch ( Exception e )
+                {
+                    System.out.println( "ERROR in applyParallel scan:" + e.getMessage() );
+                    break;
+                }
+                progressListener.set( entryCount++ );
+            }
+            msgs.append( "Max Threads[" + MAX_THREADS + "] Recs/CPU[" + distributor.getRecordsPerCPU() + "]" );
+            msgs.append( "Total[" + total + "] " );
+            for ( int i = 0; i < MAX_THREADS; i++ )
+                msgs.append( "Q" + i + "[" + recsProcessed[i] + "] " );
+            progressListener.done();
+            //--
+            for ( int threadId = 0; threadId < MAX_THREADS; threadId++ )
+                worker[threadId].isDone();
+            endLatch.await();
+        }
+        catch ( Exception e )
+        {
+            //ignore
+            System.out.println( "ERROR in applyParallel:" + e.getMessage() );
+        }
+        recordsPerCPU = 0;
+        return msgs.toString();
+    }
+
+    public static final ThreadLocal<Integer> threadIndex = new ThreadLocal<>();
+
+    private class RecordCheckWorker<R extends AbstractBaseRecord> extends java.lang.Thread
+    {
+        private final int threadId;
+        private final CountDownLatch waitSignal;
+        private final CountDownLatch endSignal;
+        public boolean done = false;
+        private int threadLocalProgress;
+        public ArrayBlockingQueue<R> recordsQ = null;
+        RecordStore<R> store;
+        AbstractStoreProcessor processor = null;
+
+        public RecordCheckWorker( int threadId, CountDownLatch wait, CountDownLatch end,
+                ArrayBlockingQueue<R> recordsQ, RecordStore<R> store, AbstractStoreProcessor p )
+        {
+            this.threadId = threadId;
+            this.recordsQ = recordsQ;
+            this.waitSignal = wait;
+            this.store = store;
+            this.processor = p;
+            this.endSignal = end;
+        }
+
+        private void reportProgress()
+        {
+            //progress.add( threadLocalProgress );
+            threadLocalProgress = 0;
+        }
+
+        public void isDone()
+        {
+            done = true;
+        }
+
+        @Override
+        public void run()
+        {
+            try
+            {
+                FullCheckNewUtils.threadIndex.set( threadId );
+                waitSignal.await();
+            }
+            catch ( InterruptedException e )
+            {
+                Thread.currentThread().interrupt();
+            }
+
+            while ( !done || !recordsQ.isEmpty() )
+            {
+                try
+                {
+                    R record = recordsQ.poll( 2000, TimeUnit.MILLISECONDS );
+                    if ( record != null )
+                        store.accept( processor, record );
+                }
+                catch ( Exception ie )
+                {
+                    System.out.println( "error in RecordStoreProcessor:" + ie.getMessage() );
+                }
+            }
+            reportProgress();
+            endSignal.countDown();
+        }
+    }
+    //------------------------- end - Parallel logic -------------------------------------
 }

@@ -24,11 +24,11 @@ import java.util.Collection;
 import java.util.List;
 
 import org.junit.Test;
-
-import org.neo4j.consistency.checking.CheckerEngine;
-import org.neo4j.consistency.report.ConsistencyReport;
+import org.neo4j.consistency.old.checking.CheckerEngine;
+import org.neo4j.consistency.old.checking.full.NodeInUseWithCorrectLabelsCheck;
+import org.neo4j.consistency.old.report.ConsistencyReport;
+import org.neo4j.consistency.old.store.synthetic.LabelScanDocument;
 import org.neo4j.consistency.store.RecordAccessStub;
-import org.neo4j.consistency.store.synthetic.LabelScanDocument;
 import org.neo4j.kernel.impl.store.DynamicArrayStore;
 import org.neo4j.kernel.impl.store.InlineNodeLabels;
 import org.neo4j.kernel.impl.store.PreAllocatedRecords;
@@ -39,7 +39,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.consistency.checking.RecordCheckTestBase.inUse;
 import static org.neo4j.consistency.checking.RecordCheckTestBase.notInUse;
 import static org.neo4j.kernel.impl.store.DynamicNodeLabels.dynamicPointer;

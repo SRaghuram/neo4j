@@ -19,10 +19,22 @@
  */
 package org.neo4j.consistency.checking;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
+import org.neo4j.collection.primitive.Primitive;
+import org.neo4j.collection.primitive.PrimitiveIntSet;
+import org.neo4j.consistency.checking.ChainCheck;
+import org.neo4j.consistency.checking.CheckerEngine;
+import org.neo4j.consistency.checking.ComparativeRecordChecker;
+import org.neo4j.consistency.checking.OwningRecordCheck;
+import org.neo4j.consistency.checking.RecordField;
+import org.neo4j.consistency.checking.full.FullCheckNewUtils;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.store.DiffRecordAccess;
+import org.neo4j.consistency.store.DirectRecordReference;
+import org.neo4j.consistency.store.FilteringRecordAccess;
 import org.neo4j.consistency.store.RecordAccess;
 import org.neo4j.kernel.impl.store.record.NeoStoreRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -64,6 +76,19 @@ public abstract class PrimitiveRecordCheck
                 }
             };
 
+
+    @SafeVarargs
+	PrimitiveRecordCheck(boolean firstProperty, RecordField<RECORD, REPORT>... fields )
+    {
+    	if (firstProperty)
+    	{
+    		this.fields = Arrays.copyOf( fields, fields.length + 1 );
+    		this.fields[fields.length] = new FirstProperty();
+    	}
+    	else
+    		this.fields = Arrays.copyOf( fields, fields.length);
+    }
+    
     @SafeVarargs
     PrimitiveRecordCheck( RecordField<RECORD, REPORT>... fields )
     {
@@ -71,16 +96,60 @@ public abstract class PrimitiveRecordCheck
         this.fields[fields.length] = new FirstProperty();
     }
 
+    public void purgePropertyCheck()
+    {
+    	this.fields[fields.length -1] = null;
+    }
+    
+    
     private class FirstProperty
             implements RecordField<RECORD, REPORT>, ComparativeRecordChecker<RECORD, PropertyRecord, REPORT>
     {
+        private ArrayList<PropertyRecord> getAllPropsInChain(long propId, RecordAccess records)
+        {
+            ArrayList<PropertyRecord> propList = new ArrayList();
+            PropertyRecord prop = ((DirectRecordReference<PropertyRecord>)records.property( propId )).record();
+            propList.add( prop );
+            while (!Record.NO_NEXT_PROPERTY.is(prop.getNextProp()))
+            {
+                prop = ((DirectRecordReference<PropertyRecord>)records.property( prop.getNextProp() )).record();
+                propList.add(prop);
+            }
+            return propList;
+        }
         @Override
         public void checkConsistency( RECORD record, CheckerEngine<RECORD, REPORT> engine,
                                       RecordAccess records )
         {
             if ( !Record.NO_NEXT_PROPERTY.is( record.getNextProp() ) )
             {
-                engine.comparativeCheck( records.property( record.getNextProp() ), this );
+                List<PropertyRecord> props = (List<PropertyRecord>)((FilteringRecordAccess)records).getStoreAccess().getRawNeoStore().getPropertyStore().getPropertyRecordChain(record.getNextProp());
+                        //(List<PropertyRecord>)FullCheckNewUtils.neoStore.getPropertyStore().getPropertyRecordChain(record.getNextProp());
+                		//getAllPropsInChain(record.getNextProp(), records);
+                //FullCheckNewUtils.countProperties( props );
+                //props[0] is first in chain
+                if ( !Record.NO_PREVIOUS_PROPERTY.is( props.get( 0 ).getPrevProp() ) )
+                {
+                    engine.report().propertyNotFirstInChain( props.get( 0 ) );
+                }
+                    //new ChainCheck<RECORD, REPORT>().checkReference( record, property, engine, records );
+                PrimitiveIntSet keys = Primitive.intSet();
+                for (PropertyRecord property : props)
+                {
+                    if ( !property.inUse() )
+                    {
+                        engine.report().propertyNotInUse( property );
+                    }
+                    else
+                    for ( int key : ChainCheck.keys( property ) )
+                    {
+                        if ( !keys.add( key ) )
+                        {
+                            engine.report().propertyKeyNotUniqueInChain();
+                        }
+                    }
+                }
+                
             }
         }
 
@@ -132,7 +201,13 @@ public abstract class PrimitiveRecordCheck
         }
         for ( RecordField<RECORD, REPORT> field : fields )
         {
+        	try {        		
+	        	if (field != null)
             field.checkConsistency( record, engine, records );
+        	} catch (Exception e)
+        	{
+        		System.out.println("error in PrimitiveRecordCheck.check:"+e.getMessage());
+        	}
         }
     }
 
@@ -145,6 +220,7 @@ public abstract class PrimitiveRecordCheck
         {
             for ( RecordField<RECORD, REPORT> field : fields )
             {
+            	if (field != null)
                 field.checkChange( oldRecord, newRecord, engine, records );
             }
         }

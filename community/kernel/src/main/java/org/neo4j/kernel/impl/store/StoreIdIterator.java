@@ -27,8 +27,8 @@ import static java.lang.String.format;
 
 public class StoreIdIterator implements PrimitiveLongIterator
 {
-    private final RecordStore<?> store;
-    private long highId, id;
+    protected final RecordStore<?> store;
+    protected long highId, id;
 
     public StoreIdIterator( RecordStore<?> store )
     {

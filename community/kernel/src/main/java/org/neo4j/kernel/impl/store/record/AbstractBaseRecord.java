@@ -25,6 +25,7 @@ public abstract class AbstractBaseRecord implements CloneableInPublic
 {
     private boolean inUse = false;
     private boolean created = false;
+    private boolean realRecord = true;
     
     public abstract long getLongId();
 
@@ -48,6 +49,14 @@ public abstract class AbstractBaseRecord implements CloneableInPublic
         return created;
     }
     
+    public boolean isReal()
+    {
+    	return realRecord;
+    }
+    public void setReal(boolean real)
+    {
+    	realRecord = real;
+    }
     @Override
     public int hashCode()
     {

@@ -19,7 +19,7 @@
  */
 package org.neo4j.consistency.checking.incremental;
 
-import org.neo4j.consistency.RecordType;
+import org.neo4j.consistency.checking.RecordType;
 import org.neo4j.consistency.checking.SchemaRecordCheck;
 import org.neo4j.consistency.report.ConsistencyReporter;
 import org.neo4j.consistency.report.ConsistencySummaryStatistics;
@@ -48,7 +48,7 @@ public class IncrementalDiffCheck extends DiffCheck
     public ConsistencySummaryStatistics execute( DiffStore diffs )
     {
         ConsistencySummaryStatistics summary = new ConsistencySummaryStatistics();
-        ConsistencyReporter reporter = new ConsistencyReporter( new DirectDiffRecordAccess( diffs ),
+        ConsistencyReporter reporter = new ConsistencyReporter( new DirectDiffRecordAccess( diffs ), 
                 new InconsistencyReport( new InconsistencyMessageLogger( logger ), summary ) );
         StoreProcessor processor = new StoreProcessor( reporter );
         diffs.applyToAll( processor );

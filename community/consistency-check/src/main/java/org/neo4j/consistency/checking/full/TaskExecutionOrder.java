@@ -20,8 +20,9 @@
 package org.neo4j.consistency.checking.full;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
+import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.consistency.checking.full.StoppableRunnable;
 import org.neo4j.helpers.progress.Completion;
 
 public enum TaskExecutionOrder
@@ -33,11 +34,22 @@ public enum TaskExecutionOrder
     {
         try
         {
+        	int id = 0;
             for ( StoppableRunnable task : tasks )
             {
+            	long time = System.currentTimeMillis();
+            	String name = task.getStage() == null? "["+id+":"+ task.getName()+"]": "["+task.getStage().name() +"] "+ task.getStage().getPurpose();
+            	
+            	FullCheckNewUtils.printMessage("Start-----"+name, true);
                 task.run();
+                time = System.currentTimeMillis()-time;
+                FullCheckNewUtils.TaskTimes[id] = "["+task.getName()+"]["+id+"]["+time+"]";
+                id++;           
+            	FullCheckNewUtils.Stages.setTimeTaken(task.getStage(), new Long(time));                     	
+            	FullCheckNewUtils.saveMessage("End["+time+"]-----"+name+"\n");
+            	FullCheckNewUtils.printSavedMessage();              
+            	FullCheckNewUtils.clearMessage();
             }
-            completion.await( 0, TimeUnit.SECONDS );
         }
         catch ( Exception e )
         {
