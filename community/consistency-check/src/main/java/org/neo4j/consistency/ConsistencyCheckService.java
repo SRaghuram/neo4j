@@ -135,7 +135,7 @@ public class ConsistencyCheckService
                 StoreAccess storeAccessNew = new StoreAccess( storeAccess );
                 FullCheckNewUtils.setFactory(factory, neoStore, fileSystem, storeAccessNew);
                 DirectStoreAccess stores = new DirectStoreAccess( storeAccessNew, labelScanStore, indexes );
-                org.neo4j.consistency.checking.full.FullCheck check = new org.neo4j.consistency.checking.full.FullCheck( tuningConfiguration, progressFactory );
+                org.neo4j.consistency.checking.full.FullCheck check = new org.neo4j.consistency.checking.full.FullCheck( tuningConfiguration, progressFactory, reportFile );
                 summary = check.execute( stores, StringLogger.tee( logger, report ) );
             }
             finally

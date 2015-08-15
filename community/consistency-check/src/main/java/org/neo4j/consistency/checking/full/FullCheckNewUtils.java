@@ -267,7 +267,7 @@ public class FullCheckNewUtils
             }
         };
         static boolean[] isParallel = new boolean[] {false, false, false, true, 
-                                                     false, true, true, false, 
+                                                     false, true, true, true, 
                                                      true, true};
        
         static Long[] times = new Long[Stages.values().length];

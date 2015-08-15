@@ -24,6 +24,7 @@ import java.util.Iterator;
 
 import org.neo4j.consistency.store.StoreAccess;
 import org.neo4j.kernel.api.direct.BoundedIterable;
+import org.neo4j.kernel.impl.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 
@@ -62,5 +63,16 @@ public class IterableStore<RECORD extends AbstractBaseRecord> implements Bounded
     public void setDirection(boolean forward )
     {
     	this.forward = forward;
+    }
+    
+    public void warmUpCache()
+    {
+        int recordsPerPage =  ((CommonAbstractStore)store).getPageSize()/store.getRecordSize();
+        long id = 0;
+        while (id < store.getHighId()/2)
+        {
+            RECORD record = store.getRecord( id );
+            id += recordsPerPage;
+        }
     }
 }

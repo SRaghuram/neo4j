@@ -53,6 +53,7 @@ public class StoreProcessor extends AbstractStoreProcessor
     private int[] cacheFields = null;
     private FullCheckNewUtils.Stages stage;
     protected volatile boolean shouldStop;
+    private boolean parallel = false;
     
 
     public StoreProcessor( CheckDecorator decorator, ConsistencyReport.Reporter report )
@@ -101,9 +102,13 @@ public class StoreProcessor extends AbstractStoreProcessor
         }
     }
 
+    public void setParallel(boolean value)
+    {
+        parallel = value;
+    }
     public boolean isParallel()
     {
-        return stage == null ? false : stage.isParallel( stage );
+        return stage == null ? parallel : stage.isParallel( stage );
     }
 
     @SuppressWarnings( "UnusedParameters" )

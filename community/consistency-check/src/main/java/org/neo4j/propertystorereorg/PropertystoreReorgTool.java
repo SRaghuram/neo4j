@@ -106,6 +106,7 @@ public class PropertystoreReorgTool
             PropertystoreReorgTool reorgTool = new PropertystoreReorgTool(progress,
                     storeAccessNew, factory, fileSystem);
             reorgTool.run();
+            neoStore.close();
         }
         catch ( Exception e )
         {
@@ -211,25 +212,42 @@ public class PropertystoreReorgTool
     }
     public List<StoppableRunnable> createTasksForPropertyFix( boolean useLabelOrder )
     {
-        return createTasksForPropertyFix( null );
+        return createTasksForPropertyFix( null, useLabelOrder );
     }
     
-    public List<StoppableRunnable> createTasksForPropertyFix(List<StoppableRunnable> tasks)
+    public List<StoppableRunnable> createTasksForPropertyFix(List<StoppableRunnable> tasks, boolean useLabelOrder)
     {
         if (tasks == null)
             tasks = new ArrayList<>();
-        //tasks.add( new RecordScanner<PropertyRecord>( new IterableStore<PropertyRecord>( storeAccess
-        //        .getPropertyStore(), storeAccess ), "PropertyStore locality - before relocation", progress,
-        //        new PropertyStoreLocalityProcess( (PropertyStore) storeAccess.getPropertyStore(), storeAccess ) ) );
+        tasks.add( new RecordScanner<PropertyRecord>( new IterableStore<PropertyRecord>( storeAccess
+                .getPropertyStore(), storeAccess ), "PropertyStore locality - before relocation", progress,
+                new PropertyStoreLocalityProcess( (PropertyStore) storeAccess.getPropertyStore(), storeAccess ) ) );
         // property relocation
         PropertyStoreRelocatorProcess propertyRelocator = new PropertyStoreRelocatorProcess( storeAccess, storeFactory, fileSys);
         //as part of prepare, save the nodestore and relationshipstore files as they get updated during relocation
         CommandProcessor prepare = new CommandTask( storeAccess, storeFactory, fileSys,
                 CommandTask.CCCommandType.CCNew_BackupNodeAndRelationshipStore,
                 CommandTask.CCCommandType.CCNew_CreateTempStore);
-                
-        //Now, relocate the properties - first for nodes and then for relationships
-        tasks.add( new RecordScanner<NodeRecord>( new IterableStore<NodeRecord>( storeAccess.getNodeStore(),
+        if (useLabelOrder)    
+        {
+            
+            NodeLabelCountProcess nodeLabelCountProcess = new NodeLabelCountProcess( (NodeStore) storeAccess
+                    .getNodeStore(), storeAccess );
+            CommandProcessor stateChanger = nodeLabelCountProcess.new StateChanger();
+            RecordScanner scanner = new RecordScanner<>( new IterableStore<>( storeAccess.getNodeStore(), storeAccess ),
+                    "NodeStore label scan", progress, nodeLabelCountProcess, stateChanger );
+            scanner.setParallel( true );
+            scanner.setIteration ( 3 );
+            tasks.add( scanner );
+            IterableStore<NodeRecord> nodeIterableStore =  new IterableStore<NodeRecord>( storeAccess.getNodeStore(),
+                    storeAccess );;
+           
+            nodeIterableStore.setUseNodeIdMap( new NodeIdMapByLabel() ); 
+            tasks.add( new RecordScanner<NodeRecord>( nodeIterableStore, "Relocate node property chains", progress, propertyRelocator, prepare) );
+        }
+        else
+            //Now, relocate the properties - first for nodes and then for relationships
+            tasks.add( new RecordScanner<NodeRecord>( new IterableStore<NodeRecord>( storeAccess.getNodeStore(),
                 storeAccess ), "Relocate node property chains", progress, propertyRelocator, prepare) );
         
         // as part of cleanup after the property relocation, save the old property store files and move the new property 
@@ -247,9 +265,9 @@ public class PropertystoreReorgTool
         if (tasks == null)
             tasks = new ArrayList<>();
         
-        //tasks.add( new RecordScanner<PropertyRecord>( new IterableStore<PropertyRecord>( storeAccess
-        //        .getPropertyStore(), storeAccess ), "PropertyStore locality - before relocation", progress,
-        //        new PropertyStoreLocalityProcess( (PropertyStore) storeAccess.getPropertyStore(), storeAccess ) ) );
+        tasks.add( new RecordScanner<PropertyRecord>( new IterableStore<PropertyRecord>( storeAccess
+                .getPropertyStore(), storeAccess ), "PropertyStore locality - before relocation", progress,
+                new PropertyStoreLocalityProcess( (PropertyStore) storeAccess.getPropertyStore(), storeAccess ) ) );
         // property relocation
         PropertyStoreRelocatorProcess propertyRelocator = new PropertyStoreRelocatorProcess( storeAccess, storeFactory, fileSys);
         //as part of prepare, save the nodestore and relationshipstore files as they get updated during relocation

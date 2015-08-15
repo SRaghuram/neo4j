@@ -39,34 +39,43 @@ public class RecordScanner<RECORD> implements StoppableRunnable
 
     private volatile boolean continueScanning = true;
     private FullCheckNewUtils.Stages stage = null;
+    private IterableStore[] warmUpStores = null;
 
     public RecordScanner( BoundedIterable<RECORD> store,
                           String taskName,
                           ProgressMonitorFactory.MultiPartBuilder builder,
-                          RecordProcessor<RECORD> processor )
+                          RecordProcessor<RECORD> processor, IterableStore... warmUpStores )
     {
         this.store = store;
         this.processor = processor;
         this.progress = builder.progressForPart( taskName, store.maxCount() );
         this.taskName = taskName;
         this.stage = null;
+        this.warmUpStores = warmUpStores;
     }
     public RecordScanner( BoundedIterable<RECORD> store,
             String taskName,
             ProgressMonitorFactory.MultiPartBuilder builder,
-            RecordProcessor<RECORD> processor, FullCheckNewUtils.Stages stage )
+            RecordProcessor<RECORD> processor, FullCheckNewUtils.Stages stage,
+            IterableStore... warmUpStores)
     {
     	this.store = store;
         this.processor = processor;
         this.progress = builder.progressForPart( taskName, store.maxCount() );
         this.taskName = taskName;
         this.stage = stage;
+        this.warmUpStores = warmUpStores;
     }
 
     public void run()
     {
         long start = System.currentTimeMillis();
         FullCheckNewUtils.processor = false;
+        if (warmUpStores != null)
+        {
+            for (IterableStore store : warmUpStores)
+                store.warmUpCache();
+        }
     	if (stage == null || !stage.isParallel(stage))
     		runSequential();
     	else

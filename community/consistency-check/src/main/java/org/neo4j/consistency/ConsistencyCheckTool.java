@@ -212,7 +212,7 @@ public class ConsistencyCheckTool
                 + storeDir + "<---------------" );
         Config tuningConfiguration = readTuningConfiguration( storeDir, arguments );
         attemptRecoveryOrCheckStateOfLogicalLogs( arguments, storeDir );
-        StringLogger logger = StringLogger.SYSTEM;
+        StringLogger logger = StringLogger.DEV_NULL;//  SYSTEM;
         try
         {
             consistencyCheckService.runFullConsistencyCheck( storeDir, tuningConfiguration,

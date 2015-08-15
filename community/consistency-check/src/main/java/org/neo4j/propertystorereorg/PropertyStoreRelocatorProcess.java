@@ -502,13 +502,17 @@ public class PropertyStoreRelocatorProcess implements RecordProcessor<Abstract64
                     property.addPropertyBlock( newBlock );
                 }
                 //link with previous property
-                if ( index++ > 0 )
+                if ( index > 0 )
                 {
                     property.setPrevProp( properties.get( index - 1 ).getId() );
-                    properties.get( index - 1 ).setNextProp( property.getId() );
+                    properties.get( index - 1 ).setNextProp( property.getId() );                   
                 }
+                index++;
             }
            
+            if (properties.get( 0 ).getPrevProp() != Record.NO_PREVIOUS_PROPERTY.intValue() ||
+                    properties.get( 0 ).getId() != record.getNextProp() )
+                System.out.println("Error in linkages");
             for ( PropertyRecord property : properties )
             {
                 TempPropertyStore.updateRecord( property );

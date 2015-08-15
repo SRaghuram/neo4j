@@ -121,6 +121,7 @@ public abstract class PrimitiveRecordCheck
         public void checkConsistency( RECORD record, CheckerEngine<RECORD, REPORT> engine,
                                       RecordAccess records )
         {
+            int i = 0;
             if ( !Record.NO_NEXT_PROPERTY.is( record.getNextProp() ) )
             {
                 List<PropertyRecord> props = (List<PropertyRecord>)((FilteringRecordAccess)records).getStoreAccess().getRawNeoStore().getPropertyStore().getPropertyRecordChain(record.getNextProp());

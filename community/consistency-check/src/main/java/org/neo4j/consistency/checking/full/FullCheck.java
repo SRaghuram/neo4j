@@ -19,6 +19,7 @@
  */
 package org.neo4j.consistency.checking.full;
 
+import java.io.File;
 import java.lang.reflect.Array;
 import java.util.List;
 
@@ -60,8 +61,9 @@ public class FullCheck
     private final IndexSamplingConfig samplingConfig;
     private final boolean checkGraph;
     private final Config tuningConfiguration;
+    private final File reportFile;
 
-    public FullCheck( Config tuningConfiguration, ProgressMonitorFactory progressFactory )
+    public FullCheck( Config tuningConfiguration, ProgressMonitorFactory progressFactory, File reportFile )
     {
         this.checkPropertyOwners = tuningConfiguration.get( ConsistencyCheckSettings.consistency_check_property_owners );
         this.checkLabelScanStore = tuningConfiguration.get( ConsistencyCheckSettings.consistency_check_label_scan_store );
@@ -71,6 +73,7 @@ public class FullCheck
         this.samplingConfig = new IndexSamplingConfig( tuningConfiguration );
         this.progressFactory = progressFactory;
         this.tuningConfiguration = tuningConfiguration;
+        this.reportFile = reportFile;
     }
 
     public ConsistencySummaryStatistics execute( DirectStoreAccess stores, StringLogger logger )
@@ -104,6 +107,9 @@ public class FullCheck
         if ( !summary.isConsistent() )
         {
             logger.logMessage( "Inconsistencies found: " + summary );
+            StringLogger.SYSTEM.logMessage( "Inconsistencies found: " + summary );
+            if (reportFile != null)
+                StringLogger.SYSTEM.logMessage("Inconsistency Report at ["+ reportFile.getPath()+"]");
         }
         return summary;
     }

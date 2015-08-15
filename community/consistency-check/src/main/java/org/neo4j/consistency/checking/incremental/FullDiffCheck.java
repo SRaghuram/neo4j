@@ -58,6 +58,6 @@ public class FullDiffCheck extends DiffCheck
 
         SchemaIndexProvider indexes = new LuceneSchemaIndexProvider( DirectoryFactory.PERSISTENT, tuningConfiguration );
         DirectStoreAccess stores = new DirectStoreAccess( diffs, labelScanStore, indexes );
-        return new FullCheck( tuningConfiguration, ProgressMonitorFactory.NONE ).execute( stores, logger );
+        return new FullCheck( tuningConfiguration, ProgressMonitorFactory.NONE, null ).execute( stores, logger );
     }
 }

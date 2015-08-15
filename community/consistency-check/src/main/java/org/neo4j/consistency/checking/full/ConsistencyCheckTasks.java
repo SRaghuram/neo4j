@@ -124,17 +124,22 @@ public class ConsistencyCheckTasks
                     RelationshipRecordCheck.RelationshipRecordCheckSourceChain( false ) );
             tasks.add( create( FullCheckNewUtils.Stages.Stage7_RS_Backward.name(), nativeStores.getRelationshipStore(),
                     processor ) );
+            
+            //relationshipGroup
+            StoreProcessor[] relGrpProcessors = multiPass.processors( RELATIONSHIP_GROUPS );
+            relGrpProcessors[0].setParallel( true );
+            tasks.add( create( "RelationshipGroupStore-RelGrp", nativeStores.getRelationshipGroupStore(),
+                    relGrpProcessors ) );
+            
             //tasks.add( create( FullCheckNewUtils.Stages.Stage8_PS_Props.name(), nativeStores.getPropertyStore(),
             //        multiPass.processor(FullCheckNewUtils.Stages.Stage8_PS_Props, PROPERTIES)));//, STRINGS, ARRAYS, PROPERTY_KEYS ) ) ); 
             tasks.add( new RecordScanner<>( new IterableStore<>( nativeStores.getNodeStore(), nativeStores ),
                     FullCheckNewUtils.Stages.Stage8_PS_Props.name(), progress,
                     new PropertyAndNode2LabelIndexProcessor( reporter, (checkIndexes ? indexes : null), new PropertyReader( nativeStores ) ),
-                    FullCheckNewUtils.Stages.Stage8_PS_Props ) );
+                    FullCheckNewUtils.Stages.Stage8_PS_Props, new IterableStore<>( nativeStores.getPropertyStore(), nativeStores ) ) );
             
-            tasks.add( create( "StrStore-Str", nativeStores.getStringStore(), multiPass.processors( STRINGS ) ) );
+            tasks.add( create( "StringStore-Str", nativeStores.getStringStore(), multiPass.processors( STRINGS ) ) );
             tasks.add( create( "ArrayStore-Arrays", nativeStores.getArrayStore(), multiPass.processors( ARRAYS ) ) );
-            tasks.add( create( "RelGrpSt-RelGrp", nativeStores.getRelationshipGroupStore(),
-                    multiPass.processors( RELATIONSHIP_GROUPS ) ) );
         }
         // The schema store is verified in multiple passes that share state since it fits into memory
         // and we care about the consistency of back references (cf. SemanticCheck)
