@@ -30,6 +30,7 @@ public class InconsistencyMessageLogger implements InconsistencyLogger
     private static final String ERROR = "ERROR:", WARNING = "WARNING:";
     public static final String LINE_SEPARATOR = System.getProperty( "line.separator" );
     public static final String TAB = "\t";
+    private boolean inconsistenyFound = false;
 
     public InconsistencyMessageLogger( StringLogger logger )
     {
@@ -91,6 +92,14 @@ public class InconsistencyMessageLogger implements InconsistencyLogger
             for ( Object arg : args )
             {
                 log.append( ' ' ).append( ObjectUtil.toString( arg ) );
+            }
+        }
+        synchronized (this)
+        {
+            if (!inconsistenyFound)
+            {
+                StringLogger.SYSTEM.logMessage( "Inconsistency detected. Check the inconsistency report for details." );
+                inconsistenyFound = true;
             }
         }
         logger.logMessage( log.toString(), true );

@@ -71,8 +71,13 @@ public class IterableStore<RECORD extends AbstractBaseRecord> implements Bounded
         long id = 0;
         while (id < store.getHighId()/2)
         {
-            RECORD record = store.getRecord( id );
-            id += recordsPerPage;
+            try {
+                RECORD record = store.getRecord( id );
+            } catch (Exception e)
+            {
+                //ignore and continue
+            }          
+            id += (recordsPerPage-1);
         }
     }
 }

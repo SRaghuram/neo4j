@@ -47,7 +47,7 @@ public abstract class PrimitiveRecordCheck
         <RECORD extends PrimitiveRecord, REPORT extends ConsistencyReport.PrimitiveConsistencyReport>
         implements OwningRecordCheck<RECORD, REPORT>
 {
-    private final RecordField<RECORD, REPORT>[] fields;
+    private RecordField<RECORD, REPORT>[] fields;
     private final ComparativeRecordChecker<RECORD, PrimitiveRecord, REPORT> ownerCheck =
             new ComparativeRecordChecker<RECORD, PrimitiveRecord, REPORT>()
             {
@@ -105,18 +105,6 @@ public abstract class PrimitiveRecordCheck
     private class FirstProperty
             implements RecordField<RECORD, REPORT>, ComparativeRecordChecker<RECORD, PropertyRecord, REPORT>
     {
-        private ArrayList<PropertyRecord> getAllPropsInChain(long propId, RecordAccess records)
-        {
-            ArrayList<PropertyRecord> propList = new ArrayList();
-            PropertyRecord prop = ((DirectRecordReference<PropertyRecord>)records.property( propId )).record();
-            propList.add( prop );
-            while (!Record.NO_NEXT_PROPERTY.is(prop.getNextProp()))
-            {
-                prop = ((DirectRecordReference<PropertyRecord>)records.property( prop.getNextProp() )).record();
-                propList.add(prop);
-            }
-            return propList;
-        }
         @Override
         public void checkConsistency( RECORD record, CheckerEngine<RECORD, REPORT> engine,
                                       RecordAccess records )
@@ -124,16 +112,14 @@ public abstract class PrimitiveRecordCheck
             int i = 0;
             if ( !Record.NO_NEXT_PROPERTY.is( record.getNextProp() ) )
             {
-                List<PropertyRecord> props = (List<PropertyRecord>)((FilteringRecordAccess)records).getStoreAccess().getRawNeoStore().getPropertyStore().getPropertyRecordChain(record.getNextProp());
-                        //(List<PropertyRecord>)FullCheckNewUtils.neoStore.getPropertyStore().getPropertyRecordChain(record.getNextProp());
-                		//getAllPropsInChain(record.getNextProp(), records);
-                //FullCheckNewUtils.countProperties( props );
+                List<PropertyRecord> props = (List<PropertyRecord>)((FilteringRecordAccess)records).getStoreAccess().getRawNeoStore().getPropertyStore().getPropertyRecordChain(record.getNextProp());                       
                 //props[0] is first in chain
                 if ( !Record.NO_PREVIOUS_PROPERTY.is( props.get( 0 ).getPrevProp() ) )
                 {
                     engine.report().propertyNotFirstInChain( props.get( 0 ) );
                 }
-                    //new ChainCheck<RECORD, REPORT>().checkReference( record, property, engine, records );
+                //replace recursion in the old logic of
+                // ChainCheck<RECORD, REPORT>().checkReference( record, property, engine, records );
                 PrimitiveIntSet keys = Primitive.intSet();
                 for (PropertyRecord property : props)
                 {

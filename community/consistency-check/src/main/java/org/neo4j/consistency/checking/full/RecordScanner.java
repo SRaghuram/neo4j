@@ -73,8 +73,13 @@ public class RecordScanner<RECORD> implements StoppableRunnable
         FullCheckNewUtils.processor = false;
         if (warmUpStores != null)
         {
-            for (IterableStore store : warmUpStores)
-                store.warmUpCache();
+            try {
+                for (IterableStore store : warmUpStores)
+                    store.warmUpCache();
+            } catch (Exception e)
+            {
+                //ignore and continue
+            }
         }
     	if (stage == null || !stage.isParallel(stage))
     		runSequential();
