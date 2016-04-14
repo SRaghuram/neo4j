@@ -48,6 +48,11 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
     private static final int HAS_LOOP_BIT     = 0b0010_0000;
     private static final int HAS_NEXT_BIT     = 0b0100_0000;
 
+    private static final int MSB_OUT =       0b0000_0001;
+    private static final int MSB_IN  =       0b0000_0010;
+    private static final int MSB_LOOP=       0b0000_0100;
+    private static final int MSB_NEXT =      0b0000_1000;
+    private static final int MSB_OWNER =     0b0001_0000;
     public RelationshipGroupRecordFormat()
     {
         this( RECORD_SIZE );
@@ -68,13 +73,28 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
     protected void doReadInternal( RelationshipGroupRecord record, PageCursor cursor, int recordSize, long headerByte,
                                    boolean inUse )
     {
-        record.initialize( inUse,
-                cursor.getShort() & 0xFFFF,
-                decode( cursor, headerByte, HAS_OUTGOING_BIT, NULL ),
-                decode( cursor, headerByte, HAS_INCOMING_BIT, NULL ),
-                decode( cursor, headerByte, HAS_LOOP_BIT, NULL ),
-                decode( cursor ),
-                decode( cursor, headerByte, HAS_NEXT_BIT, NULL ) );
+    	if (record.isFixedReference())
+    	{
+    		int type = cursor.getShort() & 0xFFFF;
+    		byte msb = cursor.getByte();
+    		record.initialize( inUse,
+	                type,
+	                Reference.readFixed(cursor, msb, MSB_OUT),
+	                Reference.readFixed(cursor, msb, MSB_IN),
+	                Reference.readFixed(cursor, msb, MSB_LOOP),
+	                Reference.readFixed(cursor, msb, MSB_OWNER),
+	                Reference.readFixed(cursor, msb, MSB_NEXT));	                
+    	}
+    	else
+    	{
+    		record.initialize( inUse,
+                    cursor.getShort() & 0xFFFF,
+                    decode( cursor, headerByte, HAS_OUTGOING_BIT, NULL ),
+                    decode( cursor, headerByte, HAS_INCOMING_BIT, NULL ),
+                    decode( cursor, headerByte, HAS_LOOP_BIT, NULL ),
+                    decode( cursor ),
+                    decode( cursor, headerByte, HAS_NEXT_BIT, NULL ) );
+    	}
     }
 
     @Override
@@ -103,11 +123,48 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
     protected void doWriteInternal( RelationshipGroupRecord record, PageCursor cursor )
             throws IOException
     {
-        cursor.putShort( (short) record.getType() );
-        encode( cursor, record.getFirstOut(), NULL );
-        encode( cursor, record.getFirstIn(), NULL );
-        encode( cursor, record.getFirstLoop(), NULL );
-        encode( cursor, record.getOwningNode() );
-        encode( cursor, record.getNext(), NULL );
+    	if (record.isFixedReference())
+    	{
+    		cursor.putShort( (short) record.getType() );
+    		byte msb = getMSB( record );
+    		cursor.putByte(msb);
+    		cursor.putInt((int)record.getFirstOut());
+    		cursor.putInt((int)record.getFirstIn());
+    		cursor.putInt((int)record.getFirstLoop());
+    		cursor.putInt((int)record.getOwningNode());
+    		cursor.putInt((int)record.getNext());
+    	}
+    	else
+    	{
+            cursor.putShort( (short) record.getType() );
+            encode( cursor, record.getFirstOut(), NULL );
+            encode( cursor, record.getFirstIn(), NULL );
+            encode( cursor, record.getFirstLoop(), NULL );
+            encode( cursor, record.getOwningNode() );
+            encode( cursor, record.getNext(), NULL );
+    	}
+    }
+    
+    @Override
+    protected boolean canBeFixedReference( RelationshipGroupRecord record )
+    {
+    	long canBeFixedRef = (record.getFirstOut() & MSB_MASK_NODE_REL) |
+    			(record.getFirstIn() & MSB_MASK_NODE_REL) |
+    			(record.getFirstLoop() & MSB_MASK_NODE_REL) |
+    			(record.getOwningNode() & MSB_MASK_NODE_REL) |
+    			(record.getNext() & MSB_MASK_NODE_REL);
+    	return canBeFixedRef == 0;	  			
+    }
+    
+    @Override
+    protected byte getMSB( RelationshipGroupRecord record)
+    {
+    	byte msb = 0;
+    	msb = (record.getFirstOut() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_OUT) : msb;
+    	msb = (record.getFirstIn() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_IN) : msb;
+    	msb = (record.getFirstLoop() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_LOOP) : msb;
+    	msb = (record.getOwningNode() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_OWNER) : msb;
+    	msb = (record.getNext() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_NEXT) : msb;
+    	return msb;
     }
 }

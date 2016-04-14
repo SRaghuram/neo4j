@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2016 "Neo Technology,"
+i+"] * Copyright (c) 2002-2016 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -56,7 +56,7 @@ public abstract class RecordFormatTest
 
     // Whoever is hit first
     private static final long TEST_ITERATIONS = 20_000;
-    private static final long TEST_TIME = 500;
+    private static final long TEST_TIME = 500000;
     private static final long PRINT_RESULTS_THRESHOLD = SECONDS.toMillis( 1 );
     private static final int DATA_SIZE = 100;
     protected static final long NULL = Record.NULL_REFERENCE.intValue();
@@ -193,6 +193,8 @@ public abstract class RecordFormatTest
                 {
                     Exceptions.setMessage( t, t.getMessage() + " : written:" + written + ", read:" + read +
                             ", seed:" + random.seed() + ", iteration:" + i );
+                    System.out.println("Written:["+i+"]"+written.toString());
+                    System.out.println("Read   :"+read.toString());
                     throw t;
                 }
             }

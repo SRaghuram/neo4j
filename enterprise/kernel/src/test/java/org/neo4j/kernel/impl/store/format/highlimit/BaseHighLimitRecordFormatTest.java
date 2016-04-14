@@ -150,6 +150,18 @@ public class BaseHighLimitRecordFormatTest
         {
             return new MyRecord( 0 );
         }
+
+		@Override
+		protected boolean canBeFixedReference(MyRecord record) {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		protected byte getMSB(MyRecord record) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
     }
 
     private class MyRecord extends AbstractBaseRecord

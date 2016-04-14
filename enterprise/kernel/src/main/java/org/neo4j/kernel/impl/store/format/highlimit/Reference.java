@@ -249,6 +249,24 @@ enum Reference
 
         return signComponent ^ register; // <8>
     }
+    
+    public static long readFixed( PageCursor cursor, byte msb, int type)
+    {
+    	return readFixed( cursor, msb, type, false);
+    }
+    public static long readFixed( PageCursor cursor, byte msb, int type, boolean multiBit )
+    {
+    	long msPart = 0;
+    	if (multiBit)
+    		msPart = (long)((msb & type) >> Integer.numberOfTrailingZeros( type ));
+    	else
+    		msPart = (msb & type) == 0 ? 0 : 1;
+    	/*long msp = msPart << 32;
+    	long lsp = (long)cursor.getInt();
+    	if (msp > 0)
+    		System.out.format("%x:%x:%x\n", msp, lsp, msp | lsp);*/
+    	return ((msPart << 32) | (long)cursor.getInt() );
+    }
 
     /**
      * Convert provided reference to be relative to basisReference

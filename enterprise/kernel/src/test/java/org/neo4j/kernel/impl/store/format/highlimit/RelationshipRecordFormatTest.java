@@ -135,10 +135,22 @@ public class RelationshipRecordFormatTest
         recordWithOtherId.setId( 1L  );
         format.read( recordWithOtherId, cursor, RecordLoad.NORMAL, recordSize, null );
 
-        assertNotEquals( record.getFirstNextRel(), recordWithOtherId.getFirstNextRel() );
-        assertNotEquals( record.getFirstPrevRel(), recordWithOtherId.getFirstPrevRel() );
-        assertNotEquals( record.getSecondNextRel(), recordWithOtherId.getSecondNextRel() );
-        assertNotEquals( record.getSecondPrevRel(), recordWithOtherId.getSecondPrevRel() );
+        if (record.isFixedReference())
+        {
+        	assertEquals( record.getFirstNextRel(), recordFromStore.getFirstNextRel() );
+            assertEquals( record.getFirstNode(), recordFromStore.getFirstNode() );
+            assertEquals( record.getFirstPrevRel(), recordFromStore.getFirstPrevRel() );
+            assertEquals( record.getSecondNextRel(), recordFromStore.getSecondNextRel() );
+            assertEquals( record.getSecondNode(), recordFromStore.getSecondNode() );
+            assertEquals( record.getSecondPrevRel(), recordFromStore.getSecondPrevRel() );
+        }
+        else
+        {
+	        assertNotEquals( record.getFirstNextRel(), recordWithOtherId.getFirstNextRel() );
+	        assertNotEquals( record.getFirstPrevRel(), recordWithOtherId.getFirstPrevRel() );
+	        assertNotEquals( record.getSecondNextRel(), recordWithOtherId.getSecondNextRel() );
+	        assertNotEquals( record.getSecondPrevRel(), recordWithOtherId.getSecondPrevRel() );
+        }
     }
 
     private void resetCursor( StubPageCursor cursor, int recordOffset )
@@ -160,6 +172,7 @@ public class RelationshipRecordFormatTest
         record.setSecondNextRel( 4L );
         record.setSecondNode( 5L );
         record.setSecondPrevRel( 6L );
+        record.setFixedReference(format.canBeFixedReference(record));
         return record;
     }
 }

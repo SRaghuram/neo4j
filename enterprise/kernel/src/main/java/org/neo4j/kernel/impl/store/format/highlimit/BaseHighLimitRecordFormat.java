@@ -84,7 +84,14 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
     static final long NULL = Record.NULL_REFERENCE.intValue();
     static final int HEADER_BIT_RECORD_UNIT = 0b0000_0010;
     static final int HEADER_BIT_FIRST_RECORD_UNIT = 0b0000_0100;
-
+    static final int HEADER_BIT_FIXED_REFERENCE = 0b0000_0100;// overloaded with HEADER_BIT_FIRST_RECORD_UNIT. 
+    															 // valid only when HEADER_BIT_RECORD_UNIT is 0.
+    
+    protected static final long MSB_MASK_NODE_REL = 0xFFFF_FFFE_0000_0000l;
+    protected static final long MSB_MASK_PROPERTY = 0xFFFF_FFFC_0000_0000l;
+    protected static final long MSB_MASK_NODE_REL_BIT = 0x0000_0001_0000_0000l;
+    protected static final long MSB_MASK_PROPERTY_BIT = 0x0000_0003_0000_0000l;
+    protected static final long INT_MASK = 0x0000_0000_FFFF_FFFFl;
     protected BaseHighLimitRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize )
     {
         super( recordSize, recordHeaderSize, IN_USE_BIT, HighLimit.DEFAULT_MAXIMUM_BITS_PER_ID );
@@ -95,6 +102,7 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
     {
         int primaryStartOffset = primaryCursor.getOffset();
         byte headerByte = primaryCursor.getByte();
+        record.setFixedReference(!has( headerByte, HEADER_BIT_RECORD_UNIT ) && has( headerByte, HEADER_BIT_FIXED_REFERENCE ));
         boolean inUse = isInUse( headerByte );
         boolean doubleRecordUnit = has( headerByte, HEADER_BIT_RECORD_UNIT );
         if ( doubleRecordUnit )
@@ -156,7 +164,10 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
                     ") collides with format-generic header bits";
             headerByte = set( headerByte, IN_USE_BIT, record.inUse() );
             headerByte = set( headerByte, HEADER_BIT_RECORD_UNIT, record.requiresSecondaryUnit() );
-            headerByte = set( headerByte, HEADER_BIT_FIRST_RECORD_UNIT, true );
+            if (record.requiresSecondaryUnit())
+            	headerByte = set( headerByte, HEADER_BIT_FIRST_RECORD_UNIT, true );
+            else
+            	headerByte = set(headerByte, HEADER_BIT_FIXED_REFERENCE, record.isFixedReference());
             primaryCursor.putByte( headerByte );
 
             if ( record.requiresSecondaryUnit() )
@@ -233,6 +244,8 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
                 // this record doesn't need this secondary unit anymore... that needs to be done when applying to store.
                 record.setSecondaryUnitId( idSequence.nextId() );
             }
+            if (!requiresSecondaryUnit)
+            	record.setFixedReference(canBeFixedReference ( record ));
         }
     }
 
@@ -243,6 +256,10 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
      * @return length required to store the data in the given record.
      */
     protected abstract int requiredDataLength( RECORD record );
+    
+    protected abstract boolean canBeFixedReference( RECORD record );
+    
+    protected abstract byte getMSB (RECORD record);
 
     protected static int length( long reference )
     {
@@ -253,15 +270,15 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
     {
         return reference == nullValue ? 0 : length( reference );
     }
-
+    
     protected static long decode( PageCursor cursor )
     {
         return Reference.decode( cursor );
     }
-
+    
     protected static long decode( PageCursor cursor, long headerByte, int headerBitMask, long nullValue )
     {
-        return has( headerByte, headerBitMask ) ? decode( cursor ) : nullValue;
+    	return has( headerByte, headerBitMask ) ? decode( cursor ) : nullValue;
     }
 
     protected static void encode( PageCursor cursor, long reference ) throws IOException

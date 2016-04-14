@@ -47,6 +47,8 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     private static final int HAS_PROPERTY_BIT     = 0b0010_0000;
     private static final int HAS_LABELS_BIT       = 0b0100_0000;
 
+    private static final int MSB_PROPERTY =    0b0000_0011;
+    private static final int MSB_NEXTREL =     0b0000_0100;
     public NodeRecordFormat()
     {
         this( RECORD_SIZE );
@@ -69,13 +71,25 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     {
         // Interpret the header byte
         boolean dense = has( headerByte, DENSE_NODE_BIT );
-
-        // Now read the rest of the data. The adapter will take care of moving the cursor over to the
-        // other unit when we've exhausted the first one.
-        long nextRel = decode( cursor, headerByte, HAS_RELATIONSHIP_BIT, NULL );
-        long nextProp = decode( cursor, headerByte, HAS_PROPERTY_BIT, NULL );
-        long labelField = decode( cursor, headerByte, HAS_LABELS_BIT, NULL_LABELS );
-        record.initialize( inUse, nextProp, dense, nextRel, labelField );
+        if (record.isFixedReference())
+        {
+        	byte msb = getMSB( record );
+        	long nextProp = Reference.readFixed( cursor, msb, MSB_PROPERTY, true); 
+        	long nextRel = Reference.readFixed( cursor, msb, MSB_NEXTREL);
+        	// get the most significant byte of 5-byte label field 
+        	msb = cursor.getByte();
+        	long labelField = Reference.readFixed( cursor, msb, 0xFF, true);
+        	record.initialize( inUse, nextProp, dense, nextRel, labelField );
+        }
+        else
+        {
+            // Now read the rest of the data. The adapter will take care of moving the cursor over to the
+            // other unit when we've exhausted the first one.
+            long nextRel = decode( cursor, headerByte, HAS_RELATIONSHIP_BIT, NULL );
+            long nextProp = decode( cursor, headerByte, HAS_PROPERTY_BIT, NULL );
+            long labelField = decode( cursor, headerByte, HAS_LABELS_BIT, NULL_LABELS );
+            record.initialize( inUse, nextProp, dense, nextRel, labelField );
+        }
     }
 
     @Override
@@ -101,8 +115,38 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     protected void doWriteInternal( NodeRecord record, PageCursor cursor )
             throws IOException
     {
-        encode( cursor, record.getNextRel(), NULL );
-        encode( cursor, record.getNextProp(), NULL );
-        encode( cursor, record.getLabelField(), NULL_LABELS );
+    	if (record.isFixedReference())
+    	{
+    		byte msb = getMSB( record );
+    		cursor.putByte( msb );
+    		cursor.putInt((int)record.getNextRel());
+    		cursor.putInt((int)record.getNextProp());
+    		msb = (byte)(record.getLabelField() >> 32);
+    		cursor.putByte(msb);
+    		cursor.putInt((int)record.getLabelField());
+    	}
+    	else
+    	{
+            encode( cursor, record.getNextRel(), NULL );
+            encode( cursor, record.getNextProp(), NULL );
+            encode( cursor, record.getLabelField(), NULL_LABELS );
+    	}
+    }
+
+    @Override
+    protected boolean canBeFixedReference( NodeRecord record )
+    {
+    	long canBeFixedRef = (record.getNextProp() & MSB_MASK_PROPERTY) |
+    			(record.getNextRel() & MSB_MASK_NODE_REL);
+    	return canBeFixedRef == 0;	  			
+    }
+    
+    @Override
+    protected byte getMSB( NodeRecord record)
+    {
+    	byte msb = 0;
+    	msb = (record.getNextRel() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_NEXTREL) : msb;
+    	msb = (record.getNextProp() & MSB_MASK_PROPERTY) > 0 ? (byte)(msb | (record.getNextProp() & MSB_MASK_PROPERTY)) : msb;
+    	return msb;
     }
 }
