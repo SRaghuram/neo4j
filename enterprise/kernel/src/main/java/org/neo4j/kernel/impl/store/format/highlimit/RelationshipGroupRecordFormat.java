@@ -22,6 +22,8 @@ package org.neo4j.kernel.impl.store.format.highlimit;
 import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.kernel.impl.store.format.BaseRecordFormat;
+import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 
 /**
@@ -48,11 +50,11 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
     private static final int HAS_LOOP_BIT     = 0b0010_0000;
     private static final int HAS_NEXT_BIT     = 0b0100_0000;
 
-    private static final int MSB_OUT =       0b0000_0001;
-    private static final int MSB_IN  =       0b0000_0010;
-    private static final int MSB_LOOP=       0b0000_0100;
-    private static final int MSB_NEXT =      0b0000_1000;
-    private static final int MSB_OWNER =     0b0001_0000;
+    private static final long MSB_OUT =       0b0000_0001;
+    private static final long MSB_IN  =       0b0000_0010;
+    private static final long MSB_LOOP=       0b0000_0100;
+    private static final long MSB_NEXT =      0b0000_1000;
+    private static final long MSB_OWNER =     0b0001_0000;
     public RelationshipGroupRecordFormat()
     {
         this( RECORD_SIZE );
@@ -76,14 +78,30 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
     	if (record.isFixedReference())
     	{
     		int type = cursor.getShort() & 0xFFFF;
-    		byte msb = cursor.getByte();
-    		record.initialize( inUse,
-	                type,
-	                Reference.readFixed(cursor, msb, MSB_OUT),
-	                Reference.readFixed(cursor, msb, MSB_IN),
-	                Reference.readFixed(cursor, msb, MSB_LOOP),
-	                Reference.readFixed(cursor, msb, MSB_OWNER),
-	                Reference.readFixed(cursor, msb, MSB_NEXT));	                
+            // [    ,   x] high firstOut bits
+            // [    ,  x ] high firstIn bits
+    		// [    , x  ] high firstLoop bits
+            // [    ,x   ] high Owner bits
+    		// [   x,    ] high next bits
+            long highByte = cursor.getByte();
+            long nextOutMod = (highByte & MSB_OUT) << 32;
+            long nextInMod = (highByte & MSB_IN) << 31;
+            long nextLoopMod = (highByte & MSB_LOOP) << 30;
+            long nextMod = (highByte & MSB_NEXT) << 29;
+            long ownerMod = (highByte & MSB_OWNER) << 28;
+            
+            long nextOutLowBits = cursor.getInt() & 0xFFFFFFFFL;
+            long nextInLowBits = cursor.getInt() & 0xFFFFFFFFL;
+            long nextLoopLowBits = cursor.getInt() & 0xFFFFFFFFL;
+            long nextLowBits = cursor.getInt() & 0xFFFFFFFFL;
+            long owningNode = cursor.getInt() & 0xFFFFFFFFL;
+
+            record.initialize( inUse, type,
+                    BaseRecordFormat.longFromIntAndMod( nextOutLowBits, nextOutMod ),
+                    BaseRecordFormat.longFromIntAndMod( nextInLowBits, nextInMod ),
+                    BaseRecordFormat.longFromIntAndMod( nextLoopLowBits, nextLoopMod ),
+                    BaseRecordFormat.longFromIntAndMod( owningNode, ownerMod ),
+                    BaseRecordFormat.longFromIntAndMod( nextLowBits, nextMod ) );              
     	}
     	else
     	{
@@ -126,13 +144,23 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
     	if (record.isFixedReference())
     	{
     		cursor.putShort( (short) record.getType() );
-    		byte msb = getMSB( record );
-    		cursor.putByte(msb);
-    		cursor.putInt((int)record.getFirstOut());
-    		cursor.putInt((int)record.getFirstIn());
-    		cursor.putInt((int)record.getFirstLoop());
-    		cursor.putInt((int)record.getOwningNode());
-    		cursor.putInt((int)record.getNext());
+            long nextOutMod = record.getFirstOut() == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (record.getFirstOut() & MSB_MASK_NODE_REL_BIT) >> 32;
+            long nextInMod = record.getFirstIn() == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (record.getFirstIn() & MSB_MASK_NODE_REL_BIT) >> 31;
+            long nextLoopMod = record.getFirstLoop() == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (record.getFirstLoop() & MSB_MASK_NODE_REL_BIT) >> 30;
+            long nextMod = record.getNext() == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (record.getNext() & MSB_MASK_NODE_REL_BIT) >> 29;
+            long ownerMod = record.getOwningNode() == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 :(record.getOwningNode() & MSB_MASK_NODE_REL_BIT) >> 28;
+            // [    ,   x] high firstOut bits
+            // [    ,  x ] high firstIn bits
+    		// [    , x  ] high firstLoop bits
+            // [    ,x   ] high Owner bits
+    		// [   x,    ] high next bits
+            cursor.putByte( (byte) (nextOutMod | nextMod | nextLoopMod | nextInMod | ownerMod) );
+
+            cursor.putInt( (int) record.getFirstOut() );
+            cursor.putInt( (int) record.getFirstIn() );
+            cursor.putInt( (int) record.getFirstLoop() );
+            cursor.putInt( (int) record.getNext() );
+            cursor.putInt( (int) record.getOwningNode() );
     	}
     	else
     	{
@@ -148,23 +176,14 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
     @Override
     protected boolean canBeFixedReference( RelationshipGroupRecord record )
     {
-    	long canBeFixedRef = (record.getFirstOut() & MSB_MASK_NODE_REL) |
-    			(record.getFirstIn() & MSB_MASK_NODE_REL) |
-    			(record.getFirstLoop() & MSB_MASK_NODE_REL) |
-    			(record.getOwningNode() & MSB_MASK_NODE_REL) |
-    			(record.getNext() & MSB_MASK_NODE_REL);
-    	return canBeFixedRef == 0;	  			
-    }
-    
-    @Override
-    protected byte getMSB( RelationshipGroupRecord record)
-    {
-    	byte msb = 0;
-    	msb = (record.getFirstOut() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_OUT) : msb;
-    	msb = (record.getFirstIn() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_IN) : msb;
-    	msb = (record.getFirstLoop() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_LOOP) : msb;
-    	msb = (record.getOwningNode() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_OWNER) : msb;
-    	msb = (record.getNext() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_NEXT) : msb;
-    	return msb;
+    	if ((record.getFirstOut() != -1) && ((record.getFirstOut() & MSB_MASK_PROPERTY) != 0))
+    		return false;
+    	if ((record.getFirstIn() != -1) && ((record.getFirstIn() & MSB_MASK_NODE_REL) != 0))
+    		return false;
+    	if ((record.getFirstLoop() != -1) && ((record.getFirstLoop() & MSB_MASK_PROPERTY) != 0))
+    		return false;
+    	if ((record.getNext() != -1) && ((record.getNext() & MSB_MASK_NODE_REL) != 0))
+    		return false;
+    	return true;	  					
     }
 }

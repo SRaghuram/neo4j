@@ -19,16 +19,22 @@ i+"] * Copyright (c) 2002-2016 "Neo Technology,"
  */
 package org.neo4j.kernel.impl.store.format;
 
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import static java.lang.System.currentTimeMillis;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Supplier;
 
+import org.junit.ClassRule;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.RuleChain;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
@@ -41,13 +47,6 @@ import org.neo4j.test.EphemeralFileSystemRule;
 import org.neo4j.test.PageCacheRule;
 import org.neo4j.test.RandomRule;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingIdSequence;
-
-import static java.lang.System.currentTimeMillis;
-import static java.nio.file.StandardOpenOption.CREATE;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
 @Ignore( "Not a test, a base class for testing formats" )
 public abstract class RecordFormatTest
@@ -73,23 +72,25 @@ public abstract class RecordFormatTest
 
     private final RecordFormats formats;
     private final RecordGenerators generators;
+    int failure = 0, success = 0, notInUse = 0;
 
     protected RecordFormatTest( RecordFormats formats, RecordGenerators generators )
     {
         this.formats = formats;
         this.generators = generators;
+        LimitedRecordGenerators.FIXED_REFERENCE = true;
+    }
+    
+    @Test
+    public void relationship() throws Exception
+    {
+        verifyWriteAndRead( formats::relationship, generators::relationship, keys::relationship );
     }
 
     @Test
     public void node() throws Exception
     {
         verifyWriteAndRead( formats::node, generators::node, keys::node );
-    }
-
-    @Test
-    public void relationship() throws Exception
-    {
-        verifyWriteAndRead( formats::relationship, generators::relationship, keys::relationship );
     }
 
     @Test
@@ -187,17 +188,16 @@ public abstract class RecordFormatTest
                     }
 
                     storeFile.resetMeasurements();
-                    idSequence.reset();
+                    idSequence.reset();;
                 }
                 catch ( Throwable t )
                 {
                     Exceptions.setMessage( t, t.getMessage() + " : written:" + written + ", read:" + read +
                             ", seed:" + random.seed() + ", iteration:" + i );
-                    System.out.println("Written:["+i+"]"+written.toString());
-                    System.out.println("Read   :"+read.toString());
                     throw t;
                 }
             }
+
             time = currentTimeMillis() - time;
             if ( time >= PRINT_RESULTS_THRESHOLD )
             {
@@ -248,6 +248,7 @@ public abstract class RecordFormatTest
             else
             {
                 assertEquals( written.inUse(), read.inUse() );
+                notInUse++;
             }
         }
     }

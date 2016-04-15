@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.store.format.highlimit;
 import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.kernel.impl.store.format.BaseRecordFormat;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 
@@ -47,8 +48,8 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     private static final int HAS_PROPERTY_BIT     = 0b0010_0000;
     private static final int HAS_LABELS_BIT       = 0b0100_0000;
 
-    private static final int MSB_PROPERTY =    0b0000_0011;
-    private static final int MSB_NEXTREL =     0b0000_0100;
+    private static final long MSB_PROPERTY =    0b0000_0011;
+    private static final long MSB_NEXTREL =     0b0000_0100;
     public NodeRecordFormat()
     {
         this( RECORD_SIZE );
@@ -73,13 +74,25 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
         boolean dense = has( headerByte, DENSE_NODE_BIT );
         if (record.isFixedReference())
         {
-        	byte msb = getMSB( record );
-        	long nextProp = Reference.readFixed( cursor, msb, MSB_PROPERTY, true); 
-        	long nextRel = Reference.readFixed( cursor, msb, MSB_NEXTREL);
+        	byte msb = cursor.getByte();
+        	// [    ,  xx] next prop higher order bits
+            // [    , x  ] next rel high order bit
+            long nextPropMod = (msb & MSB_PROPERTY) << 32;
+            long nextRelMod = (msb & MSB_NEXTREL) << 30;
+            
+            long nextRel = cursor.getInt() & 0xFFFF_FFFFL;          
+        	long nextProp = cursor.getInt() & 0xFFFF_FFFFL;
+
         	// get the most significant byte of 5-byte label field 
-        	msb = cursor.getByte();
-        	long labelField = Reference.readFixed( cursor, msb, 0xFF, true);
-        	record.initialize( inUse, nextProp, dense, nextRel, labelField );
+            long hsbLabels = cursor.getByte() & 0xFF; // so that a negative byte won't fill the "extended" bits with ones.
+            long lsbLabels = cursor.getInt() & 0xFFFFFFFFL;       
+            long labels = lsbLabels | (hsbLabels << 32);
+
+        	record.initialize( inUse, 
+        			BaseRecordFormat.longFromIntAndMod( nextProp, nextPropMod ), 
+        			dense, 
+        			BaseRecordFormat.longFromIntAndMod( nextRel, nextRelMod ), 
+        			labels );
         }
         else
         {
@@ -117,13 +130,24 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     {
     	if (record.isFixedReference())
     	{
-    		byte msb = getMSB( record );
-    		cursor.putByte( msb );
+    		long nextProp = record.getNextProp();
+            long nextPropMod = nextProp == Record.NO_NEXT_PROPERTY.intValue() ? 0 : (nextProp & MSB_MASK_PROPERTY_BIT) >> 32;
+            
+            long nextRel = record.getNextRel();
+            long nextRelMod = nextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (nextRel & MSB_MASK_NODE_REL_BIT) >> 30;
+            // [    ,  xx] next prop higher order bits
+            // [    , x  ] next rel high order bits
+            short msbByte = (short) ( nextRelMod | nextPropMod );
+    		cursor.putByte( (byte)msbByte );
+    		
     		cursor.putInt((int)record.getNextRel());
     		cursor.putInt((int)record.getNextProp());
-    		msb = (byte)(record.getLabelField() >> 32);
-    		cursor.putByte(msb);
-    		cursor.putInt((int)record.getLabelField());
+   		
+    		long labelField = record.getLabelField();
+    		// msb of labels
+            cursor.putByte( (byte) ((labelField & 0xFF00000000L) >> 32) );
+    		// lsb of labels
+            cursor.putInt( (int) labelField );
     	}
     	else
     	{
@@ -136,17 +160,10 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     @Override
     protected boolean canBeFixedReference( NodeRecord record )
     {
-    	long canBeFixedRef = (record.getNextProp() & MSB_MASK_PROPERTY) |
-    			(record.getNextRel() & MSB_MASK_NODE_REL);
-    	return canBeFixedRef == 0;	  			
-    }
-    
-    @Override
-    protected byte getMSB( NodeRecord record)
-    {
-    	byte msb = 0;
-    	msb = (record.getNextRel() & MSB_MASK_NODE_REL) > 0 ? (byte)(msb | MSB_NEXTREL) : msb;
-    	msb = (record.getNextProp() & MSB_MASK_PROPERTY) > 0 ? (byte)(msb | (record.getNextProp() & MSB_MASK_PROPERTY)) : msb;
-    	return msb;
+    	if ((record.getNextProp() != -1) && ((record.getNextProp() & MSB_MASK_PROPERTY) != 0))
+    		return false;
+    	if ((record.getNextRel() != -1) && ((record.getNextRel() & MSB_MASK_NODE_REL) != 0))
+    		return false;
+    	return true;	  			
     }
 }

@@ -85,13 +85,13 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
     static final int HEADER_BIT_RECORD_UNIT = 0b0000_0010;
     static final int HEADER_BIT_FIRST_RECORD_UNIT = 0b0000_0100;
     static final int HEADER_BIT_FIXED_REFERENCE = 0b0000_0100;// overloaded with HEADER_BIT_FIRST_RECORD_UNIT. 
-    															 // valid only when HEADER_BIT_RECORD_UNIT is 0.
+    														  // valid only when HEADER_BIT_RECORD_UNIT is 0.
     
     protected static final long MSB_MASK_NODE_REL = 0xFFFF_FFFE_0000_0000l;
     protected static final long MSB_MASK_PROPERTY = 0xFFFF_FFFC_0000_0000l;
-    protected static final long MSB_MASK_NODE_REL_BIT = 0x0000_0001_0000_0000l;
-    protected static final long MSB_MASK_PROPERTY_BIT = 0x0000_0003_0000_0000l;
-    protected static final long INT_MASK = 0x0000_0000_FFFF_FFFFl;
+    protected static final long MSB_MASK_NODE_REL_BIT = 0x1_0000_0000l;
+    protected static final long MSB_MASK_PROPERTY_BIT = 0x3_0000_0000l;
+    protected static final long INT_MASK = 0xFFFF_FFFFl;
     protected BaseHighLimitRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize )
     {
         super( recordSize, recordHeaderSize, IN_USE_BIT, HighLimit.DEFAULT_MAXIMUM_BITS_PER_ID );
@@ -235,17 +235,19 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
     {
         if ( record.inUse() )
         {
-            int requiredLength = HEADER_BYTE + requiredDataLength( record );
-            boolean requiresSecondaryUnit = requiredLength > recordSize;
-            record.setRequiresSecondaryUnit( requiresSecondaryUnit );
-            if ( record.requiresSecondaryUnit() && !record.hasSecondaryUnitId() )
-            {
-                // Allocate a new id at this point, but this is not the time to free this ID the the case where
-                // this record doesn't need this secondary unit anymore... that needs to be done when applying to store.
-                record.setSecondaryUnitId( idSequence.nextId() );
-            }
-            if (!requiresSecondaryUnit)
-            	record.setFixedReference(canBeFixedReference ( record ));
+        	record.setFixedReference(canBeFixedReference ( record ));
+        	if (!record.isFixedReference())
+        	{
+	            int requiredLength = HEADER_BYTE + requiredDataLength( record );
+	            boolean requiresSecondaryUnit = requiredLength > recordSize;
+	            record.setRequiresSecondaryUnit( requiresSecondaryUnit );
+	            if ( record.requiresSecondaryUnit() && !record.hasSecondaryUnitId() )
+	            {
+	                // Allocate a new id at this point, but this is not the time to free this ID the the case where
+	                // this record doesn't need this secondary unit anymore... that needs to be done when applying to store.
+	                record.setSecondaryUnitId( idSequence.nextId() );
+	            }
+        	}
         }
     }
 
@@ -258,8 +260,6 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
     protected abstract int requiredDataLength( RECORD record );
     
     protected abstract boolean canBeFixedReference( RECORD record );
-    
-    protected abstract byte getMSB (RECORD record);
 
     protected static int length( long reference )
     {

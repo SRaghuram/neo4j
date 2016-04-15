@@ -22,6 +22,9 @@ package org.neo4j.kernel.impl.store.format.highlimit;
 import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.kernel.impl.store.format.BaseRecordFormat;
+import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
+import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 import static org.neo4j.kernel.impl.store.format.highlimit.Reference.toAbsolute;
@@ -54,13 +57,13 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
     private static final int HAS_SECOND_CHAIN_NEXT_BIT = 0b0100_0000;
     private static final int HAS_PROPERTY_BIT = 0b1000_0000;
     
-    private static final int MSB_PROPERTY =    0b0000_0011;
-    private static final int MSB_START =       0b0000_0100;
-    private static final int MSB_END =         0b0000_1000;
-    private static final int MSB_FIRST_PREV =  0b0001_0000;
-    private static final int MSB_FIRST_NEXT =  0b0010_0000;
-    private static final int MSB_SECOND_PREV = 0b0100_0000;
-    private static final int MSB_SECOND_NEXT = 0b1000_0000;
+    private static final long MSB_PROPERTY =    0b0000_0011;
+    private static final long MSB_START =       0b0000_0100;
+    private static final long MSB_END =         0b0000_1000;
+    private static final long MSB_FIRST_PREV =  0b0001_0000;
+    private static final long MSB_FIRST_NEXT =  0b0010_0000;
+    private static final long MSB_SECOND_PREV = 0b0100_0000;
+    private static final long MSB_SECOND_NEXT = 0b1000_0000;
     public RelationshipRecordFormat()
     {
         this( RECORD_SIZE );
@@ -86,18 +89,45 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
         if (record.isFixedReference())
         {
         	byte msb = cursor.getByte();
-        	record.initialize( inUse,
-                    Reference.readFixed( cursor, msb, MSB_PROPERTY, true),
-                    Reference.readFixed( cursor, msb, MSB_START),
-                    Reference.readFixed( cursor, msb, MSB_END),
+        	// [    ,  xx] next prop higher order bits
+            // [    , x  ] first node high order bits
+            // [    ,x   ] second node high order bits
+        	// [   x,    ] first prev high order bits
+        	// [  x ,    ] first next high order bits
+        	// [ x  ,    ] second prev high order bits
+        	// [x   ,    ] second next high order bits
+        	long nextProp = cursor.getInt() & 0xFFFF_FFFFL;
+            long nextPropMod = (msb & MSB_PROPERTY) << 32;
+            
+            long firstNode = cursor.getInt() & 0xFFFF_FFFFL;
+            long firstNodeMod = (msb & MSB_START) << 30;
+
+            long secondNode = cursor.getInt() & 0xFFFF_FFFFL;
+            long secondNodeMod = (msb & MSB_END) << 29;
+            
+            long firstPrevRel = cursor.getInt() & 0xFFFF_FFFFL;
+            long firstPrevRelMod = (msb & MSB_FIRST_PREV) << 28;
+
+            long firstNextRel = cursor.getInt() & 0xFFFF_FFFFL;
+            long firstNextRelMod = (msb & MSB_FIRST_NEXT) << 27;
+
+            long secondPrevRel = cursor.getInt() & 0xFFFF_FFFFL;
+            long secondPrevRelMod = (msb & MSB_SECOND_PREV) << 26;
+
+            long secondNextRel = cursor.getInt() & 0xFFFF_FFFFL;
+            long secondNextRelMod = (msb & MSB_SECOND_NEXT) << 25;
+
+            record.initialize( inUse,
+                    BaseRecordFormat.longFromIntAndMod( nextProp, nextPropMod ),
+                    BaseRecordFormat.longFromIntAndMod( firstNode, firstNodeMod ),
+                    BaseRecordFormat.longFromIntAndMod( secondNode, secondNodeMod ),
                     type,
-                    Reference.readFixed( cursor, msb, MSB_FIRST_PREV),
-                    Reference.readFixed( cursor, msb, MSB_FIRST_NEXT),
-                    Reference.readFixed( cursor, msb, MSB_SECOND_PREV),
-                    Reference.readFixed( cursor, msb, MSB_SECOND_NEXT),
+                    BaseRecordFormat.longFromIntAndMod( firstPrevRel, firstPrevRelMod ),
+                    BaseRecordFormat.longFromIntAndMod( firstNextRel, firstNextRelMod ),
+                    BaseRecordFormat.longFromIntAndMod( secondPrevRel, secondPrevRelMod ),
+                    BaseRecordFormat.longFromIntAndMod( secondNextRel, secondNextRelMod ),
                     has( headerByte, FIRST_IN_FIRST_CHAIN_BIT ),
-                    has( headerByte, FIRST_IN_SECOND_CHAIN_BIT ) );
-        	
+                    has( headerByte, FIRST_IN_SECOND_CHAIN_BIT ) );       	
         } 
         else
         {
@@ -126,9 +156,12 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
         byte header = 0;
         header = set( header, FIRST_IN_FIRST_CHAIN_BIT, record.isFirstInFirstChain() );
         header = set( header, FIRST_IN_SECOND_CHAIN_BIT, record.isFirstInSecondChain() );
-        header = set( header, HAS_PROPERTY_BIT, record.getNextProp(), NULL );
-        header = set( header, HAS_FIRST_CHAIN_NEXT_BIT, record.getFirstNextRel(), NULL );
-        header = set( header, HAS_SECOND_CHAIN_NEXT_BIT, record.getSecondNextRel(), NULL );
+        if (!record.isFixedReference())
+        {
+	        header = set( header, HAS_PROPERTY_BIT, record.getNextProp(), NULL );
+	        header = set( header, HAS_FIRST_CHAIN_NEXT_BIT, record.getFirstNextRel(), NULL );
+	        header = set( header, HAS_SECOND_CHAIN_NEXT_BIT, record.getSecondNextRel(), NULL );
+        }
         return header;
     }
 
@@ -154,15 +187,44 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
         long recordId = record.getId();
         if (record.isFixedReference())
         {
-        	byte msb = getMSB( record );
-        	cursor.putByte( msb );
-        	cursor.putInt((int) (record.getNextProp() & INT_MASK));
-        	cursor.putInt((int) (record.getFirstNode() & INT_MASK));
-        	cursor.putInt((int) (record.getSecondNode() & INT_MASK));
-        	cursor.putInt((int) (record.getFirstPrevRel() & INT_MASK));
-        	cursor.putInt((int) (record.getFirstNextRel() & INT_MASK));
-        	cursor.putInt((int) (record.getSecondPrevRel() & INT_MASK));
-        	cursor.putInt((int) (record.getSecondNextRel() & INT_MASK));
+        	long nextProp = record.getNextProp();
+            long nextPropMod = nextProp == Record.NO_NEXT_PROPERTY.intValue() ? 0 : (nextProp & MSB_MASK_PROPERTY_BIT) >> 32;
+            
+            long firstNode = record.getFirstNode();
+            short firstNodeMod = (short)((firstNode & MSB_MASK_NODE_REL_BIT) >> 30);
+
+            long secondNode = record.getSecondNode();
+            long secondNodeMod = (secondNode & MSB_MASK_NODE_REL_BIT) >> 29;
+
+            long firstPrevRel = record.getFirstPrevRel();
+            long firstPrevRelMod = firstPrevRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (firstPrevRel & MSB_MASK_NODE_REL_BIT) >> 28;
+
+            long firstNextRel = record.getFirstNextRel();
+            long firstNextRelMod = firstNextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (firstNextRel & MSB_MASK_NODE_REL_BIT) >> 27;
+
+            long secondPrevRel = record.getSecondPrevRel();
+            long secondPrevRelMod = secondPrevRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (secondPrevRel & MSB_MASK_NODE_REL_BIT) >> 26;
+
+            long secondNextRel = record.getSecondNextRel();
+            long secondNextRelMod = secondNextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (secondNextRel & MSB_MASK_NODE_REL_BIT) >> 25;
+
+        	// [    ,  xx] next prop higher order bits
+            // [    , x  ] first node high order bits
+            // [    ,x   ] second node high order bits
+        	// [   x,    ] first prev high order bits
+        	// [  x ,    ] first next high order bits
+        	// [ x  ,    ] second prev high order bits
+        	// [x   ,    ] second next high order bits
+            short msbByte = (short)(nextPropMod | firstNodeMod | secondNodeMod | firstPrevRelMod | firstNextRelMod | 
+            						secondPrevRelMod | secondNextRelMod);
+            cursor.putByte( (byte)msbByte );
+            cursor.putInt( (int) nextProp );
+            cursor.putInt( (int) firstNode );
+            cursor.putInt( (int) secondNode );
+            cursor.putInt( (int) firstPrevRel );
+            cursor.putInt( (int) firstNextRel );
+            cursor.putInt( (int) secondPrevRel );
+            cursor.putInt( (int) secondNextRel );
         }
         else
         {
@@ -188,10 +250,6 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
     {
     	if ((record.getNextProp() != -1) && ((record.getNextProp() & MSB_MASK_PROPERTY) != 0))
     		return false;
-    	if ((record.getFirstNode() != -1) && ((record.getFirstNode() & MSB_MASK_NODE_REL) != 0))
-    		return false;
-    	if ((record.getSecondNode() != -1) && ((record.getSecondNode() & MSB_MASK_NODE_REL) != 0))
-    		return false;
     	if ((record.getFirstPrevRel() != -1) && ((record.getFirstPrevRel() & MSB_MASK_NODE_REL) != 0))
     		return false;
     	if ((record.getFirstNextRel() != -1) && ((record.getFirstNextRel() & MSB_MASK_NODE_REL) != 0))
@@ -200,26 +258,11 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
     		return false;
     	if ((record.getSecondNextRel() != -1) && ((record.getSecondNextRel() & MSB_MASK_NODE_REL) != 0))
     		return false;
-    	System.out.println("Fixed:"+record.toString());
+    	if ((record.getFirstNode() != -1) && ((record.getFirstNode() & MSB_MASK_NODE_REL) != 0))
+    		return false;
+    	if ((record.getSecondNode() != -1) && ((record.getSecondNode() & MSB_MASK_NODE_REL) != 0))
+    		return false;
     	return true;	  			
-    }
-    
-    @Override
-    protected byte getMSB( RelationshipRecord record)
-    {
-    	byte msb = 0;
-    	msb = (record.getFirstNode() & MSB_MASK_NODE_REL_BIT) > 0 ? (byte)(msb | MSB_START) : msb;
-    	msb = (record.getSecondNode() & MSB_MASK_NODE_REL_BIT) > 0 ? (byte)(msb | MSB_END) : msb;
-    	msb = (record.getFirstPrevRel() & MSB_MASK_NODE_REL_BIT) > 0 ? (byte)(msb | MSB_FIRST_PREV) : msb;
-    	msb = (record.getFirstNextRel() & MSB_MASK_NODE_REL_BIT) > 0 ? (byte)(msb | MSB_FIRST_NEXT) : msb;
-    	msb = (record.getSecondPrevRel() & MSB_MASK_NODE_REL_BIT) > 0 ? (byte)(msb | MSB_SECOND_PREV) : msb;
-    	msb = (record.getSecondNextRel() & MSB_MASK_NODE_REL_BIT) > 0 ? (byte)(msb | MSB_SECOND_NEXT) : msb;
-    	if ((record.getNextProp() & MSB_MASK_PROPERTY_BIT) > 0)
-    	{
-    		int propBits = (int)((record.getNextProp() & MSB_MASK_PROPERTY_BIT)>>32);
-			msb = (byte)(msb | propBits);
-		}
-    	return msb;
     }
     
     private long getSecondPrevReference( RelationshipRecord record, long recordId )
