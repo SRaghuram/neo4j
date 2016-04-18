@@ -84,14 +84,7 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
     static final long NULL = Record.NULL_REFERENCE.intValue();
     static final int HEADER_BIT_RECORD_UNIT = 0b0000_0010;
     static final int HEADER_BIT_FIRST_RECORD_UNIT = 0b0000_0100;
-    static final int HEADER_BIT_FIXED_REFERENCE = 0b0000_0100;// overloaded with HEADER_BIT_FIRST_RECORD_UNIT. 
-    														  // valid only when HEADER_BIT_RECORD_UNIT is 0.
-    
-    protected static final long MSB_MASK_NODE_REL = 0xFFFF_FFFE_0000_0000l;
-    protected static final long MSB_MASK_PROPERTY = 0xFFFF_FFFC_0000_0000l;
-    protected static final long MSB_MASK_NODE_REL_BIT = 0x1_0000_0000l;
-    protected static final long MSB_MASK_PROPERTY_BIT = 0x3_0000_0000l;
-    protected static final long INT_MASK = 0xFFFF_FFFFl;
+
     protected BaseHighLimitRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize )
     {
         super( recordSize, recordHeaderSize, IN_USE_BIT, HighLimit.DEFAULT_MAXIMUM_BITS_PER_ID );
@@ -102,7 +95,7 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
     {
         int primaryStartOffset = primaryCursor.getOffset();
         byte headerByte = primaryCursor.getByte();
-        record.setFixedReference(!has( headerByte, HEADER_BIT_RECORD_UNIT ) && has( headerByte, HEADER_BIT_FIXED_REFERENCE ));
+        record.setFixedReference(!has( headerByte, HEADER_BIT_RECORD_UNIT ) && has( headerByte, FIXED_REFERENCE.REFERENCE_TYPE ));
         boolean inUse = isInUse( headerByte );
         boolean doubleRecordUnit = has( headerByte, HEADER_BIT_RECORD_UNIT );
         if ( doubleRecordUnit )
@@ -167,7 +160,7 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
             if (record.requiresSecondaryUnit())
             	headerByte = set( headerByte, HEADER_BIT_FIRST_RECORD_UNIT, true );
             else
-            	headerByte = set(headerByte, HEADER_BIT_FIXED_REFERENCE, record.isFixedReference());
+            	headerByte = set(headerByte, FIXED_REFERENCE.REFERENCE_TYPE, record.isFixedReference());
             primaryCursor.putByte( headerByte );
 
             if ( record.requiresSecondaryUnit() )

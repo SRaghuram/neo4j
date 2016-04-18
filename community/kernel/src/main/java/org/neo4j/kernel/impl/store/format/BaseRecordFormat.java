@@ -40,6 +40,19 @@ import org.neo4j.kernel.impl.store.record.Record;
 public abstract class BaseRecordFormat<RECORD extends AbstractBaseRecord> implements RecordFormat<RECORD>
 {
     public static final int IN_USE_BIT = 0b0000_0001;
+    
+    public static class FIXED_REFERENCE
+    {
+    	public static boolean ALLOWED = true;
+    	public static final int REFERENCE_TYPE = 0b0000_0100; // overloaded with HEADER_BIT_FIRST_RECORD_UNIT. 
+  	  														  // valid only when HEADER_BIT_RECORD_UNIT is 0.
+    	public static final long MSB_MASK_NODE_REL = 0xFFFF_FFFE_0000_0000l;
+    	public static final long MSB_MASK_PROPERTY = 0xFFFF_FFFC_0000_0000l;
+    	public static final long MSB_MASK_NODE_REL_BIT = 0x1_0000_0000l;
+    	public static final long MSB_MASK_PROPERTY_BIT = 0x3_0000_0000l;
+    	public static final long INT_MASK = 0xFFFF_FFFFl;
+    }
+    
     public static final Function<StoreHeader,Integer> INT_STORE_HEADER_READER =
             (header) -> ((IntStoreHeader)header).value();
 

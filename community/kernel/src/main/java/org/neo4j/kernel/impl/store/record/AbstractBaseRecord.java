@@ -55,7 +55,7 @@ public abstract class AbstractBaseRecord implements CloneableInPublic
         this.created = false;
         this.secondaryUnitId = NO_ID;
         this.requiresSecondaryUnit = false;
-        canBeFixedReference = true;
+        canBeFixedReference = false;
         return this;
     }
 

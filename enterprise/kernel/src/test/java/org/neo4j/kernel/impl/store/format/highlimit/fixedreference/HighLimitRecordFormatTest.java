@@ -17,11 +17,12 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store.format.highlimit;
+package org.neo4j.kernel.impl.store.format.highlimit.fixedreference;
 
 import org.neo4j.kernel.impl.store.format.LimitedRecordGenerators;
 import org.neo4j.kernel.impl.store.format.RecordFormatTest;
 import org.neo4j.kernel.impl.store.format.RecordGenerators;
+import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 
 public class HighLimitRecordFormatTest extends RecordFormatTest
 {
@@ -29,6 +30,6 @@ public class HighLimitRecordFormatTest extends RecordFormatTest
 
     public HighLimitRecordFormatTest()
     {
-        super( HighLimit.RECORD_FORMATS, HIGH_LIMITS, false );
+        super( HighLimit.RECORD_FORMATS, HIGH_LIMITS, true );
     }
 }

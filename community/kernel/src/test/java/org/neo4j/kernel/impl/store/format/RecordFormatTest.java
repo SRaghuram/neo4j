@@ -55,7 +55,7 @@ public abstract class RecordFormatTest
 
     // Whoever is hit first
     private static final long TEST_ITERATIONS = 20_000;
-    private static final long TEST_TIME = 500000;
+    private static final long TEST_TIME = 500;
     private static final long PRINT_RESULTS_THRESHOLD = SECONDS.toMillis( 1 );
     private static final int DATA_SIZE = 100;
     protected static final long NULL = Record.NULL_REFERENCE.intValue();
@@ -74,11 +74,11 @@ public abstract class RecordFormatTest
     private final RecordGenerators generators;
     int failure = 0, success = 0, notInUse = 0;
 
-    protected RecordFormatTest( RecordFormats formats, RecordGenerators generators )
+    protected RecordFormatTest( RecordFormats formats, RecordGenerators generators, boolean fixed_reference )
     {
         this.formats = formats;
         this.generators = generators;
-        LimitedRecordGenerators.FIXED_REFERENCE = true;
+        BaseRecordFormat.FIXED_REFERENCE.ALLOWED = fixed_reference;
     }
     
     @Test
@@ -188,7 +188,7 @@ public abstract class RecordFormatTest
                     }
 
                     storeFile.resetMeasurements();
-                    idSequence.reset();;
+                    idSequence.reset();
                 }
                 catch ( Throwable t )
                 {
@@ -199,6 +199,7 @@ public abstract class RecordFormatTest
             }
 
             time = currentTimeMillis() - time;
+            System.out.println("Fixed reference format:"+BaseRecordFormat.FIXED_REFERENCE.ALLOWED);
             if ( time >= PRINT_RESULTS_THRESHOLD )
             {
                 System.out.printf( "%s%n  %.2f write-read ops/ms%n  %.2f%% required secondary unit%n" +

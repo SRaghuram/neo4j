@@ -36,9 +36,10 @@ import static java.lang.Math.abs;
 
 public class LimitedRecordGenerators implements RecordGenerators
 {
-	public static boolean FIXED_REFERENCE = false;
 	private static long FIXED_REF_PROPERTY_MASK = 0x3_FFFF_FFFFl;
 	private static long FIXED_REF_NODEREL_MASK = 0x1_FFFF_FFFFl;
+	private static long FIXED_REF_LABEL_MASK = 0xFFFF_FFFF_FFFFl;
+	private static long FIXED_REF_NO_MASK = 0xFFFF_FFFF_FFFF_FFFFl;
     static final long NULL = -1;
 
     private final RandomRule random;
@@ -55,15 +56,30 @@ public class LimitedRecordGenerators implements RecordGenerators
     private enum TYPE implements iType
     {
     	ALL,
-    	NODE,
-    	RELATIONSHIP,
+    	NODE{
+    		public long getMask()
+        	{
+        		return FIXED_REF_NODEREL_MASK;
+        	}
+    	},
+    	RELATIONSHIP{
+    		public long getMask()
+        	{
+        		return FIXED_REF_NODEREL_MASK;
+        	}
+    	},
     	PROPERTY{
     		public long getMask()
         	{
         		return FIXED_REF_PROPERTY_MASK;
         	}
     	},
-    	LABEL,
+    	LABEL{
+    		public long getMask()
+        	{
+        		return FIXED_REF_LABEL_MASK;
+        	}
+    	},
     	TOKEN;
     	int bits;
     	void init(int inBits)
@@ -72,7 +88,7 @@ public class LimitedRecordGenerators implements RecordGenerators
     	}
     	public long getMask()
     	{
-    		return FIXED_REF_NODEREL_MASK;
+    		return FIXED_REF_NO_MASK;
     	}
     	public int getBits()
 		{
@@ -126,8 +142,8 @@ public class LimitedRecordGenerators implements RecordGenerators
     @Override
     public Generator<RelationshipRecord> relationship()
     {
-        return (recordSize, format) -> new RelationshipRecord( randomId() ).initialize( true,//random.nextBoolean(),
-                randomLongOrOccasionallyNull( label ),
+        return (recordSize, format) -> new RelationshipRecord( randomId() ).initialize( random.nextBoolean(),
+                randomLongOrOccasionallyNull( prop ),
                 random.nextLong( entity.getBits() ), random.nextLong( entity.getBits() ), randomInt( token ),
                 randomLongOrOccasionallyNull( entity ), randomLongOrOccasionallyNull( entity ),
                 randomLongOrOccasionallyNull( entity ), randomLongOrOccasionallyNull( entity ),
@@ -175,10 +191,10 @@ public class LimitedRecordGenerators implements RecordGenerators
     public Generator<NodeRecord> node()
     {
         return (recordSize, format) -> new NodeRecord( randomId() ).initialize(
-                true,//random.nextBoolean(), 
+                random.nextBoolean(), 
                 randomLongOrOccasionallyNull( prop ), random.nextBoolean(),
                 randomLongOrOccasionallyNull( entity ),
-                randomLongOrOccasionallyNull( label, 0 ) );
+                randomLongOrOccasionallyNull( label, 0 ));
     }
 
     @Override
@@ -215,7 +231,7 @@ public class LimitedRecordGenerators implements RecordGenerators
     {
         int bits = random.nextInt( type.getBits() + 1 );
         long max = 1L << bits;
-        return FIXED_REFERENCE ? type.getMask() & random.nextLong( max ) : random.nextLong( max );
+        return BaseRecordFormat.FIXED_REFERENCE.ALLOWED ? type.getMask() & random.nextLong( max ) : random.nextLong( max );
     }
 
     private long randomLongOrOccasionallyNull(TYPE type )

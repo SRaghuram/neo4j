@@ -84,8 +84,8 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
         	long nextProp = cursor.getInt() & 0xFFFF_FFFFL;
 
         	// get the most significant byte of 5-byte label field 
-            long hsbLabels = cursor.getByte() & 0xFF; // so that a negative byte won't fill the "extended" bits with ones.
-            long lsbLabels = cursor.getInt() & 0xFFFFFFFFL;       
+            long hsbLabels = cursor.getShort() & 0xFFFF; // so that a negative byte won't fill the "extended" bits with ones.
+            long lsbLabels = cursor.getInt() & 0xFFFF_FFFFL;       
             long labels = lsbLabels | (hsbLabels << 32);
 
         	record.initialize( inUse, 
@@ -131,10 +131,10 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     	if (record.isFixedReference())
     	{
     		long nextProp = record.getNextProp();
-            long nextPropMod = nextProp == Record.NO_NEXT_PROPERTY.intValue() ? 0 : (nextProp & MSB_MASK_PROPERTY_BIT) >> 32;
+            long nextPropMod = nextProp == Record.NO_NEXT_PROPERTY.intValue() ? 0 : (nextProp & FIXED_REFERENCE.MSB_MASK_PROPERTY_BIT) >> 32;
             
             long nextRel = record.getNextRel();
-            long nextRelMod = nextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (nextRel & MSB_MASK_NODE_REL_BIT) >> 30;
+            long nextRelMod = nextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (nextRel & FIXED_REFERENCE.MSB_MASK_NODE_REL_BIT) >> 30;
             // [    ,  xx] next prop higher order bits
             // [    , x  ] next rel high order bits
             short msbByte = (short) ( nextRelMod | nextPropMod );
@@ -145,7 +145,7 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
    		
     		long labelField = record.getLabelField();
     		// msb of labels
-            cursor.putByte( (byte) ((labelField & 0xFF00000000L) >> 32) );
+            cursor.putShort( (short) ((labelField & 0xFFFF_0000_0000L) >> 32) );
     		// lsb of labels
             cursor.putInt( (int) labelField );
     	}
@@ -160,9 +160,11 @@ class NodeRecordFormat extends BaseHighLimitRecordFormat<NodeRecord>
     @Override
     protected boolean canBeFixedReference( NodeRecord record )
     {
-    	if ((record.getNextProp() != -1) && ((record.getNextProp() & MSB_MASK_PROPERTY) != 0))
+    	if (!FIXED_REFERENCE.ALLOWED)
     		return false;
-    	if ((record.getNextRel() != -1) && ((record.getNextRel() & MSB_MASK_NODE_REL) != 0))
+    	if ((record.getNextProp() != -1) && ((record.getNextProp() & FIXED_REFERENCE.MSB_MASK_PROPERTY) != 0))
+    		return false;
+    	if ((record.getNextRel() != -1) && ((record.getNextRel() & FIXED_REFERENCE.MSB_MASK_NODE_REL) != 0))
     		return false;
     	return true;	  			
     }

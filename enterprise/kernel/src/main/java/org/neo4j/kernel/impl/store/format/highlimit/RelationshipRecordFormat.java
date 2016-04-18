@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.format.BaseRecordFormat;
+import org.neo4j.kernel.impl.store.format.BaseRecordFormat.FIXED_REFERENCE;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
@@ -188,25 +189,30 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
         if (record.isFixedReference())
         {
         	long nextProp = record.getNextProp();
-            long nextPropMod = nextProp == Record.NO_NEXT_PROPERTY.intValue() ? 0 : (nextProp & MSB_MASK_PROPERTY_BIT) >> 32;
+            long nextPropMod = nextProp == Record.NO_NEXT_PROPERTY.intValue() ? 0 : 
+            								(nextProp & FIXED_REFERENCE.MSB_MASK_PROPERTY_BIT) >> 32;
             
             long firstNode = record.getFirstNode();
-            short firstNodeMod = (short)((firstNode & MSB_MASK_NODE_REL_BIT) >> 30);
+            short firstNodeMod = (short)((firstNode & FIXED_REFERENCE.MSB_MASK_NODE_REL_BIT) >> 30);
 
             long secondNode = record.getSecondNode();
-            long secondNodeMod = (secondNode & MSB_MASK_NODE_REL_BIT) >> 29;
+            long secondNodeMod = (secondNode & FIXED_REFERENCE.MSB_MASK_NODE_REL_BIT) >> 29;
 
             long firstPrevRel = record.getFirstPrevRel();
-            long firstPrevRelMod = firstPrevRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (firstPrevRel & MSB_MASK_NODE_REL_BIT) >> 28;
+            long firstPrevRelMod = firstPrevRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : 
+            								(firstPrevRel & FIXED_REFERENCE.MSB_MASK_NODE_REL_BIT) >> 28;
 
             long firstNextRel = record.getFirstNextRel();
-            long firstNextRelMod = firstNextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (firstNextRel & MSB_MASK_NODE_REL_BIT) >> 27;
+            long firstNextRelMod = firstNextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : 
+            								(firstNextRel & FIXED_REFERENCE.MSB_MASK_NODE_REL_BIT) >> 27;
 
             long secondPrevRel = record.getSecondPrevRel();
-            long secondPrevRelMod = secondPrevRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (secondPrevRel & MSB_MASK_NODE_REL_BIT) >> 26;
+            long secondPrevRelMod = secondPrevRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : 
+            								(secondPrevRel & FIXED_REFERENCE.MSB_MASK_NODE_REL_BIT) >> 26;
 
             long secondNextRel = record.getSecondNextRel();
-            long secondNextRelMod = secondNextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : (secondNextRel & MSB_MASK_NODE_REL_BIT) >> 25;
+            long secondNextRelMod = secondNextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0 : 
+            								(secondNextRel & FIXED_REFERENCE.MSB_MASK_NODE_REL_BIT) >> 25;
 
         	// [    ,  xx] next prop higher order bits
             // [    , x  ] first node high order bits
@@ -248,19 +254,28 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
     @Override
     protected boolean canBeFixedReference( RelationshipRecord record )
     {
-    	if ((record.getNextProp() != -1) && ((record.getNextProp() & MSB_MASK_PROPERTY) != 0))
+    	if (!FIXED_REFERENCE.ALLOWED)
     		return false;
-    	if ((record.getFirstPrevRel() != -1) && ((record.getFirstPrevRel() & MSB_MASK_NODE_REL) != 0))
+    	if ((record.getNextProp() != Record.NO_NEXT_PROPERTY.intValue()) && 
+    			((record.getNextProp() & FIXED_REFERENCE.MSB_MASK_PROPERTY) != 0))
     		return false;
-    	if ((record.getFirstNextRel() != -1) && ((record.getFirstNextRel() & MSB_MASK_NODE_REL) != 0))
+    	if ((record.getFirstPrevRel() != Record.NO_NEXT_RELATIONSHIP.intValue()) && 
+    			((record.getFirstPrevRel() & FIXED_REFERENCE.MSB_MASK_NODE_REL) != 0))
     		return false;
-    	if ((record.getSecondPrevRel() != -1) && ((record.getSecondPrevRel() & MSB_MASK_NODE_REL) != 0))
+    	if ((record.getFirstNextRel() != Record.NO_NEXT_RELATIONSHIP.intValue()) && 
+    			((record.getFirstNextRel() & FIXED_REFERENCE.MSB_MASK_NODE_REL) != 0))
     		return false;
-    	if ((record.getSecondNextRel() != -1) && ((record.getSecondNextRel() & MSB_MASK_NODE_REL) != 0))
+    	if ((record.getSecondPrevRel() != -Record.NO_NEXT_RELATIONSHIP.intValue()) && 
+    			((record.getSecondPrevRel() & FIXED_REFERENCE.MSB_MASK_NODE_REL) != 0))
     		return false;
-    	if ((record.getFirstNode() != -1) && ((record.getFirstNode() & MSB_MASK_NODE_REL) != 0))
+    	if ((record.getSecondNextRel() != -Record.NO_NEXT_RELATIONSHIP.intValue()) && 
+    			((record.getSecondNextRel() & FIXED_REFERENCE.MSB_MASK_NODE_REL) != 0))
     		return false;
-    	if ((record.getSecondNode() != -1) && ((record.getSecondNode() & MSB_MASK_NODE_REL) != 0))
+    	if ((record.getFirstNode() != -Record.NO_NEXT_RELATIONSHIP.intValue()) && 
+    			((record.getFirstNode() & FIXED_REFERENCE.MSB_MASK_NODE_REL) != 0))
+    		return false;
+    	if ((record.getSecondNode() != -Record.NO_NEXT_RELATIONSHIP.intValue()) && 
+    			((record.getSecondNode() & FIXED_REFERENCE.MSB_MASK_NODE_REL) != 0))
     		return false;
     	return true;	  			
     }

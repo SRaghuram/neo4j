@@ -30,6 +30,6 @@ public class LowLimitRecordFormatTest extends RecordFormatTest
 
     public LowLimitRecordFormatTest()
     {
-        super( LowLimitV3_0.RECORD_FORMATS, LOW_LIMITS );
+        super( LowLimitV3_0.RECORD_FORMATS, LOW_LIMITS, false );
     }
 }
