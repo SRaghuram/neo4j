@@ -28,6 +28,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.IdGeneratorFactory;
+import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 
@@ -62,9 +63,9 @@ public class StoreFactory
     private Config config;
     @SuppressWarnings( "deprecation" )
     private IdGeneratorFactory idGeneratorFactory;
-    private FileSystemAbstraction fileSystemAbstraction;
+    protected FileSystemAbstraction fileSystemAbstraction;
     private LogProvider logProvider;
-    private File neoStoreFileName;
+    protected File neoStoreFileName;
     private PageCache pageCache;
 
     public StoreFactory()
@@ -148,5 +149,7 @@ public class StoreFactory
     {
         public static final Setting<Integer> string_block_size = GraphDatabaseSettings.string_block_size;
         public static final Setting<Integer> array_block_size = GraphDatabaseSettings.array_block_size;
+        public static final Setting<Integer> label_block_size = GraphDatabaseSettings.label_block_size;
+        public static final Setting<Integer> dense_node_threshold = GraphDatabaseSettings.dense_node_threshold;
     }
 }

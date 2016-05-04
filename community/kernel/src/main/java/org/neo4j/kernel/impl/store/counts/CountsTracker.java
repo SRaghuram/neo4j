@@ -29,6 +29,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.CountsAccessor;
 import org.neo4j.kernel.impl.api.CountsVisitor;
+import org.neo4j.kernel.impl.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.store.counts.keys.CountsKey;
 import org.neo4j.kernel.impl.store.kvstore.AbstractKeyValueStore;
@@ -76,11 +77,14 @@ public class CountsTracker extends AbstractKeyValueStore<CountsKey>
 {
     /** The format specifier for the current version of the store file format. */
     private static final byte[] FORMAT = {'N', 'e', 'o', 'C', 'o', 'u', 'n', 't',
-                                          'S', 't', 'o', 'r', 'e', /**/0, 0, 'V'};
+                                          'S', 't', 'o', 'r', 'e', /**/0, 1, 'V'};
+    private static final byte[] FORMAT_22X = {'N', 'e', 'o', 'C', 'o', 'u', 'n', 't',
+			  'S', 't', 'o', 'r', 'e', /**/0, 0, 'V'};
     @SuppressWarnings("unchecked")
     private static final HeaderField<?>[] HEADER_FIELDS = new HeaderField[]{FileVersion.FILE_VERSION};
     public static final String LEFT = ".a", RIGHT = ".b";
     public static final String TYPE_DESCRIPTOR = "CountsStore";
+    private File countsFile;
 
     public CountsTracker( final LogProvider logProvider, FileSystemAbstraction fs, PageCache pages, Config config,
             File baseFile )
@@ -117,6 +121,7 @@ public class CountsTracker extends AbstractKeyValueStore<CountsKey>
             }
         }, new RotationTimerFactory( Clock.SYSTEM_CLOCK,
                 config.get( GraphDatabaseSettings.store_interval_log_rotation_wait_time ) ), 16, 16, HEADER_FIELDS );
+        countsFile = baseFile;
     }
 
     public CountsTracker setInitializer( final DataInitializer<Updater> initializer )
@@ -283,7 +288,10 @@ public class CountsTracker extends AbstractKeyValueStore<CountsKey>
     @Override
     protected void writeFormatSpecifier( WritableBuffer formatSpecifier )
     {
-        formatSpecifier.put( 0, FORMAT );
+    	File leftFile = new File(countsFile.getAbsolutePath()+LEFT);
+    	boolean format22x = CommonAbstractStore.isStore22XFormat(leftFile, TYPE_DESCRIPTOR); 
+    	//format22x = true;
+        formatSpecifier.put( 0, format22x ? FORMAT_22X : FORMAT );
     }
 
     private class DelegatingVisitor extends Visitor implements MetadataVisitor

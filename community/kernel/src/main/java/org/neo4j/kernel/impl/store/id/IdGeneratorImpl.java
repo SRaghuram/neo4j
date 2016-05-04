@@ -136,7 +136,8 @@ public class IdGeneratorImpl implements IdGenerator
         this.file = file;
         this.grabSize = grabSize;
         initGenerator();
-        this.highId.set( max( this.highId.get(), highId ) );
+        //this.highId.set( max( this.highId.get(), highId ) );
+        this.highId.set( Math.min( this.highId.get(), highId ) );
     }
 
     /**

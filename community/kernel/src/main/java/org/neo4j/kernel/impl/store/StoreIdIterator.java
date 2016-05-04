@@ -28,8 +28,9 @@ import static java.lang.String.format;
 public class StoreIdIterator implements PrimitiveLongIterator
 {
     private final RecordStore<?> store;
-    private long targetId, id;
-    private final boolean forward;
+    private long targetId;
+	protected long id;
+    private boolean forward;
 
     public StoreIdIterator( RecordStore<?> store )
     {
@@ -82,5 +83,15 @@ public class StoreIdIterator implements PrimitiveLongIterator
         {
             id += (forward ? 1 : -1);
         }
+    }
+    public boolean reverseDirection()
+    {
+        forward = !forward;
+        return forward;
+    }
+
+    public boolean isForward()
+    {
+        return forward;
     }
 }

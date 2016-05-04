@@ -21,11 +21,13 @@ package org.neo4j.kernel.impl.store;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.StandardOpenOption;
 
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.UTF8;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
@@ -52,6 +54,7 @@ import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_LOCK;
 public abstract class CommonAbstractStore implements IdSequence, AutoCloseable
 {
     public static final String ALL_STORES_VERSION = "v0.A.6";
+    public static final String ALL_STORES_VERSION_22 = "v0.A.5";
     public static final String UNKNOWN_VERSION = "Unknown";
     protected final Config configuration;
     protected final PageCache pageCache;
@@ -95,7 +98,7 @@ public abstract class CommonAbstractStore implements IdSequence, AutoCloseable
         this.log = logProvider.getLog( getClass() );
     }
 
-    void initialise( boolean createIfNotExists )
+    public void initialise( boolean createIfNotExists )
     {
         try
         {
@@ -541,7 +544,7 @@ public abstract class CommonAbstractStore implements IdSequence, AutoCloseable
                 nextPageId--;
                 do
                 {
-                    int currentRecord = recordsPerPage;
+                	int currentRecord = checkFor22xFormat(storageFileName, recordsPerPage);
                     while ( currentRecord-- > 0 )
                     {
                         cursor.setOffset( currentRecord * recordSize );
@@ -559,7 +562,46 @@ public abstract class CommonAbstractStore implements IdSequence, AutoCloseable
             return getNumberOfReservedLowIds();
         }
     }
+    static public String getExpectedTypeAndVesrion22X( String type)
+    {
+    	return type + " " + ALL_STORES_VERSION_22;
+    }
+    static public boolean isStore22XFormat(File storageFile, String expectedTypeDescriptor)
+    {
+    	String expectedTypeDescriptorAndVersion = getExpectedTypeAndVesrion22X( expectedTypeDescriptor );
+        int length = UTF8.encode( expectedTypeDescriptorAndVersion  ).length;
+        byte bytes[] = new byte[length];
+        try
+        {
+	        RandomAccessFile raf = new RandomAccessFile(storageFile, "r");	
+	        // Seek to the end of file
+	        raf.seek(storageFile.length() - length);
+	        // Read it out.
+	        raf.read(bytes, 0, length);
+	        raf.close();
+        } catch (Exception e)
+        {
+        	return false;
+        }
 
+        String readTypeDescriptorAndVersion = UTF8.decode( bytes );
+
+        if ( expectedTypeDescriptorAndVersion.equals( readTypeDescriptorAndVersion ) )
+        	return true;
+        return false;
+    }
+    
+    private int checkFor22xFormat(File storageFile, int startRecord)
+    {
+        int length = UTF8.encode( getExpectedTypeAndVesrion22X( getTypeDescriptor() ) ).length;
+    	if (isStore22XFormat(storageFile, getTypeDescriptor()))
+        {
+        	int pageSize = getRecordsPerPage() * getRecordSize();
+        	int pageOffset = (int)( storageFileName.length() % pageSize);
+        	return ((pageOffset - length)/getRecordSize());
+        }
+        return startRecord;
+    }
     public abstract int getRecordSize();
 
     protected boolean isRecordInUse( PageCursor cursor )

@@ -395,7 +395,7 @@ public class NeoStores implements AutoCloseable
         return storeDir;
     }
 
-    private File getStoreFileName( String substoreName )
+    public File getStoreFileName( String substoreName )
     {
         return new File( neoStoreFileName.getPath() + substoreName );
     }
