@@ -27,6 +27,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
+import org.neo4j.kernel.impl.api.state.PagedCache;
 import org.neo4j.kernel.impl.core.RelationshipTypeToken;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
@@ -42,6 +43,7 @@ import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NeoStoreRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
@@ -156,7 +158,7 @@ public class TransactionRecordState implements RecordState
 
         // Collect nodes, relationships, properties
         Command[] nodeCommands = EMPTY_COMMANDS;
-        int skippedCommands = 0;
+        int skippedCommands = 0+0;
         if ( recordChangeSet.getNodeRecords().changeSize() > 0 )
         {
             nodeCommands = new Command[recordChangeSet.getNodeRecords().changeSize()];
@@ -193,6 +195,18 @@ public class TransactionRecordState implements RecordState
             {
                 propCommands[i++] = new Command.PropertyCommand( change.getBefore(),
                         prepared( change, propertyStore ) );
+            }
+            Arrays.sort( propCommands, COMMAND_SORTER );
+        }
+        if ( recordChangeSet.getPropertyRecordsNew().changeSize() > 0 )
+        {
+            propCommands = new Command[recordChangeSet.getPropertyRecordsNew().changeSize()];
+            int i = 0;
+            for ( RecordProxy<Long, PropRecord, PrimitiveRecord> change :
+                recordChangeSet.getPropertyRecordsNew().changes() )
+            {
+                propCommands[i++] = new Command.PropertyCommandNew( change.getBefore(),
+                		change.forReadingLinkage() );
             }
             Arrays.sort( propCommands, COMMAND_SORTER );
         }
@@ -352,7 +366,10 @@ public class TransactionRecordState implements RecordState
     public void nodeRemoveProperty( long nodeId, int propertyKey )
     {
         RecordProxy<Long, NodeRecord, Void> node = recordChangeSet.getNodeRecords().getOrLoad( nodeId, null );
-        propertyDeleter.removeProperty( node, propertyKey, recordChangeSet.getPropertyRecords() );
+        if (!PagedCache.isTransCache())
+        		propertyDeleter.removeProperty( node, propertyKey, recordChangeSet.getPropertyRecords() );
+        else
+        	 	propertyDeleter.removePropertyNew( node, propertyKey, recordChangeSet.getPropertyRecordsNew() );
     }
 
     /**
@@ -368,7 +385,10 @@ public class TransactionRecordState implements RecordState
     public DefinedProperty relChangeProperty( long relId, int propertyKey, Object value )
     {
         RecordProxy<Long, RelationshipRecord, Void> rel = recordChangeSet.getRelRecords().getOrLoad( relId, null );
-        propertyCreator.primitiveSetProperty( rel, propertyKey, value, recordChangeSet.getPropertyRecords() );
+        if (!PagedCache.isTransCache())
+        		propertyCreator.primitiveSetProperty( rel, propertyKey, value, recordChangeSet.getPropertyRecords() );
+        else
+        		propertyCreator.primitiveSetPropertyNew( rel, propertyKey, value, recordChangeSet.getPropertyRecordsNew() );
         return Property.property( propertyKey, value );
     }
 
@@ -384,7 +404,10 @@ public class TransactionRecordState implements RecordState
     public DefinedProperty nodeChangeProperty( long nodeId, int propertyKey, Object value )
     {
         RecordProxy<Long, NodeRecord, Void> node = recordChangeSet.getNodeRecords().getOrLoad( nodeId, null );
-        propertyCreator.primitiveSetProperty( node, propertyKey, value, recordChangeSet.getPropertyRecords() );
+    		if (!PagedCache.isTransCache())
+    			propertyCreator.primitiveSetProperty( node, propertyKey, value, recordChangeSet.getPropertyRecords() );
+    		else
+    			propertyCreator.primitiveSetPropertyNew( node, propertyKey, value, recordChangeSet.getPropertyRecordsNew() );
         return Property.property( propertyKey, value );
     }
 
@@ -415,7 +438,10 @@ public class TransactionRecordState implements RecordState
     public DefinedProperty nodeAddProperty( long nodeId, int propertyKey, Object value )
     {
         RecordProxy<Long, NodeRecord, Void> node = recordChangeSet.getNodeRecords().getOrLoad( nodeId, null );
-        propertyCreator.primitiveSetProperty( node, propertyKey, value, recordChangeSet.getPropertyRecords() );
+    		if (!PagedCache.isTransCache())
+    			propertyCreator.primitiveSetProperty( node, propertyKey, value, recordChangeSet.getPropertyRecords() );
+    		else
+    			propertyCreator.primitiveSetPropertyNew( node, propertyKey, value, recordChangeSet.getPropertyRecordsNew() );
         return Property.property( propertyKey, value );
     }
 
@@ -566,8 +592,12 @@ public class TransactionRecordState implements RecordState
      */
     public DefinedProperty graphChangeProperty( int propertyKey, Object value )
     {
-        propertyCreator.primitiveSetProperty( getOrLoadNeoStoreRecord(), propertyKey, value,
-                recordChangeSet.getPropertyRecords() );
+	    	if (!PagedCache.isTransCache())
+	        propertyCreator.primitiveSetProperty( getOrLoadNeoStoreRecord(), propertyKey, value,
+	                recordChangeSet.getPropertyRecords() );
+	    	else
+	    		propertyCreator.primitiveSetPropertyNew( getOrLoadNeoStoreRecord(), propertyKey, value,
+	                    recordChangeSet.getPropertyRecordsNew() );
         return Property.property( propertyKey, value );
     }
 

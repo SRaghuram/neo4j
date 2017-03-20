@@ -42,14 +42,7 @@ public class TransactionCacheStateTest extends TxStateTest
     @Override
     protected TransactionState createTransactionState()
     {
-        try
-        {
-            return new PagedCache( pageCacheRule.getPageCache( fileSystemRule.get() ) );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
+            return null;//new PagedCache( pageCacheRule.getPageCache( fileSystemRule.get() ) );       
     }
 
     @After

@@ -1405,7 +1405,7 @@ public class TxStateTest
     public void shouldObserveCorrectAugmentedNodeRelationshipsState() throws Exception
     {
         // GIVEN random committed state
-        TxState state = new TxState();
+        TransactionState state = createTransactionState();
         for ( int i = 0; i < 100; i++ )
         {
             state.nodeDoCreate( i );
@@ -1650,12 +1650,17 @@ public class TxStateTest
     private final NewIndexDescriptor indexOn_1_2 = NewIndexDescriptorFactory.forLabel( 2, 4 );
     private final NewIndexDescriptor indexOn_2_1 = NewIndexDescriptorFactory.forLabel( 3, 3 );
 
-    private TransactionState state;
+    protected TransactionState state;
 
     @Before
     public void before() throws Exception
     {
-        state = new TxState();
+        state = createTransactionState();
+    }
+
+    protected TransactionState createTransactionState()
+    {
+        return new TxState();
     }
 
     private interface IndexUpdater

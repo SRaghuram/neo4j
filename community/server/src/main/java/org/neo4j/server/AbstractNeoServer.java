@@ -32,6 +32,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import org.neo4j.bolt.security.ssl.Certificates;
@@ -283,7 +284,8 @@ public abstract class AbstractNeoServer implements NeoServer
 
     private void stopModules()
     {
-        new RunCarefully( map( module -> module::stop, serverModules ) ).run();
+        //new RunCarefully( map( module -> module::stop, serverModules ) ).run();
+    	new RunCarefully( map( (Function<ServerModule,Runnable>) module -> module::stop, serverModules ) ).run();
     }
 
     @Override

@@ -21,7 +21,7 @@ package org.neo4j.kernel.impl.api.state;
 
 import org.junit.Test;
 
-import org.neo4j.kernel.impl.api.RelationshipVisitor;
+import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.store.RelationshipIterator;
 import org.neo4j.storageengine.api.Direction;
 
@@ -42,7 +42,7 @@ public class RelationshipChangesForNodeTest
     public void testOutgoingRelsWithTypeAndLoop() throws Exception
     {
         RelationshipChangesForNode changes = new RelationshipChangesForNode(
-                RelationshipChangesForNode.DiffStrategy.ADD, mock( RelationshipVisitor.Home.class ) );
+                RelationshipChangesForNode.DiffStrategy.ADD, mock( TransactionState.class ) );
         changes.addRelationship( REL_0, TYPE_SELF, Direction.BOTH );
         changes.addRelationship( REL_1, TYPE_DIR, OUTGOING );
 
@@ -55,7 +55,7 @@ public class RelationshipChangesForNodeTest
     public void testIncomingRelsWithTypeAndLoop() throws Exception
     {
         RelationshipChangesForNode changes = new RelationshipChangesForNode(
-                RelationshipChangesForNode.DiffStrategy.ADD, mock( RelationshipVisitor.Home.class ) );
+                RelationshipChangesForNode.DiffStrategy.ADD, mock( TransactionState.class ) );
         changes.addRelationship( REL_0, TYPE_SELF, Direction.BOTH );
         changes.addRelationship( REL_1, TYPE_DIR, INCOMING );
 

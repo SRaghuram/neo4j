@@ -33,6 +33,7 @@ import org.neo4j.kernel.impl.transaction.command.Command.NeoStoreCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.NodeCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.NodeCountsCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.PropertyCommand;
+import org.neo4j.kernel.impl.transaction.command.Command.PropertyCommandNew;
 import org.neo4j.kernel.impl.transaction.command.Command.PropertyKeyTokenCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.RelationshipCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.RelationshipCountsCommand;
@@ -52,6 +53,8 @@ public interface CommandVisitor
     boolean visitRelationshipCommand( RelationshipCommand command ) throws IOException;
 
     boolean visitPropertyCommand( PropertyCommand command ) throws IOException;
+    
+    boolean visitPropertyCommandNew( PropertyCommandNew command ) throws IOException;
 
     boolean visitRelationshipGroupCommand( RelationshipGroupCommand command ) throws IOException;
 
@@ -191,6 +194,12 @@ public interface CommandVisitor
         {
             return false;
         }
+
+		@Override
+		public boolean visitPropertyCommandNew(PropertyCommandNew command) throws IOException {
+			// TODO Auto-generated method stub
+			return false;
+		}
     }
 
     /**
@@ -307,5 +316,11 @@ public interface CommandVisitor
         {
             return delegate.visitRelationshipCountsCommand( command );
         }
+
+		@Override
+		public boolean visitPropertyCommandNew(PropertyCommandNew command) throws IOException {
+			// TODO Auto-generated method stub
+			 return delegate.visitPropertyCommandNew( command );
+		}
     }
 }

@@ -46,7 +46,7 @@ public class PropertyRecordFormat extends BaseRecordFormat<PropertyRecord>
     @Override
     public PropertyRecord newRecord()
     {
-        return new PropertyRecord( -1 );
+        return new PropertyRecord( -1, 0 );
     }
 
     @Override

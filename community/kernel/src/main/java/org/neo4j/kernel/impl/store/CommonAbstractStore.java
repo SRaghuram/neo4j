@@ -1027,6 +1027,24 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
             throw new UnderlyingStorageException( e );
         }
     }
+    
+    public void getRecordRaw( long id, byte[] data )
+    {
+        // Mark the record with this id regardless of whether or not we load the contents of it.
+        // This is done in this method since there are multiple call sites and they all want the id
+        // on that record, so it's to ensure it isn't forgotten.
+        long pageId = pageIdForRecord( id );
+        int offset = offsetForId( id );
+        try ( PageCursor cursor = storeFile.io( pageId, PF_SHARED_READ_LOCK ) )
+        {
+        	cursor.getBytes(data);
+            return;
+        }
+        catch ( IOException e )
+        {
+            throw new UnderlyingStorageException( e );
+        }
+    }
 
     void readIntoRecord( long id, RECORD record, RecordLoad mode, PageCursor cursor ) throws IOException
     {

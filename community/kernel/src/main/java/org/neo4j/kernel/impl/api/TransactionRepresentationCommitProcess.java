@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.api;
 
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.api.properties.StringProperty;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
@@ -53,6 +54,8 @@ public class TransactionRepresentationCommitProcess implements TransactionCommit
         }
         finally
         {
+        		//StringProperty.inK = 1000;
+        		//StringProperty.spaceSaving = 0;
             close( batch );
         }
     }

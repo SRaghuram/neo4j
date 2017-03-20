@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
@@ -39,6 +40,29 @@ public class PropertyTraverser
         while ( !Record.NO_NEXT_PROPERTY.is( propertyRecordId ) )
         {
             PropertyRecord propertyRecord =
+                    propertyRecords.getOrLoad( propertyRecordId, primitive ).forReadingLinkage();
+            if ( propertyRecord.getPropertyBlock( propertyKey ) != null )
+            {
+                return propertyRecordId;
+            }
+            propertyRecordId = propertyRecord.getNextProp();
+        }
+
+        if ( strict )
+        {
+            throw new IllegalStateException( "No property record in property chain for " + primitive +
+                    " contained property with key " + propertyKey );
+        }
+
+        return Record.NO_NEXT_PROPERTY.intValue();
+    }
+    public long findPropertyRecordContainingNew( PrimitiveRecord primitive, int propertyKey,
+            RecordAccess<Long, PropRecord, PrimitiveRecord> propertyRecords, boolean strict )
+    {
+        long propertyRecordId = primitive.getNextProp();
+        while ( !Record.NO_NEXT_PROPERTY.is( propertyRecordId ) )
+        {
+            PropRecord propertyRecord =
                     propertyRecords.getOrLoad( propertyRecordId, primitive ).forReadingLinkage();
             if ( propertyRecord.getPropertyBlock( propertyKey ) != null )
             {
@@ -71,7 +95,7 @@ public class PropertyTraverser
         }
     }
 
-    public boolean assertPropertyChain( PrimitiveRecord primitive,
+    public  <RECORD> boolean assertPropertyChain( PrimitiveRecord primitive,
             RecordAccess<Long, PropertyRecord, PrimitiveRecord> propertyRecords )
     {
         List<PropertyRecord> toCheck = new LinkedList<>();
@@ -99,6 +123,47 @@ public class PropertyTraverser
                                                                           + "->"
                                                                           + Arrays.toString( toCheck.toArray() );
         PropertyRecord current, previous = first;
+        for ( int i = 1; i < toCheck.size(); i++ )
+        {
+            current = toCheck.get( i );
+            assert current.getPrevProp() == previous.getId() : primitive
+                                                               + "->"
+                                                               + Arrays.toString( toCheck.toArray() );
+            assert previous.getNextProp() == current.getId() : primitive
+                                                               + "->"
+                                                               + Arrays.toString( toCheck.toArray() );
+            previous = current;
+        }
+        return true;
+    }
+    public  <RECORD> boolean assertPropertyChainNew( PrimitiveRecord primitive,
+            RecordAccess<Long, PropRecord, PrimitiveRecord> propertyRecords )
+    {
+        List<PropRecord> toCheck = new LinkedList<>();
+        long nextIdToFetch = primitive.getNextProp();
+        while ( nextIdToFetch != Record.NO_NEXT_PROPERTY.intValue() )
+        {
+            PropRecord propRecord = propertyRecords.getOrLoad( nextIdToFetch, primitive ).forReadingLinkage();
+            toCheck.add( propRecord );
+            assert propRecord.inUse() : primitive + "->"
+                                        + Arrays.toString( toCheck.toArray() );
+            assert propRecord.size() <= PropertyType.getPayloadSize() : propRecord + " size " + propRecord.size();
+            nextIdToFetch = propRecord.getNextProp();
+        }
+        if ( toCheck.isEmpty() )
+        {
+            assert primitive.getNextProp() == Record.NO_NEXT_PROPERTY.intValue() : primitive;
+            return true;
+        }
+        PropRecord first = toCheck.get( 0 );
+        PropRecord last = toCheck.get( toCheck.size() - 1 );
+        assert first.getPrevProp() == Record.NO_PREVIOUS_PROPERTY.intValue() : primitive
+                                                                               + "->"
+                                                                               + Arrays.toString( toCheck.toArray() );
+        assert last.getNextProp() == Record.NO_NEXT_PROPERTY.intValue() : primitive
+                                                                          + "->"
+                                                                          + Arrays.toString( toCheck.toArray() );
+        PropRecord current, previous = first;
         for ( int i = 1; i < toCheck.size(); i++ )
         {
             current = toCheck.get( i );

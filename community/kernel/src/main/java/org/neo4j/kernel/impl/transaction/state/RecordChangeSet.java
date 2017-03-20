@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.transaction.state;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
@@ -36,6 +37,7 @@ public class RecordChangeSet implements RecordAccessSet
 {
     private final RecordAccess<Long, NodeRecord, Void> nodeRecords;
     private final RecordAccess<Long, PropertyRecord, PrimitiveRecord> propertyRecords;
+    private final RecordAccess<Long, PropRecord, PrimitiveRecord> propertyRecordsNew;
     private final RecordAccess<Long, RelationshipRecord, Void> relRecords;
     private final RecordAccess<Long, RelationshipGroupRecord, Integer> relGroupRecords;
     private final RecordAccess<Long, SchemaRecord, SchemaRule> schemaRuleChanges;
@@ -48,6 +50,7 @@ public class RecordChangeSet implements RecordAccessSet
     {
         this(   loaders.nodeLoader(),
                 loaders.propertyLoader(),
+                loaders.propertyLoaderNew(),
                 loaders.relationshipLoader(),
                 loaders.relationshipGroupLoader(),
                 loaders.schemaRuleLoader(),
@@ -59,6 +62,7 @@ public class RecordChangeSet implements RecordAccessSet
     public RecordChangeSet(
             Loader<Long,NodeRecord,Void> nodeLoader,
             Loader<Long,PropertyRecord,PrimitiveRecord> propertyLoader,
+            Loader<Long,PropRecord,PrimitiveRecord> propertyLoaderNew,
             Loader<Long,RelationshipRecord,Void> relationshipLoader,
             Loader<Long,RelationshipGroupRecord,Integer> relationshipGroupLoader,
             Loader<Long,SchemaRecord,SchemaRule> schemaRuleLoader,
@@ -68,6 +72,7 @@ public class RecordChangeSet implements RecordAccessSet
     {
         this.nodeRecords = new RecordChanges<>( nodeLoader, changeCounter );
         this.propertyRecords = new RecordChanges<>( propertyLoader, changeCounter );
+        this.propertyRecordsNew = new RecordChanges<>( propertyLoaderNew, changeCounter );
         this.relRecords = new RecordChanges<>( relationshipLoader, changeCounter );
         this.relGroupRecords = new RecordChanges<>( relationshipGroupLoader, changeCounter );
         this.schemaRuleChanges = new RecordChanges<>( schemaRuleLoader, changeCounter );
@@ -86,6 +91,11 @@ public class RecordChangeSet implements RecordAccessSet
     public RecordAccess<Long, PropertyRecord, PrimitiveRecord> getPropertyRecords()
     {
         return propertyRecords;
+    }
+    
+    public RecordAccess<Long, PropRecord, PrimitiveRecord> getPropertyRecordsNew()
+    {
+        return propertyRecordsNew;
     }
 
     @Override

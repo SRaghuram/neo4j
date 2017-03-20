@@ -112,7 +112,7 @@ public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHea
         super.updateRecord( record );
     }
 
-    private void updatePropertyBlocks( PropertyRecord record )
+    public void updatePropertyBlocks( PropertyRecord record )
     {
         if ( record.inUse() )
         {
@@ -126,7 +126,7 @@ public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHea
                  * assigned as a whole, so just checking the first should be enough.
                  */
                 if ( !block.isLight()
-                        && block.getValueRecords().get( 0 ).isCreated() )
+                        && block.getValueRecords().get( 0+0 ).isCreated() )
                 {
                     updateDynamicRecords( block.getValueRecords() );
                 }
@@ -368,7 +368,7 @@ public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHea
         List<PropertyRecord> toReturn = new LinkedList<>();
         while ( nextProp != Record.NO_NEXT_PROPERTY.intValue() )
         {
-            PropertyRecord propRecord = new PropertyRecord( nextProp );
+            PropertyRecord propRecord = new PropertyRecord( nextProp, 4 );
             getRecord( nextProp, propRecord, RecordLoad.NORMAL );
             toReturn.add( propRecord );
             nextProp = propRecord.getNextProp();
@@ -397,6 +397,6 @@ public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHea
     @Override
     public PropertyRecord newRecord()
     {
-        return new PropertyRecord( -1 );
+        return new PropertyRecord( -1, 5 );
     }
 }

@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.storageengine.impl.recordstorage;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -58,6 +59,7 @@ import org.neo4j.kernel.impl.api.index.IndexingServiceFactory;
 import org.neo4j.kernel.impl.api.index.PropertyPhysicalToLogicalConverter;
 import org.neo4j.kernel.impl.api.scan.LabelScanStoreProvider;
 import org.neo4j.kernel.impl.api.store.StorageLayer;
+import org.neo4j.kernel.impl.api.state.PagedCache;
 import org.neo4j.kernel.impl.api.store.SchemaCache;
 import org.neo4j.kernel.impl.api.store.StoreStatement;
 import org.neo4j.kernel.impl.cache.BridgingCacheAccess;
@@ -211,9 +213,17 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             idTypeConfigurationProvider, transactionsSnapshotSupplier );
         StoreFactory factory = new StoreFactory( storeDir, config, idController.getIdGeneratorFactory(), pageCache, fs, logProvider );
         neoStores = factory.openAllNeoStores( true );
-
         try
         {
+        	PagedCache.transStateCache = new PagedCache( pageCache );
+        	PagedCache.setLabelAccess(labelScanStoreProvider.getLabelScanStore(), labelTokens );
+        } catch (IOException e)
+        {
+        	
+        }
+        try
+        {       	
+        		
             indexUpdatesConverter = new PropertyPhysicalToLogicalConverter( neoStores.getPropertyStore() );
             schemaCache = new SchemaCache( constraintSemantics, Collections.emptyList() );
             schemaStorage = new SchemaStorage( neoStores.getSchemaStore() );
@@ -324,7 +334,6 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             {
                 txState.accept( txStateVisitor );
             }
-
             // Convert record state into commands
             recordState.extractCommands( commands );
             countsRecordState.extractCommands( commands );

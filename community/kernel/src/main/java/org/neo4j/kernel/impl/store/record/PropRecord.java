@@ -96,7 +96,7 @@ public class PropRecord implements Iterable<PropertyBlock>, Iterator<PropertyBlo
 	private void initCache(int where)
 	{
 		//allocate an id
-		int id = PagedCache.TransID.get();
+		int id = PagedCache.PagedCacheClientID.get();
 		try
 		{
 			cacheId = PagedCache.transStateCache.getBlock(RECORD_SIZE);

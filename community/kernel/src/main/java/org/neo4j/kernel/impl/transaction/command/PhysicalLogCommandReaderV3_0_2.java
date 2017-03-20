@@ -41,6 +41,7 @@ import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NeoStoreRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
@@ -192,6 +193,25 @@ public class PhysicalLogCommandReaderV3_0_2 extends BaseCommandReader
             return null;
         }
         return new Command.PropertyCommand( before, after );
+    }
+    
+    private Command visitPropertyCommandNew( ReadableChannel channel ) throws IOException
+    {
+        // ID
+        long id = channel.getLong(); // 8
+        // BEFORE
+        PropertyRecord before = readPropertyRecord( id, channel );
+        if ( before == null )
+        {
+            return null;
+        }
+        // AFTER
+        PropertyRecord after = readPropertyRecord( id, channel );
+        if ( after == null )
+        {
+            return null;
+        }
+        return new Command.PropertyCommandNew( new PropRecord(before, 3), new PropRecord(after, 4) );
     }
 
     private Command visitRelationshipGroupCommand( ReadableChannel channel ) throws IOException

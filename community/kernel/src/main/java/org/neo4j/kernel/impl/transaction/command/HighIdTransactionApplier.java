@@ -33,6 +33,7 @@ import org.neo4j.kernel.impl.store.SchemaStore;
 import org.neo4j.kernel.impl.store.TokenStore;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.TokenRecord;
 import org.neo4j.kernel.impl.transaction.command.Command.BaseCommand;
@@ -79,7 +80,7 @@ public class HighIdTransactionApplier extends TransactionApplier.Adapter
     public boolean visitPropertyCommand( PropertyCommand command ) throws IOException
     {
         PropertyStore propertyStore = neoStores.getPropertyStore();
-        track( propertyStore, command );
+        track( propertyStore, command.getAfter() );
         for ( PropertyBlock block : command.getAfter() )
         {
             switch ( block.getType() )
@@ -148,6 +149,20 @@ public class HighIdTransactionApplier extends TransactionApplier.Adapter
         }
     }
 
+    private void track( RecordStore<?> store, PropRecord record )
+    {
+        long id = max( record.getId(),  -1 );
+        HighId highId = highIds.get( store );
+        if ( highId == null )
+        {
+            highIds.put( store, new HighId( id ) );
+        }
+        else
+        {
+            highId.track( id );
+        }
+    }
+    
     private void track( RecordStore<?> store, AbstractBaseRecord record )
     {
         long id = max( record.getId(), record.requiresSecondaryUnit() ? record.getSecondaryUnitId() : -1 );

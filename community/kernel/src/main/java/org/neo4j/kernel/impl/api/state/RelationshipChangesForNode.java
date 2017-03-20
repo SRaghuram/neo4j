@@ -34,8 +34,8 @@ import org.neo4j.collection.primitive.PrimitiveIntSet;
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.helpers.collection.PrefetchingIterator;
+import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
-import org.neo4j.kernel.impl.api.RelationshipVisitor.Home;
 import org.neo4j.kernel.impl.api.store.RelationshipIterator;
 import org.neo4j.kernel.impl.util.VersionedHashMap;
 import org.neo4j.storageengine.api.Direction;
@@ -65,14 +65,14 @@ public class RelationshipChangesForNode
 
                     @Override
                     RelationshipIterator augmentPrimitiveIterator( RelationshipIterator original,
-                            Iterator<Set<Long>> diff, RelationshipVisitor.Home txStateRelationshipHome )
+                            Iterator<Set<Long>> diff, TransactionState txStateRelationshipHome )
                     {
                         throw new UnsupportedOperationException();
                     }
 
                     @Override
                     PrimitiveLongIterator getPrimitiveIterator( Iterator<Set<Long>> diff,
-                            RelationshipVisitor.Home txStateRelationshipHome )
+                                                                TransactionState txStateRelationshipHome )
                     {
                         throw new UnsupportedOperationException();
                     }
@@ -87,7 +87,7 @@ public class RelationshipChangesForNode
 
                     @Override
                     RelationshipIterator augmentPrimitiveIterator( final RelationshipIterator original,
-                            final Iterator<Set<Long>> diff, final RelationshipVisitor.Home txStateRelationshipHome )
+                            final Iterator<Set<Long>> diff, final TransactionState txStateRelationshipHome )
                     {
                         if ( !diff.hasNext() )
                         {
@@ -124,16 +124,21 @@ public class RelationshipChangesForNode
                             public <EXCEPTION extends Exception> boolean relationshipVisit( long relationshipId,
                                     RelationshipVisitor<EXCEPTION> visitor ) throws EXCEPTION
                             {
-                                RelationshipVisitor.Home home = currentSetOfAddedRels != null ?
-                                        txStateRelationshipHome : original;
-                                return home.relationshipVisit( relationshipId, visitor );
+                                if ( currentSetOfAddedRels != null )
+                                {
+                                    return txStateRelationshipHome.relationshipVisit( relationshipId, visitor );
+                                }
+                                else
+                                {
+                                    return original.relationshipVisit( relationshipId, visitor );
+                                }
                             }
                         };
                     }
 
                     @Override
                     PrimitiveLongIterator getPrimitiveIterator( final Iterator<Set<Long>> diff,
-                            RelationshipVisitor.Home txStateRelationshipHome )
+                                                                TransactionState txStateRelationshipHome )
                     {
                         if ( !diff.hasNext() )
                         {
@@ -167,14 +172,14 @@ public class RelationshipChangesForNode
         abstract int augmentDegree( int degree, int diff );
 
         abstract RelationshipIterator augmentPrimitiveIterator( RelationshipIterator original,
-                Iterator<Set<Long>> diff, RelationshipVisitor.Home txStateRelationshipHome );
+                Iterator<Set<Long>> diff, TransactionState txStateRelationshipHome );
 
         abstract PrimitiveLongIterator getPrimitiveIterator(
-                Iterator<Set<Long>> diff, RelationshipVisitor.Home txStateRelationshipHome );
+                Iterator<Set<Long>> diff, TransactionState txStateRelationshipHome );
     }
 
     private final DiffStrategy diffStrategy;
-    private final Home relationshipHome;
+    private final TransactionState relationshipHome;
 
     private Map<Integer /* Type */, Set<Long /* Id */>> outgoing;
     private Map<Integer /* Type */, Set<Long /* Id */>> incoming;
@@ -184,7 +189,7 @@ public class RelationshipChangesForNode
     private int totalIncoming = 0;
     private int totalLoops = 0;
 
-    public RelationshipChangesForNode( DiffStrategy diffStrategy, RelationshipVisitor.Home relationshipHome )
+    public RelationshipChangesForNode( DiffStrategy diffStrategy, TransactionState relationshipHome )
     {
         this.diffStrategy = diffStrategy;
         this.relationshipHome = relationshipHome;

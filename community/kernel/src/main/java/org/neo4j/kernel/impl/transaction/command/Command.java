@@ -29,6 +29,7 @@ import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NeoStoreRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
@@ -88,6 +89,10 @@ public abstract class Command implements StorageCommand
         public static Mode fromRecordState( AbstractBaseRecord record )
         {
             return fromRecordState( record.isCreated(), record.inUse() );
+        }
+        public static Mode fromRecordState( PropRecord record )
+        {
+            return fromRecordState( false, true );
         }
     }
 
@@ -173,6 +178,34 @@ public abstract class Command implements StorageCommand
         }
     }
 
+    public abstract static class BasePropCommand extends Command
+    {
+        protected final PropRecord before;
+        protected final PropRecord after;
+
+        public BasePropCommand( PropRecord before, PropRecord after )
+        {
+            setup( after.getId(), Mode.fromRecordState( after ) );
+            this.before = before;
+            this.after = after;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "testing";//beforeAndAfterToString( before, after );
+        }
+
+        public PropRecord getBefore()
+        {
+            return before;
+        }
+
+        public PropRecord getAfter()
+        {
+            return after;
+        }
+    }
     public abstract static class BaseCommand<RECORD extends AbstractBaseRecord> extends Command
     {
         protected final RECORD before;
@@ -201,7 +234,36 @@ public abstract class Command implements StorageCommand
             return after;
         }
     }
+    /*
+    public abstract static class BaseCommand1<RECORD extends AbstractBaseRecord> extends Command
+    {
+        protected final long beforeId;
+        protected final long afterId;
 
+        public BaseCommand( RECORD before, RECORD after )
+        {
+            setup( after.getId(), Mode.fromRecordState( after ) );
+            this.beforeId = putTransactCache(before);
+            this.afterId = putTransactCache(after);
+        }
+
+        @Override
+        public String toString()
+        {
+            return beforeAndAfterToString( getTransactCache(beforeId), getTransactCache(afterId) );
+        }
+
+        public RECORD getBefore()
+        {
+            return getTransactCache(beforeId);
+        }
+
+        public RECORD getAfter()
+        {
+            return getTransactCache( after );
+        }
+    }
+*/
     public static class NodeCommand extends BaseCommand<NodeRecord>
     {
         public NodeCommand( NodeRecord before, NodeRecord after )
@@ -395,6 +457,108 @@ public abstract class Command implements StorageCommand
             channel.putLong( after.getId() );
             writePropertyRecord( channel, before );
             writePropertyRecord( channel, after );
+        }
+
+        private void writePropertyRecord( WritableChannel channel, PropertyRecord record ) throws IOException
+        {
+            byte flags = bitFlags( bitFlag( record.inUse(), Record.IN_USE.byteValue() ),
+                                   bitFlag( record.getRelId() != -1, Record.REL_PROPERTY.byteValue() ),
+                                   bitFlag( record.requiresSecondaryUnit(), Record.REQUIRE_SECONDARY_UNIT ),
+                                   bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ) );
+
+            channel.put( flags ); // 1
+            channel.putLong( record.getNextProp() ).putLong( record.getPrevProp() ); // 8 + 8
+            long nodeId = record.getNodeId();
+            long relId = record.getRelId();
+            if ( nodeId != -1 )
+            {
+                channel.putLong( nodeId ); // 8 or
+            }
+            else if ( relId != -1 )
+            {
+                channel.putLong( relId ); // 8 or
+            }
+            else
+            {
+                // means this records value has not changed, only place in
+                // prop chain
+                channel.putLong( -1 ); // 8
+            }
+            if ( record.hasSecondaryUnitId() )
+            {
+                channel.putLong( record.getSecondaryUnitId() );
+            }
+            channel.put( (byte) record.numberOfProperties() ); // 1
+            for ( PropertyBlock block : record )
+            {
+                assert block.getSize() > 0 : record + " seems kinda broken";
+                writePropertyBlock( channel, block );
+            }
+            writeDynamicRecords( channel, record.getDeletedRecords() );
+        }
+        private void writePropertyBlock( WritableChannel channel, PropertyBlock block ) throws IOException
+        {
+            byte blockSize = (byte) block.getSize();
+            assert blockSize > 0 : blockSize + " is not a valid block size value";
+            channel.put( blockSize ); // 1
+            long[] propBlockValues = block.getValueBlocks();
+            for ( long propBlockValue : propBlockValues )
+            {
+                channel.putLong( propBlockValue );
+            }
+            /*
+             * For each block we need to keep its dynamic record chain if
+             * it is just created. Deleted dynamic records are in the property
+             * record and dynamic records are never modified. Also, they are
+             * assigned as a whole, so just checking the first should be enough.
+             */
+            if ( block.isLight() )
+            {
+                /*
+                 *  This has to be int. If this record is not light
+                 *  then we have the number of DynamicRecords that follow,
+                 *  which is an int. We do not currently want/have a flag bit so
+                 *  we simplify by putting an int here always
+                 */
+                channel.putInt( 0 ); // 4 or
+            }
+            else
+            {
+                writeDynamicRecords( channel, block.getValueRecords() );
+            }
+        }
+    }
+        
+    public static class PropertyCommandNew extends BasePropCommand //implements PropertyRecordChange
+    {
+        public PropertyCommandNew( PropRecord before, PropRecord after )
+        {
+            super( before, after );
+        }
+
+        @Override
+        public boolean handle( CommandVisitor handler ) throws IOException
+        {
+            return handler.visitPropertyCommandNew( this );
+        }
+
+        public long getNodeId()
+        {
+            return after.getPropertyRecord().getNodeId();
+        }
+
+        public long getRelId()
+        {
+            return after.getPropertyRecord().getRelId();
+        }
+
+        @Override
+        public void serialize( WritableChannel channel ) throws IOException
+        {
+            channel.put( NeoCommandType.PROP_COMMAND );
+            channel.putLong( after.getId() );
+            writePropertyRecord( channel, before.getPropertyRecord() );
+            writePropertyRecord( channel, after.getPropertyRecord() );
         }
 
         private void writePropertyRecord( WritableChannel channel, PropertyRecord record ) throws IOException

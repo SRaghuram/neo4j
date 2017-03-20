@@ -38,6 +38,7 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.txstate.LegacyIndexTransactionState;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
+import org.neo4j.kernel.impl.api.state.PagedCache;
 import org.neo4j.kernel.impl.api.state.LegacyIndexTransactionStateImpl;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
@@ -155,6 +156,8 @@ public class KernelTransactions extends LifecycleAdapter implements Supplier<Ker
                 assertDatabaseIsRunning();
                 TransactionId lastCommittedTransaction = transactionIdStore.getLastCommittedTransaction();
                 KernelTransactionImplementation tx = localTxPool.acquire();
+		//PagedCache.PagedCacheClientID.set(tx.getId());
+		PagedCache.getClientId();
                 StatementLocks statementLocks = statementLocksFactory.newInstance();
                 tx.initialize( lastCommittedTransaction.transactionId(), lastCommittedTransaction.commitTimestamp(),
                         statementLocks, type, frozenSecurityContext, timeout );

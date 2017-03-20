@@ -28,10 +28,15 @@ import org.neo4j.kernel.api.exceptions.schema.DuplicateSchemaRuleException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.api.properties.DefinedProperty;
+import org.neo4j.kernel.api.schema_new.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema_new.constaints.ConstraintDescriptor;
+import org.neo4j.kernel.api.schema_new.constaints.ConstraintDescriptorFactory;
 import org.neo4j.kernel.api.schema_new.constaints.UniquenessConstraintDescriptor;
 import org.neo4j.kernel.api.schema_new.index.NewIndexDescriptor;
+import org.neo4j.kernel.api.schema_new.index.NewIndexDescriptorFactory;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
+import org.neo4j.kernel.impl.api.state.PagedCache;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.record.IndexRule;
@@ -106,60 +111,60 @@ public class TransactionToRecordStateVisitor extends TxStateVisitor.Adapter
     public void visitNodePropertyChanges( long id, Iterator<StorageProperty> added,
             Iterator<StorageProperty> changed, Iterator<Integer> removed ) throws ConstraintValidationException
     {
-        while ( removed.hasNext() )
-        {
-            recordState.nodeRemoveProperty( id, removed.next() );
-        }
-        while ( changed.hasNext() )
-        {
-            DefinedProperty prop = (DefinedProperty) changed.next();
-            recordState.nodeChangeProperty( id, prop.propertyKeyId(), prop.value() );
-        }
-        while ( added.hasNext() )
-        {
-            DefinedProperty prop = (DefinedProperty) added.next();
-            recordState.nodeAddProperty( id, prop.propertyKeyId(), prop.value() );
-        }
+	    	while ( removed.hasNext() )
+	    	{
+	    		recordState.nodeRemoveProperty( id, removed.next() );
+	    	}
+	    	while ( changed.hasNext() )
+	    	{
+	    		DefinedProperty prop = (DefinedProperty) changed.next();
+	    		recordState.nodeChangeProperty( id, prop.propertyKeyId(), prop.value() );
+	    	}
+	    	while ( added.hasNext() )
+	    	{
+	    		DefinedProperty prop = (DefinedProperty) added.next();
+	    		recordState.nodeAddProperty( id, prop.propertyKeyId(), prop.value() );
+	    	}
     }
 
     @Override
     public void visitRelPropertyChanges( long id, Iterator<StorageProperty> added,
             Iterator<StorageProperty> changed, Iterator<Integer> removed )
     {
-        while ( removed.hasNext() )
-        {
-            recordState.relRemoveProperty( id, removed.next() );
-        }
-        while ( changed.hasNext() )
-        {
-            DefinedProperty prop = (DefinedProperty) changed.next();
-            recordState.relChangeProperty( id, prop.propertyKeyId(), prop.value() );
-        }
-        while ( added.hasNext() )
-        {
-            DefinedProperty prop = (DefinedProperty) added.next();
-            recordState.relAddProperty( id, prop.propertyKeyId(), prop.value() );
-        }
+	    	while ( removed.hasNext() )
+	    	{
+	    		recordState.relRemoveProperty( id, removed.next() );
+	    	}
+	    	while ( changed.hasNext() )
+	    	{
+	    		DefinedProperty prop = (DefinedProperty) changed.next();
+	    		recordState.relChangeProperty( id, prop.propertyKeyId(), prop.value() );
+	    	}
+	    	while ( added.hasNext() )
+	    	{
+	    		DefinedProperty prop = (DefinedProperty) added.next();
+	    		recordState.relAddProperty( id, prop.propertyKeyId(), prop.value() );
+	    	}
     }
 
     @Override
     public void visitGraphPropertyChanges( Iterator<StorageProperty> added, Iterator<StorageProperty> changed,
-            Iterator<Integer> removed )
+    		Iterator<Integer> removed )
     {
-        while ( removed.hasNext() )
-        {
-            recordState.graphRemoveProperty( removed.next() );
-        }
-        while ( changed.hasNext() )
-        {
-            DefinedProperty prop = (DefinedProperty) changed.next();
-            recordState.graphChangeProperty( prop.propertyKeyId(), prop.value() );
-        }
-        while ( added.hasNext() )
-        {
-            DefinedProperty prop = (DefinedProperty) added.next();
-            recordState.graphAddProperty( prop.propertyKeyId(), prop.value() );
-        }
+	    	while ( removed.hasNext() )
+	    	{
+	    		recordState.graphRemoveProperty( removed.next() );
+	    	}
+	    	while ( changed.hasNext() )
+	    	{
+	    		DefinedProperty prop = (DefinedProperty) changed.next();
+	    		recordState.graphChangeProperty( prop.propertyKeyId(), prop.value() );
+	    	}
+	    	while ( added.hasNext() )
+	    	{
+	    		DefinedProperty prop = (DefinedProperty) added.next();
+	    		recordState.graphAddProperty( prop.propertyKeyId(), prop.value() );
+	    	}
     }
 
     @Override

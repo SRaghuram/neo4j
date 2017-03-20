@@ -23,6 +23,8 @@ import org.apache.shiro.authz.AuthorizationInfo;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -113,12 +115,17 @@ class StandardEnterpriseSecurityContext implements EnterpriseSecurityContext
     {
         Collection<AuthorizationInfo> authorizationInfo =
                 authManager.getAuthorizationInfo( shiroSubject.getPrincipals() );
-        return authorizationInfo.stream()
+        List<Object> res = authorizationInfo.stream()
                 .flatMap( authInfo -> {
                     Collection<String> roles = authInfo.getRoles();
                     return roles == null ? Stream.empty() : roles.stream();
                 } )
-                .collect( Collectors.toSet() );
+                .collect( Collectors.toList() );
+        String[] res1 = res.toArray(new String[res.size()]);
+        Set<String> res2 = new HashSet<>();
+        for (String str : res1)
+        	res2.add(str);
+        return res2;
     }
 
     private static class StandardAccessMode implements AccessMode

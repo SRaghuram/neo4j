@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.transaction.state;
 
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
@@ -108,6 +109,50 @@ public class PropertyDeleter
         }
     }
 
+    public <P extends PrimitiveRecord> void removePropertyNew( RecordProxy<Long,P,Void> primitiveProxy, int propertyKey,
+            RecordAccess<Long,PropRecord,PrimitiveRecord> propertyRecords )
+    {
+        PrimitiveRecord primitive = primitiveProxy.forReadingData();
+        long propertyId = // propertyData.getId();
+                traverser.findPropertyRecordContainingNew( primitive, propertyKey, propertyRecords, true );
+        RecordProxy<Long, PropRecord, PrimitiveRecord> recordChange =
+                propertyRecords.getOrLoad( propertyId, primitive );
+        PropRecord propRecord = recordChange.forChangingData();
+        if ( !propRecord.inUse() )
+        {
+            throw new IllegalStateException( "Unable to delete property[" +
+                    propertyId + "] since it is already deleted." );
+        }
+
+        PropertyBlock block = propRecord.removePropertyBlock( propertyKey );
+        if ( block == null )
+        {
+            throw new IllegalStateException( "Property with index["
+                                             + propertyKey
+                                             + "] is not present in property["
+                                             + propertyId + "]" );
+        }
+
+        for ( DynamicRecord valueRecord : block.getValueRecords() )
+        {
+            assert valueRecord.inUse();
+            valueRecord.setInUse( false, block.getType().intValue() );
+            propRecord.addDeletedRecord( valueRecord );
+        }
+        if ( propRecord.size() > 0 )
+        {
+            /*
+             * There are remaining blocks in the record. We do not unlink yet.
+             */
+            propRecord.setChanged( primitive );
+            assert traverser.assertPropertyChainNew( primitive, propertyRecords );
+        }
+        else
+        {
+            unlinkPropertyRecordNew( propRecord, propertyRecords, primitiveProxy );
+        }
+    }
+
     private <P extends PrimitiveRecord> void unlinkPropertyRecord( PropertyRecord propRecord,
             RecordAccess<Long,PropertyRecord,PrimitiveRecord> propertyRecords,
             RecordProxy<Long, P, Void> primitiveRecordChange )
@@ -150,5 +195,49 @@ public class PropertyDeleter
         propRecord.setNextProp( Record.NO_NEXT_PROPERTY.intValue() );
         propRecord.setChanged( primitive );
         assert traverser.assertPropertyChain( primitive, propertyRecords );
+    }
+    
+    private <P extends PrimitiveRecord> void unlinkPropertyRecordNew( PropRecord propRecord,
+            RecordAccess<Long,PropRecord,PrimitiveRecord> propertyRecords,
+            RecordProxy<Long, P, Void> primitiveRecordChange )
+    {
+        P primitive = primitiveRecordChange.forReadingLinkage();
+        assert traverser.assertPropertyChainNew( primitive, propertyRecords );
+        assert propRecord.size() == 0;
+        long prevProp = propRecord.getPrevProp();
+        long nextProp = propRecord.getNextProp();
+        if ( primitive.getNextProp() == propRecord.getId() )
+        {
+            assert propRecord.getPrevProp() == Record.NO_PREVIOUS_PROPERTY.intValue() : propRecord
+                    + " for "
+                    + primitive;
+            primitiveRecordChange.forChangingLinkage().setNextProp( nextProp );
+        }
+        if ( prevProp != Record.NO_PREVIOUS_PROPERTY.intValue() )
+        {
+            PropRecord prevPropRecord = propertyRecords.getOrLoad( prevProp, primitive ).forChangingLinkage();
+            assert prevPropRecord.inUse() : prevPropRecord + "->" + propRecord
+            + " for " + primitive;
+            prevPropRecord.setNextProp( nextProp );
+            prevPropRecord.setChanged( primitive );
+        }
+        if ( nextProp != Record.NO_NEXT_PROPERTY.intValue() )
+        {
+            PropRecord nextPropRecord = propertyRecords.getOrLoad( nextProp, primitive ).forChangingLinkage();
+            assert nextPropRecord.inUse() : propRecord + "->" + nextPropRecord
+            + " for " + primitive;
+            nextPropRecord.setPrevProp( prevProp );
+            nextPropRecord.setChanged( primitive );
+        }
+        propRecord.setInUse( false );
+        /*
+         *  The following two are not needed - the above line does all the work (PropertyStore
+         *  does not write out the prev/next for !inUse records). It is nice to set this
+         *  however to check for consistency when assertPropertyChain().
+         */
+        propRecord.setPrevProp( Record.NO_PREVIOUS_PROPERTY.intValue() );
+        propRecord.setNextProp( Record.NO_NEXT_PROPERTY.intValue() );
+        propRecord.setChanged( primitive );
+        assert traverser.assertPropertyChainNew( primitive, propertyRecords );
     }
 }

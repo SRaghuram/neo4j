@@ -50,6 +50,7 @@ import org.neo4j.kernel.api.txstate.LegacyIndexTransactionState;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
+import org.neo4j.kernel.impl.api.state.PagedCache;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.locking.ActiveLock;
@@ -144,7 +145,9 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
      * instances are pooled.
      */
     private final Lock terminationReleaseLock = new ReentrantLock();
-
+    private static int uniqueId = 0;
+    private int id = -1;
+    
     public KernelTransactionImplementation( StatementOperationContainer operationContainer,
                                             SchemaWriteGuard schemaWriteGuard,
                                             TransactionHooks hooks,
@@ -180,7 +183,16 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         this.currentStatement =
                 new KernelStatement( this, this, storageStatement, procedures, accessCapability, lockTracer );
         this.userMetaData = Collections.emptyMap();
+        this.id = getUniqueId();
     }
+   private synchronized int getUniqueId()
+    {
+      return uniqueId++;   	
+    }
+   public int getId()
+   {
+	   return id;
+   }
 
     /**
      * Reset this transaction to a vanilla state, turning it into a logically new transaction.
@@ -474,6 +486,13 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
             finally
             {
                 release();
+                try
+                {
+                		PagedCache.freeMem();
+                } catch (Exception e)
+                {
+                	
+                }
             }
         }
     }
@@ -547,6 +566,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
                 // use pessimistic locks for the rest of the commit process, locks can't be deferred any further
                 Locks.Client commitLocks = statementLocks.pessimistic();
 
+                PagedCache.getMemoryData(this, "Common path");
                 // Gather up commands from the various sources
                 Collection<StorageCommand> extractedCommands = new ArrayList<>();
                 storageEngine.createCommands(
@@ -559,7 +579,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
                 {
                     legacyIndexTransactionState.extractCommands( extractedCommands );
                 }
-
+                PagedCache.getMemoryData(this, "After extract commands");
                 /* Here's the deal: we track a quick-to-access hasChanges in transaction state which is true
                  * if there are any changes imposed by this transaction. Some changes made inside a transaction undo
                  * previously made changes in that same transaction, and so at some point a transaction may have
@@ -585,7 +605,10 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
                     // Commit the transaction
                     success = true;
                     TransactionToApply batch = new TransactionToApply( transactionRepresentation );
+                    PagedCache.getMemoryData(this, "beforeCommit");
                     txId = transactionId = commitProcess.commit( batch, commitEvent, INTERNAL );
+                    PagedCache.getMemoryData(this, "completeCommit");
+
                     commitTime = timeCommitted;
                 }
             }
@@ -606,7 +629,8 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
             else
             {
                 afterCommit( txId );
-            }
+            }  
+           
         }
     }
 
@@ -718,6 +742,13 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         finally
         {
             terminationReleaseLock.unlock();
+            try
+            {
+            		PagedCache.freeMem();
+            } catch (Exception e)
+            {
+            	
+            }
         }
     }
 

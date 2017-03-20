@@ -69,15 +69,34 @@ public class PropertyRecord extends AbstractBaseRecord implements Iterable<Prope
     private int blockRecordsIteratorCursor;
     private boolean canRemoveFromIterator;
 
+    static public int count = 0;
+    public static int[] whereCount = new int[10];
     public PropertyRecord( long id )
     {
+    	super( id );
+    	init ( 6 );
+    }
+    public PropertyRecord( long id, int where )
+    {
         super( id );
+        init ( where );
+    }
+    private void init(int where)
+    {
+        if (count++ % 1000000000 == 0)
+        {
+        	System.out.println("Property count:["+ count + "][0:"+whereCount[0]+ "][1:"+whereCount[1]+ "][2:"+
+        			whereCount[2]+ "][3:"+whereCount[3]+ "][4:"+whereCount[4]+ "][5:"+whereCount[5]+ "][6:"+
+        			whereCount[6]+ "][7:"+whereCount[7]+"]");
+        }
+        whereCount[where]++;
     }
 
     public PropertyRecord( long id, PrimitiveRecord primitive )
     {
         super( id );
         primitive.setIdTo( this );
+        init ( 7 );
     }
 
     public PropertyRecord initialize( boolean inUse, long prevProp, long nextProp )
@@ -363,7 +382,7 @@ public class PropertyRecord extends AbstractBaseRecord implements Iterable<Prope
     @Override
     public PropertyRecord clone()
     {
-        PropertyRecord result = (PropertyRecord) new PropertyRecord( getId() ).initialize( inUse() );
+        PropertyRecord result = (PropertyRecord) new PropertyRecord( getId(), 1 ).initialize( inUse() );
         result.nextProp = nextProp;
         result.prevProp = prevProp;
         result.entityId = entityId;
@@ -406,4 +425,88 @@ public class PropertyRecord extends AbstractBaseRecord implements Iterable<Prope
     {
         return blocksCursor;
     }
+/*   
+    public void getDiskFormat( PropertyRecord record, PageCursor cursor, RecordLoad mode, int recordSize )
+    {
+        int offsetAtBeginning = cursor.getOffset();
+
+        byte modifiers = cursor.getByte();
+        long prevMod = (modifiers & 0xF0L) << 28;
+        long nextMod = (modifiers & 0x0FL) << 32;
+        long prevProp = cursor.getInt() & 0xFFFFFFFFL;
+        long nextProp = cursor.getInt() & 0xFFFFFFFFL;
+        record.initialize( false,
+                BaseRecordFormat.longFromIntAndMod( prevProp, prevMod ),
+                BaseRecordFormat.longFromIntAndMod( nextProp, nextMod ) );
+        while ( cursor.getOffset() - offsetAtBeginning < RECORD_SIZE )
+        {
+            long block = cursor.getLong();
+            PropertyType type = PropertyType.getPropertyTypeOrNull( block );
+            if ( type == null )
+            {
+                // We assume that storage is defragged
+                break;
+            }
+
+            record.setInUse( true );
+            record.addLoadedBlock( block );
+            int numberOfBlocksUsed = type.calculateNumberOfBlocksUsed( block );
+            if ( numberOfBlocksUsed == PropertyType.BLOCKS_USED_FOR_BAD_TYPE_OR_ENCODING )
+            {
+                cursor.setCursorException( "Invalid type or encoding of property block: " + block + " (type = " + type + ")" );
+                return;
+            }
+            int additionalBlocks = numberOfBlocksUsed - 1;
+            if ( additionalBlocks * Long.BYTES > RECORD_SIZE - (cursor.getOffset() - offsetAtBeginning) )
+            {
+                cursor.setCursorException( "PropertyRecord claims to have more property blocks than can fit in a record" );
+                return;
+            }
+            while ( additionalBlocks --> 0 )
+            {
+                record.addLoadedBlock( cursor.getLong() );
+            }
+        }
+    }
+
+    public byte[] putDiskFormat( PropertyRecord record)
+    {
+    		byte[] diskFormat = new byte[64];
+        if ( record.inUse() )
+        {
+            // Set up the record header
+            short prevModifier = record.getPrevProp() == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0
+                    : (short) ((record.getPrevProp() & 0xF00000000L) >> 28);
+            short nextModifier = record.getNextProp() == Record.NO_NEXT_RELATIONSHIP.intValue() ? 0
+                    : (short) ((record.getNextProp() & 0xF00000000L) >> 32);
+            byte modifiers = (byte) (prevModifier | nextModifier);
+
+            cursor.putByte( modifiers );
+            cursor.putInt( (int) record.getPrevProp() );
+            cursor.putInt( (int) record.getNextProp() );
+
+            // Then go through the blocks
+            int longsAppended = 0; // For marking the end of blocks
+            for ( PropertyBlock block : record )
+            {
+                long[] propBlockValues = block.getValueBlocks();
+                for ( long propBlockValue : propBlockValues )
+                {
+                    cursor.putLong( propBlockValue );
+                }
+
+                longsAppended += propBlockValues.length;
+            }
+            if ( longsAppended < PropertyType.getPayloadSizeLongs() )
+            {
+                cursor.putLong( 0 );
+            }
+        }
+        else
+        {
+            // skip over the record header, nothing useful there
+            cursor.setOffset( cursor.getOffset() + 9 );
+            cursor.putLong( 0 );
+        }
+    }*/
 }

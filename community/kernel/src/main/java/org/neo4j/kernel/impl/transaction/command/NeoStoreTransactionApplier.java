@@ -100,6 +100,26 @@ public class NeoStoreTransactionApplier extends TransactionApplier.Adapter
         neoStores.getPropertyStore().updateRecord( command.getAfter() );
         return false;
     }
+    
+    @Override
+    public boolean visitPropertyCommandNew( Command.PropertyCommandNew command ) throws IOException
+    {
+        // acquire lock
+        if ( command.getNodeId() != -1 )
+        {
+            lockGroup.add( lockService.acquireNodeLock( command.getNodeId(), LockService.LockType.WRITE_LOCK ) );
+        }
+        else if ( command.getRelId() != -1 )
+        {
+            lockGroup.add( lockService.acquireRelationshipLock( command.getRelId(), LockService.LockType.WRITE_LOCK ) );
+        }
+
+        // track the dynamic value record high ids
+        // update store
+        //neoStores.getPropertyStore().updateRecord( command.getAfter().getPropertyRecord() );
+        command.getAfter().updateRecord(neoStores.getPropertyStore());
+        return false;
+    }
 
     @Override
     public boolean visitRelationshipGroupCommand( Command.RelationshipGroupCommand command ) throws IOException

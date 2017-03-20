@@ -42,6 +42,7 @@ import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
@@ -218,5 +219,11 @@ public class RelationshipCreatorTest
         {
             return delegate.changeSize();
         }
+
+		@Override
+		public RecordAccess<Long, PropRecord, PrimitiveRecord> getPropertyRecordsNew() {
+			// TODO Auto-generated method stub
+			return null;
+		}
     }
 }

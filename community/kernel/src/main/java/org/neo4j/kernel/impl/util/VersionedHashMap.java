@@ -26,6 +26,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.github.jamm.MemoryMeter;
+
 import static java.lang.Integer.bitCount;
 
 /**
@@ -100,6 +102,7 @@ public class VersionedHashMap<K, V> implements Map<K, V>
     private final EntrySet entrySet = new EntrySet();
     private final KeySet keys = new KeySet();
     private final ValueCollection values = new ValueCollection();
+    private static int count = 0;
 
     public VersionedHashMap()
     {
@@ -116,6 +119,14 @@ public class VersionedHashMap<K, V> implements Map<K, V>
         this.buckets = new Record[numBuckets];
         this.bitwiseModByBuckets = numBuckets - 1;
         this.resizeThreshold = (int)(numBuckets * resizeAtCapacity);
+        
+        count++;
+        /*if (count % 10 == 0) 
+        {
+        		System.out.println("Memory for VersionedHashMap:["+count+"] " );;//+ count* ObjectSizeFetcher.getObjectSize( this));
+        		MemoryMeter meter = new MemoryMeter();
+        		System.out.println("Size:["+ meter.measure(this) +"] [DeepSize:"+ meter.measureDeep(this) +"] [Childeren:"+meter.countChildren(this)+"]");
+        }*/
     }
 
     @Override
@@ -189,10 +200,18 @@ public class VersionedHashMap<K, V> implements Map<K, V>
         {
             resize( buckets.length << 1 );
         }
+        /*
+          MemoryMeter meter = new MemoryMeter();
+          long deepSize = meter.measureDeep(this); 
+        if (deepSize > dpSize)
+        {
+        		dpSize = deepSize;
+        		//System.out.println("["+ Integer.toHexString(System.identityHashCode(this))+"] Put - Size:["+ meter.measure(this) +"] [DeepSize:"+ deepSize +":"+dpSize+"] [Childeren:"+meter.countChildren(this)+"]");
+        }*/
 
         return null;
     }
-
+public static long dpSize = 0;
     @Override
     public V remove( Object key )
     {
@@ -311,7 +330,10 @@ public class VersionedHashMap<K, V> implements Map<K, V>
                 record = next;
             }
         }
-
+        MemoryMeter meter = new MemoryMeter();
+        meter.measure(this);
+        meter.measureDeep(this);
+        meter.countChildren(this);
     }
 
     private static int hash(int h)

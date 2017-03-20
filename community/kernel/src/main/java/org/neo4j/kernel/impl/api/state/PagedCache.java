@@ -53,7 +53,7 @@ import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_WRITE_LOCK;
 
 public class PagedCache implements Closeable
 {
-	public static ThreadLocal<Integer> TransID = new ThreadLocal<Integer>();
+	public static ThreadLocal<Integer> PagedCacheClientID = new ThreadLocal<Integer>();
 	public static PagedFile file;
 	private int smallMemory = 10;
 	static private int RECORD_SIZE = 16;
@@ -89,6 +89,8 @@ public class PagedCache implements Closeable
 	}
 	private static HashMap<Integer, ArrayList<MemData>> transIdMap = new HashMap<Integer, ArrayList<MemData>>();
 	private static int ID_CHUNK_SIZE = 0;
+	private static ArrayList<Integer> freeClientIDs = new ArrayList<Integer>();
+	private static int UniqueClientID = 0; 
 
 	public PagedCache( PageCache pageCache, LabelScanStore labelScanStore, LabelTokenHolder labelTokenHolder ) throws IOException
 	{
@@ -100,7 +102,7 @@ public class PagedCache implements Closeable
 		PagedCache.labelScanStore = labelScanStore;
 		PagedCache.labelTokenHolder = labelTokenHolder;
 		ID_CHUNK_SIZE = 1000* pageSize;
-		TransID.set((int)Thread.currentThread().getId());
+		PagedCacheClientID.set((int)Thread.currentThread().getId());
 	}
 	public PagedCache( PageCache pageCache ) throws IOException
 	{
@@ -110,7 +112,22 @@ public class PagedCache implements Closeable
 		//idGen = new IdGeneratorLocal(Integer.MAX_VALUE);
 		freeID = new FreeIdKeeper(0,  Integer.MAX_VALUE);
 		ID_CHUNK_SIZE = 1000* pageSize;
-		TransID.set((int)Thread.currentThread().getId());
+		PagedCacheClientID.set((int)Thread.currentThread().getId());
+	}
+	
+	public static synchronized int getClientId()
+	{
+		int clientId = -1;
+		if (freeClientIDs.size() > 0)
+			clientId = freeClientIDs.get(0);
+		else
+			clientId = UniqueClientID++;
+		PagedCacheClientID.set(clientId);
+		return clientId;
+	}
+	public static synchronized void freeClientID(int clientID)
+	{
+		freeClientIDs.add(clientID);
 	}
 	
 	public static int getSize(long cacheId)
@@ -854,7 +871,7 @@ public class PagedCache implements Closeable
 		runtime.gc();
 		// Calculate the used memory
 		long memory = runtime.totalMemory() - runtime.freeMemory();
-		msg.append("TransId:["+ TransID.get() +"][Used memory: "
+		msg.append("TransId:["+ PagedCacheClientID.get() +"][Used memory: "
 				+ bytesToMegabytes(memory)+" mb]");
 		System.out.println(msg);
 	}
@@ -888,7 +905,7 @@ public class PagedCache implements Closeable
 	public long allocateMemBlock(int sizeInBytes) throws Exception
 	{
 		int sizeInRecords = getSizeInRecords(sizeInBytes);
-		int transId = TransID.get();
+		int transId = PagedCacheClientID.get();
 		long entry = 0;
 		if (!transIdMap.containsKey(transId))
 			allocateMem();
@@ -906,7 +923,7 @@ public class PagedCache implements Closeable
 	}
 	public synchronized void allocateMem()
 	{
-		int transId = TransID.get();
+		int transId = PagedCacheClientID.get();
 		if (transIdMap.get(transId) == null)
 			transIdMap.put(transId, new ArrayList<MemData>());
 		long entry = freeID.getId(ID_CHUNK_SIZE);
@@ -917,14 +934,14 @@ public class PagedCache implements Closeable
 	}
 	public static void freeMem()
 	{
-		int transId = TransID.get()+0;
-		if (!transIdMap.containsKey(transId))
+		int clientId = PagedCacheClientID.get();
+		if (!transIdMap.containsKey(clientId))
 		{
 			//System.out.println("Not in TransIdMap:"+freeID.dumpFreeIds());
 			return;
 		}
-		ArrayList<MemData> memMap = transIdMap.remove(transId); 
-		System.out.println("Before Free:["+transId+":::"+freeID.dumpFreeIds());
+		ArrayList<MemData> memMap = transIdMap.remove(clientId); 
+		System.out.println("Before Free:["+clientId+":::"+freeID.dumpFreeIds());
 		Random rand = new Random();
 		while (!memMap.isEmpty())
 		{
@@ -933,7 +950,8 @@ public class PagedCache implements Closeable
 			//	freeID.freeId(memMap.remove(i).initValue);
 			freeID.freeId(memMap.remove(0).initValue);
 		}
-		System.out.println("After free:["+transId+":::"+ freeID.dumpFreeIds());
+		freeClientID( clientId );
+		System.out.println("After free:["+clientId+":::"+ freeID.dumpFreeIds());
 	}
 
 	private static void testData(long id, byte[] data)

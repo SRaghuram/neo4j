@@ -34,6 +34,7 @@ import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.impl.api.state.PagedCache;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 
 public class TransactionStateMachine implements StatementProcessor
@@ -347,6 +348,12 @@ public class TransactionStateMachine implements StatementProcessor
                 finally
                 {
                     ctx.currentTransaction = null;
+                    try{
+                    	PagedCache.getMemoryData("Bolt Close transaction:[Tran Id:"+tx.getTransactionId()+"] RunTime:["+(System.currentTimeMillis() - tx.startTime())+" ms]");
+                    } catch (Exception e)
+                    {
+                		
+                    }
                 }
             }
         }
@@ -356,6 +363,8 @@ public class TransactionStateMachine implements StatementProcessor
                                                   Map<String,Object> params, ThrowingAction<KernelException> onFail )
             throws QueryExecutionKernelException
     {
+    	if (!statement.startsWith("CALL") && !statement.startsWith("EXPLAIN"))
+    	 PagedCache.getMemoryData((PagedCache.isTransCache() ? "--------New PropRecord logic-------":"--------Current logic-------") +"\n Query: "+statement);
         return spi.executeQuery( ctx.querySource, ctx.securityContext, statement, params, onFail );
     }
 

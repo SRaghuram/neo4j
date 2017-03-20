@@ -28,8 +28,11 @@ import org.neo4j.kernel.api.index.NodeUpdates;
 import org.neo4j.kernel.impl.api.BatchTransactionApplier;
 import org.neo4j.kernel.impl.api.TransactionApplier;
 import org.neo4j.kernel.impl.locking.LockGroup;
+import org.neo4j.kernel.impl.store.record.PropRecord;
+import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.transaction.command.Command.NodeCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.PropertyCommand;
+import org.neo4j.kernel.impl.transaction.command.Command.PropertyCommandNew;
 import org.neo4j.storageengine.api.CommandsToApply;
 
 import static org.neo4j.collection.primitive.Primitive.longObjectMap;
@@ -44,6 +47,7 @@ public class NodePropertyCommandsExtractor extends TransactionApplier.Adapter
 {
     private final PrimitiveLongObjectMap<NodeCommand> nodeCommandsById = longObjectMap();
     private final PrimitiveLongObjectMap<List<PropertyCommand>> propertyCommandsByNodeIds = longObjectMap();
+    private final PrimitiveLongObjectMap<List<PropertyCommandNew>> propertyCommandsNewByNodeIds = longObjectMap();
     private boolean hasUpdates;
 
     @Override
@@ -102,6 +106,24 @@ public class NodePropertyCommandsExtractor extends TransactionApplier.Adapter
             if ( group == null )
             {
                 propertyCommandsByNodeIds.put( nodeId, group = new ArrayList<>() );
+            }
+            group.add( command );
+            hasUpdates = true;
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean visitPropertyCommandNew( PropertyCommandNew command ) throws IOException
+    {
+        PropRecord record = command.getAfter();
+        if ( record.getPropertyRecord().isNodeSet() )
+        {
+            long nodeId = command.getAfter().getPropertyRecord().getNodeId();
+            List<PropertyCommandNew> group = propertyCommandsNewByNodeIds.get( nodeId );
+            if ( group == null )
+            {
+                propertyCommandsNewByNodeIds.put( nodeId, group = new ArrayList<>() );
             }
             group.add( command );
             hasUpdates = true;

@@ -28,6 +28,7 @@ import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
@@ -45,6 +46,7 @@ public class Loaders
 {
     private final Loader<Long,NodeRecord,Void> nodeLoader;
     private final Loader<Long,PropertyRecord,PrimitiveRecord> propertyLoader;
+    private final Loader<Long,PropRecord,PrimitiveRecord> propertyLoaderNew;
     private final Loader<Long,RelationshipRecord,Void> relationshipLoader;
     private final Loader<Long,RelationshipGroupRecord,Integer> relationshipGroupLoader;
     private final Loader<Long,SchemaRecord,SchemaRule> schemaRuleLoader;
@@ -77,6 +79,7 @@ public class Loaders
     {
         nodeLoader = nodeLoader( nodeStore );
         propertyLoader = propertyLoader( propertyStore );
+        propertyLoaderNew = propertyLoaderNew( propertyStore );
         relationshipLoader = relationshipLoader( relationshipStore );
         relationshipGroupLoader = relationshipGroupLoader( relationshipGroupStore );
         schemaRuleLoader = schemaRuleLoader( schemaStore );
@@ -93,6 +96,11 @@ public class Loaders
     public Loader<Long,PropertyRecord,PrimitiveRecord> propertyLoader()
     {
         return propertyLoader;
+    }
+    
+    public Loader<Long,PropRecord,PrimitiveRecord> propertyLoaderNew()
+    {
+        return propertyLoaderNew;
     }
 
     public Loader<Long,RelationshipRecord,Void> relationshipLoader()
@@ -200,6 +208,56 @@ public class Loaders
         };
     }
 
+    public static Loader<Long,PropRecord,PrimitiveRecord> propertyLoaderNew( final PropertyStore store )
+    {
+        return new Loader<Long,PropRecord,PrimitiveRecord>()
+        {
+            @Override
+            public PropRecord newUnused( Long key, PrimitiveRecord additionalData )
+            {
+                PropRecord record = new PropRecord( key, 2 );
+                setOwner( record, additionalData );
+                return record.setCreated();
+            }
+
+            private void setOwner( PropRecord record, PrimitiveRecord owner )
+            {
+                if ( owner != null )
+                {
+                    //owner.setIdTo( record.getPropertyRecord() );
+                	if (owner instanceof NodeRecord)
+                		record.setNodeId(owner.getId());
+                	else if (owner instanceof RelationshipRecord)
+                		record.setRelId(owner.getId());
+                }
+            }
+
+            @Override
+            public PropRecord load( Long key, PrimitiveRecord additionalData )
+            {
+                PropRecord record = PropRecord.getRecordFromStore(store, key);//store.getRecord( key, new PropRecord(), NORMAL );
+                setOwner( record, additionalData );
+                return record;
+            }
+
+            @Override
+            public void ensureHeavy( PropRecord record )
+            {
+            	PropertyRecord propertyRecord = record.getPropertyRecord();
+                for ( PropertyBlock block : propertyRecord )
+                {
+                    store.ensureHeavy( block );
+                }
+            }
+
+            @Override
+            public PropRecord clone(PropRecord propRecord)
+            {
+                return propRecord.clone();
+            }
+        };
+    }
+    
     public static Loader<Long,RelationshipRecord,Void> relationshipLoader(
             final RecordStore<RelationshipRecord> store )
     {

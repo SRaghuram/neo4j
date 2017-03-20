@@ -39,6 +39,7 @@ import org.neo4j.kernel.api.security.AccessMode;
 import org.neo4j.kernel.api.txstate.LegacyIndexTransactionState;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.api.txstate.TxStateHolder;
+import org.neo4j.kernel.impl.api.state.PagedCache;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.locking.LockTracer;
 import org.neo4j.kernel.impl.locking.StatementLocks;
@@ -167,7 +168,7 @@ public class KernelStatement implements TxStateHolder, Statement
         // i.e. ignore closing already closed statements
         if ( referenceCount > 0 && (--referenceCount == 0) )
         {
-            cleanupResources();
+            cleanupResources();      
         }
     }
 

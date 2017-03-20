@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.transaction.state;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
@@ -35,6 +36,8 @@ public interface RecordAccessSet
     RecordAccess<Long, NodeRecord, Void> getNodeRecords();
 
     RecordAccess<Long, PropertyRecord, PrimitiveRecord> getPropertyRecords();
+    
+    RecordAccess<Long, PropRecord, PrimitiveRecord> getPropertyRecordsNew();
 
     RecordAccess<Long, RelationshipRecord, Void> getRelRecords();
 

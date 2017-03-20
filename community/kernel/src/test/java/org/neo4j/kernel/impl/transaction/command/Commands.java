@@ -35,6 +35,7 @@ import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.IndexRule;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.store.record.PropRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
@@ -47,6 +48,7 @@ import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.command.Command.LabelTokenCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.NodeCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.PropertyCommand;
+import org.neo4j.kernel.impl.transaction.command.Command.PropertyCommandNew;
 import org.neo4j.kernel.impl.transaction.command.Command.PropertyKeyTokenCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.RelationshipCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.RelationshipGroupCommand;
@@ -176,6 +178,25 @@ public class Commands
         return new PropertyCommand( new PropertyRecord( id ), record );
     }
 
+    public static PropertyCommandNew createPropertyNew( long id, PropertyType type, int key,
+            long... valueRecordIds )
+    {
+        PropertyRecord record = new PropertyRecord( id );
+        record.setInUse( true );
+        record.setCreated();
+        PropertyBlock block = new PropertyBlock();
+        if ( valueRecordIds.length == 0 )
+        {
+            PropertyStore.encodeValue( block, key, 123 /*value*/, null, null );
+        }
+        else
+        {
+            PropertyStore.setSingleBlockValue( block, key, type, valueRecordIds[0] );
+            block.setValueRecords( dynamicRecords( valueRecordIds ) );
+        }
+        record.addPropertyBlock( block );
+        return new PropertyCommandNew( new PropRecord( id, 7 ), new PropRecord(record, 7) );
+    }
     public static TransactionRepresentation transactionRepresentation( Command... commands )
     {
         return transactionRepresentation( Arrays.asList( commands ) );

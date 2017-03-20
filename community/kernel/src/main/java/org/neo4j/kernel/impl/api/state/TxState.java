@@ -86,7 +86,7 @@ import static org.neo4j.kernel.impl.api.PropertyValueComparison.SuperType.STRING
  * into one component. Now that that work is done, this class should be refactored to increase transparency in how it
  * works.
  */
-public final class TxState implements TransactionState, RelationshipVisitor.Home
+public class TxState implements TransactionState, RelationshipVisitor.Home
 {
     private Map<Integer/*Label ID*/, LabelState.Mutable> labelStatesMap;
     private static final LabelState.Defaults LABEL_STATE = new LabelState.Defaults()
@@ -472,7 +472,7 @@ public final class TxState implements TransactionState, RelationshipVisitor.Home
         hasChanges = true;
     }
 
-    private void dataChanged()
+    protected void dataChanged()
     {
         changed();
         hasDataChanges = true;
