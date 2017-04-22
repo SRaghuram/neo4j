@@ -34,8 +34,6 @@ import org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.StringCollisionV
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.StringEncoder;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
-import org.neo4j.unsafe.impl.batchimport.input.InputNode;
-import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 
 import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.EncodingIdMapper.NO_MONITOR;
 import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.TrackerFactories.dynamic;
@@ -59,7 +57,7 @@ public class IdMappers
         }
 
         @Override
-        public void prepare( LongFunction<Object> nodeData, Collector collector, ProgressListener progress )
+        public void prepare( LongFunction<Object> inputIdLookup, Collector collector, ProgressListener progress )
         {   // No need to prepare anything
         }
 
@@ -116,8 +114,7 @@ public class IdMappers
      * An {@link IdMapper} capable of mapping {@link String strings} to long ids.
      *
      * @param cacheFactory {@link NumberArrayFactory} for allocating memory for the cache used by this index.
-     * @return {@link IdMapper} for when node ids given to {@link InputNode} and {@link InputRelationship} are
-     * strings with o association with the actual ids in the database.
+     * @return {@link IdMapper} for when input ids are strings.
      */
     public static IdMapper strings( NumberArrayFactory cacheFactory )
     {
@@ -129,8 +126,7 @@ public class IdMappers
      * An {@link IdMapper} capable of mapping {@link Long arbitrary longs} to long ids.
      *
      * @param cacheFactory {@link NumberArrayFactory} for allocating memory for the cache used by this index.
-     * @return {@link IdMapper} for when node ids given to {@link InputNode} and {@link InputRelationship} are
-     * strings with o association with the actual ids in the database.
+     * @return {@link IdMapper} for when input ids are numbers.
      */
     public static IdMapper longs( NumberArrayFactory cacheFactory )
     {

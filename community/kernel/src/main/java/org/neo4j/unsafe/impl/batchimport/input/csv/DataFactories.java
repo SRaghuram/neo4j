@@ -37,10 +37,9 @@ import org.neo4j.csv.reader.Mark;
 import org.neo4j.function.Factory;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.unsafe.impl.batchimport.input.DuplicateHeaderException;
+import org.neo4j.unsafe.impl.batchimport.input.Group;
+import org.neo4j.unsafe.impl.batchimport.input.Groups;
 import org.neo4j.unsafe.impl.batchimport.input.HeaderException;
-import org.neo4j.unsafe.impl.batchimport.input.InputEntity;
-import org.neo4j.unsafe.impl.batchimport.input.InputNode;
-import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 import org.neo4j.unsafe.impl.batchimport.input.MissingHeaderException;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header.Entry;
 
@@ -66,7 +65,7 @@ public class DataFactories
      *
      * @return {@link DataFactory} that returns a {@link CharSeeker} over all the supplied {@code files}.
      */
-    public static <ENTITY extends InputEntity> DataFactory<ENTITY> data( final Decorator<ENTITY> decorator,
+    public static DataFactory data( final Decorator decorator,
             final Charset charset, final File... files )
     {
         if ( files.length == 0 )
@@ -74,7 +73,7 @@ public class DataFactories
             throw new IllegalArgumentException( "No files specified" );
         }
 
-        return config -> new Data<ENTITY>()
+        return config -> new Data()
         {
             @Override
             public RawIterator<CharReadable,IOException> stream()
@@ -83,7 +82,7 @@ public class DataFactories
             }
 
             @Override
-            public Decorator<ENTITY> decorator()
+            public Decorator decorator()
             {
                 return decorator;
             }
@@ -96,10 +95,10 @@ public class DataFactories
      * multiple times.
      * @return {@link DataFactory} that returns a {@link CharSeeker} over the supplied {@code readable}
      */
-    public static <ENTITY extends InputEntity> DataFactory<ENTITY> data( final Decorator<ENTITY> decorator,
+    public static DataFactory data( final Decorator decorator,
             final Supplier<CharReadable> readable )
     {
-        return config -> new Data<ENTITY>()
+        return config -> new Data()
         {
             @Override
             public RawIterator<CharReadable,IOException> stream()
@@ -108,7 +107,7 @@ public class DataFactories
             }
 
             @Override
-            public Decorator<ENTITY> decorator()
+            public Decorator decorator()
             {
                 return decorator;
             }
@@ -149,7 +148,7 @@ public class DataFactories
         }
 
         @Override
-        public Header create( CharSeeker dataSeeker, Configuration config, IdType idType )
+        public Header create( CharSeeker dataSeeker, Configuration config, IdType idType, Groups groups )
         {
             try
             {
@@ -167,11 +166,12 @@ public class DataFactories
                     if ( (spec.name == null && spec.type == null) ||
                          (spec.type != null && spec.type.equals( Type.IGNORE.name() )) )
                     {
-                        columns.add( new Header.Entry( null, Type.IGNORE, null, null ) );
+                        columns.add( new Header.Entry( null, Type.IGNORE, Group.GLOBAL, null ) );
                     }
                     else
                     {
-                        columns.add( entry( i, spec.name, spec.type, spec.groupName, extractors, idExtractor ) );
+                        Group group = groups.getOrCreate( spec.groupName );
+                        columns.add( entry( i, spec.name, spec.type, group, extractors, idExtractor ) );
                     }
                 }
                 Entry[] entries = columns.toArray( new Header.Entry[columns.size()] );
@@ -236,11 +236,17 @@ public class DataFactories
             return false;
         }
 
+        @Override
+        public boolean isDefined()
+        {
+            return false;
+        }
+
         /**
          * @param idExtractor we supply the id extractor explicitly because it's a configuration,
          * or at least input-global concern and not a concern of this particular header.
          */
-        protected abstract Header.Entry entry( int index, String name, String typeSpec, String groupName,
+        protected abstract Header.Entry entry( int index, String name, String typeSpec, Group group,
                 Extractors extractors, Extractor<?> idExtractor );
     }
 
@@ -284,7 +290,7 @@ public class DataFactories
     private static class DefaultNodeFileHeaderParser extends AbstractDefaultFileHeaderParser
     {
         @Override
-        protected Header.Entry entry( int index, String name, String typeSpec, String groupName, Extractors extractors,
+        protected Header.Entry entry( int index, String name, String typeSpec, Group group, Extractors extractors,
                 Extractor<?> idExtractor )
         {
             // For nodes it's simply ID,LABEL,PROPERTY. typeSpec can be either ID,LABEL or a type of property,
@@ -316,7 +322,7 @@ public class DataFactories
                 extractor = parsePropertyType( typeSpec, extractors );
             }
 
-            return new Header.Entry( name, type, groupName, extractor );
+            return new Header.Entry( name, type, group, extractor );
         }
     }
 
@@ -329,7 +335,7 @@ public class DataFactories
         }
 
         @Override
-        protected Header.Entry entry( int index, String name, String typeSpec, String groupName, Extractors extractors,
+        protected Header.Entry entry( int index, String name, String typeSpec, Group group, Extractors extractors,
                 Extractor<?> idExtractor )
         {
             Type type = null;
@@ -364,7 +370,7 @@ public class DataFactories
                 extractor = parsePropertyType( typeSpec, extractors );
             }
 
-            return new Header.Entry( name, type, groupName, extractor );
+            return new Header.Entry( name, type, group, extractor );
         }
 
     }
@@ -382,13 +388,7 @@ public class DataFactories
     }
 
     @SafeVarargs
-    public static Iterable<DataFactory<InputNode>> nodeData( DataFactory<InputNode>... factories )
-    {
-        return Iterables.iterable( factories );
-    }
-
-    @SafeVarargs
-    public static Iterable<DataFactory<InputRelationship>> relationshipData( DataFactory<InputRelationship>... factories )
+    public static Iterable<DataFactory> datas( DataFactory... factories )
     {
         return Iterables.iterable( factories );
     }

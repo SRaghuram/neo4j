@@ -35,10 +35,10 @@ public class IdMapperPreparationStage extends Stage
 {
     public static final String NAME = "Prepare node index";
 
-    public IdMapperPreparationStage( Configuration config, IdMapper idMapper, LongFunction<Object> allIds,
+    public IdMapperPreparationStage( Configuration config, IdMapper idMapper, LongFunction<Object> inputIdLookup,
             Collector collector, StatsProvider memoryUsageStats )
     {
         super( NAME, null, config, 0 );
-        add( new IdMapperPreparationStep( control(), config, idMapper, allIds, collector, memoryUsageStats ) );
+        add( new IdMapperPreparationStep( control(), config, idMapper, inputIdLookup, collector, memoryUsageStats ) );
     }
 }

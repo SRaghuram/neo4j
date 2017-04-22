@@ -21,17 +21,13 @@ package org.neo4j.unsafe.impl.batchimport.input;
 
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
-import org.neo4j.collection.primitive.PrimitiveLongCollections;
-import org.neo4j.collection.primitive.PrimitiveLongIterator;
+
 import org.neo4j.concurrent.AsyncEvent;
 import org.neo4j.concurrent.AsyncEvents;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.DuplicateInputIdException;
 
 import static java.lang.String.format;
-import static java.util.Arrays.copyOf;
-import static java.util.Arrays.sort;
 
 import static org.neo4j.helpers.Exceptions.withMessage;
 
@@ -99,9 +95,10 @@ public class BadCollector implements Collector
     }
 
     @Override
-    public void collectBadRelationship( final InputRelationship relationship, final Object specificValue )
+    public void collectBadRelationship( Object startId, String startIdGroup, String type, Object endId,
+            String endIdGroup, Object specificValue )
     {
-        collect( new RelationshipsProblemReporter( relationship, specificValue ) );
+        collect( new RelationshipsProblemReporter( startId, startIdGroup, type, endId, endIdGroup, specificValue ) );
     }
 
     @Override
@@ -114,6 +111,12 @@ public class BadCollector implements Collector
     public void collectDuplicateNode( final Object id, long actualId, final String group )
     {
         collect( new NodesProblemReporter( id, group ) );
+    }
+
+    @Override
+    public boolean isCollectingBadRelationships()
+    {
+        return collects( BAD_RELATIONSHIPS );
     }
 
     private void collect( ProblemReporter report )
@@ -172,13 +175,22 @@ public class BadCollector implements Collector
     private static class RelationshipsProblemReporter extends ProblemReporter
     {
         private String message;
-        private final InputRelationship relationship;
         private final Object specificValue;
+        private final Object startId;
+        private final String startIdGroup;
+        private final String type;
+        private final Object endId;
+        private final String endIdGroup;
 
-        RelationshipsProblemReporter( InputRelationship relationship, Object specificValue )
+        RelationshipsProblemReporter( Object startId, String startIdGroup, String type,
+                Object endId, String endIdGroup, Object specificValue )
         {
             super( BAD_RELATIONSHIPS );
-            this.relationship = relationship;
+            this.startId = startId;
+            this.startIdGroup = startIdGroup;
+            this.type = type;
+            this.endId = endId;
+            this.endIdGroup = endIdGroup;
             this.specificValue = specificValue;
         }
 
@@ -198,16 +210,18 @@ public class BadCollector implements Collector
         {
             if ( message == null )
             {
-                message = !isMissingData( relationship )
-                        ? format( "%s referring to missing node %s", relationship, specificValue )
-                        : format( "%s is missing data", relationship );
+                message = !isMissingData()
+                        ? format( "%s (%s)-[%s]->%s (%s) referring to missing node %s",
+                                startId, startIdGroup, type, endId, endIdGroup, specificValue )
+                        : format( "%s (%s)-[%s]->%s (%s) is missing data",
+                                startId, startIdGroup, type, endId, endIdGroup );
             }
             return message;
         }
 
-        private static boolean isMissingData( InputRelationship relationship )
+        private boolean isMissingData()
         {
-            return relationship.startNode() == null || relationship.endNode() == null || !relationship.hasType();
+            return startId == null || endId == null || type == null;
         }
     }
 

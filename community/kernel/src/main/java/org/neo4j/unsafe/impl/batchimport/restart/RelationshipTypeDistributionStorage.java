@@ -21,16 +21,14 @@ package org.neo4j.unsafe.impl.batchimport.restart;
 
 import java.io.File;
 import java.io.IOException;
-import org.neo4j.helpers.collection.Pair;
+
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalFlushableChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosableChannel;
 import org.neo4j.unsafe.impl.batchimport.DataStatistics;
-
-import static org.neo4j.unsafe.impl.batchimport.restart.ChannelUtils.readString;
-import static org.neo4j.unsafe.impl.batchimport.restart.ChannelUtils.writeString;
+import org.neo4j.unsafe.impl.batchimport.DataStatistics.RelationshipTypeCount;
 
 class RelationshipTypeDistributionStorage
 {
@@ -52,23 +50,10 @@ class RelationshipTypeDistributionStorage
             channel.putLong( distribution.getNodeCount() );
             channel.putLong( distribution.getPropertyCount() );
             channel.putInt( distribution.getNumberOfRelationshipTypes() );
-            for ( Pair<Object,Long> entry : distribution )
+            for ( RelationshipTypeCount entry : distribution )
             {
-                // write key
-                Object key = entry.first();
-                if ( key instanceof String )
-                {
-                    channel.put( (byte) 0 );
-                    writeString( (String) key, channel );
-                }
-                else
-                {
-                    channel.put( (byte) 1 );
-                    channel.putInt( (Integer) key );
-                }
-
-                // write value
-                channel.putLong( entry.other() );
+                channel.putInt( entry.getTypeId() );
+                channel.putLong( entry.getCount() );
             }
         }
     }
@@ -79,13 +64,12 @@ class RelationshipTypeDistributionStorage
         {
             long nodeCount = channel.getLong();
             long propertyCount = channel.getLong();
-            @SuppressWarnings( "unchecked" )
-            Pair<Object,Long>[] entries = new Pair[channel.getInt()];
+            RelationshipTypeCount[] entries = new RelationshipTypeCount[channel.getInt()];
             for ( int i = 0; i < entries.length; i++ )
             {
-                Object key = channel.get() == 0 ? readString( channel ) : channel.getInt();
-                Long value = channel.getLong();
-                entries[i] = Pair.of( key, value );
+                int typeId = channel.getInt();
+                long count = channel.getLong();
+                entries[i] = new RelationshipTypeCount( typeId, count );
             }
             return new DataStatistics( nodeCount, propertyCount, entries );
         }

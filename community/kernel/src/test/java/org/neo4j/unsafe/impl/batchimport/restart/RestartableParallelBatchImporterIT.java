@@ -38,16 +38,15 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.CountGroupsStage;
+import org.neo4j.unsafe.impl.batchimport.DataImporter;
 import org.neo4j.unsafe.impl.batchimport.IdMapperPreparationStage;
 import org.neo4j.unsafe.impl.batchimport.NodeCountsStage;
 import org.neo4j.unsafe.impl.batchimport.NodeDegreeCountStage;
 import org.neo4j.unsafe.impl.batchimport.NodeFirstGroupStage;
-import org.neo4j.unsafe.impl.batchimport.NodeStage;
 import org.neo4j.unsafe.impl.batchimport.RelationshipCountsStage;
 import org.neo4j.unsafe.impl.batchimport.RelationshipGroupStage;
 import org.neo4j.unsafe.impl.batchimport.RelationshipLinkbackStage;
 import org.neo4j.unsafe.impl.batchimport.RelationshipLinkforwardStage;
-import org.neo4j.unsafe.impl.batchimport.RelationshipStage;
 import org.neo4j.unsafe.impl.batchimport.ScanAndCacheGroupsStage;
 import org.neo4j.unsafe.impl.batchimport.SparseNodeFirstRelationshipStage;
 import org.neo4j.unsafe.impl.batchimport.WriteGroupsStage;
@@ -73,13 +72,13 @@ public class RestartableParallelBatchImporterIT
     @Test
     public void shouldRestartImportAfterNodeImportStart() throws Exception
     {
-        shouldRestartImport( NodeStage.NAME, true );
+        shouldRestartImport( DataImporter.NODE_IMPORT_NAME, true );
     }
 
     @Test
     public void shouldRestartImportAfterNodeImportEnd() throws Exception
     {
-        shouldRestartImport( NodeStage.NAME, false );
+        shouldRestartImport( DataImporter.NODE_IMPORT_NAME, false );
     }
 
     @Test
@@ -97,13 +96,13 @@ public class RestartableParallelBatchImporterIT
     @Test
     public void shouldRestartImportAfterRelationshipImportStart() throws Exception
     {
-        shouldRestartImport( RelationshipStage.NAME, true );
+        shouldRestartImport( DataImporter.RELATIONSHIP_IMPORT_NAME, true );
     }
 
     @Test
     public void shouldRestartImportAfterRelationshipImportEnd() throws Exception
     {
-        shouldRestartImport( RelationshipStage.NAME, false );
+        shouldRestartImport( DataImporter.RELATIONSHIP_IMPORT_NAME, false );
     }
 
     @Test

@@ -42,12 +42,13 @@ import java.util.zip.ZipOutputStream;
 
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Arrays.copyOfRange;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+
+import static java.util.Arrays.copyOfRange;
 
 @RunWith( Parameterized.class )
 public class ReadablesTest
@@ -300,5 +301,4 @@ public class ReadablesTest
         char[] readText = readMethod.read( readable, text.toCharArray().length );
         assertArrayEquals( readText, text.toCharArray() );
     }
-
 }

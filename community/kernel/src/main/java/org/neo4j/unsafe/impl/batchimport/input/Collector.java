@@ -25,13 +25,17 @@ package org.neo4j.unsafe.impl.batchimport.input;
  */
 public interface Collector extends AutoCloseable
 {
-    void collectBadRelationship( InputRelationship relationship, Object specificValue );
+    void collectBadRelationship(
+            Object startId, String startIdGroup, String type,
+            Object endId, String endIdGroup, Object specificValue );
 
     void collectDuplicateNode( Object id, long actualId, String group );
 
     void collectExtraColumns( String source, long row, String value );
 
     long badEntries();
+
+    boolean isCollectingBadRelationships();
 
     /**
      * Flushes whatever changes to the underlying resource supplied from the importer.
@@ -47,16 +51,6 @@ public interface Collector extends AutoCloseable
         }
 
         @Override
-        public void collectDuplicateNode( Object id, long actualId, String group )
-        {
-        }
-
-        @Override
-        public void collectBadRelationship( InputRelationship relationship, Object specificValue )
-        {
-        }
-
-        @Override
         public void close()
         {
         }
@@ -65,6 +59,23 @@ public interface Collector extends AutoCloseable
         public long badEntries()
         {
             return 0;
+        }
+
+        @Override
+        public void collectBadRelationship( Object startId, String startIdGroup, String type, Object endId, String endIdGroup,
+                Object specificValue )
+        {
+        }
+
+        @Override
+        public void collectDuplicateNode( Object id, long actualId, String group )
+        {
+        }
+
+        @Override
+        public boolean isCollectingBadRelationships()
+        {
+            return true;
         }
     };
 }

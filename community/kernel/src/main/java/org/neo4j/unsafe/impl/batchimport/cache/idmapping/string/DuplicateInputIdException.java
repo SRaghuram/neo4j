@@ -32,6 +32,6 @@ public class DuplicateInputIdException extends DataException
 
     public static String message( Object id, String groupName )
     {
-        return format( "Id '%s' is defined more than once", id, groupName );
+        return format( "Id '%s' is defined more than once in group '%s'", id, groupName );
     }
 }

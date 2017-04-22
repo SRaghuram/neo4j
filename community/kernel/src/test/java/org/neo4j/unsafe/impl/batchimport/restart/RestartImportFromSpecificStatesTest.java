@@ -23,6 +23,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 
+import java.io.IOException;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.configuration.Config;
@@ -32,9 +34,9 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
+import org.neo4j.unsafe.impl.batchimport.DataImporter;
 import org.neo4j.unsafe.impl.batchimport.RelationshipCountsStage;
 import org.neo4j.unsafe.impl.batchimport.RelationshipLinkbackStage;
-import org.neo4j.unsafe.impl.batchimport.RelationshipStage;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
 import static org.junit.Assert.fail;
@@ -62,7 +64,7 @@ public class RestartImportFromSpecificStatesTest
 
         // when
         SimpleRandomizedInput input = input();
-        importer( new PanicSpreadingExecutionMonitor( RelationshipStage.NAME, true ) ).doImport( input );
+        importer( new PanicSpreadingExecutionMonitor( DataImporter.RELATIONSHIP_IMPORT_NAME, true ) ).doImport( input );
 
         // then good :)
         verifyDb( input );
@@ -107,7 +109,7 @@ public class RestartImportFromSpecificStatesTest
               EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat() );
     }
 
-    private void verifyDb( SimpleRandomizedInput input )
+    private void verifyDb( SimpleRandomizedInput input ) throws IOException
     {
         GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
         try

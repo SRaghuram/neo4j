@@ -28,6 +28,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
@@ -255,5 +256,30 @@ public class Readables
                 throw new UnsupportedOperationException();
             }
         };
+    }
+
+    public static char[] extractFirstLineFrom( CharReadable source ) throws IOException
+    {
+        char[] result = new char[100];
+        int cursor = 0;
+        int read;
+        boolean foundEol = false;
+        do
+        {
+            // Grow on demand
+            if ( cursor >= result.length )
+            {
+                result = Arrays.copyOf( result, cursor * 2 );
+            }
+
+            // Read one character
+            read = source.read( result, cursor, 1 );
+        }
+        while ( read > 0 && !(foundEol = BufferedCharSeeker.isEolChar( result[cursor++] )) );
+        if ( foundEol )
+        {
+            cursor--; // to not include it
+        }
+        return Arrays.copyOf( result, cursor );
     }
 }

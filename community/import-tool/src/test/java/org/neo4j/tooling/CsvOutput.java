@@ -24,21 +24,15 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiFunction;
-
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
-import org.neo4j.unsafe.impl.batchimport.InputIterable;
 import org.neo4j.unsafe.impl.batchimport.InputIterator;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
+import org.neo4j.unsafe.impl.batchimport.input.InputChunk;
 import org.neo4j.unsafe.impl.batchimport.input.InputEntity;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Deserialization;
@@ -48,6 +42,11 @@ import static org.neo4j.io.ByteUnit.mebiBytes;
 
 public class CsvOutput implements BatchImporter
 {
+    private interface Deserializer
+    {
+        String apply( InputEntity entity, Deserialization<String> deserialization, Header header );
+    }
+
     private final File targetDirectory;
     private final Header nodeHeader;
     private final Header relationshipHeader;
@@ -66,82 +65,63 @@ public class CsvOutput implements BatchImporter
     @Override
     public void doImport( Input input ) throws IOException
     {
-        consume( "nodes", input.nodes(), nodeHeader, ( node, deserialization ) ->
+        Deserializer deserializer = ( entity, deserialization, header ) ->
         {
             deserialization.clear();
-            for ( Header.Entry entry : nodeHeader.entries() )
+            for ( Header.Entry entry : header.entries() )
             {
                 switch ( entry.type() )
                 {
                 case ID:
-                    deserialization.handle( entry, node.id() );
+                    deserialization.handle( entry, entity.hasLongId ? entity.longId : entity.objectId );
                     break;
                 case PROPERTY:
-                    deserialization.handle( entry, property( node, entry.name() ) );
+                    deserialization.handle( entry, property( entity.properties, entry.name() ) );
                     break;
                 case LABEL:
-                    deserialization.handle( entry, node.labels() );
-                    break;
-                default: // ignore other types
-                }
-            }
-            return deserialization.materialize();
-        } );
-        consume( "relationships", input.relationships(), relationshipHeader, ( relationship, deserialization ) ->
-        {
-            deserialization.clear();
-            for ( Header.Entry entry : relationshipHeader.entries() )
-            {
-                switch ( entry.type() )
-                {
-                case PROPERTY:
-                    deserialization.handle( entry, property( relationship, entry.name() ) );
+                    deserialization.handle( entry, entity.labels() );
                     break;
                 case TYPE:
-                    deserialization.handle( entry, relationship.type() );
+                    deserialization.handle( entry, entity.hasIntType ? entity.intType : entity.stringType );
                     break;
                 case START_ID:
-                    deserialization.handle( entry, relationship.startNode() );
+                    deserialization.handle( entry, entity.hasLongStartId ? entity.longStartId : entity.objectStartId );
                     break;
                 case END_ID:
-                    deserialization.handle( entry, relationship.endNode() );
+                    deserialization.handle( entry, entity.hasLongEndId ? entity.longEndId : entity.objectEndId );
                     break;
                 default: // ignore other types
                 }
             }
             return deserialization.materialize();
-        } );
+        };
+        consume( "nodes", input.nodes().iterator(), nodeHeader, deserializer );
+        consume( "relationships", input.relationships().iterator(), relationshipHeader, deserializer );
     }
 
-    private Object property( InputEntity entity, String key )
+    private static Object property( List<Object> properties, String key )
     {
-        Object[] properties = entity.properties();
-        for ( int i = 0; i < properties.length; i += 2 )
+        for ( int i = 0; i < properties.size(); i += 2 )
         {
-            if ( properties[i].equals( key ) )
+            if ( properties.get( i ).equals( key ) )
             {
-                return properties[i + 1];
+                return properties.get( i + 1 );
             }
         }
         return null;
     }
 
-    private <ENTITY extends InputEntity> void consume( String name, InputIterable<ENTITY> entities, Header header,
-            BiFunction<ENTITY,Deserialization<String>,String> deserializer ) throws IOException
+    private void consume( String name, InputIterator entities, Header header, Deserializer deserializer ) throws IOException
     {
-        try ( PrintStream out = file( name + "-header.csv" ) )
+        try ( PrintStream out = file( name + "header.csv" ) )
         {
             serialize( out, header );
         }
 
-        try ( InputIterator<ENTITY> iterator = entities.iterator() )
+        try
         {
-            int threads = Runtime.getRuntime().availableProcessors() / 2;
-            iterator.hasNext();
-            iterator.processors( threads );
+            int threads = Runtime.getRuntime().availableProcessors();
             ExecutorService executor = Executors.newFixedThreadPool( threads );
-            AtomicBoolean end = new AtomicBoolean();
-            BlockingQueue<List<ENTITY>> queue = new ArrayBlockingQueue<>( threads * 10 );
             for ( int i = 0; i < threads; i++ )
             {
                 int id = i;
@@ -150,22 +130,16 @@ public class CsvOutput implements BatchImporter
                     @Override
                     public Void call() throws Exception
                     {
-                        try ( PrintStream out = file( name + "-" + id + ".csv" ) )
+                        StringDeserialization deserialization = new StringDeserialization( config );
+                        try ( PrintStream out = file( name + "-" + id + ".csv" );
+                              InputChunk chunk = entities.newChunk() )
                         {
-                            StringDeserialization deserialization = new StringDeserialization( config );
-                            while ( true )
+                            InputEntity entity = new InputEntity();
+                            while ( entities.next( chunk ) )
                             {
-                                List<ENTITY> batch = queue.poll( 100, TimeUnit.MILLISECONDS );
-                                if ( batch != null )
+                                while ( chunk.next( entity ) )
                                 {
-                                    for ( ENTITY entity : batch )
-                                    {
-                                        out.println( deserializer.apply( entity, deserialization ) );
-                                    }
-                                }
-                                else if ( end.get() )
-                                {
-                                    break;
+                                    out.println( deserializer.apply( entity, deserialization, header ) );
                                 }
                             }
                         }
@@ -173,17 +147,7 @@ public class CsvOutput implements BatchImporter
                     }
                 } );
             }
-
-            while ( iterator.hasNext() )
-            {
-                List<ENTITY> batch = grabBatch( iterator, 10_000 );
-                while ( !queue.offer( batch, 100, TimeUnit.MILLISECONDS ) )
-                {
-                    // wait
-                }
-            }
             executor.shutdown();
-            end.set( true );
             executor.awaitTermination( 10, TimeUnit.MINUTES );
         }
         catch ( InterruptedException e )
@@ -191,16 +155,6 @@ public class CsvOutput implements BatchImporter
             Thread.currentThread().interrupt();
             throw new IOException( e );
         }
-    }
-
-    private static <T> List<T> grabBatch( InputIterator<T> iterator, int count )
-    {
-        List<T> list = new ArrayList<>( count );
-        for ( int i = 0; i < count && iterator.hasNext(); i++ )
-        {
-            list.add( iterator.next() );
-        }
-        return list;
     }
 
     private void serialize( PrintStream out, Header header )

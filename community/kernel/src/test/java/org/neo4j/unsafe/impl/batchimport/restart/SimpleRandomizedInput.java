@@ -34,26 +34,22 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.unsafe.impl.batchimport.InputIterable;
 import org.neo4j.unsafe.impl.batchimport.InputIterator;
 import org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory;
-import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdGenerator;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
+import org.neo4j.unsafe.impl.batchimport.input.InputChunk;
 import org.neo4j.unsafe.impl.batchimport.input.InputEntity;
-import org.neo4j.unsafe.impl.batchimport.input.InputNode;
-import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 import org.neo4j.unsafe.impl.batchimport.input.Inputs;
-import org.neo4j.unsafe.impl.batchimport.input.SimpleDataGenerator;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header.Entry;
+import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
+import org.neo4j.unsafe.impl.batchimport.input.csv.Type;
+import org.neo4j.values.storable.Value;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
-import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Type;
-import org.neo4j.values.storable.Value;
 
 import static org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput.bareboneNodeHeader;
 import static org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput.bareboneRelationshipHeader;
@@ -74,24 +70,22 @@ public class SimpleRandomizedInput implements Input
     {
         this.nodeCount = nodeCount;
         this.relationshipCount = relationshipCount;
-        SimpleDataGenerator generator = new SimpleDataGenerator(
+        badCollector = new GatheringBadCollector();
+        actual = new DataGeneratorInput( nodeCount, relationshipCount, idType, badCollector, seed,
                 bareboneNodeHeader( ID_KEY, idType, extractors ),
                 bareboneRelationshipHeader( idType, extractors,
                         new Entry( SimpleRandomizedInput.ID_KEY, Type.PROPERTY, null, extractors.int_() ) ),
-                seed, nodeCount, 4, 4, idType, factorBadNodeData, factorBadRelationshipData );
-        badCollector = new GatheringBadCollector();
-        actual = new DataGeneratorInput( nodeCount, relationshipCount,
-                generator.nodes(), generator.relationships(), idType, badCollector );
+                4, 4, factorBadNodeData, factorBadRelationshipData );
     }
 
     @Override
-    public InputIterable<InputNode> nodes()
+    public InputIterable nodes()
     {
         return actual.nodes();
     }
 
     @Override
-    public InputIterable<InputRelationship> relationships()
+    public InputIterable relationships()
     {
         return actual.relationships();
     }
@@ -103,42 +97,44 @@ public class SimpleRandomizedInput implements Input
     }
 
     @Override
-    public IdGenerator idGenerator()
-    {
-        return actual.idGenerator();
-    }
-
-    @Override
     public Collector badCollector()
     {
         return badCollector;
     }
 
-    public void verify( GraphDatabaseService db )
+    public void verify( GraphDatabaseService db ) throws IOException
     {
-        Map<Number,InputNode> expectedNodeData = new HashMap<>();
-        try ( InputIterator<InputNode> nodes = nodes().iterator() )
+        Map<Number,InputEntity> expectedNodeData = new HashMap<>();
+        try ( InputIterator nodes = nodes().iterator();
+              InputChunk chunk = nodes.newChunk() )
         {
             Number lastId = null;
-            while ( nodes.hasNext() )
+            InputEntity node;
+            while ( nodes.next( chunk ) )
             {
-                InputNode node = nodes.next();
-                Number id = (Number) node.id();
-                if ( lastId == null || id.longValue() > lastId.longValue() )
+                while ( chunk.next( node = new InputEntity() ) )
                 {
-                    expectedNodeData.put( id, node );
-                    lastId = id;
+                    Number id = (Number) node.id();
+                    if ( lastId == null || id.longValue() > lastId.longValue() )
+                    {
+                        expectedNodeData.put( id, node );
+                        lastId = id;
+                    }
                 }
             }
         }
-        Map<RelationshipKey,Set<InputRelationship>> expectedRelationshipData = new HashMap<>();
-        try ( InputIterator<InputRelationship> relationships = relationships().iterator() )
+        Map<RelationshipKey,Set<InputEntity>> expectedRelationshipData = new HashMap<>();
+        try ( InputIterator relationships = relationships().iterator();
+              InputChunk chunk = relationships.newChunk() )
         {
-            while ( relationships.hasNext() )
+            while ( relationships.next( chunk ) )
             {
-                InputRelationship relationship = relationships.next();
-                RelationshipKey key = keyOf( relationship );
-                expectedRelationshipData.computeIfAbsent( key, k -> new HashSet<>() ).add( relationship );
+                InputEntity relationship;
+                while ( chunk.next( relationship = new InputEntity() ) )
+                {
+                    RelationshipKey key = new RelationshipKey( relationship.startId(), relationship.stringType, relationship.endId() );
+                    expectedRelationshipData.computeIfAbsent( key, k -> new HashSet<>() ).add( relationship );
+                }
             }
         }
 
@@ -148,9 +144,9 @@ public class SimpleRandomizedInput implements Input
             for ( Relationship relationship : db.getAllRelationships() )
             {
                 RelationshipKey key = keyOf( relationship );
-                Set<InputRelationship> matches = expectedRelationshipData.get( key );
+                Set<InputEntity> matches = expectedRelationshipData.get( key );
                 assertNotNull( matches );
-                InputRelationship matchingRelationship = relationshipWithId( matches, relationship );
+                InputEntity matchingRelationship = relationshipWithId( matches, relationship );
                 assertNotNull( matchingRelationship );
                 assertTrue( matches.remove( matchingRelationship ) );
                 if ( matches.isEmpty() )
@@ -174,10 +170,10 @@ public class SimpleRandomizedInput implements Input
         }
     }
 
-    private static InputRelationship relationshipWithId( Set<InputRelationship> matches, Relationship relationship )
+    private static InputEntity relationshipWithId( Set<InputEntity> matches, Relationship relationship )
     {
         Map<String,Object> dbProperties = relationship.getAllProperties();
-        for ( InputRelationship candidate : matches )
+        for ( InputEntity candidate : matches )
         {
             if ( dbProperties.equals( propertiesOf( candidate ) ) )
             {
@@ -277,9 +273,11 @@ public class SimpleRandomizedInput implements Input
         private final Set<Object> badNodes = new HashSet<>();
 
         @Override
-        public synchronized void collectBadRelationship( InputRelationship relationship, Object specificValue )
+        public synchronized void collectBadRelationship(
+                Object startId, String startIdGroup, String type,
+                Object endId, String endIdGroup, Object specificValue )
         {
-            badRelationships.add( keyOf( relationship ) );
+            badRelationships.add( new RelationshipKey( startId, type, endId ) );
         }
 
         @Override
@@ -303,11 +301,12 @@ public class SimpleRandomizedInput implements Input
         public void close()
         {
         }
-    }
 
-    private static RelationshipKey keyOf( InputRelationship relationship )
-    {
-        return new RelationshipKey( relationship.startNode(), relationship.type(), relationship.endNode() );
+        @Override
+        public boolean isCollectingBadRelationships()
+        {
+            return true;
+        }
     }
 
     private static RelationshipKey keyOf( Relationship relationship )
