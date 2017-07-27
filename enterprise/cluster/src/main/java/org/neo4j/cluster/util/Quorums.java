@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,6 +24,6 @@ public class Quorums
     /** Determines if a number of available members qualify as a majority, given the total number of members. */
     public static boolean isQuorum( long availableMembers, long totalMembers )
     {
-        return availableMembers >= Math.floor((totalMembers/2) + 1);
+        return availableMembers >= Math.floor( (totalMembers / 2) + 1 );
     }
 }

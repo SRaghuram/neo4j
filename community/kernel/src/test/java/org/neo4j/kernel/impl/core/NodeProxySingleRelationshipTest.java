@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
@@ -46,7 +45,7 @@ import static org.mockito.Mockito.when;
 public class NodeProxySingleRelationshipTest
 {
     private static final long REL_ID = 1;
-    private static final RelationshipType loves = DynamicRelationshipType.withName( "LOVES" );
+    private static final RelationshipType loves = RelationshipType.withName( "LOVES" );
 
     /**
      * This behaviour is a workaround until we have proper concurrency support in the kernel.
@@ -80,7 +79,7 @@ public class NodeProxySingleRelationshipTest
             node.getSingleRelationship( loves, Direction.OUTGOING );
             fail("expected exception");
         }
-        catch ( NotFoundException expected )
+        catch ( NotFoundException ignored )
         {
         }
     }
@@ -97,7 +96,7 @@ public class NodeProxySingleRelationshipTest
             node.getSingleRelationship( loves, Direction.OUTGOING );
             fail();
         }
-        catch ( NotFoundException expected )
+        catch ( NotFoundException ignored )
         {
         }
     }
@@ -106,27 +105,14 @@ public class NodeProxySingleRelationshipTest
     {
         NodeProxy.NodeActions nodeActions = mock( NodeProxy.NodeActions.class );
         final RelationshipProxy.RelationshipActions relActions = mock( RelationshipProxy.RelationshipActions.class );
-        when( nodeActions.newRelationshipProxy( anyLong() ) ).thenAnswer( new Answer<RelationshipProxy>()
+        when( nodeActions.newRelationshipProxy( anyLong(), anyLong(), anyInt(), anyLong() ) ).then( invocation ->
         {
-            @Override
-            public RelationshipProxy answer( InvocationOnMock invocation ) throws Throwable
-            {
-                return new RelationshipProxy( relActions, (Long)invocation.getArguments()[0] );
-            }
+            Long id = (Long) invocation.getArguments()[0];
+            Long startNode = (Long) invocation.getArguments()[1];
+            Integer type = (Integer) invocation.getArguments()[2];
+            Long endNode = (Long) invocation.getArguments()[3];
+            return new RelationshipProxy( relActions, id, startNode, type, endNode );
         } );
-        when( nodeActions.newRelationshipProxy( anyLong(), anyLong(), anyInt(), anyLong() ) ).then(
-                new Answer<Relationship>()
-                {
-                    @Override
-                    public Relationship answer( InvocationOnMock invocation ) throws Throwable
-                    {
-                        Long id = (Long) invocation.getArguments()[0];
-                        Long startNode = (Long) invocation.getArguments()[1];
-                        Integer type = (Integer) invocation.getArguments()[2];
-                        Long endNode = (Long) invocation.getArguments()[3];
-                        return new RelationshipProxy( relActions, id, startNode, type, endNode );
-                    }
-                } );
 
         GraphDatabaseService gds = mock( GraphDatabaseService.class );
 
@@ -143,12 +129,8 @@ public class NodeProxySingleRelationshipTest
         when( nodeActions.statement() ).thenReturn( stmt );
         when( readOps.relationshipTypeGetForName( loves.name() ) ).thenReturn( 2 );
 
-        when( readOps.nodeGetRelationships( eq( 1L ), eq( Direction.OUTGOING ), eq( 2 ) ) ).thenAnswer( new Answer<RelationshipIterator>()
-        {
-            @Override
-            public RelationshipIterator answer( InvocationOnMock invocation ) throws Throwable
-            {
-                return new RelationshipIterator.BaseIterator()
+        when( readOps.nodeGetRelationships( eq( 1L ), eq( Direction.OUTGOING ), eq( new int[]{2} ) ) ).thenAnswer(
+                invocation -> new RelationshipIterator.BaseIterator()
                 {
                     int pos;
                     long relId;
@@ -174,9 +156,7 @@ public class NodeProxySingleRelationshipTest
                         visitor.visit( relId, 2, 1, 10 * relId + 2 );
                         return false;
                     }
-                };
-            }
-        } );
+                } );
         return nodeImpl;
     }
 }

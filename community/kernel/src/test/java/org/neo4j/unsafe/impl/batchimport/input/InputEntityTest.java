@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,6 @@ package org.neo4j.unsafe.impl.batchimport.input;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
-
 import static org.neo4j.unsafe.impl.batchimport.input.UpdateBehaviour.ADD;
 
 public class InputEntityTest

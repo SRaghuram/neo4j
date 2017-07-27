@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,14 +30,23 @@ import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
  */
 public class CountsEntry extends AbstractBaseRecord
 {
-    private final CountsKey key;
-    private final long count;
+    private CountsKey key;
+    private long count;
 
     public CountsEntry( CountsKey key, long count )
     {
+        super( -1 );
         this.key = key;
         this.count = count;
         setInUse( true );
+    }
+
+    @Override
+    public void clear()
+    {
+        super.clear();
+        key = null;
+        count = 0;
     }
 
     @Override
@@ -47,7 +56,7 @@ public class CountsEntry extends AbstractBaseRecord
     }
 
     @Override
-    public long getLongId()
+    public long getId()
     {
         throw new UnsupportedOperationException();
     }
@@ -62,7 +71,7 @@ public class CountsEntry extends AbstractBaseRecord
         return count;
     }
 
-    public static abstract class CheckAdapter implements RecordCheck<CountsEntry,ConsistencyReport.CountsConsistencyReport>
+    public abstract static class CheckAdapter implements RecordCheck<CountsEntry,ConsistencyReport.CountsConsistencyReport>
     {
     }
 }

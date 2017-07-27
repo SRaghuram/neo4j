@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -61,7 +61,7 @@ public class ClusterHeartbeatTest
                 down( 100, 3 ).
                 message( 1000, "*** Should have seen failure by now" ).
                 up( 0, 3 ).
-                message( 200, "*** Should have recovered by now" ).
+                message( 2000, "*** Should have recovered by now" ).
                 verifyConfigurations( "after recovery", 0 ).
                 leave( 200, 1 ).
                 leave( 200, 2 ).

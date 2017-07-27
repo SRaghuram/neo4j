@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,8 +20,6 @@
 package org.neo4j.kernel.api.properties;
 
 import org.junit.Test;
-
-import java.util.concurrent.Callable;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -154,13 +152,7 @@ public class DefinedPropertyTest
     @Test
     public void shouldSortLazyStringAndNonLazyStringPropertiesByValue()
     {
-        DefinedProperty p1 = lazyStringProperty( 1, new Callable<String>(){
-            @Override
-            public String call() throws Exception
-            {
-                return "x";
-            }
-        } );
+        DefinedProperty p1 = lazyStringProperty( 1, () -> "x" );
         DefinedProperty p2 = stringProperty( 1, "y" );
 
         assertThat( compare( p1, p2 ), lessThan( 0 ) );
@@ -170,7 +162,7 @@ public class DefinedPropertyTest
     {
         int leftComparison = DefinedProperty.COMPARATOR.compare( leftProperty, rightProperty );
         int rightComparison = DefinedProperty.COMPARATOR.compare( rightProperty, leftProperty );
-        assertThat( sign ( leftComparison ) , equalTo( -sign( rightComparison ) ) );
+        assertThat( sign( leftComparison ), equalTo( -sign( rightComparison ) ) );
         return leftComparison;
     }
 

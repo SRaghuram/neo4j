@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,11 +21,7 @@ package org.neo4j.io.pagecache.tracing;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.invoke.SwitchPoint;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.neo4j.io.pagecache.PageSwapper;
 
@@ -34,75 +30,30 @@ import org.neo4j.io.pagecache.PageSwapper;
  */
 public class DefaultPageCacheTracer implements PageCacheTracer
 {
-    private static final MethodHandle beginPinMH;
-    private static final SwitchPoint beginPinSwitchPoint;
-    static
-    {
-        try
-        {
-            // A hidden setting to have pin/unpin monitoring enabled from the start by default.
-            boolean alwaysEnabled = Boolean.getBoolean(
-                    "org.neo4j.io.pagecache.tracing.tracePinUnpin" );
-
-            MethodType type = MethodType.methodType( PinEvent.class );
-            MethodHandles.Lookup lookup = MethodHandles.lookup();
-            MethodHandle monitoredPinMH = lookup.findVirtual( DefaultPageCacheTracer.class, "beginTracingPin", type );
-            if ( alwaysEnabled )
-            {
-                beginPinMH = monitoredPinMH;
-                beginPinSwitchPoint = null;
-            }
-            else
-            {
-                MethodHandle nullPinMH = lookup.findVirtual( DefaultPageCacheTracer.class, "beginNullPin", type );
-                beginPinSwitchPoint = new SwitchPoint();
-                beginPinMH = beginPinSwitchPoint.guardWithTest( nullPinMH, monitoredPinMH );
-            }
-        }
-        catch ( Exception e )
-        {
-            throw new AssertionError( "Unexpected MethodHandle initiation error", e );
-        }
-    }
-
-    /**
-     * Enable monitoring of page pins and unpins, which is disabled by default for
-     * performance reasons.
-     *
-     * This is a one-way operation; once monitoring of pinning and unpinning has been
-     * enabled, it cannot be disabled again without restarting the JVM.
-     */
-    public static void enablePinUnpinTracing()
-    {
-        if ( beginPinSwitchPoint != null && !beginPinSwitchPoint.hasBeenInvalidated() )
-        {
-            SwitchPoint.invalidateAll( new SwitchPoint[]{ beginPinSwitchPoint } );
-        }
-    }
-
-    protected final AtomicLong faults = new AtomicLong();
-    protected final AtomicLong evictions = new AtomicLong();
-    protected final AtomicLong pins = new AtomicLong();
-    protected final AtomicLong unpins = new AtomicLong();
-    protected final AtomicLong flushes = new AtomicLong();
-    protected final AtomicLong bytesRead = new AtomicLong();
-    protected final AtomicLong bytesWritten = new AtomicLong();
-    protected final AtomicLong filesMapped = new AtomicLong();
-    protected final AtomicLong filesUnmapped = new AtomicLong();
-    protected final AtomicLong evictionExceptions = new AtomicLong();
+    protected final LongAdder faults = new LongAdder();
+    protected final LongAdder evictions = new LongAdder();
+    protected final LongAdder pins = new LongAdder();
+    protected final LongAdder unpins = new LongAdder();
+    protected final LongAdder hits = new LongAdder();
+    protected final LongAdder flushes = new LongAdder();
+    protected final LongAdder bytesRead = new LongAdder();
+    protected final LongAdder bytesWritten = new LongAdder();
+    protected final LongAdder filesMapped = new LongAdder();
+    protected final LongAdder filesUnmapped = new LongAdder();
+    protected final LongAdder evictionExceptions = new LongAdder();
 
     private final FlushEvent flushEvent = new FlushEvent()
     {
         @Override
         public void addBytesWritten( long bytes )
         {
-            bytesWritten.getAndAdd( bytes );
+            bytesWritten.add( bytes );
         }
 
         @Override
         public void done()
         {
-            flushes.getAndIncrement();
+            flushes.increment();
         }
 
         @Override
@@ -117,14 +68,7 @@ public class DefaultPageCacheTracer implements PageCacheTracer
         }
     };
 
-    private final FlushEventOpportunity flushEventOpportunity = new FlushEventOpportunity()
-    {
-        @Override
-        public FlushEvent beginFlush( long filePageId, int cachePageId, PageSwapper swapper )
-        {
-            return flushEvent;
-        }
-    };
+    private final FlushEventOpportunity flushEventOpportunity = ( filePageId, cachePageId, swapper ) -> flushEvent;
 
     private final EvictionEvent evictionEvent = new EvictionEvent()
     {
@@ -147,7 +91,7 @@ public class DefaultPageCacheTracer implements PageCacheTracer
         @Override
         public void threwException( IOException exception )
         {
-            evictionExceptions.getAndIncrement();
+            evictionExceptions.increment();
         }
 
         @Override
@@ -158,7 +102,7 @@ public class DefaultPageCacheTracer implements PageCacheTracer
         @Override
         public void close()
         {
-            evictions.getAndIncrement();
+            evictions.increment();
         }
     };
 
@@ -172,77 +116,6 @@ public class DefaultPageCacheTracer implements PageCacheTracer
 
         @Override
         public void close()
-        {
-        }
-    };
-
-    private final PageFaultEvent pageFaultEvent = new PageFaultEvent()
-    {
-        @Override
-        public void addBytesRead( long bytes )
-        {
-            bytesRead.getAndAdd( bytes );
-        }
-
-        @Override
-        public void done()
-        {
-            faults.getAndIncrement();
-        }
-
-        @Override
-        public void done( Throwable throwable )
-        {
-            done();
-        }
-
-        @Override
-        public EvictionEvent beginEviction()
-        {
-            return evictionEvent;
-        }
-
-        @Override
-        public void setCachePageId( int cachePageId )
-        {
-        }
-    };
-
-    private final PinEvent pinTracingEvent = new PinEvent()
-    {
-        @Override
-        public void setCachePageId( int cachePageId )
-        {
-        }
-
-        @Override
-        public PageFaultEvent beginPageFault()
-        {
-            return pageFaultEvent;
-        }
-
-        @Override
-        public void done()
-        {
-            unpins.getAndIncrement();
-        }
-    };
-
-    private final PinEvent nullPinEvent = new PinEvent()
-    {
-        @Override
-        public void setCachePageId( int cachePageId )
-        {
-        }
-
-        @Override
-        public PageFaultEvent beginPageFault()
-        {
-            return pageFaultEvent;
-        }
-
-        @Override
-        public void done()
         {
         }
     };
@@ -264,51 +137,19 @@ public class DefaultPageCacheTracer implements PageCacheTracer
     @Override
     public void mappedFile( File file )
     {
-        filesMapped.getAndIncrement();
+        filesMapped.increment();
     }
 
     @Override
     public void unmappedFile( File file )
     {
-        filesUnmapped.getAndIncrement();
+        filesUnmapped.increment();
     }
 
     @Override
     public EvictionRunEvent beginPageEvictions( int pageCountToEvict )
     {
         return evictionRunEvent;
-    }
-
-    @Override
-    public PinEvent beginPin( boolean exclusiveLock, long filePageId, PageSwapper swapper )
-    {
-        try
-        {
-            return (PinEvent) beginPinMH.invokeExact( this );
-        }
-        catch ( Throwable throwable )
-        {
-            throw new AssertionError( "Unexpected MethodHandle error", throwable );
-        }
-    }
-
-    /**
-     * Invoked through beginPinMH.
-     */
-    @SuppressWarnings( "UnusedDeclaration" )
-    private PinEvent beginNullPin()
-    {
-        return nullPinEvent;
-    }
-
-    /**
-     * Invoked through beginPinMH.
-     */
-    @SuppressWarnings( "UnusedDeclaration" )
-    private PinEvent beginTracingPin()
-    {
-        pins.getAndIncrement();
-        return pinTracingEvent;
     }
 
     @Override
@@ -324,62 +165,122 @@ public class DefaultPageCacheTracer implements PageCacheTracer
     }
 
     @Override
-    public long countFaults()
+    public long faults()
     {
-        return faults.get();
+        return faults.sum();
     }
 
     @Override
-    public long countEvictions()
+    public long evictions()
     {
-        return evictions.get();
+        return evictions.sum();
     }
 
     @Override
-    public long countPins()
+    public long pins()
     {
-        return pins.get();
+        return pins.sum();
     }
 
     @Override
-    public long countUnpins()
+    public long unpins()
     {
-        return unpins.get();
+        return unpins.sum();
     }
 
     @Override
-    public long countFlushes()
+    public long hits()
     {
-        return flushes.get();
+        return hits.sum();
     }
 
     @Override
-    public long countBytesRead()
+    public long flushes()
     {
-        return bytesRead.get();
+        return flushes.sum();
     }
 
     @Override
-    public long countBytesWritten()
+    public long bytesRead()
     {
-        return bytesWritten.get();
+        return bytesRead.sum();
     }
 
     @Override
-    public long countFilesMapped()
+    public long bytesWritten()
     {
-        return filesMapped.get();
+        return bytesWritten.sum();
     }
 
     @Override
-    public long countFilesUnmapped()
+    public long filesMapped()
     {
-        return filesUnmapped.get();
+        return filesMapped.sum();
     }
 
     @Override
-    public long countEvictionExceptions()
+    public long filesUnmapped()
     {
-        return evictionExceptions.get();
+        return filesUnmapped.sum();
+    }
+
+    @Override
+    public long evictionExceptions()
+    {
+        return evictionExceptions.sum();
+    }
+
+    @Override
+    public void pins( long pins )
+    {
+        this.pins.add( pins );
+    }
+
+    @Override
+    public void unpins( long unpins )
+    {
+        this.unpins.add( unpins );
+    }
+
+    @Override
+    public void hits( long hits )
+    {
+        this.hits.add( hits );
+    }
+
+    @Override
+    public void faults( long faults )
+    {
+        this.faults.add( faults );
+    }
+
+    @Override
+    public void bytesRead( long bytesRead )
+    {
+        this.bytesRead.add( bytesRead );
+    }
+
+    @Override
+    public void evictions( long evictions )
+    {
+        this.evictions.add( evictions );
+    }
+
+    @Override
+    public void evictionExceptions( long evictionExceptions )
+    {
+        this.evictionExceptions.add( evictionExceptions );
+    }
+
+    @Override
+    public void bytesWritten( long bytesWritten )
+    {
+        this.bytesWritten.add( bytesWritten );
+    }
+
+    @Override
+    public void flushes( long flushes )
+    {
+        this.flushes.add( flushes );
     }
 }

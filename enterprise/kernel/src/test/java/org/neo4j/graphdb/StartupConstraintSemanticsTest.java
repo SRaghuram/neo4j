@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,30 +23,48 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.neo4j.test.TargetDirectory.testDirForTest;
 
 public class StartupConstraintSemanticsTest
 {
     @Rule
-    public final TargetDirectory.TestDirectory dir = testDirForTest( StartupConstraintSemanticsTest.class );
+    public final TestDirectory dir = TestDirectory.testDirectory();
 
     @Test
     public void shouldNotAllowOpeningADatabaseWithPECInCommunityEdition() throws Exception
+    {
+        assertThatCommunityCannotStartOnEnterpriseOnlyConstraint( "CREATE CONSTRAINT ON (n:Draconian) ASSERT exists(n.required)",
+                StandardConstraintSemantics.ERROR_MESSAGE_EXISTS );
+    }
+
+    @Test
+    public void shouldNotAllowOpeningADatabaseWithNodeKeyInCommunityEdition() throws Exception
+    {
+        assertThatCommunityCannotStartOnEnterpriseOnlyConstraint( "CREATE CONSTRAINT ON (n:Draconian) ASSERT (n.required) IS NODE KEY",
+                StandardConstraintSemantics.ERROR_MESSAGE_NODE_KEY );
+    }
+
+    @Test
+    public void shouldAllowOpeningADatabaseWithUniqueConstraintInCommunityEdition() throws Exception
+    {
+        assertThatCommunityCanStartOnNormalConstraint( "CREATE CONSTRAINT ON (n:Draconian) ASSERT (n.required) IS UNIQUE" );
+    }
+
+    private void assertThatCommunityCanStartOnNormalConstraint( String constraintCreationQuery )
     {
         // given
         GraphDatabaseService graphDb = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabase( dir.graphDbDir() );
         try
         {
-            graphDb.execute( "CREATE CONSTRAINT ON (n:Draconian) ASSERT exists(n.required)" );
+            graphDb.execute( constraintCreationQuery );
         }
         finally
         {
@@ -57,7 +75,36 @@ public class StartupConstraintSemanticsTest
         // when
         try
         {
-            graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( dir.graphDbDir() );
+            graphDb = new TestGraphDatabaseFactory().newEmbeddedDatabase( dir.graphDbDir() );
+            // Should not get exception
+        }
+        finally
+        {
+            if ( graphDb != null )
+            {
+                graphDb.shutdown();
+            }
+        }
+    }
+
+    private void assertThatCommunityCannotStartOnEnterpriseOnlyConstraint( String constraintCreationQuery, String errorMessage )
+    {
+        // given
+        GraphDatabaseService graphDb = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabase( dir.graphDbDir() );
+        try
+        {
+            graphDb.execute( constraintCreationQuery );
+        }
+        finally
+        {
+            graphDb.shutdown();
+        }
+        graphDb = null;
+
+        // when
+        try
+        {
+            graphDb = new TestGraphDatabaseFactory().newEmbeddedDatabase( dir.graphDbDir() );
             fail( "should have failed to start!" );
         }
         // then
@@ -65,7 +112,7 @@ public class StartupConstraintSemanticsTest
         {
             Throwable error = Exceptions.rootCause( e );
             assertThat( error, instanceOf( IllegalStateException.class ) );
-            assertEquals( StandardConstraintSemantics.ERROR_MESSAGE, error.getMessage() );
+            assertEquals( errorMessage, error.getMessage() );
         }
         finally
         {

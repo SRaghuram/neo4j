@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,8 +33,8 @@ public interface Kernel
                   + "beans for this Neo4j instance." )
     ObjectName getMBeanQuery();
 
-    @Description( "The location where the Neo4j store is located" )
-    String getStoreDirectory();
+    @Description( "The name of the mounted database" )
+    String getDatabaseName();
 
     @Description( "The version of Neo4j" )
     String getKernelVersion();

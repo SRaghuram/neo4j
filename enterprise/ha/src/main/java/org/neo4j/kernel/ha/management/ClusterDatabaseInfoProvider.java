@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,8 @@
  */
 package org.neo4j.kernel.ha.management;
 
-import org.neo4j.helpers.Functions;
+import java.util.function.Function;
+
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.ha.LastUpdateTime;
 import org.neo4j.kernel.ha.cluster.member.ClusterMember;
@@ -44,14 +45,18 @@ public class ClusterDatabaseInfoProvider
 
     public ClusterDatabaseInfo getInfo()
     {
-        ClusterMember self = members.getSelf();
-        if (self == null)
+        ClusterMember currentMember = members.getCurrentMember();
+        if (currentMember == null)
+        {
             return null;
+        }
 
-        return new ClusterDatabaseInfo( new ClusterMemberInfo( self.getInstanceId().toString(), self.getHAUri() != null,
-                true, self.getHARole(),
-                Iterables.toArray(String.class, Iterables.map( Functions.TO_STRING, self.getRoleURIs() ) ),
-                Iterables.toArray(String.class, Iterables.map( Functions.TO_STRING, self.getRoles() ) ) ),
+        Function<Object,String> nullSafeToString = from -> from == null ? "" : from.toString();
+
+        return new ClusterDatabaseInfo( new ClusterMemberInfo( currentMember.getInstanceId().toString(),
+                currentMember.getHAUri() != null, true, currentMember.getHARole(),
+                Iterables.asArray(String.class, Iterables.map( nullSafeToString, currentMember.getRoleURIs() ) ),
+                Iterables.asArray(String.class, Iterables.map( nullSafeToString, currentMember.getRoles() ) ) ),
                 txIdGetter.getLastTxId(), lastUpdateTime.getLastUpdateTime() );
     }
 }

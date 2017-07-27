@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,16 +22,19 @@ package org.neo4j.kernel.impl.index;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
+import org.neo4j.kernel.impl.api.CommandVisitor;
 import org.neo4j.kernel.impl.transaction.command.Command;
-import org.neo4j.kernel.impl.transaction.command.CommandHandler;
+import org.neo4j.kernel.impl.transaction.command.NeoCommandType;
+import org.neo4j.storageengine.api.WritableChannel;
 
 import static java.lang.String.format;
-
 import static org.neo4j.collection.primitive.Primitive.intObjectMap;
+import static org.neo4j.kernel.impl.util.IoPrimitiveUtils.write2bLengthAndString;
 
 /**
  * A command which have to be first in the transaction. It will map index names
@@ -128,10 +131,10 @@ public class IndexDefineCommand extends Command
         }
 
         int nextIdInt = nextId.incrementAndGet();
-        if ( nextIdInt > HIGHEST_POSSIBLE_ID ) // >= since the actual value -1 is reserved for all-ones
+        if ( nextIdInt > HIGHEST_POSSIBLE_ID || stringToId.size() >= HIGHEST_POSSIBLE_ID )
         {
             throw new IllegalStateException( format(
-                    "Modifying more than %d indexes in a single transaction is not supported",
+                    "Modifying more than %d indexes or keys in a single transaction is not supported",
                     HIGHEST_POSSIBLE_ID + 1 ) );
         }
         id = nextIdInt;
@@ -141,29 +144,39 @@ public class IndexDefineCommand extends Command
         return id;
     }
 
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        if ( !super.equals( o ) )
+        {
+            return false;
+        }
+        IndexDefineCommand that = (IndexDefineCommand) o;
+        return nextIndexNameId.get() == that.nextIndexNameId.get() &&
+               nextKeyId.get() == that.nextKeyId.get() &&
+               Objects.equals( indexNameIdRange, that.indexNameIdRange ) &&
+               Objects.equals( keyIdRange, that.keyIdRange ) &&
+               Objects.equals( idToIndexName, that.idToIndexName ) &&
+               Objects.equals( idToKey, that.idToKey );
+    }
 
     @Override
     public int hashCode()
     {
-        int result = nextIndexNameId != null ? nextIndexNameId.hashCode() : 0;
-        result = 31 * result + (nextKeyId != null ? nextKeyId.hashCode() : 0);
-        result = 31 * result + (getIndexNameIdRange() != null ? getIndexNameIdRange().hashCode() : 0);
-        result = 31 * result + (getKeyIdRange() != null ? getKeyIdRange().hashCode() : 0);
-        result = 31 * result + (idToIndexName != null ? idToIndexName.hashCode() : 0);
-        result = 31 * result + (idToKey != null ? idToKey.hashCode() : 0);
-        return result;
+        return Objects.hash( super.hashCode(), nextIndexNameId.get(), nextKeyId.get(), indexNameIdRange, keyIdRange,
+                idToIndexName, idToKey );
     }
 
     @Override
-    public boolean equals( Object obj )
-    {
-        IndexDefineCommand other = (IndexDefineCommand) obj;
-        return getIndexNameIdRange().equals( other.getIndexNameIdRange() ) &&
-                getKeyIdRange().equals( other.getKeyIdRange() );
-    }
-
-    @Override
-    public boolean handle( CommandHandler visitor ) throws IOException
+    public boolean handle( CommandVisitor visitor ) throws IOException
     {
         return visitor.visitIndexDefineCommand( this );
     }
@@ -192,5 +205,30 @@ public class IndexDefineCommand extends Command
     public String toString()
     {
         return getClass().getSimpleName() + "[names:" + indexNameIdRange + ", keys:" + keyIdRange + "]";
+    }
+
+    @Override
+    public void serialize( WritableChannel channel ) throws IOException
+    {
+        channel.put( NeoCommandType.INDEX_DEFINE_COMMAND );
+        byte zero = 0;
+        IndexCommand.writeIndexCommandHeader( channel, zero, zero, zero, zero, zero, zero, zero );
+        writeMap( channel, getIndexNameIdRange() );
+        writeMap( channel, getKeyIdRange() );
+    }
+
+    private void writeMap( WritableChannel channel, Map<String,Integer> map ) throws IOException
+    {
+        assert map.size() <= IndexDefineCommand.HIGHEST_POSSIBLE_ID :
+            "Can not write map with size larger than 2 bytes. Actual size " + map.size();
+        channel.putShort( (short) map.size() );
+        for ( Map.Entry<String,Integer> entry : map.entrySet() )
+        {
+            write2bLengthAndString( channel, entry.getKey() );
+            int id = entry.getValue();
+            assert id <= IndexDefineCommand.HIGHEST_POSSIBLE_ID :
+                "Can not write id larger than 2 bytes. Actual value " + id;
+            channel.putShort( (short) id );
+        }
     }
 }

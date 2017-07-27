@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,17 +19,17 @@
  */
 package org.neo4j.cluster.com.message;
 
+import org.junit.Test;
+import org.mockito.Matchers;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.junit.Test;
-import org.mockito.Matchers;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.cluster.com.NetworkReceiver;
@@ -88,7 +88,7 @@ public class NetworkSenderReceiverTest
 
         // then
 
-        latch.await( 5, TimeUnit.SECONDS );
+        assertTrue( latch.await( 5, TimeUnit.SECONDS ) );
 
         assertTrue( "server1 should have processed the message", server1.processedMessage() );
         assertTrue( "server2 should have processed the message", server2.processedMessage() );
@@ -250,7 +250,6 @@ public class NetworkSenderReceiverTest
 
             sem.acquire(); // wait for overridden stop method in receiver
 
-
             /*
              * This is the infernal loop of doom. We keep sending messages until one fails with a ClosedChannelException
              * which we have no better way to grab other than through the logger.warn() call which will occur.
@@ -311,7 +310,7 @@ public class NetworkSenderReceiverTest
 
         private Server( final CountDownLatch latch, final Map<String, String> config )
         {
-            final Config conf = new Config( config, ClusterSettings.class );
+            final Config conf = Config.embeddedDefaults( config );
             networkReceiver = life.add( new NetworkReceiver( mock( NetworkReceiver.Monitor.class ),
                     new NetworkReceiver.Configuration()
             {

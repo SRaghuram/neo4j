@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,24 +21,24 @@ package org.neo4j.kernel.api.exceptions.schema;
 
 import org.neo4j.kernel.api.TokenNameLookup;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 
 import static java.lang.String.format;
 
 public class IndexBelongsToConstraintException extends SchemaKernelException
 {
-    private final IndexDescriptor index;
-    private final static String message = "Index belongs to constraint: %s";
+    private final LabelSchemaDescriptor descriptor;
+    private static final String message = "Index belongs to constraint: %s";
 
-    public IndexBelongsToConstraintException( IndexDescriptor index )
+    public IndexBelongsToConstraintException( LabelSchemaDescriptor descriptor )
     {
-        super( Status.Schema.IndexBelongsToConstraint, format( "Index belongs to constraint: %s", index ) );
-        this.index = index;
+        super( Status.Schema.ForbiddenOnConstraintIndex, format( "Index belongs to constraint: %s", descriptor ) );
+        this.descriptor = descriptor;
     }
 
     @Override
     public String getUserMessage( TokenNameLookup tokenNameLookup )
     {
-        return format( message, index.userDescription( tokenNameLookup ) );
+        return format( message, descriptor.userDescription( tokenNameLookup ) );
     }
 }

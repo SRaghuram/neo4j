@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,6 +24,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+
+import org.neo4j.io.ByteUnit;
 
 public class Format
 {
@@ -87,9 +89,7 @@ public class Format
         return TIME.format( date, timeZone );
     }
 
-    public static int KB = 1024;
-    public static int MB = KB * KB;
-    public static int GB = KB * MB;
+    private static int KB = (int) ByteUnit.kibiBytes( 1 );
 
     public static String bytes( long bytes )
     {
@@ -143,7 +143,7 @@ public class Format
         for ( int i = 0; i < half; i++ )
         {
             T temp = array[i];
-            int highIndex = array.length-1-i;
+            int highIndex = array.length - 1 - i;
             array[i] = array[highIndex];
             array[highIndex] = temp;
         }

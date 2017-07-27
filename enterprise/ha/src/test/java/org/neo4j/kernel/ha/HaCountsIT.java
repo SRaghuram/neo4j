@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,34 +19,81 @@
  */
 package org.neo4j.kernel.ha;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.KernelException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.ha.ClusterManager;
-import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.ha.ClusterManager.ManagedCluster;
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.register.Register.DoubleLongRegister;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.test.ha.ClusterRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.kernel.impl.ha.ClusterManager.clusterOfSize;
 import static org.neo4j.register.Registers.newDoubleLongRegister;
 
 public class HaCountsIT
 {
+    private static final Label LABEL = Label.label( "label" );
+    private static final String PROPERTY_NAME = "prop";
+    private static final String PROPERTY_VALUE = "value";
+
+    @Rule
+    public ClusterRule clusterRule = new ClusterRule( getClass() );
+
+    private ManagedCluster cluster;
+    private HighlyAvailableGraphDatabase master;
+    private HighlyAvailableGraphDatabase slave1;
+    private HighlyAvailableGraphDatabase slave2;
+
+    @Before
+    public void setup() throws Exception
+    {
+        cluster = clusterRule.startCluster();
+        master = cluster.getMaster();
+        slave1 = cluster.getAnySlave();
+        slave2 = cluster.getAnySlave( slave1 );
+        clearDatabase();
+    }
+
+    private void clearDatabase() throws InterruptedException
+    {
+        try ( Transaction tx = master.beginTx() )
+        {
+            for ( IndexDefinition index : master.schema().getIndexes() )
+            {
+                index.drop();
+            }
+            tx.success();
+        }
+
+        try ( Transaction tx = master.beginTx() )
+        {
+            for ( Node node : master.getAllNodes() )
+            {
+                for ( Relationship relationship : node.getRelationships() )
+                {
+                    relationship.delete();
+                }
+                node.delete();
+            }
+            tx.success();
+        }
+        cluster.sync();
+    }
+
     @Test
     public void shouldUpdateCountsOnSlavesWhenCreatingANodeOnMaster() throws Exception
     {
@@ -83,18 +130,18 @@ public class HaCountsIT
         // when creating a node on the master
         createANode( master, LABEL, PROPERTY_VALUE, PROPERTY_NAME );
         IndexDescriptor indexDescriptor = createAnIndex( master, LABEL, PROPERTY_NAME );
-        awaitOnline( master, indexDescriptor );
+        long indexId = awaitOnline( master, indexDescriptor );
 
         // and the slaves got the updates
         cluster.sync( master );
 
-        awaitOnline( slave1, indexDescriptor );
-        awaitOnline( slave2, indexDescriptor );
+        long index1 = awaitOnline( slave1, indexDescriptor );
+        long index2 = awaitOnline( slave2, indexDescriptor );
 
         // then the slaves has updated counts
-        assertOnIndexCounts( 0, 1, 1, 1, indexDescriptor, master );
-        assertOnIndexCounts( 0, 1, 1, 1, indexDescriptor, slave1 );
-        assertOnIndexCounts( 0, 1, 1, 1, indexDescriptor, slave2 );
+        assertOnIndexCounts( 0, 1, 1, 1, indexId, master );
+        assertOnIndexCounts( 0, 1, 1, 1, index1, slave1 );
+        assertOnIndexCounts( 0, 1, 1, 1, index2, slave2 );
     }
 
     @Test
@@ -103,18 +150,18 @@ public class HaCountsIT
         // when creating a node on the master
         createANode( slave1, LABEL, PROPERTY_VALUE, PROPERTY_NAME );
         IndexDescriptor indexDescriptor = createAnIndex( master, LABEL, PROPERTY_NAME );
-        awaitOnline( master, indexDescriptor );
+        long indexId = awaitOnline( master, indexDescriptor );
 
         // and the updates are propagate in the cluster
         cluster.sync();
 
-        awaitOnline( slave1, indexDescriptor );
-        awaitOnline( slave2, indexDescriptor );
+        long index1 = awaitOnline( slave1, indexDescriptor );
+        long index2 = awaitOnline( slave2, indexDescriptor );
 
         // then the slaves has updated counts
-        assertOnIndexCounts( 0, 1, 1, 1, indexDescriptor, master );
-        assertOnIndexCounts( 0, 1, 1, 1, indexDescriptor, slave1 );
-        assertOnIndexCounts( 0, 1, 1, 1, indexDescriptor, slave2 );
+        assertOnIndexCounts( 0, 1, 1, 1, indexId, master );
+        assertOnIndexCounts( 0, 1, 1, 1, index1, slave1 );
+        assertOnIndexCounts( 0, 1, 1, 1, index2, slave2 );
     }
 
     private void createANode( HighlyAvailableGraphDatabase db, Label label, String value, String property )
@@ -135,7 +182,8 @@ public class HaCountsIT
             Statement statement = statement( db );
             int labelId = statement.tokenWriteOperations().labelGetOrCreateForName( label.name() );
             int propertyKeyId = statement.tokenWriteOperations().propertyKeyGetOrCreateForName( propertyName );
-            IndexDescriptor index = statement.schemaWriteOperations().indexCreate( labelId, propertyKeyId );
+            IndexDescriptor index = statement.schemaWriteOperations()
+                    .indexCreate( SchemaDescriptorFactory.forLabel( labelId, propertyKeyId ) );
             tx.success();
             return index;
         }
@@ -155,15 +203,13 @@ public class HaCountsIT
 
     private void assertOnIndexCounts( int expectedIndexUpdates, int expectedIndexSize,
                                       int expectedUniqueValues, int expectedSampleSize,
-                                      IndexDescriptor indexDescriptor, HighlyAvailableGraphDatabase db )
+                                      long indexId, HighlyAvailableGraphDatabase db )
     {
         CountsTracker counts = counts( db );
-        int labelId = indexDescriptor.getLabelId();
-        int propertyKeyId = indexDescriptor.getPropertyKeyId();
         assertDoubleLongEquals( expectedIndexUpdates, expectedIndexSize,
-                counts.indexUpdatesAndSize( labelId, propertyKeyId, newDoubleLongRegister() ) );
+                counts.indexUpdatesAndSize( indexId, newDoubleLongRegister() ) );
         assertDoubleLongEquals( expectedUniqueValues, expectedSampleSize,
-                counts.indexSample( labelId, propertyKeyId, newDoubleLongRegister() ) );
+                counts.indexSample( indexId, newDoubleLongRegister() ) );
     }
 
     private void assertDoubleLongEquals( int expectedFirst, int expectedSecond, DoubleLongRegister actualValues )
@@ -175,7 +221,8 @@ public class HaCountsIT
 
     private CountsTracker counts( HighlyAvailableGraphDatabase db )
     {
-        return db.getDependencyResolver().resolveDependency( NeoStores.class ).getCounts();
+        return db.getDependencyResolver().resolveDependency( RecordStorageEngine.class )
+                .testAccessNeoStores().getCounts();
     }
 
     private Statement statement( HighlyAvailableGraphDatabase db )
@@ -185,7 +232,12 @@ public class HaCountsIT
                  .get();
     }
 
-    private IndexDescriptor awaitOnline( HighlyAvailableGraphDatabase db, IndexDescriptor index )
+    private IndexingService indexingService( HighlyAvailableGraphDatabase db )
+    {
+        return db.getDependencyResolver().resolveDependency( IndexingService.class );
+    }
+
+    private long awaitOnline( HighlyAvailableGraphDatabase db, IndexDescriptor index )
             throws KernelException
     {
         long start = System.currentTimeMillis();
@@ -197,7 +249,7 @@ public class HaCountsIT
                 switch ( statement( db ).readOperations().indexGetState( index ) )
                 {
                 case ONLINE:
-                    return index;
+                    return indexingService( db ).getIndexId( index.schema() );
 
                 case FAILED:
                     throw new IllegalStateException( "Index failed instead of becoming ONLINE" );
@@ -218,35 +270,5 @@ public class HaCountsIT
             }
         }
         throw new IllegalStateException( "Index did not become ONLINE within reasonable time" );
-    }
-
-    private static final Label LABEL = DynamicLabel.label( "label" );
-    private static final String PROPERTY_NAME = "prop";
-    private static final String PROPERTY_VALUE = "value";
-
-    @Rule
-    public TargetDirectory.TestDirectory dir = TargetDirectory.testDirForTest( getClass() );
-    private ClusterManager clusterManager;
-    private ClusterManager.ManagedCluster cluster;
-    private HighlyAvailableGraphDatabase master;
-    private HighlyAvailableGraphDatabase slave1;
-    private HighlyAvailableGraphDatabase slave2;
-
-    @Before
-    public void setup() throws Throwable
-    {
-        clusterManager = new ClusterManager( clusterOfSize( 3 ), dir.graphDbDir(), stringMap() );
-        clusterManager.start();
-        cluster = clusterManager.getDefaultCluster();
-        cluster.await( ClusterManager.allSeesAllAsAvailable() );
-        master = cluster.getMaster();
-        slave1 = cluster.getAnySlave();
-        slave2 = cluster.getAnySlave( slave1 );
-    }
-
-    @After
-    public void teardown() throws Throwable
-    {
-        clusterManager.shutdown();
     }
 }

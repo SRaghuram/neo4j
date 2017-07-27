@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,8 +25,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Supplier;
 
-import org.neo4j.function.Supplier;
 import org.neo4j.function.Suppliers;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.impl.store.PropertyStore;
@@ -52,7 +52,8 @@ public class PropertyBlock implements Cloneable
 
     private PropertyType getType( boolean force )
     {
-        return valueBlocks == null ? null : PropertyType.getPropertyType( valueBlocks[0], force );
+        return valueBlocks == null ? null : force ? PropertyType.getPropertyTypeOrNull( valueBlocks[0] )
+                                                  : PropertyType.getPropertyTypeOrThrow( valueBlocks[0] );
     }
 
     public int getKeyIndexId()
@@ -137,8 +138,8 @@ public class PropertyBlock implements Cloneable
     public void setValueBlocks( long[] blocks )
     {
         int expectedPayloadSize = PropertyType.getPayloadSizeLongs();
-        assert ( blocks == null || blocks.length <= expectedPayloadSize) : (
-                "I was given an array of size " + blocks.length +", but I wanted it to be " + expectedPayloadSize );
+        assert blocks == null || blocks.length <= expectedPayloadSize :
+                "I was given an array of size " + blocks.length + ", but I wanted it to be " + expectedPayloadSize;
         this.valueBlocks = blocks;
         if ( valueRecords != null )
         {

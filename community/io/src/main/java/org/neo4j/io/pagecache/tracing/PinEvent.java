@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -41,6 +41,11 @@ public interface PinEvent
         }
 
         @Override
+        public void hit()
+        {
+        }
+
+        @Override
         public void done()
         {
         }
@@ -49,15 +54,20 @@ public interface PinEvent
     /**
      * The id of the cache page that holds the file page we pinned.
      */
-    public void setCachePageId( int cachePageId );
+    void setCachePageId( int cachePageId );
 
     /**
      * The page we want to pin is not in memory, so being a page fault to load it in.
      */
-    public PageFaultEvent beginPageFault();
+    PageFaultEvent beginPageFault();
+
+    /**
+     * Page found and bounded.
+     */
+    void hit();
 
     /**
      * The pinning has completed and the page is now unpinned.
      */
-    public void done();
+    void done();
 }

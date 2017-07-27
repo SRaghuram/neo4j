@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,10 @@
  */
 package org.neo4j.test;
 
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -27,11 +30,23 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.kernel.impl.util.JobScheduler;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-import static org.neo4j.kernel.impl.util.JobScheduler.Group.*;
+import static org.neo4j.kernel.impl.util.JobScheduler.Group.NO_METADATA;
 
 public class OnDemandJobScheduler extends LifecycleAdapter implements JobScheduler
 {
-    private Runnable job;
+    private List<Runnable> jobs = new CopyOnWriteArrayList<>();
+
+    private final boolean removeJobsAfterExecution;
+
+    public OnDemandJobScheduler()
+    {
+        this( true );
+    }
+
+    public OnDemandJobScheduler( boolean removeJobsAfterExecution)
+    {
+        this.removeJobsAfterExecution = removeJobsAfterExecution;
+    }
 
     @Override
     public Executor executor( Group group )
@@ -41,7 +56,7 @@ public class OnDemandJobScheduler extends LifecycleAdapter implements JobSchedul
             @Override
             public void execute( Runnable command )
             {
-                job = command;
+                jobs.add( command );
             }
         };
     }
@@ -61,21 +76,21 @@ public class OnDemandJobScheduler extends LifecycleAdapter implements JobSchedul
     @Override
     public JobHandle schedule( Group group, Runnable job, Map<String,String> metadata )
     {
-        this.job = job;
+        jobs.add( job );
         return new OnDemandJobHandle();
     }
 
     @Override
     public JobHandle schedule( Group group, Runnable job, long initialDelay, TimeUnit timeUnit )
     {
-        this.job = job;
+        jobs.add( job );
         return new OnDemandJobHandle();
     }
 
     @Override
     public JobHandle scheduleRecurring( Group group, Runnable runnable, long period, TimeUnit timeUnit )
     {
-        this.job = runnable;
+        jobs.add( runnable );
         return new OnDemandJobHandle();
     }
 
@@ -83,18 +98,25 @@ public class OnDemandJobScheduler extends LifecycleAdapter implements JobSchedul
     public JobHandle scheduleRecurring( Group group, Runnable runnable, long initialDelay,
             long period, TimeUnit timeUnit )
     {
-        this.job = runnable;
+        jobs.add( runnable );
         return new OnDemandJobHandle();
     }
 
     public Runnable getJob()
     {
-        return job;
+        return jobs.size() > 0 ? jobs.get( 0 ) : null;
     }
 
     public void runJob()
     {
-        job.run();
+        for ( Runnable job : jobs )
+        {
+            job.run();
+            if ( removeJobsAfterExecution )
+            {
+                jobs.remove( job );
+            }
+        }
     }
 
     private class OnDemandJobHandle implements JobHandle
@@ -102,7 +124,13 @@ public class OnDemandJobScheduler extends LifecycleAdapter implements JobSchedul
         @Override
         public void cancel( boolean mayInterruptIfRunning )
         {
-            job = null;
+            jobs.clear();
+        }
+
+        @Override
+        public void waitTermination() throws InterruptedException, ExecutionException
+        {
+            // on demand
         }
     }
 }

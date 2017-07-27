@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,11 +25,12 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import sun.misc.BASE64Encoder;
+import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
 import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.member.ClusterMemberEvents;
@@ -47,8 +48,6 @@ import org.neo4j.cluster.protocol.heartbeat.Heartbeat;
 import org.neo4j.cluster.protocol.heartbeat.HeartbeatListener;
 import org.neo4j.cluster.protocol.snapshot.Snapshot;
 import org.neo4j.cluster.protocol.snapshot.SnapshotProvider;
-import org.neo4j.function.Predicate;
-import org.neo4j.helpers.Function2;
 import org.neo4j.helpers.Listeners;
 import org.neo4j.helpers.NamedThreadFactory;
 import org.neo4j.helpers.collection.Iterables;
@@ -56,10 +55,9 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static org.neo4j.helpers.Predicates.in;
-import static org.neo4j.helpers.Predicates.not;
+import static org.neo4j.function.Predicates.in;
+import static org.neo4j.helpers.collection.Iterables.asList;
 import static org.neo4j.helpers.collection.Iterables.filter;
-import static org.neo4j.helpers.collection.Iterables.toList;
 
 /**
  * Paxos based implementation of {@link org.neo4j.cluster.member.ClusterMemberEvents}
@@ -70,7 +68,7 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
     private AtomicBroadcast atomicBroadcast;
     private Log log;
     protected AtomicBroadcastSerializer serializer;
-    protected Iterable<ClusterMemberListener> listeners = Listeners.newListeners();
+    protected final Listeners<ClusterMemberListener> listeners = new Listeners<>();
     private ClusterMembersSnapshot clusterMembersSnapshot;
     private ClusterListener.Adapter clusterListener;
     private Snapshot snapshot;
@@ -86,7 +84,7 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
     public PaxosClusterMemberEvents( final Snapshot snapshot, Cluster cluster, Heartbeat heartbeat,
                                     AtomicBroadcast atomicBroadcast, LogProvider logProvider,
                                     Predicate<ClusterMembersSnapshot> validator,
-                                    Function2<Iterable<MemberIsAvailable>, MemberIsAvailable,
+                                    BiFunction<Iterable<MemberIsAvailable>, MemberIsAvailable,
                                     Iterable<MemberIsAvailable>> snapshotFilter,
                                     ObjectInputStreamFactory lenientObjectInputStream,
                                     ObjectOutputStreamFactory lenientObjectOutputStream,
@@ -113,13 +111,13 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
     @Override
     public void addClusterMemberListener( ClusterMemberListener listener )
     {
-        listeners = Listeners.addListener( listener, listeners );
+        listeners.add( listener );
     }
 
     @Override
     public void removeClusterMemberListener( ClusterMemberListener listener )
     {
-        listeners = Listeners.removeListener( listener, listeners );
+        listeners.remove( listener );
     }
 
     @Override
@@ -185,28 +183,17 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
 
             if ( !snapshotValidator.test( clusterMembersSnapshot ) )
             {
-                executor.submit( new Runnable()
-                {
-                    @Override
-                    public void run()
-                    {
-                        cluster.leave();
-                    }
-                } );
+                executor.submit( () -> cluster.leave() );
             }
             else
             {
                 // Send current availability events to listeners
-                Listeners.notifyListeners( listeners, executor, new Listeners.Notification<ClusterMemberListener>()
+                listeners.notify( executor, listener ->
                 {
-                    @Override
-                    public void notify( ClusterMemberListener listener )
+                    for ( MemberIsAvailable memberIsAvailable : clusterMembersSnapshot.getCurrentAvailableMembers() )
                     {
-                        for ( MemberIsAvailable memberIsAvailable : clusterMembersSnapshot.getCurrentAvailableMembers() )
-                        {
-                            listener.memberIsAvailable( memberIsAvailable.getRole(), memberIsAvailable.getInstanceId(),
-                                    memberIsAvailable.getRoleUri(), memberIsAvailable.getStoreId() );
-                        }
+                        listener.memberIsAvailable( memberIsAvailable.getRole(), memberIsAvailable.getInstanceId(),
+                                memberIsAvailable.getRoleUri(), memberIsAvailable.getStoreId() );
                     }
                 } );
             }
@@ -214,19 +201,15 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
     }
 
     public static class UniqueRoleFilter
-            implements Function2<Iterable<MemberIsAvailable>, MemberIsAvailable, Iterable<MemberIsAvailable>>
+            implements BiFunction<Iterable<MemberIsAvailable>,MemberIsAvailable,Iterable<MemberIsAvailable>>
     {
         @Override
         public Iterable<MemberIsAvailable> apply( final Iterable<MemberIsAvailable> previousSnapshot,
                                                   final MemberIsAvailable newMessage )
         {
-            return Iterables.append( newMessage, Iterables.filter( new Predicate<MemberIsAvailable>()
+            return Iterables.append( newMessage, Iterables.filter( item ->
             {
-                @Override
-                public boolean test( MemberIsAvailable item )
-                {
-                    return not( in( newMessage.getInstanceId() ) ).accept( item.getInstanceId() );
-                }
+                return in( newMessage.getInstanceId() ).negate().test( item.getInstanceId() );
             }, previousSnapshot ) );
         }
     }
@@ -234,12 +217,13 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
     public static class ClusterMembersSnapshot
             implements Serializable
     {
-        private final
-        Function2<Iterable<MemberIsAvailable>, MemberIsAvailable, Iterable<MemberIsAvailable>> nextSnapshotFunction;
+        private static final long serialVersionUID = -4638991834604077187L;
+
+        private BiFunction<Iterable<MemberIsAvailable>, MemberIsAvailable, Iterable<MemberIsAvailable>> nextSnapshotFunction;
 
         private Iterable<MemberIsAvailable> availableMembers = new ArrayList<>();
 
-        public ClusterMembersSnapshot( Function2<Iterable<MemberIsAvailable>, MemberIsAvailable,
+        public ClusterMembersSnapshot( BiFunction<Iterable<MemberIsAvailable>, MemberIsAvailable,
                 Iterable<MemberIsAvailable>> nextSnapshotFunction )
         {
             this.nextSnapshotFunction = nextSnapshotFunction;
@@ -247,33 +231,22 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
 
         public void availableMember( MemberIsAvailable memberIsAvailable )
         {
-            availableMembers = toList( nextSnapshotFunction.apply( availableMembers, memberIsAvailable ) );
+            availableMembers = asList( nextSnapshotFunction.apply( availableMembers, memberIsAvailable ) );
         }
 
         public void unavailableMember( final InstanceId member )
         {
-            availableMembers = toList( filter( new Predicate<MemberIsAvailable>()
-            {
-                @Override
-                public boolean test( MemberIsAvailable item )
-                {
-                    return !item.getInstanceId().equals( member );
-                }
-            }, availableMembers ) );
+            availableMembers = asList( filter( item -> !item.getInstanceId().equals( member ), availableMembers ) );
         }
 
         public void unavailableMember( final URI member, final InstanceId id, final String role )
         {
-            availableMembers = toList( filter( new Predicate<MemberIsAvailable>()
+            availableMembers = asList( filter( item ->
             {
-                @Override
-                public boolean test( MemberIsAvailable item )
-                {
-                    boolean matchByUriOrId = item.getClusterUri().equals( member ) || item.getInstanceId().equals( id );
-                    boolean matchByRole = item.getRole().equals( role );
+                boolean matchByUriOrId = item.getClusterUri().equals( member ) || item.getInstanceId().equals( id );
+                boolean matchByRole = item.getRole().equals( role );
 
-                    return !(matchByUriOrId && matchByRole);
-                }
+                return !(matchByUriOrId && matchByRole);
             }, availableMembers ) );
         }
 
@@ -284,13 +257,9 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
 
         public Iterable<MemberIsAvailable> getCurrentAvailable( final InstanceId memberId )
         {
-            return toList( Iterables.filter( new Predicate<MemberIsAvailable>()
+            return asList( Iterables.filter( item ->
             {
-                @Override
-                public boolean test( MemberIsAvailable item )
-                {
-                    return item.getInstanceId().equals( memberId );
-                }
+                return item.getInstanceId().equals( memberId );
             }, availableMembers ) );
         }
 
@@ -310,36 +279,24 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
         }
 
         @Override
-        public void elected( String role, final InstanceId instanceId, final URI electedMember )
+        public void elected( String role, InstanceId instanceId, URI electedMember )
         {
             if ( role.equals( ClusterConfiguration.COORDINATOR ) )
             {
                 // Use the cluster coordinator as master for HA
-                Listeners.notifyListeners( listeners, new Listeners.Notification<ClusterMemberListener>()
-                {
-                    @Override
-                    public void notify( ClusterMemberListener listener )
-                    {
-                        listener.coordinatorIsElected( instanceId );
-                    }
-                } );
+                listeners.notify( listener -> listener.coordinatorIsElected( instanceId ) );
             }
         }
 
         @Override
-        public void leftCluster( final InstanceId instanceId, URI member )
+        public void leftCluster( InstanceId instanceId, URI member )
         {
             // Notify unavailability of members
-            Listeners.notifyListeners( listeners, new Listeners.Notification<ClusterMemberListener>()
+            listeners.notify( listener ->
             {
-                @Override
-                public void notify( ClusterMemberListener listener )
+                for ( MemberIsAvailable memberIsAvailable : clusterMembersSnapshot.getCurrentAvailable( instanceId ) )
                 {
-                    for ( MemberIsAvailable memberIsAvailable : clusterMembersSnapshot.getCurrentAvailable(
-                            instanceId ) )
-                    {
-                        listener.memberIsUnavailable( memberIsAvailable.getRole(), instanceId );
-                    }
+                    listener.memberIsUnavailable( memberIsAvailable.getRole(), instanceId );
                 }
             } );
 
@@ -354,7 +311,7 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
         {
             try
             {
-                final Object value = serializer.receive( payload );
+                Object value = serializer.receive( payload );
                 if ( value instanceof MemberIsAvailable )
                 {
                     final MemberIsAvailable memberIsAvailable = (MemberIsAvailable) value;
@@ -364,15 +321,9 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
 
                     log.info( "Snapshot:" + clusterMembersSnapshot.getCurrentAvailableMembers() );
 
-                    Listeners.notifyListeners( listeners, new Listeners.Notification<ClusterMemberListener>()
-                    {
-                        @Override
-                        public void notify( ClusterMemberListener listener )
-                        {
-                            listener.memberIsAvailable( memberIsAvailable.getRole(), memberIsAvailable.getInstanceId(),
-                                    memberIsAvailable.getRoleUri(), memberIsAvailable.getStoreId() );
-                        }
-                    } );
+                    listeners.notify( listener -> listener.memberIsAvailable(
+                            memberIsAvailable.getRole(), memberIsAvailable.getInstanceId(),
+                            memberIsAvailable.getRoleUri(), memberIsAvailable.getStoreId() ) );
                 }
                 else if ( value instanceof MemberIsUnavailable )
                 {
@@ -384,22 +335,14 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
                             memberIsUnavailable.getInstanceId(),
                             memberIsUnavailable.getRole() );
 
-                    Listeners.notifyListeners( listeners, new Listeners.Notification<ClusterMemberListener>()
-                    {
-                        @Override
-                        public void notify( ClusterMemberListener listener )
-                        {
-                            listener.memberIsUnavailable( memberIsUnavailable.getRole(),
-                                    memberIsUnavailable.getInstanceId() );
-                        }
-                    } );
+                    listeners.notify( listener -> listener.memberIsUnavailable( memberIsUnavailable.getRole(),
+                            memberIsUnavailable.getInstanceId() ) );
                 }
             }
             catch ( Throwable t )
             {
-
                 log.error( String.format( "Could not handle cluster member available message: %s (%d)",
-                        new BASE64Encoder().encode( payload.getBuf() ), payload.getLen() ), t );
+                        Base64.getEncoder().encodeToString( payload.getBuf() ), payload.getLen() ), t );
             }
         }
     }
@@ -407,29 +350,15 @@ public class PaxosClusterMemberEvents implements ClusterMemberEvents, Lifecycle
     private class HeartbeatListenerImpl implements HeartbeatListener
     {
         @Override
-        public void failed( final InstanceId server )
+        public void failed( InstanceId server )
         {
-            Listeners.notifyListeners( listeners, new Listeners.Notification<ClusterMemberListener>()
-            {
-                @Override
-                public void notify( ClusterMemberListener listener )
-                {
-                    listener.memberIsFailed( server );
-                }
-            } );
+            listeners.notify( listener -> listener.memberIsFailed( server ) );
         }
 
         @Override
-        public void alive( final InstanceId server )
+        public void alive( InstanceId server )
         {
-            Listeners.notifyListeners( listeners, new Listeners.Notification<ClusterMemberListener>()
-            {
-                @Override
-                public void notify( ClusterMemberListener listener )
-                {
-                    listener.memberIsAlive( server );
-                }
-            } );
+            listeners.notify( listener -> listener.memberIsAlive( server ) );
         }
     }
 }

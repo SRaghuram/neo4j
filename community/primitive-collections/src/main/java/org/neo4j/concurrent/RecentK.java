@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Tracks an (approximate) set of recently seen unique elements in a stream, based on a concurrent LRU implementation.
  *
  * This class is thread safe. For the common case of items that are recently seen being seen again, this class is
- * lock free. 
+ * lock free.
  *
  * @param <Type> the entry type stored
  */
@@ -57,20 +57,20 @@ public class RecentK<Type> implements Iterable<Type>
     public void add( Type item )
     {
         AtomicLong counter = recentItems.get( item );
-        if(counter != null)
+        if ( counter != null )
         {
             counter.incrementAndGet();
         }
         else
         {
             // Double-checked locking ahead: Check if there is space for our item
-            if( recentItems.size() >= maxItems )
+            if ( recentItems.size() >= maxItems )
             {
                 // If not, synchronize and check again (this will happen if there is > maxItems in the current set)
                 synchronized ( recentItems )
                 {
                     // Proper check under lock, make space in the set for our new item
-                    while( recentItems.size() >= maxItems )
+                    while ( recentItems.size() >= maxItems )
                     {
                         removeItemWithLowestCount();
                     }
@@ -99,10 +99,12 @@ public class RecentK<Type> implements Iterable<Type>
         for ( AtomicLong count : recentItems.values() )
         {
             long prev, next;
-            do {
+            do
+            {
                 prev = count.get();
                 next = Math.max( prev / 2, 1 );
-            } while (!count.compareAndSet(prev, next));
+            }
+            while ( !count.compareAndSet( prev, next ) );
 
         }
     }
@@ -114,14 +116,14 @@ public class RecentK<Type> implements Iterable<Type>
         for ( Map.Entry<Type,AtomicLong> entry : recentItems.entrySet() )
         {
             long currentCount = entry.getValue().get();
-            if( currentCount < lowestCount)
+            if ( currentCount < lowestCount )
             {
                 lowestCount = currentCount;
                 lowestCountKey = entry.getKey();
             }
         }
 
-        if( lowestCountKey != null )
+        if ( lowestCountKey != null )
         {
             recentItems.remove( lowestCountKey );
         }

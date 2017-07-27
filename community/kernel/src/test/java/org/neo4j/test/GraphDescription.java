@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,19 +32,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.AutoIndexer;
-import org.neo4j.tooling.GlobalGraphOperations;
 
 import static java.util.Arrays.asList;
 import static java.util.Arrays.copyOfRange;
-
-import static org.neo4j.graphdb.DynamicLabel.label;
+import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.GraphDescription.PropType.ERROR;
 import static org.neo4j.test.GraphDescription.PropType.STRING;
 
@@ -60,9 +58,9 @@ public class GraphDescription implements GraphDefinition
         NODE[] nodes() default {};
 
         REL[] relationships() default {};
-        
+
         boolean autoIndexNodes() default false;
-        
+
         boolean autoIndexRelationships() default false;
     }
 
@@ -72,7 +70,7 @@ public class GraphDescription implements GraphDefinition
         String name();
 
         PROP[] properties() default {};
-        
+
         LABEL[] labels() default {};
 
         boolean setNameProperty() default false;
@@ -105,7 +103,7 @@ public class GraphDescription implements GraphDefinition
 
         PropType componentType() default ERROR;
     }
-    
+
     @Target( {} )
     public @interface LABEL
     {
@@ -118,11 +116,12 @@ public class GraphDescription implements GraphDefinition
 
         ARRAY
         {
-            @Override Object convert( PropType componentType, String value )
+            @Override
+            Object convert( PropType componentType, String value )
             {
-                String[] items  = value.split( " *, *" );
+                String[] items = value.split( " *, *" );
                 Object[] result = (Object[]) Array.newInstance( componentType.componentClass(), items.length );
-                for ( int i =0 ; i < items.length; i++ )
+                for ( int i = 0; i < items.length; i++ )
                 {
                     result[i] = componentType.convert( items[i] );
                 }
@@ -137,7 +136,8 @@ public class GraphDescription implements GraphDefinition
                 return value;
             }
 
-            @Override Class<?> componentClass()
+            @Override
+            Class<?> componentClass()
             {
                 return String.class;
             }
@@ -150,7 +150,8 @@ public class GraphDescription implements GraphDefinition
                 return Long.parseLong( value );
             }
 
-            @Override Class<?> componentClass()
+            @Override
+            Class<?> componentClass()
             {
                 return Long.class;
             }
@@ -163,7 +164,8 @@ public class GraphDescription implements GraphDefinition
                 return Double.parseDouble( value );
             }
 
-            @Override Class<?> componentClass()
+            @Override
+            Class<?> componentClass()
             {
                 return Double.class;
             }
@@ -176,24 +178,29 @@ public class GraphDescription implements GraphDefinition
                 return Boolean.parseBoolean( value );
             }
 
-            @Override Class<?> componentClass()
+            @Override
+            Class<?> componentClass()
             {
                 return Boolean.class;
             }
         },
 
-        ERROR{
-        };
+        ERROR
+                {
+                };
 
-        Class<?> componentClass() {
+        Class<?> componentClass()
+        {
             throw new UnsupportedOperationException( "Not implemented for property type" + name() );
         }
 
-        Object convert( String value ) {
+        Object convert( String value )
+        {
             throw new UnsupportedOperationException( "Not implemented for property type"  + name() );
         }
 
-        Object convert( PropType componentType, String value ) {
+        Object convert( PropType componentType, String value )
+        {
             throw new UnsupportedOperationException( "Not implemented for property type"  + name() );
         }
     }
@@ -238,7 +245,7 @@ public class GraphDescription implements GraphDefinition
             for ( REL def : rels )
             {
                 init( result.get( def.start() ).createRelationshipTo( result.get( def.end() ),
-                        DynamicRelationshipType.withName( def.type() ) ), def.setNameProperty() ? def.name() : null,
+                                RelationshipType.withName( def.type() ) ), def.setNameProperty() ? def.name() : null,
                         def.properties(), graphdb.index().getRelationshipAutoIndexer(), autoIndexRelationships );
             }
             tx.success();
@@ -251,28 +258,29 @@ public class GraphDescription implements GraphDefinition
         autoindex.setEnabled( auto );
         for ( PROP prop : properties )
         {
-            if(auto)
+            if ( auto )
             {
                 autoindex.startAutoIndexingProperty( prop.key() );
             }
             PropType tpe = prop.type();
-            switch(tpe) {
-                case ARRAY:
-                    entity.setProperty( prop.key(), tpe.convert( prop.componentType(), prop.value() ) );
-                    break;
-                default:
-                    entity.setProperty( prop.key(), prop.type().convert( prop.value() ) );
+            switch ( tpe )
+            {
+            case ARRAY:
+                entity.setProperty( prop.key(), tpe.convert( prop.componentType(), prop.value() ) );
+                break;
+            default:
+                entity.setProperty( prop.key(), prop.type().convert( prop.value() ) );
             }
         }
         if ( name != null )
         {
-            if(auto)
+            if ( auto )
             {
                 autoindex.startAutoIndexingProperty( "name" );
             }
             entity.setProperty( "name", name );
         }
-        
+
         return entity;
     }
 
@@ -303,14 +311,19 @@ public class GraphDescription implements GraphDefinition
 
     public static void destroy( Map<String, Node> nodes )
     {
-        if ( nodes.isEmpty() ) return;
+        if ( nodes.isEmpty() )
+        {
+            return;
+        }
         GraphDatabaseService db = nodes.values().iterator().next().getGraphDatabase();
         try ( Transaction tx = db.beginTx() )
         {
-            for ( Node node : GlobalGraphOperations.at( db ).getAllNodes() )
+            for ( Node node : db.getAllNodes() )
             {
                 for ( Relationship rel : node.getRelationships() )
+                {
                     rel.delete();
+                }
                 node.delete();
             }
             tx.success();
@@ -459,9 +472,9 @@ public class GraphDescription implements GraphDefinition
         {
             super( name );
             labels = new LABEL[labelNames.length];
-            for(int i=0;i<labelNames.length;i++)
+            for ( int i = 0; i < labelNames.length; i++ )
             {
-                labels[i] = new DefaultLabel(labelNames[i]);
+                labels[i] = new DefaultLabel( labelNames[i] );
             }
         }
 
@@ -485,9 +498,9 @@ public class GraphDescription implements GraphDefinition
         {
             this.inner = inner;
             labels = new LABEL[labelNames.length];
-            for(int i=0;i<labelNames.length;i++)
+            for ( int i = 0; i < labelNames.length; i++ )
             {
-                labels[i] = new DefaultLabel(labelNames[i]);
+                labels[i] = new DefaultLabel( labelNames[i] );
             }
         }
 
@@ -558,7 +571,7 @@ public class GraphDescription implements GraphDefinition
 
         private final String name;
 
-        public DefaultLabel( String name )
+        DefaultLabel( String name )
         {
 
             this.name = name;
@@ -576,6 +589,5 @@ public class GraphDescription implements GraphDefinition
             return name;
         }
     }
-
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,6 +20,7 @@
 package org.neo4j.helpers;
 
 import java.net.URI;
+import java.util.function.Function;
 
 /**
  * Functions for working with URIs
@@ -35,38 +36,34 @@ public final class Uris
      */
     public static Function<URI, String> parameter( final String name )
     {
-        return new Function<URI, String>()
+        return uri ->
         {
-            @Override
-            public String apply( URI uri )
+            if ( uri == null )
             {
-                if ( uri == null )
-                {
-                    return null;
-                }
+                return null;
+            }
 
-                String query = uri.getQuery();
-                if (query != null)
+            String query = uri.getQuery();
+            if (query != null)
+            {
+                for ( String param : query.split( "&" ) )
                 {
-                    for ( String param : query.split( "&" ) )
+                    String[] keyValue = param.split( "=" );
+
+                    if ( keyValue[0].equalsIgnoreCase( name ) )
                     {
-                        String[] keyValue = param.split( "=" );
-
-                        if ( keyValue[0].equalsIgnoreCase( name ) )
+                        if ( keyValue.length == 2 )
                         {
-                            if ( keyValue.length == 2 )
-                            {
-                                return keyValue[1];
-                            }
-                            else
-                            {
-                                return "true";
-                            }
+                            return keyValue[1];
+                        }
+                        else
+                        {
+                            return "true";
                         }
                     }
                 }
-                return null;
             }
+            return null;
         };
     }
 

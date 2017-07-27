@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,33 +19,33 @@
  */
 package org.neo4j.server.web;
 
-import java.io.File;
+import org.eclipse.jetty.server.RequestLog;
+import org.eclipse.jetty.server.Server;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-
+import java.util.Optional;
+import java.util.function.Consumer;
 import javax.servlet.Filter;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.server.database.InjectableProvider;
 import org.neo4j.server.plugins.Injectable;
-import org.neo4j.server.security.ssl.KeyStoreInformation;
+import org.neo4j.ssl.SslPolicy;
 
 public interface WebServer
 {
-    void setPort( int portNo );
+    void setAddress( ListenSocketAddress address );
 
-    void setAddress( String addr );
+    void setHttpsAddress( Optional<ListenSocketAddress> address );
 
-    void setEnableHttps( boolean enable );
+    void setSslPolicy( SslPolicy sslPolicy );
 
-    void setHttpsPort( int portNo );
-
-    void setHttpsCertificateInformation( KeyStoreInformation config );
-
-    void setHttpLoggingConfiguration( File logbackConfig, boolean enableContentLogging );
+    void setRequestLog( RequestLog requestLog );
 
     void setMaxThreads( int maxThreads );
 
@@ -71,4 +71,6 @@ public interface WebServer
     void setWadlEnabled( boolean wadlEnabled );
 
     void setDefaultInjectables( Collection<InjectableProvider<?>> defaultInjectables );
+
+    void setJettyCreatedCallback( Consumer<Server> callback );
 }

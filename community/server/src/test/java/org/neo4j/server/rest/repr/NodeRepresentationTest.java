@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,21 +19,19 @@
  */
 package org.neo4j.server.rest.repr;
 
+import org.junit.Test;
+
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Test;
-
 import static java.util.Arrays.asList;
-
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import static org.neo4j.server.rest.repr.RepresentationTestAccess.serialize;
 import static org.neo4j.server.rest.repr.RepresentationTestBase.assertUriMatches;
 import static org.neo4j.server.rest.repr.RepresentationTestBase.uriPattern;
-import static org.neo4j.test.mocking.GraphMock.node;
-import static org.neo4j.test.mocking.Properties.properties;
+import static org.neo4j.test.mockito.mock.GraphMock.node;
+import static org.neo4j.test.mockito.mock.Properties.properties;
 
 public class NodeRepresentationTest
 {

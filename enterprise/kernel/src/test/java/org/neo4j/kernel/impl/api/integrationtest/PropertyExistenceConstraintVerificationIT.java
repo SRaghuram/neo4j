@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,12 +34,12 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.EnterpriseDatabaseRule;
 import org.neo4j.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.impl.api.OperationsFacade;
-import org.neo4j.test.DatabaseRule;
-import org.neo4j.test.ThreadingRule;
+import org.neo4j.test.rule.DatabaseRule;
+import org.neo4j.test.rule.EnterpriseDatabaseRule;
+import org.neo4j.test.rule.concurrent.ThreadingRule;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -47,10 +47,13 @@ import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.junit.runners.Suite.SuiteClasses;
-import static org.neo4j.graphdb.DynamicLabel.label;
-import static org.neo4j.graphdb.DynamicRelationshipType.withName;
-import static org.neo4j.kernel.impl.api.integrationtest.PropertyExistenceConstraintVerificationIT.*;
-import static org.neo4j.test.ThreadingRule.waitingWhileIn;
+import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.graphdb.RelationshipType.withName;
+import static org.neo4j.kernel.impl.api.integrationtest.PropertyExistenceConstraintVerificationIT
+        .NodePropertyExistenceExistenceConstrainVerificationIT;
+import static org.neo4j.kernel.impl.api.integrationtest.PropertyExistenceConstraintVerificationIT
+        .RelationshipPropertyExistenceExistenceConstrainVerificationIT;
+import static org.neo4j.test.rule.concurrent.ThreadingRule.waitingWhileIn;
 
 @RunWith( Suite.class )
 @SuiteClasses( {
@@ -235,35 +238,27 @@ public class PropertyExistenceConstraintVerificationIT
 
         private ThrowingFunction<Void,Void,RuntimeException> createOffender()
         {
-            return new ThrowingFunction<Void,Void,RuntimeException>()
+            return aVoid ->
             {
-                @Override
-                public Void apply( Void aVoid ) throws RuntimeException
+                try ( Transaction tx = db.beginTx() )
                 {
-                    try ( Transaction tx = db.beginTx() )
-                    {
-                        createOffender( db, KEY );
-                        tx.success();
-                    }
-                    return null;
+                    createOffender( db, KEY );
+                    tx.success();
                 }
+                return null;
             };
         }
 
         private ThrowingFunction<Void,Void,RuntimeException> createConstraint()
         {
-            return new ThrowingFunction<Void,Void,RuntimeException>()
+            return aVoid ->
             {
-                @Override
-                public Void apply( Void aVoid ) throws RuntimeException
+                try ( Transaction tx = db.beginTx() )
                 {
-                    try ( Transaction tx = db.beginTx() )
-                    {
-                        createConstraint( db, KEY, PROPERTY );
-                        tx.success();
-                    }
-                    return null;
+                    createConstraint( db, KEY, PROPERTY );
+                    tx.success();
                 }
+                return null;
             };
         }
     }

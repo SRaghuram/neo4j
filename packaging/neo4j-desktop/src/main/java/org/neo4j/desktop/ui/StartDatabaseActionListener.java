@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,10 +22,12 @@ package org.neo4j.desktop.ui;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import org.neo4j.desktop.model.DesktopModel;
+import org.neo4j.desktop.model.exceptions.UnableToStartServerException;
+import org.neo4j.desktop.model.exceptions.UnsuitableDirectoryException;
 import org.neo4j.desktop.runtime.DatabaseActions;
 
 import static javax.swing.SwingUtilities.invokeLater;
-
 import static org.neo4j.desktop.ui.Components.alert;
 import static org.neo4j.desktop.ui.DatabaseStatus.STARTED;
 import static org.neo4j.desktop.ui.DatabaseStatus.STARTING;
@@ -37,7 +39,7 @@ class StartDatabaseActionListener implements ActionListener
     private final DesktopModel model;
     private final DatabaseActions databaseActions;
 
-    public StartDatabaseActionListener( MainWindow mainWindow, DesktopModel model, DatabaseActions databaseActions )
+    StartDatabaseActionListener( MainWindow mainWindow, DesktopModel model, DatabaseActions databaseActions )
     {
         this.mainWindow = mainWindow;
         this.model = model;

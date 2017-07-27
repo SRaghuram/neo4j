@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,28 +19,14 @@
  */
 package org.neo4j.server.database;
 
-import org.neo4j.kernel.impl.factory.CommunityFacadeFactory;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 public class WrappedDatabase extends LifecycleAdapter implements Database
 {
-    private final GraphDatabaseAPI graph;
+    private final GraphDatabaseFacade graph;
 
-    public static Database.Factory wrappedDatabase( final GraphDatabaseAPI db )
-    {
-        return new Factory()
-        {
-            @Override
-            public Database newDatabase( Config config, CommunityFacadeFactory.Dependencies dependencies)
-            {
-                return new WrappedDatabase( db );
-            }
-        };
-    }
-
-    public WrappedDatabase( GraphDatabaseAPI graph )
+    public WrappedDatabase( GraphDatabaseFacade graph )
     {
         this.graph = graph;
         try
@@ -60,7 +46,7 @@ public class WrappedDatabase extends LifecycleAdapter implements Database
     }
 
     @Override
-    public GraphDatabaseAPI getGraph()
+    public GraphDatabaseFacade getGraph()
     {
         return graph;
     }

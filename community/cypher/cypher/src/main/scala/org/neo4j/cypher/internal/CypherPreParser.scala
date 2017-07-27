@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,8 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.internal.frontend.v2_3.InputPosition
-import org.neo4j.cypher.internal.frontend.v2_3.parser.Base
+import org.neo4j.cypher.internal.frontend.v3_2.InputPosition
+import org.neo4j.cypher.internal.frontend.v3_2.parser.Base
 import org.parboiled.scala._
 
 final case class PreParsedStatement(statement: String, options: Seq[PreParserOption], offset: InputPosition)
@@ -34,20 +34,20 @@ case object CypherPreParser extends Parser with Base {
 
   def AllOptions: Rule1[Seq[PreParserOption]] = zeroOrMore(AnyCypherOption, WS)
 
-  def AnyCypherOption: Rule1[PreParserOption] = Cypher | Explain | Profile | PlannerDeprecated
+  def AnyCypherOption: Rule1[PreParserOption] = Cypher | Explain | Profile
 
   def AnySomething: Rule1[String] = rule("Query") { oneOrMore(org.parboiled.scala.ANY) ~> identity }
 
   def Cypher = rule("CYPHER options") {
     keyword("CYPHER") ~~
       optional(VersionNumber) ~~
-      zeroOrMore(PlannerOption | RuntimeOption, WS) ~~> ConfigurationOptions
+      zeroOrMore(PlannerOption | RuntimeOption | StrategyOption | DebugFlag, WS) ~~> ConfigurationOptions
   }
 
   def PlannerOption: Rule1[PreParserOption] = rule("planner option") (
-      option("planner", "cost") ~ push(GreedyPlannerOption)
-    | option("planner", "greedy") ~ push(GreedyPlannerOption)
+      option("planner", "cost") ~ push(CostPlannerOption)
     | option("planner", "rule") ~ push(RulePlannerOption)
+    | option("planner", "greedy") ~ push(GreedyPlannerOption)
     | option("planner", "idp") ~ push(IDPPlannerOption)
     | option("planner", "dp") ~ push(DPPlannerOption)
   )
@@ -57,17 +57,16 @@ case object CypherPreParser extends Parser with Base {
       | option("runtime", "compiled") ~ push(CompiledRuntimeOption)
   )
 
-  @deprecated
-  def PlannerDeprecated = rule("PLANNER") (
-      keyword("PLANNER COST") ~ push(GreedyPlannerOption)
-    | keyword("PLANNER GREEDY") ~ push(GreedyPlannerOption)
-    | keyword("PLANNER IDP") ~ push(IDPPlannerOption)
-    | keyword("PLANNER DP") ~ push(DPPlannerOption)
-    | keyword("PLANNER RULE") ~ push(RulePlannerOption)
+  def StrategyOption = rule("strategy option")(
+    option("updateStrategy", "eager") ~ push(EagerOption)
   )
 
   def VersionNumber = rule("Version") {
     group(Digits ~ "." ~ Digits) ~> VersionOption
+  }
+
+  def DebugFlag: Rule1[DebugOption] = rule("debug option") {
+    keyword("debug") ~~ "=" ~~ SymbolicNameString ~~> DebugOption
   }
 
   def Digits = oneOrMore("0" - "9")
@@ -77,6 +76,6 @@ case object CypherPreParser extends Parser with Base {
   def Explain = keyword("EXPLAIN") ~ push(ExplainOption)
 
   def option(key: String, value: String): Rule0 = {
-    keyword(key) ~ WS ~ "=" ~ WS ~keyword(value)
+    keyword(key) ~~ "=" ~~ keyword(value)
   }
 }

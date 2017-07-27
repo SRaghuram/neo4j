@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,20 +19,19 @@
  */
 package org.neo4j.server.rest.web;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 import javax.ws.rs.core.Response;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import org.neo4j.graphdb.DynamicRelationshipType;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.FakeClock;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.database.WrappedDatabase;
 import org.neo4j.server.rest.domain.GraphDbHelper;
@@ -41,6 +40,8 @@ import org.neo4j.server.rest.paging.LeaseManager;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.server.EntityOutputFormat;
+import org.neo4j.time.Clocks;
+import org.neo4j.time.FakeClock;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -57,16 +58,16 @@ public class RestfulGraphDatabasePagedTraversalTest
     private EntityOutputFormat output;
     private GraphDbHelper helper;
     private LeaseManager leaseManager;
-    private GraphDatabaseAPI graph;
+    private GraphDatabaseFacade graph;
 
     @Before
     public void startDatabase() throws IOException
     {
-        graph = (GraphDatabaseAPI)new TestGraphDatabaseFactory().newImpermanentDatabase();
-        database = new WrappedDatabase(graph);
+        graph = (GraphDatabaseFacade) new TestGraphDatabaseFactory().newImpermanentDatabase();
+        database = new WrappedDatabase( graph );
         helper = new GraphDbHelper( database );
         output = new EntityOutputFormat( new JsonFormat(), URI.create( BASE_URI ), null );
-        leaseManager = new LeaseManager( new FakeClock() );
+        leaseManager = new LeaseManager( Clocks.fakeClock() );
         service = new RestfulGraphDatabase( new JsonFormat(), output,
                 new DatabaseActions( leaseManager, true, database.getGraph() ), null );
         service = new TransactionWrappingRestfulGraphDatabase( graph, service );
@@ -180,7 +181,7 @@ public class RestfulGraphDatabasePagedTraversalTest
                 long currentNodeId = helper.createNode( MapUtil.map( "name", String.valueOf( i ) ) );
                 database.getGraph().getNodeById( previousNodeId )
                         .createRelationshipTo( database.getGraph().getNodeById( currentNodeId ),
-                                DynamicRelationshipType.withName( "PRECEDES" ) );
+                                RelationshipType.withName( "PRECEDES" ) );
                 previousNodeId = currentNodeId;
             }
 

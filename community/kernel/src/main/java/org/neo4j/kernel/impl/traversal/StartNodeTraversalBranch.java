@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import org.neo4j.graphdb.traversal.TraversalContext;
 class StartNodeTraversalBranch extends TraversalBranchWithState
 {
     private final InitialBranchState initialState;
-    
+
     StartNodeTraversalBranch( TraversalContext context, TraversalBranch parent, Node source,
             InitialBranchState initialState )
     {
@@ -49,7 +49,7 @@ class StartNodeTraversalBranch extends TraversalBranchWithState
         }
         return super.next( expander, metadata );
     }
-    
+
     @Override
     protected TraversalBranch newNextBranch( Node node, Relationship relationship )
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,8 +21,11 @@ package org.neo4j.server.rest.security;
 
 import javax.servlet.http.HttpServletRequest;
 
-public class PermanentlyPassingSecurityRule implements SecurityRule {
-    
+import org.neo4j.server.configuration.ServerSettings;
+
+public class PermanentlyPassingSecurityRule implements SecurityRule
+{
+
     public static final String REALM = "WallyWorld"; // as per RFC2617 :-);
 
     @Override
@@ -34,7 +37,7 @@ public class PermanentlyPassingSecurityRule implements SecurityRule {
     @Override
     public String forUriPath()
     {
-        return SecurityRule.DEFAULT_DATABASE_PATH;
+        return ServerSettings.rest_api_path.getDefaultValue();
     }
 
     @Override

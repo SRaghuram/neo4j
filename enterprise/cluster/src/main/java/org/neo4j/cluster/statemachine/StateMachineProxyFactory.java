@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,6 +33,10 @@ import org.neo4j.cluster.StateMachines;
 import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.com.message.MessageProcessor;
 import org.neo4j.cluster.com.message.MessageType;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
+
+import static java.lang.String.format;
 
 /**
  * Used to generate dynamic proxies whose methods are backed by a {@link StateMachine}. Method
@@ -47,16 +51,18 @@ public class StateMachineProxyFactory
 {
     private final StateMachines stateMachines;
     private final StateMachineConversations conversations;
+    private final Log log;
     private volatile InstanceId me;
 
-    private final Map<String, ResponseFuture> responseFutureMap = new ConcurrentHashMap<String, ResponseFuture>();
+    private final Map<String, ResponseFuture> responseFutureMap = new ConcurrentHashMap<>();
 
-
-    public StateMachineProxyFactory( StateMachines stateMachines, StateMachineConversations conversations, InstanceId me )
+    public StateMachineProxyFactory( StateMachines stateMachines, StateMachineConversations conversations,
+            InstanceId me, LogProvider logProvider )
     {
         this.stateMachines = stateMachines;
         this.conversations = conversations;
         this.me = me;
+        this.log = logProvider.getLog( getClass() );
     }
 
     public <CLIENT> CLIENT newProxy( Class<CLIENT> proxyInterface )
@@ -104,8 +110,9 @@ public class StateMachineProxyFactory
             }
             else
             {
-                ResponseFuture future = new ResponseFuture( conversationId, typeAsEnum );
+                ResponseFuture future = new ResponseFuture( conversationId, typeAsEnum, responseFutureMap );
                 responseFutureMap.put( conversationId, future );
+                log.debug( "Added response future for conversation id %s", conversationId );
                 stateMachines.process( message );
 
                 return future;
@@ -132,6 +139,11 @@ public class StateMachineProxyFactory
                     {
                         responseFutureMap.remove( conversationId );
                     }
+                }
+                else
+                {
+                    log.warn(  "Unable to find the client (with the conversation id %s) waiting for the response %s.",
+                            conversationId, message  );
                 }
             }
         }
@@ -168,8 +180,9 @@ public class StateMachineProxyFactory
                     if ( foundMatch )
                     // State machine could only partially handle this interface
                     {
-                        exception = new IllegalArgumentException( "State machine for " + stateMachine.getMessageType
-                                ().getName() + " cannot handle method:" + method.getName() );
+                        exception = new IllegalArgumentException(
+                                "State machine for " + stateMachine.getMessageType().getName() +
+                                " cannot handle method:" + method.getName() );
                     }
 
                     // Continue searching
@@ -185,21 +198,23 @@ public class StateMachineProxyFactory
         throw exception;
     }
 
-    class ResponseFuture
-            implements Future<Object>
+    private static class ResponseFuture implements Future<Object>
     {
         private final String conversationId;
         private final MessageType initiatedByMessageType;
+        private final Map<String,ResponseFuture> responseFutureMap; /* temporary for debug logging */
 
         private Message response;
 
-        ResponseFuture( String conversationId, MessageType initiatedByMessageType )
+        ResponseFuture( String conversationId, MessageType initiatedByMessageType,
+                Map<String,ResponseFuture> responseFutureMap )
         {
             this.conversationId = conversationId;
             this.initiatedByMessageType = initiatedByMessageType;
+            this.responseFutureMap = responseFutureMap;
         }
 
-        public synchronized boolean setPotentialResponse( Message response )
+        synchronized boolean setPotentialResponse( Message response )
         {
             if ( isResponse( response ) )
             {
@@ -215,8 +230,8 @@ public class StateMachineProxyFactory
 
         private boolean isResponse( Message response )
         {
-            return (response.getMessageType().name().equals( initiatedByMessageType.name() + "Response" ) ||
-                    response.getMessageType().name().equals( initiatedByMessageType.name() + "Failure" ));
+            return response.getMessageType().name().equals( initiatedByMessageType.name() + "Response" ) ||
+                   response.getMessageType().name().equals( initiatedByMessageType.name() + "Failure" );
         }
 
         @Override
@@ -297,9 +312,16 @@ public class StateMachineProxyFactory
 
             if ( response == null )
             {
-                throw new TimeoutException();
+                throw new TimeoutException( format( "Conversation-response mapping:%n" + responseFutureMap ) );
             }
             return getResult();
+        }
+
+        @Override
+        public String toString()
+        {
+            return "ResponseFuture{" + "conversationId='" + conversationId + '\'' + ", initiatedByMessageType=" +
+                    initiatedByMessageType + ", response=" + response + '}';
         }
     }
 }

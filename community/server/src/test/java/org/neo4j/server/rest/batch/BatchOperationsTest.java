@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,34 +19,41 @@
  */
 package org.neo4j.server.rest.batch;
 
+import org.junit.Test;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
 
-import org.junit.Test;
 import org.neo4j.server.rest.web.InternalJettyServletRequest;
+import org.neo4j.server.rest.web.InternalJettyServletRequest.RequestData;
 import org.neo4j.server.rest.web.InternalJettyServletResponse;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.neo4j.test.assertion.Assert.assertException;
 
-public class BatchOperationsTest {
+public class BatchOperationsTest
+{
 
-    private final BatchOperations ops = new BatchOperations(null) {
+    private final BatchOperations ops = new BatchOperations(null)
+    {
         @Override
-        protected void invoke(String method, String path, String body, Integer id, URI targetUri, InternalJettyServletRequest req, InternalJettyServletResponse res) throws IOException, ServletException {
+        protected void invoke(String method, String path, String body, Integer id,
+                URI targetUri, InternalJettyServletRequest req, InternalJettyServletResponse res) throws IOException, ServletException
+        {
         }
     };
 
     @Test
-    public void testReplaceLocations() throws Exception {
-        Map<Integer,String> map=new HashMap<Integer, String>();
+    public void testReplaceLocations() throws Exception
+    {
+        Map<Integer,String> map = new HashMap<>();
         map.put(100,"bar");
         assertEquals("foo", ops.replaceLocationPlaceholders("foo", map));
         assertEquals("foo bar", ops.replaceLocationPlaceholders("foo {100}", map));
@@ -58,7 +65,9 @@ public class BatchOperationsTest {
     public void testSchemeInInternalJettyServletRequestForHttp() throws UnsupportedEncodingException
     {
         // when
-        InternalJettyServletRequest req = new InternalJettyServletRequest( "POST", "http://localhost:7473/db/data/node", "{'name':'node1'}", new InternalJettyServletResponse() );
+        InternalJettyServletRequest req = new InternalJettyServletRequest( "POST",
+                "http://localhost:7473/db/data/node", "{'name':'node1'}", new InternalJettyServletResponse(),
+                mock( RequestData.class ) );
 
         // then
         assertEquals("http",req.getScheme());
@@ -68,36 +77,46 @@ public class BatchOperationsTest {
     public void testSchemeInInternalJettyServletRequestForHttps() throws UnsupportedEncodingException
     {
         // when
-        InternalJettyServletRequest req = new InternalJettyServletRequest( "POST", "https://localhost:7473/db/data/node", "{'name':'node1'}", new InternalJettyServletResponse() );
+        InternalJettyServletRequest req = new InternalJettyServletRequest( "POST",
+                "https://localhost:7473/db/data/node", "{'name':'node1'}", new InternalJettyServletResponse(),
+                mock( RequestData.class ) );
 
         // then
         assertEquals("https",req.getScheme());
     }
 
     @Test
-    public void shouldForwardMetadataFromOuterRequest() throws Exception
+    public void shouldForwardMetadataFromRequestData() throws Exception
     {
         // Given
-        HttpServletRequest mock = mock( HttpServletRequest.class );
-
-        when(mock.getAuthType()).thenReturn( "auth" );
-        when(mock.getRemoteAddr()).thenReturn( "127.0.0.1" );
-        when(mock.getRemoteHost()).thenReturn( "localhost" );
-        when(mock.getRemotePort()).thenReturn( 1 );
-        when(mock.getLocalAddr()).thenReturn( "129.0.0.1" );
-        when(mock.getLocalPort()).thenReturn( 2 );
+        RequestData mock = new RequestData(
+                "127.0.0.1", true, 1,
+                "TheLocalName", "129.0.0.1", 2, "authorization/auth" );
 
         InternalJettyServletRequest req = new InternalJettyServletRequest( "POST",
                 "https://localhost:7473/db/data/node", "", new InternalJettyServletResponse(),
                 mock );
 
         // When & then
-        assertEquals( "auth", req.getAuthType());
         assertEquals( "127.0.0.1", req.getRemoteAddr());
-        assertEquals( "localhost", req.getRemoteHost());
+        assertException( () -> req.getRemoteHost(), UnsupportedOperationException.class,
+                "Remote host-name lookup might prove expensive, this should be explicitly considered." );
+        assertTrue( req.isSecure() );
         assertEquals( 1, req.getRemotePort());
-        assertEquals( 2, req.getLocalPort());
+        assertEquals( "TheLocalName", req.getLocalName());
         assertEquals( "129.0.0.1", req.getLocalAddr());
+        assertEquals( 2, req.getLocalPort());
+        assertEquals( "authorization/auth", req.getAuthType());
 
+    }
+
+    @Test
+    public void shouldIgnoreUnknownAndUnparseablePlaceholders() throws Throwable
+    {
+        // When/then
+        assertEquals("foo {00000000010001010001001100111000100101010111001101110111}",
+                ops.replaceLocationPlaceholders("foo {00000000010001010001001100111000100101010111001101110111}", Collections.emptyMap() ));
+        assertEquals("foo {2147483648}",
+                ops.replaceLocationPlaceholders("foo {2147483648}", Collections.emptyMap() ));
     }
 }

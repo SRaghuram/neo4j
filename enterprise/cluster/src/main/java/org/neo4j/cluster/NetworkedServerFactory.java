@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,6 @@
 package org.neo4j.cluster;
 
 import java.net.URI;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +33,6 @@ import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.AcceptorInstanceSto
 import org.neo4j.cluster.protocol.election.ElectionCredentialsProvider;
 import org.neo4j.cluster.statemachine.StateTransitionLogger;
 import org.neo4j.cluster.timeout.TimeoutStrategy;
-import org.neo4j.helpers.Factory;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.NamedThreadFactory;
 import org.neo4j.kernel.configuration.Config;
@@ -118,19 +116,14 @@ public class NetworkedServerFactory
             }
         }, receiver, logProvider );
 
-        ExecutorLifecycleAdapter stateMachineExecutor = new ExecutorLifecycleAdapter( new Factory<ExecutorService>()
-        {
-            @Override
-            public ExecutorService newInstance()
-            {
-                return Executors.newSingleThreadExecutor( new NamedThreadFactory( "State machine", namedThreadFactoryMonitor ) );
-            }
-        } );
+        ExecutorLifecycleAdapter stateMachineExecutor = new ExecutorLifecycleAdapter( () ->
+                Executors.newSingleThreadExecutor(
+                        new NamedThreadFactory( "State machine", namedThreadFactoryMonitor ) ) );
 
         final ProtocolServer protocolServer = protocolServerFactory.newProtocolServer(
                 config.get( ClusterSettings.server_id ), timeoutStrategy, receiver, sender,
                 acceptorInstanceStore, electionCredentialsProvider, stateMachineExecutor, objectInputStreamFactory,
-                objectOutputStreamFactory );
+                objectOutputStreamFactory, config );
         receiver.addNetworkChannelsListener( new NetworkReceiver.NetworkChannelsListener()
         {
             private StateTransitionLogger logger;

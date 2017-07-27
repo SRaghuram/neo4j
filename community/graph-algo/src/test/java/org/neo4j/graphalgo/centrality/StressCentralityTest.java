@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,11 @@
  */
 package org.neo4j.graphalgo.centrality;
 
-import static org.junit.Assert.assertTrue;
+import common.Neo4jAlgoTestCase;
+import org.junit.Test;
 
 import java.util.Set;
 
-import org.junit.Test;
 import org.neo4j.graphalgo.CostEvaluator;
 import org.neo4j.graphalgo.impl.centrality.StressCentrality;
 import org.neo4j.graphalgo.impl.shortestpath.SingleSourceShortestPath;
@@ -32,7 +32,7 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 
-import common.Neo4jAlgoTestCase;
+import static org.junit.Assert.assertTrue;
 
 public class StressCentralityTest extends Neo4jAlgoTestCase
 {
@@ -110,9 +110,7 @@ public class StressCentralityTest extends Neo4jAlgoTestCase
 
     class StressTest extends StressCentrality<Double>
     {
-        public StressTest(
-            SingleSourceShortestPath<Double> singleSourceShortestPath,
-            Set<Node> nodeSet )
+        StressTest( SingleSourceShortestPath<Double> singleSourceShortestPath, Set<Node> nodeSet )
         {
             super( singleSourceShortestPath, nodeSet );
         }

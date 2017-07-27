@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,7 +32,7 @@ import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.TestHighlyAvailableGraphDatabaseFactory;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertTrue;
 
@@ -40,7 +40,7 @@ public class ConcurrentInstanceStartupIT
 {
     public static final int INSTANCE_COUNT = 3;
     @Rule
-    public TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
+    public TestDirectory testDirectory = TestDirectory.testDirectory();
 
     @Test
     public void concurrentStartupShouldWork() throws Exception
@@ -69,7 +69,7 @@ public class ConcurrentInstanceStartupIT
                     try
                     {
                         barrier.await();
-                        dbs[ finalI-1 ] = startDbAtBase( finalI, initialHosts );
+                        dbs[finalI - 1] = startDbAtBase( finalI, initialHosts );
                     }
                     catch ( InterruptedException | BrokenBarrierException e )
                     {
@@ -116,7 +116,7 @@ public class ConcurrentInstanceStartupIT
     private HighlyAvailableGraphDatabase startDbAtBase( int i, String initialHosts )
     {
         GraphDatabaseBuilder masterBuilder = new TestHighlyAvailableGraphDatabaseFactory()
-                .newHighlyAvailableDatabaseBuilder( path( i ).getAbsolutePath() )
+                .newEmbeddedDatabaseBuilder( path( i ).getAbsoluteFile() )
                 .setConfig( ClusterSettings.initial_hosts, initialHosts )
                 .setConfig( ClusterSettings.cluster_server, "127.0.0.1:" + ( 5000 + i ) )
                 .setConfig( ClusterSettings.server_id, "" + i )

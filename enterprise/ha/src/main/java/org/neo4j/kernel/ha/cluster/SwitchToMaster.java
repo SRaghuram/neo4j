@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,16 +19,17 @@
  */
 package org.neo4j.kernel.ha.cluster;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.member.ClusterMemberAvailability;
 import org.neo4j.com.ServerUtil;
-import org.neo4j.function.BiFunction;
 import org.neo4j.function.Factory;
-import org.neo4j.function.Function;
-import org.neo4j.function.Supplier;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.DelegateInvocationHandler;
@@ -39,23 +40,16 @@ import org.neo4j.kernel.ha.com.master.MasterServer;
 import org.neo4j.kernel.ha.com.master.SlaveFactory;
 import org.neo4j.kernel.ha.id.HaIdGeneratorFactory;
 import org.neo4j.kernel.impl.logging.LogService;
-import org.neo4j.kernel.impl.transaction.TransactionCounters;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.locks.LockSupport.parkNanos;
-
-import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
-import static org.neo4j.kernel.ha.cluster.HighAvailabilityModeSwitcher.MASTER;
+import static org.neo4j.kernel.ha.cluster.modeswitch.HighAvailabilityModeSwitcher.MASTER;
 
 public class SwitchToMaster implements AutoCloseable
 {
-    private LogService logService;
     Factory<ConversationManager> conversationManagerFactory;
-    Function<ConversationManager, Master> masterFactory;
+    BiFunction<ConversationManager, LifeSupport, Master> masterFactory;
     BiFunction<Master, ConversationManager, MasterServer> masterServerFactory;
-    private TransactionCounters transactionCounters;
     private Log userLog;
     private HaIdGeneratorFactory idGeneratorFactory;
     private Config config;
@@ -67,16 +61,14 @@ public class SwitchToMaster implements AutoCloseable
     public SwitchToMaster( LogService logService,
             HaIdGeneratorFactory idGeneratorFactory, Config config, Supplier<SlaveFactory> slaveFactorySupplier,
             Factory<ConversationManager> conversationManagerFactory,
-            Function<ConversationManager, Master> masterFactory,
+            BiFunction<ConversationManager, LifeSupport, Master> masterFactory,
             BiFunction<Master, ConversationManager, MasterServer> masterServerFactory,
             DelegateInvocationHandler<Master> masterDelegateHandler, ClusterMemberAvailability clusterMemberAvailability,
-            Supplier<NeoStoreDataSource> dataSourceSupplier, TransactionCounters transactionCounters)
+            Supplier<NeoStoreDataSource> dataSourceSupplier )
     {
-        this.logService = logService;
         this.conversationManagerFactory = conversationManagerFactory;
         this.masterFactory = masterFactory;
         this.masterServerFactory = masterServerFactory;
-        this.transactionCounters = transactionCounters;
         this.userLog = logService.getUserLog( getClass() );
         this.idGeneratorFactory = idGeneratorFactory;
         this.config = config;
@@ -95,61 +87,72 @@ public class SwitchToMaster implements AutoCloseable
      */
     public URI switchToMaster( LifeSupport haCommunicationLife, URI me )
     {
-        userLog.info( "I am %s, moving to master", myId() );
+        userLog.info( "I am %s, moving to master", myId( config ) );
 
-        // Wait for current transactions to stop first
-        long deadline = SYSTEM_CLOCK.currentTimeMillis() + config.get( HaSettings.state_switch_timeout );
-        while ( transactionCounters.getNumberOfActiveTransactions() > 0 && SYSTEM_CLOCK.currentTimeMillis() < deadline )
-        {
-            parkNanos( MILLISECONDS.toNanos( 10 ) );
-        }
+        // Do not wait for currently active transactions to complete before continuing switching.
+        // - A master in a cluster is very important, without it the cluster cannot process any write requests
+        // - Awaiting open transactions to complete assumes that this instance just now was a slave that is
+        //   switching to master, which means the previous master where these active transactions were hosted
+        //   is no longer available so these open transactions cannot continue and complete anyway,
+        //   so what's the point waiting for them?
+        // - Read transactions may still be able to complete, but the correct response to failures in those
+        //   is to have them throw transient error exceptions hinting that they should be retried,
+        //   at which point they may get redirected to another instance, or to this instance if it has completed
+        //   the switch until then.
 
-        /*
-         * Synchronizing on the xaDataSourceManager makes sense if you also look at HaKernelPanicHandler. In
-         * particular, it is possible to get a masterIsElected while recovering the database. That is generally
-         * going to break things. Synchronizing on the xaDSM as HaKPH does solves this.
-         */
-        //noinspection SynchronizationOnLocalVariableOrMethodParameter
-//        synchronized ( xaDataSourceManager )
-        {
+        idGeneratorFactory.switchToMaster();
+        NeoStoreDataSource neoStoreXaDataSource = dataSourceSupplier.get();
+        neoStoreXaDataSource.afterModeSwitch();
 
-            idGeneratorFactory.switchToMaster();
-            NeoStoreDataSource neoStoreXaDataSource = dataSourceSupplier.get();
-            neoStoreXaDataSource.afterModeSwitch();
+        ConversationManager conversationManager = conversationManagerFactory.newInstance();
+        Master master = masterFactory.apply( conversationManager, haCommunicationLife );
 
-            ConversationManager conversationManager = conversationManagerFactory.newInstance();
-            Master master = masterFactory.apply( conversationManager );
+        MasterServer masterServer = masterServerFactory.apply( master, conversationManager );
 
-            MasterServer masterServer = masterServerFactory.apply( master, conversationManager );
+        haCommunicationLife.add( masterServer );
+        masterDelegateHandler.setDelegate( master );
 
-            haCommunicationLife.add( master );
-            haCommunicationLife.add( masterServer );
-            masterDelegateHandler.setDelegate( master );
+        haCommunicationLife.start();
 
-            haCommunicationLife.start();
+        URI masterHaURI = getMasterUri( me, masterServer, config );
+        clusterMemberAvailability.memberIsAvailable( MASTER, masterHaURI, neoStoreXaDataSource.getStoreId() );
+        userLog.info( "I am %s, successfully moved to master", myId( config ) );
 
-            URI masterHaURI = getMasterUri( me, masterServer );
-            clusterMemberAvailability.memberIsAvailable( MASTER, masterHaURI, neoStoreXaDataSource.getStoreId() );
-            userLog.info( "I am %s, successfully moved to master", myId() );
+        slaveFactorySupplier.get().setStoreId( neoStoreXaDataSource.getStoreId() );
 
-            slaveFactorySupplier.get().setStoreId( neoStoreXaDataSource.getStoreId() );
-
-            return masterHaURI;
-        }
+        return masterHaURI;
     }
 
-    private URI getMasterUri( URI me, MasterServer masterServer )
+    static URI getMasterUri( URI me, MasterServer masterServer, Config config )
     {
-        String hostname = config.get( HaSettings.ha_server ).getHost( ServerUtil.getHostString( masterServer.getSocketAddress() ).contains( "0.0.0.0" ) ?
-                            me.getHost() :
-                            ServerUtil.getHostString( masterServer.getSocketAddress() ));
+        String hostname = config.get( HaSettings.ha_server ).getHost();
+        InetSocketAddress masterSocketAddress = masterServer.getSocketAddress();
 
-        int port = masterServer.getSocketAddress().getPort();
+        if ( hostname == null || isWildcard( hostname ) )
+        {
+            InetAddress masterAddress = masterSocketAddress.getAddress();
+            hostname = masterAddress.isAnyLocalAddress() ? me.getHost() : ServerUtil.getHostString( masterSocketAddress );
+            hostname = ensureWrapForIPv6Uri( hostname );
+        }
 
-        return URI.create( "ha://" + hostname + ":" + port + "?serverId=" + myId() );
+        return URI.create( "ha://" + hostname + ":" + masterSocketAddress.getPort() + "?serverId=" + myId( config ) );
     }
 
-    private InstanceId myId()
+    private static String ensureWrapForIPv6Uri( String hostname )
+    {
+        if ( hostname.contains( ":" ) && !hostname.contains( "[" ) )
+        {
+            hostname = "[" + hostname + "]";
+        }
+        return hostname;
+    }
+
+    private static boolean isWildcard( String hostname )
+    {
+        return hostname.contains( "0.0.0.0" ) || hostname.contains( "[::]" ) || hostname.contains( "[0:0:0:0:0:0:0:0]" );
+    }
+
+    private static InstanceId myId( Config config )
     {
         return config.get( ClusterSettings.server_id );
     }
@@ -157,7 +160,6 @@ public class SwitchToMaster implements AutoCloseable
     @Override
     public void close() throws Exception
     {
-        logService = null;
         userLog = null;
         conversationManagerFactory = null;
         masterFactory = null;

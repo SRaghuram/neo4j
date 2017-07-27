@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,26 +21,31 @@ package org.neo4j.kernel.impl.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.api.IndexValueValidator;
+import org.neo4j.kernel.impl.api.LegacyIndexValueValidator;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.storemigration.StoreFileType;
 
 public class Validators
 {
-    public static final Validator<File> REGEX_FILE_EXISTS = new Validator<File>()
+
+    public static final IndexValueValidator INDEX_VALUE_VALIDATOR = IndexValueValidator.INSTANCE;
+
+    public static final LegacyIndexValueValidator LEGACY_INDEX_VALUE_VALIDATOR = LegacyIndexValueValidator.INSTANCE;
+
+    public static final Validator<File> REGEX_FILE_EXISTS = file ->
     {
-        @Override
-        public void validate( File file )
+        if ( matchingFiles( file ).isEmpty() )
         {
-            if ( matchingFiles( file ).isEmpty() )
-            {
-                throw new IllegalArgumentException( "File '" + file + "' doesn't exist" );
-            }
+            throw new IllegalArgumentException( "File '" + file + "' doesn't exist" );
         }
     };
 
@@ -63,70 +68,90 @@ public class Validators
         return files;
     }
 
-    public static final Validator<File> DIRECTORY_IS_WRITABLE = new Validator<File>()
+    public static final Validator<File> DIRECTORY_IS_WRITABLE = value ->
     {
-        @Override
-        public void validate( File value )
-        {
-            if ( value.mkdirs() )
-            {   // It's OK, we created the directory right now, which means we have write access to it
-                return;
-            }
+        if ( value.mkdirs() )
+        {   // It's OK, we created the directory right now, which means we have write access to it
+            return;
+        }
 
-            File test = new File( value, "_______test___" );
-            try
-            {
-                test.createNewFile();
-            }
-            catch ( IOException e )
-            {
-                throw new IllegalArgumentException( "Directoy '" + value + "' not writable: " + e.getMessage() );
-            }
-            finally
-            {
-                test.delete();
-            }
+        File test = new File( value, "_______test___" );
+        try
+        {
+            test.createNewFile();
+        }
+        catch ( IOException e )
+        {
+            throw new IllegalArgumentException( "Directoy '" + value + "' not writable: " + e.getMessage() );
+        }
+        finally
+        {
+            test.delete();
         }
     };
 
-    public static final Validator<File> CONTAINS_NO_EXISTING_DATABASE = new Validator<File>()
+    public static final Validator<File> CONTAINS_NO_EXISTING_DATABASE = value ->
     {
-        @Override
-        public void validate( File value )
+        try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            if ( new DefaultFileSystemAbstraction()
-                    .fileExists( new File( value, StoreFileType.STORE.augment( MetaDataStore.DEFAULT_NAME ) ) ) )
+            if ( isExistingDatabase( fileSystem, value ) )
             {
                 throw new IllegalArgumentException( "Directory '" + value + "' already contains a database" );
             }
         }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     };
 
-    public static <T> Validator<T[]> atLeast( final String key, final int length )
+    public static final Validator<File> CONTAINS_EXISTING_DATABASE = value ->
     {
-        return new Validator<T[]>()
+        try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            @Override
-            public void validate( T[] value )
+            if ( !isExistingDatabase( fileSystem, value ) )
             {
-                if ( value.length < length )
-                {
-                    throw new IllegalArgumentException( "Expected '" + key + "' to have at least " +
-                            length + " item" + (length == 1 ? "" : "s") + ", but had " + value.length +
-                            " (" + Arrays.toString( value ) + ")" );
-                }
+                throw new IllegalArgumentException( "Directory '" + value + "' does not contain a database" );
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    };
+
+    private static boolean isExistingDatabase( FileSystemAbstraction fileSystem, File value )
+    {
+        return fileSystem.fileExists( new File( value, StoreFileType.STORE.augment( MetaDataStore.DEFAULT_NAME ) ) );
+    }
+
+    public static Validator<String> inList( String[] validStrings )
+    {
+        return value ->
+        {
+            if ( Arrays.stream( validStrings ).noneMatch( s -> s.equals( value ) ) )
+            {
+                throw new IllegalArgumentException( "'" + value + "' found but must be one of: " +
+                    Arrays.toString( validStrings ) + "." );
             }
         };
     }
 
-    public static final <T> Validator<T> emptyValidator()
+    public static <T> Validator<T[]> atLeast( final String key, final int length )
     {
-        return new Validator<T>()
+        return value ->
         {
-            @Override
-            public void validate( T value )
-            {   // Do nothing
+            if ( value.length < length )
+            {
+                throw new IllegalArgumentException( "Expected '" + key + "' to have at least " +
+                        length + " valid item" + (length == 1 ? "" : "s") + ", but had " + value.length +
+                        " " + Arrays.toString( value ) );
             }
         };
+    }
+
+    public static <T> Validator<T> emptyValidator()
+    {
+        return value -> {};
     }
 }

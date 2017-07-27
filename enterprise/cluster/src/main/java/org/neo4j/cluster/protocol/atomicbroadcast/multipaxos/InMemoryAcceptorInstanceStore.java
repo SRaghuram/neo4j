@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -56,6 +56,8 @@ public class InMemoryAcceptorInstanceStore
         {
             instance = new AcceptorInstance();
             instances.put( instanceId, instance );
+
+            // Make sure we only keep a maximum number of instances, to not run out of memory
             if (!currentInstances.offer( instanceId ))
             {
                 instances.remove( currentInstances.poll() );
@@ -93,7 +95,8 @@ public class InMemoryAcceptorInstanceStore
     public InMemoryAcceptorInstanceStore snapshot()
     {
         return new InMemoryAcceptorInstanceStore( new HashMap<>(instances),
-                new ArrayBlockingQueue<>( currentInstances.size()+currentInstances.remainingCapacity(), false, currentInstances ),
+                new ArrayBlockingQueue<>( currentInstances.size() + currentInstances.remainingCapacity(), false,
+                        currentInstances ),
                 lastDeliveredInstanceId );
     }
 

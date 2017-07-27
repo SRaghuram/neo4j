@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -65,15 +65,30 @@ public class DijkstraPriorityQueueFibonacciImpl<CostType> implements
         @Override
         public boolean equals( Object obj )
         {
-            if ( this == obj ) return true;
-            if ( obj == null ) return false;
-            if ( getClass() != obj.getClass() ) return false;
+            if ( this == obj )
+            {
+                return true;
+            }
+            if ( obj == null )
+            {
+                return false;
+            }
+            if ( getClass() != obj.getClass() )
+            {
+                return false;
+            }
             final HeapObject other = (HeapObject) obj;
             if ( node == null )
             {
-                if ( other.node != null ) return false;
+                if ( other.node != null )
+                {
+                    return false;
+                }
             }
-            else if ( !node.equals( other.node ) ) return false;
+            else if ( !node.equals( other.node ) )
+            {
+                return false;
+            }
             return true;
         }
 
@@ -86,20 +101,13 @@ public class DijkstraPriorityQueueFibonacciImpl<CostType> implements
 
     Map<Node,FibonacciHeap<HeapObject>.FibonacciHeapNode> heapNodes = new HashMap<Node,FibonacciHeap<HeapObject>.FibonacciHeapNode>();
     FibonacciHeap<HeapObject> heap;
-    Comparator<CostType> costComparator;
 
     public DijkstraPriorityQueueFibonacciImpl(
         final Comparator<CostType> costComparator )
     {
         super();
-        this.costComparator = costComparator;
-        heap = new FibonacciHeap<HeapObject>( new Comparator<HeapObject>()
-        {
-            public int compare( HeapObject o1, HeapObject o2 )
-            {
-                return costComparator.compare( o1.getCost(), o2.getCost() );
-            }
-        } );
+        heap = new FibonacciHeap<>(
+                (Comparator<HeapObject>) ( o1, o2 ) -> costComparator.compare( o1.getCost(), o2.getCost() ) );
     }
 
     public void decreaseValue( Node node, CostType newValue )

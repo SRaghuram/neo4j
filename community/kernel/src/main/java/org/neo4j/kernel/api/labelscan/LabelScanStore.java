@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,13 +21,13 @@ package org.neo4j.kernel.api.labelscan;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.kernel.api.direct.AllEntriesLabelScanReader;
-import org.neo4j.kernel.api.exceptions.index.IndexCapacityExceededException;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.impl.store.UnderlyingStorageException;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.unsafe.batchinsert.LabelScanWriter;
+import org.neo4j.storageengine.api.schema.LabelScanReader;
 
 /**
  * Stores label-->nodes mappings. It receives updates in the form of condensed label->node transaction data
@@ -35,9 +35,66 @@ import org.neo4j.unsafe.batchinsert.LabelScanWriter;
  */
 public interface LabelScanStore extends Lifecycle
 {
+    interface Monitor
+    {
+        Monitor EMPTY = new Monitor.Adaptor();
+
+        class Adaptor implements Monitor
+        {
+            @Override
+            public void init()
+            {   // empty
+            }
+
+            @Override
+            public void noIndex()
+            {   // empty
+            }
+
+            @Override
+            public void lockedIndex( Exception e )
+            {   // empty
+            }
+
+            @Override
+            public void notValidIndex()
+            {   // empty
+            }
+
+            @Override
+            public void rebuilding()
+            {   // empty
+            }
+
+            @Override
+            public void rebuilt( long roughNodeCount )
+            {   // empty
+            }
+
+            @Override
+            public void recoveryCompleted( Map<String,Object> data )
+            {   // empty
+            }
+        }
+
+        void init();
+
+        void noIndex();
+
+        void lockedIndex( Exception e );
+
+        void notValidIndex();
+
+        void rebuilding();
+
+        void rebuilt( long roughNodeCount );
+
+        void recoveryCompleted( Map<String,Object> data );
+    }
+
     /**
-     * From the point a {@link LabelScanReader} is created till it's {@link LabelScanReader#close() closed} the contents it
-     * returns cannot change, i.e. it honors repeatable reads.
+     * From the point a {@link LabelScanReader} is created till it's {@link LabelScanReader#close() closed} the
+     * contents it returns cannot change, i.e. it honors repeatable reads.
      *
      * @return a {@link LabelScanReader} capable of retrieving nodes for labels.
      */
@@ -45,6 +102,8 @@ public interface LabelScanStore extends Lifecycle
 
     /**
      * Acquire a writer for updating the store.
+     *
+     * @return {@link LabelScanWriter} which can modify the {@link LabelScanStore}.
      */
     LabelScanWriter newWriter();
 
@@ -55,11 +114,22 @@ public interface LabelScanStore extends Lifecycle
      *
      * @throws UnderlyingStorageException if there was a problem forcing the state to persistent storage.
      */
-    void force() throws UnderlyingStorageException;
+    void force( IOLimiter limiter ) throws UnderlyingStorageException;
 
-    AllEntriesLabelScanReader newAllEntriesReader();
+    /**
+     * Acquire a reader for all {@link NodeLabelRange node label} ranges.
+     *
+     * @return the {@link AllEntriesLabelScanReader reader}.
+     */
+    AllEntriesLabelScanReader allNodeLabelRanges();
 
     ResourceIterator<File> snapshotStoreFiles() throws IOException;
+
+    /**
+     * @return {@code true} if there's no data at all in this label scan store, otherwise {@code false}.
+     * @throws IOException on I/O error.
+     */
+    boolean isEmpty() throws IOException;
 
     /**
      * Initializes the store. After this has been called recovery updates can be processed.
@@ -71,7 +141,7 @@ public interface LabelScanStore extends Lifecycle
      * Starts the store. After this has been called updates can be processed.
      */
     @Override
-    void start() throws IOException, IndexCapacityExceededException;
+    void start() throws IOException;
 
     @Override
     void stop() throws IOException;
@@ -81,4 +151,22 @@ public interface LabelScanStore extends Lifecycle
      */
     @Override
     void shutdown() throws IOException;
+
+    /**
+     * Drops any persistent storage backing this store.
+     *
+     * @throws IOException on I/O error.
+     */
+    void drop() throws IOException;
+
+    /**
+     * @return whether or not this index is read-only.
+     */
+    boolean isReadOnly();
+
+    /**
+     * @return whether or not there's an existing store present for this label scan store.
+     * @throws IOException on I/O error checking the presence of a store.
+     */
+    boolean hasStore() throws IOException;
 }

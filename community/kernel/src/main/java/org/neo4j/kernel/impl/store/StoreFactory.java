@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,14 +21,16 @@ package org.neo4j.kernel.impl.store;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.OpenOption;
 
-import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.DefaultIdGeneratorFactory;
-import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.store.format.RecordFormatPropertyConfigurator;
+import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
+import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.logging.LogProvider;
 
 /**
@@ -59,74 +61,100 @@ public class StoreFactory
     public static final String RELATIONSHIP_GROUP_STORE_NAME = ".relationshipgroupstore.db";
     public static final String COUNTS_STORE = ".counts.db";
 
-    private Config config;
-    @SuppressWarnings( "deprecation" )
-    private IdGeneratorFactory idGeneratorFactory;
-    private FileSystemAbstraction fileSystemAbstraction;
-    private LogProvider logProvider;
-    private File neoStoreFileName;
-    private PageCache pageCache;
+    private final Config config;
+    private final IdGeneratorFactory idGeneratorFactory;
+    private final FileSystemAbstraction fileSystemAbstraction;
+    private final LogProvider logProvider;
+    private final File neoStoreFileName;
+    private final PageCache pageCache;
+    private final RecordFormats recordFormats;
+    private final OpenOption[] openOptions;
 
-    public StoreFactory()
+    public StoreFactory( File storeDir, PageCache pageCache, FileSystemAbstraction fileSystem, LogProvider logProvider )
     {
+        this( storeDir, Config.defaults(), new DefaultIdGeneratorFactory( fileSystem ), pageCache, fileSystem,
+                logProvider );
     }
 
-    @SuppressWarnings( "deprecation" )
-    public StoreFactory( FileSystemAbstraction fileSystem, File storeDir, PageCache pageCache, LogProvider logProvider )
+    public StoreFactory( File storeDir, PageCache pageCache, FileSystemAbstraction fileSystem,
+            RecordFormats recordFormats, LogProvider logProvider )
     {
-        this( storeDir, new Config(), new DefaultIdGeneratorFactory( fileSystem ), pageCache, fileSystem, logProvider );
+        this( storeDir, Config.defaults(), new DefaultIdGeneratorFactory( fileSystem ), pageCache, fileSystem,
+                recordFormats, logProvider );
     }
 
-    public StoreFactory( File storeDir, Config config,
-            @SuppressWarnings( "deprecation" ) IdGeneratorFactory idGeneratorFactory, PageCache pageCache,
+    public StoreFactory( File storeDir, Config config, IdGeneratorFactory idGeneratorFactory, PageCache pageCache,
             FileSystemAbstraction fileSystemAbstraction, LogProvider logProvider )
     {
+        this( storeDir, config, idGeneratorFactory, pageCache, fileSystemAbstraction,
+                RecordFormatSelector.selectForStoreOrConfig( config, storeDir, fileSystemAbstraction, pageCache, logProvider ),
+                logProvider );
+    }
+
+    public StoreFactory( File storeDir, Config config, IdGeneratorFactory idGeneratorFactory, PageCache pageCache,
+            FileSystemAbstraction fileSystemAbstraction, RecordFormats recordFormats, LogProvider logProvider )
+    {
+        this( storeDir, MetaDataStore.DEFAULT_NAME, config, idGeneratorFactory, pageCache, fileSystemAbstraction,
+                recordFormats, logProvider );
+    }
+
+    public StoreFactory( File storeDir, String storeName, Config config, IdGeneratorFactory idGeneratorFactory,
+            PageCache pageCache, FileSystemAbstraction fileSystemAbstraction, RecordFormats recordFormats,
+            LogProvider logProvider, OpenOption... openOptions )
+    {
         this.config = config;
         this.idGeneratorFactory = idGeneratorFactory;
         this.fileSystemAbstraction = fileSystemAbstraction;
-        setLogProvider( logProvider );
-        setStoreDir( storeDir );
-        this.pageCache = pageCache;
-    }
+        this.recordFormats = recordFormats;
+        this.openOptions = openOptions;
+        new RecordFormatPropertyConfigurator( recordFormats, config ).configure();
 
-    public void setConfig( Config config )
-    {
-        this.config = config;
-    }
-
-    public void setIdGeneratorFactory( IdGeneratorFactory idGeneratorFactory )
-    {
-        this.idGeneratorFactory = idGeneratorFactory;
-    }
-
-    public void setFileSystemAbstraction( FileSystemAbstraction fileSystemAbstraction )
-    {
-        this.fileSystemAbstraction = fileSystemAbstraction;
-    }
-
-    public void setLogProvider( LogProvider logProvider )
-    {
         this.logProvider = logProvider;
-    }
-
-    public void setStoreDir( File storeDir )
-    {
-        this.neoStoreFileName = new File( storeDir, MetaDataStore.DEFAULT_NAME );
-    }
-
-    public void setPageCache( PageCache pageCache )
-    {
+        this.neoStoreFileName = new File( storeDir, storeName );
         this.pageCache = pageCache;
     }
 
-    public NeoStores openNeoStores( boolean createIfNotExist )
+    /**
+     * Open {@link NeoStores} with all possible stores. If some store does not exist it will <b>not</b> be created.
+     * @return container with all opened stores
+     */
+    public NeoStores openAllNeoStores()
     {
-        return openNeoStores( createIfNotExist, true );
+        return openNeoStores( false, StoreType.values() );
     }
 
-    public NeoStores openNeoStores( boolean createIfNotExist, boolean eagerlyInitializeStores )
+    /**
+     * Open {@link NeoStores} with all possible stores with a possibility to create store if it not exist.
+     * @param createStoreIfNotExists - should store be created if it's not exist
+     * @return container with all opened stores
+     */
+    public NeoStores openAllNeoStores( boolean createStoreIfNotExists )
     {
-        if ( createIfNotExist )
+        return openNeoStores( createStoreIfNotExists, StoreType.values() );
+    }
+
+    /**
+     * Open {@link NeoStores} for requested and store types. If requested store depend from non request store,
+     * it will be automatically opened as well.
+     * If some store does not exist it will <b>not</b> be created.
+     * @param storeTypes - types of stores to be opened.
+     * @return container with opened stores
+     */
+    public NeoStores openNeoStores( StoreType... storeTypes )
+    {
+        return openNeoStores( false, storeTypes );
+    }
+
+    /**
+     * Open {@link NeoStores} for requested and store types. If requested store depend from non request store,
+     * it will be automatically opened as well.
+     * @param createStoreIfNotExists - should store be created if it's not exist
+     * @param storeTypes - types of stores to be opened.
+     * @return container with opened stores
+     */
+    public NeoStores openNeoStores( boolean createStoreIfNotExists, StoreType... storeTypes )
+    {
+        if ( createStoreIfNotExists )
         {
             try
             {
@@ -138,15 +166,7 @@ public class StoreFactory
                         "Could not create store directory: " + neoStoreFileName.getParent(), e );
             }
         }
-        return new NeoStores( neoStoreFileName, config, idGeneratorFactory, pageCache,
-                logProvider,
-                fileSystemAbstraction,
-                createIfNotExist, eagerlyInitializeStores );
-    }
-
-    public abstract static class Configuration
-    {
-        public static final Setting<Integer> string_block_size = GraphDatabaseSettings.string_block_size;
-        public static final Setting<Integer> array_block_size = GraphDatabaseSettings.array_block_size;
+        return new NeoStores( neoStoreFileName, config, idGeneratorFactory, pageCache, logProvider,
+                fileSystemAbstraction, recordFormats, createStoreIfNotExists, storeTypes, openOptions );
     }
 }

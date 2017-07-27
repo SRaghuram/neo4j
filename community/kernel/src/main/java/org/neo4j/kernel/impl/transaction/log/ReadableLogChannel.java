@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,22 +19,7 @@
  */
 package org.neo4j.kernel.impl.transaction.log;
 
-import java.io.Closeable;
-import java.io.IOException;
-
-public interface ReadableLogChannel extends PositionAwareChannel, Closeable
+public interface ReadableLogChannel
+        extends ReadableClosablePositionAwareChannel, VersionableLog
 {
-    byte get() throws IOException, ReadPastEndException;
-
-    short getShort() throws IOException, ReadPastEndException;
-
-    int getInt() throws IOException, ReadPastEndException;
-
-    long getLong() throws IOException, ReadPastEndException;
-
-    float getFloat() throws IOException, ReadPastEndException;
-
-    double getDouble() throws IOException, ReadPastEndException;
-
-    void get( byte[] bytes, int length ) throws IOException, ReadPastEndException;
 }

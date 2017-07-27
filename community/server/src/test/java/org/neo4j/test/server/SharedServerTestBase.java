@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,11 +25,12 @@ import org.junit.Rule;
 
 import java.util.concurrent.Callable;
 
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.helpers.ServerHelper;
-import org.neo4j.test.SuppressOutput;
+import org.neo4j.test.rule.SuppressOutput;
 
-import static org.neo4j.test.SuppressOutput.suppressAll;
+import static org.neo4j.test.rule.SuppressOutput.suppressAll;
 
 public class SharedServerTestBase
 {
@@ -42,8 +43,8 @@ public class SharedServerTestBase
 
     private static NeoServer server;
 
-	@Rule
-	public SuppressOutput suppressOutput = suppressAll();
+    @Rule
+    public SuppressOutput suppressOutput = suppressAll();
 
     @BeforeClass
     public static void allocateServer() throws Throwable
@@ -56,6 +57,7 @@ public class SharedServerTestBase
                 @Override
                 public Void call() throws Exception
                 {
+                    ServerHolder.setServerBuilderProperty( GraphDatabaseSettings.cypher_hints_error.name(), "true" );
                     server = ServerHolder.allocate();
                     ServerHelper.cleanTheDatabase( server );
                     return null;

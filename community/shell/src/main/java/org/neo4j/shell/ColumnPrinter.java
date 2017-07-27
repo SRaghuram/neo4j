@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -54,7 +54,7 @@ public class ColumnPrinter
                     this.columns.size() );
         }
     }
-    
+
     public void addRaw( String string )
     {
         rawColumn.add( string );
@@ -87,7 +87,7 @@ public class ColumnPrinter
         protected final List<String> cells = new ArrayList<String>();
         protected final String prefix;
 
-        public Column( String prefix )
+        Column( String prefix )
         {
             this.prefix = prefix;
         }
@@ -110,10 +110,10 @@ public class ColumnPrinter
             return value.length() > 0;
         }
     }
-    
+
     private static class RawColumn extends Column
     {
-        public RawColumn( int indentation )
+        RawColumn( int indentation )
         {
             super( multiply( " ", indentation ) );
         }

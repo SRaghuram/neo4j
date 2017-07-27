@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,6 +27,7 @@ import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 
+import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.server.configuration.ServerSettings;
 
@@ -36,7 +37,6 @@ public class HttpConnectorFactory
 
     public HttpConnectorFactory( Config config )
     {
-
         this.configuration = config;
     }
 
@@ -53,13 +53,13 @@ public class HttpConnectorFactory
         return httpConfig;
     }
 
-    public ServerConnector createConnector( Server server, String host, int port, JettyThreadCalculator jettyThreadCalculator )
+    public ServerConnector createConnector( Server server, ListenSocketAddress address, JettyThreadCalculator jettyThreadCalculator )
     {
         ConnectionFactory httpFactory = createHttpConnectionFactory();
-        return createConnector(server, host, port, jettyThreadCalculator, httpFactory );
+        return createConnector(server, address, jettyThreadCalculator, httpFactory );
     }
 
-    public ServerConnector createConnector( Server server, String host, int port, JettyThreadCalculator jettyThreadCalculator, ConnectionFactory... httpFactories )
+    public ServerConnector createConnector( Server server, ListenSocketAddress address, JettyThreadCalculator jettyThreadCalculator, ConnectionFactory... httpFactories )
     {
         int acceptors = jettyThreadCalculator.getAcceptors();
         int selectors = jettyThreadCalculator.getSelectors();
@@ -71,8 +71,8 @@ public class HttpConnectorFactory
         // TCP backlog, per socket, 50 is the default, consider adapting if needed
         connector.setAcceptQueueSize( 50 );
 
-        connector.setHost( host );
-        connector.setPort( port );
+        connector.setHost( address.getHostname() );
+        connector.setPort( address.getPort() );
 
         return connector;
     }

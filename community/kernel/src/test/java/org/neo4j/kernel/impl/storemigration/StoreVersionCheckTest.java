@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,17 +21,19 @@ package org.neo4j.kernel.impl.storemigration;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.neo4j.helpers.UTF8;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.test.EphemeralFileSystemRule;
-import org.neo4j.test.PageCacheRule;
+import org.neo4j.string.UTF8;
+import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -40,17 +42,20 @@ import static org.junit.Assert.assertTrue;
 
 public class StoreVersionCheckTest
 {
+    private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    private final TestDirectory directory = TestDirectory.testDirectory( getClass() );
+    private final PageCacheRule pageCacheRule = new PageCacheRule();
+
     @Rule
-    public final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
-    @Rule
-    public final PageCacheRule pageCacheRule = new PageCacheRule();
+    public final RuleChain ruleChain = RuleChain.outerRule( directory )
+                    .around( fileSystemRule ).around( pageCacheRule );
 
     @Test
     public void shouldFailIfFileDoesNotExist()
     {
         // given
-        File missingFile = new File("/you/will/never/find/me");
-        PageCache pageCache = pageCacheRule.getPageCache( fs.get() );
+        File missingFile = new File( directory.directory(), "missing-file" );
+        PageCache pageCache = pageCacheRule.getPageCache( fileSystemRule.get() );
         StoreVersionCheck storeVersionCheck = new StoreVersionCheck( pageCache );
 
         // when
@@ -66,8 +71,8 @@ public class StoreVersionCheckTest
     public void shouldReportShortFileDoesNotHaveSpecifiedVersion() throws IOException
     {
         // given
-        File shortFile = fileContaining( fs.get(), "nothing interesting" );
-        StoreVersionCheck storeVersionCheck = new StoreVersionCheck( pageCacheRule.getPageCache( fs.get() ) );
+        File shortFile = fileContaining( fileSystemRule.get(), "nothing interesting" );
+        StoreVersionCheck storeVersionCheck = new StoreVersionCheck( pageCacheRule.getPageCache( fileSystemRule.get() ) );
 
         // when
         StoreVersionCheck.Result result = storeVersionCheck.hasVersion( shortFile, "version" );
@@ -82,9 +87,9 @@ public class StoreVersionCheckTest
     public void shouldReportFileWithIncorrectVersion() throws IOException
     {
         // given
-        File neoStore = emptyFile( fs.get() );
+        File neoStore = emptyFile( fileSystemRule.get() );
         long v1 = MetaDataStore.versionStringToLong( "V1" );
-        PageCache pageCache = pageCacheRule.getPageCache( fs.get() );
+        PageCache pageCache = pageCacheRule.getPageCache( fileSystemRule.get() );
         MetaDataStore.setRecord( pageCache, neoStore, MetaDataStore.Position.STORE_VERSION, v1 );
         StoreVersionCheck storeVersionCheck = new StoreVersionCheck( pageCache );
 
@@ -93,7 +98,7 @@ public class StoreVersionCheckTest
 
         // then
         assertFalse( result.outcome.isSuccessful() );
-        assertEquals( StoreVersionCheck.Result.Outcome.unexpectedUpgradingStoreVersion, result.outcome );
+        assertEquals( StoreVersionCheck.Result.Outcome.unexpectedStoreVersion, result.outcome );
         assertEquals( "V1", result.actualVersion );
     }
 
@@ -101,9 +106,9 @@ public class StoreVersionCheckTest
     public void shouldReportFileWithCorrectVersion() throws IOException
     {
         // given
-        File neoStore = emptyFile( fs.get() );
+        File neoStore = emptyFile( fileSystemRule.get() );
         long v1 = MetaDataStore.versionStringToLong( "V1" );
-        PageCache pageCache = pageCacheRule.getPageCache( fs.get() );
+        PageCache pageCache = pageCacheRule.getPageCache( fileSystemRule.get() );
         MetaDataStore.setRecord( pageCache, neoStore, MetaDataStore.Position.STORE_VERSION, v1 );
         StoreVersionCheck storeVersionCheck = new StoreVersionCheck( pageCache );
 
@@ -118,15 +123,17 @@ public class StoreVersionCheckTest
 
     private File emptyFile( FileSystemAbstraction fs ) throws IOException
     {
-        File shortFile = new File( "shortFile" );
-        fs.create( shortFile );
+        File shortFile = directory.file( "empty" );
+        fs.deleteFile( shortFile );
+        fs.create( shortFile ).close();
         return shortFile;
     }
 
     private File fileContaining( FileSystemAbstraction fs, String content ) throws IOException
     {
-        File shortFile = new File( "shortFile" );
-        try ( OutputStream outputStream = fs.openAsOutputStream( shortFile, true ) )
+        File shortFile = directory.file( "file" );
+        fs.deleteFile( shortFile );
+        try ( OutputStream outputStream = fs.openAsOutputStream( shortFile, false ) )
         {
             outputStream.write( UTF8.encode( content ) );
             return shortFile;

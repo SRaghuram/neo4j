@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -73,7 +73,7 @@ public class FormattedLogProviderTest
         log.info( "Terminator 2" );
 
         // Then
-        assertThat( writer.toString(), equalTo( format( "1984-10-26 04:23:24.343+0000 INFO  [j.i.StringWriter] Terminator 2%n" ) ) );
+        assertThat( writer.toString(), equalTo( format( "1984-10-26 04:23:24.343+0000 INFO [j.i.StringWriter] Terminator 2%n" ) ) );
     }
 
     @Test

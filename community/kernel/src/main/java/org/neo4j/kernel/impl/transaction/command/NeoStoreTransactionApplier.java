@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,15 +21,14 @@ package org.neo4j.kernel.impl.transaction.command;
 
 import java.io.IOException;
 
+import org.neo4j.kernel.impl.api.TransactionApplier;
 import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
 import org.neo4j.kernel.impl.locking.LockGroup;
 import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.NodeStore;
-import org.neo4j.kernel.impl.store.record.PropertyConstraintRule;
 import org.neo4j.kernel.impl.store.SchemaStore;
+import org.neo4j.kernel.impl.store.record.ConstraintRule;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
-import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 /**
  * Visits commands targeted towards the {@link NeoStores} and update corresponding stores.
@@ -39,23 +38,28 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
  * For other modes of application, like recovery or external there are other, added functionality, decorated
  * outside this applier.
  */
-public class NeoStoreTransactionApplier extends CommandHandler.Adapter
+public class NeoStoreTransactionApplier extends TransactionApplier.Adapter
 {
-    private final NeoStores neoStores;
-    // Ideally we don't want any cache access in here, but it is how it is. At least we try to minimize use of it
-    private final CacheAccessBackDoor cacheAccess;
-    private final LockService lockService;
     private final LockGroup lockGroup;
     private final long transactionId;
+    private final NeoStores neoStores;
+    private final CacheAccessBackDoor cacheAccess;
+    private LockService lockService;
 
-    public NeoStoreTransactionApplier( NeoStores store, CacheAccessBackDoor cacheAccess,
-                                       LockService lockService, LockGroup lockGroup, long transactionId )
+    public NeoStoreTransactionApplier( NeoStores neoStores, CacheAccessBackDoor cacheAccess, LockService lockService,
+            long transactionId, LockGroup lockGroup )
     {
-        this.neoStores = store;
-        this.cacheAccess = cacheAccess;
-        this.lockService = lockService;
-        this.transactionId = transactionId;
         this.lockGroup = lockGroup;
+        this.transactionId = transactionId;
+        this.lockService = lockService;
+        this.neoStores = neoStores;
+        this.cacheAccess = cacheAccess;
+    }
+
+    @Override
+    public void close() throws Exception
+    {
+        lockGroup.close();
     }
 
     @Override
@@ -65,19 +69,16 @@ public class NeoStoreTransactionApplier extends CommandHandler.Adapter
         lockGroup.add( lockService.acquireNodeLock( command.getKey(), LockService.LockType.WRITE_LOCK ) );
 
         // update store
-        NodeStore nodeStore = neoStores.getNodeStore();
-        nodeStore.updateRecord( command.getAfter() );
-        // getDynamicLabelRecords will contain even deleted records
-        nodeStore.updateDynamicLabelRecords( command.getAfter().getDynamicLabelRecords() );
-
+        neoStores.getNodeStore().updateRecord( command.getAfter() );
         return false;
     }
 
     @Override
     public boolean visitRelationshipCommand( Command.RelationshipCommand command ) throws IOException
     {
-        RelationshipRecord record = command.getRecord();
-        neoStores.getRelationshipStore().updateRecord( record );
+        lockGroup.add( lockService.acquireRelationshipLock( command.getKey(), LockService.LockType.WRITE_LOCK ) );
+
+        neoStores.getRelationshipStore().updateRecord( command.getAfter() );
         return false;
     }
 
@@ -85,10 +86,13 @@ public class NeoStoreTransactionApplier extends CommandHandler.Adapter
     public boolean visitPropertyCommand( Command.PropertyCommand command ) throws IOException
     {
         // acquire lock
-        long nodeId = command.getNodeId();
-        if ( nodeId != -1 )
+        if ( command.getNodeId() != -1 )
         {
-            lockGroup.add( lockService.acquireNodeLock( nodeId, LockService.LockType.WRITE_LOCK ) );
+            lockGroup.add( lockService.acquireNodeLock( command.getNodeId(), LockService.LockType.WRITE_LOCK ) );
+        }
+        else if ( command.getRelId() != -1 )
+        {
+            lockGroup.add( lockService.acquireRelationshipLock( command.getRelId(), LockService.LockType.WRITE_LOCK ) );
         }
 
         // track the dynamic value record high ids
@@ -100,28 +104,28 @@ public class NeoStoreTransactionApplier extends CommandHandler.Adapter
     @Override
     public boolean visitRelationshipGroupCommand( Command.RelationshipGroupCommand command ) throws IOException
     {
-        neoStores.getRelationshipGroupStore().updateRecord( command.getRecord() );
+        neoStores.getRelationshipGroupStore().updateRecord( command.getAfter() );
         return false;
     }
 
     @Override
     public boolean visitRelationshipTypeTokenCommand( Command.RelationshipTypeTokenCommand command ) throws IOException
     {
-        neoStores.getRelationshipTypeTokenStore().updateRecord( command.getRecord() );
+        neoStores.getRelationshipTypeTokenStore().updateRecord( command.getAfter() );
         return false;
     }
 
     @Override
     public boolean visitLabelTokenCommand( Command.LabelTokenCommand command ) throws IOException
     {
-        neoStores.getLabelTokenStore().updateRecord( command.getRecord() );
+        neoStores.getLabelTokenStore().updateRecord( command.getAfter() );
         return false;
     }
 
     @Override
     public boolean visitPropertyKeyTokenCommand( Command.PropertyKeyTokenCommand command ) throws IOException
     {
-        neoStores.getPropertyKeyTokenStore().updateRecord( command.getRecord() );
+        neoStores.getPropertyKeyTokenStore().updateRecord( command.getAfter() );
         return false;
     }
 
@@ -144,7 +148,7 @@ public class NeoStoreTransactionApplier extends CommandHandler.Adapter
             schemaStore.updateRecord( record );
         }
 
-        if ( command.getSchemaRule() instanceof PropertyConstraintRule )
+        if ( command.getSchemaRule() instanceof ConstraintRule )
         {
             switch ( command.getMode() )
             {
@@ -173,7 +177,7 @@ public class NeoStoreTransactionApplier extends CommandHandler.Adapter
     @Override
     public boolean visitNeoStoreCommand( Command.NeoStoreCommand command ) throws IOException
     {
-        neoStores.getMetaDataStore().setGraphNextProp( command.getRecord().getNextProp() );
+        neoStores.getMetaDataStore().setGraphNextProp( command.getAfter().getNextProp() );
         return false;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,20 +31,22 @@ public enum ElectionMessage
     implements MessageType
 {
     created,join,leave,
-    demote, performRoleElections, promote, vote, electionTimeout, voted;
+    demote, performRoleElections, vote, electionTimeout, voted;
 
     public static class VotedData
         implements Serializable
     {
-        private final String role;
-        private final InstanceId instanceId;
-        private final Comparable<Object> voteCredentials;
+        private static final long serialVersionUID = 6115474263667086327L;
 
-        public VotedData( String role, InstanceId instanceId, Comparable<Object> voteCredentials )
+        private String role;
+        private InstanceId instanceId;
+        private ElectionCredentials voteCredentials;
+
+        public VotedData( String role, InstanceId instanceId, ElectionCredentials electionCredentials )
         {
             this.role = role;
             this.instanceId = instanceId;
-            this.voteCredentials = voteCredentials;
+            this.voteCredentials = electionCredentials;
         }
 
         public String getRole()
@@ -57,11 +59,11 @@ public enum ElectionMessage
             return instanceId;
         }
 
-        public Comparable<Object> getVoteCredentials()
+        public ElectionCredentials getElectionCredentials()
         {
             return voteCredentials;
         }
-        
+
         @Override
         public String toString()
         {
@@ -77,11 +79,13 @@ public enum ElectionMessage
 
     public static class VersionedVotedData extends VotedData
     {
-        private final long version;
+        private static final long serialVersionUID = -3795472557085578559L;
 
-        public VersionedVotedData( String role, InstanceId instanceId, Comparable<Object> voteCredentials, long version )
+        private long version;
+
+        public VersionedVotedData( String role, InstanceId instanceId, ElectionCredentials electionCredentials, long version )
         {
-            super( role, instanceId, voteCredentials );
+            super( role, instanceId, electionCredentials );
             this.version = version;
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,24 +19,23 @@
  */
 package org.neo4j.server.helpers;
 
-import static org.neo4j.server.rest.web.RestfulGraphDatabase.PATH_AUTO_INDEX;
+import com.sun.jersey.api.client.Client;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeMatcher;
 
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeMatcher;
-import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.rest.JaxRsResponse;
 import org.neo4j.server.rest.RestRequest;
 import org.neo4j.server.rest.domain.GraphDbHelper;
 import org.neo4j.server.rest.web.RestfulGraphDatabase;
 
-import com.sun.jersey.api.client.Client;
+import static org.neo4j.server.rest.web.RestfulGraphDatabase.PATH_AUTO_INDEX;
 
 public final class FunctionalTestHelper
 {
@@ -56,7 +55,7 @@ public final class FunctionalTestHelper
         this.server = server;
         this.request = new RestRequest(server.baseUri().resolve("db/data/"));
     }
-    
+
     public static Matcher<String[]> arrayContains( final String element )
     {
         return new TypeSafeMatcher<String[]>()
@@ -81,7 +80,10 @@ public final class FunctionalTestHelper
                 {
                     if ( element == null )
                     {
-                        if ( string == null ) return true;
+                        if ( string == null )
+                        {
+                            return true;
+                        }
                     }
                     else if ( element.equals( string ) )
                     {
@@ -97,7 +99,7 @@ public final class FunctionalTestHelper
     {
         return helper;
     }
-    
+
     public String dataUri()
     {
         return server.baseUri().toString() + "db/data/";
@@ -138,11 +140,6 @@ public final class FunctionalTestHelper
         return relationshipUri( id ) + "/properties";
     }
 
-    String relationshipPropertyUri( long id, String key )
-    {
-        return relationshipPropertiesUri( id ) + "/" + key;
-    }
-
     public String relationshipsUri( long nodeId, String dir, String... types )
     {
         StringBuilder typesString = new StringBuilder();
@@ -157,16 +154,6 @@ public final class FunctionalTestHelper
     public String indexUri()
     {
         return dataUri() + "index/";
-    }
-    
-    String nodeAutoIndexUri()
-    {
-        return indexUri() + "auto/node/";
-    }
-    
-    String relationshipAutoIndexUri()
-    {
-        return indexUri() + "auto/relationship/";
     }
 
     public String nodeIndexUri()
@@ -189,12 +176,11 @@ public final class FunctionalTestHelper
     {
         return nodeIndexUri() + indexName;
     }
-    
+
     public String indexNodeUri( String indexName, String key, Object value )
     {
         return indexNodeUri( indexName ) + "/" + key + "/" + value;
     }
-    
 
     public String indexRelationshipUri( String indexName )
     {
@@ -211,68 +197,21 @@ public final class FunctionalTestHelper
         return dataUri() + "ext";
     }
 
-    String extensionUri( String name )
+    public JaxRsResponse get(String path)
     {
-        return extensionUri() + "/" + name;
-    }
-
-    String graphdbExtensionUri( String name, String method )
-    {
-        return extensionUri( name ) + "/graphdb/" + method;
-    }
-
-    String nodeExtensionUri( String name, String method, long id )
-    {
-        return extensionUri( name ) + "/node/" + id + "/" + method;
-    }
-
-    String relationshipExtensionUri( String name, String method, long id )
-    {
-        return extensionUri( name ) + "/relationship/" + id + "/" + method;
-    }
-
-    public GraphDatabaseAPI getDatabase()
-    {
-        return server.getDatabase().getGraph();
-    }
-
-    public String webAdminUri()
-    {
-        // the trailing slash prevents a 302 redirect
-        return server.baseUri()
-                .toString() + "webadmin" + "/";
-    }
-
-    public JaxRsResponse get(String path) {
         return request.get(path);
-    }
-
-    public JaxRsResponse get(String path, String data) {
-        return request.get(path, data);
-    }
-
-    public JaxRsResponse delete(String path) {
-        return request.delete(path);
-    }
-
-    public JaxRsResponse post(String path, String data) {
-        return request.post(path, data);
-    }
-
-    public void put(String path, String data) {
-        request.put(path, data);
     }
 
     public long getNodeIdFromUri( String nodeUri )
     {
-        return Long.valueOf( nodeUri.substring( nodeUri.lastIndexOf( "/" ) +1 , nodeUri.length() ) );
+        return Long.valueOf( nodeUri.substring( nodeUri.lastIndexOf( "/" ) + 1, nodeUri.length() ) );
     }
 
     public long getRelationshipIdFromUri( String relationshipUri )
     {
         return getNodeIdFromUri( relationshipUri );
     }
-    
+
     public Map<String, Object> removeAnyAutoIndex( Map<String, Object> map )
     {
         Map<String, Object> result = new HashMap<String, Object>();
@@ -280,10 +219,12 @@ public final class FunctionalTestHelper
         {
             Map<?, ?> innerMap = (Map<?,?>) entry.getValue();
             String template = innerMap.get( "template" ).toString();
-            if ( !template.contains( PATH_AUTO_INDEX.replace("{type}", RestfulGraphDatabase.NODE_AUTO_INDEX_TYPE) ) && 
-                 !template.contains( PATH_AUTO_INDEX.replace("{type}", RestfulGraphDatabase.RELATIONSHIP_AUTO_INDEX_TYPE) ) && 
+            if ( !template.contains( PATH_AUTO_INDEX.replace("{type}", RestfulGraphDatabase.NODE_AUTO_INDEX_TYPE) ) &&
+                 !template.contains( PATH_AUTO_INDEX.replace("{type}", RestfulGraphDatabase.RELATIONSHIP_AUTO_INDEX_TYPE) ) &&
                  !template.contains( "_auto_" ) )
+            {
                 result.put( entry.getKey(), entry.getValue() );
+            }
         }
         return result;
     }
@@ -292,4 +233,5 @@ public final class FunctionalTestHelper
     {
         return server.baseUri();
     }
+
 }

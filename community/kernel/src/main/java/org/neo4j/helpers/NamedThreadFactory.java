@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -71,6 +71,16 @@ public class NamedThreadFactory implements ThreadFactory
     public NamedThreadFactory( String threadNamePrefix, int priority, Monitor monitor )
     {
         this( threadNamePrefix, priority, monitor, false );
+    }
+
+    public NamedThreadFactory( String threadNamePrefix, int priority, boolean daemon )
+    {
+        this( threadNamePrefix, priority, NO_OP_MONITOR, daemon );
+    }
+
+    public NamedThreadFactory( String threadNamePrefix, boolean daemon )
+    {
+        this( threadNamePrefix, DEFAULT_THREAD_PRIORITY, NO_OP_MONITOR, daemon );
     }
 
     public NamedThreadFactory( String threadNamePrefix, int priority, Monitor monitor, boolean daemon )

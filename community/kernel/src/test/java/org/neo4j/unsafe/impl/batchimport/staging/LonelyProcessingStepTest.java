@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,7 +26,8 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.neo4j.test.SuppressOutput;
+import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.unsafe.impl.batchimport.Configuration;
 
 public class LonelyProcessingStepTest
 {
@@ -58,7 +59,7 @@ public class LonelyProcessingStepTest
 
         private volatile boolean panicOnEndUpstream = false;
 
-        public FaultyLonelyProcessingStepTest( List<Step<?>> pipeLine )
+        FaultyLonelyProcessingStepTest( List<Step<?>> pipeLine )
         {
             super( new StageExecution( "Faulty", Configuration.DEFAULT, pipeLine, 0 ),
                     "Faulty", Configuration.DEFAULT );

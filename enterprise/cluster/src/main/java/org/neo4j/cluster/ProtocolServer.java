@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,9 +28,9 @@ import org.neo4j.cluster.statemachine.StateMachineProxyFactory;
 import org.neo4j.cluster.statemachine.StateTransitionListener;
 import org.neo4j.cluster.timeout.Timeouts;
 import org.neo4j.helpers.Listeners;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 /**
  * A ProtocolServer ties together the underlying StateMachines with an understanding of ones
@@ -44,7 +44,7 @@ public class ProtocolServer
     private URI boundAt;
     protected StateMachineProxyFactory proxyFactory;
     protected final StateMachines stateMachines;
-    private Iterable<BindingListener> bindingListeners = Listeners.newListeners();
+    private final Listeners<BindingListener> bindingListeners = new Listeners<>();
     private Log msgLog;
 
     public ProtocolServer( InstanceId me, StateMachines stateMachines, LogProvider logProvider )
@@ -54,7 +54,7 @@ public class ProtocolServer
         this.msgLog = logProvider.getLog( getClass() );
 
         StateMachineConversations conversations = new StateMachineConversations(me);
-        proxyFactory = new StateMachineProxyFactory( stateMachines, conversations, me );
+        proxyFactory = new StateMachineProxyFactory( stateMachines, conversations, me, logProvider );
         stateMachines.addMessageProcessor( proxyFactory );
     }
 
@@ -67,7 +67,7 @@ public class ProtocolServer
     @Override
     public void addBindingListener( BindingListener listener )
     {
-        bindingListeners = Listeners.addListener( listener, bindingListeners );
+        bindingListeners.add( listener );
         try
         {
             if ( boundAt != null )
@@ -84,21 +84,14 @@ public class ProtocolServer
     @Override
     public void removeBindingListener( BindingListener listener )
     {
-        bindingListeners = Listeners.removeListener( listener, bindingListeners );
+        bindingListeners.remove( listener );
     }
 
-    public void listeningAt( final URI me )
+    public void listeningAt( URI me )
     {
         this.boundAt = me;
 
-        Listeners.notifyListeners( bindingListeners, new Listeners.Notification<BindingListener>()
-        {
-            @Override
-            public void notify( BindingListener listener )
-            {
-                listener.listeningAt( me );
-            }
-        } );
+        bindingListeners.notify( listener -> listener.listeningAt( me ) );
     }
 
     /**
@@ -131,7 +124,7 @@ public class ProtocolServer
     {
         StringBuilder builder = new StringBuilder();
         builder.append( "Instance URI: " ).append( boundAt.toString() ).append( "\n" );
-        for( StateMachine stateMachine : stateMachines.getStateMachines() )
+        for ( StateMachine stateMachine : stateMachines.getStateMachines() )
         {
             builder.append( "  " ).append( stateMachine ).append( "\n" );
         }

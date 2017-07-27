@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,9 +37,8 @@ class DeferredIndexedConflictResolution
     private PropertyStore propertyStore;
     private DuplicatePropertyRemover propertyRemover;
 
-    public DeferredIndexedConflictResolution( NodeRecord record, List<DuplicateCluster> duplicateClusters,
-                                              NodeStore nodeStore, IndexLookup indexLookup,
-                                              PropertyStore propertyStore, DuplicatePropertyRemover propertyRemover )
+    DeferredIndexedConflictResolution( NodeRecord record, List<DuplicateCluster> duplicateClusters, NodeStore nodeStore,
+            IndexLookup indexLookup, PropertyStore propertyStore, DuplicatePropertyRemover propertyRemover )
     {
         this.record = record;
         this.duplicateClusterList = duplicateClusters;

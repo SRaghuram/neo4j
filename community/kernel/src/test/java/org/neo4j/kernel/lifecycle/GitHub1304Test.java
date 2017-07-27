@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,12 +19,13 @@
  */
 package org.neo4j.kernel.lifecycle;
 
-import java.util.Collections;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.util.Collections;
+
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
 import org.neo4j.unsafe.batchinsert.BatchInserters;
 
@@ -32,11 +33,13 @@ public class GitHub1304Test
 {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
+    @Rule
+    public DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
 
     @Test
     public void givenBatchInserterWhenArrayPropertyUpdated4TimesThenShouldNotFail() throws Exception
     {
-        BatchInserter batchInserter = BatchInserters.inserter( folder.getRoot().getAbsolutePath() );
+        BatchInserter batchInserter = BatchInserters.inserter( folder.getRoot().getAbsoluteFile(), fileSystemRule.get() );
 
         long nodeId = batchInserter.createNode( Collections.<String, Object>emptyMap() );
 
@@ -47,5 +50,6 @@ public class GitHub1304Test
         }
 
         batchInserter.getNodeProperties( nodeId );   //fails here
+        batchInserter.shutdown();
     }
 }

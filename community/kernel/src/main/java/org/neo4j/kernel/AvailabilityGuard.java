@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,19 +19,18 @@
  */
 package org.neo4j.kernel;
 
+import java.time.Clock;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
-import org.neo4j.function.Function;
-import org.neo4j.helpers.Clock;
 import org.neo4j.helpers.Format;
 import org.neo4j.helpers.Listeners;
 import org.neo4j.helpers.collection.Iterables;
-
-import static org.neo4j.helpers.Listeners.notifyListeners;
-import static org.neo4j.helpers.collection.Iterables.join;
+import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.logging.Log;
 
 /**
  * The availability guard ensures that the database will only take calls when it is in an ok state.
@@ -42,11 +41,20 @@ import static org.neo4j.helpers.collection.Iterables.join;
  */
 public class AvailabilityGuard
 {
-    public class UnavailableException extends Exception
+    public static final String DATABASE_AVAILABLE_MSG = "Fulfilling of requirement makes database available: ";
+    public static final String DATABASE_UNAVAILABLE_MSG = "Requirement makes database unavailable: ";
+
+    public class UnavailableException extends Exception implements Status.HasStatus
     {
         public UnavailableException( String message )
         {
             super( message );
+        }
+
+        @Override
+        public Status status()
+        {
+            return Status.General.DatabaseUnavailable;
         }
     }
 
@@ -107,12 +115,14 @@ public class AvailabilityGuard
     private final AtomicInteger requirementCount = new AtomicInteger( 0 );
     private final Set<AvailabilityRequirement> blockingRequirements = new CopyOnWriteArraySet<>();
     private final AtomicBoolean isShutdown = new AtomicBoolean( false );
-    private Iterable<AvailabilityListener> listeners = Listeners.newListeners();
+    private final Listeners<AvailabilityListener> listeners = new Listeners<>();
     private final Clock clock;
+    private final Log log;
 
-    public AvailabilityGuard( Clock clock )
+    public AvailabilityGuard( Clock clock, Log log )
     {
         this.clock = clock;
+        this.log = log;
     }
 
     /**
@@ -131,14 +141,8 @@ public class AvailabilityGuard
         {
             if ( requirementCount.getAndIncrement() == 0 && !isShutdown.get() )
             {
-                notifyListeners( listeners, new Listeners.Notification<AvailabilityListener>()
-                {
-                    @Override
-                    public void notify( AvailabilityListener listener )
-                    {
-                        listener.unavailable();
-                    }
-                } );
+                log.info( DATABASE_UNAVAILABLE_MSG + requirement.description() );
+                listeners.notify( AvailabilityListener::unavailable );
             }
         }
     }
@@ -159,14 +163,8 @@ public class AvailabilityGuard
         {
             if ( requirementCount.getAndDecrement() == 1 && !isShutdown.get() )
             {
-                notifyListeners( listeners, new Listeners.Notification<AvailabilityListener>()
-                {
-                    @Override
-                    public void notify( AvailabilityListener listener )
-                    {
-                        listener.available();
-                    }
-                } );
+                log.info( DATABASE_AVAILABLE_MSG + requirement.description() );
+                listeners.notify( AvailabilityListener::available );
             }
         }
     }
@@ -185,19 +183,12 @@ public class AvailabilityGuard
 
             if ( requirementCount.get() == 0 )
             {
-                notifyListeners( listeners, new Listeners.Notification<AvailabilityListener>()
-                {
-                    @Override
-                    public void notify( AvailabilityListener listener )
-                    {
-                        listener.unavailable();
-                    }
-                } );
+                listeners.notify( AvailabilityListener::unavailable );
             }
         }
     }
 
-    private static enum Availability
+    private enum Availability
     {
         AVAILABLE,
         UNAVAILABLE,
@@ -215,6 +206,14 @@ public class AvailabilityGuard
     }
 
     /**
+     * Check if the database has been shut down.
+     */
+    public boolean isShutdown()
+    {
+        return availability() == Availability.SHUTDOWN;
+    }
+
+    /**
      * Check if the database is available for transactions to use.
      *
      * @param millis to wait for availability
@@ -223,6 +222,17 @@ public class AvailabilityGuard
     public boolean isAvailable( long millis )
     {
         return availability( millis ) == Availability.AVAILABLE;
+    }
+
+    /**
+     * Checks if available. If not then an {@link UnavailableException} is thrown describing why.
+     * This methods doesn't wait like {@link #await(long)} does.
+     *
+     * @throws UnavailableException if not available.
+     */
+    public void checkAvailable() throws UnavailableException
+    {
+        await( 0 );
     }
 
     /**
@@ -259,7 +269,7 @@ public class AvailabilityGuard
             return Availability.AVAILABLE;
         }
 
-        assert (count > 0);
+        assert count > 0;
 
         return Availability.UNAVAILABLE;
     }
@@ -272,7 +282,7 @@ public class AvailabilityGuard
             return availability;
         }
 
-        long timeout = clock.currentTimeMillis() + millis;
+        long timeout = clock.millis() + millis;
         do
         {
             try
@@ -285,7 +295,7 @@ public class AvailabilityGuard
                 break;
             }
             availability = availability();
-        } while ( availability == Availability.UNAVAILABLE && clock.currentTimeMillis() < timeout );
+        } while ( availability == Availability.UNAVAILABLE && clock.millis() < timeout );
 
         return availability;
     }
@@ -297,7 +307,7 @@ public class AvailabilityGuard
      */
     public void addListener( AvailabilityListener listener )
     {
-        listeners = Listeners.addListener( listener, listeners );
+        listeners.add( listener );
     }
 
     /**
@@ -307,7 +317,7 @@ public class AvailabilityGuard
      */
     public void removeListener( AvailabilityListener listener )
     {
-        listeners = Listeners.removeListener( listener, listeners );
+        listeners.remove( listener );
     }
 
     /**
@@ -317,19 +327,12 @@ public class AvailabilityGuard
     {
         if ( blockingRequirements.size() > 0 || requirementCount.get() > 0 )
         {
-            String causes = join( ", ", Iterables.map( DESCRIPTION, blockingRequirements ) );
+            String causes = Iterables.join( ", ", Iterables.map( DESCRIPTION, blockingRequirements ) );
             return requirementCount.get() + " reasons for blocking: " + causes + ".";
         }
         return "No blocking components";
     }
 
     public static final Function<AvailabilityRequirement, String> DESCRIPTION =
-            new Function<AvailabilityRequirement, String>()
-            {
-                @Override
-                public String apply( AvailabilityRequirement availabilityRequirement )
-                {
-                    return availabilityRequirement.description();
-                }
-            };
+            AvailabilityRequirement::description;
 }

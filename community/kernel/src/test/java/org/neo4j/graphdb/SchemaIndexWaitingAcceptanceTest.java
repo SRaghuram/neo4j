@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,24 +19,24 @@
  */
 package org.neo4j.graphdb;
 
+import org.junit.Rule;
+import org.junit.Test;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import org.junit.Rule;
-import org.junit.Test;
 
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.api.index.ControlledPopulationSchemaIndexProvider;
 import org.neo4j.test.DoubleLatch;
-import org.neo4j.test.ImpermanentDatabaseRule;
+import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.ImpermanentDatabaseRule;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-
 import static org.neo4j.kernel.impl.api.index.SchemaIndexTestHelper.singleInstanceSchemaIndexProviderFactory;
 
 public class SchemaIndexWaitingAcceptanceTest
@@ -50,9 +50,8 @@ public class SchemaIndexWaitingAcceptanceTest
         protected void configure( GraphDatabaseFactory databaseFactory )
         {
             List<KernelExtensionFactory<?>> extensions;
-            extensions = Collections.<KernelExtensionFactory<?>>singletonList( singleInstanceSchemaIndexProviderFactory(
-                    "test", provider ) );
-            databaseFactory.addKernelExtensions( extensions );
+            extensions = Collections.singletonList( singleInstanceSchemaIndexProviderFactory( "test", provider ) );
+            ((TestGraphDatabaseFactory) databaseFactory).addKernelExtensions( extensions );
         }
     };
 
@@ -60,17 +59,17 @@ public class SchemaIndexWaitingAcceptanceTest
     public void shouldTimeoutWatingForIndexToComeOnline() throws Exception
     {
         // given
-        GraphDatabaseService db = rule.getGraphDatabaseService();
+        GraphDatabaseService db = rule.getGraphDatabaseAPI();
         DoubleLatch latch = provider.installPopulationJobCompletionLatch();
 
         IndexDefinition index;
         try ( Transaction tx = db.beginTx() )
         {
-            index = db.schema().indexFor( DynamicLabel.label( "Person" ) ).on( "name" ).create();
+            index = db.schema().indexFor( Label.label( "Person" ) ).on( "name" ).create();
             tx.success();
         }
 
-        latch.awaitStart();
+        latch.waitForAllToStart();
 
         // when
         try ( Transaction tx = db.beginTx() )
@@ -95,16 +94,16 @@ public class SchemaIndexWaitingAcceptanceTest
     public void shouldTimeoutWatingForAllIndexesToComeOnline() throws Exception
     {
         // given
-        GraphDatabaseService db = rule.getGraphDatabaseService();
+        GraphDatabaseService db = rule.getGraphDatabaseAPI();
         DoubleLatch latch = provider.installPopulationJobCompletionLatch();
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().indexFor( DynamicLabel.label( "Person" ) ).on( "name" ).create();
+            db.schema().indexFor( Label.label( "Person" ) ).on( "name" ).create();
             tx.success();
         }
 
-        latch.awaitStart();
+        latch.waitForAllToStart();
 
         // when
         try ( Transaction tx = db.beginTx() )

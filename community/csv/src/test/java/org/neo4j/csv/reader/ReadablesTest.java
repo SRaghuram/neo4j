@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,10 @@ package org.neo4j.csv.reader;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -32,22 +36,54 @@ import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.neo4j.test.TestDirectory;
+import org.neo4j.test.rule.TestDirectory;
 
+import static java.util.Arrays.copyOfRange;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import static java.util.Arrays.copyOfRange;
-
+@RunWith( Parameterized.class )
 public class ReadablesTest
 {
+    @Parameters
+    public static Collection<ReadMethod> readMethods()
+    {
+        return Arrays.asList(
+                (readable,length) ->
+                {
+                    SectionedCharBuffer readText = new SectionedCharBuffer( length );
+                    readable.read( readText, readText.front() );
+                    return copyOfRange( readText.array(), readText.pivot(), readText.front() );
+                },
+                (readable,length) ->
+                {
+                    char[] result = new char[length];
+                    readable.read( result, 0, length );
+                    return result;
+                } );
+    }
+
+    @Rule
+    public final TestDirectory directory = TestDirectory.testDirectory();
+
+    interface ReadMethod
+    {
+        char[] read( CharReadable readable, int length ) throws IOException;
+    }
+
+    @Parameter
+    public ReadMethod readMethod;
+
     @Test
     public void shouldReadTextCompressedInZipArchiveWithSingleFileIn() throws Exception
     {
@@ -148,13 +184,13 @@ public class ReadablesTest
     @Test
     public void shouldComplyWithUtf8CharsetForExample() throws Exception
     {
-        shouldComplyWithSpecifiedCharset( Charset.forName( "utf-8" ) );
+        shouldComplyWithSpecifiedCharset( StandardCharsets.UTF_8 );
     }
 
     @Test
     public void shouldComplyWithIso88591CharsetForExample() throws Exception
     {
-        shouldComplyWithSpecifiedCharset( Charset.forName( "iso-8859-1" ) );
+        shouldComplyWithSpecifiedCharset( StandardCharsets.ISO_8859_1 );
     }
 
     @Test
@@ -225,7 +261,7 @@ public class ReadablesTest
         assertEquals( expected.length, buffer.available() );
         for ( int i = 0; i < expected.length; i++ )
         {
-            assertEquals( expected[i], array[buffer.pivot()+i] );
+            assertEquals( expected[i], array[buffer.pivot() + i] );
         }
     }
 
@@ -304,10 +340,8 @@ public class ReadablesTest
 
     private void assertReadText( CharReadable readable, String text ) throws IOException
     {
-        SectionedCharBuffer readText = new SectionedCharBuffer( text.toCharArray().length );
-        readable.read( readText, readText.front() );
-        assertArrayEquals( text.toCharArray(), copyOfRange( readText.array(), readText.pivot(), readText.front() ) );
+        char[] readText = readMethod.read( readable, text.toCharArray().length );
+        assertArrayEquals( readText, text.toCharArray() );
     }
 
-    public final @Rule TestDirectory directory = new TestDirectory();
 }

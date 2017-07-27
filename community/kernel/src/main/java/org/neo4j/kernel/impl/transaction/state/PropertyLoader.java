@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,6 +33,8 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.transaction.state.TransactionRecordState.PropertyReceiver;
 
+import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
+
 public class PropertyLoader
 {
     private final NodeStore nodeStore;
@@ -50,7 +52,7 @@ public class PropertyLoader
 
     public <RECEIVER extends PropertyReceiver> RECEIVER nodeLoadProperties( long nodeId, RECEIVER receiver )
     {
-        NodeRecord nodeRecord = nodeStore.getRecord( nodeId );
+        NodeRecord nodeRecord = nodeStore.getRecord( nodeId, nodeStore.newRecord(), NORMAL );
         loadProperties( nodeRecord.getNextProp(), receiver );
         return receiver;
     }
@@ -63,13 +65,13 @@ public class PropertyLoader
 
     public <RECEIVER extends PropertyReceiver> RECEIVER relLoadProperties( long relId, RECEIVER receiver )
     {
-        RelationshipRecord relRecord = relationshipStore.getRecord( relId );
+        RelationshipRecord relRecord = relationshipStore.getRecord( relId, relationshipStore.newRecord(), NORMAL );
         return loadProperties( relRecord.getNextProp(), receiver );
     }
 
     public <RECEIVER extends PropertyReceiver> RECEIVER graphLoadProperties( RECEIVER records )
     {
-        return loadProperties( metaDataStore.asRecord().getNextProp(), records );
+        return loadProperties( metaDataStore.graphPropertyRecord().getNextProp(), records );
     }
 
     private <RECEIVER extends PropertyReceiver> RECEIVER loadProperties( long nextProp, RECEIVER receiver )

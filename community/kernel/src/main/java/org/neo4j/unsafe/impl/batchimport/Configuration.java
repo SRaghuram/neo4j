@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,31 +19,51 @@
  */
 package org.neo4j.unsafe.impl.batchimport;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
+import org.neo4j.kernel.impl.util.OsBeanUtil;
+import org.neo4j.unsafe.impl.batchimport.staging.Stage;
+import org.neo4j.unsafe.impl.batchimport.staging.Step;
 
+import static java.lang.Math.min;
 import static java.lang.Math.round;
+
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
+import static org.neo4j.io.ByteUnit.gibiBytes;
+import static org.neo4j.io.ByteUnit.mebiBytes;
 
 /**
  * User controlled configuration for a {@link BatchImporter}.
  */
-public interface Configuration extends org.neo4j.unsafe.impl.batchimport.staging.Configuration
+public interface Configuration
 {
     /**
      * File name in which bad entries from the import will end up. This file will be created in the
      * database directory of the imported database, i.e. <into>/bad.log.
      */
     String BAD_FILE_NAME = "bad.log";
+    long MAX_PAGE_CACHE_MEMORY = mebiBytes( 480 );
+    int DEFAULT_MAX_MEMORY_PERCENT = 90;
 
     /**
-     * Memory dedicated to buffering data to be written.
+     * A {@link Stage} works with batches going through one or more {@link Step steps} where one or more threads
+     * process batches at each {@link Step}. This setting dictates how big the batches that are passed around are.
      */
-    int writeBufferSize();
+    default int batchSize()
+    {
+        return 10_000;
+    }
 
     /**
-     * The number of relationships threshold for considering a node dense.
+     * For statistics the average processing time is based on total processing time divided by
+     * number of batches processed. A total average is probably not that interesting so this configuration
+     * option specifies how many of the latest processed batches counts in the equation above.
      */
-    int denseNodeThreshold();
+    default int movingAverageSize()
+    {
+        return 100;
+    }
 
     /**
      * Rough max number of processors (CPU cores) simultaneously used in total by importer at any given time.
@@ -56,77 +76,109 @@ public interface Configuration extends org.neo4j.unsafe.impl.batchimport.staging
      * how many processors are fully in use there's a calculation where one thread takes up 0 < fraction <= 1
      * of a processor.
      */
-    int maxNumberOfProcessors();
-
-    class Default
-            extends org.neo4j.unsafe.impl.batchimport.staging.Configuration.Default
-            implements Configuration
+    default int maxNumberOfProcessors()
     {
-        private static final int DEFAULT_PAGE_SIZE = 1024 * 8;
-
-        @Override
-        public int batchSize()
-        {
-            return 10_000;
-        }
-
-        @Override
-        public int writeBufferSize()
-        {
-            // Do a little calculation here where the goal of the returned value is that if a file channel
-            // would be seen as a batch itself (think asynchronous writing) there would be created roughly
-            // as many as the other types of batches.
-            int averageRecordSize = 40; // Gut-feel estimate
-            int batchesToBuffer = 1000;
-            int maxWriteBufferSize = batchSize() * averageRecordSize * batchesToBuffer;
-            int writeBufferSize = (int) Math.min( maxWriteBufferSize, Runtime.getRuntime().maxMemory() / 5);
-            return roundToClosest( writeBufferSize, DEFAULT_PAGE_SIZE * 30 );
-        }
-
-        private int roundToClosest( int value, int divisible )
-        {
-            double roughCount = (double) value / divisible;
-            int count = (int) round( roughCount );
-            return divisible*count;
-        }
-
-        @Override
-        public int workAheadSize()
-        {
-            return 20;
-        }
-
-        @Override
-        public int denseNodeThreshold()
-        {
-            return Integer.parseInt( GraphDatabaseSettings.dense_node_threshold.getDefaultValue() );
-        }
-
-        @Override
-        public int maxNumberOfProcessors()
-        {
-            return Runtime.getRuntime().availableProcessors();
-        }
-
-        @Override
-        public int movingAverageSize()
-        {
-            return 100;
-        }
+        return allAvailableProcessors();
     }
 
-    Configuration DEFAULT = new Default();
+    static int allAvailableProcessors()
+    {
+        return Runtime.getRuntime().availableProcessors();
+    }
 
-    class Overridden
-            extends org.neo4j.unsafe.impl.batchimport.staging.Configuration.Overridden
-            implements Configuration
+    /**
+     * @return number of relationships threshold for considering a node dense.
+     */
+    default int denseNodeThreshold()
+    {
+        return Integer.parseInt( dense_node_threshold.getDefaultValue() );
+    }
+
+    /**
+     * @return amount of memory to reserve for the page cache. This should just be "enough" for it to be able
+     * to sequentially read and write a couple of stores at a time. If configured too high then there will
+     * be less memory available for other caches which are critical during the import. Optimal size is
+     * estimated to be 100-200 MiB. The importer will figure out an optimal page size from this value,
+     * with slightly bigger page size than "normal" random access use cases.
+     */
+    default long pageCacheMemory()
+    {
+        // Get the upper bound of what we can get from the default config calculation
+        // We even want to limit amount of memory a bit more since we don't need very much during import
+        long defaultPageCacheMemory = ConfiguringPageCacheFactory.defaultHeuristicPageCacheMemory();
+        return min( MAX_PAGE_CACHE_MEMORY, defaultPageCacheMemory );
+    }
+
+    /**
+     * @return max memory to use for import cache data structures while importing.
+     * This should exclude the memory acquired by this JVM. By default this returns total physical
+     * memory on the machine it's running on minus the max memory of this JVM.
+     * {@value #DEFAULT_MAX_MEMORY_PERCENT}% of that figure.
+     * @throws UnsupportedOperationException if available memory couldn't be determined.
+     */
+    default long maxMemoryUsage()
+    {
+        return calculateMaxMemoryFromPercent( DEFAULT_MAX_MEMORY_PERCENT );
+    }
+
+    /**
+     * @return whether or not to do sequential flushing of the page cache in the during stages which
+     * import nodes and relationships. Having this {@code true} will reduce random I/O and make most
+     * writes happen in this single background thread and will greatly benefit hardware which generally
+     * benefits from single sequential writer.
+     */
+    default boolean sequentialBackgroundFlushing()
+    {
+        return true;
+    }
+
+    /**
+     * Controls whether or not to write records in parallel. Multiple threads writing records in parallel
+     * doesn't necessarily mean concurrent I/O because writing is separate from page cache eviction/flushing.
+     */
+    default boolean parallelRecordWrites()
+    {
+        // Defaults to true since this benefits virtually all environments
+        return true;
+    }
+
+    /**
+     * Controls whether or not to read records in parallel in stages where there's no record writing.
+     * Enabling this may result in multiple pages being read from underlying storage concurrently.
+     */
+    default boolean parallelRecordReads()
+    {
+        // Defaults to true since this benefits most environments
+        return true;
+    }
+
+    /**
+     * Controls whether or not to read records in parallel in stages where there's concurrent record writing.
+     * Enabling will probably increase concurrent I/O to a point which reduces performance if underlying storage
+     * isn't great at concurrent I/O, especially if also {@link #parallelRecordWrites()} is enabled.
+     */
+    default boolean parallelRecordReadsWhenWriting()
+    {
+        // Defaults to false since some environments sees less performance with this enabled
+        return false;
+    }
+
+    Configuration DEFAULT = new Configuration()
+    {
+    };
+
+    class Overridden implements Configuration
     {
         private final Configuration defaults;
         private final Config config;
 
+        public Overridden( Configuration defaults )
+        {
+            this( defaults, Config.embeddedDefaults() );
+        }
+
         public Overridden( Configuration defaults, Config config )
         {
-            super( defaults );
             this.defaults = defaults;
             this.config = config;
         }
@@ -137,15 +189,38 @@ public interface Configuration extends org.neo4j.unsafe.impl.batchimport.staging
         }
 
         @Override
-        public int writeBufferSize()
+        public long pageCacheMemory()
         {
-            return defaults.writeBufferSize();
+            Long pageCacheMemory = config.get( pagecache_memory );
+            if ( pageCacheMemory == null )
+            {
+                pageCacheMemory = ConfiguringPageCacheFactory.defaultHeuristicPageCacheMemory();
+            }
+            return min( MAX_PAGE_CACHE_MEMORY, pageCacheMemory );
         }
 
         @Override
         public int denseNodeThreshold()
         {
-            return config.get( GraphDatabaseSettings.dense_node_threshold );
+            return config.get( dense_node_threshold );
+        }
+
+        @Override
+        public int movingAverageSize()
+        {
+            return defaults.movingAverageSize();
+        }
+
+        @Override
+        public boolean sequentialBackgroundFlushing()
+        {
+            return defaults.sequentialBackgroundFlushing();
+        }
+
+        @Override
+        public int batchSize()
+        {
+            return defaults.batchSize();
         }
 
         @Override
@@ -155,9 +230,60 @@ public interface Configuration extends org.neo4j.unsafe.impl.batchimport.staging
         }
 
         @Override
-        public int movingAverageSize()
+        public boolean parallelRecordWrites()
         {
-            return defaults.movingAverageSize();
+            return defaults.parallelRecordWrites();
         }
+
+        @Override
+        public boolean parallelRecordReads()
+        {
+            return defaults.parallelRecordReads();
+        }
+
+        @Override
+        public boolean parallelRecordReadsWhenWriting()
+        {
+            return defaults.parallelRecordReadsWhenWriting();
+        }
+    }
+
+    static Configuration withBatchSize( Configuration config, int batchSize )
+    {
+        return new Overridden( config )
+        {
+            @Override
+            public int batchSize()
+            {
+                return batchSize;
+            }
+        };
+    }
+
+    static boolean canDetectFreeMemory()
+    {
+        return OsBeanUtil.getFreePhysicalMemory() != OsBeanUtil.VALUE_UNAVAILABLE;
+    }
+
+    static long calculateMaxMemoryFromPercent( int percent )
+    {
+        if ( percent < 1 )
+        {
+            throw new IllegalArgumentException( "Expected percentage to be > 0, was " + percent );
+        }
+        if ( percent > 100 )
+        {
+            throw new IllegalArgumentException( "Expected percentage to be < 100, was " + percent );
+        }
+        long freePhysicalMemory = OsBeanUtil.getFreePhysicalMemory();
+        if ( freePhysicalMemory == OsBeanUtil.VALUE_UNAVAILABLE )
+        {
+            // Unable to detect amount of free memory, so rather max memory should be explicitly set
+            // in order to get best performance. However let's just go with a default of 2G in this case.
+            return gibiBytes( 2 );
+        }
+
+        double factor = percent / 100D;
+        return round( (freePhysicalMemory - Runtime.getRuntime().maxMemory()) * factor );
     }
 }

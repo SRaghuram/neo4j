@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,15 +22,14 @@ package org.neo4j.kernel.impl.query;
 import java.io.Closeable;
 import java.io.File;
 import java.io.OutputStream;
+import java.util.EnumSet;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.Clock;
 import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.logging.LogService;
-import org.neo4j.kernel.impl.query.QuerySession.MetadataKey;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.impl.util.JobScheduler;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -70,18 +69,12 @@ public class QueryLoggerKernelExtension extends KernelExtensionFactory<QueryLogg
         final Config config = dependencies.config();
         boolean queryLogEnabled = config.get( GraphDatabaseSettings.log_queries );
         final File queryLogFile = config.get( GraphDatabaseSettings.log_queries_filename );
+        final FileSystemAbstraction fileSystem = dependencies.fileSystem();
+        final JobScheduler jobScheduler = dependencies.jobScheduler();
+        final Monitors monitoring = dependencies.monitoring();
 
         if (!queryLogEnabled)
         {
-            return createEmptyAdapter();
-        }
-        if ( queryLogFile == null )
-        {
-            dependencies.logger().getInternalLog( getClass() )
-                    .warn( GraphDatabaseSettings.log_queries.name() + " is enabled but no " +
-                           GraphDatabaseSettings.log_queries_filename.name() +
-                           " has not been provided in configuration, hence query logging is suppressed" );
-
             return createEmptyAdapter();
         }
 
@@ -92,11 +85,17 @@ public class QueryLoggerKernelExtension extends KernelExtensionFactory<QueryLogg
             @Override
             public void init() throws Throwable
             {
-                final FileSystemAbstraction fileSystem = dependencies.fileSystem();
-
-                Long thresholdMillis = config.get( GraphDatabaseSettings.log_queries_threshold );
+                Long thresholdMillis = config.get( GraphDatabaseSettings.log_queries_threshold ).toMillis();
                 Long rotationThreshold = config.get( GraphDatabaseSettings.log_queries_rotation_threshold );
                 int maxArchives = config.get( GraphDatabaseSettings.log_queries_max_archives );
+                EnumSet<QueryLogEntryContent> flags = EnumSet.noneOf( QueryLogEntryContent.class );
+                for ( QueryLogEntryContent flag : QueryLogEntryContent.values() )
+                {
+                    if (flag.enabledIn(config))
+                    {
+                        flags.add( flag );
+                    }
+                }
 
                 FormattedLog.Builder logBuilder = FormattedLog.withUTCTimeZone();
                 Log log;
@@ -108,7 +107,6 @@ public class QueryLoggerKernelExtension extends KernelExtensionFactory<QueryLogg
                 }
                 else
                 {
-                    JobScheduler jobScheduler = dependencies.jobScheduler();
                     RotatingFileOutputStreamSupplier
                             rotatingSupplier = new RotatingFileOutputStreamSupplier( fileSystem, queryLogFile,
                             rotationThreshold, 0, maxArchives,
@@ -117,8 +115,8 @@ public class QueryLoggerKernelExtension extends KernelExtensionFactory<QueryLogg
                     closable = rotatingSupplier;
                 }
 
-                QueryLogger logger = new QueryLogger( Clock.SYSTEM_CLOCK, log, thresholdMillis );
-                dependencies.monitoring().addMonitorListener( logger );
+                QueryLogger logger = new QueryLogger( log, thresholdMillis, flags );
+                monitoring.addMonitorListener( logger );
             }
 
             @Override
@@ -132,64 +130,5 @@ public class QueryLoggerKernelExtension extends KernelExtensionFactory<QueryLogg
     private Lifecycle createEmptyAdapter()
     {
         return new LifecycleAdapter();
-    }
-
-    public static class QueryLogger implements QueryExecutionMonitor
-    {
-        private static final MetadataKey<Long> START_TIME = new MetadataKey<>( Long.class, "start time" );
-        private static final MetadataKey<String> QUERY_STRING = new MetadataKey<>( String.class, "query string" );
-
-        private final Clock clock;
-        private final Log log;
-        private final long thresholdMillis;
-
-        public QueryLogger( Clock clock, Log log, long thresholdMillis )
-        {
-            this.clock = clock;
-            this.log = log;
-            this.thresholdMillis = thresholdMillis;
-        }
-
-        @Override
-        public void startQueryExecution( QuerySession session, String query )
-        {
-            long startTime = clock.currentTimeMillis();
-            Object oldTime = session.put( START_TIME, startTime );
-            Object oldQuery = session.put( QUERY_STRING, query );
-            if ( oldTime != null || oldQuery != null )
-            {
-                log.error( "Concurrent queries for session %s: \"%s\" @ %s and \"%s\" @ %s",
-                        session.toString(), oldQuery, oldTime, query, startTime );
-            }
-        }
-
-        @Override
-        public void endFailure( QuerySession session, Throwable failure )
-        {
-            String query = session.remove( QUERY_STRING );
-            Long startTime = session.remove( START_TIME );
-            if ( startTime != null )
-            {
-                long time = clock.currentTimeMillis() - startTime;
-                log.error( String.format( "%d ms: %s - %s", time, session.toString(),
-                        query == null ? "<unknown query>" : query ), failure );
-            }
-        }
-
-        @Override
-        public void endSuccess( QuerySession session )
-        {
-            String query = session.remove( QUERY_STRING );
-            Long startTime = session.remove( START_TIME );
-            if ( startTime != null )
-            {
-                long time = clock.currentTimeMillis() - startTime;
-                if ( time >= thresholdMillis )
-                {
-                    log.info( "%d ms: %s - %s", time, session.toString(),
-                            query == null ? "<unknown query>" : query );
-                }
-            }
-        }
     }
 }

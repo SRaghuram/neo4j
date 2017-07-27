@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,42 +21,52 @@ package org.neo4j.kernel.impl.store;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.OpenOption;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
-import org.neo4j.kernel.IdGeneratorFactory;
-import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.store.id.IdGenerator;
+import org.neo4j.kernel.impl.store.format.RecordFormat;
+import org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdType;
+import org.neo4j.kernel.impl.store.record.MetaDataRecord;
 import org.neo4j.kernel.impl.store.record.NeoStoreRecord;
 import org.neo4j.kernel.impl.store.record.Record;
+import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.transaction.log.LogVersionRepository;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.util.ArrayQueueOutOfOrderSequence;
 import org.neo4j.kernel.impl.util.Bits;
-import org.neo4j.kernel.impl.util.CappedOperation;
+import org.neo4j.kernel.impl.util.CappedLogger;
 import org.neo4j.kernel.impl.util.OutOfOrderSequence;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.Logger;
+import org.neo4j.time.Clocks;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.neo4j.io.pagecache.PagedFile.PF_EXCLUSIVE_LOCK;
-import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_LOCK;
-import static org.neo4j.kernel.impl.util.CappedOperation.time;
+import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
+import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_WRITE_LOCK;
+import static org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat.FIELD_NOT_PRESENT;
+import static org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat.RECORD_SIZE;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
-public class MetaDataStore extends AbstractStore implements TransactionIdStore, LogVersionRepository
+public class MetaDataStore extends CommonAbstractStore<MetaDataRecord,NoStoreHeader>
+        implements TransactionIdStore, LogVersionRepository
 {
     public static final String TYPE_DESCRIPTOR = "NeoStore";
     // This value means the field has not been refreshed from the store. Normally, this should happen only once
-    public static final long FIELD_NOT_PRESENT = -1;
     public static final long FIELD_NOT_INITIALIZED = Long.MIN_VALUE;
     /*
      *  9 longs in header (long + in use), time | random | version | txid | store version | graph next prop | latest
      *  constraint tx | upgrade time | upgrade id
      */
-    public static final int RECORD_SIZE = 9;
     public static final String DEFAULT_NAME = "neostore";
     // Positions of meta-data records
 
@@ -75,7 +85,9 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
         UPGRADE_TRANSACTION_CHECKSUM( 10, "Checksum of transaction id the most recent upgrade was performed at" ),
         LAST_CLOSED_TRANSACTION_LOG_VERSION( 11, "Log version where the last transaction commit entry has been written into" ),
         LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET( 12, "Byte offset in the log file where the last transaction commit entry " +
-                                                     "has been written into" );
+                                                     "has been written into" ),
+        LAST_TRANSACTION_COMMIT_TIMESTAMP( 13, "Commit time timestamp for last committed transaction" ),
+        UPGRADE_TRANSACTION_COMMIT_TIMESTAMP( 14, "Commit timestamp of transaction the most recent upgrade was performed at" );
 
         private final int id;
         private final String description;
@@ -86,53 +98,69 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
             this.description = description;
         }
 
+        public int id()
+        {
+            return id;
+        }
+
         public String description()
         {
             return description;
         }
     }
 
-    public static final int META_DATA_RECORD_COUNT = Position.values().length;
-
     // Fields the neostore keeps cached and must be initialized on startup
     private volatile long creationTimeField = FIELD_NOT_INITIALIZED;
     private volatile long randomNumberField = FIELD_NOT_INITIALIZED;
     private volatile long versionField = FIELD_NOT_INITIALIZED;
     // This is an atomic long since we, when incrementing last tx id, won't set the record in the page,
-    // we do that when flushing, which is more performant and fine from a recovery POV.
+    // we do that when flushing, which performs better and fine from a recovery POV.
     private final AtomicLong lastCommittingTxField = new AtomicLong( FIELD_NOT_INITIALIZED );
     private volatile long storeVersionField = FIELD_NOT_INITIALIZED;
     private volatile long graphNextPropField = FIELD_NOT_INITIALIZED;
     private volatile long latestConstraintIntroducingTxField = FIELD_NOT_INITIALIZED;
     private volatile long upgradeTxIdField = FIELD_NOT_INITIALIZED;
-    private volatile long upgradeTimeField = FIELD_NOT_INITIALIZED;
-    private volatile long lastTransactionChecksum = FIELD_NOT_INITIALIZED;
-    private volatile long lastClosedTransactionLogVersion = FIELD_NOT_INITIALIZED;
-    private volatile long lastClosedTransactionLogByteOffset = FIELD_NOT_INITIALIZED;
     private volatile long upgradeTxChecksumField = FIELD_NOT_INITIALIZED;
+    private volatile long upgradeTimeField = FIELD_NOT_INITIALIZED;
+    private volatile long upgradeCommitTimestampField = FIELD_NOT_INITIALIZED;
+
+    private volatile TransactionId upgradeTransaction = new TransactionId( FIELD_NOT_INITIALIZED,
+            FIELD_NOT_INITIALIZED, FIELD_NOT_INITIALIZED );
+
+    // This is not a field in the store, but something keeping track of which is the currently highest
+    // committed transaction id, together with its checksum.
+    private final HighestTransactionId highestCommittedTransaction =
+            new HighestTransactionId( FIELD_NOT_INITIALIZED, FIELD_NOT_INITIALIZED, FIELD_NOT_INITIALIZED );
 
     // This is not a field in the store, but something keeping track of which of the committed
     // transactions have been closed. Useful in rotation and shutdown.
-    private final OutOfOrderSequence lastCommittedTx = new ArrayQueueOutOfOrderSequence( -1, 200, new long[1] );
     private final OutOfOrderSequence lastClosedTx = new ArrayQueueOutOfOrderSequence( -1, 200, new long[2] );
 
-    private final CappedOperation<Void> transactionCloseWaitLogger;
+    // We use these objects and their monitors as "entity" locks on the records, because page write locks are not
+    // exclusive. Therefor, these locks are only used when *writing* records, not when reading them.
+    private final Object upgradeTimeLock = new Object();
+    private final Object creationTimeLock  = new Object();
+    private final Object randomNumberLock = new Object();
+    private final Object upgradeTransactionLock = new Object();
+    private final Object logVersionLock = new Object();
+    private final Object storeVersionLock = new Object();
+    private final Object graphNextPropLock = new Object();
+    private final Object lastConstraintIntroducingTxLock = new Object();
+    private final Object transactionCommittedLock = new Object();
+    private final Object transactionClosedLock = new Object();
+
+    private final CappedLogger transactionCloseWaitLogger;
 
     MetaDataStore( File fileName, Config conf,
-                   IdGeneratorFactory idGeneratorFactory,
-                   PageCache pageCache, LogProvider logProvider )
+            IdGeneratorFactory idGeneratorFactory,
+            PageCache pageCache, LogProvider logProvider, RecordFormat<MetaDataRecord> recordFormat,
+            String storeVersion,
+            OpenOption... openOptions )
     {
-        super( fileName, conf, IdType.NEOSTORE_BLOCK, idGeneratorFactory, pageCache, logProvider );
-        this.transactionCloseWaitLogger = new CappedOperation<Void>( time( 30, SECONDS ) )
-        {
-            @Override
-            protected void triggered( Void event )
-            {
-                log.info( format(
-                        "Waiting for all transactions to close...%n committed:  %s%n  committing: %s%n  closed:     %s",
-                        lastCommittedTx, lastCommittingTxField, lastClosedTx ) );
-            }
-        };
+        super( fileName, conf, IdType.NEOSTORE_BLOCK, idGeneratorFactory, pageCache, logProvider,
+                TYPE_DESCRIPTOR, recordFormat, NoStoreHeaderFormat.NO_STORE_HEADER_FORMAT, storeVersion, openOptions );
+        this.transactionCloseWaitLogger = new CappedLogger( logProvider.getLog( MetaDataStore.class ) );
+        transactionCloseWaitLogger.setTimeLimit( 30, SECONDS, Clocks.systemClock() );
     }
 
     @Override
@@ -140,7 +168,8 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
     {
         super.initialiseNewStoreFile( file );
 
-        StoreId storeId = new StoreId();
+        long storeVersionAsLong = MetaDataStore.versionStringToLong( storeVersion );
+        StoreId storeId = new StoreId( storeVersionAsLong );
 
         storeFile = file;
         setCreationTime( storeId.getCreationTime() );
@@ -148,11 +177,11 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
         // If metaDataStore.creationTime == metaDataStore.upgradeTime && metaDataStore.upgradeTransactionId == BASE_TX_ID
         // then store has never been upgraded
         setUpgradeTime( storeId.getCreationTime() );
-        setUpgradeTransaction( BASE_TX_ID, BASE_TX_CHECKSUM );
+        setUpgradeTransaction( BASE_TX_ID, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP );
         setCurrentLogVersion( 0 );
         setLastCommittedAndClosedTransactionId(
-                BASE_TX_ID, BASE_TX_CHECKSUM, BASE_TX_LOG_VERSION, BASE_TX_LOG_BYTE_OFFSET );
-        setStoreVersion( MetaDataStore.versionStringToLong( CommonAbstractStore.ALL_STORES_VERSION ) );
+                BASE_TX_ID, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP, BASE_TX_LOG_BYTE_OFFSET, BASE_TX_LOG_VERSION );
+        setStoreVersion( storeVersionAsLong );
         setGraphNextProp( -1 );
         setLatestConstraintIntroducingTx( 0 );
 
@@ -160,68 +189,26 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
         storeFile = null;
     }
 
+    // Only for initialization and recovery, so we don't need to lock the records
     @Override
-    protected void initialiseNewIdGenerator( IdGenerator idGenerator )
+    public void setLastCommittedAndClosedTransactionId(
+            long transactionId, long checksum, long commitTimestamp, long byteOffset, long logVersion )
     {
-        super.initialiseNewIdGenerator( idGenerator );
-
-        /*
-         * created time | random long | backup version | tx id | store version | next prop | latest constraint tx |
-         * upgrade time | upgrade id
-         */
-        for ( int i = 0; i < META_DATA_RECORD_COUNT; i++ )
-        {
-            nextId();
-        }
-    }
-
-    public void checkVersion()
-    {
-        long record;
-        try
-        {
-            record = getRecord( pageCache, storageFileName, Position.STORE_VERSION );
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( e );
-        }
-
-        if ( record == -1 )
-        {
-            // if the record cannot be read, let's assume the neo store has not been create yet
-            // we'll check again when the store is gonna set to "store ok"
-            return;
-        }
-
-        String foundVersion = versionLongToString( record );
-        if ( !ALL_STORES_VERSION.equals( foundVersion ) )
-        {
-            throw new IllegalStateException(
-                    format( "Mismatching store version found (%s while expecting %s). The store cannot be " +
-                            "automatically upgraded since it isn't cleanly shutdown."
-                            + " Recover by starting the database using the previous Neo4j version, " +
-                            "followed by a clean shutdown. Then start with this version again.",
-                            foundVersion, ALL_STORES_VERSION ) );
-        }
-    }
-
-    @Override
-    public String getTypeDescriptor()
-    {
-        return TYPE_DESCRIPTOR;
-    }
-
-    @Override
-    public int getRecordSize()
-    {
-        return RECORD_SIZE;
+        assertNotClosed();
+        setRecord( Position.LAST_TRANSACTION_ID, transactionId );
+        setRecord( Position.LAST_TRANSACTION_CHECKSUM, checksum );
+        setRecord( Position.LAST_CLOSED_TRANSACTION_LOG_VERSION, logVersion );
+        setRecord( Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET, byteOffset );
+        setRecord( Position.LAST_TRANSACTION_COMMIT_TIMESTAMP, commitTimestamp );
+        checkInitialized( lastCommittingTxField.get() );
+        lastCommittingTxField.set( transactionId );
+        lastClosedTx.set( transactionId, new long[]{logVersion, byteOffset} );
+        highestCommittedTransaction.set( transactionId, checksum, commitTimestamp );
     }
 
     /**
      * Writes a record in a neostore file.
-     * This method only works for neostore files of the current version. It is not guaranteed to correctly handle store
-     * version trailers of other store versions.
+     * This method only works for neostore files of the current version.
      *
      * @param pageCache {@link PageCache} the {@code neostore} file lives in.
      * @param neoStore {@link File} pointing to the neostore.
@@ -233,37 +220,44 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
     public static long setRecord( PageCache pageCache, File neoStore, Position position, long value ) throws IOException
     {
         long previousValue = FIELD_NOT_INITIALIZED;
-        try ( PagedFile pagedFile = pageCache.map( neoStore, getPageSize( pageCache ) ) )
+        int pageSize = getPageSize( pageCache );
+        try ( PagedFile pagedFile = pageCache.map( neoStore, pageSize ) )
         {
-            int recordOffset = RECORD_SIZE * position.id;
-            try ( PageCursor pageCursor = pagedFile.io( 0, PagedFile.PF_EXCLUSIVE_LOCK ) )
+            int offset = offset( position );
+            try ( PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK ) )
             {
-                if ( pageCursor.next() )
+                if ( cursor.next() )
                 {
                     // We're overwriting a record, get the previous value
-                    long record;
-                    byte inUse;
-                    do
+                    cursor.setOffset( offset );
+                    byte inUse = cursor.getByte();
+                    long record = cursor.getLong();
+
+                    if ( inUse == Record.IN_USE.byteValue() )
                     {
-                        pageCursor.setOffset( recordOffset );
-                        inUse = pageCursor.getByte();
-                        record = pageCursor.getLong();
-
-                        if ( inUse == Record.IN_USE.byteValue() )
-                        {
-                            previousValue = record;
-                        }
-
-                        // Write the value
-                        pageCursor.setOffset( recordOffset );
-                        pageCursor.putByte( Record.IN_USE.byteValue() );
-                        pageCursor.putLong( value );
+                        previousValue = record;
                     }
-                    while ( pageCursor.shouldRetry() );
+
+                    // Write the value
+                    cursor.setOffset( offset );
+                    cursor.putByte( Record.IN_USE.byteValue() );
+                    cursor.putLong( value );
+                    if ( cursor.checkAndClearBoundsFlag() )
+                    {
+                        MetaDataRecord neoStoreRecord = new MetaDataRecord();
+                        neoStoreRecord.setId( position.id );
+                        throw new UnderlyingStorageException( buildOutOfBoundsExceptionMessage(
+                                neoStoreRecord, 0, offset, RECORD_SIZE, pageSize, neoStore.getAbsolutePath() ) );
+                    }
                 }
             }
         }
         return previousValue;
+    }
+
+    private static int offset( Position position )
+    {
+        return RECORD_SIZE * position.id;
     }
 
     /**
@@ -271,37 +265,48 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
      *
      * @param pageCache {@link PageCache} the {@code neostore} file lives in.
      * @param neoStore {@link File} pointing to the neostore.
-     * @param recordPosition record {@link Position}.
+     * @param position record {@link Position}.
      * @return the read record value specified by {@link Position}.
      */
-    public static long getRecord( PageCache pageCache, File neoStore, Position recordPosition ) throws IOException
+    public static long getRecord( PageCache pageCache, File neoStore, Position position ) throws IOException
     {
-        try ( PagedFile pagedFile = pageCache.map( neoStore, getPageSize( pageCache ) ) )
+        MetaDataRecordFormat format = new MetaDataRecordFormat();
+        int pageSize = getPageSize( pageCache );
+        long value = FIELD_NOT_PRESENT;
+        try ( PagedFile pagedFile = pageCache.map( neoStore, pageSize ) )
         {
-            if ( pagedFile.getLastPageId() != -1 )
+            if ( pagedFile.getLastPageId() >= 0 )
             {
-                try ( PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_LOCK ) )
+                try ( PageCursor cursor = pagedFile.io( 0, PF_SHARED_READ_LOCK ) )
                 {
                     if ( cursor.next() )
                     {
-                        byte recordByte;
-                        long record;
+                        MetaDataRecord record = new MetaDataRecord();
+                        record.setId( position.id );
                         do
                         {
-                            cursor.setOffset( RECORD_SIZE * recordPosition.id );
-                            recordByte = cursor.getByte();
-                            record = cursor.getLong();
+                            format.read( record, cursor, RecordLoad.CHECK, RECORD_SIZE );
+                            if ( record.inUse() )
+                            {
+                                value = record.getValue();
+                            }
+                            else
+                            {
+                                value = FIELD_NOT_PRESENT;
+                            }
                         }
                         while ( cursor.shouldRetry() );
-                        if ( recordByte == Record.IN_USE.byteValue() )
+                        if ( cursor.checkAndClearBoundsFlag() )
                         {
-                            return record;
+                            int offset = offset( position );
+                            throw new UnderlyingStorageException( buildOutOfBoundsExceptionMessage(
+                                    record, 0, offset, RECORD_SIZE, pageSize, neoStore.getAbsolutePath() ) );
                         }
                     }
                 }
             }
         }
-        return FIELD_NOT_PRESENT;
+        return value;
     }
 
     static int getPageSize( PageCache pageCache )
@@ -311,92 +316,55 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
 
     public StoreId getStoreId()
     {
-        return new StoreId( getCreationTime(), getRandomNumber(), getUpgradeTime(), upgradeTxIdField );
+        return new StoreId( getCreationTime(), getRandomNumber(), getStoreVersion(), getUpgradeTime(), upgradeTxIdField );
+    }
+
+    public static StoreId getStoreId( PageCache pageCache, File neoStore ) throws IOException
+    {
+        return new StoreId(
+                getRecord( pageCache, neoStore, Position.TIME ),
+                getRecord( pageCache, neoStore, Position.RANDOM_NUMBER ),
+                getRecord( pageCache, neoStore, Position.STORE_VERSION ),
+                getRecord( pageCache, neoStore, Position.UPGRADE_TIME ),
+                getRecord( pageCache, neoStore, Position.UPGRADE_TRANSACTION_ID )
+        );
     }
 
     public long getUpgradeTime()
     {
+        assertNotClosed();
         checkInitialized( upgradeTimeField );
         return upgradeTimeField;
     }
 
-    public synchronized void setUpgradeTime( long time )
+    public void setUpgradeTime( long time )
     {
-        setRecord( Position.UPGRADE_TIME, time );
-        upgradeTimeField = time;
-    }
-
-    public synchronized void setUpgradeTransaction( long id, long checksum )
-    {
-        setRecord( Position.UPGRADE_TRANSACTION_ID, id );
-        upgradeTxIdField = id;
-        setRecord( Position.UPGRADE_TRANSACTION_CHECKSUM, checksum );
-        upgradeTxChecksumField = checksum;
-    }
-
-    public long getCreationTime()
-    {
-        checkInitialized( creationTimeField );
-        return creationTimeField;
-    }
-
-    public synchronized void setCreationTime( long time )
-    {
-        setRecord( Position.TIME, time );
-        creationTimeField = time;
-    }
-
-    public long getRandomNumber()
-    {
-        checkInitialized( randomNumberField );
-        return randomNumberField;
-    }
-
-    public synchronized void setRandomNumber( long nr )
-    {
-        setRecord( Position.RANDOM_NUMBER, nr );
-        randomNumberField = nr;
-    }
-
-    @Override
-    public long getCurrentLogVersion()
-    {
-        checkInitialized( versionField );
-        return versionField;
-    }
-
-    public void setCurrentLogVersion( long version )
-    {
-        setRecord( Position.LOG_VERSION, version );
-        versionField = version;
-    }
-
-    @Override
-    public long incrementAndGetVersion()
-    {
-        // This method can expect synchronisation at a higher level,
-        // and be effectively single-threaded.
-        // The call to getVersion() will most likely optimise to a volatile-read.
-        long pageId = pageIdForRecord( Position.LOG_VERSION.id );
-        try ( PageCursor cursor = storeFile.io( pageId, PF_EXCLUSIVE_LOCK ) )
+        synchronized ( upgradeTimeLock )
         {
-            if ( cursor.next() )
-            {
-                incrementVersion( cursor );
-            }
-            return versionField;
+            setRecord( Position.UPGRADE_TIME, time );
+            upgradeTimeField = time;
         }
-        catch ( IOException e )
+    }
+
+    public void setUpgradeTransaction( long id, long checksum, long timestamp )
+    {
+        long pageId = pageIdForRecord( Position.UPGRADE_TRANSACTION_ID.id );
+        assert pageId == pageIdForRecord( Position.UPGRADE_TRANSACTION_CHECKSUM.id );
+        synchronized ( upgradeTransactionLock )
         {
-            throw new UnderlyingStorageException( e );
-        }
-        finally
-        {
-            try
+            try ( PageCursor cursor = storeFile.io( pageId, PF_SHARED_WRITE_LOCK ) )
             {
-                // make sure the new version value is persisted
-                // TODO this can be improved by flushing only the page containing that value rather than all pages
-                storeFile.flushAndForce();
+                if ( !cursor.next() )
+                {
+                    throw new UnderlyingStorageException( "Could not access MetaDataStore page " + pageId );
+                }
+                setRecord( cursor, Position.UPGRADE_TRANSACTION_ID, id );
+                setRecord( cursor, Position.UPGRADE_TRANSACTION_CHECKSUM, checksum );
+                setRecord( cursor, Position.UPGRADE_TRANSACTION_COMMIT_TIMESTAMP, timestamp );
+                upgradeTxIdField = id;
+                upgradeTxChecksumField = checksum;
+                upgradeCommitTimestampField = timestamp;
+                upgradeTransaction = new TransactionId( id, checksum, timestamp );
             }
             catch ( IOException e )
             {
@@ -405,40 +373,152 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
         }
     }
 
+    public long getCreationTime()
+    {
+        assertNotClosed();
+        checkInitialized( creationTimeField );
+        return creationTimeField;
+    }
+
+    public void setCreationTime( long time )
+    {
+        synchronized ( creationTimeLock )
+        {
+            setRecord( Position.TIME, time );
+            creationTimeField = time;
+        }
+    }
+
+    public long getRandomNumber()
+    {
+        assertNotClosed();
+        checkInitialized( randomNumberField );
+        return randomNumberField;
+    }
+
+    public void setRandomNumber( long nr )
+    {
+        synchronized ( randomNumberLock )
+        {
+            setRecord( Position.RANDOM_NUMBER, nr );
+            randomNumberField = nr;
+        }
+    }
+
+    @Override
+    public long getCurrentLogVersion()
+    {
+        assertNotClosed();
+        checkInitialized( versionField );
+        return versionField;
+    }
+
+    public void setCurrentLogVersion( long version )
+    {
+        synchronized ( logVersionLock )
+        {
+            setRecord( Position.LOG_VERSION, version );
+            versionField = version;
+        }
+    }
+
+    public void setLastTransactionCommitTimestamp( long timestamp )
+    {
+        // Preventing race with transactionCommitted() and assure record is consistent with highestCommittedTransaction
+        synchronized ( transactionCommittedLock )
+        {
+            setRecord( Position.LAST_TRANSACTION_COMMIT_TIMESTAMP, timestamp );
+            TransactionId transactionId = highestCommittedTransaction.get();
+            highestCommittedTransaction.set( transactionId.transactionId(), transactionId.checksum(), timestamp );
+        }
+    }
+
+    @Override
+    public long incrementAndGetVersion()
+    {
+        // This method can expect synchronisation at a higher level,
+        // and be effectively single-threaded.
+        long pageId = pageIdForRecord( Position.LOG_VERSION.id );
+        long version;
+        synchronized ( logVersionLock )
+        {
+            try ( PageCursor cursor = storeFile.io( pageId, PF_SHARED_WRITE_LOCK ) )
+            {
+                if ( cursor.next() )
+                {
+                    incrementVersion( cursor );
+                }
+                version = versionField;
+            }
+            catch ( IOException e )
+            {
+                throw new UnderlyingStorageException( e );
+            }
+        }
+        flush(); // make sure the new version value is persisted
+        return version;
+    }
+
+    private void incrementVersion( PageCursor cursor ) throws IOException
+    {
+        if ( !cursor.isWriteLocked() )
+        {
+            throw new IllegalArgumentException( "Cannot increment log version on page cursor that is not write-locked" );
+        }
+        // offsets plus one to skip the inUse byte
+        int offset = (Position.LOG_VERSION.id * getRecordSize()) + 1;
+        long value = cursor.getLong( offset ) + 1;
+        cursor.putLong( offset, value );
+        checkForDecodingErrors( cursor, Position.LOG_VERSION.id, NORMAL );
+        versionField = value;
+    }
+
     public long getStoreVersion()
     {
+        assertNotClosed();
         checkInitialized( storeVersionField );
         return storeVersionField;
     }
 
     public void setStoreVersion( long version )
     {
-        setRecord( Position.STORE_VERSION, version );
-        storeVersionField = version;
+        synchronized ( storeVersionLock )
+        {
+            setRecord( Position.STORE_VERSION, version );
+            storeVersionField = version;
+        }
     }
 
     public long getGraphNextProp()
     {
+        assertNotClosed();
         checkInitialized( graphNextPropField );
         return graphNextPropField;
     }
 
     public void setGraphNextProp( long propId )
     {
-        setRecord( Position.FIRST_GRAPH_PROPERTY, propId );
-        graphNextPropField = propId;
+        synchronized ( graphNextPropLock )
+        {
+            setRecord( Position.FIRST_GRAPH_PROPERTY, propId );
+            graphNextPropField = propId;
+        }
     }
 
     public long getLatestConstraintIntroducingTx()
     {
+        assertNotClosed();
         checkInitialized( latestConstraintIntroducingTxField );
         return latestConstraintIntroducingTxField;
     }
 
     public void setLatestConstraintIntroducingTx( long latestConstraintIntroducingTx )
     {
-        setRecord( Position.LAST_CONSTRAINT_TRANSACTION, latestConstraintIntroducingTx );
-        latestConstraintIntroducingTxField = latestConstraintIntroducingTx;
+        synchronized ( lastConstraintIntroducingTxLock )
+        {
+            setRecord( Position.LAST_CONSTRAINT_TRANSACTION, latestConstraintIntroducingTx );
+            latestConstraintIntroducingTxField = latestConstraintIntroducingTx;
+        }
     }
 
     private void readAllFields( PageCursor cursor ) throws IOException
@@ -448,62 +528,78 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
             creationTimeField = getRecordValue( cursor, Position.TIME );
             randomNumberField = getRecordValue( cursor, Position.RANDOM_NUMBER );
             versionField = getRecordValue( cursor, Position.LOG_VERSION );
-            upgradeTxIdField = getRecordValue( cursor, Position.UPGRADE_TRANSACTION_ID );
-            upgradeTimeField = getRecordValue( cursor, Position.UPGRADE_TIME );
             long lastCommittedTxId = getRecordValue( cursor, Position.LAST_TRANSACTION_ID );
             lastCommittingTxField.set( lastCommittedTxId );
             storeVersionField = getRecordValue( cursor, Position.STORE_VERSION );
             graphNextPropField = getRecordValue( cursor, Position.FIRST_GRAPH_PROPERTY );
             latestConstraintIntroducingTxField = getRecordValue( cursor, Position.LAST_CONSTRAINT_TRANSACTION );
-            lastTransactionChecksum = getRecordValue( cursor, Position.LAST_TRANSACTION_CHECKSUM );
-            lastClosedTransactionLogVersion = getRecordValue( cursor, Position.LAST_CLOSED_TRANSACTION_LOG_VERSION );
-            lastClosedTransactionLogByteOffset = getRecordValue( cursor, Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET );
+            upgradeTxIdField = getRecordValue( cursor, Position.UPGRADE_TRANSACTION_ID );
+            upgradeTxChecksumField = getRecordValue( cursor, Position.UPGRADE_TRANSACTION_CHECKSUM );
+            upgradeTimeField = getRecordValue( cursor, Position.UPGRADE_TIME );
+            long lastClosedTransactionLogVersion = getRecordValue( cursor, Position.LAST_CLOSED_TRANSACTION_LOG_VERSION );
+            long lastClosedTransactionLogByteOffset = getRecordValue( cursor, Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET );
             lastClosedTx.set( lastCommittedTxId,
                     new long[]{lastClosedTransactionLogVersion, lastClosedTransactionLogByteOffset} );
-            lastCommittedTx.set( lastCommittedTxId, new long[]{lastTransactionChecksum} );
-            upgradeTxChecksumField = getRecordValue( cursor, Position.UPGRADE_TRANSACTION_CHECKSUM );
+            highestCommittedTransaction.set( lastCommittedTxId,
+                    getRecordValue( cursor, Position.LAST_TRANSACTION_CHECKSUM ),
+                    getRecordValue( cursor, Position.LAST_TRANSACTION_COMMIT_TIMESTAMP, UNKNOWN_TX_COMMIT_TIMESTAMP
+                    ) );
+            upgradeCommitTimestampField = getRecordValue( cursor, Position.UPGRADE_TRANSACTION_COMMIT_TIMESTAMP,
+                    BASE_TX_COMMIT_TIMESTAMP );
+
+            upgradeTransaction = new TransactionId( upgradeTxIdField, upgradeTxChecksumField,
+                    upgradeCommitTimestampField );
         }
         while ( cursor.shouldRetry() );
+        if ( cursor.checkAndClearBoundsFlag() )
+        {
+            throw new UnderlyingStorageException(
+                    "Out of page bounds when reading all meta-data fields. The page in question is page " +
+                    cursor.getCurrentPageId() + " of file " + storageFileName.getAbsolutePath() + ", which is " +
+                    cursor.getCurrentPageSize() + " bytes in size" );
+        }
     }
 
-    private long getRecordValue( PageCursor cursor, Position position )
+    long getRecordValue( PageCursor cursor, Position position )
     {
-        int offset = position.id * getRecordSize();
-        cursor.setOffset( offset );
-        if ( cursor.getByte() == Record.IN_USE.byteValue() )
-        {
-            return cursor.getLong();
-        }
-        return FIELD_NOT_PRESENT;
+        return getRecordValue( cursor, position, FIELD_NOT_PRESENT );
     }
 
-    private void incrementVersion( PageCursor cursor ) throws IOException
+    private long getRecordValue( PageCursor cursor, Position position, long defaultValue )
     {
-        int offset = Position.LOG_VERSION.id * getRecordSize();
-        long value;
-        do
+        MetaDataRecord record = newRecord();
+        try
         {
-            cursor.setOffset( offset + 1 ); // +1 to skip the inUse byte
-            value = cursor.getLong() + 1;
-            cursor.setOffset( offset + 1 ); // +1 to skip the inUse byte
-            cursor.putLong( value );
+            record.setId( position.id );
+            recordFormat.read( record, cursor, FORCE, RECORD_SIZE );
+            if ( record.inUse() )
+            {
+                return record.getValue();
+            }
+            return defaultValue;
         }
-        while ( cursor.shouldRetry() );
-        versionField = value;
+        catch ( IOException e )
+        {
+            throw new UnderlyingStorageException( e );
+        }
     }
 
     private void refreshFields()
     {
-        scanAllFields( PF_SHARED_LOCK );
+        scanAllFields( PF_SHARED_READ_LOCK, element ->
+        {
+            readAllFields( element );
+            return false;
+        } );
     }
 
-    private void scanAllFields( int pf_flags )
+    private void scanAllFields( int pf_flags, Visitor<PageCursor,IOException> visitor )
     {
         try ( PageCursor cursor = storeFile.io( 0, pf_flags ) )
         {
             if ( cursor.next() )
             {
-                readAllFields( cursor );
+                visitor.visit( cursor );
             }
         }
         catch ( IOException e )
@@ -512,10 +608,9 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
         }
     }
 
-    private void setRecord( Position recordPosition, long value )
+    private void setRecord( Position position, long value )
     {
-        long id = recordPosition.id;
-        long pageId = pageIdForRecord( id );
+        long id = position.id;
 
         // We need to do a little special handling of high id in neostore since it's not updated in the same
         // way as other stores. Other stores always gets updates via commands where records are updated and
@@ -524,27 +619,26 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
         // unclear from the outside which record id that refers to, so here we need to manage high id ourselves.
         setHighestPossibleIdInUse( id );
 
-        try ( PageCursor cursor = storeFile.io( pageId, PF_EXCLUSIVE_LOCK ) )
-        {
-            if ( cursor.next() )
-            {
-                int offset = offsetForId( id );
-                do
-                {
-                    cursor.setOffset( offset );
-                    cursor.putByte( Record.IN_USE.byteValue() );
-                    cursor.putLong( value );
-                }
-                while ( cursor.shouldRetry() );
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( e );
-        }
+        MetaDataRecord record = new MetaDataRecord();
+        record.initialize( true, value );
+        record.setId( id );
+        updateRecord( record );
     }
 
-    public NeoStoreRecord asRecord() // TODO rename to something about next graph prop
+    private void setRecord( PageCursor cursor, Position position, long value ) throws IOException
+    {
+        if ( !cursor.isWriteLocked() )
+        {
+            throw new IllegalArgumentException( "Cannot write record without a page cursor that is write-locked" );
+        }
+        int offset = offsetForId( position.id );
+        cursor.setOffset( offset );
+        cursor.putByte( Record.IN_USE.byteValue() );
+        cursor.putLong( value );
+        checkForDecodingErrors( cursor, position.id, NORMAL );
+    }
+
+    public NeoStoreRecord graphPropertyRecord()
     {
         NeoStoreRecord result = new NeoStoreRecord();
         result.setNextProp( getGraphNextProp() );
@@ -571,16 +665,16 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
         int length = storeVersion.length();
         if ( length == 0 || length > 7 )
         {
-            throw new IllegalArgumentException( String.format(
+            throw new IllegalArgumentException( format(
                     "The given string %s is not of proper size for a store version string", storeVersion ) );
         }
         bits.put( length, 8 );
         for ( int i = 0; i < length; i++ )
         {
             char c = storeVersion.charAt( i );
-            if ( c < 0 || c >= 256 )
+            if ( c >= 256 )
             {
-                throw new IllegalArgumentException( String.format(
+                throw new IllegalArgumentException( format(
                         "Store version strings should be encode-able as Latin1 - %s is not", storeVersion ) );
             }
             bits.put( c, 8 ); // Just the lower byte
@@ -598,7 +692,7 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
         int length = bits.getShort( 8 );
         if ( length == 0 || length > 7 )
         {
-            throw new IllegalArgumentException( String.format( "The read version string length %d is not proper.",
+            throw new IllegalArgumentException( format( "The read version string length %d is not proper.",
                     length ) );
         }
         char[] result = new char[length];
@@ -612,58 +706,103 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
     @Override
     public long nextCommittingTransactionId()
     {
+        assertNotClosed();
         checkInitialized( lastCommittingTxField.get() );
         return lastCommittingTxField.incrementAndGet();
     }
 
     @Override
-    public void transactionCommitted( long transactionId, long checksum )
+    public void transactionCommitted( long transactionId, long checksum, long commitTimestamp )
     {
-        if ( lastCommittedTx.offer( transactionId, new long[]{checksum} ) )
+        assertNotClosed();
+        checkInitialized( lastCommittingTxField.get() );
+        if ( highestCommittedTransaction.offer( transactionId, checksum, commitTimestamp ) )
         {
-            long[] transactionData = lastCommittedTx.get();
-            setRecord( Position.LAST_TRANSACTION_ID, transactionData[0] );
-            setRecord( Position.LAST_TRANSACTION_CHECKSUM, transactionData[1] );
-            lastTransactionChecksum = checksum;
+            // We need to synchronize here in order to guarantee that the three fields are written consistently
+            // together. Note that having a write lock on the page is not enough for 3 reasons:
+            // 1. page write locks are not exclusive
+            // 2. the records might be in different pages
+            // 3. some other thread might kick in while we have been written only one record
+            synchronized ( transactionCommittedLock )
+            {
+                // Double-check with highest tx id under the lock, so that there haven't been
+                // another higher transaction committed between our id being accepted and
+                // acquiring this monitor.
+                if ( highestCommittedTransaction.get().transactionId() == transactionId )
+                {
+                    long pageId = pageIdForRecord( Position.LAST_TRANSACTION_ID.id );
+                    assert pageId == pageIdForRecord( Position.LAST_TRANSACTION_CHECKSUM.id );
+                    try ( PageCursor cursor = storeFile.io( pageId, PF_SHARED_WRITE_LOCK ) )
+                    {
+                        if ( cursor.next() )
+                        {
+                            setRecord( cursor, Position.LAST_TRANSACTION_ID, transactionId );
+                            setRecord( cursor, Position.LAST_TRANSACTION_CHECKSUM, checksum );
+                            setRecord( Position.LAST_TRANSACTION_COMMIT_TIMESTAMP, commitTimestamp );
+                        }
+                    }
+                    catch ( IOException e )
+                    {
+                        throw new UnderlyingStorageException( e );
+                    }
+                }
+            }
         }
     }
 
     @Override
     public long getLastCommittedTransactionId()
     {
+        assertNotClosed();
         checkInitialized( lastCommittingTxField.get() );
-        return lastCommittedTx.getHighestGapFreeNumber();
+        return highestCommittedTransaction.get().transactionId();
     }
 
     @Override
-    public long[] getLastCommittedTransaction()
+    public TransactionId getLastCommittedTransaction()
     {
+        assertNotClosed();
         checkInitialized( lastCommittingTxField.get() );
-        return lastCommittedTx.get();
+        return highestCommittedTransaction.get();
     }
 
     @Override
-    public long[] getUpgradeTransaction()
+    public TransactionId getUpgradeTransaction()
     {
-        checkInitialized( upgradeTxChecksumField );
-        return new long[]{upgradeTxIdField, upgradeTxChecksumField};
+        assertNotClosed();
+        checkInitialized( upgradeTxIdField  );
+        return upgradeTransaction;
     }
 
     @Override
     public long getLastClosedTransactionId()
     {
+        assertNotClosed();
         checkInitialized( lastCommittingTxField.get() );
         return lastClosedTx.getHighestGapFreeNumber();
     }
 
     @Override
+    public void awaitClosedTransactionId( long txId, long timeoutMillis ) throws TimeoutException, InterruptedException
+    {
+        assertNotClosed();
+        checkInitialized( lastCommittingTxField.get() );
+        lastClosedTx.await( txId, timeoutMillis );
+    }
+
+    @Override
     public long[] getLastClosedTransaction()
     {
+        assertNotClosed();
         checkInitialized( lastCommittingTxField.get() );
         return lastClosedTx.get();
     }
 
-    // Ensures that all fields are read from the store, by checking the initial value of the field in question
+    /**
+     * Ensures that all fields are read from the store, by checking the initial value of the field in question
+     *
+     * @param field the value
+     */
     private void checkInitialized( long field )
     {
         if ( field == FIELD_NOT_INITIALIZED )
@@ -673,31 +812,28 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
     }
 
     @Override
-    public void setLastCommittedAndClosedTransactionId( long transactionId, long checksum, long logVersion, long byteOffset )
-    {
-        setRecord( Position.LAST_TRANSACTION_ID, transactionId );
-        setRecord( Position.LAST_TRANSACTION_CHECKSUM, checksum );
-        setRecord( Position.LAST_CLOSED_TRANSACTION_LOG_VERSION, logVersion );
-        setRecord( Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET, byteOffset );
-        checkInitialized( lastCommittingTxField.get() );
-        lastCommittingTxField.set( transactionId );
-        lastCommittedTx.set( transactionId, new long[]{checksum} );
-        lastTransactionChecksum = checksum;
-        lastClosedTx.set( transactionId, new long[]{logVersion, byteOffset} );
-        lastClosedTransactionLogVersion = logVersion;
-        lastClosedTransactionLogByteOffset = byteOffset;
-    }
-
-    @Override
     public void transactionClosed( long transactionId, long logVersion, long byteOffset )
     {
         if ( lastClosedTx.offer( transactionId, new long[]{logVersion, byteOffset} ) )
         {
-            long[] lastClosedTransactionData = lastClosedTx.get();
-            setRecord( Position.LAST_CLOSED_TRANSACTION_LOG_VERSION, lastClosedTransactionData[1] );
-            setRecord( Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET, lastClosedTransactionData[2] );
-            lastClosedTransactionLogVersion = lastClosedTransactionData[1];
-            lastClosedTransactionLogByteOffset = lastClosedTransactionData[2];
+            long pageId = pageIdForRecord( Position.LAST_CLOSED_TRANSACTION_LOG_VERSION.id );
+            assert pageId == pageIdForRecord( Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET.id );
+            synchronized ( transactionClosedLock )
+            {
+                try ( PageCursor cursor = storeFile.io( pageId, PF_SHARED_WRITE_LOCK ) )
+                {
+                    if ( cursor.next() )
+                    {
+                        long[] lastClosedTransactionData = lastClosedTx.get();
+                        setRecord( cursor, Position.LAST_CLOSED_TRANSACTION_LOG_VERSION, lastClosedTransactionData[1] );
+                        setRecord( cursor, Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET, lastClosedTransactionData[2] );
+                    }
+                }
+                catch ( IOException e )
+                {
+                    throw new UnderlyingStorageException( e );
+                }
+            }
         }
     }
 
@@ -707,8 +843,49 @@ public class MetaDataStore extends AbstractStore implements TransactionIdStore, 
         boolean onPar = lastClosedTx.getHighestGapFreeNumber() == lastCommittingTxField.get();
         if ( !onPar )
         {   // Trigger some logging here, max logged every 30 secs or so
-            transactionCloseWaitLogger.event( null );
+            transactionCloseWaitLogger.info( format(
+                    "Waiting for all transactions to close...%n committed:  %s%n  committing: %s%n  closed:     %s",
+                    highestCommittedTransaction.get(), lastCommittingTxField, lastClosedTx ) );
         }
         return onPar;
+    }
+
+    public void logRecords( final Logger msgLog )
+    {
+        scanAllFields( PF_SHARED_READ_LOCK, cursor ->
+        {
+            for ( Position position : Position.values() )
+            {
+                long value;
+                do
+                {
+                    value = getRecordValue( cursor, position );
+                }
+                while ( cursor.shouldRetry() );
+                boolean bounds = cursor.checkAndClearBoundsFlag();
+                msgLog.log( position.name() + " (" + position.description() + "): " + value +
+                            (bounds ? " (out-of-bounds detected; value cannot be trusted)" : ""));
+            }
+            return false;
+        } );
+    }
+
+    @Override
+    public MetaDataRecord newRecord()
+    {
+        return new MetaDataRecord();
+    }
+
+    @Override
+    public <FAILURE extends Exception> void accept(
+            org.neo4j.kernel.impl.store.RecordStore.Processor<FAILURE> processor, MetaDataRecord record )
+                    throws FAILURE
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void prepareForCommit( MetaDataRecord record )
+    {   // No need to do anything with these records before commit
     }
 }

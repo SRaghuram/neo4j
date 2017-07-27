@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,25 @@
  */
 package org.neo4j.kernel.impl.store.record;
 
-
 public class NeoStoreRecord extends PrimitiveRecord
 {
     public NeoStoreRecord()
     {
-        super( -1, Record.NO_NEXT_PROPERTY.intValue() );
+        super( -1 );
         setInUse( true );
+    }
+
+    @Override
+    public NeoStoreRecord initialize( boolean inUse, long nextProp )
+    {
+        super.initialize( inUse, nextProp );
+        return this;
+    }
+
+    @Override
+    public void clear()
+    {
+        initialize( false, -1 );
     }
 
     @Override
@@ -40,5 +52,13 @@ public class NeoStoreRecord extends PrimitiveRecord
     @Override
     public void setIdTo( PropertyRecord property )
     {
+    }
+
+    @Override
+    public NeoStoreRecord clone()
+    {
+        NeoStoreRecord neoStoreRecord = new NeoStoreRecord();
+        neoStoreRecord.setNextProp( getNextProp() );
+        return neoStoreRecord;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,7 @@ public interface TransactionHeaderInformationFactory
 {
     TransactionHeaderInformation create();
 
-    static final TransactionHeaderInformationFactory DEFAULT = new TransactionHeaderInformationFactory.WithRandomBytes()
+    TransactionHeaderInformationFactory DEFAULT = new TransactionHeaderInformationFactory.WithRandomBytes()
     {
         private static final int NO_ID = -1;
 
@@ -38,7 +38,7 @@ public interface TransactionHeaderInformationFactory
         }
     };
 
-    static abstract class WithRandomBytes implements TransactionHeaderInformationFactory
+    abstract class WithRandomBytes implements TransactionHeaderInformationFactory
     {
         private static final int ADDITIONAL_HEADER_SIZE = 8;
 

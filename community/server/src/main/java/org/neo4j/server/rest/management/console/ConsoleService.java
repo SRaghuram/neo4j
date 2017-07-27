@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,6 @@ package org.neo4j.server.rest.management.console;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -31,13 +30,15 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.database.CypherExecutor;
 import org.neo4j.server.database.Database;
+import org.neo4j.server.rest.management.AdvertisableService;
+import org.neo4j.server.rest.management.repr.ConsoleServiceRepresentation;
 import org.neo4j.server.rest.repr.BadInputException;
 import org.neo4j.server.rest.repr.InputFormat;
 import org.neo4j.server.rest.repr.ListRepresentation;
@@ -45,10 +46,6 @@ import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.Representation;
 import org.neo4j.server.rest.repr.RepresentationType;
 import org.neo4j.server.rest.repr.ValueRepresentation;
-import org.neo4j.server.webadmin.console.ConsoleSessionFactory;
-import org.neo4j.server.webadmin.console.ScriptSession;
-import org.neo4j.server.rest.management.AdvertisableService;
-import org.neo4j.server.rest.management.repr.ConsoleServiceRepresentation;
 
 import static java.util.Arrays.asList;
 
@@ -67,7 +64,7 @@ public class ConsoleService implements AdvertisableService
     public ConsoleService( @Context Config config, @Context Database database, @Context LogProvider logProvider, @Context HttpServletRequest req,
                            @Context OutputFormat output, @Context CypherExecutor cypherExecutor )
     {
-        this( new SessionFactoryImpl( req, config.get( ServerSettings.management_console_engines ),
+        this( new SessionFactoryImpl( req, config.get( ServerSettings.console_module_engines ),
                 cypherExecutor ), database, logProvider, output );
     }
 
@@ -121,10 +118,13 @@ public class ConsoleService implements AdvertisableService
         }
 
         ScriptSession scriptSession;
-        try {
+        try
+        {
             scriptSession = getSession( args );
-        } catch(IllegalArgumentException e) {
-            return output.badRequest(e);
+        }
+        catch ( IllegalArgumentException e )
+        {
+            return output.badRequest( e );
         }
 
         log.debug( scriptSession.toString() );
@@ -135,7 +135,8 @@ public class ConsoleService implements AdvertisableService
                     asList( ValueRepresentation.string( result.first() ), ValueRepresentation.string( result.other() ) ) );
 
             return output.ok( new ListRepresentation( RepresentationType.STRING, list ) );
-        } catch (Exception e)
+        }
+        catch (Exception e)
         {
             List<Representation> list = new ArrayList<Representation>(
                     asList( ValueRepresentation.string( e.getClass() + " : " + e.getMessage() + "\n"), ValueRepresentation.string( null ) ));

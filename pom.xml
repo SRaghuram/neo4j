@@ -11,35 +11,40 @@
 
   <groupId>org.neo4j</groupId>
   <artifactId>parent</artifactId>
-  <version>2.3-SNAPSHOT</version>
+  <version>3.2.3-SNAPSHOT</version>
+
   <packaging>pom</packaging>
   <name>Neo4j</name>
   <description>Neo4j Graph Database</description>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jta.groupId>org.apache.geronimo.specs</jta.groupId>
-    <jta.artifactId>geronimo-jta_1.1_spec</jta.artifactId>
-    <jta.version>1.1.1</jta.version>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <neo4j.java.version>${maven.compiler.source}</neo4j.java.version>
     <pico.version>2.14.3</pico.version>
     <licensing.prepend.text>notice-agpl-prefix.txt</licensing.prepend.text>
     <licensing.phase>compile</licensing.phase>
-    <lucene.version>3.6.2</lucene.version>
-    <powermock.version>1.5.5</powermock.version>
-    <logback-classic.version>1.1.2</logback-classic.version>
+    <lucene.version>5.5.0</lucene.version>
+    <bouncycastle.version>1.53</bouncycastle.version>
     <generate-config-docs-phase>prepare-package</generate-config-docs-phase>
     <hsqldb.version>2.3.2</hsqldb.version>
-    <metrics.version>3.1.2</metrics.version>
-    <test.runner.jvm.settings>-Xmx1G -XX:MaxPermSize=128M -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=target/test-data</test.runner.jvm.settings>
+    <test.runner.jvm.settings.additional></test.runner.jvm.settings.additional>
+    <test.runner.jvm.settings>-Xmx2G -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=target/test-data -Dorg.neo4j.unsafe.impl.internal.dragons.UnsafeUtil.DIRTY_MEMORY=true -Dorg.neo4j.unsafe.impl.internal.dragons.UnsafeUtil.CHECK_NATIVE_ACCESS=true -Dorg.neo4j.io.pagecache.impl.muninn.usePreciseCursorErrorStackTraces=true -XX:+UnlockExperimentalVMOptions -XX:+TrustFinalNonStaticFields ${test.runner.jvm.settings.additional}</test.runner.jvm.settings>
     <doclint-groups>reference</doclint-groups>
+    <jetty.version>9.2.9.v20150224</jetty.version>
+    <findbugs.version>3.0.1</findbugs.version>
+    <clirr.comparisonVersion>3.0.1</clirr.comparisonVersion>
+    <git.commit>unknown-commit</git.commit>
   </properties>
 
   <modules>
     <module>community</module>
-    <module>advanced</module>
     <module>enterprise</module>
     <module>integrationtests</module>
     <module>stresstests</module>
+    <module>tools</module>
+    <module>packaging</module>
   </modules>
 
   <build>
@@ -48,12 +53,18 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <argLine>${test.runner.jvm.settings}</argLine>
+          <systemPropertyVariables>
+            <dbms.pagecache.memory.default.override>8m</dbms.pagecache.memory.default.override>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
           <argLine>${test.runner.jvm.settings}</argLine>
+          <systemPropertyVariables>
+            <dbms.pagecache.memory.default.override>8m</dbms.pagecache.memory.default.override>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>
@@ -71,18 +82,89 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>2.17</version>
+        <configuration>
+          <configLocation>build/checkstyle.xml</configLocation>
+          <consoleOutput>true</consoleOutput>
+          <logViolationsToConsole>true</logViolationsToConsole>
+          <failsOnError>true</failsOnError>
+          <failOnViolation>true</failOnViolation>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>7.6</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>validate</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>clirr-maven-plugin</artifactId>
-          <version>2.4</version>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.19.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>2.19.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>3.0.1</version>
         </plugin>
         <plugin>
           <groupId>org.neo4j.build.plugins</groupId>
           <artifactId>clirr-maven-plugin</artifactId>
-          <version>1.0</version>
+          <version>1.0.1</version>
+          <executions>
+            <execution>
+              <id>default</id>
+              <phase>${clirr-check-phase}</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <failOnError>true</failOnError>
+            <logResults>true</logResults>
+            <!-- OBS: Set this to one version ahead, i.e. if you'd like it to compare against 1.9.3 then set it to 1.9.4-->
+            <comparisonVersion>${clirr.comparisonVersion}</comparisonVersion>
+            <ignoreMaintenenceVersions>false</ignoreMaintenenceVersions>
+            <excludeMessageCodes>
+              <param>6006</param><!-- Field was made final. -->
+              <param>7012</param><!-- Method added to interface -->
+            </excludeMessageCodes>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -95,15 +177,9 @@
           <version>1.4.0</version>
         </plugin>
         <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>findbugs-maven-plugin</artifactId>
-          <version>2.5.2</version>
-        </plugin>
-        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>2.1</version>
-          <!-- 2.1 ? Yes, 2.0 has maven3 issues -->
+          <version>2.4.3</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -126,28 +202,6 @@
           <version>1.2.0.0</version>
         </plugin>
         <plugin>
-          <groupId>pl.project13.maven</groupId>
-          <artifactId>git-commit-id-plugin</artifactId>
-          <version>2.1.13</version>
-          <executions>
-            <execution>
-              <id>generate-git-hash</id>
-              <goals>
-                <goal>revision</goal>
-              </goals>
-            </execution>
-          </executions>
-          <configuration>
-            <skipPoms>false</skipPoms>
-            <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
-            <gitDescribe>
-              <dirty>-dirty</dirty>
-              <abbrev>7</abbrev>
-              <forceLongFormat>true</forceLongFormat>
-            </gitDescribe>
-          </configuration>
-        </plugin>
-        <plugin>
           <groupId>org.neo4j.build.plugins</groupId>
           <artifactId>licensing-maven-plugin</artifactId>
           <version>1.7.5</version>
@@ -157,8 +211,9 @@
             <plainTextReport>true</plainTextReport>
             <prependText>${licensing.prepend.text}</prependText>
             <excludedGroups>
-              ^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.browser){1}|(org.neo4j.doc){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1}|(org.neo4j.bolt){1}|(org.neo4j.build){1}|(org.neo4j.examples){1})$
+              ^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1}|(org.neo4j.bolt){1}|(org.neo4j.build){1}|(org.neo4j.test){1})$
             </excludedGroups>
+            <excludedArtifacts>^((neo4j-browser))$</excludedArtifacts>
             <includedScopes>compile</includedScopes>
           </configuration>
           <executions>
@@ -218,28 +273,60 @@
             </dependency>
           </dependencies>
         </plugin>
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>net.alchim31.maven</groupId>
+                    <artifactId>scala-maven-plugin</artifactId>
+                    <versionRange>[3.1.0,)</versionRange>
+                    <goals>
+                      <goal>add-source</goal>
+                      <goal>compile</goal>
+                      <goal>testCompile</goal>
+                      <goal>doc</goal>
+                      <goal>doc-jar</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore />
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
 
   <profiles>
+    <!--
+     Git information extraction profiles.
+     Activate by adding the required Git information to the environment, e.g. on *nix:
+
+     export GIT_COMMIT
+     GIT_COMMIT=$(git rev-parse HEAD)
+    -->
     <profile>
-      <id>neo-full-build</id>
+      <id>attach-git-info-commit</id>
       <activation>
         <activeByDefault>false</activeByDefault>
         <property>
-          <name>fullBuild</name>
+          <name>env.GIT_COMMIT</name>
         </property>
       </activation>
-      <modules>
-        <module>manual</module>
-        <module>packaging</module>
-        <module>packaging/installer-linux</module>
-      </modules>
       <properties>
-        <attach-docs-phase>verify</attach-docs-phase>
+        <git.commit>${env.GIT_COMMIT}</git.commit>
       </properties>
     </profile>
+
+    <!-- Build configuration profiles -->
     <profile>
       <id>neodev</id>
       <activation>
@@ -268,64 +355,7 @@
               </execution>
             </executions>
           </plugin>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>findbugs-maven-plugin</artifactId>
-            <configuration>
-              <xmlOutput>true</xmlOutput>
-              <findbugsXmlOutput>true</findbugsXmlOutput>
-              <!-- For jenkins to pick stuff up -->
-            </configuration>
-          </plugin>
         </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>neo-docs-build</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>docsBuild</name>
-        </property>
-      </activation>
-      <modules>
-        <module>manual</module>
-      </modules>
-      <properties>
-        <attach-java-sources-phase>package</attach-java-sources-phase>
-        <attach-java-test-sources-phase>package</attach-java-test-sources-phase>
-        <attach-test-jar-phase>package</attach-test-jar-phase>
-        <attach-docs-phase>verify</attach-docs-phase>
-        <integration-test-phase>integration-test</integration-test-phase>
-      </properties>
-      <build>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-surefire-plugin</artifactId>
-              <configuration>
-                <includes>
-                  <include>**/DocTest*.java</include>
-                  <include>**/*DocTest.java</include>
-                  <include>**/*DocTests.java</include>
-                  <include>**/*DocTestCase.java</include>
-                </includes>
-              </configuration>
-            </plugin>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-failsafe-plugin</artifactId>
-              <configuration>
-                <includes>
-                  <include>**/DocIT*.java</include>
-                  <include>**/*DocIT.java</include>
-                  <include>**/*DocITCase.java</include>
-                </includes>
-              </configuration>
-            </plugin>
-          </plugins>
-        </pluginManagement>
       </build>
     </profile>
     <profile>
@@ -361,41 +391,11 @@
         </plugins>
       </build>
     </profile>
-    <profile><!-- used for testing -->
-      <id>unix-dependency-tools.jar</id>
-      <activation>
-        <file>
-          <exists>${java.home}/../lib/tools.jar</exists>
-        </file>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>com.sun.tools</groupId>
-          <artifactId>tools</artifactId>
-          <version>${sun.tools.version}</version>
-          <scope>system</scope>
-          <systemPath>${java.home}/../lib/tools.jar</systemPath>
-          <optional>true</optional>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile><!-- used for testing -->
-      <id>Windows-dependency-tools.jar</id>
-      <activation>
-        <os>
-          <family>Windows</family>
-        </os>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>com.sun.tools</groupId>
-          <artifactId>tools</artifactId>
-          <version>${sun.tools.version}</version>
-          <scope>system</scope>
-          <systemPath>${java.home}\\..\\lib\\tools.jar</systemPath>
-          <optional>true</optional>
-        </dependency>
-      </dependencies>
+    <profile>
+      <id>causal-clustering-tests-only</id>
+      <properties>
+        <test-phase>none</test-phase>
+      </properties>
     </profile>
     <profile>
       <id>java8-set-javadoc-doclint</id>
@@ -419,34 +419,56 @@
     <dependencies>
       <dependency>
         <groupId>org.apache.lucene</groupId>
+        <artifactId>lucene-analyzers-common</artifactId>
+        <version>${lucene.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.lucene</groupId>
         <artifactId>lucene-core</artifactId>
         <version>${lucene.version}</version>
       </dependency>
-      <!-- special -->
       <dependency>
-        <groupId>${jta.groupId}</groupId>
-        <artifactId>${jta.artifactId}</artifactId>
-        <version>${jta.version}</version>
+        <groupId>org.apache.lucene</groupId>
+        <artifactId>lucene-codecs</artifactId>
+        <version>${lucene.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.lucene</groupId>
+        <artifactId>lucene-queryparser</artifactId>
+        <version>${lucene.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queries</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-sandbox</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <!-- testing -->
       <dependency>
+        <groupId>org.neo4j.driver</groupId>
+        <artifactId>neo4j-java-driver</artifactId>
+        <version>1.2.1</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
-        <version>4.3.4</version>
-        <scope>test</scope>
+        <version>4.5.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>4.5.2</version>
+        <classifier>tests</classifier>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpcore</artifactId>
-        <version>4.3.2</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.httpcomponents</groupId>
-        <artifactId>httpclient</artifactId>
-        <version>4.3.4</version>
-        <classifier>tests</classifier>
-        <scope>test</scope>
+        <version>4.4.5</version>
       </dependency>
       <dependency>
         <groupId>org.picocontainer</groupId>
@@ -454,12 +476,19 @@
         <version>${pico.version}</version>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>com.google.jimfs</groupId>
+        <artifactId>jimfs</artifactId>
+        <version>1.1</version>
+        <scope>test</scope>
+      </dependency>
+
 
       <!-- The JUnit-Hamcrest-Mockito combo -->
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
-        <version>4.11</version>
+        <version>4.12</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -478,55 +507,17 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>1.9.5</version>
+        <version>1.10.19</version>
         <scope>test</scope>
       </dependency>
 
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-all</artifactId>
-        <version>1.9.5</version>
-        <scope>test</scope>
-      </dependency>
       <dependency>
           <groupId>org.objenesis</groupId>
           <artifactId>objenesis</artifactId>
-          <version>1.3</version>
+          <version>2.2</version>
           <scope>test</scope>
       </dependency>
 
-      <dependency>
-        <groupId>org.powermock</groupId>
-        <artifactId>powermock-module-junit4</artifactId>
-        <version>${powermock.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.powermock</groupId>
-        <artifactId>powermock-api-mockito</artifactId>
-        <version>${powermock.version}</version>
-        <scope>test</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-<!--
-      <dependency>
-        <groupId>org.ow2.jotm</groupId>
-        <artifactId>jotm-core</artifactId>
-        <version>2.2.3</version>
-        <scope>test</scope>
-      </dependency>
--->
-      <dependency>
-        <groupId>geronimo-spec</groupId>
-        <artifactId>geronimo-spec-j2ee</artifactId>
-        <version>1.4-rc4</version>
-        <scope>test</scope>
-      </dependency>
       <dependency>
         <groupId>org.hsqldb</groupId>
         <artifactId>hsqldb</artifactId>
@@ -576,6 +567,11 @@
         <artifactId>commons-lang3</artifactId>
         <version>3.3.2</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>1.12</version>
+      </dependency>
 
       <!-- Netty is used by three components: Com, Cluster and Bolt Socket Transport.
            Netty 4 is a significant improvement over Netty 3, in that it introduces
@@ -587,12 +583,12 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty</artifactId>
-        <version>3.6.3.Final</version>
+        <version>3.9.9.Final</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>4.0.28.Final</version>
+        <version>4.1.8.Final</version>
       </dependency>
 
       <dependency>
@@ -601,29 +597,9 @@
         <version>1.2.17</version>
       </dependency>
       <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>${logback-classic.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-core</artifactId>
-        <version>${logback-classic.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-access</artifactId>
-        <version>${logback-classic.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.codehaus.janino</groupId>
         <artifactId>janino</artifactId>
         <version>2.6.1</version>
-      </dependency>
-      <dependency>
-        <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
-        <artifactId>concurrentlinkedhashmap-lru</artifactId>
-        <version>1.4.2</version>
       </dependency>
       <dependency>
         <groupId>net.sf.opencsv</groupId>
@@ -684,14 +660,24 @@
         <version>1.9.13</version>
       </dependency>
       <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-server</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-webapp</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-servlet</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.eclipse.jetty.websocket</groupId>
         <artifactId>websocket-client</artifactId>
         <version>9.2.10.v20150310</version>
-      </dependency>
-      <dependency>
-        <groupId>org.rrd4j</groupId>
-        <artifactId>rrd4j</artifactId>
-        <version>2.2</version>
       </dependency>
       <dependency>
         <groupId>org.mozilla</groupId>
@@ -701,7 +687,12 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk15on</artifactId>
-        <version>1.52</version>
+        <version>${bouncycastle.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk15on</artifactId>
+        <version>${bouncycastle.version}</version>
       </dependency>
       <dependency>
         <groupId>org.neo4j.3rdparty.javax.ws.rs</groupId>
@@ -729,17 +720,19 @@
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-core</artifactId>
-        <version>${metrics.version}</version>
+        <version>3.1.2</version>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-graphite</artifactId>
-        <version>${metrics.version}</version>
+        <version>3.1.2</version>
       </dependency>
+
       <dependency>
-        <groupId>io.dropwizard.metrics</groupId>
-        <artifactId>metrics-ganglia</artifactId>
-        <version>${metrics.version}</version>
+        <groupId>com.google.code.findbugs</groupId>
+        <artifactId>annotations</artifactId>
+        <version>${findbugs.version}</version>
+        <scope>provided</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>

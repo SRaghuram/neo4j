@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,7 +37,7 @@ public class TestAllSimplePaths extends Neo4jAlgoTestCase
     public void testCircularGraph()
     {
         /* Layout
-         * 
+         *
          * (a)---(b)===(c)---(e)
          *         \   /
          *          (d)
@@ -66,7 +66,7 @@ public class TestAllSimplePaths extends Neo4jAlgoTestCase
         graph.makeEdge( "b", "c" );
         graph.makeEdge( "b", "c" );
         graph.makeEdge( "c", "d" );
-        
+
         PathFinder<Path> finder = instantiatePathFinder( 10 );
         Iterable<Path> paths = finder.findAllPaths( graph.getNode( "a" ), graph.getNode( "d" ) );
         assertPaths( paths, "a,b,c,d", "a,b,c,d", "a,b,c,d" );

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -45,9 +45,10 @@ import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.ha.UpdatePuller;
 import org.neo4j.test.StreamConsumer;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * This test case ensures that updates in HA are first written out to the log
@@ -59,14 +60,14 @@ import static org.junit.Assert.assertFalse;
  * txid and that will lead to branching. The exception is thrown during startup,
  * before the constructor returns, so we cannot test from userland. Instead we
  * check for the symptom, which is the branched store. This is not nice, just a
- * bit better than checking messages.log for certain entries. Another, more
+ * bit better than checking debug.log for certain entries. Another, more
  * direct, test is present in community.
  */
 public class TestPullUpdatesApplied
 {
     private final HighlyAvailableGraphDatabase[] dbs = new HighlyAvailableGraphDatabase[3];
     @Rule
-    public final TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
+    public final TestDirectory testDirectory = TestDirectory.testDirectory();
 
     @Before
     public void doBefore() throws Exception
@@ -120,10 +121,7 @@ public class TestPullUpdatesApplied
 
         dbToKill.shutdown();
 
-        if ( !latch1.await( 60, TimeUnit.SECONDS ) )
-        {
-            throw new IllegalStateException( "Timeout waiting for instance to leave cluster" );
-        }
+        assertTrue( "Timeout waiting for instance to leave cluster", latch1.await( 60, TimeUnit.SECONDS ) );
 
         addNode( master ); // this will be pulled by tne next start up, applied
         // but not written to log.
@@ -147,10 +145,7 @@ public class TestPullUpdatesApplied
 
         runInOtherJvmToGetExitCode( targetDirectory.getAbsolutePath(), "" + toKill );
 
-        if ( !latch2.await( 60, TimeUnit.SECONDS ) )
-        {
-            throw new IllegalStateException( "Timeout waiting for instance to fail" );
-        }
+        assertTrue( "Timeout waiting for instance to fail", latch2.await( 60, TimeUnit.SECONDS ) );
 
         // This is to allow other instances to mark the dead instance as failed, otherwise on startup it will be denied.
         // TODO This is to demonstrate shortcomings in our design. Fix this, you ugly, ugly hacker
@@ -164,7 +159,7 @@ public class TestPullUpdatesApplied
     // For executing in a different process than the one running the test case.
     public static void main( String[] args ) throws Exception
     {
-        String storePath = args[0];
+        File storePath = new File( args[0] );
         int serverId = Integer.parseInt( args[1] );
 
         database( serverId, storePath ).getDependencyResolver().resolveDependency( UpdatePuller.class ).pullUpdates();
@@ -174,18 +169,18 @@ public class TestPullUpdatesApplied
 
     private HighlyAvailableGraphDatabase newDb( int serverId )
     {
-        return database( serverId, testDirectory.directory( Integer.toString( serverId ) ).getAbsolutePath() );
+        return database( serverId, testDirectory.directory( Integer.toString( serverId ) ).getAbsoluteFile() );
     }
 
     private void restart( int serverId )
     {
-        dbs[serverId] = database( serverId, testDirectory.directory( Integer.toString( serverId ) ).getAbsolutePath() );
+        dbs[serverId] = database( serverId, testDirectory.directory( Integer.toString( serverId ) ).getAbsoluteFile() );
     }
 
-    private static HighlyAvailableGraphDatabase database( int serverId, String path )
+    private static HighlyAvailableGraphDatabase database( int serverId, File path )
     {
         return (HighlyAvailableGraphDatabase) new TestHighlyAvailableGraphDatabaseFactory().
-                newHighlyAvailableDatabaseBuilder( path )
+                newEmbeddedDatabaseBuilder( path )
                 .setConfig( ClusterSettings.cluster_server, "127.0.0.1:" + (5001 + serverId) )
                 .setConfig( ClusterSettings.initial_hosts, "127.0.0.1:5001" )
                 .setConfig( ClusterSettings.server_id, Integer.toString( serverId ) )

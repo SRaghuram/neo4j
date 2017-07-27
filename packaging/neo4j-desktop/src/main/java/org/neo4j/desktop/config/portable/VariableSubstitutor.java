@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,22 +19,21 @@
  */
 package org.neo4j.desktop.config.portable;
 
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.neo4j.helpers.Function;
 
 class VariableSubstitutor
 {
     private static final Pattern DEFAULT_PATTERN = Pattern.compile( "\\$\\{([^\\}]+)\\}" );
     private final Pattern pattern;
 
-    public VariableSubstitutor( Pattern pattern )
+    private VariableSubstitutor( Pattern pattern )
     {
         this.pattern = pattern;
     }
 
-    public VariableSubstitutor()
+    VariableSubstitutor()
     {
         this( DEFAULT_PATTERN );
     }

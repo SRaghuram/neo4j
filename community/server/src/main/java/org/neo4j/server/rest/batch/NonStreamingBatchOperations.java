@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,6 @@ package org.neo4j.server.rest.batch;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
@@ -59,7 +58,8 @@ public class NonStreamingBatchOperations extends BatchOperations
         if (is2XXStatusCode(res.getStatus()))
         {
             results.addOperationResult(path, id, resultBody, res.getHeader("Location"));
-        } else
+        }
+        else
         {
             throw new BatchOperationFailedException(res.getStatus(), resultBody, null );
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -43,7 +43,7 @@ public class IndexProviderStore
     private final long indexVersion;
 
     private final StoreChannel fileChannel;
-    private final ByteBuffer buf = ByteBuffer.allocate( RECORD_SIZE*RECORD_COUNT );
+    private final ByteBuffer buf = ByteBuffer.allocate( RECORD_SIZE * RECORD_COUNT );
     private long lastCommittedTx;
     private final File file;
     private final Random random;
@@ -58,7 +58,9 @@ public class IndexProviderStore
         {
             // Create it if it doesn't exist
             if ( !fileSystem.fileExists( file ) || fileSystem.getFileSize( file ) == 0 )
+            {
                 create( file, fileSystem, expectedVersion );
+            }
 
             // Read all the records in the file
             channel = fileSystem.open( file, "rw" );
@@ -76,8 +78,10 @@ public class IndexProviderStore
             // Here we know that either the version matches or we just upgraded to the expected version
             indexVersion = expectedVersion;
             if ( versionDiffers )
-                // We have upgraded the version, let's write it
+            // We have upgraded the version, let's write it
+            {
                 writeOut();
+            }
             success = true;
         }
         catch ( IOException e )
@@ -128,23 +132,30 @@ public class IndexProviderStore
     {
         buf.clear();
         int bytesRead = fileChannel.read( buf );
-        int wholeRecordsRead = bytesRead/RECORD_SIZE;
+        int wholeRecordsRead = bytesRead / RECORD_SIZE;
         if ( wholeRecordsRead < RECORD_COUNT && !allowUpgrade )
-            throw new UpgradeNotAllowedByConfigurationException( "Index version (managed by " + file + ") has changed " +
-            		"and cannot be upgraded unless " + GraphDatabaseSettings.allow_store_upgrade.name() +
-            		"=true is supplied in the configuration" );
+        {
+            throw new UpgradeNotAllowedByConfigurationException(
+                    "Index version (managed by " + file + ") has changed " + "and cannot be upgraded unless " +
+                            GraphDatabaseSettings.allow_store_upgrade.name() +
+                            "=true is supplied in the configuration" );
+        }
 
         buf.flip();
         Long[] result = new Long[count];
         for ( int i = 0; i < wholeRecordsRead; i++ )
+        {
             result[i] = buf.getLong();
+        }
         return result;
     }
 
     private void create( File file, FileSystemAbstraction fileSystem, long indexVersion ) throws IOException
     {
         if ( fileSystem.fileExists( file ) && fileSystem.getFileSize( file ) > 0 )
+        {
             throw new IllegalArgumentException( file + " already exist" );
+        }
 
         StoreChannel fileChannel = null;
         try
@@ -155,8 +166,10 @@ public class IndexProviderStore
         }
         finally
         {
-            if (fileChannel != null)
+            if ( fileChannel != null )
+            {
                 fileChannel.close();
+            }
         }
     }
 
@@ -170,9 +183,11 @@ public class IndexProviderStore
         int written = channel.write( buf, 0 );
         channel.force( true );
 
-        int expectedLength = RECORD_COUNT*RECORD_SIZE;
+        int expectedLength = RECORD_COUNT * RECORD_SIZE;
         if ( written != expectedLength )
+        {
             throw new RuntimeException( "Expected to write " + expectedLength + " bytes, but wrote " + written );
+        }
     }
 
     public File getFile()
@@ -239,7 +254,9 @@ public class IndexProviderStore
     public void close()
     {
         if ( !fileChannel.isOpen() )
+        {
             return;
+        }
 
         writeOut();
         try

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,271 +19,308 @@
  */
 package org.neo4j.cypher
 
+import org.mockito.Matchers._
 import org.mockito.Mockito._
-import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherFunSuite
-import org.neo4j.graphdb.GraphDatabaseService
-import org.neo4j.kernel.GraphDatabaseAPI
-import org.neo4j.kernel.impl.query.{QueryEngineProvider, QueryExecutionMonitor}
-import org.neo4j.kernel.monitoring.Monitors
+import org.neo4j.cypher.internal.frontend.v3_2.test_helpers.CypherFunSuite
+import org.neo4j.cypher.ExecutionEngineHelper.createEngine
+import org.neo4j.cypher.internal.helpers.GraphIcing
+import org.neo4j.cypher.internal.{ExecutionEngine, ExecutionResult}
+import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
+import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
+import org.neo4j.kernel.GraphDatabaseQueryService
+import org.neo4j.kernel.api.query.ExecutingQuery
+import org.neo4j.kernel.impl.query.{QueryExecutionMonitor, TransactionalContext}
 import org.neo4j.test.TestGraphDatabaseFactory
 
-class QueryExecutionMonitorTest extends CypherFunSuite {
+import scala.collection.immutable.Map
+import scala.language.implicitConversions
+
+class QueryExecutionMonitorTest extends CypherFunSuite with GraphIcing with GraphDatabaseTestSupport with ExecutionEngineTestSupport {
+  implicit def contextQuery(context: TransactionalContext): ExecutingQuery = context.executingQuery()
+
+  private def runQuery(query: String): (ExecutingQuery, ExecutionResult) = {
+    val context = db.transactionalContext(query = query -> Map.empty)
+    val executingQuery = context.executingQuery()
+    val executionResult = engine.execute(executingQuery.queryText(), executingQuery.queryParameters(), context)
+    (executingQuery, executionResult)
+  }
 
   test("monitor is not called if iterator not exhausted") {
-    // given
-    val session = QueryEngineProvider.embeddedSession()
-
     // when
-    engine.execute("RETURN 42", Map.empty[String, Any], session)
+    val (query, result) = runQuery("RETURN 42")
 
     // then
-    verify(monitor, times(1)).startQueryExecution(session, "RETURN 42")
-    verify(monitor, never()).endSuccess(session)
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, never()).endSuccess(query)
   }
 
   test("monitor is called when exhausted") {
-    // given
-    val session = QueryEngineProvider.embeddedSession()
-
     // when
-    val result = engine.execute("RETURN 42", Map.empty[String, Any], session).javaIterator
+    val (query, result) = runQuery("RETURN 42")
+
     while (result.hasNext) {
-      verify(monitor, never).endSuccess(session)
+      verify(monitor, never).endSuccess(query)
       result.next()
     }
 
     // then
-    verify(monitor, times(1)).startQueryExecution(session, "RETURN 42")
-    verify(monitor, times(1)).endSuccess(session)
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, times(1)).endSuccess(query)
+  }
+
+  test("monitor is called when using dumpToString") {
+    // when
+    val (query, result) = runQuery("RETURN 42")
+
+
+    val textResult = result.dumpToString()
+
+    // then
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, times(1)).endSuccess(query)
+  }
+
+  test("monitor is called when using columnAs[]") {
+    // when
+    val (query, result) = runQuery("RETURN 42 as x")
+
+
+    result.columnAs[Number]("x").toSeq
+
+    // then
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, times(1)).endSuccess(query)
+  }
+
+  test("monitor is called when using columnAs[] from Java and explicitly closing") {
+    // when
+    val (query, result) = runQuery("RETURN 42 as x")
+
+
+    val res = result.javaColumnAs[Number]("x")
+    res.close()
+
+    // then
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, times(1)).endSuccess(query)
+  }
+
+  test("monitor is called when using columnAs[] from Java and emptying") {
+    // when
+    val (query, result) = runQuery("RETURN 42 as x")
+
+
+    val res = result.javaColumnAs[Number]("x")
+    while(res.hasNext) res.next()
+
+    // then
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, times(1)).endSuccess(query)
   }
 
   test("monitor is called directly when return is empty") {
-    // given
-    val session = QueryEngineProvider.embeddedSession()
-
-    // when
-    val result = engine.execute("CREATE()", Map.empty[String, Any], session).javaIterator
+    val (context, result) = runQuery("CREATE ()")
 
     // then
-    verify(monitor, times(1)).startQueryExecution(session, "CREATE()")
-    verify(monitor, times(1)).endSuccess(session)
+    verify(monitor, times(1)).startQueryExecution(context)
+    verify(monitor, times(1)).endSuccess(context)
   }
 
-  test("monitor really not called until result is exhausted") {
-    // given
-    val session = QueryEngineProvider.embeddedSession()
+  test("monitor is not called multiple times even if result is closed multiple times") {
+    val (context, result) = runQuery("CREATE ()")
+    result.close()
+    result.close()
 
-    // when
-    val result = engine.execute("RETURN [1, 2, 3, 4, 5]", Map.empty[String, Any], session).javaIterator
-
-    //then
-    verify(monitor, times(1)).startQueryExecution(session, "RETURN [1, 2, 3, 4, 5]")
-    while (result.hasNext) {
-      verify(monitor, never).endSuccess(session)
-      result.next()
-    }
-    verify(monitor, times(1)).endSuccess(session)
+    // then
+    verify(monitor, times(1)).startQueryExecution(context)
+    verify(monitor, times(1)).endSuccess(context)
   }
 
-  test("nothing breaks when no monitor is there") {
-    // given
-    val engine = new ExecutionEngine(graph)
-    val session = QueryEngineProvider.embeddedSession()
+  test("monitor is called directly when proc return is void") {
+    db.execute("CREATE INDEX ON :Person(name)").close()
 
-    // when
-    engine.execute("RETURN 42", Map.empty[String, Any], session).toList
+    val (context, result) = runQuery("CALL db.awaitIndex(':Person(name)')")
+
+    // then
+    verify(monitor, times(1)).startQueryExecution(context)
+    verify(monitor, times(1)).endSuccess(context)
   }
 
   test("monitor is called when iterator closes") {
-    // given
-    val session = QueryEngineProvider.embeddedSession()
+   // given
+   val (context, result) = runQuery("RETURN 42")
 
     // when
-    val result = engine.execute("RETURN 42", Map.empty[String, Any], session).javaIterator.close()
+    result.javaIterator.close()
 
     // then
-    verify(monitor, times(1)).startQueryExecution(session, "RETURN 42")
-    verify(monitor, times(1)).endSuccess(session)
+    verify(monitor, times(1)).startQueryExecution(context)
+    verify(monitor, times(1)).endSuccess(context)
   }
 
-  test("monitor is called when next on empty iterator") {
+  test("monitor is not called when next on empty iterator") {
     // given
-    val session = QueryEngineProvider.embeddedSession()
+    val (context, result) = runQuery("RETURN 42")
 
     // when
-    val iterator = engine.execute("RETURN 42", Map.empty[String, Any], session).javaIterator
-    iterator.next()
-    var throwable: Throwable = null
-    try {
-      iterator.next()
-      fail("we expect an exception here")
-    }
-    catch {
-      case e: Throwable => throwable = e
-    }
+    result.next()
 
-    // then
-    verify(monitor, times(1)).startQueryExecution(session, "RETURN 42")
-    verify(monitor, times(1)).endFailure(session, throwable)
+    intercept[Throwable](result.next())
+
+    // then, since the result was successfully emptied
+    verify(monitor, times(1)).startQueryExecution(context)
+    verify(monitor, times(1)).endSuccess(context)
+    verify(monitor, never()).endFailure(any(classOf[ExecutingQuery]), any(classOf[Throwable]))
   }
 
   test("check so that profile triggers monitor") {
-    // given
-    val session = QueryEngineProvider.embeddedSession()
-
     // when
-    val result = engine.profile("RETURN [1, 2, 3, 4, 5]", Map.empty[String, Any], session).javaIterator
+    val (context, result) = runQuery("RETURN [1, 2, 3, 4, 5]")
 
     //then
-    verify(monitor, times(1)).startQueryExecution(session, "RETURN [1, 2, 3, 4, 5]")
+    verify(monitor, times(1)).startQueryExecution(context)
     while (result.hasNext) {
-      verify(monitor, never).endSuccess(session)
+      verify(monitor, never).endSuccess(context)
       result.next()
     }
-    verify(monitor, times(1)).endSuccess(session)
+    verify(monitor, times(1)).endSuccess(context)
   }
 
-  test("triggering monitor in 2.2") {
-    // given
-    val session = QueryEngineProvider.embeddedSession()
-
+  test("check that monitoring is correctly done when using visitor") {
     // when
-    val result = engine.profile("CYPHER 2.2 RETURN [1, 2, 3, 4, 5]", Map.empty[String, Any], session).javaIterator
+    val (context, result) = runQuery("RETURN [1, 2, 3, 4, 5]")
 
     //then
-    verify(monitor, times(1)).startQueryExecution(session, "CYPHER 2.2 RETURN [1, 2, 3, 4, 5]")
-    while (result.hasNext) {
-      verify(monitor, never).endSuccess(session)
-      result.next()
-    }
-    verify(monitor, times(1)).endSuccess(session)
+    result.accept(new ResultVisitor[Exception] {
+      override def visit(row: ResultRow): Boolean = true
+    })
+
+    verify(monitor, times(1)).startQueryExecution(context)
+    verify(monitor, times(1)).endSuccess(context)
   }
 
-  test("monitor is called when iterator closes in 2.2") {
+  test("triggering monitor in 2.3") {
     // given
-    val session = QueryEngineProvider.embeddedSession()
+    val (query, result) = runQuery("CYPHER 2.3 RETURN [1, 2, 3, 4, 5]")
+
+
+    //then
+    verify(monitor, times(1)).startQueryExecution(query)
+    while (result.hasNext) {
+      verify(monitor, never).endSuccess(query)
+      result.next()
+    }
+    verify(monitor, times(1)).endSuccess(query)
+  }
+
+  test("monitor is called when iterator closes in 2.3") {
+    // given
+    val (query, result) = runQuery("CYPHER 2.3 RETURN 42")
 
     // when
-    val result = engine.execute("CYPHER 2.2 RETURN 42", Map.empty[String, Any], session).javaIterator.close()
+    result.javaIterator.close()
 
     // then
-    verify(monitor, times(1)).startQueryExecution(session, "CYPHER 2.2 RETURN 42")
-    verify(monitor, times(1)).endSuccess(session)
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, times(1)).endSuccess(query)
   }
 
-  test("monitor is called when next on empty iterator in 2.2") {
+  test("monitor is called when next on empty iterator in 2.3") {
     // given
-    val session = QueryEngineProvider.embeddedSession()
+    val (query, result) = runQuery("CYPHER 2.3 RETURN 42")
 
     // when
-    val iterator = engine.execute("CYPHER 2.2 RETURN 42", Map.empty[String, Any], session).javaIterator
+    val iterator = result.javaIterator
     iterator.next()
-    var throwable: Throwable = null
-    try {
-      iterator.next()
-      fail("we expect an exception here")
-    }
-    catch {
-      case e: Throwable => throwable = e
-    }
+    intercept[NoSuchElementException] { iterator.next() }
 
     // then
-    verify(monitor, times(1)).startQueryExecution(session, "CYPHER 2.2 RETURN 42")
-    verify(monitor, times(1)).endFailure(session, throwable)
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, times(1)).endSuccess(query)
   }
 
-  test("monitor is called directly when return is empty in 2.2") {
+  test("monitor is called directly when return is empty in 2.3") {
     // given
-    val session = QueryEngineProvider.embeddedSession()
+    val context = db.transactionalContext(query = "CYPHER 2.3 CREATE()" -> Map.empty)
 
     // when
-    val result = engine.execute("CYPHER 2.2 CREATE()", Map.empty[String, Any], session).javaIterator
+    val result = engine.execute(context.queryText(), context.queryParameters(), context).javaIterator
 
     // then
-    verify(monitor, times(1)).startQueryExecution(session, "CYPHER 2.2 CREATE()")
-    verify(monitor, times(1)).endSuccess(session)
+    verify(monitor, times(1)).startQueryExecution(context)
+    verify(monitor, times(1)).endSuccess(context)
   }
 
-  test("triggering monitor in 1.9") {
+  test("triggering monitor in 3.1") {
     // given
-    val session = QueryEngineProvider.embeddedSession()
+    val context = db.transactionalContext(query = "CYPHER 3.1 RETURN [1, 2, 3, 4, 5]" -> Map.empty)
 
     // when
-    val result = engine.profile("CYPHER 1.9 CREATE() RETURN [1, 2, 3, 4, 5]", Map.empty[String, Any], session).javaIterator
+    val result = engine.profile(context.queryText(), context.queryParameters(), context).javaIterator
 
     //then
-    verify(monitor, times(1)).startQueryExecution(session, "CYPHER 1.9 CREATE() RETURN [1, 2, 3, 4, 5]")
+    verify(monitor, times(1)).startQueryExecution(context)
     while (result.hasNext) {
-      verify(monitor, never).endSuccess(session)
+      verify(monitor, never).endSuccess(context)
       result.next()
     }
-    verify(monitor, times(1)).endSuccess(session)
+    verify(monitor, times(1)).endSuccess(context)
   }
 
-  test("monitor is called when iterator closes in 1.9") {
+  test("monitor is called when iterator closes in 3.1") {
     // given
-    val session = QueryEngineProvider.embeddedSession()
+    val (query, result) = runQuery("CYPHER 3.1 RETURN 42")
 
     // when
-    val result = engine.execute("CYPHER 1.9 CREATE() RETURN 42", Map.empty[String, Any], session).javaIterator.close()
+    val iterator = result.javaIterator
+    iterator.close()
 
     // then
-    verify(monitor, times(1)).startQueryExecution(session, "CYPHER 1.9 CREATE() RETURN 42")
-    verify(monitor, times(1)).endSuccess(session)
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, times(1)).endSuccess(query)
   }
 
-  test("monitor is called when next on empty iterator in 1.9") {
+  test("monitor is called when next on empty iterator in 3.1") {
     // given
-    val session = QueryEngineProvider.embeddedSession()
+    val (query, result) = runQuery("CYPHER 3.1 RETURN 42")
 
     // when
-    val iterator = engine.execute("CYPHER 1.9 CREATE() RETURN 42", Map.empty[String, Any], session).javaIterator
+    val iterator = result.javaIterator
     iterator.next()
-    var throwable: Throwable = null
-    try {
-      iterator.next()
-      fail("we expect an exception here")
-    }
-    catch {
-      case e: Throwable => throwable = e
-    }
+    intercept[NoSuchElementException] { iterator.next() }
 
     // then
-    verify(monitor, times(1)).startQueryExecution(session, "CYPHER 1.9 CREATE() RETURN 42")
-    verify(monitor, times(1)).endFailure(session, throwable)
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, times(1)).endSuccess(query)
   }
 
-  test("monitor is called directly when return is empty in 1.9 ") {
+  test("monitor is called directly when return is empty in 3.1") {
     // given
-    val session = QueryEngineProvider.embeddedSession()
+    val (query, result) = runQuery("CYPHER 3.1 CREATE()")
 
     // when
-    val result = engine.execute("CYPHER 1.9 CREATE()", Map.empty[String, Any], session).javaIterator
+    result.javaIterator
 
     // then
-    verify(monitor, times(1)).startQueryExecution(session, "CYPHER 1.9 CREATE()")
-    verify(monitor, times(1)).endSuccess(session)
+    verify(monitor, times(1)).startQueryExecution(query)
+    verify(monitor, times(1)).endSuccess(query)
   }
 
-  var graph: GraphDatabaseService = null
+  var db: GraphDatabaseQueryService = null
   var monitor: QueryExecutionMonitor = null
   var engine: ExecutionEngine = null
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
-    graph = new TestGraphDatabaseFactory().newImpermanentDatabase()
+    db = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentDatabase())
     monitor = mock[QueryExecutionMonitor]
-    monitors(graph).addMonitorListener(monitor)
-    engine = new ExecutionEngine(graph)
+    val monitors = db.getDependencyResolver.resolveDependency(classOf[org.neo4j.kernel.monitoring.Monitors])
+    monitors.addMonitorListener(monitor)
+    engine = createEngine(db)
   }
 
   override protected def afterEach(): Unit = {
     super.afterEach()
-    if (graph != null) graph.shutdown()
-  }
-
-  private def monitors(graph: GraphDatabaseService): Monitors = {
-    val graphAPI = graph.asInstanceOf[GraphDatabaseAPI]
-    graphAPI.getDependencyResolver.resolveDependency(classOf[org.neo4j.kernel.monitoring.Monitors])
+    if (db != null) db.shutdown()
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,17 +19,15 @@
  */
 package org.neo4j.kernel.ha.com.master;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.InOrder;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
+
+import org.junit.Rule;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.com.RequestContext;
@@ -37,34 +35,46 @@ import org.neo4j.com.ResourceReleaser;
 import org.neo4j.com.Response;
 import org.neo4j.com.TransactionNotPresentOnMasterException;
 import org.neo4j.com.TransactionObligationResponse;
+import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.cluster.DefaultConversationSPI;
 import org.neo4j.kernel.ha.com.master.MasterImpl.Monitor;
 import org.neo4j.kernel.ha.com.master.MasterImpl.SPI;
+import org.neo4j.kernel.ha.lock.LockResult;
+import org.neo4j.kernel.impl.locking.LockTracer;
 import org.neo4j.kernel.impl.locking.Locks.Client;
-import org.neo4j.kernel.impl.locking.Locks.ResourceType;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.kernel.impl.store.StoreId;
+import org.neo4j.kernel.impl.transaction.IllegalResourceException;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
-import org.neo4j.test.OtherThreadExecutor.WorkerCommand;
-import org.neo4j.test.OtherThreadRule;
+import org.neo4j.kernel.impl.util.collection.NoSuchEntryException;
+import org.neo4j.storageengine.api.lock.ResourceType;
+import org.neo4j.test.rule.concurrent.OtherThreadRule;
 
-import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.neo4j.com.StoreIdTestFactory.newStoreIdForCurrentVersion;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 public class MasterImplTest
 {
@@ -73,7 +83,7 @@ public class MasterImplTest
     {
         // Given
         MasterImpl.SPI spi = mock( MasterImpl.SPI.class );
-        Config config = config( 20 );
+        Config config = config();
 
         when( spi.isAccessible() ).thenReturn( false );
 
@@ -98,7 +108,7 @@ public class MasterImplTest
     {
         // Given
         MasterImpl.SPI spi = mockedSpi();
-        Config config = config( 20 );
+        Config config = config();
 
         when( spi.isAccessible() ).thenReturn( true );
         when( spi.getTransactionChecksum( anyLong() ) ).thenReturn( 1L );
@@ -106,7 +116,7 @@ public class MasterImplTest
         MasterImpl instance = new MasterImpl( spi, mock(
                 ConversationManager.class ), mock( MasterImpl.Monitor.class ), config );
         instance.start();
-        HandshakeResult handshake = instance.handshake( 1, new StoreId() ).response();
+        HandshakeResult handshake = instance.handshake( 1, newStoreIdForCurrentVersion() ).response();
 
         // When
         try
@@ -125,7 +135,7 @@ public class MasterImplTest
         // Given
         MasterImpl.SPI spi = mockedSpi();
         DefaultConversationSPI conversationSpi = mockedConversationSpi();
-        Config config = config( 20 );
+        Config config = config();
         ConversationManager conversationManager = new ConversationManager( conversationSpi, config );
 
         when( spi.isAccessible() ).thenReturn( true );
@@ -135,7 +145,7 @@ public class MasterImplTest
 
         MasterImpl instance = new MasterImpl( spi, conversationManager, mock( MasterImpl.Monitor.class ), config );
         instance.start();
-        Response<HandshakeResult> response = instance.handshake( 1, new StoreId() );
+        Response<HandshakeResult> response = instance.handshake( 1, newStoreIdForCurrentVersion() );
         HandshakeResult handshake = response.response();
 
         // When
@@ -154,64 +164,39 @@ public class MasterImplTest
 
     private void mockEmptyResponse( SPI spi )
     {
-        when( spi.packEmptyResponse( any() ) ).thenAnswer( new Answer()
-        {
-            @Override
-            public Object answer( InvocationOnMock invocation ) throws Throwable
-            {
-                return new TransactionObligationResponse<>( invocation.getArguments()[0], StoreId.DEFAULT,
-                        TransactionIdStore.BASE_TX_ID, ResourceReleaser.NO_OP );
-            }
-        } );
+        when( spi.packEmptyResponse( any() ) ).thenAnswer(
+                invocation -> new TransactionObligationResponse<>( invocation.getArguments()[0], StoreId.DEFAULT,
+                        TransactionIdStore.BASE_TX_ID, ResourceReleaser.NO_OP ) );
     }
 
     @Test
     public void shouldNotEndLockSessionWhereThereIsAnActiveLockAcquisition() throws Throwable
     {
         // GIVEN
-        final CountDownLatch latch = new CountDownLatch( 1 );
+        CountDownLatch latch = new CountDownLatch( 1 );
         try
         {
-            MasterImpl.SPI spi = mockedSpi();
-            DefaultConversationSPI conversationSpi = mockedConversationSpi();
-            when( spi.isAccessible() ).thenReturn( true );
-            Client client = mock( Client.class );
-            doAnswer( new Answer<Void>()
-            {
-                @Override
-                public Void answer( InvocationOnMock invocation ) throws Throwable
-                {
-                    latch.await();
-                    return null;
-                }
-            } ).when( client ).acquireExclusive( any( ResourceType.class ), anyLong() );
-            when( conversationSpi.acquireClient() ).thenReturn( client );
-            Config config = config( 20 );
-            ConversationManager conversationManager = new ConversationManager( conversationSpi, config );
-            final MasterImpl master = new MasterImpl( spi, conversationManager, mock( Monitor.class ), config );
-            master.start();
-            HandshakeResult handshake = master.handshake( 1, new StoreId() ).response();
+            Client client = newWaitingLocksClient( latch );
+            MasterImpl master = newMasterWithLocksClient( client );
+            HandshakeResult handshake = master.handshake( 1, newStoreIdForCurrentVersion() ).response();
 
             // WHEN
-            final RequestContext context = new RequestContext( handshake.epoch(), 1, 2, 0, 0 );
+            RequestContext context = new RequestContext( handshake.epoch(), 1, 2, 0, 0 );
             master.newLockSession( context );
-            Future<Void> acquireFuture = otherThread.execute( new WorkerCommand<Void, Void>()
+            Future<Void> acquireFuture = otherThread.execute( state ->
             {
-                @Override
-                public Void doWork( Void state ) throws Exception
-                {
-                    master.acquireExclusiveLock( context, ResourceTypes.NODE, 1L );
-                    return null;
-                }
+                master.acquireExclusiveLock( context, ResourceTypes.NODE, 1L );
+                return null;
             } );
             otherThread.get().waitUntilWaiting();
-            master.endLockSession( context, false );
-            verify( client, times( 0 ) ).close();
+            master.endLockSession( context, true );
+            verify( client, never() ).stop();
+            verify( client, never() ).close();
             latch.countDown();
             acquireFuture.get();
 
             // THEN
-            verify( client, times( 1 ) ).close();
+            verify( client ).close();
         }
         finally
         {
@@ -220,12 +205,74 @@ public class MasterImplTest
     }
 
     @Test
+    public void shouldStopLockSessionOnFailureWhereThereIsAnActiveLockAcquisition() throws Throwable
+    {
+        // GIVEN
+        CountDownLatch latch = new CountDownLatch( 1 );
+        try
+        {
+            Client client = newWaitingLocksClient( latch );
+            MasterImpl master = newMasterWithLocksClient( client );
+            HandshakeResult handshake = master.handshake( 1, newStoreIdForCurrentVersion() ).response();
+
+            // WHEN
+            RequestContext context = new RequestContext( handshake.epoch(), 1, 2, 0, 0 );
+            master.newLockSession( context );
+            Future<Void> acquireFuture = otherThread.execute( state ->
+            {
+                master.acquireExclusiveLock( context, ResourceTypes.NODE, 1L );
+                return null;
+            } );
+            otherThread.get().waitUntilWaiting();
+            master.endLockSession( context, false );
+            verify( client ).stop();
+            verify( client, never() ).close();
+            latch.countDown();
+            acquireFuture.get();
+
+            // THEN
+            verify( client ).close();
+        }
+        finally
+        {
+            latch.countDown();
+        }
+    }
+
+    private MasterImpl newMasterWithLocksClient( Client client ) throws Throwable
+    {
+        SPI spi = mockedSpi();
+        DefaultConversationSPI conversationSpi = mockedConversationSpi();
+        when( spi.isAccessible() ).thenReturn( true );
+        when( conversationSpi.acquireClient() ).thenReturn( client );
+        Config config = config();
+        ConversationManager conversationManager = new ConversationManager( conversationSpi, config );
+
+        MasterImpl master = new MasterImpl( spi, conversationManager, mock( Monitor.class ), config );
+        master.start();
+        return master;
+    }
+
+    private Client newWaitingLocksClient( final CountDownLatch latch )
+    {
+        Client client = mock( Client.class );
+
+        doAnswer( invocation ->
+        {
+            latch.await();
+            return null;
+        } ).when( client ).acquireExclusive( eq( LockTracer.NONE), any( ResourceType.class ), anyLong() );
+
+        return client;
+    }
+
+    @Test
     public void shouldNotAllowCommitIfThereIsNoMatchingLockSession() throws Throwable
     {
         // Given
         MasterImpl.SPI spi = mock( MasterImpl.SPI.class );
         DefaultConversationSPI conversationSpi = mockedConversationSpi();
-        Config config = config( 20 );
+        Config config = config();
         ConversationManager conversationManager = new ConversationManager( conversationSpi, config );
 
         when( spi.isAccessible() ).thenReturn( true );
@@ -234,7 +281,7 @@ public class MasterImplTest
 
         MasterImpl master = new MasterImpl( spi, conversationManager, mock( MasterImpl.Monitor.class ), config );
         master.start();
-        HandshakeResult handshake = master.handshake( 1, new StoreId() ).response();
+        HandshakeResult handshake = master.handshake( 1, newStoreIdForCurrentVersion() ).response();
 
         RequestContext ctx = new RequestContext( handshake.epoch(), 1, 2, 0, 0 );
 
@@ -256,7 +303,7 @@ public class MasterImplTest
     {
         // Given
         MasterImpl.SPI spi = mock( MasterImpl.SPI.class );
-        Config config = config( 20 );
+        Config config = config();
         DefaultConversationSPI conversationSpi = mockedConversationSpi();
         ConversationManager conversationManager = new ConversationManager( conversationSpi, config );
         Client locks = mock( Client.class );
@@ -269,7 +316,7 @@ public class MasterImplTest
 
         MasterImpl master = new MasterImpl( spi, conversationManager, mock( MasterImpl.Monitor.class ), config );
         master.start();
-        HandshakeResult handshake = master.handshake( 1, new StoreId() ).response();
+        HandshakeResult handshake = master.handshake( 1, newStoreIdForCurrentVersion() ).response();
 
         int no_lock_session = -1;
         RequestContext ctx = new RequestContext( handshake.epoch(), 1, no_lock_session, 0, 0 );
@@ -289,7 +336,7 @@ public class MasterImplTest
         MasterImpl.SPI spi = mockedSpi();
         DefaultConversationSPI conversationSpi = mockedConversationSpi();
         Monitor monitor = mock( Monitor.class );
-        Config config = config( 20 );
+        Config config = config();
         Client client = mock( Client.class );
         ConversationManager conversationManager = new ConversationManager( conversationSpi, config );
         int machineId = 1;
@@ -298,7 +345,7 @@ public class MasterImplTest
         when( spi.isAccessible() ).thenReturn( true );
         when( conversationSpi.acquireClient() ).thenReturn( client );
         master.start();
-        HandshakeResult handshake = master.handshake( 1, new StoreId() ).response();
+        HandshakeResult handshake = master.handshake( 1, newStoreIdForCurrentVersion() ).response();
         RequestContext requestContext = new RequestContext( handshake.epoch(), machineId, 0, 0, 0);
 
         // When
@@ -318,7 +365,7 @@ public class MasterImplTest
     {
         MasterImpl.SPI spi = mockedSpi();
         ConversationManager conversationManager = mock( ConversationManager.class );
-        Config config = config( 20 );
+        Config config = config();
         MasterImpl master = new MasterImpl( spi, conversationManager, null, config );
 
         master.start();
@@ -330,14 +377,136 @@ public class MasterImplTest
         verifyNoMoreInteractions( conversationManager );
     }
 
-    public final @Rule OtherThreadRule<Void> otherThread = new OtherThreadRule<>();
-
-    private Config config( int lockReadTimeout )
+    @Test
+    public void lockResultMustHaveMessageWhenAcquiringExclusiveLockWithoutConversation() throws Exception
     {
-        Map<String, String> params = new HashMap<>();
-        params.put( HaSettings.lock_read_timeout.name(), lockReadTimeout + "s" );
-        params.put( ClusterSettings.server_id.name(), "1" );
-        return new Config( params, HaSettings.class );
+        MasterImpl.SPI spi = mockedSpi();
+        ConversationManager conversationManager = mock( ConversationManager.class );
+        Config config = config();
+        MasterImpl master = new MasterImpl( spi, conversationManager, null, config );
+
+        RequestContext context = createRequestContext( master );
+        when( conversationManager.acquire( context ) ).thenThrow( new NoSuchEntryException( "" ) );
+        master.acquireExclusiveLock( context, ResourceTypes.NODE, 1 );
+
+        ArgumentCaptor<LockResult> captor = ArgumentCaptor.forClass( LockResult.class );
+        verify( spi ).packTransactionObligationResponse( argThat( is( context ) ), captor.capture() );
+        assertThat( captor.getValue().getMessage(), is( not( nullValue() ) ) );
+    }
+
+    @Test
+    public void lockResultMustHaveMessageWhenAcquiringSharedLockWithoutConversation() throws Exception
+    {
+        MasterImpl.SPI spi = mockedSpi();
+        ConversationManager conversationManager = mock( ConversationManager.class );
+        Config config = config();
+        MasterImpl master = new MasterImpl( spi, conversationManager, null, config );
+
+        RequestContext context = createRequestContext( master );
+        when( conversationManager.acquire( context ) ).thenThrow( new NoSuchEntryException( "" ) );
+        master.acquireSharedLock( context, ResourceTypes.NODE, 1 );
+
+        ArgumentCaptor<LockResult> captor = ArgumentCaptor.forClass( LockResult.class );
+        verify( spi ).packTransactionObligationResponse( argThat( is( context ) ), captor.capture() );
+        assertThat( captor.getValue().getMessage(), is( not( nullValue() ) ) );
+    }
+
+    @Test
+    public void lockResultMustHaveMessageWhenAcquiringExclusiveLockDeadlocks() throws Exception
+    {
+        MasterImpl.SPI spi = mockedSpi();
+        DefaultConversationSPI conversationSpi = mockedConversationSpi();
+        Config config = config();
+        ConversationManager conversationManager = new ConversationManager( conversationSpi, config );
+        conversationManager.start();
+        Client locks = mock( Client.class );
+        MasterImpl master = new MasterImpl( spi, conversationManager, null, config );
+
+        RequestContext context = createRequestContext( master );
+        when( conversationSpi.acquireClient() ).thenReturn( locks );
+        ResourceTypes type = ResourceTypes.NODE;
+        doThrow( new DeadlockDetectedException( "" ) ).when( locks ).acquireExclusive( LockTracer.NONE, type, 1 );
+        master.acquireExclusiveLock( context, type, 1 );
+
+        ArgumentCaptor<LockResult> captor = ArgumentCaptor.forClass( LockResult.class );
+        verify( spi ).packTransactionObligationResponse( argThat( is( context ) ), captor.capture() );
+        assertThat( captor.getValue().getMessage(), is( not( nullValue() ) ) );
+    }
+
+    @Test
+    public void lockResultMustHaveMessageWhenAcquiringSharedLockDeadlocks() throws Exception
+    {
+        MasterImpl.SPI spi = mockedSpi();
+        DefaultConversationSPI conversationSpi = mockedConversationSpi();
+        Config config = config();
+        ConversationManager conversationManager = new ConversationManager( conversationSpi, config );
+        conversationManager.start();
+        Client locks = mock( Client.class );
+        MasterImpl master = new MasterImpl( spi, conversationManager, null, config );
+
+        RequestContext context = createRequestContext( master );
+        when( conversationSpi.acquireClient() ).thenReturn( locks );
+        ResourceTypes type = ResourceTypes.NODE;
+        doThrow( new DeadlockDetectedException( "" ) ).when( locks ).acquireExclusive( LockTracer.NONE, type, 1 );
+        master.acquireSharedLock( context, type, 1 );
+
+        ArgumentCaptor<LockResult> captor = ArgumentCaptor.forClass( LockResult.class );
+        verify( spi ).packTransactionObligationResponse( argThat( is( context ) ), captor.capture() );
+        assertThat( captor.getValue().getMessage(), is( not( nullValue() ) ) );
+    }
+
+    @Test
+    public void lockResultMustHaveMessageWhenAcquiringExclusiveLockThrowsIllegalResource() throws Exception
+    {
+        MasterImpl.SPI spi = mockedSpi();
+        DefaultConversationSPI conversationSpi = mockedConversationSpi();
+        Config config = config();
+        ConversationManager conversationManager = new ConversationManager( conversationSpi, config );
+        conversationManager.start();
+        Client locks = mock( Client.class );
+        MasterImpl master = new MasterImpl( spi, conversationManager, null, config );
+
+        RequestContext context = createRequestContext( master );
+        when( conversationSpi.acquireClient() ).thenReturn( locks );
+        ResourceTypes type = ResourceTypes.NODE;
+        doThrow( new IllegalResourceException( "" ) ).when( locks ).acquireExclusive( LockTracer.NONE, type, 1 );
+        master.acquireExclusiveLock( context, type, 1 );
+
+        ArgumentCaptor<LockResult> captor = ArgumentCaptor.forClass( LockResult.class );
+        verify( spi ).packTransactionObligationResponse( argThat( is( context ) ), captor.capture() );
+        assertThat( captor.getValue().getMessage(), is( not( nullValue() ) ) );
+    }
+
+    @Test
+    public void lockResultMustHaveMessageWhenAcquiringSharedLockThrowsIllegalResource() throws Exception
+    {
+        MasterImpl.SPI spi = mockedSpi();
+        DefaultConversationSPI conversationSpi = mockedConversationSpi();
+        Config config = config();
+        ConversationManager conversationManager = new ConversationManager( conversationSpi, config );
+        conversationManager.start();
+        Client locks = mock( Client.class );
+        MasterImpl master = new MasterImpl( spi, conversationManager, null, config );
+
+        RequestContext context = createRequestContext( master );
+        when( conversationSpi.acquireClient() ).thenReturn( locks );
+        ResourceTypes type = ResourceTypes.NODE;
+        doThrow( new IllegalResourceException( "" ) ).when( locks ).acquireExclusive( LockTracer.NONE, type, 1 );
+        master.acquireSharedLock( context, type, 1 );
+
+        ArgumentCaptor<LockResult> captor = ArgumentCaptor.forClass( LockResult.class );
+        verify( spi ).packTransactionObligationResponse( argThat( is( context ) ), captor.capture() );
+        assertThat( captor.getValue().getMessage(), is( not( nullValue() ) ) );
+    }
+
+    @Rule
+    public final OtherThreadRule<Void> otherThread = new OtherThreadRule<>();
+
+    private Config config()
+    {
+        return Config.embeddedDefaults( stringMap(
+                HaSettings.lock_read_timeout.name(), 20 + "s",
+                ClusterSettings.server_id.name(), "1" ) );
     }
 
     public DefaultConversationSPI mockedConversationSpi()
@@ -354,15 +523,15 @@ public class MasterImplTest
     {
         MasterImpl.SPI mock = mock( MasterImpl.SPI.class );
         when( mock.storeId() ).thenReturn( storeId );
-        when( mock.packEmptyResponse( any() ) ).thenAnswer( new Answer()
-        {
-            @Override
-            public Object answer( InvocationOnMock invocation ) throws Throwable
-            {
-                return new TransactionObligationResponse<>( invocation.getArguments()[0], storeId,
-                        TransactionIdStore.BASE_TX_ID, ResourceReleaser.NO_OP );
-            }
-        } );
+        when( mock.packEmptyResponse( any() ) ).thenAnswer(
+                invocation -> new TransactionObligationResponse<>( invocation.getArguments()[0], storeId,
+                        TransactionIdStore.BASE_TX_ID, ResourceReleaser.NO_OP ) );
         return mock;
+    }
+
+    protected RequestContext createRequestContext( MasterImpl master )
+    {
+        HandshakeResult handshake = master.handshake( 1, newStoreIdForCurrentVersion() ).response();
+        return new RequestContext( handshake.epoch(), 1, 2, 0, 0 );
     }
 }

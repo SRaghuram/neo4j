@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,10 +25,9 @@ import java.io.CharArrayReader;
 import java.io.IOException;
 import java.util.concurrent.locks.LockSupport;
 
+import static java.util.Arrays.copyOfRange;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-
-import static java.util.Arrays.copyOfRange;
 
 public class ThreadAheadReadableTest
 {
@@ -57,19 +56,19 @@ public class ThreadAheadReadableTest
 
         // then simulate reading some characters, i.e. back section will contain some characters
         int keep = 2;
-        buffer = aheadReader.read( buffer, buffer.front()-keep );
-        assertBuffer( chars( read-keep, bufferSize+keep ), buffer, keep, bufferSize );
+        buffer = aheadReader.read( buffer, buffer.front() - keep );
+        assertBuffer( chars( read - keep, bufferSize + keep ), buffer, keep, bufferSize );
         read += buffer.available();
 
         keep = 3;
-        buffer = aheadReader.read( buffer, buffer.front()-keep );
-        assertBuffer( chars( read-keep, bufferSize+keep ), buffer, keep, bufferSize );
+        buffer = aheadReader.read( buffer, buffer.front() - keep );
+        assertBuffer( chars( read - keep, bufferSize + keep ), buffer, keep, bufferSize );
         read += buffer.available();
 
         keep = 1;
-        buffer = aheadReader.read( buffer, buffer.front()-keep );
+        buffer = aheadReader.read( buffer, buffer.front() - keep );
         assertEquals( 3, buffer.available() );
-        assertBuffer( chars( read-keep, buffer.available()+keep ), buffer, keep, 3 );
+        assertBuffer( chars( read - keep, buffer.available() + keep ), buffer, keep, 3 );
         read += buffer.available();
         assertEquals( 23, read );
     }
@@ -94,8 +93,8 @@ public class ThreadAheadReadableTest
 
     private void assertBuffer( char[] expectedChars, SectionedCharBuffer buffer, int charsInBack, int charsInFront )
     {
-        assertEquals( buffer.pivot()-charsInBack, buffer.back() );
-        assertEquals( buffer.pivot()+charsInFront, buffer.front() );
+        assertEquals( buffer.pivot() - charsInBack, buffer.back() );
+        assertEquals( buffer.pivot() + charsInFront, buffer.front() );
         assertArrayEquals( expectedChars, copyOfRange( buffer.array(), buffer.back(), buffer.front() ) );
     }
 
@@ -105,7 +104,7 @@ public class ThreadAheadReadableTest
         private volatile int readsCompleted;
         private final CharReadable actual;
 
-        public TrackingReader( int length )
+        TrackingReader( int length )
         {
             this.actual = Readables.wrap( new CharArrayReader( chars( 0, length ) ) );
         }
@@ -121,6 +120,12 @@ public class ThreadAheadReadableTest
             {
                 readsCompleted++;
             }
+        }
+
+        @Override
+        public int read( char[] into, int offset, int length ) throws IOException
+        {
+            throw new UnsupportedOperationException();
         }
 
         private SectionedCharBuffer registerBytesRead( SectionedCharBuffer buffer )
@@ -161,7 +166,7 @@ public class ThreadAheadReadableTest
         char[] result = new char[length];
         for ( int i = 0; i < length; i++ )
         {
-            result[i] = (char) (start+i);
+            result[i] = (char) (start + i);
         }
         return result;
     }

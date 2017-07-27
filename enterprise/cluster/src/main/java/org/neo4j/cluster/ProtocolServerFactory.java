@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,6 +28,7 @@ import org.neo4j.cluster.protocol.atomicbroadcast.ObjectOutputStreamFactory;
 import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.AcceptorInstanceStore;
 import org.neo4j.cluster.protocol.election.ElectionCredentialsProvider;
 import org.neo4j.cluster.timeout.TimeoutStrategy;
+import org.neo4j.kernel.configuration.Config;
 
 /**
  * Factory for instantiating ProtocolServers.
@@ -41,5 +42,6 @@ public interface ProtocolServerFactory
                                       ElectionCredentialsProvider electionCredentialsProvider,
                                       Executor stateMachineExecutor,
                                       ObjectInputStreamFactory objectInputStreamFactory,
-                                      ObjectOutputStreamFactory objectOutputStreamFactory);
+                                      ObjectOutputStreamFactory objectOutputStreamFactory,
+                                      Config config );
 }

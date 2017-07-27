@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,7 @@ final class ValueLookup<Value> extends ValueSink
     private final AbstractKeyValueStore.Reader<Value> reader;
     private Value value;
 
-    public ValueLookup( AbstractKeyValueStore.Reader<Value> reader )
+    ValueLookup( AbstractKeyValueStore.Reader<Value> reader )
     {
         this.reader = reader;
     }

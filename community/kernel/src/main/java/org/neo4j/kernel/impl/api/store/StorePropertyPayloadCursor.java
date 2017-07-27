@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,25 +19,18 @@
  */
 package org.neo4j.kernel.impl.api.store;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
 
-import org.neo4j.cursor.GenericCursor;
-import org.neo4j.helpers.UTF8;
-import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.kernel.impl.store.AbstractDynamicStore;
-import org.neo4j.kernel.impl.store.DynamicArrayStore;
-import org.neo4j.kernel.impl.store.DynamicStringStore;
 import org.neo4j.kernel.impl.store.LongerShortString;
-import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
+import org.neo4j.kernel.impl.store.RecordCursor;
 import org.neo4j.kernel.impl.store.ShortArray;
-import org.neo4j.kernel.impl.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
+import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.util.Bits;
+import org.neo4j.string.UTF8;
 
 import static org.neo4j.kernel.impl.store.PropertyType.ARRAY;
 import static org.neo4j.kernel.impl.store.PropertyType.BOOL;
@@ -51,24 +44,18 @@ import static org.neo4j.kernel.impl.store.PropertyType.SHORT;
 import static org.neo4j.kernel.impl.store.PropertyType.SHORT_ARRAY;
 import static org.neo4j.kernel.impl.store.PropertyType.SHORT_STRING;
 import static org.neo4j.kernel.impl.store.PropertyType.STRING;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 
 /**
  * Cursor that provides a view on property blocks of a particular property record.
  * This cursor is reusable and can be re-initialized with
- * {@link #init(PageCursor)} method and cleaned up using {@link #clear()} method.
- * <p/>
- * During initialization {@link #MAX_NUMBER_OF_PAYLOAD_LONG_ARRAY} number of longs is read from
- * the given {@linkplain PageCursor}. This is done eagerly to avoid reading property blocks from different versions
- * of the page.
- * <p/>
- * Internally, this cursor is mainly an array of {@link #MAX_NUMBER_OF_PAYLOAD_LONG_ARRAY} and a current-position
- * pointer.
+ * {@link #init(long[], int)} method and cleaned up using {@link #clear()} method.
+ * <p>
+ * During initialization the raw property block {@code long}s are read from
+ * the given property record.
  */
 class StorePropertyPayloadCursor
 {
-    static final int MAX_NUMBER_OF_PAYLOAD_LONG_ARRAY = PropertyStore.DEFAULT_PAYLOAD_SIZE / 8;
-
-    private static final long PROPERTY_KEY_ID_BITMASK = 0xFFFFFFL;
     private static final int MAX_BYTES_IN_SHORT_STRING_OR_SHORT_ARRAY = 32;
     private static final int INTERNAL_BYTE_ARRAY_SIZE = 4096;
     private static final int INITIAL_POSITION = -1;
@@ -78,63 +65,72 @@ class StorePropertyPayloadCursor
      */
     private final ByteBuffer cachedBuffer = ByteBuffer.allocate( INTERNAL_BYTE_ARRAY_SIZE );
 
-    private final DynamicStringStore stringStore;
-    private final DynamicArrayStore arrayStore;
-
-    private AbstractDynamicStore.DynamicRecordCursor recordCursor;
+    private final RecordCursor<DynamicRecord> stringRecordCursor;
+    private final RecordCursor<DynamicRecord> arrayRecordCursor;
     private ByteBuffer buffer = cachedBuffer;
 
-    private final long[] data = new long[MAX_NUMBER_OF_PAYLOAD_LONG_ARRAY];
+    private long[] data;
     private int position = INITIAL_POSITION;
+    private int numberOfBlocks = 0;
+    private boolean exhausted;
 
-    StorePropertyPayloadCursor( DynamicStringStore stringStore, DynamicArrayStore arrayStore )
+    StorePropertyPayloadCursor( RecordCursor<DynamicRecord> stringRecordCursor,
+            RecordCursor<DynamicRecord> arrayRecordCursor )
     {
-        this.stringStore = stringStore;
-        this.arrayStore = arrayStore;
+        this.stringRecordCursor = stringRecordCursor;
+        this.arrayRecordCursor = arrayRecordCursor;
     }
 
-    void init( PageCursor cursor )
+    void init( long[] blocks, int numberOfBlocks )
     {
-        for ( int i = 0; i < data.length; i++ )
-        {
-            data[i] = cursor.getLong();
-        }
+        position = INITIAL_POSITION;
+        buffer = cachedBuffer;
+        data = blocks;
+        this.numberOfBlocks = numberOfBlocks;
+        exhausted = false;
     }
 
     void clear()
     {
         position = INITIAL_POSITION;
+        numberOfBlocks = 0;
+        exhausted = false;
         buffer = cachedBuffer;
-        // Array of data should be filled with '0' because it is possible to call next() without calling init().
-        // In such case 'false' should be returned, which might not be the case if there is stale data in the buffer.
-        Arrays.fill( data, 0 );
     }
 
     boolean next()
     {
+        if ( exhausted )
+        {
+            return false;
+        }
+
         if ( position == INITIAL_POSITION )
         {
             position = 0;
         }
-        else
+        else if ( position < numberOfBlocks )
         {
             position += currentBlocksUsed();
         }
-        if ( position >= data.length )
+
+        if ( position >= numberOfBlocks || type() == null )
         {
+            exhausted = true;
             return false;
         }
-        return type() != null;
+        return true;
     }
 
     PropertyType type()
     {
-        return PropertyType.getPropertyType( currentHeader(), true );
+        long propBlock = currentHeader();
+        return PropertyType.getPropertyTypeOrNull( propBlock );
     }
 
     int propertyKeyId()
     {
-        return (int) (currentHeader() & PROPERTY_KEY_ID_BITMASK);
+        return PropertyBlock.keyIndexId( currentHeader() );
     }
 
     boolean booleanValue()
@@ -193,21 +189,13 @@ class StorePropertyPayloadCursor
     String shortStringValue()
     {
         assertOfType( SHORT_STRING );
-        Bits bits = valueAsBits();
-        return LongerShortString.decode( bits );
+        return LongerShortString.decode( data, position, currentBlocksUsed() );
     }
 
     String stringValue()
     {
         assertOfType( STRING );
-        try
-        {
-            readFromStore( stringStore );
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( e );
-        }
+        readFromStore( stringRecordCursor );
         buffer.flip();
         return UTF8.decode( buffer.array(), 0, buffer.limit() );
     }
@@ -222,16 +210,42 @@ class StorePropertyPayloadCursor
     Object arrayValue()
     {
         assertOfType( ARRAY );
-        try
-        {
-            readFromStore( arrayStore );
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( e );
-        }
+        readFromStore( arrayRecordCursor );
         buffer.flip();
         return readArrayFromBuffer( buffer );
+    }
+
+    Object value()
+    {
+        switch ( type() )
+        {
+        case BOOL:
+            return booleanValue();
+        case BYTE:
+            return byteValue();
+        case SHORT:
+            return shortValue();
+        case CHAR:
+            return charValue();
+        case INT:
+            return intValue();
+        case LONG:
+            return longValue();
+        case FLOAT:
+            return floatValue();
+        case DOUBLE:
+            return doubleValue();
+        case SHORT_STRING:
+            return shortStringValue();
+        case STRING:
+            return stringValue();
+        case SHORT_ARRAY:
+            return shortArrayValue();
+        case ARRAY:
+            return arrayValue();
+        default:
+            throw new IllegalStateException( "No such type:" + type() );
+        }
     }
 
     private long currentHeader()
@@ -247,36 +261,35 @@ class StorePropertyPayloadCursor
     private Bits valueAsBits()
     {
         Bits bits = Bits.bits( MAX_BYTES_IN_SHORT_STRING_OR_SHORT_ARRAY );
-        for ( int i = 0; i < currentBlocksUsed(); i++ )
+        int blocksUsed = currentBlocksUsed();
+        for ( int i = 0; i < blocksUsed; i++ )
         {
             bits.put( data[position + i] );
         }
         return bits;
     }
 
-    private void readFromStore( AbstractDynamicStore store ) throws IOException
+    private void readFromStore( RecordCursor<DynamicRecord> cursor )
     {
-        if ( recordCursor == null )
-        {
-            recordCursor = store.newDynamicRecordCursor();
-        }
-
         buffer.clear();
         long startBlockId = PropertyBlock.fetchLong( currentHeader() );
-        try ( GenericCursor<DynamicRecord> records = store.getRecordsCursor( startBlockId, true, recordCursor ) )
+        cursor.placeAt( startBlockId, FORCE );
+        while ( true )
         {
-            while ( records.next() )
+            cursor.next();
+            DynamicRecord dynamicRecord = cursor.get();
+            byte[] data = dynamicRecord.getData();
+            if ( buffer.remaining() < data.length )
             {
-                DynamicRecord dynamicRecord = records.get();
-                byte[] data = dynamicRecord.getData();
-                if ( buffer.remaining() < data.length )
-                {
-                    buffer.flip();
-                    ByteBuffer newBuffer = newBiggerBuffer( data.length );
-                    newBuffer.put( buffer );
-                    buffer = newBuffer;
-                }
-                buffer.put( data, 0, data.length );
+                buffer.flip();
+                ByteBuffer newBuffer = newBiggerBuffer( data.length );
+                newBuffer.put( buffer );
+                buffer = newBuffer;
+            }
+            buffer.put( data, 0, data.length );
+            if ( Record.NULL_REFERENCE.is( dynamicRecord.getNextBlock() ) )
+            {
+                break;
             }
         }
     }
@@ -350,9 +363,6 @@ class StorePropertyPayloadCursor
 
     private void assertOfType( PropertyType expected )
     {
-        if ( type() != expected )
-        {
-            throw new IllegalStateException( "Expected type " + expected + " but was " + type() );
-        }
+        assert type() == expected : "Expected type " + expected + " but was " + type();
     }
 }

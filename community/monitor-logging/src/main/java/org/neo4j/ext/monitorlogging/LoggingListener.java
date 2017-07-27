@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,10 +21,10 @@ package org.neo4j.ext.monitorlogging;
 
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.function.Predicate;
 
-import org.neo4j.function.Predicate;
-import org.neo4j.logging.Logger;
 import org.neo4j.kernel.monitoring.MonitorListenerInvocationHandler;
+import org.neo4j.logging.Logger;
 
 public class LoggingListener implements MonitorListenerInvocationHandler
 {
@@ -42,7 +42,7 @@ public class LoggingListener implements MonitorListenerInvocationHandler
 
     public LoggingListener( Map<Class<?>, Logger> classes )
     {
-        assert (classes != null);
+        assert classes != null;
         this.classes = classes;
     }
 

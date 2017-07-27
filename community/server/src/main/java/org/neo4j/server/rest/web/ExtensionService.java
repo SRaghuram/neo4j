@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,7 +32,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.plugins.BadPluginInvocationException;
 import org.neo4j.server.plugins.ParameterList;
@@ -76,7 +76,7 @@ public class ExtensionService
 
     private Node node( long id ) throws NodeNotFoundException
     {
-        try(Transaction tx = graphDb.beginTx())
+        try ( Transaction tx = graphDb.beginTx() )
         {
             Node node = graphDb.getNodeById( id );
 
@@ -91,7 +91,7 @@ public class ExtensionService
 
     private Relationship relationship( long id ) throws RelationshipNotFoundException
     {
-        try(Transaction tx = graphDb.beginTx())
+        try ( Transaction tx = graphDb.beginTx() )
         {
             Relationship relationship = graphDb.getRelationshipById( id );
 
@@ -294,7 +294,7 @@ public class ExtensionService
             {
                 for ( String extension : extensions.extensionNames() )
                 {
-                    serializer.putUri( extension, "ext/" + extension );
+                    serializer.putRelativeUri( extension, "ext/" + extension );
                 }
             }
         };

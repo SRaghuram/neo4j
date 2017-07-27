@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,11 +26,11 @@ public abstract class FlipFailedKernelException extends KernelException
 {
     public FlipFailedKernelException( Throwable cause, String message, Object... parameters )
     {
-        super( Status.Schema.IndexCreationFailure, cause, message, parameters );
+        super( Status.Schema.IndexCreationFailed, cause, message, parameters );
     }
 
     public FlipFailedKernelException( String message, Object... parameters )
     {
-        super( Status.Schema.IndexCreationFailure, message, parameters );
+        super( Status.Schema.IndexCreationFailed, message, parameters );
     }
 }

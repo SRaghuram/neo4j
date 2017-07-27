@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,15 +25,15 @@ import org.junit.rules.TestName;
 
 import java.util.concurrent.Callable;
 
-import org.neo4j.test.SuppressOutput;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.rule.TestDirectory;
 
-import static org.neo4j.test.SuppressOutput.suppressAll;
+import static org.neo4j.test.rule.SuppressOutput.suppressAll;
 
 public class ExclusiveServerTestBase
 {
     @Rule
-    public TargetDirectory.TestDirectory folder = TargetDirectory.testDirForTest( getClass() );
+    public TestDirectory folder = TestDirectory.testDirectory( );
     @Rule
     public SuppressOutput suppressOutput = suppressAll();
     @Rule
@@ -42,7 +42,6 @@ public class ExclusiveServerTestBase
     @BeforeClass
     public static void ensureServerNotRunning() throws Exception
     {
-
         System.setProperty( "org.neo4j.useInsecureCertificateGeneration", "true" );
         suppressAll().call( new Callable<Void>()
         {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,7 +28,7 @@ import org.neo4j.graphdb.Node;
  */
 public interface EigenvectorCentrality
 {
-    public static double DETACHED_VERTEX_CENTRALITY = 0d;
+    double DETACHED_VERTEX_CENTRALITY = 0d;
     /**
      * This can be used to retrieve the result for every node. Might return null
      * if the node is not contained in the node set initially given.
@@ -37,16 +37,16 @@ public interface EigenvectorCentrality
      *            The node for which we would like the value.
      * @return the centrality value for the given node.
      */
-    public Double getCentrality( Node node );
+    Double getCentrality( Node node );
 
     /**
      * This resets the calculation if we for some reason would like to redo it.
      */
-    public void reset();
+    void reset();
 
     /**
      * Internal calculate method that will do the calculation. This can however
      * be called externally to manually trigger the calculation.
      */
-    public void calculate();
+    void calculate();
 }

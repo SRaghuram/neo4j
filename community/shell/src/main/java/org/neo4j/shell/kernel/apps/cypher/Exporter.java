@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -39,23 +39,11 @@ public class Exporter
 
     public void export( Output out ) throws RemoteException, ShellException
     {
-        begin( out );
-        exporter.export(asWriter(out));
-        out.println(";");
-        commit(out);
+        exporter.export( asWriter(out), "begin", "commit" );
     }
 
-    private PrintWriter asWriter(Output out) {
+    private PrintWriter asWriter( Output out )
+    {
         return new PrintWriter( new OutputAsWriter( out ) );
-    }
-
-    private void begin( Output out ) throws RemoteException
-    {
-        out.println( "begin" );
-    }
-
-    private void commit( Output out ) throws RemoteException
-    {
-        out.println( "commit" );
     }
 }

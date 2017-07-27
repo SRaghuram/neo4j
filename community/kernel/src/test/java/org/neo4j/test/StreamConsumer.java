@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,7 +37,7 @@ public class StreamConsumer implements Runnable
     {
         void handle( IOException failure );
     }
-    
+
     public static StreamExceptionHandler PRINT_FAILURES = new StreamExceptionHandler()
     {
         @Override
@@ -46,7 +46,7 @@ public class StreamConsumer implements Runnable
             failure.printStackTrace();
         }
     };
-    
+
     public static StreamExceptionHandler IGNORE_FAILURES = new StreamExceptionHandler()
     {
         @Override
@@ -54,7 +54,7 @@ public class StreamConsumer implements Runnable
         {
         }
     };
-    
+
     private final BufferedReader in;
     private final Writer out;
 
@@ -90,7 +90,7 @@ public class StreamConsumer implements Runnable
             {
                 if ( !quiet )
                 {
-                    out.write( prefix+line+"\n" );
+                    out.write( prefix + line + "\n" );
                     out.flush();
                 }
             }

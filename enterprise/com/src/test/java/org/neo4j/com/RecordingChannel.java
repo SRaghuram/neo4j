@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,12 +19,6 @@
  */
 package org.neo4j.com;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.TimeUnit;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
@@ -34,6 +28,12 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.queue.BlockingReadHandler;
 
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.TimeUnit;
+
 public class RecordingChannel implements Channel
 {
     private Queue<ChannelBuffer> recievedMessages = new LinkedList<ChannelBuffer>();
@@ -41,9 +41,9 @@ public class RecordingChannel implements Channel
     @Override
     public ChannelFuture write( Object message )
     {
-        if(message instanceof ChannelBuffer )
+        if ( message instanceof ChannelBuffer )
         {
-            ChannelBuffer buffer = (ChannelBuffer)message;
+            ChannelBuffer buffer = (ChannelBuffer) message;
             recievedMessages.offer( buffer.duplicate() );
         }
         return immediateFuture;

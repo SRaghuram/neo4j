@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,11 +24,15 @@ import org.junit.Test;
 import org.neo4j.backup.BackupClient.BackupRequestType;
 import org.neo4j.com.RequestContext;
 import org.neo4j.com.Response;
+import org.neo4j.com.TargetCaller;
 import org.neo4j.com.monitor.RequestMonitor;
 import org.neo4j.com.storecopy.ResponseUnpacker;
 import org.neo4j.com.storecopy.StoreWriter;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.impl.store.StoreId;
+import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.ByteCounterMonitor;
 import org.neo4j.logging.NullLogProvider;
@@ -59,7 +63,10 @@ public class BackupProtocolTest
     {
         TheBackupInterface backup = mock( TheBackupInterface.class );
         RequestContext ctx = new RequestContext( 0, 1, 0, -1, 12 );
-        BackupRequestType.FULL_BACKUP.getTargetCaller().call( backup, ctx, EMPTY_BUFFER, null );
+        @SuppressWarnings( "unchecked" )
+        TargetCaller<TheBackupInterface, Void> targetCaller =
+                (TargetCaller<TheBackupInterface,Void>) BackupRequestType.FULL_BACKUP.getTargetCaller();
+        targetCaller.call( backup, ctx, EMPTY_BUFFER, null );
         verify( backup ).fullBackup( any( StoreWriter.class ), eq( false ) );
     }
 
@@ -72,8 +79,9 @@ public class BackupProtocolTest
         int port = BackupServer.DEFAULT_PORT;
         LifeSupport life = new LifeSupport();
 
-        BackupClient client = life.add( new BackupClient( host, port, NullLogProvider.getInstance(), storeId, 1000,
-                mock( ResponseUnpacker.class ), mock( ByteCounterMonitor.class ), mock( RequestMonitor.class ) ) );
+        LogEntryReader<ReadableClosablePositionAwareChannel> reader = new VersionAwareLogEntryReader<>();
+        BackupClient client = life.add( new BackupClient( host, port, null, NullLogProvider.getInstance(), storeId, 10_000,
+                mock( ResponseUnpacker.class ), mock( ByteCounterMonitor.class ), mock( RequestMonitor.class ), reader ) );
         ControlledBackupInterface backup = new ControlledBackupInterface();
         life.add( new BackupServer( backup, new HostnamePort( host, port ), NullLogProvider.getInstance(), mock( ByteCounterMonitor.class ),
                 mock( RequestMonitor.class )) );
@@ -86,7 +94,7 @@ public class BackupProtocolTest
             client.fullBackup( writer, forensics );
 
             // THEN
-            assertEquals( forensics, backup.receivedForensics.booleanValue() );
+            assertEquals( forensics, backup.receivedForensics );
         }
         finally
         {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,14 +24,16 @@ import java.util.Map;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.index.IndexAccessor;
-import org.neo4j.kernel.api.index.IndexConfiguration;
-import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
+import org.neo4j.kernel.impl.api.scan.LabelScanStoreProvider;
 import org.neo4j.kernel.impl.storemigration.StoreMigrationParticipant;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
+
+import static org.neo4j.kernel.api.schema.index.IndexDescriptor.Type.UNIQUE;
 
 public class InMemoryIndexProvider extends SchemaIndexProvider
 {
@@ -54,30 +56,30 @@ public class InMemoryIndexProvider extends SchemaIndexProvider
     }
 
     @Override
-    public InternalIndexState getInitialState( long indexId )
+    public InternalIndexState getInitialState( long indexId, IndexDescriptor descriptor )
     {
         InMemoryIndex index = indexes.get( indexId );
         return index != null ? index.getState() : InternalIndexState.POPULATING;
     }
 
     @Override
-    public StoreMigrationParticipant storeMigrationParticipant( FileSystemAbstraction fs, PageCache pageCache )
+    public StoreMigrationParticipant storeMigrationParticipant( FileSystemAbstraction fs, PageCache pageCache,
+            LabelScanStoreProvider labelScanStoreProvider )
     {
         return StoreMigrationParticipant.NOT_PARTICIPATING;
     }
 
     @Override
-    public IndexPopulator getPopulator( long indexId, IndexDescriptor descriptor, IndexConfiguration config,
-                                        IndexSamplingConfig samplingConfig )
+    public IndexPopulator getPopulator( long indexId, IndexDescriptor descriptor, IndexSamplingConfig samplingConfig )
     {
-        InMemoryIndex index = config.isUnique()
-                ? new UniqueInMemoryIndex( descriptor.getPropertyKeyId() ) : new InMemoryIndex();
+        InMemoryIndex index = descriptor.type() == UNIQUE
+                ? new UniqueInMemoryIndex( descriptor.schema() ) : new InMemoryIndex();
         indexes.put( indexId, index );
         return index.getPopulator();
     }
 
     @Override
-    public IndexAccessor getOnlineAccessor( long indexId, IndexConfiguration indexConfig,
+    public IndexAccessor getOnlineAccessor( long indexId, IndexDescriptor descriptor,
                                             IndexSamplingConfig samplingConfig )
     {
         InMemoryIndex index = indexes.get( indexId );
@@ -85,7 +87,7 @@ public class InMemoryIndexProvider extends SchemaIndexProvider
         {
             throw new IllegalStateException( "Index " + indexId + " not online yet" );
         }
-        if ( indexConfig.isUnique() && !(index instanceof UniqueInMemoryIndex) )
+        if ( descriptor.type() == UNIQUE && !(index instanceof UniqueInMemoryIndex) )
         {
             throw new IllegalStateException(
                     String.format( "The index [%s] was not created as a unique index.", indexId )

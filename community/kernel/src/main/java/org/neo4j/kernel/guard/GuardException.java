@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,14 @@
  */
 package org.neo4j.kernel.guard;
 
-public class GuardException extends RuntimeException
+import org.neo4j.kernel.api.exceptions.Status;
+
+public abstract class GuardException extends RuntimeException implements Status.HasStatus
 {
 
     protected GuardException( final String message )
     {
         super( message );
     }
+
 }

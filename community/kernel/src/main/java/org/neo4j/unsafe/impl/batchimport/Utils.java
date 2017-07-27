@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,7 +33,7 @@ public class Utils
     {
         if ( value > Integer.MAX_VALUE )
         {
-            throw new UnsupportedOperationException( "Not supported a.t.m" );
+            throw new ArithmeticException( getOverflowMessage( value, Integer.TYPE ) );
         }
         return (int) value;
     }
@@ -42,7 +42,7 @@ public class Utils
     {
         if ( value > Short.MAX_VALUE )
         {
-            throw new UnsupportedOperationException( "Not supported a.t.m" );
+            throw new ArithmeticException( getOverflowMessage( value, Short.TYPE ) );
         }
         return (short) value;
     }
@@ -51,7 +51,7 @@ public class Utils
     {
         if ( value > Byte.MAX_VALUE )
         {
-            throw new UnsupportedOperationException( "Not supported a.t.m" );
+            throw new ArithmeticException( getOverflowMessage( value, Byte.TYPE ) );
         }
         return (byte) value;
     }
@@ -66,7 +66,7 @@ public class Utils
         switch ( compareType )
         {
         case EQ:
-            return (dataA == dataB);
+            return dataA == dataB;
         case GE:
             if ( dataA == dataB )
             {
@@ -82,10 +82,13 @@ public class Utils
             }
             // fall through to LT
         case LT:
-            return ((dataA < dataB) ^ ((dataA < 0) != (dataB < 0)));
+            return (dataA < dataB) ^ ((dataA < 0) != (dataB < 0));
         case NE:
+            return false;
+
+        default:
+            throw new IllegalArgumentException( "Unknown compare type: " + compareType );
         }
-        return false;
     }
 
     /**
@@ -132,6 +135,12 @@ public class Utils
                         }
                         return iterator.next().id();
                     }
+
+                    @Override
+                    public void receivePanic( Throwable cause )
+                    {
+                        iterator.receivePanic( cause );
+                    }
                 };
             }
 
@@ -147,7 +156,7 @@ public class Utils
     public static boolean anyIdCollides( long[] first, int firstLength, long[] other, int otherLength )
     {
         int f = 0, o = 0;
-        while( f < firstLength && o < otherLength )
+        while ( f < firstLength && o < otherLength )
         {
             if ( first[f] == other[o] )
             {
@@ -156,11 +165,15 @@ public class Utils
 
             if ( first[f] < other[o] )
             {
-                while ( ++f < firstLength && first[f] < other[o] );
+                while ( ++f < firstLength && first[f] < other[o] )
+                {
+                }
             }
             else
             {
-                while ( ++o < otherLength && first[f] > other[o] );
+                while ( ++o < otherLength && first[f] > other[o] )
+                {
+                }
             }
         }
 
@@ -169,9 +182,9 @@ public class Utils
 
     public static void mergeSortedInto( long[] values, long[] into, int intoLengthBefore )
     {
-        int v = values.length-1;
-        int i = intoLengthBefore-1;
-        int t = i+values.length;
+        int v = values.length - 1;
+        int i = intoLengthBefore - 1;
+        int t = i + values.length;
         while ( v >= 0 || i >= 0 )
         {
             if ( i == -1 )
@@ -191,6 +204,11 @@ public class Utils
                 into[t--] = into[i--];
             }
         }
+    }
+
+    private static String getOverflowMessage( long value, Class clazz )
+    {
+        return "Value " + value + " is too big to be represented as " + clazz.getName();
     }
 
     private Utils()

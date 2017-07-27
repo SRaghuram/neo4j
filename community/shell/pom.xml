@@ -3,13 +3,13 @@
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>parent</artifactId>
-    <version>2.3-SNAPSHOT</version>
+    <version>3.2.3-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <artifactId>neo4j-shell</artifactId>
-  <version>2.3-SNAPSHOT</version>
+  <version>3.2.3-SNAPSHOT</version>
 
   <name>Neo4j - Generic shell</name>
   <description>
@@ -18,11 +18,12 @@
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
   <scm>
-	  <url>https://github.com/neo4j/neo4j/tree/master/community/shell</url>
+    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+    <url>https://github.com/neo4j/neo4j</url>
   </scm>
 
   <properties>
-    <sun.jta.version>1.1</sun.jta.version>
     <jline.groupId>jline</jline.groupId>
     <jline.artifactId>jline</jline.artifactId>
     <jline.version>2.12</jline.version>
@@ -67,41 +68,11 @@ the relevant Commercial Agreement.
               <packageName>org.neo4j.shell</packageName>
             </manifest>
             <manifestEntries>
-              <Class-Path>neo4j-kernel-${project.version}.jar neo4j-index-${project.version}.jar lucene-core-${lucene.version}.jar jta-${sun.jta.version}.jar ${jta.artifactId}-${jta.version}.jar jline-${jline.main.version}.jar
+              <Class-Path>neo4j-kernel-${project.version}.jar neo4j-index-${project.version}.jar lucene-core-${lucene.version}.jar jline-${jline.main.version}.jar
                 ${jline.artifactId}-${jline.version}.jar</Class-Path>
               <Agent-Class>org.neo4j.shell.StartClient</Agent-Class>
             </manifestEntries>
           </archive>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>generate-source-based-documentation</id>
-            <phase>${generate-config-docs-phase}</phase>
-            <configuration>
-              <target>
-                <java classname="org.neo4j.tooling.GenerateConfigDocumentation"
-                      classpathref="maven.compile.classpath" failonerror="true">
-                  <arg value="org.neo4j.shell.ShellSettings" />
-                  <arg value="${project.build.directory}/docs/ops/configuration-attributes.asciidoc" />
-                </java>
-              </target>
-            </configuration>
-            <goals><goal>run</goal></goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.neo4j.build.plugins</groupId>
-        <artifactId>docs-maven-plugin</artifactId>
-        <configuration>
-          <sourceDirectories>
-            <sourceDirectory>${basedir}/src/docs</sourceDirectory>
-            <sourceDirectory>${project.build.directory}/docs</sourceDirectory>
-            <sourceDirectory>${basedir}/src/test/resources</sourceDirectory>
-          </sourceDirectories>
         </configuration>
       </plugin>
     </plugins>
@@ -120,6 +91,13 @@ the relevant Commercial Agreement.
       <version>${project.version}</version>
       <scope>test</scope>
       <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-common</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.neo4j</groupId>
@@ -164,6 +142,10 @@ the relevant Commercial Agreement.
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+    </dependency>
+    <dependency>
         <groupId>org.hamcrest</groupId>
         <artifactId>hamcrest-core</artifactId>
         <scope>test</scope>
@@ -181,10 +163,18 @@ the relevant Commercial Agreement.
 
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-graphviz</artifactId>
+      <artifactId>neo4j-bolt</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-logging</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
 </project>

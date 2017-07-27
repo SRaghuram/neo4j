@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,14 +22,15 @@ package org.neo4j.server;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.server.configuration.ServerSettings;
 
 import static org.junit.Assert.assertEquals;
+
+import static org.neo4j.server.ServerTestUtils.getRelativePath;
+import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 import static org.neo4j.test.server.HTTP.Response;
 import static org.neo4j.test.server.HTTP.withBaseUri;
@@ -38,18 +39,19 @@ public class BatchEndpointIT
 {
     @Rule
     public final Neo4jRule neo4j = new Neo4jRule()
+            .withConfig( LegacySslPolicyConfig.certificates_directory,
+                    getRelativePath( getSharedTestTemporaryFolder(), LegacySslPolicyConfig.certificates_directory ) )
+            .withConfig( GraphDatabaseSettings.logs_directory,
+                    getRelativePath( getSharedTestTemporaryFolder(), GraphDatabaseSettings.logs_directory ) )
             .withConfig( ServerSettings.http_logging_enabled, "true" )
-            .withConfig( ServerSettings.http_log_config_file, createDummyLogbackConfigFile() )
-            .withConfig( ServerSettings.auth_enabled, "false" );
+            .withConfig( GraphDatabaseSettings.auth_enabled, "false" );
 
     @Test
     public void requestsShouldNotFailWhenHttpLoggingIsOn()
     {
         // Given
         String body = "[" +
-                      "{'method': 'POST', 'to': '/node', 'body': {'age': 1}, 'id': 1}," +
-                      "{'method': 'POST', 'to': '/node', 'body': {'age': 2}, 'id': 2}" +
-                      "]";
+                "{'method': 'POST', 'to': '/node', 'body': {'age': 1}, 'id': 1} ]";
 
         // When
         Response response = withBaseUri( neo4j.httpURI().toString() )
@@ -58,19 +60,5 @@ public class BatchEndpointIT
 
         // Then
         assertEquals( 200, response.status() );
-    }
-
-    private static String createDummyLogbackConfigFile()
-    {
-        try
-        {
-            Path file = Files.createTempFile( "logback", ".xml" );
-            Files.write( file, "<configuration></configuration>".getBytes() );
-            return file.toAbsolutePath().toString();
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( "Unable to create dummy logback configuration file", e );
-        }
     }
 }

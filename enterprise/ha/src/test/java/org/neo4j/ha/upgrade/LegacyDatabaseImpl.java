@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -36,9 +36,9 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.TestHighlyAvailableGraphDatabaseFactory;
 import org.neo4j.helpers.Args;
-import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.ha.UpdatePuller;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.shell.impl.RmiLocation;
 import org.neo4j.test.ProcessStreamHandler;
 
@@ -61,27 +61,27 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
     public static void main( String[] args ) throws Exception
     {
         Args arguments = Args.parse( args );
-        String storeDir = arguments.orphans().get( 0 );
+        File storeDir = new File( arguments.orphans().get( 0 ) );
 
         GraphDatabaseAPI db = (GraphDatabaseAPI) new TestHighlyAvailableGraphDatabaseFactory()
-                .newHighlyAvailableDatabaseBuilder( storeDir )
+                .newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( arguments.asMap() )
                 .newGraphDatabase();
 
         LegacyDatabaseImpl legacyDb = new LegacyDatabaseImpl( storeDir, db );
         rmiLocation( parseInt( arguments.orphans().get( 1 ) ) ).bind( legacyDb );
     }
-    
-    private final GraphDatabaseAPI db;
-    private final String storeDir;
 
-    public LegacyDatabaseImpl( String storeDir, GraphDatabaseAPI db ) throws RemoteException
+    private final GraphDatabaseAPI db;
+    private final File storeDir;
+
+    public LegacyDatabaseImpl( File storeDir, GraphDatabaseAPI db ) throws RemoteException
     {
         super();
         this.storeDir = storeDir;
         this.db = db;
     }
-    
+
     public static Future<LegacyDatabase> start( String classpath, File storeDir, Map<String, String> config )
             throws Exception
     {
@@ -93,7 +93,7 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
         final Process process = execJava( appendNecessaryTestClasses( classpath ),
                 LegacyDatabaseImpl.class.getName(), args.toArray( new String[0] ) );
         new ProcessStreamHandler( process, false ).launch();
-        
+
         final RmiLocation rmiLocation = rmiLocation( rmiPort );
         ExecutorService executor = newSingleThreadExecutor();
         Future<LegacyDatabase> future = executor.submit( new Callable<LegacyDatabase>()
@@ -138,7 +138,7 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
     {
         return RmiLocation.location( "127.0.0.1", rmiPort, "remote" );
     }
-    
+
     @Override
     public int stop()
     {
@@ -150,7 +150,7 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
     @Override
     public String getStoreDir()
     {
-        return storeDir;
+        return storeDir.getPath();
     }
 
     @Override
@@ -163,7 +163,7 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
     public long createNode() throws RemoteException
     {
         long result = -1;
-        try( Transaction tx = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             result = db.createNode().getId();
             tx.success();
@@ -175,7 +175,7 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
     public long initialize()
     {
         long result = -1;
-        try( Transaction tx = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Node center = db.createNode();
             result = center.getId();
@@ -183,7 +183,7 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
             long largest = 0;
             for ( int i = 0; i < 100; i++ )
             {
-                long current  = center.createRelationshipTo( db.createNode(), type1 ).getId();
+                long current = center.createRelationshipTo( db.createNode(), type1 ).getId();
                 if ( current > largest )
                 {
                     largest = current;
@@ -192,7 +192,7 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
 
             for ( int i = 0; i < 100; i++ )
             {
-                long current  = center.createRelationshipTo( db.createNode(), type2 ).getId();
+                long current = center.createRelationshipTo( db.createNode(), type2 ).getId();
                 if ( current > largest )
                 {
                     largest = current;
@@ -201,9 +201,9 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
 
             for ( Relationship rel : center.getRelationships() )
             {
-                rel.setProperty( "relProp", "relProp"+rel.getId()+"-"+largest );
+                rel.setProperty( "relProp", "relProp" + rel.getId() + "-" + largest );
                 Node other = rel.getEndNode();
-                other.setProperty( "nodeProp", "nodeProp"+other.getId()+"-"+largest );
+                other.setProperty( "nodeProp", "nodeProp" + other.getId() + "-" + largest );
             }
             tx.success();
         }
@@ -213,12 +213,12 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
     @Override
     public void doComplexLoad( long center )
     {
-        try( Transaction tx = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Node central = db.getNodeById( center );
 
-            long[] type1RelId = new long[ 100 ];
-            long[] type2RelId = new long[ 100 ];
+            long[] type1RelId = new long[100];
+            long[] type2RelId = new long[100];
 
             int index = 0;
             for ( Relationship relationship : central.getRelationships( type1 ) )
@@ -265,7 +265,7 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
             {
                 relationship.setProperty( "relProp", "relProp" + relationship.getId() + "-" + largestCreated );
                 Node end = relationship.getEndNode();
-                end.setProperty( "nodeProp", "nodeProp" + end.getId() + "-" + largestCreated  );
+                end.setProperty( "nodeProp", "nodeProp" + end.getId() + "-" + largestCreated );
             }
 
             tx.success();
@@ -275,13 +275,13 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
     @Override
     public void verifyComplexLoad( long centralNode )
     {
-        try( Transaction tx = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Node center = db.getNodeById( centralNode );
             long maxRelId = -1;
             for ( Relationship relationship : center.getRelationships() )
             {
-                if (relationship.getId() > maxRelId )
+                if ( relationship.getId() > maxRelId )
                 {
                     maxRelId = relationship.getId();
                 }
@@ -291,38 +291,40 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
             for ( Relationship relationship : center.getRelationships( type1 ) )
             {
                 typeCount++;
-                if ( !relationship.getProperty( "relProp" ).equals( "relProp" +relationship.getId()+"-"+maxRelId) )
+                if ( !relationship.getProperty( "relProp" )
+                        .equals( "relProp" + relationship.getId() + "-" + maxRelId ) )
                 {
-                    fail( "damn");
+                    fail( "damn" );
                 }
                 Node other = relationship.getEndNode();
-                if ( !other.getProperty( "nodeProp" ).equals( "nodeProp"+other.getId()+"-"+maxRelId ) )
+                if ( !other.getProperty( "nodeProp" ).equals( "nodeProp" + other.getId() + "-" + maxRelId ) )
                 {
-                    fail("double damn");
+                    fail( "double damn" );
                 }
             }
             if ( typeCount != 100 )
             {
-                fail("tripled damn");
+                fail( "tripled damn" );
             }
 
             typeCount = 0;
             for ( Relationship relationship : center.getRelationships( type2 ) )
             {
                 typeCount++;
-                if ( !relationship.getProperty( "relProp" ).equals( "relProp" +relationship.getId()+"-"+maxRelId) )
+                if ( !relationship.getProperty( "relProp" )
+                        .equals( "relProp" + relationship.getId() + "-" + maxRelId ) )
                 {
-                    fail( "damn2");
+                    fail( "damn2" );
                 }
                 Node other = relationship.getEndNode();
-                if ( !other.getProperty( "nodeProp" ).equals( "nodeProp"+other.getId()+"-"+maxRelId ) )
+                if ( !other.getProperty( "nodeProp" ).equals( "nodeProp" + other.getId() + "-" + maxRelId ) )
                 {
-                    fail("double damn2");
+                    fail( "double damn2" );
                 }
             }
             if ( typeCount != 100 )
             {
-                fail("tripled damn2");
+                fail( "tripled damn2" );
             }
             tx.success();
         }
@@ -339,14 +341,14 @@ public class LegacyDatabaseImpl extends UnicastRemoteObject implements LegacyDat
         {
             throw launderedException( e );
         }
-        
+
         try ( Transaction tx = db.beginTx() )
         {
             db.getNodeById( id );
             tx.success();
         }
     }
-    
+
     @Override
     public boolean isMaster() throws RemoteException
     {

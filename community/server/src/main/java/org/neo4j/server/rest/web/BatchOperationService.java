@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,16 +19,18 @@
  */
 package org.neo4j.server.rest.web;
 
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
-
 import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.servlet.WriteListener;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
@@ -37,8 +39,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
 
-import org.eclipse.jetty.util.log.Log;
-import org.eclipse.jetty.util.log.Logger;
 import org.neo4j.server.rest.batch.BatchOperationResults;
 import org.neo4j.server.rest.batch.NonStreamingBatchOperations;
 import org.neo4j.server.rest.repr.OutputFormat;
@@ -46,20 +46,27 @@ import org.neo4j.server.rest.repr.RepresentationWriteHandler;
 import org.neo4j.server.rest.repr.StreamingFormat;
 import org.neo4j.server.web.HttpHeaderUtils;
 import org.neo4j.server.web.WebServer;
+import org.neo4j.udc.UsageData;
+
+import static org.neo4j.udc.UsageDataKeys.Features.http_batch_endpoint;
+import static org.neo4j.udc.UsageDataKeys.features;
 
 @Path("/batch")
-public class BatchOperationService {
+public class BatchOperationService
+{
 
     private static final Logger LOGGER = Log.getLogger(BatchOperationService.class);
 
     private final OutputFormat output;
     private final WebServer webServer;
+    private final UsageData usage;
     private RepresentationWriteHandler representationWriteHandler = RepresentationWriteHandler.DO_NOTHING;
 
-    public BatchOperationService( @Context WebServer webServer, @Context OutputFormat output )
+    public BatchOperationService( @Context WebServer webServer, @Context OutputFormat output, @Context UsageData usage )
     {
         this.output = output;
         this.webServer = webServer;
+        this.usage = usage;
     }
 
     public void setRepresentationWriteHandler( RepresentationWriteHandler representationWriteHandler )
@@ -71,6 +78,7 @@ public class BatchOperationService {
     public Response performBatchOperations(@Context UriInfo uriInfo,
             @Context HttpHeaders httpHeaders, @Context HttpServletRequest req, InputStream body)
     {
+        usage.get( features ).flag( http_batch_endpoint );
         if ( isStreaming( httpHeaders ) )
         {
             return batchProcessAndStream( uriInfo, httpHeaders, req, body );

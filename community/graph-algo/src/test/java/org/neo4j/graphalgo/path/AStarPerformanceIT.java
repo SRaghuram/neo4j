@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,10 +31,11 @@ import org.neo4j.graphalgo.WeightedPath;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.System.currentTimeMillis;
+
 import static org.neo4j.graphalgo.CommonEvaluators.doubleCostEvaluator;
 import static org.neo4j.graphalgo.GraphAlgoFactory.aStar;
 import static org.neo4j.graphdb.PathExpanders.allTypesAndDirections;
@@ -45,12 +46,12 @@ public class AStarPerformanceIT
     private File directory;
 
     @Rule
-    public TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
+    public TestDirectory testDirectory = TestDirectory.testDirectory();
 
     @Before
     public void setup()
     {
-        directory = testDirectory.directory( "graph-db" );
+        directory = testDirectory.graphDbDir();
     }
 
     @Test
@@ -74,7 +75,7 @@ public class AStarPerformanceIT
                 new long[]{291, 86707},
                 new long[]{188345, 158468}
         };
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.getAbsolutePath() );
+        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( directory.getAbsoluteFile() );
         PathFinder<WeightedPath> algo = aStar( allTypesAndDirections(),
                 doubleCostEvaluator( "weight", 0 ), GeoDataGenerator.estimateEvaluator() );
         for ( int i = 0; i < 10; i++ )

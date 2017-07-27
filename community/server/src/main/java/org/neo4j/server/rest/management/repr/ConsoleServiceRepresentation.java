@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,8 @@ package org.neo4j.server.rest.management.repr;
 import org.neo4j.server.rest.repr.ListRepresentation;
 import org.neo4j.server.rest.repr.MappingSerializer;
 
-public class ConsoleServiceRepresentation extends ServiceDefinitionRepresentation {
+public class ConsoleServiceRepresentation extends ServiceDefinitionRepresentation
+{
 
     private Iterable<String> engines;
 
@@ -32,7 +33,7 @@ public class ConsoleServiceRepresentation extends ServiceDefinitionRepresentatio
         resourceUri( "exec", "" );
         this.engines = engines;
     }
-    
+
     @Override
     public void serialize( MappingSerializer serializer )
     {

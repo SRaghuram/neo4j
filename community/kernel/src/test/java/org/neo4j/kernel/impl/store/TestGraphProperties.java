@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,31 +32,35 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
-import org.neo4j.kernel.DefaultIdGeneratorFactory;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.core.NodeManager;
+import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.EphemeralFileSystemRule;
 import org.neo4j.test.OtherThreadExecutor;
-import org.neo4j.test.PageCacheRule;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.graphdb.Neo4jMatchers.containsOnly;
-import static org.neo4j.graphdb.Neo4jMatchers.getPropertyKeys;
-import static org.neo4j.graphdb.Neo4jMatchers.hasProperty;
-import static org.neo4j.graphdb.Neo4jMatchers.inTx;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.containsOnly;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.getPropertyKeys;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.hasProperty;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.inTx;
 
 public class TestGraphProperties
 {
+    @ClassRule
+    public static final PageCacheRule pageCacheRule = new PageCacheRule();
+
     @Rule
     public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
     private TestGraphDatabaseFactory factory;
@@ -64,7 +68,8 @@ public class TestGraphProperties
     @Before
     public void before() throws Exception
     {
-        factory = new TestGraphDatabaseFactory().setFileSystem( fs.get() );
+        factory = new TestGraphDatabaseFactory()
+                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fs.get() ) );
     }
 
     @Test
@@ -173,10 +178,10 @@ public class TestGraphProperties
         tx.close();
         db.shutdown();
 
-        Config config = new Config( Collections.<String, String>emptyMap(), GraphDatabaseSettings.class );
+        Config config = Config.embeddedDefaults( Collections.emptyMap() );
         StoreFactory storeFactory = new StoreFactory( storeDir, config, new DefaultIdGeneratorFactory( fs.get() ),
                 pageCacheRule.getPageCache( fs.get() ), fs.get(), NullLogProvider.getInstance() );
-        NeoStores neoStores = storeFactory.openNeoStores( false );
+        NeoStores neoStores = storeFactory.openAllNeoStores();
         long prop = neoStores.getMetaDataStore().getGraphNextProp();
         assertTrue( prop != 0 );
         neoStores.close();
@@ -225,19 +230,23 @@ public class TestGraphProperties
         worker1.close();
         worker2.close();
         db.shutdown();
-   }
+    }
 
     @Test
     public void twoUncleanInARow() throws Exception
     {
         File storeDir = new File("dir");
-        EphemeralFileSystemAbstraction snapshot = produceUncleanStore( fs.get(), storeDir );
-        snapshot = produceUncleanStore( snapshot, storeDir );
-        snapshot = produceUncleanStore( snapshot, storeDir );
-
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().setFileSystem( snapshot ).newImpermanentDatabase( storeDir );
-        assertThat( properties( db ), inTx( db, hasProperty( "prop" ).withValue( "Some value" ) ) );
-        db.shutdown();
+        try ( EphemeralFileSystemAbstraction snapshot = produceUncleanStore( fs.get(), storeDir ) )
+        {
+            try ( EphemeralFileSystemAbstraction snapshot2 = produceUncleanStore( snapshot, storeDir ) )
+            {
+                GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
+                        .setFileSystem( produceUncleanStore( snapshot2, storeDir ) )
+                        .newImpermanentDatabase( storeDir );
+                assertThat( properties( db ), inTx( db, hasProperty( "prop" ).withValue( "Some value" ) ) );
+                db.shutdown();
+            }
+        }
     }
 
     @Test
@@ -258,6 +267,55 @@ public class TestGraphProperties
         db.shutdown();
     }
 
+    @Test
+    public void shouldBeAbleToCreateLongGraphPropertyChainsAndReadTheCorrectNextPointerFromTheStore()
+    {
+        GraphDatabaseService database = factory.newImpermanentDatabase();
+
+        PropertyContainer graphProperties = properties( (GraphDatabaseAPI) database );
+
+        try ( Transaction tx = database.beginTx() )
+        {
+            graphProperties.setProperty( "a", new String[]{"A", "B", "C", "D", "E"} );
+            graphProperties.setProperty( "b", true );
+            graphProperties.setProperty( "c", "C" );
+            tx.success();
+        }
+
+        try ( Transaction tx = database.beginTx() )
+        {
+            graphProperties.setProperty( "d", new String[]{"A", "F"} );
+            graphProperties.setProperty( "e", true );
+            graphProperties.setProperty( "f", "F" );
+            tx.success();
+        }
+
+        try ( Transaction tx = database.beginTx() )
+        {
+            graphProperties.setProperty( "g", new String[]{"F"} );
+            graphProperties.setProperty( "h", false );
+            graphProperties.setProperty( "i", "I" );
+            tx.success();
+        }
+
+        try ( Transaction tx = database.beginTx() )
+        {
+            assertArrayEquals( new String[]{"A", "B", "C", "D", "E"}, (String[]) graphProperties.getProperty( "a" ) );
+            assertTrue( (boolean) graphProperties.getProperty( "b" ) );
+            assertEquals( "C", graphProperties.getProperty( "c" ) );
+
+            assertArrayEquals( new String[]{"A", "F"}, (String[]) graphProperties.getProperty( "d" ) );
+            assertTrue( (boolean) graphProperties.getProperty( "e" ) );
+            assertEquals( "F", graphProperties.getProperty( "f" ) );
+
+            assertArrayEquals( new String[]{"F"}, (String[]) graphProperties.getProperty( "g" ) );
+            assertFalse( (boolean) graphProperties.getProperty( "h" ) );
+            assertEquals( "I", graphProperties.getProperty( "i" ) );
+            tx.success();
+        }
+        database.shutdown();
+    }
+
     private static class State
     {
         private final GraphDatabaseAPI db;
@@ -273,60 +331,41 @@ public class TestGraphProperties
 
     private static class Worker extends OtherThreadExecutor<State>
     {
-        public Worker( String name, State initialState )
+        Worker( String name, State initialState )
         {
             super( name, initialState );
         }
 
         public boolean hasProperty( final String key ) throws Exception
         {
-            return execute( new WorkerCommand<State, Boolean>()
-            {
-                @Override
-                public Boolean doWork( State state )
-                {
-                    return state.properties.hasProperty( key );
-                }
-            } );
+            return execute( state -> state.properties.hasProperty( key ) );
         }
 
         public void commitTx() throws Exception
         {
-            execute( new WorkerCommand<State, Void>()
+            execute( (WorkerCommand<State,Void>) state ->
             {
-                @Override
-                public Void doWork( State state )
-                {
-                    state.tx.success();
-                    state.tx.close();
-                    return null;
-                }
+                state.tx.success();
+                state.tx.close();
+                return null;
             } );
         }
 
         void beginTx() throws Exception
         {
-            execute( new WorkerCommand<State, Void>()
+            execute( (WorkerCommand<State,Void>) state ->
             {
-                @Override
-                public Void doWork( State state )
-                {
-                    state.tx = state.db.beginTx();
-                    return null;
-                }
+                state.tx = state.db.beginTx();
+                return null;
             } );
         }
 
         Future<Void> setProperty( final String key, final Object value ) throws Exception
         {
-            return executeDontWait( new WorkerCommand<State, Void>()
+            return executeDontWait( state ->
             {
-                @Override
-                public Void doWork( State state )
-                {
-                    state.properties.setProperty( key, value );
-                    return null;
-                }
+                state.properties.setProperty( key, value );
+                return null;
             } );
         }
     }
@@ -345,7 +384,4 @@ public class TestGraphProperties
         db.shutdown();
         return snapshot;
     }
-
-    @ClassRule
-    public static PageCacheRule pageCacheRule = new PageCacheRule();
 }

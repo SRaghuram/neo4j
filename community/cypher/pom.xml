@@ -6,12 +6,12 @@
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>parent</artifactId>
-    <version>2.3-SNAPSHOT</version>
+    <version>3.2.3-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
 
   <artifactId>cypher-parent</artifactId>
-  <version>2.3-SNAPSHOT</version>
+  <version>3.2.3-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Neo4j - Community Cypher Build</name>
   <description>Project that builds the Neo4j Cypher modules as part of the Community distribution.</description>
@@ -29,16 +29,25 @@
   <scm>
     <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
     <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
-    <url>https://github.com/neo4j/neo4j/tree/master/community/cypher</url>
+    <url>https://github.com/neo4j/neo4j</url>
   </scm>
 
-  <modules>
-    <module>frontend-2.3</module>
-    <module>cypher-compiler-2.3</module>
-    <module>cypher</module>
-    <module>acceptance</module>
-    <module>compatibility-suite</module>
-  </modules>
+  <profiles>
+    <profile>
+      <id>include-cypher</id>
+      <activation>
+        <property>
+          <name>!skipCypher</name>
+        </property>
+      </activation>
+      <modules>
+        <module>frontend-3.2</module>
+        <module>ir-3.2</module>
+        <module>cypher-compiler-3.2</module>
+        <module>cypher</module>
+      </modules>
+    </profile>
+  </profiles>
 
   <build>
     <plugins>
@@ -78,47 +87,14 @@
       </plugin>
 
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-
-      <plugin>
         <groupId>org.neo4j.build.plugins</groupId>
         <artifactId>clirr-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>default</id>
-            <phase>${clirr-check-phase}</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
         <configuration>
-          <failOnError>true</failOnError>
-          <logResults>true</logResults>
-          <!-- This is temporarily hard-coded, because the versionsBack attribute seems to not work on OS X, we'll
-           need to fix that.
-           OBS: Set this to one version ahead, i.e. if you'd like it to compare against 1.9.3 then set it to 1.9.4
-            -->
-          <comparisonVersion>1.9.M05</comparisonVersion>
-          <ignoreMaintenenceVersions>false</ignoreMaintenenceVersions>
           <includes>
             <include>org/neo4j/cypher</include>
           </includes>
 
-          <!-- Allowed breaking changes in Neo4j 2.0 -->
-          <!-- These rules should be looked over and modified appropriately in 2.1 -->
-          <excludeMessageCodes>
-            <param>6006</param><!-- Field was made final. -->
-            <param>7012</param><!-- Method added to interface -->
-          </excludeMessageCodes>
           <excludes>
-            <!-- Ignore known breaking changes introduced in 2.0 and 2.1 -->
-
             <!-- Ignore all Cypher internals -->
             <exclude>org/neo4j/cypher/internal/*</exclude>
           </excludes>
@@ -139,7 +115,9 @@
                       <rules>
                           <requireFilesDontExist>
                               <files>
-                                  <file>cypher-compiler-2.2</file>
+                                  <file>cypher-compiler-3.1</file>
+                                  <file>cypher-compiler-3.0</file>
+                                  <file>cypher-compiler-2.3</file>
                               </files>
                           </requireFilesDontExist>
                       </rules>
@@ -250,7 +228,7 @@
       <dependency>
         <groupId>org.scalacheck</groupId>
         <artifactId>scalacheck_2.11</artifactId>
-        <version>1.12.4</version>
+        <version>1.12.5</version>
         <scope>test</scope>
       </dependency>
 
@@ -270,6 +248,13 @@
       </dependency>
       <dependency>
         <groupId>org.neo4j</groupId>
+        <artifactId>neo4j-common</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.neo4j</groupId>
         <artifactId>neo4j-io</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
@@ -277,19 +262,14 @@
       </dependency>
       <dependency>
         <groupId>org.neo4j</groupId>
-        <artifactId>neo4j-graphviz</artifactId>
-        <version>${project.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.neo4j</groupId>
         <artifactId>neo4j-lucene-index</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <!-- graph matching is used in old cypher compilers 3.1 and 2.3 we can use the old component -->
       <dependency>
         <groupId>org.neo4j</groupId>
         <artifactId>neo4j-graph-matching</artifactId>
-        <version>${project.version}</version>
+        <version>3.1.3</version>
       </dependency>
       <dependency>
         <groupId>org.neo4j</groupId>
@@ -298,12 +278,6 @@
       </dependency>
 
       <!-- other -->
-
-      <dependency>
-        <artifactId>scala-parser-combinators_2.11</artifactId>
-        <groupId>org.scala-lang.modules</groupId>
-        <version>1.0.4</version>
-      </dependency>
 
       <dependency>
         <groupId>org.parboiled</groupId>

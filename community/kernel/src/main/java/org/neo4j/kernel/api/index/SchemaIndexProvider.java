@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,22 +21,17 @@ package org.neo4j.kernel.api.index;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
-import org.neo4j.graphdb.DependencyResolver.SelectionStrategy;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.helpers.collection.IteratorUtil;
+import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
+import org.neo4j.kernel.impl.api.scan.LabelScanStoreProvider;
 import org.neo4j.kernel.impl.storemigration.StoreMigrationParticipant;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-
-import static org.neo4j.helpers.collection.IteratorUtil.addToCollection;
-import static org.neo4j.kernel.extension.KernelExtensionUtil.servicesClassPathEntryInformation;
 
 /**
  * Contract for implementing an index in Neo4j.
@@ -48,7 +43,7 @@ import static org.neo4j.kernel.extension.KernelExtensionUtil.servicesClassPathEn
  *
  * When an index rule is added, the {@link IndexingService} is notified. It will, in turn, ask
  * your {@link SchemaIndexProvider} for a\
- * {@link #getPopulator(long, IndexDescriptor, IndexConfiguration, IndexSamplingConfig) batch index writer}.
+ * {@link #getPopulator(long, IndexDescriptor, IndexSamplingConfig) batch index writer}.
  *
  * A background index job is triggered, and all existing data that applies to the new rule, as well as new data
  * from the "outside", will be inserted using the writer. You are guaranteed that usage of this writer,
@@ -93,7 +88,7 @@ import static org.neo4j.kernel.extension.KernelExtensionUtil.servicesClassPathEn
  * <h3>Online operation</h3>
  *
  * Once the index is online, the database will move to using the
- * {@link #getOnlineAccessor(long, IndexConfiguration, IndexSamplingConfig) online accessor} to
+ * {@link #getOnlineAccessor(long, IndexDescriptor, IndexSamplingConfig) online accessor} to
  * write to the index.
  */
 public abstract class SchemaIndexProvider extends LifecycleAdapter implements Comparable<SchemaIndexProvider>
@@ -105,27 +100,28 @@ public abstract class SchemaIndexProvider extends LifecycleAdapter implements Co
                 private final IndexPopulator singlePopulator = new IndexPopulator.Adapter();
 
                 @Override
-                public IndexAccessor getOnlineAccessor( long indexId, IndexConfiguration config,
+                public IndexAccessor getOnlineAccessor( long indexId, IndexDescriptor descriptor,
                                                         IndexSamplingConfig samplingConfig )
                 {
                     return singleWriter;
                 }
 
                 @Override
-                public IndexPopulator getPopulator( long indexId, IndexDescriptor descriptor, IndexConfiguration config,
+                public IndexPopulator getPopulator( long indexId, IndexDescriptor descriptor,
                                                     IndexSamplingConfig samplingConfig )
                 {
                     return singlePopulator;
                 }
 
                 @Override
-                public InternalIndexState getInitialState( long indexId )
+                public InternalIndexState getInitialState( long indexId, IndexDescriptor descriptor )
                 {
                     return InternalIndexState.POPULATING;
                 }
 
                 @Override
-                public StoreMigrationParticipant storeMigrationParticipant( FileSystemAbstraction fs, PageCache pageCache )
+                public StoreMigrationParticipant storeMigrationParticipant( FileSystemAbstraction fs,
+                        PageCache pageCache, LabelScanStoreProvider labelScanStoreProvider )
                 {
                     return StoreMigrationParticipant.NOT_PARTICIPATING;
                 }
@@ -136,24 +132,6 @@ public abstract class SchemaIndexProvider extends LifecycleAdapter implements Co
                     throw new IllegalStateException();
                 }
             };
-
-    public static final SelectionStrategy HIGHEST_PRIORITIZED_OR_NONE =
-            new SelectionStrategy()
-    {
-        @Override
-        @SuppressWarnings("unchecked")
-        public <T> T select( Class<T> type, Iterable<T> candidates ) throws IllegalArgumentException
-        {
-            List<Comparable> all = (List<Comparable>) addToCollection( candidates, new ArrayList<T>() );
-            if ( all.isEmpty() )
-            {
-                throw new IllegalArgumentException( "No schema index provider " +
-                        SchemaIndexProvider.class.getName() + " found. " + servicesClassPathEntryInformation() );
-            }
-            Collections.sort( all );
-            return (T) all.get( all.size()-1 );
-        }
-    };
 
     protected final int priority;
     private final Descriptor providerDescriptor;
@@ -168,20 +146,19 @@ public abstract class SchemaIndexProvider extends LifecycleAdapter implements Co
     /**
      * Used for initially populating a created index, using batch insertion.
      */
-    public abstract IndexPopulator getPopulator( long indexId, IndexDescriptor descriptor, IndexConfiguration config,
+    public abstract IndexPopulator getPopulator( long indexId, IndexDescriptor descriptor,
                                                  IndexSamplingConfig samplingConfig );
 
     /**
      * Used for updating an index once initial population has completed.
      */
-    public abstract IndexAccessor getOnlineAccessor( long indexId, IndexConfiguration config,
+    public abstract IndexAccessor getOnlineAccessor( long indexId, IndexDescriptor descriptor,
                                                      IndexSamplingConfig samplingConfig ) throws IOException;
 
     /**
      * Returns a failure previously gotten from {@link IndexPopulator#markAsFailed(String)}
      *
-     * Implementations are expected to persist this failure and may elect to make use of
-     * {@link org.neo4j.kernel.api.index.util.FailureStorage} for this purpose
+     * Implementations are expected to persist this failure
      */
     public abstract String getPopulationFailure( long indexId ) throws IllegalStateException;
 
@@ -191,7 +168,7 @@ public abstract class SchemaIndexProvider extends LifecycleAdapter implements Co
      * the failure accepted by any call to {@link IndexPopulator#markAsFailed(String)} call at the time
      * of failure.
      */
-    public abstract InternalIndexState getInitialState( long indexId );
+    public abstract InternalIndexState getInitialState( long indexId, IndexDescriptor descriptor );
 
     /**
      * @return a description of this index provider
@@ -233,12 +210,18 @@ public abstract class SchemaIndexProvider extends LifecycleAdapter implements Co
         return result;
     }
 
-    public static File getRootDirectory( File storeDir, String key )
+    /**
+     * Get schema index store root directory in specified store.
+     * @param storeDir store root directory
+     * @return shema index store root directory
+     */
+    public File getSchemaIndexStoreDirectory( File storeDir )
     {
-        return new File( new File( new File( storeDir, "schema" ), "index" ), key );
+        return new File( new File( new File( storeDir, "schema" ), "index" ), getProviderDescriptor().getKey() );
     }
 
-    public abstract StoreMigrationParticipant storeMigrationParticipant( FileSystemAbstraction fs, PageCache pageCache );
+    public abstract StoreMigrationParticipant storeMigrationParticipant( FileSystemAbstraction fs, PageCache pageCache,
+            LabelScanStoreProvider labelScanStoreProvider );
 
     /**
      * Provides a snapshot of meta files about this index provider, not the indexes themselves.
@@ -246,7 +229,7 @@ public abstract class SchemaIndexProvider extends LifecycleAdapter implements Co
      */
     public ResourceIterator<File> snapshotMetaFiles()
     {
-        return IteratorUtil.emptyIterator();
+        return Iterators.emptyIterator();
     }
 
     public static class Descriptor

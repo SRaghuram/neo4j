@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.helpers;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.function.Function;
 
 import static java.util.Arrays.copyOf;
 
@@ -29,22 +30,6 @@ import static java.util.Arrays.copyOf;
  */
 public abstract class ArrayUtil
 {
-    /**
-     * Convert an array to a {@link String}.
-     * I can't believe this method is missing from {@link Arrays}.
-     *
-     * @see Arrays#toString(byte[]) for similar functionality.
-     * @deprecated use {@link ObjectUtil#toString(Object)} instead.
-     * @param array Array to convert.
-     * @return A String representing the array.
-     */
-    @Deprecated
-    public static String toString( Object array )
-    {
-        assert array.getClass().isArray() : array + " is not an array";
-        return ObjectUtil.arrayToString( array );
-    }
-
     public static int hashCode( Object array )
     {
         assert array.getClass().isArray() : array + " is not an array";
@@ -410,8 +395,7 @@ public abstract class ArrayUtil
      * @param <TO> type of the converted items
      * @return a new array with all items from {@code from} converted into type {@code toClass}.
      */
-    public static <FROM,TO> TO[] map( FROM[] from, org.neo4j.function.Function<FROM,TO> transformer,
-            Class<TO> toClass )
+    public static <FROM, TO> TO[] map( FROM[] from, Function<FROM,TO> transformer, Class<TO> toClass )
     {
         @SuppressWarnings( "unchecked" )
         TO[] result = (TO[]) Array.newInstance( toClass, from.length );
@@ -434,26 +418,32 @@ public abstract class ArrayUtil
     public static <T> T[] concat( T first, T... additional )
     {
         @SuppressWarnings( "unchecked" )
-        T[] result = (T[]) Array.newInstance( additional.getClass().getComponentType(), additional.length+1 );
+        T[] result = (T[]) Array.newInstance( additional.getClass().getComponentType(), additional.length + 1 );
         result[0] = first;
         System.arraycopy( additional, 0, result, 1, additional.length );
         return result;
     }
 
     /**
-     * @return a concatenated array where {@code first} as the item at index {@code 0} and the additional
-     * items following it.
+     * Create a array from a existing array and additional items following it.
+     *
+     * @param initial the initial array
+     * @param additional the additional items that would be added into the initial array
+     * @param <T> the type of the array items
+     * @return a concatenated array and the additional items following it.
      */
     public static <T> T[] concat( T[] initial, T... additional )
     {
         @SuppressWarnings( "unchecked" )
-        T[] result = (T[]) Array.newInstance( additional.getClass().getComponentType(), initial.length+additional.length );
+        T[] result = (T[]) Array.newInstance( additional.getClass().getComponentType(), initial.length + additional.length );
         System.arraycopy( initial, 0, result, 0, initial.length );
         System.arraycopy( additional, 0, result, initial.length, additional.length );
         return result;
     }
 
     /**
+     * Returns the array version of the vararg argument.
+     *
      * @param varargs the items
      * @param <T> the type of the items
      * @return the array version of the vararg argument.
@@ -485,9 +475,9 @@ public abstract class ArrayUtil
             int index = indexOf( result, candidate );
             if ( index != -1 )
             {
-                if ( index+1 < length )
+                if ( index + 1 < length )
                 {   // not the last one
-                    result[index] = result[length-1];
+                    result[index] = result[length - 1];
                 }
                 length--;
             }

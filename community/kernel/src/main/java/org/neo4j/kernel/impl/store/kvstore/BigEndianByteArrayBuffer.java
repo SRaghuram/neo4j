@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,7 @@ import java.util.Arrays;
 
 import org.neo4j.io.pagecache.PageCursor;
 
-final class BigEndianByteArrayBuffer implements ReadableBuffer, WritableBuffer
+public final class BigEndianByteArrayBuffer implements ReadableBuffer, WritableBuffer
 {
     static BigEndianByteArrayBuffer buffer( int size )
     {
@@ -39,7 +39,7 @@ final class BigEndianByteArrayBuffer implements ReadableBuffer, WritableBuffer
         this( new byte[size] );
     }
 
-    BigEndianByteArrayBuffer( byte[] buffer )
+    public BigEndianByteArrayBuffer( byte[] buffer )
     {
         this.buffer = buffer;
     }
@@ -120,6 +120,26 @@ final class BigEndianByteArrayBuffer implements ReadableBuffer, WritableBuffer
         return true;
     }
 
+    public boolean minusOneAtTheEnd()
+    {
+        for ( int i = 0; i < buffer.length / 2; i++ )
+        {
+            if ( buffer[i] != 0 )
+            {
+                return false;
+            }
+        }
+
+        for ( int i = buffer.length / 2; i < buffer.length; i++)
+        {
+            if ( buffer[i] != -1 )
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public void dataFrom( ByteBuffer buffer )
     {
         buffer.get( this.buffer );
@@ -174,10 +194,10 @@ final class BigEndianByteArrayBuffer implements ReadableBuffer, WritableBuffer
     public int getInt( int offset )
     {
         offset = checkBounds( offset, 4 );
-        return (((0xFF & buffer[offset]) << 24) |
-                ((0xFF & buffer[offset + 1]) << 16) |
-                ((0xFF & buffer[offset + 2]) << 8) |
-                (0xFF & buffer[offset + 3]));
+        return ((0xFF & buffer[offset]) << 24) |
+               ((0xFF & buffer[offset + 1]) << 16) |
+               ((0xFF & buffer[offset + 2]) << 8) |
+                0xFF & buffer[offset + 3];
     }
 
     public BigEndianByteArrayBuffer putInt( int offset, int value )
@@ -188,14 +208,14 @@ final class BigEndianByteArrayBuffer implements ReadableBuffer, WritableBuffer
     public long getLong( int offset )
     {
         offset = checkBounds( offset, 8 );
-        return (((0xFFL & buffer[offset]) << 56) |
+        return ((0xFFL & buffer[offset]) << 56) |
                 ((0xFFL & buffer[offset + 1]) << 48) |
                 ((0xFFL & buffer[offset + 2]) << 40) |
                 ((0xFFL & buffer[offset + 3]) << 32) |
                 ((0xFFL & buffer[offset + 4]) << 24) |
                 ((0xFFL & buffer[offset + 5]) << 16) |
                 ((0xFFL & buffer[offset + 6]) << 8) |
-                (0xFFL & buffer[offset + 7]));
+                (0xFFL & buffer[offset + 7]);
     }
 
     @Override
@@ -240,11 +260,11 @@ final class BigEndianByteArrayBuffer implements ReadableBuffer, WritableBuffer
         return this;
     }
 
-    public void putIntegerAtEnd( long value ) throws IOException
+    void putIntegerAtEnd( long value ) throws IOException
     {
-        if ( value < 0 )
+        if ( value < -1 )
         {
-            throw new IllegalArgumentException( "Negative values not supported." );
+            throw new IllegalArgumentException( "Negative values different form -1 are not supported." );
         }
         if ( this.size() < 8 )
         {
@@ -261,7 +281,7 @@ final class BigEndianByteArrayBuffer implements ReadableBuffer, WritableBuffer
         }
     }
 
-    public long getIntegerFromEnd()
+    long getIntegerFromEnd()
     {
         long value = 0;
         for ( int i = Math.max( 0, buffer.length - 8 ); i < buffer.length; i++ )

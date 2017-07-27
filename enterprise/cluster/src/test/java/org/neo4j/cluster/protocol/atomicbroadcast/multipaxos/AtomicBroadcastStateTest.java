@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -51,7 +51,7 @@ public class AtomicBroadcastStateTest
         InstanceId coordinator = id( 1 );
         when( context.getCoordinator() ).thenReturn( coordinator );
         when( context.getUriForId( coordinator ) ).thenReturn( uri( 1 ) );
-        when( context.getInternalLog( AtomicBroadcastState.class ) ).thenReturn( NullLog.getInstance() );
+        when( context.getLog( AtomicBroadcastState.class ) ).thenReturn( NullLog.getInstance() );
 
         final List<Message<?>> messages = new ArrayList<>( 1 );
         MessageHolder outgoing = new MessageHolder()
@@ -76,7 +76,7 @@ public class AtomicBroadcastStateTest
         AtomicBroadcastContext context = mock( AtomicBroadcastContext.class );
         when( context.hasQuorum() ).thenReturn( false );
         when( context.getCoordinator() ).thenReturn( null );
-        when( context.getInternalLog( AtomicBroadcastState.class ) ).thenReturn( NullLog.getInstance() );
+        when( context.getLog( AtomicBroadcastState.class ) ).thenReturn( NullLog.getInstance() );
 
         final List<Message<?>> messages = new ArrayList<>( 1 );
         MessageHolder outgoing = new MessageHolder()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,72 +19,33 @@
  */
 package org.neo4j.kernel.impl.transaction;
 
-import java.util.concurrent.atomic.AtomicLong;
-
-public class TransactionCounters implements TransactionMonitor
+public interface TransactionCounters
 {
-    private final AtomicLong startedTransactionCount = new AtomicLong();
-    private final AtomicLong activeTransactionCount = new AtomicLong();
-    private final AtomicLong rolledBackTransactionCount = new AtomicLong();
-    private final AtomicLong terminatedTransactionCount = new AtomicLong();
-    private long peakTransactionCount; // hard to have absolutely atomic, and it doesn't need to be.
+    long getPeakConcurrentNumberOfTransactions();
 
-    @Override
-    public void transactionStarted()
-    {
-        // TODO offload stats keeping somehow from executing thread?
-        startedTransactionCount.incrementAndGet();
-        long active = activeTransactionCount.incrementAndGet();
-        peakTransactionCount = Math.max( peakTransactionCount, active );
-    }
+    long getNumberOfStartedTransactions();
 
-    @Override
-    public void transactionFinished( boolean successful )
-    {
-        long count = activeTransactionCount.decrementAndGet();
-        assert count >= 0;
-        if ( !successful )
-        {
-            rolledBackTransactionCount.incrementAndGet();
-        }
-    }
+    long getNumberOfCommittedTransactions();
 
-    @Override
-    public void transactionTerminated()
-    {
-        terminatedTransactionCount.incrementAndGet();
-    }
+    long getNumberOfCommittedReadTransactions();
 
-    public long getNumberOfActiveTransactions()
-    {
-        return activeTransactionCount.get();
-    }
+    long getNumberOfCommittedWriteTransactions();
 
-    public long getPeakConcurrentNumberOfTransactions()
-    {
-        return peakTransactionCount;
-    }
+    long getNumberOfActiveTransactions();
 
-    public long getNumberOfStartedTransactions()
-    {
-        return startedTransactionCount.get();
-    }
+    long getNumberOfActiveReadTransactions();
 
-    public long getNumberOfCommittedTransactions()
-    {
-        return startedTransactionCount.get()
-                - activeTransactionCount.get()
-                - rolledBackTransactionCount.get()
-                - terminatedTransactionCount.get();
-    }
+    long getNumberOfActiveWriteTransactions();
 
-    public long getNumberOfTerminatedTransactions()
-    {
-        return terminatedTransactionCount.get();
-    }
+    long getNumberOfTerminatedTransactions();
 
-    public long getNumberOfRolledbackTransactions()
-    {
-        return rolledBackTransactionCount.get();
-    }
+    long getNumberOfTerminatedReadTransactions();
+
+    long getNumberOfTerminatedWriteTransactions();
+
+    long getNumberOfRolledBackTransactions();
+
+    long getNumberOfRolledBackReadTransactions();
+
+    long getNumberOfRolledBackWriteTransactions();
 }

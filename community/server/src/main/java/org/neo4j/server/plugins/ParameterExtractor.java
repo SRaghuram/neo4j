@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,7 @@
  */
 package org.neo4j.server.plugins;
 
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.rest.repr.BadInputException;
 
 class ParameterExtractor extends DataExtractor
@@ -43,7 +43,10 @@ class ParameterExtractor extends DataExtractor
     Object extract( GraphDatabaseAPI graphDb, Object source, ParameterList parameters ) throws BadInputException
     {
         Object result = caster.get( graphDb, parameters, name );
-        if ( optional || result != null ) return result;
+        if ( optional || result != null )
+        {
+            return result;
+        }
         throw new IllegalArgumentException( "Mandatory argument \"" + name + "\" not supplied." );
     }
 

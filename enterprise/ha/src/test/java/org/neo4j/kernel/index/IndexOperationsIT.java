@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -36,10 +36,10 @@ import org.neo4j.ha.FinishTx;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.ha.UpdatePuller;
 import org.neo4j.kernel.impl.ha.ClusterManager;
+import org.neo4j.kernel.impl.ha.ClusterManager.RepairKit;
 import org.neo4j.test.OtherThreadExecutor;
 import org.neo4j.test.OtherThreadExecutor.WorkerCommand;
 import org.neo4j.test.ha.ClusterRule;
-import org.neo4j.test.ha.RetryOnGcRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -52,9 +52,6 @@ public class IndexOperationsIT
     public ClusterRule clusterRule = new ClusterRule( getClass() );
 
     protected ClusterManager.ManagedCluster cluster;
-
-    @Rule
-    public RetryOnGcRule retryRule = new RetryOnGcRule();
 
     @Before
     public void setup() throws Exception
@@ -85,7 +82,7 @@ public class IndexOperationsIT
     }
 
     @Test
-    public void index_objects_can_be_reused_after_role_switch() throws Exception
+    public void index_objects_can_be_reused_after_role_switch() throws Throwable
     {
         // GIVEN
         // -- an existing index
@@ -108,7 +105,7 @@ public class IndexOperationsIT
 
         // WHEN
         // -- there's a master switch
-        cluster.shutdown( master );
+        RepairKit repair = cluster.shutdown( master );
         indexManagers.remove( master );
         indexes.remove( master );
 
@@ -137,6 +134,7 @@ public class IndexOperationsIT
                 assertEquals( nodeId, index.get( key, value ).getSingle().getId() );
             }
         }
+        repair.repair();
     }
 
     @Test
@@ -144,7 +142,7 @@ public class IndexOperationsIT
     {
         // GIVEN
         // -- two instances, each begin a transaction
-        String key = "key", value = "value";
+        String key = "key2", value = "value2";
         HighlyAvailableGraphDatabase db1 = cluster.getMaster(), db2 = cluster.getAnySlave();
         long node = createNode( db1, key, value, false );
         cluster.sync();
@@ -180,19 +178,19 @@ public class IndexOperationsIT
 
     private long createNode( HighlyAvailableGraphDatabase author, String key, Object value, boolean index )
     {
-
         try ( Transaction tx = author.beginTx() )
         {
             Node node = author.createNode();
             node.setProperty( key, value );
             if ( index )
-            { author.index().forNodes( key ).add( node, key, value ); }
+            {
+                author.index().forNodes( key ).add( node, key, value );
+            }
             tx.success();
             return node.getId();
         }
         catch ( Exception e )
         {
-            e.printStackTrace( System.err );
             throw e;
         }
     }
@@ -214,7 +212,7 @@ public class IndexOperationsIT
         private final String key;
         private final String value;
 
-        public PutIfAbsent( long node, String key, String value )
+        PutIfAbsent( long node, String key, String value )
         {
             this.node = node;
             this.key = key;

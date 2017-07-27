@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,19 +22,19 @@ package org.neo4j.io.pagecache.tracing;
 import java.io.File;
 
 import org.neo4j.io.pagecache.PageSwapper;
-import org.neo4j.io.pagecache.monitoring.PageCacheMonitor;
+import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 
 /**
  * A PageCacheTracer receives a steady stream of events and data about what
- * the page cache is doing. Implementations of this interface should be as
+ * whole page cache is doing. Implementations of this interface should be as
  * efficient as possible, lest they severely slow down the page cache.
  */
-public interface PageCacheTracer extends PageCacheMonitor
+public interface PageCacheTracer extends PageCacheCounters
 {
     /**
      * A PageCacheTracer that does nothing other than return the NULL variants of the companion interfaces.
      */
-    public static final PageCacheTracer NULL = new PageCacheTracer()
+    PageCacheTracer NULL = new PageCacheTracer()
     {
         @Override
         public void mappedFile( File file )
@@ -53,12 +53,6 @@ public interface PageCacheTracer extends PageCacheMonitor
         }
 
         @Override
-        public PinEvent beginPin( boolean exclusiveLock, long filePageId, PageSwapper swapper )
-        {
-            return PinEvent.NULL;
-        }
-
-        @Override
         public MajorFlushEvent beginFileFlush( PageSwapper swapper )
         {
             return MajorFlushEvent.NULL;
@@ -71,63 +65,114 @@ public interface PageCacheTracer extends PageCacheMonitor
         }
 
         @Override
-        public long countFaults()
+        public long faults()
         {
             return 0;
         }
 
         @Override
-        public long countEvictions()
+        public long evictions()
         {
             return 0;
         }
 
         @Override
-        public long countPins()
+        public long pins()
         {
             return 0;
         }
 
         @Override
-        public long countUnpins()
+        public long unpins()
         {
             return 0;
         }
 
         @Override
-        public long countFlushes()
+        public long hits()
         {
             return 0;
         }
 
         @Override
-        public long countBytesRead()
+        public long flushes()
         {
             return 0;
         }
 
         @Override
-        public long countBytesWritten()
+        public long bytesRead()
         {
             return 0;
         }
 
         @Override
-        public long countFilesMapped()
+        public long bytesWritten()
         {
             return 0;
         }
 
         @Override
-        public long countFilesUnmapped()
+        public long filesMapped()
         {
             return 0;
         }
 
         @Override
-        public long countEvictionExceptions()
+        public long filesUnmapped()
         {
             return 0;
+        }
+
+        @Override
+        public long evictionExceptions()
+        {
+            return 0;
+        }
+
+        @Override
+        public void pins( long pins )
+        {
+        }
+
+        @Override
+        public void unpins( long unpins )
+        {
+        }
+
+        @Override
+        public void hits( long hits )
+        {
+        }
+
+        @Override
+        public void faults( long faults )
+        {
+        }
+
+        @Override
+        public void bytesRead( long bytesRead )
+        {
+        }
+
+        @Override
+        public void evictions( long evictions )
+        {
+        }
+
+        @Override
+        public void evictionExceptions( long evictionExceptions )
+        {
+        }
+
+        @Override
+        public void bytesWritten( long bytesWritten )
+        {
+        }
+
+        @Override
+        public void flushes( long flushes )
+        {
         }
 
         @Override
@@ -140,34 +185,83 @@ public interface PageCacheTracer extends PageCacheMonitor
     /**
      * The given file has been mapped, where no existing mapping for that file existed.
      */
-    public void mappedFile( File file );
+    void mappedFile( File file );
 
     /**
      * The last reference to the given file has been unmapped.
      */
-    public void unmappedFile( File file );
+    void unmappedFile( File file );
 
     /**
      * A background eviction has begun. Called from the background eviction thread.
-     * 
+     *
      * This call will be paired with a following PageCacheTracer#endPageEviction call.
      *
      * The method returns an EvictionRunEvent to represent the event of this eviction run.
      **/
-    public EvictionRunEvent beginPageEvictions( int pageCountToEvict );
-
-    /**
-     * A page is to be pinned.
-     */
-    public PinEvent beginPin( boolean exclusiveLock, long filePageId, PageSwapper swapper );
+    EvictionRunEvent beginPageEvictions( int pageCountToEvict );
 
     /**
      * A PagedFile wants to flush all its bound pages.
      */
-    public MajorFlushEvent beginFileFlush( PageSwapper swapper );
+    MajorFlushEvent beginFileFlush( PageSwapper swapper );
 
     /**
      * The PageCache wants to flush all its bound pages.
      */
-    public MajorFlushEvent beginCacheFlush();
+    MajorFlushEvent beginCacheFlush();
+
+    /**
+     * Report number of observed pins
+     * @param pins number of pins
+     */
+    void pins( long pins );
+
+    /**
+     * Report number of observed unpins
+     * @param unpins number of unpins
+     */
+    void unpins( long unpins );
+
+    /**
+     * Report number of observer hits
+     * @param hits number of hits
+     */
+    void hits( long hits );
+
+    /**
+     * Report number of observed faults
+     * @param faults number of faults
+     */
+    void faults( long faults );
+
+    /**
+     * Report number of bytes read
+     * @param bytesRead number of read bytes
+     */
+    void bytesRead( long bytesRead );
+
+    /**
+     * Report number of observed evictions
+     * @param evictions number of evictions
+     */
+    void evictions( long evictions );
+
+    /**
+     * Report number of eviction exceptions
+     * @param evictionExceptions number of eviction exceptions
+     */
+    void evictionExceptions( long evictionExceptions );
+
+    /**
+     * Report number of bytes written
+     * @param bytesWritten number of written bytes
+     */
+    void bytesWritten( long bytesWritten );
+
+    /**
+     * Report number of flushes
+     * @param flushes number of flushes
+     */
+    void flushes( long flushes );
 }

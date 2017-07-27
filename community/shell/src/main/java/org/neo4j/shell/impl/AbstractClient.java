@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,6 +33,7 @@ import java.util.Set;
 
 import org.neo4j.helpers.Cancelable;
 import org.neo4j.shell.Console;
+import org.neo4j.shell.Continuation;
 import org.neo4j.shell.CtrlCHandler;
 import org.neo4j.shell.Output;
 import org.neo4j.shell.Response;
@@ -57,11 +58,11 @@ public abstract class AbstractClient implements ShellClient
     private long timeConnection;
     private volatile boolean end;
     private final Collection<String> multiLine = new ArrayList<>();
-    private Serializable id;
+    protected Serializable id;
     private String prompt;
 
-    private final Map<String, Serializable> initialSession;
-    
+    protected final Map<String, Serializable> initialSession;
+
     public AbstractClient( Map<String, Serializable> initialSession, CtrlCHandler signalHandler )
     {
         this.signalHandler = signalHandler;
@@ -138,16 +139,17 @@ public abstract class AbstractClient implements ShellClient
     {
         if ( EXIT_COMMANDS.contains( line ) )
         {
-            end(); 
+            end();
             return;
         }
-        
+
         boolean success = false;
         try
         {
             String expandedLine = fullLine( line );
             Response response = getServer().interpretLine( id, expandedLine, out );
-            switch ( response.getContinuation() )
+            Continuation continuation = response.getContinuation();
+            switch ( continuation )
             {
             case INPUT_COMPLETE:
                 endMultiLine();
@@ -162,6 +164,8 @@ public abstract class AbstractClient implements ShellClient
             case EXCEPTION_CAUGHT:
                 endMultiLine();
                 break;
+            default:
+                throw new IllegalStateException( "Unknown continuation: " + continuation );
             }
             prompt = response.getPrompt();
             success = true;
@@ -173,7 +177,9 @@ public abstract class AbstractClient implements ShellClient
         finally
         {
             if ( !success )
+            {
                 endMultiLine();
+            }
         }
     }
 
@@ -181,7 +187,7 @@ public abstract class AbstractClient implements ShellClient
     {
         multiLine.clear();
     }
-    
+
     private String fullLine( String line )
     {
         if ( multiLine.isEmpty() )
@@ -272,12 +278,12 @@ public abstract class AbstractClient implements ShellClient
     {
         this.timeConnection = System.currentTimeMillis();
     }
-    
+
     public long timeForMostRecentConnection()
     {
         return timeConnection;
     }
-    
+
     public void shutdown()
     {
         if ( !multiLine.isEmpty() )
@@ -292,7 +298,7 @@ public abstract class AbstractClient implements ShellClient
             }
         }
     }
-    
+
     @Override
     public Serializable getId()
     {
@@ -301,16 +307,16 @@ public abstract class AbstractClient implements ShellClient
 
     protected void tryUnexport( Remote remote )
     {
-    	try
-    	{
-    		UnicastRemoteObject.unexportObject( remote, true );
-    	}
-    	catch ( NoSuchObjectException e )
-    	{
-    		System.out.println( "Couldn't unexport: " + remote );
-    	}
+        try
+        {
+            UnicastRemoteObject.unexportObject( remote, true );
+        }
+        catch ( NoSuchObjectException e )
+        {
+            System.out.println( "Couldn't unexport: " + remote );
+        }
     }
-    
+
     @Override
     public void setSessionVariable( String key, Serializable value ) throws ShellException
     {

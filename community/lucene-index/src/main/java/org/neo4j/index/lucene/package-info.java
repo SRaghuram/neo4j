@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,7 @@
  * Contains {@link org.neo4j.index.lucene.QueryContext} and
  * {@link org.neo4j.index.lucene.ValueContext} which is part of the
  * public API for an {@link org.neo4j.graphdb.index.Index} backed by Lucene.
- * 
+ *
  * Also contain a timeline implementation on top of an
  * {@link org.neo4j.graphdb.index.Index} based on Lucene.
  */

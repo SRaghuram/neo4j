@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import org.neo4j.cluster.com.message.MessageProcessor;
 import org.neo4j.cluster.com.message.MessageType;
 import org.neo4j.cluster.timeout.FixedTimeoutStrategy;
 import org.neo4j.cluster.timeout.Timeouts;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 
 class ProverTimeouts extends Timeouts
 {
@@ -37,7 +37,7 @@ class ProverTimeouts extends Timeouts
     private final URI to;
     private long time = 0;
 
-    public ProverTimeouts( URI to )
+    ProverTimeouts( URI to )
     {
         super(new FixedTimeoutStrategy(1));
         this.to = to;
@@ -69,9 +69,14 @@ class ProverTimeouts extends Timeouts
     }
 
     @Override
-    public void cancelTimeout( Object key )
+    public Message<? extends MessageType> cancelTimeout( Object key )
     {
-        timeouts.remove( key );
+        Pair<ProverTimeout,Long> timeout = timeouts.remove( key );
+        if ( timeout != null )
+        {
+            return timeout.first().getTimeoutMessage();
+        }
+        return null;
     }
 
     @Override
@@ -112,17 +117,17 @@ class ProverTimeouts extends Timeouts
         ProverTimeouts that = (ProverTimeouts) o;
 
         Iterator<Pair<ProverTimeout,Long>> those = that.timeouts.values().iterator();
-        Iterator<Pair<ProverTimeout,Long>> mine  = timeouts.values().iterator();
+        Iterator<Pair<ProverTimeout,Long>> mine = timeouts.values().iterator();
 
-        while(mine.hasNext())
+        while ( mine.hasNext() )
         {
-            if(!those.hasNext() || !those.next().first().equals( mine.next().first() ))
+            if ( !those.hasNext() || !those.next().first().equals( mine.next().first() ) )
             {
                 return false;
             }
         }
 
-        if(those.hasNext())
+        if ( those.hasNext() )
         {
             return false;
         }
@@ -151,7 +156,7 @@ class ProverTimeouts extends Timeouts
     public ClusterAction peek()
     {
         Map.Entry<Object, Pair<ProverTimeout, Long>> next = nextTimeout();
-        if(next != null)
+        if ( next != null )
         {
             return new MessageDeliveryAction( next.getValue().first().getTimeoutMessage() );
         }
@@ -164,9 +169,9 @@ class ProverTimeouts extends Timeouts
     private Map.Entry<Object, Pair<ProverTimeout, Long>> nextTimeout()
     {
         Map.Entry<Object, Pair<ProverTimeout, Long>> lowestTimeout = null;
-        for ( Map.Entry<Object, Pair<ProverTimeout, Long>> current : timeouts.entrySet() )
+        for ( Map.Entry<Object,Pair<ProverTimeout,Long>> current : timeouts.entrySet() )
         {
-            if(lowestTimeout == null || lowestTimeout.getValue().other() > current.getValue().other())
+            if ( lowestTimeout == null || lowestTimeout.getValue().other() > current.getValue().other() )
             {
                 lowestTimeout = current;
             }
@@ -176,7 +181,7 @@ class ProverTimeouts extends Timeouts
 
     class ProverTimeout extends Timeout
     {
-        public ProverTimeout( long timeout, Message<? extends MessageType> timeoutMessage )
+        ProverTimeout( long timeout, Message<? extends MessageType> timeoutMessage )
         {
             super( timeout, timeoutMessage );
         }
@@ -190,7 +195,7 @@ class ProverTimeouts extends Timeouts
         @Override
         public boolean equals( Object obj )
         {
-            if(obj.getClass() != getClass())
+            if ( obj.getClass() != getClass() )
             {
                 return false;
             }

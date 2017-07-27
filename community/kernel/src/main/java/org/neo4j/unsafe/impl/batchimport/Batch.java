@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,7 @@
 package org.neo4j.unsafe.impl.batchimport;
 
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
-import org.neo4j.kernel.impl.store.record.PropertyBlock;
+import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.unsafe.impl.batchimport.staging.Stage;
 import org.neo4j.unsafe.impl.batchimport.staging.Step;
 
@@ -31,19 +31,20 @@ import org.neo4j.unsafe.impl.batchimport.staging.Step;
  */
 public class Batch<INPUT,RECORD extends PrimitiveRecord>
 {
+    /**
+     * Used in a scenario where a step merely needs to signal that the next step in the stage should execute,
+     * not necessarily that it needs any data from the previous step.
+     */
+    public static final Batch EMPTY = new Batch<>( null );
+
     public final INPUT[] input;
     public RECORD[] records;
-    public int[] propertyBlocksLengths;
-    // This is a special succer. All property blocks for ALL records in this batch sits in this
-    // single array. The number of property blocks for a given record sits in propertyBlocksLengths
-    // using the same index as the record. So it's a collective size suitable for complete looping
-    // over the batch.
-    public PropertyBlock[] propertyBlocks;
-    // Used by ParallelizeByNodeIdStep to help determine any two batches have any id in common
-    public long[] sortedIds;
-    // Used by relationship staged to query idMapper and store ids here
+
+    public PropertyRecord[][] propertyRecords;
+    public int numberOfProperties;
+
+    // Used by relationship stages to query idMapper and store ids here
     public long[] ids;
-    public boolean parallelizableWithPrevious;
     public long firstRecordId;
     public long[][] labels;
 

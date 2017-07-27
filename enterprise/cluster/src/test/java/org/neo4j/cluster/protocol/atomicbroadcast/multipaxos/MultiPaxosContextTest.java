@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,13 @@
  */
 package org.neo4j.cluster.protocol.atomicbroadcast.multipaxos;
 
+import org.junit.Test;
+
 import java.net.URI;
 import java.util.Collections;
 import java.util.concurrent.Executor;
 
-import org.junit.Test;
+import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.protocol.atomicbroadcast.ObjectStreamFactory;
 import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.context.MultiPaxosContext;
@@ -31,27 +33,31 @@ import org.neo4j.cluster.protocol.cluster.ClusterConfiguration;
 import org.neo4j.cluster.protocol.election.ElectionCredentialsProvider;
 import org.neo4j.cluster.protocol.election.ElectionRole;
 import org.neo4j.cluster.timeout.Timeouts;
-import org.neo4j.kernel.impl.logging.NullLogService;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.TestCase.assertFalse;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class MultiPaxosContextTest
 {
-
     @Test
     public void shouldNotConsiderInstanceJoiningWithSameIdAndIpAProblem() throws Exception
     {
         // Given
+
+        Config config = mock( Config.class );
+        when( config.get( ClusterSettings.max_acceptors ) ).thenReturn( 10 );
+
         MultiPaxosContext ctx = new MultiPaxosContext( new InstanceId( 1 ),
                 Collections.<ElectionRole>emptyList(),
                 mock( ClusterConfiguration.class ), mock( Executor.class ),
-                NullLogService.getInstance(), new ObjectStreamFactory(),
+                NullLogProvider.getInstance(), new ObjectStreamFactory(),
                 new ObjectStreamFactory(), mock( AcceptorInstanceStore.class ), mock( Timeouts.class ),
-                mock( ElectionCredentialsProvider.class) );
+                mock( ElectionCredentialsProvider.class), config );
 
         InstanceId joiningId = new InstanceId( 12 );
         String joiningUri = "http://127.0.0.1:900";
@@ -76,14 +82,17 @@ public class MultiPaxosContextTest
         ClusterConfiguration clusterConfig = new ClusterConfiguration( "myCluster", NullLogProvider.getInstance() );
         ElectionCredentialsProvider electionCredentials = mock( ElectionCredentialsProvider.class );
 
+        Config config = mock( Config.class );
+        when( config.get( ClusterSettings.max_acceptors ) ).thenReturn( 10 );
+
         MultiPaxosContext ctx = new MultiPaxosContext( new InstanceId( 1 ),
                 Collections.<ElectionRole>emptyList(),
                 clusterConfig, executor,
-                NullLogService.getInstance(), objStream,
-                objStream, acceptorInstances, timeouts, electionCredentials );
+                NullLogProvider.getInstance(), objStream,
+                objStream, acceptorInstances, timeouts, electionCredentials, config );
 
         // When
-        MultiPaxosContext snapshot = ctx.snapshot( NullLogService.getInstance(), timeouts, executor, acceptorInstances, objStream, objStream,
+        MultiPaxosContext snapshot = ctx.snapshot( NullLogProvider.getInstance(), timeouts, executor, acceptorInstances, objStream, objStream,
                 electionCredentials );
 
         // Then

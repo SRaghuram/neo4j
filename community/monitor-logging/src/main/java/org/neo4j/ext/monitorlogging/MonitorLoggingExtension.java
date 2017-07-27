@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,9 +26,9 @@ import java.util.Set;
 
 import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.Logger;
-import org.neo4j.kernel.monitoring.Monitors;
 
 public class MonitorLoggingExtension implements Lifecycle
 {
@@ -64,7 +64,8 @@ public class MonitorLoggingExtension implements Lifecycle
             try
             {
                 clazz = getClass().getClassLoader().loadClass( className );
-            } catch ( ClassNotFoundException ex )
+            }
+            catch ( ClassNotFoundException ex )
             {
                 log.warn( "When trying to add a logging monitor, not able to load class " + className, ex );
                 continue;

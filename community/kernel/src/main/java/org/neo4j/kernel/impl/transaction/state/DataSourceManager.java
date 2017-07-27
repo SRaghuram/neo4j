@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,9 @@
  */
 package org.neo4j.kernel.impl.transaction.state;
 
-import org.neo4j.function.Supplier;
+import java.util.function.Supplier;
+
+import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.helpers.Listeners;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.KernelAPI;
@@ -43,7 +45,7 @@ public class DataSourceManager implements Lifecycle, Supplier<KernelAPI>
     }
 
     private LifeSupport life = new LifeSupport();
-    private Iterable<Listener> dsRegistrationListeners = Listeners.newListeners();
+    private final Listeners<Listener> dsRegistrationListeners = new Listeners<>();
     private NeoStoreDataSource dataSource;
 
     public void addListener( Listener listener )
@@ -61,36 +63,22 @@ public class DataSourceManager implements Lifecycle, Supplier<KernelAPI>
             {   // OK
             }
         }
-        dsRegistrationListeners = Listeners.addListener( listener, dsRegistrationListeners );
+        dsRegistrationListeners.add( listener );
     }
 
-    public void register( final NeoStoreDataSource dataSource )
+    public void register( NeoStoreDataSource dataSource )
     {
         this.dataSource = dataSource;
         if ( life.getStatus().equals( LifecycleStatus.STARTED ) )
         {
-            Listeners.notifyListeners( dsRegistrationListeners, new Listeners.Notification<Listener>()
-            {
-                @Override
-                public void notify( Listener listener )
-                {
-                    listener.registered( dataSource );
-                }
-            } );
+            dsRegistrationListeners.notify( listener -> listener.registered( dataSource ) );
         }
     }
 
-    public void unregister( final NeoStoreDataSource dataSource )
+    public void unregister( NeoStoreDataSource dataSource )
     {
         this.dataSource = null;
-        Listeners.notifyListeners( dsRegistrationListeners, new Listeners.Notification<Listener>()
-        {
-            @Override
-            public void notify( Listener listener )
-            {
-                listener.unregistered( dataSource );
-            }
-        } );
+        dsRegistrationListeners.notify( listener -> listener.unregistered( dataSource ) );
         life.remove( dataSource );
     }
 
@@ -143,5 +131,26 @@ public class DataSourceManager implements Lifecycle, Supplier<KernelAPI>
     public KernelAPI get()
     {
         return dataSource.getKernel();
+    }
+
+    public static class DependencyResolverSupplier implements Supplier<DependencyResolver>
+    {
+        private DataSourceManager dataSourceManager;
+
+        public DependencyResolverSupplier( DataSourceManager dataSourceManager )
+        {
+            this.dataSourceManager = dataSourceManager;
+        }
+
+        @Override
+        public DependencyResolver get()
+        {
+            NeoStoreDataSource dataSource = dataSourceManager.getDataSource();
+            if ( dataSource == null )
+            {
+                return null;
+            }
+            return dataSource.getDependencyResolver();
+        }
     }
 }

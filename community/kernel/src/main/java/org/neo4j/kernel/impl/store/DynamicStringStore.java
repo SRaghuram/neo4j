@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,11 +20,13 @@
 package org.neo4j.kernel.impl.store;
 
 import java.io.File;
+import java.nio.file.OpenOption;
 
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.IdGeneratorFactory;
-import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.store.format.RecordFormat;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.logging.LogProvider;
 
@@ -43,9 +45,13 @@ public class DynamicStringStore extends AbstractDynamicStore
             IdGeneratorFactory idGeneratorFactory,
             PageCache pageCache,
             LogProvider logProvider,
-            int blockSize )
+            int dataSizeFromConfiguration,
+            RecordFormat<DynamicRecord> recordFormat,
+            String storeVersion,
+            OpenOption... openOptions )
     {
-        super( fileName, configuration, idType, idGeneratorFactory, pageCache, logProvider, blockSize );
+        super( fileName, configuration, idType, idGeneratorFactory, pageCache,
+                logProvider, TYPE_DESCRIPTOR, dataSizeFromConfiguration, recordFormat, storeVersion, openOptions );
     }
 
     @Override
@@ -53,11 +59,5 @@ public class DynamicStringStore extends AbstractDynamicStore
             throws FAILURE
     {
         processor.processString( this, record, idType );
-    }
-
-    @Override
-    protected String getTypeDescriptor()
-    {
-        return TYPE_DESCRIPTOR;
     }
 }

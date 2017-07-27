@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,15 @@
  */
 package org.neo4j.kernel.impl.transaction;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -35,14 +35,13 @@ import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.ReaderLogVersionBridge;
-
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.encodeLogVersion;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_LOG_VERSION;
@@ -54,7 +53,7 @@ public class ReaderLogVersionBridgeTest
     private final LogVersionedStoreChannel channel = mock( LogVersionedStoreChannel.class );
 
     private final File file = mock( File.class );
-    private final long version = 10l;
+    private final long version = 10L;
 
     @Test
     public void shouldOpenTheNextChannelWhenItExists() throws IOException
@@ -67,7 +66,7 @@ public class ReaderLogVersionBridgeTest
         when( channel.getLogFormatVersion() ).thenReturn( CURRENT_LOG_VERSION );
         when( logFiles.getLogFileForVersion( version + 1 ) ).thenReturn( file );
         when( fs.fileExists( file ) ).thenReturn( true );
-        when( fs.open( file, "rw" ) ).thenReturn( newStoreChannel );
+        when( fs.open( file, "r" ) ).thenReturn( newStoreChannel );
         when( newStoreChannel.read( Matchers.<ByteBuffer>any() ) ).then( new Answer<Integer>()
         {
             @Override
@@ -98,7 +97,28 @@ public class ReaderLogVersionBridgeTest
 
         when( channel.getVersion() ).thenReturn( version );
         when( logFiles.getLogFileForVersion( version + 1 ) ).thenReturn( file );
-        when( fs.open( file, "rw" ) ).thenThrow( new FileNotFoundException() );
+        when( fs.open( file, "r" ) ).thenThrow( new FileNotFoundException() );
+
+        // when
+        final LogVersionedStoreChannel result = bridge.next( channel );
+
+        // then
+        assertEquals( channel, result );
+        verify( channel, never() ).close();
+    }
+
+    @Test
+    public void shouldReturnOldChannelWhenNextChannelHasntGottenCompleteHeaderYet() throws Exception
+    {
+        // given
+        final ReaderLogVersionBridge bridge = new ReaderLogVersionBridge( fs, logFiles );
+        final StoreChannel nextVersionWithIncompleteHeader = mock( StoreChannel.class );
+        when( nextVersionWithIncompleteHeader.read( any( ByteBuffer.class ) ) ).thenReturn( LOG_HEADER_SIZE / 2 );
+
+        when( channel.getVersion() ).thenReturn( version );
+        when( fs.fileExists( file ) ).thenReturn( true );
+        when( logFiles.getLogFileForVersion( version + 1 ) ).thenReturn( file );
+        when( fs.open( file, "r" ) ).thenReturn( nextVersionWithIncompleteHeader );
 
         // when
         final LogVersionedStoreChannel result = bridge.next( channel );

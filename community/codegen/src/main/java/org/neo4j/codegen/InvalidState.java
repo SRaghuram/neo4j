@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,8 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.codegen;
+
+import java.util.function.Consumer;
 
 class InvalidState implements MethodEmitter
 {
@@ -82,7 +83,7 @@ class InvalidState implements MethodEmitter
     }
 
     @Override
-    public void assign( TypeReference type, String name, Expression value )
+    public void assign( LocalVariable variable, Expression value )
     {
         throw new IllegalStateException( reason );
     }
@@ -100,7 +101,7 @@ class InvalidState implements MethodEmitter
     }
 
     @Override
-    public void beginFinally()
+    public void beginBlock()
     {
         throw new IllegalStateException( reason );
     }
@@ -112,7 +113,7 @@ class InvalidState implements MethodEmitter
     }
 
     @Override
-    public void beginTry( Resource... resources )
+    public <T> void tryCatchBlock( Consumer<T> body, Consumer<T> handler, LocalVariable exception, T block )
     {
         throw new IllegalStateException( reason );
     }
@@ -124,26 +125,15 @@ class InvalidState implements MethodEmitter
     }
 
     @Override
-    public void beginCatch( Parameter exception )
-    {
-        throw new IllegalStateException( reason );
-    }
-
-    @Override
     public void declare( LocalVariable local )
     {
         throw new IllegalStateException( reason );
     }
 
     @Override
-    public void assign( LocalVariable local, Expression value )
+    public void assignVariableInScope( LocalVariable local, Expression value )
     {
         throw new IllegalStateException( reason );
     }
 
-    @Override
-    public void beginForEach( Parameter local, Expression iterable )
-    {
-        throw new IllegalStateException( reason );
-    }
 }

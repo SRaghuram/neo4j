@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,29 +23,25 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.lang.reflect.Field;
-
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.kernel.NeoStoreDataSource;
-import org.neo4j.kernel.impl.store.AbstractDynamicStore;
+import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.PropertyStore;
-import org.neo4j.kernel.impl.store.TestShortString;
-import org.neo4j.test.DatabaseRule;
-import org.neo4j.test.GraphTransactionRule;
-import org.neo4j.test.ImpermanentDatabaseRule;
+import org.neo4j.test.rule.DatabaseRule;
+import org.neo4j.test.rule.GraphTransactionRule;
+import org.neo4j.test.rule.ImpermanentDatabaseRule;
 
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.graphdb.RelationshipType.withName;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.hasProperty;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.inTx;
 
-import static org.neo4j.graphdb.DynamicRelationshipType.withName;
-import static org.neo4j.graphdb.Neo4jMatchers.hasProperty;
-import static org.neo4j.graphdb.Neo4jMatchers.inTx;
-
-public class TestShortStringProperties extends TestShortString
+public class TestShortStringProperties
 {
     @ClassRule
     public static DatabaseRule graphdb = new ImpermanentDatabaseRule();
@@ -58,7 +54,7 @@ public class TestShortStringProperties extends TestShortString
         tx.success();
     }
 
-    public void newTx()
+    private void newTx()
     {
         tx.success();
         tx.begin();
@@ -70,20 +66,20 @@ public class TestShortStringProperties extends TestShortString
     public void canAddMultipleShortStringsToTheSameNode() throws Exception
     {
         long recordCount = dynamicRecordsInUse();
-        Node node = graphdb.getGraphDatabaseService().createNode();
+        Node node = graphdb.getGraphDatabaseAPI().createNode();
         node.setProperty( "key", "value" );
         node.setProperty( "reverse", "esrever" );
         commit();
         assertEquals( recordCount, dynamicRecordsInUse() );
-        assertThat( node, inTx( graphdb.getGraphDatabaseService(), hasProperty( "key" ).withValue( "value" )  ) );
-        assertThat( node, inTx( graphdb.getGraphDatabaseService(), hasProperty( "reverse" ).withValue( "esrever" )  ) );
+        assertThat( node, inTx( graphdb.getGraphDatabaseAPI(), hasProperty( "key" ).withValue( "value" )  ) );
+        assertThat( node, inTx( graphdb.getGraphDatabaseAPI(), hasProperty( "reverse" ).withValue( "esrever" )  ) );
     }
 
     @Test
     public void canAddShortStringToRelationship() throws Exception
     {
         long recordCount = dynamicRecordsInUse();
-        GraphDatabaseService db = graphdb.getGraphDatabaseService();
+        GraphDatabaseService db = graphdb.getGraphDatabaseAPI();
         Relationship rel = db.createNode().createRelationshipTo( db.createNode(), withName( "REL_TYPE" ) );
         rel.setProperty( "type", "dimsedut" );
         commit();
@@ -98,7 +94,7 @@ public class TestShortStringProperties extends TestShortString
         {
             long recordCount = dynamicRecordsInUse();
             long propCount = propertyRecordsInUse();
-            Node node = graphdb.getGraphDatabaseService().createNode();
+            Node node = graphdb.getGraphDatabaseAPI().createNode();
             node.setProperty( "key", "value" );
 
             newTx();
@@ -112,7 +108,7 @@ public class TestShortStringProperties extends TestShortString
 
             assertEquals( recordCount, dynamicRecordsInUse() );
             assertEquals( propCount + 1, propertyRecordsInUse() );
-            assertThat( node, inTx( graphdb.getGraphDatabaseService(), hasProperty( "key" ).withValue( "other" )  ) );
+            assertThat( node, inTx( graphdb.getGraphDatabaseAPI(), hasProperty( "key" ).withValue( "other" )  ) );
         }
         catch ( Exception e )
         {
@@ -126,7 +122,7 @@ public class TestShortStringProperties extends TestShortString
     {
         long recordCount = dynamicRecordsInUse();
         long propCount = propertyRecordsInUse();
-        Node node = graphdb.getGraphDatabaseService().createNode();
+        Node node = graphdb.getGraphDatabaseAPI().createNode();
         node.setProperty( "key", LONG_STRING );
         newTx();
 
@@ -139,7 +135,7 @@ public class TestShortStringProperties extends TestShortString
 
         assertEquals( recordCount, dynamicRecordsInUse() );
         assertEquals( propCount + 1, propertyRecordsInUse() );
-        assertThat( node, inTx( graphdb.getGraphDatabaseService(), hasProperty( "key" ).withValue( "value" )  ) );
+        assertThat( node, inTx( graphdb.getGraphDatabaseAPI(), hasProperty( "key" ).withValue( "value" )  ) );
     }
 
     @Test
@@ -147,7 +143,7 @@ public class TestShortStringProperties extends TestShortString
     {
         long recordCount = dynamicRecordsInUse();
         long propCount = propertyRecordsInUse();
-        Node node = graphdb.getGraphDatabaseService().createNode();
+        Node node = graphdb.getGraphDatabaseAPI().createNode();
         node.setProperty( "key", "value" );
         newTx();
 
@@ -160,7 +156,7 @@ public class TestShortStringProperties extends TestShortString
 
         assertEquals( recordCount + 1, dynamicRecordsInUse() );
         assertEquals( propCount + 1, propertyRecordsInUse() );
-        assertThat( node, inTx( graphdb.getGraphDatabaseService(), hasProperty( "key" ).withValue( LONG_STRING )  ) );
+        assertThat( node, inTx( graphdb.getGraphDatabaseAPI(), hasProperty( "key" ).withValue( LONG_STRING )  ) );
     }
 
     @Test
@@ -168,7 +164,7 @@ public class TestShortStringProperties extends TestShortString
     {
         long recordCount = dynamicRecordsInUse();
         long propCount = propertyRecordsInUse();
-        GraphDatabaseService db = graphdb.getGraphDatabaseService();
+        GraphDatabaseService db = graphdb.getGraphDatabaseAPI();
         Node node = db.createNode();
         node.setProperty( "key", "value" );
         newTx();
@@ -185,10 +181,122 @@ public class TestShortStringProperties extends TestShortString
         assertThat( node, inTx( db, not( hasProperty( "key" ) ) ) );
     }
 
-    // === reuse the test cases from the encoding ===
+    @Test
+    public void canEncodeEmptyString() throws Exception
+    {
+        assertCanEncode( "" );
+    }
 
-    @Override
-    protected void assertCanEncode( String string )
+    @Test
+    public void canEncodeReallyLongString() throws Exception
+    {
+        assertCanEncode( "                    " ); // 20 spaces
+        assertCanEncode( "                " ); // 16 spaces
+    }
+
+    @Test
+    public void canEncodeFifteenSpaces() throws Exception
+    {
+        assertCanEncode( "               " );
+    }
+
+    @Test
+    public void canEncodeNumericalString() throws Exception
+    {
+        assertCanEncode( "0123456789+,'.-" );
+        assertCanEncode( " ,'.-0123456789" );
+        assertCanEncode( "+ '.0123456789-" );
+        assertCanEncode( "+, 0123456789.-" );
+        assertCanEncode( "+,0123456789' -" );
+        assertCanEncode( "+0123456789,'. " );
+        // IP(v4) numbers
+        assertCanEncode( "192.168.0.1" );
+        assertCanEncode( "127.0.0.1" );
+        assertCanEncode( "255.255.255.255" );
+    }
+
+    @Test
+    public void canEncodeTooLongStringsWithCharsInDifferentTables()
+            throws Exception
+    {
+        assertCanEncode( "____________+" );
+        assertCanEncode( "_____+_____" );
+        assertCanEncode( "____+____" );
+        assertCanEncode( "HELLO world" );
+        assertCanEncode( "Hello_World" );
+    }
+
+    @Test
+    public void canEncodeUpToNineEuropeanChars() throws Exception
+    {
+        // Shorter than 10 chars
+        assertCanEncode( "fågel" ); // "bird" in Swedish
+        assertCanEncode( "påfågel" ); // "peacock" in Swedish
+        assertCanEncode( "påfågelö" ); // "peacock island" in Swedish
+        assertCanEncode( "påfågelön" ); // "the peacock island" in Swedish
+        // 10 chars
+        assertCanEncode( "påfågelöar" ); // "peacock islands" in Swedish
+    }
+
+    @Test
+    public void canEncodeEuropeanCharsWithPunctuation() throws Exception
+    {
+        assertCanEncode( "qHm7 pp3" );
+        assertCanEncode( "UKKY3t.gk" );
+    }
+
+    @Test
+    public void canEncodeAlphanumerical() throws Exception
+    {
+        assertCanEncode( "1234567890" ); // Just a sanity check
+        assertCanEncodeInBothCasings( "HelloWor1d" ); // There is a number there
+        assertCanEncode( "          " ); // Alphanum is the first that can encode 10 spaces
+        assertCanEncode( "_ _ _ _ _ " ); // The only available punctuation
+        assertCanEncode( "H3Lo_ or1D" ); // Mixed case + punctuation
+        assertCanEncode( "q1w2e3r4t+" ); // + is not in the charset
+    }
+
+    @Test
+    public void canEncodeHighUnicode() throws Exception
+    {
+        assertCanEncode( "\u02FF" );
+        assertCanEncode( "hello\u02FF" );
+    }
+
+    @Test
+    public void canEncodeLatin1SpecialChars() throws Exception
+    {
+        assertCanEncode( "#$#$#$#" );
+        assertCanEncode( "$hello#" );
+    }
+
+    @Test
+    public void canEncodeTooLongLatin1String() throws Exception
+    {
+        assertCanEncode( "#$#$#$#$" );
+    }
+
+    @Test
+    public void canEncodeLowercaseAndUppercaseStringsUpTo12Chars() throws Exception
+    {
+        assertCanEncodeInBothCasings( "hello world" );
+        assertCanEncode( "hello_world" );
+        assertCanEncode( "_hello_world" );
+        assertCanEncode( "hello::world" );
+        assertCanEncode( "hello//world" );
+        assertCanEncode( "hello world" );
+        assertCanEncode( "http://ok" );
+        assertCanEncode( "::::::::" );
+        assertCanEncode( " _.-:/ _.-:/" );
+    }
+
+    private void assertCanEncodeInBothCasings( String string )
+    {
+        assertCanEncode( string.toLowerCase() );
+        assertCanEncode( string.toUpperCase() );
+    }
+
+    private void assertCanEncode( String string )
     {
         encode( string, true );
     }
@@ -196,7 +304,7 @@ public class TestShortStringProperties extends TestShortString
     private void encode( String string, boolean isShort )
     {
         long recordCount = dynamicRecordsInUse();
-        Node node = graphdb.getGraphDatabaseService().createNode();
+        Node node = graphdb.getGraphDatabaseAPI().createNode();
         node.setProperty( "key", string );
         newTx();
         if ( isShort )
@@ -210,41 +318,19 @@ public class TestShortStringProperties extends TestShortString
         assertEquals( string, node.getProperty( "key" ) );
     }
 
-    // === Here be (reflection) dragons ===
-
-    private static Field storeField;
-    static
-    {
-        try
-        {
-            storeField = PropertyStore.class.getDeclaredField( "stringPropertyStore" );
-            storeField.setAccessible( true );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( e );
-        }
-    }
-
     private long propertyRecordsInUse()
     {
-        return propertyStore().getNumberOfIdsInUse();
+        return AbstractNeo4jTestCase.numberOfRecordsInUse( propertyStore() );
     }
 
     private long dynamicRecordsInUse()
     {
-        try
-        {
-            return ( (AbstractDynamicStore) storeField.get( propertyStore() ) ).getNumberOfIdsInUse();
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( e );
-        }
+        return AbstractNeo4jTestCase.numberOfRecordsInUse( propertyStore().getStringStore() );
     }
 
     private PropertyStore propertyStore()
     {
-        return graphdb.getGraphDatabaseAPI().getDependencyResolver().resolveDependency( NeoStoreDataSource.class).getNeoStores().getPropertyStore();
+        return graphdb.getGraphDatabaseAPI().getDependencyResolver().resolveDependency( RecordStorageEngine.class)
+                .testAccessNeoStores().getPropertyStore();
     }
 }

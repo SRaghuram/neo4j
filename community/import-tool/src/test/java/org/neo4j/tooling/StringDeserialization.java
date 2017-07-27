@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,9 +20,9 @@
 package org.neo4j.tooling;
 
 import java.lang.reflect.Array;
+import java.util.function.Function;
 
 import org.neo4j.csv.reader.SourceTraceability;
-import org.neo4j.function.Function;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Deserialization;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header.Entry;
@@ -53,10 +53,13 @@ class StringDeserialization implements Deserialization<String>
         {
             builder.append( config.delimiter() );
         }
-        stringify( entry, value );
+        if ( value != null )
+        {
+            stringify( value );
+        }
     }
 
-    private void stringify( Entry entry, Object value )
+    private void stringify( Object value )
     {
         if ( value instanceof String )
         {
@@ -82,7 +85,7 @@ class StringDeserialization implements Deserialization<String>
                 {
                     builder.append( config.arrayDelimiter() );
                 }
-                stringify( entry, item );
+                stringify( item );
             }
         }
         else if ( value instanceof Number )
@@ -125,13 +128,6 @@ class StringDeserialization implements Deserialization<String>
 
     public static Function<SourceTraceability,Deserialization<String>> factory( final Configuration config )
     {
-        return new Function<SourceTraceability,Deserialization<String>>()
-        {
-            @Override
-            public Deserialization<String> apply( SourceTraceability from ) throws RuntimeException
-            {
-                return new StringDeserialization( config );
-            }
-        };
+        return from -> new StringDeserialization( config );
     }
 }

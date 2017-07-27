@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,7 @@ package org.neo4j.unsafe.impl.batchimport.stats;
  */
 public class Stats
 {
-    public static abstract class LongBasedStat implements Stat
+    public abstract static class LongBasedStat implements Stat
     {
         private final DetailLevel detailLevel;
 

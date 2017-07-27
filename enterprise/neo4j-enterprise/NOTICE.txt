@@ -1,5 +1,5 @@
 Neo4j
-Copyright © 2002-2015 Network Engine for Objects in Lund AB (referred to
+Copyright © 2002-2016 Network Engine for Objects in Lund AB (referred to
 in this notice as "Neo Technology")
    [http://neotechnology.com]
 
@@ -25,16 +25,25 @@ Third-party licenses
 --------------------
 
 Apache Software License, Version 2.0
+  Apache Commons Compress
   Apache Commons Lang
+  Apache Shiro :: Core
+  Caffeine cache
+  Commons BeanUtils
   ConcurrentLinkedHashMap
-  Ganglia Integration for Metrics
   Graphite Integration for Metrics
+  hazelcast-all
+  Lucene codecs
+  Lucene Common Analyzers
   Lucene Core
+  Lucene Memory
+  Lucene QueryParsers
   Metrics Core
+  Netty
+  Netty/All-in-One
   opencsv
   parboiled-core
   parboiled-scala
-  The Netty Project
 
 BSD - Scala License
   Scala Library
@@ -42,12 +51,12 @@ BSD - Scala License
 BSD License
   ASM Core
   Scala Compiler
-  scala-parser-combinators
 
-GNU Lesser General Public License, Version 2.1
-  Remote Tea Runtime
+Bouncy Castle License
+  Bouncy Castle PKIX, CMS, EAC, TSP, PKCS, OCSP, CMP, and CRMF APIs
+  Bouncy Castle Provider
 
 MIT License
-  gmetric4j
   SLF4J API Module
+  SLF4J NOP Binding
 

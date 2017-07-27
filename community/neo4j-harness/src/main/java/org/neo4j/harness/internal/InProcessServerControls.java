@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,11 +23,15 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Optional;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.config.Configuration;
 import org.neo4j.harness.ServerControls;
+import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.server.AbstractNeoServer;
 
 public class InProcessServerControls implements ServerControls
@@ -44,13 +48,20 @@ public class InProcessServerControls implements ServerControls
     }
 
     @Override
+    public URI boltURI()
+    {
+        AdvertisedSocketAddress address = server.getConfig().get( new BoltConnector( "bolt" ).advertised_address );
+        return URI.create( "bolt://" + address.getHostname() + ":" + address.getPort() );
+    }
+
+    @Override
     public URI httpURI()
     {
         return server.baseUri();
     }
 
     @Override
-    public URI httpsURI()
+    public Optional<URI> httpsURI()
     {
         return server.httpsUri();
     }
@@ -74,7 +85,7 @@ public class InProcessServerControls implements ServerControls
         }
         try
         {
-            if( looksLikeMd5Hash( serverFolder.getName() ) )
+            if ( looksLikeMd5Hash( serverFolder.getName() ) )
             {
                 FileUtils.deleteRecursively( serverFolder );
             }
@@ -92,8 +103,15 @@ public class InProcessServerControls implements ServerControls
         return name.length() == 32;
     }
 
+    @Override
     public GraphDatabaseService graph()
     {
         return server.getDatabase().getGraph();
+    }
+
+    @Override
+    public Configuration config()
+    {
+        return server.getConfig();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,31 +19,30 @@
  */
 package org.neo4j.ext.udc;
 
-import java.util.Arrays;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+
 import org.neo4j.helpers.Configuration;
 import org.neo4j.kernel.configuration.Config;
 
 import static java.util.Collections.singletonMap;
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import static org.neo4j.ext.udc.UdcSettings.udc_enabled;
 import static org.neo4j.helpers.Configuration.DEFAULT;
 
 @RunWith(Parameterized.class)
 public class UdcSettingsTest
 {
-    public static final String UDC_DISABLE = "neo4j.ext.udc.disable";
-    public final @Rule Configuration configuration = new Configuration();
+    public static final String UDC_DISABLE = "dbms.udc.disable";
+    @Rule
+    public final Configuration configuration = new Configuration();
 
-    @Parameterized.Parameters(name="{0}")
+    @Parameterized.Parameters( name = "{0}" )
     public static Iterable<Object[]> variations()
     {
         return Arrays.asList(
@@ -67,7 +66,7 @@ public class UdcSettingsTest
     public void shouldBeEnabledByDefault()
     {
         assertTrue( configuration.config( UdcSettings.class ).get( udc_enabled ) );
-        assertTrue( new Config().get( udc_enabled ) );
+        assertTrue( Config.defaults().get( udc_enabled ) );
     }
 
     @Test
@@ -77,7 +76,7 @@ public class UdcSettingsTest
                                   .withSystemProperty( udc_enabled.name(), DEFAULT )
                                   .withSystemProperty( UDC_DISABLE, DEFAULT )
                                   .config( UdcSettings.class ).get( udc_enabled ) );
-        assertFalse( new Config( singletonMap( udc_enabled.name(), "false" ) ).get( udc_enabled ) );
+        assertFalse( Config.embeddedDefaults( singletonMap( udc_enabled.name(), "false" ) ).get( udc_enabled ) );
     }
 
     // enabled by default

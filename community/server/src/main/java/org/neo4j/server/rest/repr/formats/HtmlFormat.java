@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -142,7 +141,9 @@ public class HtmlFormat extends RepresentationFormat
                 if ( tb != null )
                 {
                     for ( Object el : tb )
+                    {
                         entity.append( "\n\tat " + el );
+                    }
                 }
                 entity.append( "</pre></p>" )
                         .append( "</body></html>" );
@@ -151,7 +152,7 @@ public class HtmlFormat extends RepresentationFormat
         };
         private final String key;
 
-        private MappingTemplate( String key )
+        MappingTemplate( String key )
         {
             this.key = key;
         }
@@ -160,7 +161,9 @@ public class HtmlFormat extends RepresentationFormat
         static
         {
             for ( MappingTemplate template : values() )
+            {
                 TEMPLATES.put( template.key, template );
+            }
         }
 
         abstract String render( Map<String, Object> data );
@@ -280,7 +283,7 @@ public class HtmlFormat extends RepresentationFormat
     {
         private final MappingTemplate template;
 
-        public HtmlMap( MappingTemplate template )
+        HtmlMap( MappingTemplate template )
         {
             super( new HashMap<String, Object>(), true );
             this.template = template;
@@ -296,7 +299,7 @@ public class HtmlFormat extends RepresentationFormat
     {
         private final ListTemplate template;
 
-        public HtmlList( ListTemplate template )
+        HtmlList( ListTemplate template )
         {
             super( new ArrayList<Object>(), true );
             this.template = template;

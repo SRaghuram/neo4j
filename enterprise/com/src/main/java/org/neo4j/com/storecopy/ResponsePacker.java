@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,7 @@
  */
 package org.neo4j.com.storecopy;
 
-import java.io.IOException;
+import java.util.function.Supplier;
 
 import org.neo4j.com.RequestContext;
 import org.neo4j.com.ResourceReleaser;
@@ -27,11 +27,10 @@ import org.neo4j.com.Response;
 import org.neo4j.com.TransactionObligationResponse;
 import org.neo4j.com.TransactionStream;
 import org.neo4j.com.TransactionStreamResponse;
-import org.neo4j.function.Supplier;
+import org.neo4j.cursor.IOCursor;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.log.IOCursor;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 
@@ -55,16 +54,12 @@ public class ResponsePacker
     {
         final long toStartFrom = context.lastAppliedTransaction() + 1;
         final long toEndAt = transactionIdStore.getLastCommittedTransactionId();
-        TransactionStream transactions = new TransactionStream()
+        TransactionStream transactions = visitor ->
         {
-            @Override
-            public void accept( Visitor<CommittedTransactionRepresentation,IOException> visitor ) throws IOException
+            // Check so that it's even worth thinking about extracting any transactions at all
+            if ( toStartFrom > BASE_TX_ID && toStartFrom <= toEndAt )
             {
-                // Check so that it's even worth thinking about extracting any transactions at all
-                if ( toStartFrom > BASE_TX_ID && toStartFrom <= toEndAt )
-                {
-                    extractTransactions( toStartFrom, filterVisitor( visitor, toEndAt ) );
-                }
+                extractTransactions( toStartFrom, filterVisitor( visitor, toEndAt ) );
             }
         };
         return new TransactionStreamResponse<>( response, storeId.get(), transactions, ResourceReleaser.NO_OP );
@@ -89,33 +84,28 @@ public class ResponsePacker
                 ResourceReleaser.NO_OP );
     }
 
-    protected Visitor<CommittedTransactionRepresentation,IOException> filterVisitor(
-            final Visitor<CommittedTransactionRepresentation,IOException> delegate, final long txToEndAt )
+    protected Visitor<CommittedTransactionRepresentation,Exception> filterVisitor(
+            final Visitor<CommittedTransactionRepresentation,Exception> delegate, final long txToEndAt )
     {
-        return new Visitor<CommittedTransactionRepresentation,IOException>()
+        return element ->
         {
-            @Override
-            public boolean visit( CommittedTransactionRepresentation element ) throws IOException
+            if ( element.getCommitEntry().getTxId() > txToEndAt )
             {
-                if ( element.getCommitEntry().getTxId() > txToEndAt )
-                {
-                    return false;
-                }
-                return delegate.visit( element );
+                return false;
             }
+            return delegate.visit( element );
         };
     }
 
     protected void extractTransactions( long startingAtTransactionId,
-                                        Visitor<CommittedTransactionRepresentation,IOException> visitor )
-            throws IOException
+                                        Visitor<CommittedTransactionRepresentation,Exception> visitor )
+            throws Exception
     {
         try ( IOCursor<CommittedTransactionRepresentation> cursor = transactionStore
                 .getTransactions( startingAtTransactionId ) )
         {
             while ( cursor.next() && !visitor.visit( cursor.get() ) )
             {
-                ;
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,6 @@
  */
 package org.neo4j.server.plugins;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import javax.ws.rs.core.MediaType;
-
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import org.junit.AfterClass;
@@ -32,7 +27,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.neo4j.graphdb.DynamicRelationshipType;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import javax.ws.rs.core.MediaType;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
@@ -45,7 +44,6 @@ import org.neo4j.server.rest.RestRequest;
 import org.neo4j.server.rest.domain.JsonHelper;
 import org.neo4j.server.rest.domain.JsonParseException;
 import org.neo4j.test.server.ExclusiveServerTestBase;
-import org.neo4j.tooling.GlobalGraphOperations;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -54,8 +52,8 @@ import static org.junit.Assert.assertTrue;
 
 public class CloneSubgraphPluginTest extends ExclusiveServerTestBase
 {
-    private static final RelationshipType KNOWS = DynamicRelationshipType.withName( "knows" );
-    private static final RelationshipType WORKED_FOR = DynamicRelationshipType.withName( "worked_for" );
+    private static final RelationshipType KNOWS = RelationshipType.withName( "knows" );
+    private static final RelationshipType WORKED_FOR = RelationshipType.withName( "worked_for" );
 
     private static NeoServer server;
     private static FunctionalTestHelper functionalTestHelper;
@@ -66,13 +64,16 @@ public class CloneSubgraphPluginTest extends ExclusiveServerTestBase
         server = ServerHelper.createNonPersistentServer();
         functionalTestHelper = new FunctionalTestHelper( server );
     }
-    
+
     @AfterClass
     public static void shutdownServer()
     {
         try
         {
-            if ( server != null ) server.stop();
+            if ( server != null )
+            {
+                server.stop();
+            }
         }
         finally
         {
@@ -183,21 +184,15 @@ public class CloneSubgraphPluginTest extends ExclusiveServerTestBase
 
         Assert.assertEquals( response.getEntity(), 200, response.getStatus() );
 
-        int doubleTheNumberOfNodes = ( originalCount * 2 );
+        int doubleTheNumberOfNodes = originalCount * 2;
         assertEquals( doubleTheNumberOfNodes, nodeCount() );
     }
 
     private int nodeCount()
     {
-        try ( Transaction tx = server.getDatabase().getGraph().beginTx() )
+        try ( Transaction ignore = server.getDatabase().getGraph().beginTx() )
         {
-            int count = 0;
-            for ( @SuppressWarnings("unused") Node node : GlobalGraphOperations.at( server.getDatabase().getGraph() )
-                                                                               .getAllNodes() )
-            {
-                count++;
-            }
-            return count;
+            return Math.toIntExact( server.getDatabase().getGraph().getAllNodes().stream().count() );
         }
     }
 }

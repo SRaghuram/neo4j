@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,7 @@ import org.neo4j.graphdb.traversal.TraversalMetadata;
 
 /**
  * Interface of algorithms that finds paths in between two nodes.
- * 
+ *
  * @author Tobias Ivarsson
  *
  * @param <P> the path type that the algorithm produces
@@ -55,6 +55,6 @@ public interface PathFinder<P extends Path>
      * @return all {@link Path}s between {@code start} and {@code end}.
      */
     Iterable<P> findAllPaths( Node start, Node end );
-    
+
     TraversalMetadata metadata();
 }

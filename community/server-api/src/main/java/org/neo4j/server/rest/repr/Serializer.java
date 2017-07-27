@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -58,7 +58,10 @@ abstract class Serializer
                     {
                         StringBuilder path = new StringBuilder( "/ext/" ).append( ext.getKey() );
                         path.append( "/" ).append( value.type.valueName );
-                        if ( entityIdentity != null ) path.append( "/" ).append( entityIdentity );
+                        if ( entityIdentity != null )
+                        {
+                            path.append( "/" ).append( entityIdentity );
+                        }
                         path.append( "/" ).append( method );
                         extension.writeValue( RepresentationType.URI, method, joinBaseWithRelativePath( baseUri,
                                 path.toString() ) );
@@ -89,7 +92,7 @@ abstract class Serializer
     static String joinBaseWithRelativePath( URI baseUri, String path )
     {
         String base = baseUri.toString();
-        final StringBuilder result = new StringBuilder(base.length() + path.length() +1).append(base);
+        final StringBuilder result = new StringBuilder( base.length() + path.length() + 1).append(base);
         if ( base.endsWith( "/" ) )
         {
             if ( path.startsWith( "/" ) )
@@ -104,7 +107,7 @@ abstract class Serializer
         return result.append(path).toString();
     }
 
-    protected void checkThatItIsBuiltInType( Object value )
+    void checkThatItIsBuiltInType( Object value )
     {
         if ( !"java.lang".equals( value.getClass().getPackage().getName() ) )
         {

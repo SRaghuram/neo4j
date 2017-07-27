@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,12 +21,10 @@ package org.neo4j.kernel.impl.transaction.log.rotation;
 
 import java.io.IOException;
 
-import org.neo4j.kernel.KernelHealth;
 import org.neo4j.kernel.impl.transaction.log.LogFile;
 import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
 import org.neo4j.kernel.impl.transaction.tracing.LogRotateEvent;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.kernel.internal.DatabaseHealth;
 
 /**
  * Default implementation of the LogRotation interface.
@@ -35,15 +33,13 @@ public class LogRotationImpl implements LogRotation
 {
     private final LogRotation.Monitor monitor;
     private final LogFile logFile;
-    private final KernelHealth kernelHealth;
-    private final Log msgLog;
+    private final DatabaseHealth databaseHealth;
 
-    public LogRotationImpl( Monitor monitor, LogFile logFile, KernelHealth kernelHealth, LogProvider logProvider )
+    public LogRotationImpl( Monitor monitor, LogFile logFile, DatabaseHealth databaseHealth )
     {
         this.monitor = monitor;
         this.logFile = logFile;
-        this.kernelHealth = kernelHealth;
-        this.msgLog = logProvider.getLog( getClass() );
+        this.databaseHealth = databaseHealth;
     }
 
     @Override
@@ -83,18 +79,13 @@ public class LogRotationImpl implements LogRotation
     private void doRotate() throws IOException
     {
         long currentVersion = logFile.currentLogVersion();
-
         /*
          * In order to rotate the current log file safely we need to assert that the kernel is still
          * at full health. In case of a panic this rotation will be aborted, which is the safest alternative.
          */
-        kernelHealth.assertHealthy( IOException.class );
-
+        databaseHealth.assertHealthy( IOException.class );
         monitor.startedRotating( currentVersion );
-
-        msgLog.info( PrintFormat.prefix( currentVersion ) + " Preparing new log file..." );
         logFile.rotate();
-
         monitor.finishedRotating( currentVersion );
     }
 }

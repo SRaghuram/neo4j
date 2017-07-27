@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,10 @@
  */
 package org.neo4j.kernel.ha;
 
+import java.util.function.Supplier;
+
 import org.neo4j.cluster.InstanceId;
 import org.neo4j.com.storecopy.TransactionObligationFulfiller;
-import org.neo4j.function.Supplier;
-import org.neo4j.kernel.ha.UpdatePuller.Condition;
 import org.neo4j.kernel.ha.cluster.HighAvailabilityMemberChangeEvent;
 import org.neo4j.kernel.ha.cluster.HighAvailabilityMemberListener;
 import org.neo4j.kernel.ha.cluster.HighAvailabilityMemberStateMachine;
@@ -60,19 +60,15 @@ public class UpdatePullingTransactionObligationFulfiller extends LifecycleAdapte
     @Override
     public void fulfill( final long toTxId ) throws InterruptedException
     {
-        updatePuller.pullUpdates( new Condition()
+        updatePuller.pullUpdates( ( currentTicket, targetTicket ) ->
         {
-            @Override
-            public boolean evaluate( int currentTicket, int targetTicket )
-            {
-                /*
-                 * We need to await last *closed* transaction id, not last *committed* transaction id since
-                 * right after leaving this method we might read records off of disk, and they had better
-                 * be up to date, otherwise we read stale data.
-                 */
-                return transactionIdStore != null &&
-                       transactionIdStore.getLastClosedTransactionId() >= toTxId;
-            }
+            /*
+             * We need to await last *closed* transaction id, not last *committed* transaction id since
+             * right after leaving this method we might read records off of disk, and they had better
+             * be up to date, otherwise we read stale data.
+             */
+            return transactionIdStore != null &&
+                   transactionIdStore.getLastClosedTransactionId() >= toTxId;
         }, true /*We strictly need the update puller to be and remain active while we wait*/ );
     }
 

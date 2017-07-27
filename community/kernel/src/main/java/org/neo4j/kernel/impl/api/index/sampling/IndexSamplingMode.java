@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,27 +21,30 @@ package org.neo4j.kernel.impl.api.index.sampling;
 
 public enum IndexSamplingMode
 {
-    TRIGGER_REBUILD_ALL( false, true ){
-        @Override
-        public String toString()
-        {
-            return "FORCE REBUILD";
-        }
-    },
-    TRIGGER_REBUILD_UPDATED( true, true ){
-        @Override
-        public String toString()
-        {
-            return "REBUILD OUTDATED";
-        }
-    },
-    BACKGROUND_REBUILD_UPDATED( true, false ){
-        @Override
-        public String toString()
-        {
-            return "BACKGROUND-REBUILD OF OUTDATED";
-        }
-    };
+    TRIGGER_REBUILD_ALL( false, true )
+            {
+                @Override
+                public String toString()
+                {
+                    return "FORCE REBUILD";
+                }
+            },
+    TRIGGER_REBUILD_UPDATED( true, true )
+            {
+                @Override
+                public String toString()
+                {
+                    return "REBUILD OUTDATED";
+                }
+            },
+    BACKGROUND_REBUILD_UPDATED( true, false )
+            {
+                @Override
+                public String toString()
+                {
+                    return "BACKGROUND-REBUILD OF OUTDATED";
+                }
+            };
 
     public final boolean sampleOnlyIfUpdated;
     public final boolean blockUntilAllScheduled;

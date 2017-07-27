@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,7 @@ import javax.management.DynamicMBean;
 import javax.management.NotCompliantMBeanException;
 
 import org.neo4j.helpers.Service;
-import org.neo4j.kernel.KernelData;
+import org.neo4j.kernel.internal.KernelData;
 
 public abstract class ManagementBeanProvider extends Service
 {
@@ -34,7 +34,10 @@ public abstract class ManagementBeanProvider extends Service
     public ManagementBeanProvider( Class<?> beanInterface )
     {
         super( ManagementSupport.beanName( beanInterface ) );
-        if ( DynamicMBean.class.isAssignableFrom( beanInterface ) ) beanInterface = DynamicMBean.class;
+        if ( DynamicMBean.class.isAssignableFrom( beanInterface ) )
+        {
+            beanInterface = DynamicMBean.class;
+        }
         this.beanInterface = beanInterface;
     }
 
@@ -88,7 +91,10 @@ public abstract class ManagementBeanProvider extends Service
 
     private static Collection<? extends Neo4jMBean> singletonOrNone( Neo4jMBean mbean )
     {
-        if ( mbean == null ) return Collections.emptySet();
+        if ( mbean == null )
+        {
+            return Collections.emptySet();
+        }
         return Collections.singleton( mbean );
     }
 }

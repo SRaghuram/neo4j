@@ -1,4 +1,4 @@
-# Copyright (c) 2002-2015 "Neo Technology,"
+# Copyright (c) 2002-2016 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
 #
 # This file is part of Neo4j.
@@ -25,7 +25,7 @@ Retrieves properties about a Neo4j installation
 Retrieves properties about a Neo4j installation and outputs a Neo4j Server object.
 
 .PARAMETER Neo4jHome
-The full path to the Neo4j installation.  If an empty string is passed, the Neo4j Home is determied via Get-Neo4jHome
+The full path to the Neo4j installation.
 
 .EXAMPLE
 Get-Neo4jServer -Neo4jHome 'C:\Neo4j'
@@ -47,7 +47,10 @@ System.Management.Automation.PSCustomObject
 This is a Neo4j Server Object
 
 .LINK
-Get-Neo4jHome  
+Get-Neo4jHome
+
+.NOTES
+This function is private to the powershell module
 
 #>
 Function Get-Neo4jServer
@@ -59,55 +62,109 @@ Function Get-Neo4jServer
     [AllowEmptyString()]
     [string]$Neo4jHome = ''
   )
-  
+
   Begin
   {
   }
-  
+
   Process
   {
     # Get and check the Neo4j Home directory
-    if ($Neo4jHome -eq '') { $Neo4jHome = Get-Neo4jHome }
     if ( ($Neo4jHome -eq '') -or ($Neo4jHome -eq $null) )
     {
       Write-Error "Could not detect the Neo4j Home directory"
       return
     }
-    if (-not (Confirm-Neo4jHome -Neo4jHome $Neo4jHome))
+
+    if (-not (Test-Path -Path $Neo4jHome))
     {
-      Write-Error "$Neo4jHome is not a Neo4j Home directory"
+      Write-Error "$Neo4jHome does not exist"
       return
     }
-    
+
+    # Convert the path specified into an absolute path
+    $Neo4jDir = Get-Item $Neo4jHome
+    $Neo4jHome = $Neo4jDir.FullName.TrimEnd('\')
+
+    $ConfDir = Get-Neo4jEnv 'NEO4J_CONF'
+    if ($ConfDir -eq $null)
+    {
+      $ConfDir = (Join-Path -Path $Neo4jHome -ChildPath 'conf')
+    }
+
     # Get the information about the server
     $serverProperties = @{
       'Home' = $Neo4jHome;
+      'ConfDir' = $ConfDir;
+      'LogDir' = (Join-Path -Path $Neo4jHome -ChildPath 'logs');
       'ServerVersion' = '';
       'ServerType' = 'Community';
+      'DatabaseMode' = '';
     }
-    Get-ChildItem (Join-Path -Path $Neo4jHome -ChildPath 'system\lib') | Where-Object { $_.Name -like 'neo4j-server-*.jar' } | ForEach-Object -Process `
+
+    # Check if the lib dir exists
+    $libPath = (Join-Path -Path $Neo4jHome -ChildPath 'lib')
+    if (-not (Test-Path -Path $libPath))
+    {
+      Write-Error "$Neo4jHome is not a valid Neo4j installation.  Missing $libPath"
+      return
+    }
+
+    # Scan the lib dir...
+    Get-ChildItem (Join-Path -Path $Neo4jHome -ChildPath 'lib') | Where-Object { $_.Name -like 'neo4j-server-*.jar' } | ForEach-Object -Process `
     {
       # if neo4j-server-enterprise-<version>.jar exists then this is the enterprise version
       if ($_.Name -like 'neo4j-server-enterprise-*.jar') { $serverProperties.ServerType = 'Enterprise' }
 
-      # if neo4j-server-advanced-<version>.jar exists then this is the advanced version
-      if ($_.Name -like 'neo4j-server-advanced-*.jar') { $serverProperties.ServerType = 'Advanced' }
-      
       # Get the server version from the name of the neo4j-server-<version>.jar file
       if ($matches -ne $null) { $matches.Clear() }
-      if ($_.Name -match '^neo4j-server-([\d.\-MRC]+)\.jar$') { $serverProperties.ServerVersion = $matches[1] }
+      if ($_.Name -match '^neo4j-server-(\d.+)\.jar$') { $serverProperties.ServerVersion = $matches[1] }
     }
-    
     $serverObject = New-Object -TypeName PSCustomObject -Property $serverProperties
-    if (-not (Confirm-Neo4jServerObject -Neo4jServer $serverObject))
-    {
-      Write-Error "$Neo4jHome does not contain a valid Neo4j installation"
+
+    # Validate the object
+    if ([string]$serverObject.ServerVersion -eq '') {
+      Write-Error "Unable to determine the version of the installation at $Neo4jHome"
       return
     }
 
+    # Get additional settings...
+    $setting = (Get-Neo4jSetting -ConfigurationFile 'neo4j.conf' -Name 'dbms.mode' -Neo4jServer $serverObject)
+    if ($setting -ne $null) { $serverObject.DatabaseMode = $setting.Value }
+
+    # Set process level environment variables
+    #  These should mirror the same paths in neo4j-shared.sh
+    (@{'NEO4J_DATA'    = @{'config_var' = 'dbms.directories.data';    'default' = (Join-Path $Neo4jHome 'data')}
+       'NEO4J_LIB'     = @{'config_var' = 'dbms.directories.lib';     'default' = (Join-Path $Neo4jHome 'lib')}
+       'NEO4J_LOGS'    = @{'config_var' = 'dbms.directories.logs';    'default' = (Join-Path $Neo4jHome 'logs')}
+       'NEO4J_PLUGINS' = @{'config_var' = 'dbms.directories.plugins'; 'default' = (Join-Path $Neo4jHome 'plugins')}
+       'NEO4J_RUN'     = @{'config_var' = 'dbms.directories.run';     'default' = (Join-Path $Neo4jHome 'run')}
+    }).GetEnumerator() | % {
+      $setting = (Get-Neo4jSetting -ConfigurationFile 'neo4j.conf' -Name $_.Value.config_var -Neo4jServer $serverObject)
+      $value = $_.Value.default
+      if ($setting -ne $null) { $value = $setting.Value }
+      if ($value -ne $null) {
+        if (![System.IO.Path]::IsPathRooted($value)) {
+          $value = (Join-Path -Path $Neo4jHome -ChildPath $value)
+        }
+      }
+      Set-Neo4jEnv $_.Name $value
+    }
+
+    # Set log dir on server object
+    $serverObject.LogDir = (Get-Neo4jEnv 'NEO4J_LOGS')
+
+    #  NEO4J_CONF and NEO4J_HOME are used by the Neo4j Admin Tool
+    if ( (Get-Neo4jEnv 'NEO4J_CONF') -eq $null) { Set-Neo4jEnv "NEO4J_CONF" $ConfDir }
+    if ( (Get-Neo4jEnv 'NEO4J_HOME') -eq $null) { Set-Neo4jEnv "NEO4J_HOME" $Neo4jHome }
+
+    # Any deprecation warnings
+    $WrapperPath = Join-Path -Path $ConfDir -ChildPath 'neo4j-wrapper.conf'
+    If (Test-Path -Path $WrapperPath) { Write-Warning "$WrapperPath is deprecated and support for it will be removed in a future version of Neo4j; please move all your settings to neo4j.conf" }
+
     Write-Output $serverObject
   }
-  
+
   End
   {
   }

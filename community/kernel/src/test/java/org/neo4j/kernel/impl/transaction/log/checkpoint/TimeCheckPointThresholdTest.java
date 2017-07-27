@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,62 +21,71 @@ package org.neo4j.kernel.impl.transaction.log.checkpoint;
 
 import org.junit.Test;
 
-import org.neo4j.helpers.FakeClock;
+import org.neo4j.time.Clocks;
+import org.neo4j.time.FakeClock;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 
 public class TimeCheckPointThresholdTest
 {
-    private FakeClock clock = new FakeClock();
+    private final FakeClock clock = Clocks.fakeClock();
+    private final TriggerInfo triggerInfo = mock( TriggerInfo.class );
 
     @Test
     public void shouldBeFalseIfTimeThresholdIsNotReachedAndThereAreCommittedTransactions() throws Throwable
     {
         // given
-        TimeCheckPointThreshold timeCheckPointThreshold = new TimeCheckPointThreshold( 100, clock );
-        timeCheckPointThreshold.initialize( 2 );
+        TimeCheckPointThreshold threshold = new TimeCheckPointThreshold( 100, clock );
+        threshold.initialize( 2 );
 
         clock.forward( 50, MILLISECONDS );
 
         // when
-        boolean checkPointingNeeded = timeCheckPointThreshold.isCheckPointingNeeded( 42 );
+        boolean checkPointingNeeded = threshold.isCheckPointingNeeded( 42, triggerInfo );
 
         // then
         assertFalse( checkPointingNeeded );
+        verifyZeroInteractions( triggerInfo );
     }
 
     @Test
     public void shouldBeTrueIfTimeThresholdIsReachedAndThereAreCommittedTransactions() throws Throwable
     {
         // given
-        TimeCheckPointThreshold timeCheckPointThreshold = new TimeCheckPointThreshold( 100, clock );
-        timeCheckPointThreshold.initialize( 2 );
+        TimeCheckPointThreshold threshold = new TimeCheckPointThreshold( 100, clock );
+        threshold.initialize( 2 );
 
-        clock.forward( 100, MILLISECONDS );
+        clock.forward( 199, MILLISECONDS );
 
         // when
-        boolean checkPointingNeeded = timeCheckPointThreshold.isCheckPointingNeeded( 42 );
+        boolean checkPointingNeeded = threshold.isCheckPointingNeeded( 42, triggerInfo );
 
         // then
         assertTrue( checkPointingNeeded );
+        verify( triggerInfo, times( 1 ) ).accept( threshold.description() );
     }
 
     @Test
     public void shouldBeFalseIfTimeThresholdIsReachedButThereAreNoCommittedTransactions() throws Throwable
     {
         // given
-        TimeCheckPointThreshold timeCheckPointThreshold = new TimeCheckPointThreshold( 100, clock );
-        timeCheckPointThreshold.initialize( 42 );
+        TimeCheckPointThreshold threshold = new TimeCheckPointThreshold( 100, clock );
+        threshold.initialize( 42 );
 
-        clock.forward( 100, MILLISECONDS );
+        clock.forward( 199, MILLISECONDS );
 
         // when
-        boolean checkPointingNeeded = timeCheckPointThreshold.isCheckPointingNeeded( 42 );
+        boolean checkPointingNeeded = threshold.isCheckPointingNeeded( 42, triggerInfo );
 
         // then
         assertFalse( checkPointingNeeded );
+        verifyZeroInteractions( triggerInfo );
     }
 
     @Test
@@ -84,20 +93,21 @@ public class TimeCheckPointThresholdTest
             throws Throwable
     {
         // given
-        TimeCheckPointThreshold timeCheckPointThreshold = new TimeCheckPointThreshold( 100, clock );
-        timeCheckPointThreshold.initialize( 2 );
+        TimeCheckPointThreshold threshold = new TimeCheckPointThreshold( 100, clock );
+        threshold.initialize( 2 );
 
-        clock.forward( 100, MILLISECONDS );
+        clock.forward( 199, MILLISECONDS );
 
-        timeCheckPointThreshold.checkPointHappened( 42 );
+        threshold.checkPointHappened( 42 );
 
         clock.forward( 100, MILLISECONDS );
 
         // when
-        boolean checkPointingNeeded = timeCheckPointThreshold.isCheckPointingNeeded( 42 );
+        boolean checkPointingNeeded = threshold.isCheckPointingNeeded( 42, triggerInfo );
 
         // then
         assertFalse( checkPointingNeeded );
+        verifyZeroInteractions( triggerInfo );
     }
 
     @Test
@@ -105,19 +115,20 @@ public class TimeCheckPointThresholdTest
             throws Throwable
     {
         // given
-        TimeCheckPointThreshold timeCheckPointThreshold = new TimeCheckPointThreshold( 100, clock );
-        timeCheckPointThreshold.initialize( 2 );
+        TimeCheckPointThreshold threshold = new TimeCheckPointThreshold( 100, clock );
+        threshold.initialize( 2 );
 
-        clock.forward( 100, MILLISECONDS );
+        clock.forward( 199, MILLISECONDS );
 
-        timeCheckPointThreshold.checkPointHappened( 42 );
+        threshold.checkPointHappened( 42 );
 
         clock.forward( 100, MILLISECONDS );
 
         // when
-        boolean checkPointingNeeded = timeCheckPointThreshold.isCheckPointingNeeded( 43 );
+        boolean checkPointingNeeded = threshold.isCheckPointingNeeded( 43, triggerInfo );
 
         // then
         assertTrue( checkPointingNeeded );
+        verify( triggerInfo, times( 1 ) ).accept( threshold.description() );
     }
 }

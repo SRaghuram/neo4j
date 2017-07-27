@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -41,7 +41,7 @@ public class TestTransactionEventsWithIndexes extends TestTransactionEvents
     public void nodeCanBeLegacyIndexedInBeforeCommit() throws Exception
     {
         // Given we have a legacy index...
-        GraphDatabaseService db = dbRule.getGraphDatabaseService();
+        GraphDatabaseService db = dbRule.getGraphDatabaseAPI();
         final Index<Node> index;
         try ( Transaction tx = db.beginTx() )
         {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -52,7 +52,7 @@ final class FileVersion
         }
     };
 
-    public FileVersion( long txId )
+    FileVersion( long txId )
     {
         this( txId, INITIAL_MINOR_VERSION );
     }

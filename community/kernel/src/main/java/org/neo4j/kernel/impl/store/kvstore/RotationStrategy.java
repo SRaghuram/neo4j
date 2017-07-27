@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 
@@ -167,8 +167,8 @@ abstract class RotationStrategy
         private static final Pattern SUFFIX = Pattern.compile( "\\.[0-9]+" );
         private final File base;
 
-        public Incrementing( FileSystemAbstraction fs, PageCache pages, ProgressiveFormat format,
-                             RotationMonitor monitor, File base )
+        Incrementing( FileSystemAbstraction fs, PageCache pages, ProgressiveFormat format, RotationMonitor monitor,
+                File base )
         {
             super( fs, pages, format, monitor );
             this.base = base;

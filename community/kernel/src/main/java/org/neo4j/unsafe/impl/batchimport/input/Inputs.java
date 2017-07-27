@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,9 +20,9 @@
 package org.neo4j.unsafe.impl.batchimport.input;
 
 import java.io.File;
-import java.io.OutputStream;
 
 import org.neo4j.unsafe.impl.batchimport.InputIterable;
+import org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdGenerator;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
@@ -30,7 +30,6 @@ import org.neo4j.unsafe.impl.batchimport.input.csv.CsvInput;
 import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 
 import static java.nio.charset.Charset.defaultCharset;
-
 import static org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators.NO_NODE_DECORATOR;
 import static org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators.NO_RELATIONSHIP_DECORATOR;
 import static org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories.data;
@@ -43,8 +42,7 @@ public class Inputs
 {
     public static Input input(
             final InputIterable<InputNode> nodes, final InputIterable<InputRelationship> relationships,
-            final IdMapper idMapper, final IdGenerator idGenerator, final boolean specificRelationshipIds,
-            final int badTolerance )
+            final IdMapper idMapper, final IdGenerator idGenerator, final Collector badCollector )
     {
         return new Input()
         {
@@ -61,7 +59,7 @@ public class Inputs
             }
 
             @Override
-            public IdMapper idMapper()
+            public IdMapper idMapper( NumberArrayFactory numberArrayFactory )
             {
                 return idMapper;
             }
@@ -73,26 +71,20 @@ public class Inputs
             }
 
             @Override
-            public boolean specificRelationshipIds()
+            public Collector badCollector()
             {
-                return specificRelationshipIds;
-            }
-
-            @Override
-            public Collector badCollector( OutputStream out )
-            {
-                return Collectors.badCollector( out, badTolerance );
+                return badCollector;
             }
         };
     }
 
     public static Input csv( File nodes, File relationships, IdType idType,
-            Configuration configuration )
+            Configuration configuration, Collector badCollector, int maxProcessors )
     {
         return new CsvInput(
                 nodeData( data( NO_NODE_DECORATOR, defaultCharset(), nodes ) ), defaultFormatNodeFileHeader(),
                 relationshipData( data( NO_RELATIONSHIP_DECORATOR, defaultCharset(), relationships ) ),
                 defaultFormatRelationshipFileHeader(), idType, configuration,
-                Collectors.badCollector( 0 ) );
+                badCollector, maxProcessors );
     }
 }

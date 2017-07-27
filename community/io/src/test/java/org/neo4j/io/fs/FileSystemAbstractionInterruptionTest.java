@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,7 +35,7 @@ import java.util.Arrays;
 
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -45,23 +45,8 @@ import static org.junit.Assert.fail;
 @RunWith( Parameterized.class )
 public class FileSystemAbstractionInterruptionTest
 {
-    private static final Factory<FileSystemAbstraction> ephemeral = new Factory<FileSystemAbstraction>()
-    {
-        @Override
-        public FileSystemAbstraction newInstance()
-        {
-            return new EphemeralFileSystemAbstraction();
-        }
-    };
-
-    private static final Factory<FileSystemAbstraction> real = new Factory<FileSystemAbstraction>()
-    {
-        @Override
-        public FileSystemAbstraction newInstance()
-        {
-            return new DefaultFileSystemAbstraction();
-        }
-    };
+    private static final Factory<FileSystemAbstraction> ephemeral = EphemeralFileSystemAbstraction::new;
+    private static final Factory<FileSystemAbstraction> real = DefaultFileSystemAbstraction::new;
 
     @Parameterized.Parameters(name = "{0}")
     public static Iterable<Object[]> dataPoints()
@@ -73,8 +58,7 @@ public class FileSystemAbstractionInterruptionTest
     }
 
     @Rule
-    public final TargetDirectory.TestDirectory testdir =
-            TargetDirectory.testDirForTest( FileSystemAbstractionInterruptionTest.class );
+    public final TestDirectory testdir = TestDirectory.testDirectory();
 
     private FileSystemAbstraction fs;
     private File file;
@@ -85,19 +69,15 @@ public class FileSystemAbstractionInterruptionTest
     }
 
     @Before
-    public void interruptPriorToCall()
-    {
-        Thread.currentThread().interrupt();
-    }
-
-    @Before
     public void createWorkingDirectoryAndTestFile() throws IOException
     {
+        Thread.interrupted();
         fs.mkdirs( testdir.directory() );
         file = testdir.file( "a" );
         fs.create( file ).close();
         channel = null;
         channelShouldBeClosed = false;
+        Thread.currentThread().interrupt();
     }
 
     private StoreChannel channel;
@@ -123,6 +103,7 @@ public class FileSystemAbstractionInterruptionTest
                 // This is good. What we expect to see.
             }
         }
+        fs.close();
     }
 
     private StoreChannel chan( boolean channelShouldBeClosed ) throws IOException

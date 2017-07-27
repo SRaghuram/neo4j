@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,12 +26,13 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.helpers.collection.PrefetchingIterator;
-import org.neo4j.kernel.api.exceptions.index.IndexCapacityExceededException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.index.IndexEntryConflictException;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.index.IndexUpdater;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 import org.neo4j.kernel.impl.store.MultipleUnderlyingStorageExceptions;
 import org.neo4j.kernel.impl.store.UnderlyingStorageException;
 
@@ -44,20 +45,20 @@ import org.neo4j.kernel.impl.store.UnderlyingStorageException;
  * All updaters retrieved from this map must be either closed manually or handle duplicate calls to close
  * or must all be closed indirectly by calling close on this updater map.
  */
-public class IndexUpdaterMap implements AutoCloseable, Iterable<IndexUpdater>
+class IndexUpdaterMap implements AutoCloseable, Iterable<IndexUpdater>
 {
     private final IndexUpdateMode indexUpdateMode;
     private final IndexMap indexMap;
-    private final Map<IndexDescriptor, IndexUpdater> updaterMap;
+    private final Map<LabelSchemaDescriptor, IndexUpdater> updaterMap;
 
-    public IndexUpdaterMap( IndexMap indexMap, IndexUpdateMode indexUpdateMode )
+    IndexUpdaterMap( IndexMap indexMap, IndexUpdateMode indexUpdateMode )
     {
         this.indexUpdateMode = indexUpdateMode;
         this.indexMap = indexMap;
         this.updaterMap = new HashMap<>();
     }
 
-    public IndexUpdater getUpdater( IndexDescriptor descriptor )
+    IndexUpdater getUpdater( LabelSchemaDescriptor descriptor )
     {
         IndexUpdater updater = updaterMap.get( descriptor );
         if ( null == updater )
@@ -77,20 +78,21 @@ public class IndexUpdaterMap implements AutoCloseable, Iterable<IndexUpdater>
     {
         Set<Pair<IndexDescriptor, UnderlyingStorageException>> exceptions = null;
 
-        for ( Map.Entry<IndexDescriptor, IndexUpdater> updaterEntry : updaterMap.entrySet() )
+        for ( Map.Entry<LabelSchemaDescriptor, IndexUpdater> updaterEntry : updaterMap.entrySet() )
         {
             IndexUpdater updater = updaterEntry.getValue();
             try
             {
                 updater.close();
             }
-            catch ( IOException | IndexEntryConflictException | IndexCapacityExceededException e )
+            catch ( IOException | IndexEntryConflictException e )
             {
                 if ( null == exceptions )
                 {
                     exceptions = new HashSet<>();
                 }
-                exceptions.add( Pair.of( updaterEntry.getKey(), new UnderlyingStorageException( e ) ) );
+                exceptions.add( Pair.of( IndexDescriptorFactory.forSchema( updaterEntry.getKey() ),
+                        new UnderlyingStorageException( e ) ) );
             }
         }
 
@@ -117,17 +119,12 @@ public class IndexUpdaterMap implements AutoCloseable, Iterable<IndexUpdater>
         return updaterMap.size();
     }
 
-    public int numberOfIndexes()
-    {
-        return indexMap.size();
-    }
-
     @Override
     public Iterator<IndexUpdater> iterator()
     {
         return new PrefetchingIterator<IndexUpdater>()
         {
-            Iterator<IndexDescriptor> descriptors = indexMap.descriptors();
+            Iterator<LabelSchemaDescriptor> descriptors = indexMap.descriptors();
             @Override
             protected IndexUpdater fetchNextOrNull()
             {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,6 +20,7 @@
 package org.neo4j.unsafe.impl.batchimport.cache;
 
 import org.junit.Test;
+
 import static org.junit.Assert.assertEquals;
 
 public class LongBitsManipulatorTest
@@ -28,7 +29,7 @@ public class LongBitsManipulatorTest
     public void shouldManageTwoSlots() throws Exception
     {
         // GIVEN
-        LongBitsManipulator manipulator = new LongBitsManipulator( 64-29, 29 );
+        LongBitsManipulator manipulator = new LongBitsManipulator( 64 - 29, 29 );
         long field = 0;
 
         // WHEN
@@ -44,7 +45,7 @@ public class LongBitsManipulatorTest
     public void shouldInterpretAllOnesAsMinusOne() throws Exception
     {
         // GIVEN
-        LongBitsManipulator manipulator = new LongBitsManipulator( 64-29, 29 );
+        LongBitsManipulator manipulator = new LongBitsManipulator( 64 - 29, 29 );
 
         // WHEN
         long field = manipulator.template( true, false );

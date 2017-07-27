@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.cluster.protocol.atomicbroadcast.multipaxos;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+
 import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.com.message.MessageHolder;
 import org.neo4j.cluster.protocol.atomicbroadcast.AtomicBroadcastSerializer;
@@ -43,12 +44,9 @@ public enum LearnerState
                 )
                         throws Throwable
                 {
-                    switch ( message.getMessageType() )
+                    if ( message.getMessageType() == LearnerMessage.join )
                     {
-                        case join:
-                        {
-                            return learner;
-                        }
+                        return learner;
                     }
 
                     return this;
@@ -72,7 +70,7 @@ public enum LearnerState
                             InstanceId instanceId = new InstanceId( message );
                             PaxosInstance instance = context.getPaxosInstance( instanceId );
 
-                            Log log = context.getInternalLog( getClass() );
+                            Log log = context.getLog( getClass() );
 
                             // Skip if we already know about this
                             if ( instanceId.getId() <= context.getLastDeliveredInstanceId() )
@@ -102,7 +100,7 @@ public enum LearnerState
                                     description = instance.value_2.toString();
                                 }
                                 log.debug(
-                                        "Learned and closed instance "+instance.id +
+                                        "Learned and closed instance " + instance.id +
                                                 " from conversation " +
                                                 instance.conversationIdHeader +
                                                 " and the content was " +
@@ -143,14 +141,14 @@ public enum LearnerState
                                 else
                                 {
                                     // Found hole - we're waiting for this to be filled, i.e. timeout already set
-                                    context.getInternalLog( LearnerState.class ).debug( "*** HOLE! WAITING " +
+                                    context.getLog( LearnerState.class ).debug( "*** HOLE! WAITING " +
                                             "FOR " + (context.getLastDeliveredInstanceId() + 1) );
                                 }
                             }
                             else
                             {
                                 // Found hole - we're waiting for this to be filled, i.e. timeout already set
-                                context.getInternalLog( LearnerState.class ).debug( "*** GOT " + instanceId
+                                context.getLog( LearnerState.class ).debug( "*** GOT " + instanceId
                                         + ", WAITING FOR " + (context.getLastDeliveredInstanceId() + 1) );
 
                                 context.setTimeout( "learn", Message.timeout( LearnerMessage.learnTimedout,
@@ -267,6 +265,9 @@ public enum LearnerState
                             context.leave();
                             return start;
                         }
+
+                        default:
+                            break;
                     }
 
                     return this;
@@ -279,7 +280,8 @@ public enum LearnerState
                     if ( lastKnownAliveInstance != null )
                     {
                         return context.getUriForId( lastKnownAliveInstance );
-                    } else
+                    }
+                    else
                     {
                         return new URI(message.getHeader( Message.FROM ));
                     }

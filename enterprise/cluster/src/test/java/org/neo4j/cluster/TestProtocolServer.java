@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,7 +35,11 @@ import org.neo4j.cluster.statemachine.StateTransitionListener;
 import org.neo4j.cluster.timeout.TimeoutStrategy;
 import org.neo4j.cluster.timeout.Timeouts;
 import org.neo4j.helpers.Listeners;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * TODO
@@ -60,8 +64,13 @@ public class TestProtocolServer
 
         stateMachineExecutor = new DelayedDirectExecutor( logProvider );
 
+        Config config = mock( Config.class );
+        when( config.get( ClusterSettings.max_acceptors ) ).thenReturn( 10 );
+        when( config.get( ClusterSettings.strict_initial_hosts) ).thenReturn( Boolean.FALSE );
+
         server = factory.newProtocolServer( instanceId, timeoutStrategy, receiver, sender, acceptorInstanceStore,
-                electionCredentialsProvider, stateMachineExecutor, new ObjectStreamFactory(), new ObjectStreamFactory() );
+                electionCredentialsProvider, stateMachineExecutor, new ObjectStreamFactory(), new ObjectStreamFactory(),
+                config );
 
         server.listeningAt( serverUri );
     }
@@ -148,12 +157,12 @@ public class TestProtocolServer
     public class TestMessageSource
             implements MessageSource, MessageProcessor
     {
-        Iterable<MessageProcessor> listeners = Listeners.newListeners();
+        final Listeners<MessageProcessor> listeners = new Listeners<>();
 
         @Override
         public void addMessageProcessor( MessageProcessor listener )
         {
-            listeners = Listeners.addListener( listener, listeners );
+            listeners.add( listener );
         }
 
         @Override

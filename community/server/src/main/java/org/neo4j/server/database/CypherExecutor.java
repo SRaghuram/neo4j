@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,21 +19,47 @@
  */
 package org.neo4j.server.database;
 
-import org.neo4j.cypher.javacompat.internal.ServerExecutionEngine;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import javax.servlet.http.HttpServletRequest;
+
+import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
+import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.kernel.GraphDatabaseQueryService;
+import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
+import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
+import org.neo4j.kernel.impl.query.TransactionalContext;
+import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.server.rest.web.HttpConnectionInfoFactory;
+
+import org.neo4j.logging.Log;
+
+import static org.neo4j.kernel.api.security.SecurityContext.AUTH_DISABLED;
+import static org.neo4j.server.web.HttpHeaderUtils.getTransactionTimeout;
 
 public class CypherExecutor extends LifecycleAdapter
 {
     private final Database database;
-    private ServerExecutionEngine executionEngine;
+    private final Log log;
+    private ExecutionEngine executionEngine;
+    private TransactionalContextFactory contextFactory;
 
-    public CypherExecutor( Database database )
+    private static final PropertyContainerLocker locker = new PropertyContainerLocker();
+    private GraphDatabaseQueryService service;
+
+    public CypherExecutor( Database database, LogProvider logProvider )
     {
         this.database = database;
+        log = logProvider.getLog( getClass() );
     }
 
-    public ServerExecutionEngine getExecutionEngine()
+    public ExecutionEngine getExecutionEngine()
     {
         return executionEngine;
     }
@@ -41,13 +67,42 @@ public class CypherExecutor extends LifecycleAdapter
     @Override
     public void start() throws Throwable
     {
-        this.executionEngine = (ServerExecutionEngine) database.getGraph().getDependencyResolver()
-                                                               .resolveDependency( QueryExecutionEngine.class );
+        DependencyResolver resolver = database.getGraph().getDependencyResolver();
+        this.executionEngine = (ExecutionEngine) resolver.resolveDependency( QueryExecutionEngine.class );
+        this.service = resolver.resolveDependency( GraphDatabaseQueryService.class );
+        this.contextFactory = Neo4jTransactionalContextFactory.create( this.service, locker );
     }
 
     @Override
     public void stop() throws Throwable
     {
         this.executionEngine = null;
+        this.contextFactory = null;
+    }
+
+    public TransactionalContext createTransactionContext( String query, Map<String, Object> parameters,
+            HttpServletRequest request )
+    {
+        InternalTransaction tx = getInternalTransaction( request );
+        return contextFactory.newContext( HttpConnectionInfoFactory.create( request ), tx, query, parameters );
+    }
+
+    private InternalTransaction getInternalTransaction( HttpServletRequest request )
+    {
+        long customTimeout = getTransactionTimeout( request, log );
+        return customTimeout > GraphDatabaseSettings.UNSPECIFIED_TIMEOUT ?
+           beginCustomTransaction( customTimeout ) : beginDefaultTransaction();
+    }
+
+    private InternalTransaction beginCustomTransaction( long customTimeout )
+    {
+        return service.beginTransaction(
+            KernelTransaction.Type.implicit, AUTH_DISABLED, customTimeout, TimeUnit.MILLISECONDS
+        );
+    }
+
+    private InternalTransaction beginDefaultTransaction()
+    {
+        return service.beginTransaction( KernelTransaction.Type.implicit, AUTH_DISABLED );
     }
 }

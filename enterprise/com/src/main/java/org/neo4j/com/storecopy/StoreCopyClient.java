@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,36 +20,38 @@
 package org.neo4j.com.storecopy;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 import org.neo4j.com.Response;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings.LabelIndex;
 import org.neo4j.helpers.CancellationRequest;
-import org.neo4j.helpers.Settings;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.log.CommandWriter;
+import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
 import org.neo4j.kernel.impl.transaction.log.LogFile;
+import org.neo4j.kernel.impl.transaction.log.LogHeaderCache;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyLogVersionRepository;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
-import org.neo4j.kernel.impl.transaction.log.TransactionMetadataCache;
-import org.neo4j.kernel.impl.transaction.log.WritableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -58,6 +60,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
 import static java.lang.Math.max;
+
 import static org.neo4j.helpers.Format.bytes;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
@@ -146,17 +149,6 @@ public class StoreCopyClient
         void done();
     }
 
-    public static final String TEMP_COPY_DIRECTORY_NAME = "temp-copy";
-    private static final FileFilter STORE_FILE_FILTER = new FileFilter()
-    {
-        @Override
-        public boolean accept( File file )
-        {
-            // Skip log files and tx files from temporary database
-            return !file.getName().startsWith( "metrics" )
-                   && !file.getName().startsWith( "messages." );
-        }
-    };
     private final File storeDir;
     private final Config config;
     private final Iterable<KernelExtensionFactory<?>> kernelExtensions;
@@ -164,7 +156,7 @@ public class StoreCopyClient
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
     private final Monitor monitor;
-    private boolean forensics;
+    private final boolean forensics;
 
     public StoreCopyClient( File storeDir, Config config, Iterable<KernelExtensionFactory<?>> kernelExtensions,
             LogProvider logProvider, FileSystemAbstraction fs,
@@ -180,66 +172,107 @@ public class StoreCopyClient
         this.forensics = forensics;
     }
 
-    public void copyStore( StoreCopyRequester requester, CancellationRequest cancellationRequest )
-            throws IOException
+    public void copyStore( StoreCopyRequester requester, CancellationRequest cancellationRequest,
+                           MoveAfterCopy moveAfterCopy ) throws Exception
     {
-        // Clear up the current temp directory if there
-        File tempStore = new File( storeDir, TEMP_COPY_DIRECTORY_NAME );
-        cleanDirectory( tempStore );
-
-        // Request store files and transactions that will need recovery
-        monitor.startReceivingStoreFiles();
-        try ( Response<?> response = requester.copyStore( decorateWithProgressIndicator(
-                new ToFileStoreWriter( tempStore, monitor ) ) ) )
+        // Create a temp directory (or clean if present)
+        File tempStore = new File( storeDir, StoreUtil.TEMP_COPY_DIRECTORY_NAME );
+        try
         {
-            monitor.finishReceivingStoreFiles();
-            // Update highest archived log id
-            // Write transactions that happened during the copy to the currently active logical log
-            writeTransactionsToActiveLogFile( tempStore, response );
+            // The ToFileStoreWriter will add FileMoveActions for *RecordStores* that have to be
+            // *moves via the PageCache*!
+            // We have to move these files via the page cache, because that is the *only way* that we can communicate
+            // with any block storage that might have been configured for this instance.
+            List<FileMoveAction> storeFileMoveActions = new ArrayList<>();
+            cleanDirectory( tempStore );
+
+            // Request store files and transactions that will need recovery
+            monitor.startReceivingStoreFiles();
+            try ( Response<?> response = requester.copyStore( decorateWithProgressIndicator(
+                    new ToFileStoreWriter( tempStore, fs, monitor, pageCache, storeFileMoveActions ) ) ) )
+            {
+                monitor.finishReceivingStoreFiles();
+                // Update highest archived log id
+                // Write transactions that happened during the copy to the currently active logical log
+                writeTransactionsToActiveLogFile( tempStore, response );
+            }
+            finally
+            {
+                requester.done();
+            }
+
+            // This is a good place to check if the switch has been cancelled
+            checkCancellation( cancellationRequest, tempStore );
+
+            // Run recovery, so that the transactions we just wrote into the active log will be applied.
+            monitor.startRecoveringStore();
+            GraphDatabaseService graphDatabaseService = newTempDatabase( tempStore );
+            graphDatabaseService.shutdown();
+            monitor.finishRecoveringStore();
+
+            // All is well, move the streamed files to the real store directory.
+            // Start with the files written through the page cache. Should only be record store files.
+            // Note that the stream is lazy, so the file system traversal won't happen until *after* the store files
+            // have been moved. Thus we ensure that we only attempt to move them once.
+            Stream<FileMoveAction> moveActionStream = Stream.concat(
+                    storeFileMoveActions.stream(), traverseGenerateMoveActions( tempStore, tempStore ) );
+            moveAfterCopy.move( moveActionStream, tempStore, storeDir );
         }
         finally
         {
-            requester.done();
-        }
-
-        // This is a good place to check if the switch has been cancelled
-        checkCancellation( cancellationRequest, tempStore );
-
-        // Run recovery, so that the transactions we just wrote into the active log will be applied.
-        monitor.startRecoveringStore();
-        GraphDatabaseService graphDatabaseService = newTempDatabase( tempStore );
-        graphDatabaseService.shutdown();
-        monitor.finishRecoveringStore();
-
-        // All is well, move the streamed files to the real store directory
-        for ( File candidate : tempStore.listFiles( STORE_FILE_FILTER ) )
-        {
-            FileUtils.moveFileToDirectory( candidate, storeDir );
+            // All done, delete temp directory
+            FileUtils.deleteRecursively( tempStore );
         }
     }
 
-    private void writeTransactionsToActiveLogFile( File tempStoreDir, Response<?> response ) throws IOException
+    private static Stream<FileMoveAction> traverseGenerateMoveActions( File dir, File basePath )
+    {
+        // Note that flatMap is an *intermediate operation* and therefor always lazy.
+        // It is very important that the stream we return only *lazily* calls out to expandTraverseFiles!
+        return Stream.of( dir ).flatMap( d -> expandTraverseFiles( d, basePath ) );
+    }
+
+    private static Stream<FileMoveAction> expandTraverseFiles( File dir, File basePath )
+    {
+        File[] listing = dir.listFiles();
+        if ( listing == null )
+        {
+            // Weird, we somehow listed files for something that is no longer a directory. It's either a file,
+            // or doesn't exists. If the pathname no longer exists, then we are safe to return null here,
+            // because the flatMap in traverseGenerateMoveActions will just ignore it.
+            return dir.isFile() ? Stream.of( FileMoveAction.copyViaFileSystem( dir, basePath ) ) : null;
+        }
+        Stream<File> files = Arrays.stream( listing ).filter( File::isFile );
+        Stream<File> dirs = Arrays.stream( listing ).filter( File::isDirectory );
+        Stream<FileMoveAction> moveFiles = files.map( f -> FileMoveAction.copyViaFileSystem( f, basePath ) );
+        Stream<FileMoveAction> traverseDirectories = dirs.flatMap( d -> traverseGenerateMoveActions( d, basePath ) );
+        return Stream.concat( moveFiles, traverseDirectories );
+    }
+
+    private void writeTransactionsToActiveLogFile( File tempStoreDir, Response<?> response ) throws Exception
     {
         LifeSupport life = new LifeSupport();
         try
         {
             // Start the log and appender
             PhysicalLogFiles logFiles = new PhysicalLogFiles( tempStoreDir, fs );
-            TransactionMetadataCache transactionMetadataCache = new TransactionMetadataCache( 10, 100 );
-            ReadOnlyLogVersionRepository logVersionRepository = new ReadOnlyLogVersionRepository( pageCache, tempStoreDir );
+            LogHeaderCache logHeaderCache = new LogHeaderCache( 10 );
+            ReadOnlyLogVersionRepository logVersionRepository =
+                    new ReadOnlyLogVersionRepository( pageCache, tempStoreDir );
+            ReadOnlyTransactionIdStore readOnlyTransactionIdStore = new ReadOnlyTransactionIdStore(
+                    pageCache, tempStoreDir );
             LogFile logFile = life.add( new PhysicalLogFile( fs, logFiles, Long.MAX_VALUE /*don't rotate*/,
-                    new ReadOnlyTransactionIdStore( pageCache, tempStoreDir ), logVersionRepository,
-                    new Monitors().newMonitor( PhysicalLogFile.Monitor.class ),
-                    transactionMetadataCache ) );
+                    readOnlyTransactionIdStore::getLastCommittedTransactionId, logVersionRepository,
+                    new Monitors().newMonitor( PhysicalLogFile.Monitor.class ), logHeaderCache ) );
             life.start();
 
             // Just write all transactions to the active log version. Remember that this is after a store copy
             // where there are no logs, and the transaction stream we're about to write will probably contain
             // transactions that goes some time back, before the last committed transaction id. So we cannot
             // use a TransactionAppender, since it has checks for which transactions one can append.
-            WritableLogChannel channel = logFile.getWriter();
+            FlushableChannel channel = logFile.getWriter();
             final TransactionLogWriter writer = new TransactionLogWriter(
-                    new LogEntryWriter( channel, new CommandWriter( channel ) ) );
+                    new LogEntryWriter( channel ) );
             final AtomicLong firstTxId = new AtomicLong( BASE_TX_ID );
 
             response.accept( new Response.Handler()
@@ -251,21 +284,17 @@ public class StoreCopyClient
                 }
 
                 @Override
-                public Visitor<CommittedTransactionRepresentation,IOException> transactions()
+                public Visitor<CommittedTransactionRepresentation,Exception> transactions()
                 {
-                    return new Visitor<CommittedTransactionRepresentation,IOException>()
+                    return transaction ->
                     {
-                        @Override
-                        public boolean visit( CommittedTransactionRepresentation transaction ) throws IOException
+                        long txId = transaction.getCommitEntry().getTxId();
+                        if ( firstTxId.compareAndSet( BASE_TX_ID, txId ) )
                         {
-                            long txId = transaction.getCommitEntry().getTxId();
-                            if ( firstTxId.compareAndSet( BASE_TX_ID, txId ) )
-                            {
-                                monitor.startReceivingTransactions( txId );
-                            }
-                            writer.append( transaction.getTransactionRepresentation(), txId );
-                            return false;
+                            monitor.startReceivingTransactions( txId );
                         }
+                        writer.append( transaction.getTransactionRepresentation(), txId );
+                        return false;
                     };
                 }
             } );
@@ -298,7 +327,7 @@ public class StoreCopyClient
                         pageCache,
                         neoStore,
                         MetaDataStore.Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET,
-                        (long) LOG_HEADER_SIZE );
+                        LOG_HEADER_SIZE );
             }
         }
         finally
@@ -309,12 +338,15 @@ public class StoreCopyClient
 
     private GraphDatabaseService newTempDatabase( File tempStore )
     {
-        GraphDatabaseFactory factory = ExternallyManagedPageCache.graphDatabaseFactoryWithPageCache( pageCache );
+        ExternallyManagedPageCache.GraphDatabaseFactoryWithPageCacheFactory factory =
+                ExternallyManagedPageCache.graphDatabaseFactoryWithPageCache( pageCache );
         return factory
-                .setUserLogProvider( NullLogProvider.getInstance() )
                 .setKernelExtensions( kernelExtensions )
-                .newEmbeddedDatabaseBuilder( tempStore.getAbsolutePath() )
-                .setConfig( "online_backup_enabled", Settings.FALSE )
+                .setUserLogProvider( NullLogProvider.getInstance() )
+                .newEmbeddedDatabaseBuilder( tempStore.getAbsoluteFile() )
+                .setConfig( GraphDatabaseSettings.label_index, LabelIndex.AUTO.name() )
+                .setConfig( "dbms.backup.enabled", Settings.FALSE )
+                .setConfig( GraphDatabaseSettings.logs_directory, tempStore.getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.keep_logical_logs, Settings.TRUE )
                 .setConfig( GraphDatabaseSettings.allow_store_upgrade,
                         config.get( GraphDatabaseSettings.allow_store_upgrade ).toString() )
@@ -329,10 +361,10 @@ public class StoreCopyClient
 
             @Override
             public long write( String path, ReadableByteChannel data, ByteBuffer temporaryBuffer,
-                              boolean hasData ) throws IOException
+                    boolean hasData, int requiredElementAlignment ) throws IOException
             {
                 log.info( "Copying %s", path );
-                long written = actual.write( path, data, temporaryBuffer, hasData );
+                long written = actual.write( path, data, temporaryBuffer, hasData, requiredElementAlignment );
                 log.info( "Copied %s %s", path, bytes( written ) );
                 totalFiles++;
                 return written;
@@ -360,6 +392,7 @@ public class StoreCopyClient
     {
         if ( cancellationRequest.cancellationRequested() )
         {
+            log.info( "Store copying was cancelled. Cleaning up temp-directories." );
             cleanDirectory( tempStore );
         }
     }

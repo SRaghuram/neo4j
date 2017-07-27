@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,16 @@
  */
 package org.neo4j.kernel.api.exceptions.schema;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 import org.neo4j.kernel.api.TokenNameLookup;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 
 /**
- * Signals that some constraint has been violated in a {@link org.neo4j.kernel.api.KernelAPI kernel interaction},
- * for example a name containing invalid characters or length.
+ * Signals that some constraint has been violated, for example a name containing invalid characters or length.
  */
 public abstract class SchemaKernelException extends KernelException
 {
@@ -50,20 +53,29 @@ public abstract class SchemaKernelException extends KernelException
         super( statusCode, message );
     }
 
-    protected static String messageWithLabelAndPropertyName( TokenNameLookup tokenNameLookup, String formatString,
-            int labelId, int propertyKeyId )
+    static String messageWithLabelAndPropertyName( TokenNameLookup tokenNameLookup, String formatString,
+            LabelSchemaDescriptor descriptor )
     {
+        int[] propertyIds = descriptor.getPropertyIds();
+
         if ( tokenNameLookup != null )
         {
+            String propertyString = propertyIds.length == 1 ?
+                                    "property '" + tokenNameLookup.propertyKeyGetName( propertyIds[0]) + "'" :
+                                    "properties " + Arrays.stream( propertyIds )
+                                            .mapToObj( (i) -> "'" + tokenNameLookup.propertyKeyGetName( i ) + "'")
+                                            .collect( Collectors.joining( " and " ));
             return String.format( formatString,
-                    tokenNameLookup.labelGetName( labelId ),
-                    tokenNameLookup.propertyKeyGetName( propertyKeyId ) );
+                    tokenNameLookup.labelGetName( descriptor.getLabelId() ), propertyString);
         }
         else
         {
+            String keyString = propertyIds.length == 1 ? "key[" + propertyIds[0] + "]" :
+                               "keys[" + Arrays.stream( propertyIds )
+                                       .mapToObj( Integer::toString )
+                                       .collect( Collectors.joining( ", " )) + "]";
             return String.format( formatString,
-                    "label[" + labelId + "]",
-                    "key[" + propertyKeyId + "]" );
+                    "label[" + descriptor.getLabelId() + "]", keyString );
         }
     }
 }

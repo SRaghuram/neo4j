@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -47,10 +47,14 @@ public class Neo4jError
 
     public Neo4jError( Status status, Throwable cause )
     {
-        if ( status == null  )
+        if ( status == null )
+        {
             throw new IllegalArgumentException( "statusCode must not be null" );
-        if ( cause == null  )
+        }
+        if ( cause == null )
+        {
             throw new IllegalArgumentException( "cause must not be null" );
+        }
 
         this.status = status;
         this.cause = cause;
@@ -64,7 +68,10 @@ public class Neo4jError
                               getClass().getSimpleName(), status.code(), cause );
     }
 
-    public Throwable cause() { return cause; }
+    public Throwable cause()
+    {
+        return cause;
+    }
 
     public Status status()
     {
@@ -78,13 +85,12 @@ public class Neo4jError
 
     public boolean shouldSerializeStackTrace()
     {
-        switch(status.code().classification())
+        switch ( status.code().classification() )
         {
-            case ClientError:
-                return false;
-            default:
-                return true;
-
+        case ClientError:
+            return false;
+        default:
+            return true;
         }
     }
 

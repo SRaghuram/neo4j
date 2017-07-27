@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -43,7 +43,7 @@ import org.neo4j.graphdb.traversal.UniquenessFactory;
  * one starting {@link Node} and for implementation simplicity a
  * {@link BranchSelector} starts from one {@link TraversalBranch}.
  * This class bridges that gap.
- * 
+ *
  * @author Mattias Persson
  */
 class AsOneStartBranch implements TraversalBranch
@@ -68,9 +68,12 @@ class AsOneStartBranch implements TraversalBranch
         {
             List<TraversalBranch> result = new ArrayList<TraversalBranch>();
             for ( Node node : nodes )
+            {
                 result.add( new StartNodeTraversalBranch( context, this, node, initialState ) );
+            }
             return result.iterator();
-        } else
+        }
+        else
         {
             return new TraversalBranchIterator( nodes.iterator() );
         }
@@ -122,13 +125,13 @@ class AsOneStartBranch implements TraversalBranch
     {
         return true;
     }
-    
+
     @Override
     public boolean includes()
     {
         return false;
     }
-    
+
     @Override
     public void evaluation( Evaluation eval )
     {
@@ -151,7 +154,7 @@ class AsOneStartBranch implements TraversalBranch
     {
         throw new UnsupportedOperationException();
     }
-    
+
     @Override
     public Iterable<Relationship> reverseRelationships()
     {
@@ -163,7 +166,7 @@ class AsOneStartBranch implements TraversalBranch
     {
         throw new UnsupportedOperationException();
     }
-    
+
     @Override
     public Iterable<Node> reverseNodes()
     {
@@ -175,13 +178,13 @@ class AsOneStartBranch implements TraversalBranch
     {
         throw new UnsupportedOperationException();
     }
-    
+
     @Override
     public void prune()
     {
         branches = Collections.<TraversalBranch>emptyList().iterator();
     }
-    
+
     @Override
     public Object state()
     {
@@ -192,7 +195,7 @@ class AsOneStartBranch implements TraversalBranch
     {
         private final Iterator<Node> nodeIterator;
 
-        public TraversalBranchIterator( Iterator<Node> nodeIterator )
+        TraversalBranchIterator( Iterator<Node> nodeIterator )
         {
             this.nodeIterator = nodeIterator;
         }

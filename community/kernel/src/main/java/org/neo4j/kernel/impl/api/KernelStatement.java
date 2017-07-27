@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,53 +19,97 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import java.util.Optional;
+import java.util.function.Function;
+
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.TransactionTerminatedException;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.DataWriteOperations;
+import org.neo4j.kernel.api.ExecutionStatisticsOperations;
+import org.neo4j.kernel.api.ProcedureCallOperations;
+import org.neo4j.kernel.api.QueryRegistryOperations;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.SchemaWriteOperations;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.TokenWriteOperations;
 import org.neo4j.kernel.api.exceptions.InvalidTransactionTypeKernelException;
-import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.index.IndexReader;
-import org.neo4j.kernel.api.labelscan.LabelScanReader;
-import org.neo4j.kernel.api.labelscan.LabelScanStore;
+import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.query.ExecutingQuery;
+import org.neo4j.kernel.api.security.AccessMode;
 import org.neo4j.kernel.api.txstate.LegacyIndexTransactionState;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.api.txstate.TxStateHolder;
-import org.neo4j.kernel.impl.api.store.StoreStatement;
-import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.kernel.impl.factory.AccessCapability;
+import org.neo4j.kernel.impl.locking.LockTracer;
+import org.neo4j.kernel.impl.locking.StatementLocks;
+import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.storageengine.api.StorageStatement;
 
-public class KernelStatement implements TxStateHolder, Statement
+/**
+ * A resource efficient implementation of {@link Statement}. Designed to be reused within a
+ * {@link KernelTransactionImplementation} instance, even across transactions since this instances itself
+ * doesn't hold essential state. Usage:
+ *
+ * <ol>
+ * <li>Construct {@link KernelStatement} when {@link KernelTransactionImplementation} is constructed</li>
+ * <li>For every transaction...</li>
+ * <li>Call {@link #initialize(StatementLocks, StatementOperationParts, PageCursorTracer)} which makes this instance
+ * full available and ready to use. Call when the {@link KernelTransactionImplementation} is initialized.</li>
+ * <li>Alternate {@link #acquire()} / {@link #close()} when acquiring / closing a statement for the transaction...
+ * Temporarily asymmetric number of calls to {@link #acquire()} / {@link #close()} is supported, although in
+ * the end an equal number of calls must have been issued.</li>
+ * <li>To be safe call {@link #forceClose()} at the end of a transaction to force a close of the statement,
+ * even if there are more than one current call to {@link #acquire()}. This instance is now again ready
+ * to be {@link #initialize(StatementLocks, StatementOperationParts, PageCursorTracer)}  initialized} and used for the transaction
+ * instance again, when it's initialized.</li>
+ * </ol>
+ */
+public class KernelStatement implements TxStateHolder, Statement, AssertOpen
 {
-    protected final Locks.Client locks;
-    protected final TxStateHolder txStateHolder;
-    protected final IndexReaderFactory indexReaderFactory;
-    protected final LabelScanStore labelScanStore;
-    private final StoreStatement storeStatement;
+    private final TxStateHolder txStateHolder;
+    private final StorageStatement storeStatement;
+    private final AccessCapability accessCapability;
     private final KernelTransactionImplementation transaction;
     private final OperationsFacade facade;
-    private LabelScanReader labelScanReader;
+    private StatementLocks statementLocks;
+    private PageCursorTracer pageCursorTracer = PageCursorTracer.NULL;
     private int referenceCount;
-    private boolean closed;
+    private volatile ExecutingQueryList executingQueryList;
+    private final LockTracer systemLockTracer;
 
-    public KernelStatement( KernelTransactionImplementation transaction, IndexReaderFactory indexReaderFactory,
-            LabelScanStore labelScanStore, TxStateHolder txStateHolder, Locks.Client locks,
-            StatementOperationParts operations, StoreStatement storeStatement )
+    public KernelStatement( KernelTransactionImplementation transaction,
+                            TxStateHolder txStateHolder,
+                            StorageStatement storeStatement,
+                            Procedures procedures,
+                            AccessCapability accessCapability,
+                            LockTracer systemLockTracer )
     {
         this.transaction = transaction;
-        this.locks = locks;
-        this.indexReaderFactory = indexReaderFactory;
         this.txStateHolder = txStateHolder;
-        this.labelScanStore = labelScanStore;
         this.storeStatement = storeStatement;
-        this.facade = new OperationsFacade( this, operations );
+        this.accessCapability = accessCapability;
+        this.facade = new OperationsFacade( transaction, this, procedures );
+        this.executingQueryList = ExecutingQueryList.EMPTY;
+        this.systemLockTracer = systemLockTracer;
     }
 
     @Override
     public ReadOperations readOperations()
+    {
+        assertAllows( AccessMode::allowsReads, "Read" );
+        return facade;
+    }
+
+    @Override
+    public ProcedureCallOperations procedureCallOperations()
+    {
+        return facade;
+    }
+
+    @Override
+    public ExecutionStatisticsOperations executionStatisticsOperations()
     {
         return facade;
     }
@@ -73,6 +117,8 @@ public class KernelStatement implements TxStateHolder, Statement
     @Override
     public TokenWriteOperations tokenWriteOperations()
     {
+        accessCapability.assertCanWrite();
+
         return facade;
     }
 
@@ -80,7 +126,10 @@ public class KernelStatement implements TxStateHolder, Statement
     public DataWriteOperations dataWriteOperations()
             throws InvalidTransactionTypeKernelException
     {
-        transaction.upgradeToDataTransaction();
+        accessCapability.assertCanWrite();
+
+        assertAllows( AccessMode::allowsWrites, "Write" );
+        transaction.upgradeToDataWrites();
         return facade;
     }
 
@@ -88,7 +137,16 @@ public class KernelStatement implements TxStateHolder, Statement
     public SchemaWriteOperations schemaWriteOperations()
             throws InvalidTransactionTypeKernelException
     {
-        transaction.upgradeToSchemaTransaction();
+        accessCapability.assertCanWrite();
+
+        assertAllows( AccessMode::allowsSchemaWrites, "Schema" );
+        transaction.upgradeToSchemaWrites();
+        return facade;
+    }
+
+    @Override
+    public QueryRegistryOperations queryRegistration()
+    {
         return facade;
     }
 
@@ -113,86 +171,121 @@ public class KernelStatement implements TxStateHolder, Statement
     @Override
     public void close()
     {
-        if ( !closed && release() )
+        // Check referenceCount > 0 since we allow multiple close calls,
+        // i.e. ignore closing already closed statements
+        if ( referenceCount > 0 && (--referenceCount == 0) )
         {
-            closed = true;
             cleanupResources();
         }
     }
 
-    void assertOpen()
+    @Override
+    public void assertOpen()
     {
-        if ( closed )
+        if ( referenceCount == 0 )
         {
             throw new NotInTransactionException( "The statement has been closed." );
         }
-        if ( transaction.shouldBeTerminated() )
+
+        Optional<Status> terminationReason = transaction.getReasonIfTerminated();
+        if ( terminationReason.isPresent() )
         {
-            throw new TransactionTerminatedException();
+            throw new TransactionTerminatedException( terminationReason.get() );
         }
     }
 
-    public Locks.Client locks()
+    public void initialize( StatementLocks statementLocks, StatementOperationParts operationParts,
+            PageCursorTracer pageCursorCounters )
     {
-        return locks;
+        this.statementLocks = statementLocks;
+        this.pageCursorTracer = pageCursorCounters;
+        facade.initialize( operationParts );
     }
 
-    public IndexReader getIndexReader( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public StatementLocks locks()
     {
-        return indexReaderFactory.newReader( descriptor );
+        return statementLocks;
     }
 
-    public IndexReader getFreshIndexReader( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public LockTracer lockTracer()
     {
-        return indexReaderFactory.newUnCachedReader( descriptor );
+        LockTracer tracer = executingQueryList.top( ExecutingQuery::lockTracer );
+        return tracer == null ? systemLockTracer : systemLockTracer.combine( tracer );
     }
 
-    public LabelScanReader getLabelScanReader()
+    public PageCursorTracer getPageCursorTracer()
     {
-        if ( labelScanReader == null )
+        return pageCursorTracer;
+    }
+
+    public final void acquire()
+    {
+        if ( referenceCount++ == 0 )
         {
-            labelScanReader = labelScanStore.newReader();
+            storeStatement.acquire();
         }
-        return labelScanReader;
     }
 
-    final void acquire()
+    final boolean isAcquired()
     {
-        referenceCount++;
-    }
-
-    private boolean release()
-    {
-        referenceCount--;
-
-        return (referenceCount == 0);
+        return referenceCount > 0;
     }
 
     final void forceClose()
     {
-        if ( !closed )
+        if ( referenceCount > 0 )
         {
-            closed = true;
             referenceCount = 0;
-
             cleanupResources();
         }
+        pageCursorTracer.reportEvents();
+    }
+
+    final String username()
+    {
+        return transaction.securityContext().subject().username();
+    }
+
+    final ExecutingQueryList executingQueryList()
+    {
+        return executingQueryList;
+    }
+
+    final void startQueryExecution( ExecutingQuery query )
+    {
+        this.executingQueryList = executingQueryList.push( query );
+    }
+
+    final void stopQueryExecution( ExecutingQuery executingQuery )
+    {
+        this.executingQueryList = executingQueryList.remove( executingQuery );
+    }
+
+    public StorageStatement getStoreStatement()
+    {
+        return storeStatement;
     }
 
     private void cleanupResources()
     {
-        indexReaderFactory.close();
-
-        if ( null != labelScanReader )
-        {
-            labelScanReader.close();
-        }
-
-        transaction.releaseStatement( this );
+        // closing is done by KTI
+        storeStatement.release();
+        executingQueryList = ExecutingQueryList.EMPTY;
     }
 
-    public StoreStatement getStoreStatement()
+    public KernelTransactionImplementation getTransaction()
     {
-        return storeStatement;
+        return transaction;
+    }
+
+    void assertAllows( Function<AccessMode,Boolean> allows, String mode )
+    {
+        AccessMode accessMode = transaction.securityContext().mode();
+        if ( !allows.apply( accessMode ) )
+        {
+            throw accessMode.onViolation(
+                    String.format( "%s operations are not allowed for %s.", mode,
+                            transaction.securityContext().description() ) );
+        }
     }
 }

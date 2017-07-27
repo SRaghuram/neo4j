@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,16 +25,17 @@ import org.junit.runners.JUnit4;
 import org.junit.runners.Suite;
 
 import org.neo4j.consistency.report.ConsistencyReport;
-import org.neo4j.kernel.impl.store.AbstractDynamicStore;
+import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.SchemaStore;
+import org.neo4j.kernel.impl.store.format.standard.DynamicRecordFormat;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.consistency.store.RecordAccessStub.SCHEMA_RECORD_TYPE;
 
 @RunWith(Suite.class)
@@ -187,6 +188,27 @@ public abstract class DynamicRecordCheckTest
         verifyNoMoreInteractions( report );
     }
 
+    @Test
+    public void shouldReportCorrectTypeBasedOnProperBitsOnly() throws Exception
+    {
+        // given
+        DynamicRecord property = inUse( record( 42 ) );
+        // Type is 9, which is string, but has an extra bit set at a higher up position
+        int type = PropertyType.STRING.intValue();
+        type = type | 0b10000000;
+
+        property.setType( type );
+
+        // when
+        PropertyType reportedType = property.getType();
+
+        // then
+        // The type must be string
+        assertEquals( PropertyType.STRING, reportedType );
+        // but the type data must be preserved
+        assertEquals( type, property.getTypeAsInt() );
+    }
+
     // utilities
 
     DynamicRecord fill( DynamicRecord record )
@@ -271,8 +293,8 @@ public abstract class DynamicRecordCheckTest
     {
         @SuppressWarnings( "unchecked" )
         RecordStore<DynamicRecord> mock = mock( RecordStore.class );
-        when( mock.getRecordSize() ).thenReturn( blockSize + AbstractDynamicStore.BLOCK_HEADER_SIZE );
-        when( mock.getRecordHeaderSize() ).thenReturn( AbstractDynamicStore.BLOCK_HEADER_SIZE );
+        when( mock.getRecordSize() ).thenReturn( blockSize + DynamicRecordFormat.RECORD_HEADER_SIZE );
+        when( mock.getRecordDataSize() ).thenReturn( blockSize );
         return mock;
     }
 }

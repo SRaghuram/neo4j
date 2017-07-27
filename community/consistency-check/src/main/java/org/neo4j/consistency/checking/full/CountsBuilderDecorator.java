@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.consistency.checking.full;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 import org.neo4j.consistency.checking.CheckDecorator;
 import org.neo4j.consistency.checking.CheckerEngine;
@@ -33,7 +34,6 @@ import org.neo4j.consistency.report.ConsistencyReport.RelationshipConsistencyRep
 import org.neo4j.consistency.report.ConsistencyReporter;
 import org.neo4j.consistency.store.RecordAccess;
 import org.neo4j.consistency.store.synthetic.CountsEntry;
-import org.neo4j.function.Predicate;
 import org.neo4j.helpers.collection.MultiSet;
 import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
@@ -42,7 +42,6 @@ import org.neo4j.kernel.impl.api.CountsVisitor;
 import org.neo4j.kernel.impl.store.NodeLabelsField;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.RecordStore;
-import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.store.counts.keys.CountsKey;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
@@ -55,16 +54,16 @@ import static org.neo4j.consistency.checking.cache.CacheSlots.NodeLabel.SLOT_LAB
 import static org.neo4j.consistency.checking.full.NodeLabelReader.getListOfLabels;
 import static org.neo4j.kernel.impl.store.counts.keys.CountsKeyFactory.nodeKey;
 import static org.neo4j.kernel.impl.store.counts.keys.CountsKeyFactory.relationshipKey;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 
 class CountsBuilderDecorator extends CheckDecorator.Adapter
 {
     private static final int WILDCARD = -1;
     private final MultiSet<CountsKey> nodeCounts = new MultiSet<>();
     private final MultiSet<CountsKey> relationshipCounts = new MultiSet<>();
-    private final Predicate<NodeRecord> nodeCountBuildCondition;
-    private final Predicate<RelationshipRecord> relationshipCountBuildCondition;
+    private final MultiPassAvoidanceCondition<NodeRecord> nodeCountBuildCondition;
+    private final MultiPassAvoidanceCondition<RelationshipRecord> relationshipCountBuildCondition;
     private final NodeStore nodeStore;
-    private final RelationshipStore relationshipStore;
     private final StoreAccess storeAccess;
     private final CountsEntry.CheckAdapter CHECK_NODE_COUNT = new CountsEntry.CheckAdapter()
     {
@@ -123,13 +122,19 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
         }
     };
 
-    public CountsBuilderDecorator( StoreAccess storeAccess )
+    CountsBuilderDecorator( StoreAccess storeAccess )
     {
         this.storeAccess = storeAccess;
         this.nodeStore = storeAccess.getRawNeoStores().getNodeStore();
-        this.relationshipStore = storeAccess.getRawNeoStores().getRelationshipStore();
-        this.nodeCountBuildCondition = new MultiPassAvoidanceCondition<>( nodeStore.getHighestPossibleIdInUse() );
-        this.relationshipCountBuildCondition = new MultiPassAvoidanceCondition<>( relationshipStore.getHighestPossibleIdInUse() );
+        this.nodeCountBuildCondition = new MultiPassAvoidanceCondition<>( 0 );
+        this.relationshipCountBuildCondition = new MultiPassAvoidanceCondition<>( 1 );
+    }
+
+    @Override
+    public void prepare()
+    {
+        this.nodeCountBuildCondition.prepare();
+        this.relationshipCountBuildCondition.prepare();
     }
 
     @Override
@@ -170,15 +175,17 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
             public void visitRelationshipCount( int startLabelId, int relTypeId, int endLabelId, long count )
             {
                 relationshipEntries.incrementAndGet();
-                reporter.forCounts( new CountsEntry( relationshipKey( startLabelId, relTypeId, endLabelId ), count ),
+                reporter.forCounts(
+                        new CountsEntry( relationshipKey( startLabelId, relTypeId, endLabelId ), count ),
                         CHECK_RELATIONSHIP_COUNT );
                 listener.add( 1 );
             }
         } );
-        reporter.forCounts( new CountsEntry( nodeKey( WILDCARD ), nodeEntries.get() ), CHECK_NODE_KEY_COUNT );
         reporter.forCounts(
-                new CountsEntry( relationshipKey( WILDCARD, WILDCARD, WILDCARD ), relationshipEntries.get() ),
-                CHECK_RELATIONSHIP_KEY_COUNT );
+                new CountsEntry( nodeKey( WILDCARD ), nodeEntries.get() ), CHECK_NODE_KEY_COUNT );
+        reporter.forCounts(
+                new CountsEntry( relationshipKey( WILDCARD, WILDCARD, WILDCARD ),
+                        relationshipEntries.get() ), CHECK_RELATIONSHIP_KEY_COUNT );
         listener.done();
     }
 
@@ -189,7 +196,7 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
         private final Predicate<NodeRecord> countUpdateCondition;
         private final OwningRecordCheck<NodeRecord,NodeConsistencyReport> inner;
 
-        public NodeCounts( RecordStore<NodeRecord> nodeStore, MultiSet<CountsKey> counts,
+        NodeCounts( RecordStore<NodeRecord> nodeStore, MultiSet<CountsKey> counts,
                 Predicate<NodeRecord> countUpdateCondition, OwningRecordCheck<NodeRecord,NodeConsistencyReport> inner )
         {
             this.nodeStore = nodeStore;
@@ -240,9 +247,9 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
         private final Predicate<RelationshipRecord> countUpdateCondition;
         private final OwningRecordCheck<RelationshipRecord,RelationshipConsistencyReport> inner;
 
-        public RelationshipCounts( StoreAccess storeAccess, MultiSet<CountsKey> counts,
-                                   Predicate<RelationshipRecord> countUpdateCondition,
-                                   OwningRecordCheck<RelationshipRecord,RelationshipConsistencyReport> inner )
+        RelationshipCounts( StoreAccess storeAccess, MultiSet<CountsKey> counts,
+                Predicate<RelationshipRecord> countUpdateCondition,
+                OwningRecordCheck<RelationshipRecord,RelationshipConsistencyReport> inner )
         {
             this.nodeStore = storeAccess.getRawNeoStores().getNodeStore();
             this.counts = counts;
@@ -267,7 +274,7 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
                 {
                     CacheAccess.Client cacheAccess = records.cacheAccess().client();
                     Set<Long> firstNodeLabels = null, secondNodeLabels = null;
-                    long firstLabelsField = cacheAccess.getFromCache( record.getFirstNode(), 1 );
+                    long firstLabelsField = cacheAccess.getFromCache( record.getFirstNode(), SLOT_LABEL_FIELD );
                     if ( NodeLabelsField.fieldPointsToDynamicRecordOfLabels( firstLabelsField ) )
                     {
                         firstNodeLabels = labelsFor( nodeStore, engine, records, record.getFirstNode() );
@@ -276,7 +283,7 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
                     {
                         firstNodeLabels = NodeLabelReader.getListOfLabels( firstLabelsField );
                     }
-                    long secondLabelsField = cacheAccess.getFromCache( record.getSecondNode(), 1 );
+                    long secondLabelsField = cacheAccess.getFromCache( record.getSecondNode(), SLOT_LABEL_FIELD );
                     if ( NodeLabelsField.fieldPointsToDynamicRecordOfLabels( secondLabelsField ) )
                     {
                         secondNodeLabels = labelsFor( nodeStore, engine, records, record.getSecondNode() );
@@ -326,39 +333,25 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
 
     private static class MultiPassAvoidanceCondition<T extends AbstractBaseRecord> implements Predicate<T>
     {
-        private boolean started = false, done = false;
-        private final long terminationId;
+        // Stage which this condition is active, starting from 0, mimicing the CheckStage ordinal
+        private final int activeStage;
+        // The same thread updates this every time, the TaskExecutor. Other threads read it
+        private volatile int stage = -1;
 
-        public MultiPassAvoidanceCondition( long terminationId )
+        MultiPassAvoidanceCondition( int activeStage )
         {
-            this.terminationId = terminationId;
+            this.activeStage = activeStage;
+        }
+
+        public void prepare()
+        {
+            stage++;
         }
 
         @Override
         public boolean test( T record )
         {
-            if ( done )
-            {
-                return false;
-            }
-            if ( record.getLongId() == terminationId )
-            {
-                done = true;
-                return true;
-            }
-            if ( record.getLongId() == 0 )
-            {
-                if ( started )
-                {
-                    done = true;
-                    return false;
-                }
-                else
-                {
-                    started = true;
-                }
-            }
-            return true;
+            return stage == activeStage;
         }
     }
 
@@ -367,6 +360,6 @@ class CountsBuilderDecorator extends CheckDecorator.Adapter
                                         RecordAccess recordAccess,
                                         long nodeId )
     {
-        return getListOfLabels( nodeStore.forceGetRecord( nodeId ), recordAccess, engine );
+        return getListOfLabels( nodeStore.getRecord( nodeId, nodeStore.newRecord(), FORCE ), recordAccess, engine );
     }
 }

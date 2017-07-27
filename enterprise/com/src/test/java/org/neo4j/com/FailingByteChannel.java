@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,14 +29,17 @@ public class FailingByteChannel extends KnownDataByteChannel
 
     public FailingByteChannel( int sizeToFailAt, String failWithMessage )
     {
-        super( sizeToFailAt*2 );
+        super( sizeToFailAt * 2 );
         this.sizeToFailAt = sizeToFailAt;
         this.failWithMessage = failWithMessage;
     }
 
     public int read( ByteBuffer dst ) throws IOException
     {
-        if ( position > sizeToFailAt ) throw new MadeUpException( failWithMessage );
+        if ( position > sizeToFailAt )
+        {
+            throw new MadeUpException( failWithMessage );
+        }
         return super.read( dst );
     }
 }

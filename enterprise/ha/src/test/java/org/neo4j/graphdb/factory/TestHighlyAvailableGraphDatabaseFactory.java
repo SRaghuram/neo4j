@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,10 @@
  */
 package org.neo4j.graphdb.factory;
 
+import java.util.Collections;
+import java.util.function.Predicate;
+
+import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.ha.ClusterManager;
 
 public class TestHighlyAvailableGraphDatabaseFactory extends HighlyAvailableGraphDatabaseFactory
@@ -28,7 +32,29 @@ public class TestHighlyAvailableGraphDatabaseFactory extends HighlyAvailableGrap
     {
         super.configure( builder );
         builder.setConfig( ClusterManager.CONFIG_FOR_SINGLE_JVM_CLUSTER );
-        builder.setConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
         builder.setConfig( GraphDatabaseSettings.store_internal_log_level, "DEBUG" );
+    }
+
+    public TestHighlyAvailableGraphDatabaseFactory addKernelExtensions( Iterable<KernelExtensionFactory<?>> newKernelExtensions )
+    {
+        getCurrentState().addKernelExtensions( newKernelExtensions );
+        return this;
+    }
+
+    public TestHighlyAvailableGraphDatabaseFactory addKernelExtension( KernelExtensionFactory<?> newKernelExtension )
+    {
+        return addKernelExtensions( Collections.singletonList( newKernelExtension ) );
+    }
+
+    public TestHighlyAvailableGraphDatabaseFactory setKernelExtensions( Iterable<KernelExtensionFactory<?>> newKernelExtensions )
+    {
+        getCurrentState().setKernelExtensions( newKernelExtensions );
+        return this;
+    }
+
+    public TestHighlyAvailableGraphDatabaseFactory removeKernelExtensions( Predicate<KernelExtensionFactory<?>> toRemove )
+    {
+        getCurrentState().removeKernelExtensions( toRemove );
+        return this;
     }
 }

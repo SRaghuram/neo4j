@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,14 +24,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * State control class for Locks.Clients.
  * Client state represent current Locks.Client state: <b>ACTIVE/STOPPED </b> and number of active clients.
- *
+ * <p/>
  * Client states are:
  * <ul>
- *     <li><b>ACTIVE</b> state of fully functional locks client without any restriction or operations limitations</li>
- *     <li><b>STOPPED</b> all current lock acquisitions will be interrupted/terminated without obtaining
- *     corresponding lock, new acquisitions will not be possible anymore, all locks that client holds are preserved.</li>
+ * <li><b>ACTIVE</b> state of fully functional locks client without any restriction or operations limitations</li>
+ * <li><b>STOPPED</b> all current lock acquisitions will be interrupted/terminated without obtaining
+ * corresponding lock, new acquisitions will not be possible anymore, all locks that client holds are preserved.</li>
  * </ul>
- *
  */
 public final class LockClientStateHolder
 {
@@ -44,6 +43,7 @@ public final class LockClientStateHolder
 
     /**
      * Check if we still have any active client
+     *
      * @return true if have any open client, false otherwise.
      */
     public boolean hasActiveClients()
@@ -66,10 +66,12 @@ public final class LockClientStateHolder
 
     /**
      * Increment active number of clients that use current state instance.
-     * @return false if already stopped and not possible to increment active clients counter, true in case if counter
-     * was successfully incremented.
+     *
+     * @param client the locks client associated with this state; used only to create pretty exception
+     * with {@link LockClientStoppedException#LockClientStoppedException(Locks.Client)}.
+     * @throws LockClientStoppedException when stopped.
      */
-    public boolean incrementActiveClients()
+    public void incrementActiveClients( Locks.Client client )
     {
         int currentState;
         do
@@ -77,11 +79,10 @@ public final class LockClientStateHolder
             currentState = clientState.get();
             if ( isStopped( currentState ) )
             {
-                return false;
+                throw new LockClientStoppedException( client );
             }
         }
-        while ( !clientState.compareAndSet( currentState, statusWithUpdatedClients( currentState, 1 ) ) );
-        return true;
+        while ( !clientState.compareAndSet( currentState, incrementActiveClients( currentState ) ) );
     }
 
     /**
@@ -94,11 +95,12 @@ public final class LockClientStateHolder
         {
             currentState = clientState.get();
         }
-        while ( !clientState.compareAndSet( currentState, statusWithUpdatedClients( currentState, -1 ) ) );
+        while ( !clientState.compareAndSet( currentState, decrementActiveClients( currentState ) ) );
     }
 
     /**
      * Check if stopped
+     *
      * @return true if client is stopped, false otherwise
      */
     public boolean isStopped()
@@ -134,8 +136,13 @@ public final class LockClientStateHolder
         return newStatus | getActiveClients( clientState );
     }
 
-    private int statusWithUpdatedClients( int clientState, int delta )
+    private int incrementActiveClients( int clientState )
     {
-        return getStatus( clientState ) | (getActiveClients( clientState ) + delta);
+        return getStatus( clientState ) | Math.incrementExact( getActiveClients( clientState ) );
+    }
+
+    private int decrementActiveClients( int clientState )
+    {
+        return getStatus( clientState ) | Math.decrementExact( getActiveClients( clientState ) );
     }
 }

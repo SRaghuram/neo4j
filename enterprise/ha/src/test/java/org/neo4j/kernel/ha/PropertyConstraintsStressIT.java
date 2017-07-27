@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,10 +20,12 @@
 package org.neo4j.kernel.ha;
 
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -42,14 +44,16 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Exceptions;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintVerificationFailedKernelException;
+import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.impl.ha.ClusterManager;
+import org.neo4j.test.GraphDatabaseServiceCleaner;
 import org.neo4j.test.OtherThreadExecutor.WorkerCommand;
-import org.neo4j.test.OtherThreadRule;
-import org.neo4j.test.RepeatRule;
 import org.neo4j.test.ha.ClusterRule;
-import org.neo4j.tooling.GlobalGraphOperations;
+import org.neo4j.test.rule.RepeatRule;
+import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.rule.concurrent.OtherThreadRule;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -57,9 +61,9 @@ import static org.junit.Assert.assertThat;
 
 import static java.lang.String.format;
 
-import static org.neo4j.graphdb.DynamicLabel.label;
-import static org.neo4j.graphdb.DynamicRelationshipType.withName;
-import static org.neo4j.helpers.collection.IteratorUtil.loop;
+import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.graphdb.RelationshipType.withName;
+import static org.neo4j.helpers.collection.Iterators.loop;
 
 /**
  * This test stress tests unique constraints in a setup where writes are being issued against a slave.
@@ -67,11 +71,16 @@ import static org.neo4j.helpers.collection.IteratorUtil.loop;
 @RunWith( Parameterized.class )
 public class PropertyConstraintsStressIT
 {
-    @Parameterized.Parameter
+    @Parameter( 0 )
     public ConstraintOperations constraintOps;
 
+    @Parameter( 1 )
+    public boolean releaseSchemaLockWhileBuildingIndex;
+
     @Rule
-    public final ClusterRule clusterRule = new ClusterRule( getClass() );
+    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    @ClassRule
+    public static final ClusterRule clusterRule = new ClusterRule( PropertyConstraintsStressIT.class );
 
     @Rule
     public OtherThreadRule<Object> slaveWork = new OtherThreadRule<>();
@@ -97,20 +106,33 @@ public class PropertyConstraintsStressIT
 
     private final AtomicInteger roundNo = new AtomicInteger( 0 );
 
-    @Parameterized.Parameters( name = "{0}" )
+    @Parameterized.Parameters( name = "{0}:{1}" )
     public static Iterable<Object[]> params()
     {
         return Arrays.asList( new Object[][]{
-                {UNIQUE_PROPERTY_CONSTRAINT_OPS},
-                {NODE_PROPERTY_EXISTENCE_CONSTRAINT_OPS},
-                {REL_PROPERTY_EXISTENCE_CONSTRAINT_OPS},
+                {UNIQUE_PROPERTY_CONSTRAINT_OPS, false},
+                {UNIQUE_PROPERTY_CONSTRAINT_OPS, true},
+                {NODE_PROPERTY_EXISTENCE_CONSTRAINT_OPS, false},
+                {REL_PROPERTY_EXISTENCE_CONSTRAINT_OPS, false},
         } );
     }
 
     @Before
     public void setup() throws Exception
     {
-        cluster = clusterRule.config( HaSettings.pull_interval, "0" ).startCluster();
+        cluster = clusterRule
+                .withSharedSetting( HaSettings.pull_interval, "0" )
+                .withSharedSetting( GraphDatabaseSettings.release_schema_lock_while_building_constraint,
+                        String.valueOf( releaseSchemaLockWhileBuildingIndex ) )
+                .startCluster();
+        clearData();
+    }
+
+    private void clearData() throws InterruptedException
+    {
+        HighlyAvailableGraphDatabase db = cluster.getMaster();
+        GraphDatabaseServiceCleaner.cleanDatabaseContent( db );
+        cluster.sync();
     }
 
     /* The different orders and delays in the below variations try to stress all known scenarios, as well as
@@ -539,7 +561,7 @@ public class PropertyConstraintsStressIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                for ( Relationship relationship : GlobalGraphOperations.at( db ).getAllRelationships() )
+                for ( Relationship relationship : db.getAllRelationships() )
                 {
                     if ( relationship.getType().name().equals( type ) )
                     {
@@ -587,7 +609,7 @@ public class PropertyConstraintsStressIT
                 catch ( QueryExecutionException e )
                 {
                     System.out.println( "Constraint failed: " + e.getMessage() );
-                    if ( Exceptions.rootCause( e ) instanceof ConstraintVerificationFailedKernelException )
+                    if ( Exceptions.rootCause( e ) instanceof ConstraintValidationException )
                     {
                         // Unable to create constraint since it is not consistent with existing data
                         constraintCreationFailed = true;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -54,7 +54,6 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.kernel.impl.store.record.TokenRecord;
 
 import static java.util.Collections.unmodifiableMap;
-
 import static org.neo4j.consistency.RecordType.ARRAY_PROPERTY;
 import static org.neo4j.consistency.RecordType.PROPERTY_KEY_NAME;
 import static org.neo4j.consistency.RecordType.RELATIONSHIP_TYPE_NAME;
@@ -67,7 +66,7 @@ class OwnerCheck implements CheckDecorator
 
     OwnerCheck( boolean active, DynamicStore... stores )
     {
-        this.owners = active ? new ConcurrentHashMap<Long, PropertyOwner>( 16, 0.75f, 4 ) : null;
+        this.owners = active ? new ConcurrentHashMap<>( 16, 0.75f, 4 ) : null;
         this.dynamics = active ? initialize( stores ) : null;
     }
 
@@ -77,7 +76,7 @@ class OwnerCheck implements CheckDecorator
                 new EnumMap<>( RecordType.class );
         for ( DynamicStore store : stores )
         {
-            map.put( store.type, new ConcurrentHashMap<Long, DynamicOwner>( 16, 0.75f, 4 ) );
+            map.put( store.type, new ConcurrentHashMap<>( 16, 0.75f, 4 ) );
         }
         return unmodifiableMap( map );
     }
@@ -127,6 +126,11 @@ class OwnerCheck implements CheckDecorator
             }
             progress.done();
         }
+    }
+
+    @Override
+    public void prepare()
+    {
     }
 
     @Override
@@ -239,17 +243,20 @@ class OwnerCheck implements CheckDecorator
 
     private RecordType recordType( PropertyType type )
     {
-        if ( type != null )
+        if ( type == null )
         {
-            switch ( type )
-            {
-            case STRING:
-                return STRING_PROPERTY;
-            case ARRAY:
-                return ARRAY_PROPERTY;
-            }
+            return null;
         }
-        return null;
+
+        switch ( type )
+        {
+        case STRING:
+            return STRING_PROPERTY;
+        case ARRAY:
+            return ARRAY_PROPERTY;
+        default:
+            return null;
+        }
     }
 
     @Override
@@ -309,14 +316,6 @@ class OwnerCheck implements CheckDecorator
                 return new DynamicOwner.LabelToken( record );
             }
         };
-    }
-
-    @Override
-    public RecordCheck<NodeRecord, ConsistencyReport.LabelsMatchReport> decorateLabelMatchChecker(
-            RecordCheck<NodeRecord, ConsistencyReport.LabelsMatchReport> checker )
-    {
-        // TODO: Understand what this does.
-        return checker;
     }
 
     RecordCheck<DynamicRecord, ConsistencyReport.DynamicConsistencyReport> decorateDynamicChecker(
@@ -408,14 +407,14 @@ class OwnerCheck implements CheckDecorator
         abstract PropertyOwner owner( RECORD record );
     }
 
-    private static abstract class NameCheckerDecorator
+    private abstract static class NameCheckerDecorator
             <RECORD extends TokenRecord, REPORT extends ConsistencyReport.NameConsistencyReport>
             implements RecordCheck<RECORD, REPORT>
     {
         private final RecordCheck<RECORD, REPORT> checker;
         private final ConcurrentMap<Long, DynamicOwner> owners;
 
-        public NameCheckerDecorator( RecordCheck<RECORD, REPORT> checker, ConcurrentMap<Long, DynamicOwner> owners )
+        NameCheckerDecorator( RecordCheck<RECORD,REPORT> checker, ConcurrentMap<Long,DynamicOwner> owners )
         {
             this.checker = checker;
             this.owners = owners;
@@ -441,14 +440,5 @@ class OwnerCheck implements CheckDecorator
     }
 
     private static final ComparativeRecordChecker<PropertyRecord, PrimitiveRecord, ConsistencyReport.PropertyConsistencyReport> ORPHAN_CHECKER =
-            new ComparativeRecordChecker<PropertyRecord, PrimitiveRecord, ConsistencyReport.PropertyConsistencyReport>()
-            {
-                @Override
-                public void checkReference( PropertyRecord record, PrimitiveRecord primitiveRecord,
-                                            CheckerEngine<PropertyRecord, ConsistencyReport.PropertyConsistencyReport> engine,
-                                            RecordAccess records )
-                {
-                    engine.report().orphanPropertyChain();
-                }
-            };
+            ( record, primitiveRecord, engine, records ) -> engine.report().orphanPropertyChain();
 }

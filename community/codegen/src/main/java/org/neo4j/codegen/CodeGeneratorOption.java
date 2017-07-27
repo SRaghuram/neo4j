@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,11 +23,8 @@ public interface CodeGeneratorOption
 {
     void applyTo( Object target );
 
-    CodeGeneratorOption BLANK_OPTION = new CodeGeneratorOption()
+    CodeGeneratorOption BLANK_OPTION = target ->
     {
-        @Override
-        public void applyTo( Object target )
-        {
-        }
     };
+    CodeGeneratorOption PRINT_DISASSEMBLY = ByteCodeVisitor.printer( System.out );
 }

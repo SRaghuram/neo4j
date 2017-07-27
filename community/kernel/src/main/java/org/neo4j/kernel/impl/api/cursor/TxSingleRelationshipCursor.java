@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,19 +19,19 @@
  */
 package org.neo4j.kernel.impl.api.cursor;
 
+import java.util.function.Consumer;
+
 import org.neo4j.cursor.Cursor;
-import org.neo4j.function.Consumer;
 import org.neo4j.kernel.api.StatementConstants;
-import org.neo4j.kernel.api.cursor.RelationshipItem;
 import org.neo4j.kernel.api.txstate.TransactionState;
+import org.neo4j.storageengine.api.RelationshipItem;
 
 /**
  * Overlays transaction state on a {@link RelationshipItem} item.
  */
-public class TxSingleRelationshipCursor
-        extends TxAbstractRelationshipCursor
+public class TxSingleRelationshipCursor extends TxAbstractRelationshipCursor
 {
-    private long nextId;
+    private long nextId = StatementConstants.NO_SUCH_RELATIONSHIP;
 
     public TxSingleRelationshipCursor( TransactionState state, Consumer<TxSingleRelationshipCursor> instanceCache )
     {
@@ -52,6 +52,7 @@ public class TxSingleRelationshipCursor
         {
             visit( StatementConstants.NO_SUCH_RELATIONSHIP, StatementConstants.NO_SUCH_RELATIONSHIP_TYPE,
                     StatementConstants.NO_SUCH_NODE, StatementConstants.NO_SUCH_NODE );
+            nextId = StatementConstants.NO_SUCH_RELATIONSHIP;
             return false;
         }
 
@@ -76,7 +77,8 @@ public class TxSingleRelationshipCursor
         {
             visit( StatementConstants.NO_SUCH_RELATIONSHIP, StatementConstants.NO_SUCH_RELATIONSHIP_TYPE,
                     StatementConstants.NO_SUCH_NODE, StatementConstants.NO_SUCH_NODE );
-            this.relationshipState = null;
+            relationshipState = null;
+            nextId = StatementConstants.NO_SUCH_RELATIONSHIP;
             return false;
         }
     }

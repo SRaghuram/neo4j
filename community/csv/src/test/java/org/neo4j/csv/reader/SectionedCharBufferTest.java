@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,7 +37,7 @@ public class SectionedCharBufferTest
         buffer.readFrom( data );
 
         // WHEN
-        buffer.compact( buffer, buffer.front()-2 );
+        buffer.compact( buffer, buffer.front() - 2 );
 
         // THEN
         assertEquals( '2', buffer.array()[2] );
@@ -56,7 +56,7 @@ public class SectionedCharBufferTest
         // WHEN
         buffer2.readFrom( data );
         // simulate reading 2 chars as one value, then reading 2 bytes and requesting more
-        buffer1.compact( buffer2, buffer1.pivot()+2 /*simulate reading 2 chars*/ );
+        buffer1.compact( buffer2, buffer1.pivot() + 2 /*simulate reading 2 chars*/ );
 
         // THEN
         assertEquals( '2', buffer2.array()[2] );

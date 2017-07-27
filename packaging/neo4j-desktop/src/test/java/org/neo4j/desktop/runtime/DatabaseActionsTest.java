@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,44 +19,42 @@
  */
 package org.neo4j.desktop.runtime;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Properties;
+
+import org.neo4j.desktop.Parameters;
 import org.neo4j.desktop.config.Installation;
-import org.neo4j.desktop.ui.DesktopModel;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.desktop.model.DesktopModel;
+import org.neo4j.kernel.configuration.HttpConnector;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import static org.neo4j.server.ServerTestUtils.writePropertiesToFile;
-
 public class DatabaseActionsTest
 {
     @Rule
-    public TargetDirectory.TestDirectory baseDir = TargetDirectory.testDirForTest( getClass() );
+    public TestDirectory testDirectory = TestDirectory.testDirectory();
 
     private File storeDir;
-    private File serverConfigFile;
-    private File dbConfigFile;
+    private File configFile;
 
     @Test
-    public void shouldCreateMessagesLogInDbDirWithClassicLog() throws Exception
+    public void shouldCreateMessagesLogBelowStoreDir() throws Exception
     {
         // Given
         Installation installation = mock( Installation.class );
         when( installation.getDatabaseDirectory() ).thenReturn( storeDir );
-        when( installation.getServerConfigurationsFile() ).thenReturn( serverConfigFile );
+        when( installation.getConfigurationsFile() ).thenReturn( configFile );
 
-        DesktopModel model = new DesktopModel( installation );
+        DesktopModel model = new DesktopModel( installation, new Parameters( new String[] {} ) );
         DatabaseActions databaseActions = new DatabaseActions( model );
 
         try
@@ -65,7 +63,7 @@ public class DatabaseActionsTest
             databaseActions.start();
 
             // Then
-            File logFile = new File( storeDir, "messages.log" );
+            File logFile = new File( new File( storeDir, "logs" ), "debug.log" );
             assertTrue( logFile.exists() );
         }
         finally
@@ -78,15 +76,17 @@ public class DatabaseActionsTest
     @Before
     public void createFiles() throws IOException
     {
-        storeDir = new File( baseDir.directory(), "store_dir" );
-        serverConfigFile = new File( storeDir, "neo4j-server.properties" );
-        dbConfigFile = new File( storeDir, "neo4j.properties" );
+        storeDir = new File( testDirectory.directory(), "store_dir" );
         storeDir.mkdirs();
 
-        Map<String,String> properties = MapUtil.stringMap( GraphDatabaseSettings.store_dir.name(),
-                storeDir.getAbsolutePath());
-        writePropertiesToFile( properties, serverConfigFile );
-
-        dbConfigFile.createNewFile();
+        configFile = new File( testDirectory.directory(), "neo4j.conf" );
+        Properties props = new Properties();
+        props.setProperty( new HttpConnector( "http" ).type.name(), "HTTP" );
+        props.setProperty( new HttpConnector( "http" ).encryption.name(), "NONE" );
+        props.setProperty( new HttpConnector( "http" ).enabled.name(), "true" );
+        try ( FileWriter writer = new FileWriter( configFile ) )
+        {
+            props.store( writer, "" );
+        }
     }
 }

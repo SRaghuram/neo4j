@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,7 @@ package org.neo4j.unsafe.impl.batchimport.input;
 
 import java.util.Collection;
 
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 
 import static org.neo4j.unsafe.impl.batchimport.input.Group.GLOBAL;
 
@@ -30,13 +30,10 @@ import static org.neo4j.unsafe.impl.batchimport.input.Group.GLOBAL;
  */
 public class InputRelationship extends InputEntity
 {
-    public static final long NO_SPECIFIC_ID = -1L;
-
-    private long id = NO_SPECIFIC_ID;
     private final Object startNode;
     private final Object endNode;
     private String type;
-    private final Integer typeId;
+    private Integer typeId;
     private final Group startNodeGroup;
     private final Group endNodeGroup;
 
@@ -62,23 +59,6 @@ public class InputRelationship extends InputEntity
         this.endNode = endNode;
         this.type = type;
         this.typeId = typeId;
-    }
-
-    public InputRelationship setSpecificId( long id )
-    {
-        this.id = id;
-        return this;
-    }
-
-    public boolean hasSpecificId()
-    {
-        return id != NO_SPECIFIC_ID;
-    }
-
-    public long specificId()
-    {
-        assert hasSpecificId() : "Didn't have specific id set";
-        return id;
     }
 
     public Group startNodeGroup()
@@ -119,14 +99,15 @@ public class InputRelationship extends InputEntity
     public void setType( String type )
     {
         this.type = type;
+        this.typeId = null;
     }
 
     @Override
     protected void toStringFields( Collection<Pair<String, ?>> fields )
     {
         super.toStringFields( fields );
-        fields.add( Pair.of( "startNode", startNode ) );
-        fields.add( Pair.of( "endNode", endNode ) );
+        fields.add( Pair.of( "startNode", startNode + " (" + startNodeGroup.name() + ")" ) );
+        fields.add( Pair.of( "endNode", endNode + " (" + endNodeGroup.name() + ")" ) );
         if ( hasTypeId() )
         {
             fields.add( Pair.of( "typeId", typeId ) );
@@ -135,5 +116,10 @@ public class InputRelationship extends InputEntity
         {
             fields.add( Pair.of( "type", type ) );
         }
+    }
+
+    public Object typeAsObject()
+    {
+        return hasTypeId() ? typeId() : type();
     }
 }

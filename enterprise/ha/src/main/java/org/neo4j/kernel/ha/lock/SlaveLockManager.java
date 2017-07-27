@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,44 +20,46 @@
 package org.neo4j.kernel.ha.lock;
 
 import org.neo4j.kernel.AvailabilityGuard;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.com.RequestContextFactory;
 import org.neo4j.kernel.ha.com.master.Master;
 import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.logging.LogProvider;
 
-public class SlaveLockManager extends LifecycleAdapter implements Locks
+public class SlaveLockManager implements Locks
 {
     private final RequestContextFactory requestContextFactory;
     private final Locks local;
     private final Master master;
     private final AvailabilityGuard availabilityGuard;
-    private final Configuration config;
-
-    public interface Configuration
-    {
-        long getAvailabilityTimeout();
-    }
+    private final LogProvider logProvider;
 
     public SlaveLockManager( Locks localLocks, RequestContextFactory requestContextFactory, Master master,
-                             AvailabilityGuard availabilityGuard, Configuration config )
+            AvailabilityGuard availabilityGuard, LogProvider logProvider, Config config )
     {
         this.requestContextFactory = requestContextFactory;
         this.availabilityGuard = availabilityGuard;
-        this.config = config;
         this.local = localLocks;
         this.master = master;
+        this.logProvider = logProvider;
     }
 
     @Override
     public Client newClient()
     {
-        return new SlaveLocksClient(
-                master, local.newClient(), local, requestContextFactory, availabilityGuard, config );
+        Client client = local.newClient();
+        return new SlaveLocksClient( master, client, local, requestContextFactory, availabilityGuard, logProvider );
     }
 
     @Override
     public void accept( Visitor visitor )
     {
         local.accept( visitor );
+    }
+
+    @Override
+    public void close()
+    {
+        local.close();
     }
 }

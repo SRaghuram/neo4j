@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel.impl.util;
 
-import org.neo4j.function.Predicate;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -31,18 +29,23 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
+import static java.lang.String.format;
+import static java.lang.System.currentTimeMillis;
+import static java.lang.System.nanoTime;
 import static java.lang.reflect.Modifier.isPublic;
 import static java.lang.reflect.Modifier.isStatic;
-
 import static org.neo4j.helpers.Exceptions.stringify;
+import static org.neo4j.helpers.Format.duration;
 
 public class DebugUtil
 {
     public static void printShortStackTrace( Throwable cause, int maxNumberOfStackLines )
     {
-        System.out.println( firstLinesOf( stringify( cause ), maxNumberOfStackLines+1 ) );
+        System.out.println( firstLinesOf( stringify( cause ), maxNumberOfStackLines + 1 ) );
     }
 
     public static String firstLinesOf( String string, int maxNumberOfLines )
@@ -68,9 +71,9 @@ public class DebugUtil
         }
     }
 
-    public static boolean currentStackTraceContains( Predicate<StackTraceElement> predicate )
+    public static boolean stackTraceContains( Thread thread, Predicate<StackTraceElement> predicate )
     {
-        for ( StackTraceElement element : Thread.currentThread().getStackTrace() )
+        for ( StackTraceElement element : thread.getStackTrace() )
         {
             if ( predicate.test( element ) )
             {
@@ -80,75 +83,54 @@ public class DebugUtil
         return false;
     }
 
+    public static boolean currentStackTraceContains( Predicate<StackTraceElement> predicate )
+    {
+        return stackTraceContains( Thread.currentThread(), predicate );
+    }
+
     public static Predicate<StackTraceElement> classNameIs( final String className )
     {
-        return new Predicate<StackTraceElement>()
-        {
-            @Override
-            public boolean test( StackTraceElement item )
-            {
-                return item.getClassName().equals( className );
-            }
-        };
+        return item -> item.getClassName().equals( className );
     }
 
     public static Predicate<StackTraceElement> classNameContains( final String classNamePart )
     {
-        return new Predicate<StackTraceElement>()
-        {
-            @Override
-            public boolean test( StackTraceElement item )
-            {
-                return item.getClassName().contains( classNamePart );
-            }
-        };
+        return item -> item.getClassName().contains( classNamePart );
     }
 
     public static Predicate<StackTraceElement> classIs( final Class<?> cls )
     {
-        return new Predicate<StackTraceElement>()
-        {
-            @Override
-            public boolean test( StackTraceElement item )
-            {
-                return item.getClassName().equals( cls.getName() );
-            }
-        };
+        return item -> item.getClassName().equals( cls.getName() );
     }
 
     public static Predicate<StackTraceElement> classNameAndMethodAre( final String className,
             final String methodName )
     {
-        return new Predicate<StackTraceElement>()
-        {
-            @Override
-            public boolean test( StackTraceElement item )
-            {
-                return item.getClassName().equals( className ) && item.getMethodName().equals( methodName );
-            }
-        };
+        return item -> item.getClassName().equals( className ) && item.getMethodName().equals( methodName );
     }
 
     public static Predicate<StackTraceElement> classAndMethodAre( final Class<?> cls, final String methodName )
     {
-        return new Predicate<StackTraceElement>()
-        {
-            @Override
-            public boolean test( StackTraceElement item )
-            {
-                return item.getClassName().equals( cls.getName() ) && item.getMethodName().equals( methodName );
-            }
-        };
+        return item -> item.getClassName().equals( cls.getName() ) && item.getMethodName().equals( methodName );
+    }
+
+    public static Predicate<StackTraceElement> methodIs( String methodName )
+    {
+        return item -> item.getMethodName().equals( methodName );
     }
 
     public static class StackTracer
     {
-        private final Map<Stack, AtomicInteger> uniqueStackTraces = new HashMap<>();
+        private final Map<CallStack, AtomicInteger> uniqueStackTraces = new HashMap<>();
         private boolean considerMessages = true;
 
-        public void add( Throwable t )
+        /**
+         * Returns {@link AtomicInteger} for the unique stack trace provided. It gets updated
+         * as more are added.
+         */
+        public AtomicInteger add( Throwable t )
         {
-            Stack key = new Stack( t, considerMessages );
+            CallStack key = new CallStack( t, considerMessages );
             AtomicInteger count = uniqueStackTraces.get( key );
             if ( count == null )
             {
@@ -156,13 +138,14 @@ public class DebugUtil
                 uniqueStackTraces.put( key, count );
             }
             count.incrementAndGet();
+            return count;
         }
 
         public void print( PrintStream out, int interestThreshold )
         {
             System.out.println( "Printing stack trace counts:" );
             long total = 0;
-            for ( Map.Entry<Stack, AtomicInteger> entry : uniqueStackTraces.entrySet() )
+            for ( Map.Entry<CallStack, AtomicInteger> entry : uniqueStackTraces.entrySet() )
             {
                 if ( entry.getValue().get() >= interestThreshold )
                 {
@@ -195,25 +178,34 @@ public class DebugUtil
         }
     }
 
-    private static class Stack
+    public static class CallStack
     {
+        private final String message;
         private final Throwable stackTrace;
         private final StackTraceElement[] elements;
         private final boolean considerMessage;
 
-        Stack( Throwable stackTrace, boolean considerMessage )
+        public CallStack( Throwable stackTrace, boolean considerMessage )
         {
+            this.message = stackTrace.getMessage();
             this.stackTrace = stackTrace;
             this.considerMessage = considerMessage;
             this.elements = stackTrace.getStackTrace();
         }
 
+        public CallStack( StackTraceElement[] elements, String message )
+        {
+            this.message = message;
+            this.stackTrace = null;
+            this.elements = elements;
+            this.considerMessage = true;
+        }
+
         @Override
         public int hashCode()
         {
-            int hashCode = stackTrace.getMessage() == null || !considerMessage ? 31 :
-                stackTrace.getMessage().hashCode();
-            for ( StackTraceElement element : stackTrace.getStackTrace() )
+            int hashCode = message == null || !considerMessage ? 31 : message.hashCode();
+            for ( StackTraceElement element : elements )
             {
                 hashCode = hashCode * 9 + element.hashCode();
             }
@@ -223,22 +215,22 @@ public class DebugUtil
         @Override
         public boolean equals( Object obj )
         {
-            if ( !( obj instanceof Stack) )
+            if ( !( obj instanceof CallStack) )
             {
                 return false;
             }
 
-            Stack o = (Stack) obj;
+            CallStack o = (CallStack) obj;
             if ( considerMessage )
             {
-                if ( stackTrace.getMessage() == null )
+                if ( message == null )
                 {
-                    if ( o.stackTrace.getMessage() != null )
+                    if ( o.message != null )
                     {
                         return false;
                     }
                 }
-                else if ( !stackTrace.getMessage().equals( o.stackTrace.getMessage() ) )
+                else if ( !message.equals( o.message ) )
                 {
                     return false;
                 }
@@ -255,6 +247,19 @@ public class DebugUtil
                 }
             }
             return true;
+        }
+
+        @Override
+        public String toString()
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.append( stackTrace != null ? stackTrace.getClass().getName() + ": " : "" )
+                    .append( message != null ? message : "" );
+            for ( StackTraceElement element : elements )
+            {
+                builder.append( format( "%n" ) ).append( "    at " ).append( element.toString() );
+            }
+            return builder.toString();
         }
     }
 
@@ -319,7 +324,7 @@ public class DebugUtil
     public static String trackTest()
     {
         boolean track = false;
-        assert (track = true) : "A trick to set this variable to true if assertions are enabled";
+        assert track = true : "A trick to set this variable to true if assertions are enabled";
 
         if ( track )
         {
@@ -349,9 +354,7 @@ public class DebugUtil
 
     private static String simpleClassName( String className )
     {
-        return className.indexOf( '.' ) == -1
-                ? className
-                : className.substring( className.lastIndexOf( '.' )+1 );
+        return className.indexOf( '.' ) == -1 ? className : className.substring( className.lastIndexOf( '.' ) + 1 );
     }
 
     private static boolean hasTestAnnotation( Method method )
@@ -364,5 +367,79 @@ public class DebugUtil
             }
         }
         return false;
+    }
+
+    /**
+     * Super simple utility for determining where most time is spent when you don't know where to even start.
+     * It could be used to home in on right place in a test or in a sequence of operations or similar.
+     */
+    public abstract static class Timer
+    {
+        private final TimeUnit unit;
+        private long startTime;
+
+        protected Timer( TimeUnit unit )
+        {
+            this.unit = unit;
+            this.startTime = currentTime();
+        }
+
+        protected abstract long currentTime();
+
+        public void reset()
+        {
+            startTime = currentTime();
+        }
+
+        public void at( String point )
+        {
+            long duration = currentTime() - startTime;
+            System.out.println( duration( unit.toMillis( duration ) ) + " @ " + point );
+            startTime = currentTime();
+        }
+
+        public static Timer millis()
+        {
+            return new Millis();
+        }
+
+        private static class Millis extends Timer
+        {
+            Millis()
+            {
+                super( TimeUnit.MILLISECONDS );
+            }
+
+            @Override
+            protected long currentTime()
+            {
+                return currentTimeMillis();
+            }
+        }
+
+        public static Timer nanos()
+        {
+            return new Nanos();
+        }
+
+        private static class Nanos extends Timer
+        {
+            Nanos()
+            {
+                super( TimeUnit.NANOSECONDS );
+            }
+
+            @Override
+            protected long currentTime()
+            {
+                return nanoTime();
+            }
+        }
+    }
+
+    public static long time( long startTime, String message )
+    {
+        System.out.println( duration( currentTimeMillis() - startTime ) + ": " + message );
+        return currentTimeMillis();
     }
 }

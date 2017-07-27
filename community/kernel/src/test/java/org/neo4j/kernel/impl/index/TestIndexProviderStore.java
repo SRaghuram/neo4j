@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,15 @@
  */
 package org.neo4j.kernel.impl.index;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -59,6 +60,12 @@ public class TestIndexProviderStore
         fileSystem = new DefaultFileSystemAbstraction();
         file.mkdirs();
         fileSystem.deleteFile( file );
+    }
+
+    @After
+    public void tearDown() throws IOException
+    {
+        fileSystem.close();
     }
 
     @Test
@@ -140,7 +147,7 @@ public class TestIndexProviderStore
         // This was before 1.6.M02
         IndexProviderStore store = new IndexProviderStore( file, fileSystem, 0, false );
         store.close();
-        FileUtils.truncateFile( file, 4*8 );
+        FileUtils.truncateFile( file, 4 * 8 );
         try
         {
             store = new IndexProviderStore( file, fileSystem, 0, false );
@@ -165,7 +172,7 @@ public class TestIndexProviderStore
         when( tempChannel = fs.open( file, "rw" ) ).then( new Answer<StoreChannel>()
         {
             @Override
-            public StoreChannel answer( InvocationOnMock _ ) throws Throwable
+            public StoreChannel answer( InvocationOnMock ignored ) throws Throwable
             {
                 StoreChannel channel = fileSystem.open( file, "rw" );
                 if ( channelUsedToCreateFile[0] == null )

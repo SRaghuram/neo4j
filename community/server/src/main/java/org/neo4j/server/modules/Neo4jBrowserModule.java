@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,17 +30,17 @@ public class Neo4jBrowserModule implements ServerModule
 
     public Neo4jBrowserModule( WebServer webServer )
     {
-    	this.webServer = webServer;
+        this.webServer = webServer;
     }
 
     @Override
-	public void start()
+    public void start()
     {
         webServer.addStaticContent( DEFAULT_NEO4J_BROWSER_STATIC_WEB_CONTENT_LOCATION, DEFAULT_NEO4J_BROWSER_PATH );
     }
 
     @Override
-	public void stop()
+    public void stop()
     {
         webServer.removeStaticContent( DEFAULT_NEO4J_BROWSER_STATIC_WEB_CONTENT_LOCATION, DEFAULT_NEO4J_BROWSER_PATH );
     }

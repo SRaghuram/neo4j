@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,8 +20,13 @@
 package org.neo4j.kernel.monitoring.tracing;
 
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.kernel.impl.locking.LockTracer;
 import org.neo4j.kernel.impl.transaction.tracing.CheckPointTracer;
 import org.neo4j.kernel.impl.transaction.tracing.TransactionTracer;
+import org.neo4j.kernel.impl.util.JobScheduler;
+import org.neo4j.kernel.monitoring.Monitors;
 
 /**
  * A TracerFactory determines the implementation of the tracers, that a database should use. Each implementation has
@@ -38,19 +43,51 @@ public interface TracerFactory
 
     /**
      * Create a new PageCacheTracer instance.
+     *
+     * @param monitors the monitoring manager
+     * @param jobScheduler a scheduler for async jobs
      * @return The created instance.
      */
-    PageCacheTracer createPageCacheTracer();
+    PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler );
 
     /**
      * Create a new TransactionTracer instance.
+     *
+     * @param monitors the monitoring manager
+     * @param jobScheduler a scheduler for async jobs
      * @return The created instance.
      */
-    TransactionTracer createTransactionTracer();
+    TransactionTracer createTransactionTracer( Monitors monitors, JobScheduler jobScheduler );
 
     /**
      * Create a new CheckPointTracer instance.
+     *
+     * @param monitors the monitoring manager
+     * @param jobScheduler a scheduler for async jobs
      * @return The created instance.
      */
-    CheckPointTracer createCheckPointTracer();
+    CheckPointTracer createCheckPointTracer( Monitors monitors, JobScheduler jobScheduler );
+
+    /**
+     * Create a new LockTracer instance.
+     *
+     * @param monitors the monitoring manager
+     * @param jobScheduler a scheduler for async jobs
+     * @return The created instance.
+     */
+    default LockTracer createLockTracer( Monitors monitors, JobScheduler jobScheduler )
+    {
+        return LockTracer.NONE;
+    }
+
+    /**
+     * Create a new PageCursorTracerSupplier instance.
+     * @param monitors the monitoring manager
+     * @param jobScheduler a scheduler for async jobs
+     * @return The created instance.
+     */
+    default PageCursorTracerSupplier createPageCursorTracerSupplier( Monitors monitors, JobScheduler jobScheduler )
+    {
+        return DefaultPageCursorTracerSupplier.INSTANCE;
+    }
 }

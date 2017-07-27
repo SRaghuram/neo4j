@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,9 @@
  */
 package org.neo4j.com;
 
-import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.test.subprocess.SubProcess;
+
+import static org.neo4j.com.StoreIdTestFactory.newStoreIdForCurrentVersion;
 
 public class MadeUpServerProcess extends SubProcess<ServerInterface, StartupData> implements ServerInterface
 {
@@ -34,7 +35,7 @@ public class MadeUpServerProcess extends SubProcess<ServerInterface, StartupData
     protected void startup( StartupData data ) throws Throwable
     {
         MadeUpCommunicationInterface implementation = new MadeUpServerImplementation(
-                new StoreId( data.creationTime, data.storeId, data.creationTime, data.storeId ) );
+                newStoreIdForCurrentVersion( data.creationTime, data.storeId, data.creationTime, data.storeId ) );
         MadeUpServer localServer = new MadeUpServer( implementation, 8888, data.internalProtocolVersion,
                 data.applicationProtocolVersion, TxChecksumVerifier.ALWAYS_MATCH, data.chunkSize );
         localServer.init();
@@ -48,7 +49,7 @@ public class MadeUpServerProcess extends SubProcess<ServerInterface, StartupData
     {
         try
         {
-            long endTime = System.currentTimeMillis()+20*1000;
+            long endTime = System.currentTimeMillis() + 20 * 1000;
             while ( server == null && System.currentTimeMillis() < endTime )
             {
                 Thread.sleep( 10 );

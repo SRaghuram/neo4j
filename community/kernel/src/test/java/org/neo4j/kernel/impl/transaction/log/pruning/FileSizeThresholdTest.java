@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -46,7 +46,7 @@ public class FileSizeThresholdTest
         final long maxSize = 10;
         final FileSizeThreshold threshold = new FileSizeThreshold( fs, maxSize );
 
-        when( fs.getFileSize( file ) ).thenReturn( 5l );
+        when( fs.getFileSize( file ) ).thenReturn( 5L );
 
         // when
         threshold.init();
@@ -60,7 +60,7 @@ public class FileSizeThresholdTest
     public void shouldReturnTrueWhenASingleFileSizeIsGreaterOrEqualThanMaxSize()
     {
         // given
-        long sixteenGigabytes = 16l * 1024 * 1024 * 1024;
+        long sixteenGigabytes = 16L * 1024 * 1024 * 1024;
 
         final FileSizeThreshold threshold = new FileSizeThreshold( fs, sixteenGigabytes );
 
@@ -81,7 +81,7 @@ public class FileSizeThresholdTest
         final long maxSize = 10;
         final FileSizeThreshold threshold = new FileSizeThreshold( fs, maxSize );
 
-        when( fs.getFileSize( file ) ).thenReturn( 5l );
+        when( fs.getFileSize( file ) ).thenReturn( 5L );
 
         // when
         threshold.init();
@@ -99,7 +99,7 @@ public class FileSizeThresholdTest
         final long maxSize = 10;
         final FileSizeThreshold threshold = new FileSizeThreshold( fs, maxSize );
 
-        when( fs.getFileSize( file ) ).thenReturn( 5l );
+        when( fs.getFileSize( file ) ).thenReturn( 5L );
 
         // when
         threshold.init();

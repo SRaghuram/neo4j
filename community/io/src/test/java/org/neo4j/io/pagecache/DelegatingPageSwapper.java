@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -74,6 +74,12 @@ public class DelegatingPageSwapper implements PageSwapper
     public void truncate() throws IOException
     {
         delegate.truncate();
+    }
+
+    @Override
+    public void closeAndDelete() throws IOException
+    {
+        delegate.closeAndDelete();
     }
 
     public long read( long startFilePageId, Page[] pages, int arrayOffset, int length ) throws IOException

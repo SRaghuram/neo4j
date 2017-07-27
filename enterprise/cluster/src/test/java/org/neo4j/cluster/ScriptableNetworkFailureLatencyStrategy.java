@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,26 +34,26 @@ public class ScriptableNetworkFailureLatencyStrategy
 {
     List<String> nodesDown = new ArrayList<String>(  );
     List<String[]> linksDown = new ArrayList<String[]>(  );
-    
+
     public ScriptableNetworkFailureLatencyStrategy nodeIsDown(String id)
     {
         nodesDown.add( id );
         return this;
     }
-    
+
     public ScriptableNetworkFailureLatencyStrategy nodeIsUp(String id)
     {
         nodesDown.remove( id );
         return this;
     }
-    
+
     public ScriptableNetworkFailureLatencyStrategy linkIsDown(String node1, String node2)
     {
         linksDown.add( new String[]{node1, node2} );
         linksDown.add( new String[]{ node2, node1 } );
         return this;
     }
-    
+
     public ScriptableNetworkFailureLatencyStrategy linkIsUp(String node1, String node2)
     {
         linksDown.remove( new String[]{ node1, node2 } );
@@ -61,15 +61,18 @@ public class ScriptableNetworkFailureLatencyStrategy
         return this;
     }
 
-
     @Override
     public long messageDelay(Message<? extends MessageType> message, String serverIdTo)
     {
-        if (nodesDown.contains( serverIdTo ) || nodesDown.contains( message.getHeader( Message.FROM ) ))
+        if ( nodesDown.contains( serverIdTo ) || nodesDown.contains( message.getHeader( Message.FROM ) ) )
+        {
             return LOST;
+        }
 
-        if (linksDown.contains( new String[]{message.getHeader( Message.FROM ),serverIdTo} ))
+        if ( linksDown.contains( new String[]{message.getHeader( Message.FROM ), serverIdTo} ) )
+        {
             return LOST;
+        }
 
         return 0;
     }

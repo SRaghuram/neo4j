@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,27 +19,19 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
-import org.neo4j.kernel.api.index.IndexDescriptor;
-
-public interface IndexCountsRemover
+public class IndexCountsRemover
 {
-    /**
-     * Remove the associated index counts
-     */
-    void remove();
+    private final IndexStoreView storeView;
+    private final long indexId;
 
-    public static class Factory
+    public IndexCountsRemover( final IndexStoreView storeView, final long indexId )
     {
-        public static IndexCountsRemover create( final IndexStoreView storeView, final IndexDescriptor descriptor )
-        {
-            return new IndexCountsRemover()
-            {
-                @Override
-                public void remove()
-                {
-                    storeView.replaceIndexCounts( descriptor, 0, 0, 0 );
-                }
-            };
-        }
+        this.storeView = storeView;
+        this.indexId = indexId;
+    }
+
+    public void remove()
+    {
+        storeView.replaceIndexCounts( indexId, 0, 0, 0 );
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -45,16 +45,19 @@ public enum Record
     NO_LABELS_FIELD( (byte)0, 0 );
 
     public static final byte CREATED_IN_TX = 2;
+    public static final byte REQUIRE_SECONDARY_UNIT = 4;
+    public static final byte HAS_SECONDARY_UNIT = 8;
+    public static final byte USES_FIXED_REFERENCE_FORMAT = 16;
 
     private byte byteValue;
     private int intValue;
 
-    private Record( Record from )
+    Record( Record from )
     {
         this( from.byteValue, from.intValue );
     }
 
-    private Record( byte byteValue, int intValue )
+    Record( byte byteValue, int intValue )
     {
         this.byteValue = byteValue;
         this.intValue = intValue;
@@ -76,6 +79,11 @@ public enum Record
      * @return The int value for this record type
      */
     public int intValue()
+    {
+        return intValue;
+    }
+
+    public long longValue()
     {
         return intValue;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -40,7 +39,7 @@ public class GraphDescription implements GraphDefinition
         private final String start;
         private final RelationshipType type;
 
-        public RelationshipDescription( String rel )
+        RelationshipDescription( String rel )
         {
             String[] parts = rel.split( " " );
             if ( parts.length != 3 )
@@ -49,7 +48,7 @@ public class GraphDescription implements GraphDefinition
                                                     + "\"" );
             }
             start = parts[0];
-            type = DynamicRelationshipType.withName( parts[1] );
+            type = RelationshipType.withName( parts[1] );
             end = parts[2];
         }
 

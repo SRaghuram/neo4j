@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,12 +26,9 @@ import java.util.List;
 import org.neo4j.concurrent.RecentK;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.guard.Guard;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.configuration.ServerSettings;
-import org.neo4j.server.database.Database;
-import org.neo4j.server.guard.GuardingRequestFilter;
 import org.neo4j.server.plugins.PluginManager;
 import org.neo4j.server.rest.web.BatchOperationService;
 import org.neo4j.server.rest.web.CollectUserAgentFilter;
@@ -41,7 +38,6 @@ import org.neo4j.server.rest.web.ExtensionService;
 import org.neo4j.server.rest.web.ResourcesService;
 import org.neo4j.server.rest.web.RestfulGraphDatabase;
 import org.neo4j.server.rest.web.TransactionalService;
-import org.neo4j.server.web.ServerInternalSettings;
 import org.neo4j.server.web.WebServer;
 import org.neo4j.udc.UsageData;
 import org.neo4j.udc.UsageDataKeys;
@@ -55,20 +51,17 @@ public class RESTApiModule implements ServerModule
 {
     private final Config config;
     private final WebServer webServer;
-    private final Database database;
     private DependencyResolver dependencyResolver;
     private final LogProvider logProvider;
     private final Log log;
 
     private PluginManager plugins;
-    private GuardingRequestFilter requestTimeLimitFilter;
 
-    public RESTApiModule( WebServer webServer, Database database, Config config, DependencyResolver dependencyResolver,
+    public RESTApiModule( WebServer webServer, Config config, DependencyResolver dependencyResolver,
             LogProvider logProvider )
     {
         this.webServer = webServer;
         this.config = config;
-        this.database = database;
         this.dependencyResolver = dependencyResolver;
         this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
@@ -84,8 +77,6 @@ public class RESTApiModule implements ServerModule
             webServer.addFilter( new CollectUserAgentFilter( clientNames() ), "/*" );
             webServer.addJAXRSClasses( getClassNames(), restApiUri.toString(), null );
             loadPlugins();
-
-            setupRequestTimeLimit();
         }
         catch ( URISyntaxException e )
         {
@@ -123,8 +114,6 @@ public class RESTApiModule implements ServerModule
         try
         {
             webServer.removeJAXRSClasses( getClassNames(), restApiUri().toString() );
-
-            tearDownRequestTimeLimit();
             unloadPlugins();
         }
         catch ( URISyntaxException e )
@@ -133,37 +122,9 @@ public class RESTApiModule implements ServerModule
         }
     }
 
-    private void tearDownRequestTimeLimit()
-    {
-        if(requestTimeLimitFilter != null)
-        {
-            webServer.removeFilter(requestTimeLimitFilter, "/*");
-        }
-    }
-
-    private void setupRequestTimeLimit()
-    {
-        Long limit = config.get( ServerSettings.webserver_limit_execution_time );
-        
-        if ( limit != null )
-        {
-            try
-            {
-                Guard guard = database.getGraph().getDependencyResolver().resolveDependency( Guard.class );
-                this.requestTimeLimitFilter = new GuardingRequestFilter( guard, limit );
-                webServer.addFilter(requestTimeLimitFilter , "/*" );
-            }
-            catch ( IllegalArgumentException e )
-            {
-                //TODO enable guard and restart EmbeddedGraphdb
-                throw new RuntimeException( "Unable to use guard, you have to enable guard in neo4j.properties", e );
-            }
-        }
-    }
-
     private URI restApiUri() throws URISyntaxException
     {
-        return config.get( ServerInternalSettings.rest_api_path );
+        return config.get( ServerSettings.rest_api_path );
     }
 
     private void loadPlugins()

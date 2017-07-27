@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,19 +26,19 @@ import java.util.concurrent.TimeUnit;
 public interface LegacyDatabase extends Remote
 {
     int stop() throws RemoteException;
-    
+
     String getStoreDir() throws RemoteException;
-    
+
     void awaitStarted( long time, TimeUnit unit ) throws RemoteException;
 
     long initialize() throws RemoteException;
 
     long createNode() throws RemoteException;
 
-    public void doComplexLoad( long center ) throws RemoteException;
+    void doComplexLoad( long center ) throws RemoteException;
 
     void verifyNodeExists( long id ) throws RemoteException;
-    
+
     boolean isMaster() throws RemoteException;
 
     void verifyComplexLoad( long centralNode ) throws RemoteException;

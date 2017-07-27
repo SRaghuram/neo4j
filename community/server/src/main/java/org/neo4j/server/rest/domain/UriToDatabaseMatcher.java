@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -53,7 +53,7 @@ public class UriToDatabaseMatcher
     /**
      * Adds a mapping the given database using the default URI
      * (/{database_name})
-     * 
+     *
      * @param databaseName
      */
     public void add( GraphDatabaseName databaseName )
@@ -84,7 +84,7 @@ public class UriToDatabaseMatcher
         public GraphDatabaseName graphDatabaseName;
         public Pattern pattern;
 
-        public Tuple( Pattern pattern, GraphDatabaseName graphDatabaseName )
+        Tuple( Pattern pattern, GraphDatabaseName graphDatabaseName )
         {
             this.pattern = pattern;
             this.graphDatabaseName = graphDatabaseName;

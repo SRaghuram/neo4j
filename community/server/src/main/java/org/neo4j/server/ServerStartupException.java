@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,26 +23,8 @@ import org.neo4j.logging.Log;
 
 import static java.lang.String.format;
 
-/**
- * Thrown during start-up of the server.
- *
- * @deprecated This class is for internal use only and will be moved to an internal package in a future release
- */
-@Deprecated
 public class ServerStartupException extends RuntimeException
 {
-    /**
-     * Creates a new exception with a message and an error code.
-     * 
-     * @param message sensible explanation about the exception, excluding the
-     *            error code value, which will be automatically appended
-     * @param errorCode unique identifying number for the error
-     */
-    public ServerStartupException( String message, Integer errorCode )
-    {
-        super( message + " Error code: " + errorCode.toString() );
-    }
-
     public ServerStartupException( String message, Throwable t )
     {
         super( message, t);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -42,8 +42,10 @@ public enum TraverserReturnType
         public Representation toRepresentation( Path position )
         {
             Relationship lastRelationship = position.lastRelationship();
-            
-            return lastRelationship != null? new org.neo4j.server.rest.repr.RelationshipRepresentation( lastRelationship ): Representation.emptyRepresentation();
+
+            return lastRelationship != null ?
+                   new org.neo4j.server.rest.repr.RelationshipRepresentation( lastRelationship ) :
+                   Representation.emptyRepresentation();
         }
     },
     path( RepresentationType.PATH )
@@ -64,7 +66,7 @@ public enum TraverserReturnType
     };
     public final RepresentationType repType;
 
-    private TraverserReturnType( RepresentationType repType )
+    TraverserReturnType( RepresentationType repType )
     {
         this.repType = repType;
     }

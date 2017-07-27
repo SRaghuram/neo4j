@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,19 +22,17 @@ package org.neo4j.kernel.impl.store.kvstore;
 import java.io.File;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Optional;
 import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
-import org.neo4j.function.Consumer;
 import org.neo4j.helpers.Exceptions;
-import org.neo4j.helpers.Pair;
-import org.neo4j.kernel.impl.util.function.Optional;
-import org.neo4j.kernel.impl.util.function.Optionals;
+import org.neo4j.helpers.collection.Pair;
 
 abstract class RotationState<Key> extends ProgressiveState<Key>
 {
     abstract ProgressiveState<Key> rotate( boolean force, RotationStrategy strategy, RotationTimerFactory timerFactory,
-                                           Consumer<Headers.Builder> headersUpdater )
-            throws IOException;
+            Consumer<Headers.Builder> headersUpdater ) throws IOException;
 
     @Override
     String stateName()
@@ -42,16 +40,21 @@ abstract class RotationState<Key> extends ProgressiveState<Key>
         return "rotating";
     }
 
-    @Override
-    abstract void close() throws IOException;
-
     abstract long rotationVersion();
+
+    /**
+     * Marks state as failed and returns the state as it were before this state.
+     *
+     * @return previous state.
+     */
+    abstract ProgressiveState<Key> markAsFailed();
 
     static final class Rotation<Key> extends RotationState<Key>
     {
         private final ActiveState<Key> preState;
         private final PrototypeState<Key> postState;
         private final long threshold;
+        private boolean failed;
 
         Rotation( ActiveState<Key> preState, PrototypeState<Key> postState, long version )
         {
@@ -60,6 +63,7 @@ abstract class RotationState<Key> extends ProgressiveState<Key>
             this.threshold = version;
         }
 
+        @Override
         ActiveState<Key> rotate( boolean force, RotationStrategy strategy, RotationTimerFactory timerFactory,
                                 Consumer<Headers.Builder> headersUpdater ) throws IOException
         {
@@ -90,9 +94,24 @@ abstract class RotationState<Key> extends ProgressiveState<Key>
         }
 
         @Override
-        void close() throws IOException
+        public void close() throws IOException
         {
-            preState.close();
+            if ( !failed )
+            {
+                // We can't just close the pre-state (the only good state right now) if the rotation failed.
+                preState.close();
+            }
+        }
+
+        @Override
+        ProgressiveState<Key> stop() throws IOException
+        {
+            if ( failed )
+            {
+                // failed to rotate allow for stopping no matter what
+                return preState;
+            }
+            return super.stop();
         }
 
         @Override
@@ -115,7 +134,7 @@ abstract class RotationState<Key> extends ProgressiveState<Key>
             if ( version <= threshold )
             {
                 final EntryUpdater<Key> pre = preState.updater( version, lock );
-                return Optionals.<EntryUpdater<Key>>some( new EntryUpdater<Key>( lock )
+                return Optional.of( new EntryUpdater<Key>( lock )
                 {
                     @Override
                     public void apply( Key key, ValueUpdate update ) throws IOException
@@ -139,7 +158,7 @@ abstract class RotationState<Key> extends ProgressiveState<Key>
             }
             else
             {
-                return Optionals.some( post );
+                return Optional.of( post );
             }
         }
 
@@ -201,6 +220,13 @@ abstract class RotationState<Key> extends ProgressiveState<Key>
         protected boolean lookup( Key key, ValueSink sink ) throws IOException
         {
             return postState.lookup( key, sink );
+        }
+
+        @Override
+        ProgressiveState<Key> markAsFailed()
+        {
+            failed = true;
+            return preState;
         }
     }
 }

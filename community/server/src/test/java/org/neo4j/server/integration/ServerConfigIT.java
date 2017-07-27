@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,10 +24,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import javax.management.ObjectName;
 
-import org.neo4j.helpers.Settings;
 import org.neo4j.jmx.impl.ConfigurationBean;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.helpers.CommunityServerBuilder;
@@ -37,7 +38,10 @@ import org.neo4j.shell.ShellSettings;
 import org.neo4j.test.server.ExclusiveServerTestBase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.fail;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_timeout;
 import static org.neo4j.jmx.JmxUtils.getAttribute;
 import static org.neo4j.jmx.JmxUtils.getObjectName;
 
@@ -46,13 +50,14 @@ public class ServerConfigIT extends ExclusiveServerTestBase
     @Rule
     public TemporaryFolder tempDir = new TemporaryFolder();
 
+    private CommunityNeoServer server;
+
     @Test
-    public void serverConfigShouldBeVisibleInJMX() throws Throwable
+    public void durationsAlwaysHaveUnitsInJMX() throws Throwable
     {
         // Given
-        String configValue = tempDir.newFile().getAbsolutePath();
-        server = CommunityServerBuilder.server().withProperty(
-                ServerSettings.http_log_config_file.name(), configValue )
+        server = CommunityServerBuilder.server()
+                .withProperty( transaction_timeout.name(), "10" )
                 .build();
 
         // When
@@ -60,10 +65,26 @@ public class ServerConfigIT extends ExclusiveServerTestBase
 
         // Then
         ObjectName name = getObjectName( server.getDatabase().getGraph(), ConfigurationBean.CONFIGURATION_MBEAN_NAME );
-        assertThat( getAttribute( name, ServerSettings.http_log_config_file.name() ), equalTo( (Object)configValue ) );
+        String attr = getAttribute( name, transaction_timeout.name() );
+        assertThat( attr, equalTo( "10000ms" ) );
     }
 
-    private CommunityNeoServer server;
+    @Test
+    public void serverConfigShouldBeVisibleInJMX() throws Throwable
+    {
+        // Given
+        String configValue = tempDir.newFile().getAbsolutePath();
+        server = CommunityServerBuilder.server().withProperty(
+        ServerSettings.run_directory.name(), configValue ).build();
+
+        // When
+        server.start();
+
+        // Then
+        ObjectName name = getObjectName( server.getDatabase().getGraph(), ConfigurationBean.CONFIGURATION_MBEAN_NAME );
+        String attr = getAttribute( name, ServerSettings.run_directory.name() );
+        assertThat( attr, equalTo( configValue ) );
+    }
 
     @Test
     public void shouldBeAbleToOverrideShellConfig()  throws Throwable
@@ -87,7 +108,7 @@ public class ServerConfigIT extends ExclusiveServerTestBase
     }
 
     @Test
-    public void connectWithShellOnDefaultPortWhenNoShellConfigSupplied() throws Throwable
+    public void shouldNotBeAbleToConnectWithShellOnDefaultPortWhenNoShellConfigSupplied() throws Throwable
     {
         // Given
         server = CommunityServerBuilder.server().build();
@@ -96,7 +117,16 @@ public class ServerConfigIT extends ExclusiveServerTestBase
         server.start();
 
         // Then
-        ShellLobby.newClient().shutdown();
+        try
+        {
+            ShellLobby.newClient().shutdown();
+            fail( "Should not have been able to connect a shell client" );
+        }
+        catch ( Exception e )
+        {
+            assertThat( "Should have been got connection refused", e.getMessage(),
+                    containsString( "Connection refused" ) );
+        }
     }
 
     private int findFreeShellPortToUse( int startingPort )

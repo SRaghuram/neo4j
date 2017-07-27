@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,7 +34,8 @@ public final class RFC1123
 
     private static final Date Y2K_START_DATE;
 
-    static {
+    static
+    {
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeZone( GMT );
         calendar.set( 2000, Calendar.JANUARY, 1, 0, 0, 0 );
@@ -59,12 +60,14 @@ public final class RFC1123
     public String format(Date date)
     {
         if ( null == date )
+        {
             throw new IllegalArgumentException( "Date is null" );
+        }
 
         return format.format( date );
     }
 
-    static final RFC1123 instance()
+    static RFC1123 instance()
     {
         RFC1123 instance = INSTANCES.get();
         if ( null == instance )

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,6 +33,7 @@ import org.neo4j.graphdb.SeverityLevel;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.graphdb.impl.notification.NotificationCode.CARTESIAN_PRODUCT;
+import static org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_PROCEDURE;
 import static org.neo4j.graphdb.impl.notification.NotificationCode.INDEX_HINT_UNFULFILLABLE;
 import static org.neo4j.graphdb.impl.notification.NotificationCode.JOIN_HINT_UNFULFILLABLE;
 
@@ -46,7 +47,7 @@ public class NotificationCodeTest
 
         assertThat( notification.getTitle(), equalTo( "The request (directly or indirectly) referred to an index that does not exist." ) );
         assertThat( notification.getSeverity(), equalTo( SeverityLevel.WARNING ) );
-        assertThat( notification.getCode(), equalTo( "Neo.ClientError.Schema.NoSuchIndex" ) );
+        assertThat( notification.getCode(), equalTo( "Neo.ClientError.Schema.IndexNotFound" ) );
         assertThat( notification.getPosition(), equalTo( InputPosition.empty ) );
         assertThat( notification.getDescription(), equalTo( "The hinted index does not exist, please check the schema (hinted index is: index on :Person(name))" ) );
     }
@@ -62,7 +63,7 @@ public class NotificationCodeTest
 
         assertThat( notification.getTitle(), equalTo( "This query builds a cartesian product between disconnected patterns." ) );
         assertThat( notification.getSeverity(), equalTo( SeverityLevel.WARNING ) );
-        assertThat( notification.getCode(), equalTo( "Neo.ClientNotification.Statement.CartesianProduct" ) );
+        assertThat( notification.getCode(), equalTo( "Neo.ClientNotification.Statement.CartesianProductWarning" ) );
         assertThat( notification.getPosition(), equalTo( InputPosition.empty ) );
         assertThat( notification.getDescription(), equalTo( "If a part of a query contains multiple disconnected patterns, this will build a cartesian product " +
                                                             "between all those parts. This may produce a large amount of data and slow down query processing. While " +
@@ -72,7 +73,8 @@ public class NotificationCodeTest
     }
 
     @Test
-    public void shouldConstructNotificationsFor_JOIN_HINT_UNFULFILLABLE() {
+    public void shouldConstructNotificationsFor_JOIN_HINT_UNFULFILLABLE()
+    {
         List<String> idents = new ArrayList<>();
         idents.add( "n" );
         idents.add( "node2" );
@@ -87,5 +89,33 @@ public class NotificationCodeTest
             equalTo( "The hinted join was not planned. This could happen because no generated plan contained the join key, " +
                      "please try using a different join key or restructure your query. " +
                      "(hinted join key identifiers are: n, node2)" ) );
+    }
+
+    @Test
+    public void shouldConstructNotificationsFor_DEPRECATED_PROCEDURE()
+    {
+        NotificationDetail identifierDetail = NotificationDetail.Factory.deprecatedName("oldName", "newName");
+        Notification notification = DEPRECATED_PROCEDURE.notification( InputPosition.empty, identifierDetail );
+
+        assertThat( notification.getTitle(), equalTo( "This feature is deprecated and will be removed in future versions." ) );
+        assertThat( notification.getSeverity(), equalTo( SeverityLevel.WARNING ) );
+        assertThat( notification.getCode(), equalTo( "Neo.ClientNotification.Statement.FeatureDeprecationWarning" ) );
+        assertThat( notification.getPosition(), equalTo( InputPosition.empty ) );
+        assertThat( notification.getDescription(),
+                equalTo( "The query used a deprecated procedure. ('oldName' has been replaced by 'newName')" ) );
+    }
+
+    @Test
+    public void shouldConstructNotificationsFor_DEPRECATED_PROCEDURE_with_no_newName()
+    {
+        NotificationDetail identifierDetail = NotificationDetail.Factory.deprecatedName("oldName", "");
+        Notification notification = DEPRECATED_PROCEDURE.notification( InputPosition.empty, identifierDetail );
+
+        assertThat( notification.getTitle(), equalTo( "This feature is deprecated and will be removed in future versions." ) );
+        assertThat( notification.getSeverity(), equalTo( SeverityLevel.WARNING ) );
+        assertThat( notification.getCode(), equalTo( "Neo.ClientNotification.Statement.FeatureDeprecationWarning" ) );
+        assertThat( notification.getPosition(), equalTo( InputPosition.empty ) );
+        assertThat( notification.getDescription(),
+                equalTo( "The query used a deprecated procedure. ('oldName' is no longer supported)" ) );
     }
 }

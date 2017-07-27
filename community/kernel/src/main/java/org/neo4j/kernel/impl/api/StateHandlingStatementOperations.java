@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,55 +23,60 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntCollection;
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
+import org.neo4j.collection.primitive.PrimitiveIntSet;
 import org.neo4j.collection.primitive.PrimitiveIntStack;
-import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.collection.primitive.PrimitiveLongResourceIterator;
 import org.neo4j.cursor.Cursor;
-import org.neo4j.function.Predicate;
-import org.neo4j.kernel.api.EntityType;
+import org.neo4j.graphdb.NotFoundException;
+import org.neo4j.kernel.api.DataWriteOperations;
 import org.neo4j.kernel.api.LegacyIndex;
 import org.neo4j.kernel.api.LegacyIndexHits;
 import org.neo4j.kernel.api.Statement;
-import org.neo4j.kernel.api.constraints.NodePropertyConstraint;
-import org.neo4j.kernel.api.constraints.NodePropertyExistenceConstraint;
-import org.neo4j.kernel.api.constraints.PropertyConstraint;
-import org.neo4j.kernel.api.constraints.RelationshipPropertyConstraint;
-import org.neo4j.kernel.api.constraints.RelationshipPropertyExistenceConstraint;
-import org.neo4j.kernel.api.constraints.UniquenessConstraint;
-import org.neo4j.kernel.api.cursor.LabelItem;
-import org.neo4j.kernel.api.cursor.NodeItem;
-import org.neo4j.kernel.api.cursor.PropertyItem;
-import org.neo4j.kernel.api.cursor.RelationshipItem;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
+import org.neo4j.kernel.api.exceptions.InvalidTransactionTypeKernelException;
 import org.neo4j.kernel.api.exceptions.LabelNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
+import org.neo4j.kernel.api.exceptions.legacyindex.AutoIndexingKernelException;
 import org.neo4j.kernel.api.exceptions.legacyindex.LegacyIndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintVerificationFailedKernelException;
+import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
-import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.DropIndexFailureException;
 import org.neo4j.kernel.api.exceptions.schema.IllegalTokenNameException;
 import org.neo4j.kernel.api.exceptions.schema.IndexBrokenKernelException;
-import org.neo4j.kernel.api.exceptions.schema.ProcedureConstraintViolation;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
 import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
 import org.neo4j.kernel.api.index.InternalIndexState;
-import org.neo4j.kernel.api.procedures.ProcedureDescriptor;
-import org.neo4j.kernel.api.procedures.ProcedureSignature;
-import org.neo4j.kernel.api.procedures.ProcedureSignature.ProcedureName;
+import org.neo4j.kernel.api.legacyindex.AutoIndexing;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.api.properties.PropertyKeyIdIterator;
+import org.neo4j.kernel.api.schema.IndexQuery;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.OrderedPropertyValues;
+import org.neo4j.kernel.api.schema.RelationTypeSchemaDescriptor;
+import org.neo4j.kernel.api.schema.SchemaDescriptor;
+import org.neo4j.kernel.api.schema.SchemaUtil;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory;
+import org.neo4j.kernel.api.schema.constaints.IndexBackedConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.NodeExistenceConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.NodeKeyConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.RelExistenceConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.UniquenessConstraintDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
+import org.neo4j.kernel.api.txstate.TransactionCountingStateVisitor;
 import org.neo4j.kernel.api.txstate.TransactionState;
-import org.neo4j.kernel.api.txstate.TxStateHolder;
 import org.neo4j.kernel.impl.api.operations.CountsOperations;
 import org.neo4j.kernel.impl.api.operations.EntityOperations;
 import org.neo4j.kernel.impl.api.operations.KeyReadOperations;
@@ -81,24 +86,41 @@ import org.neo4j.kernel.impl.api.operations.LegacyIndexWriteOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
+import org.neo4j.kernel.impl.api.state.IndexTxStateUpdater;
 import org.neo4j.kernel.impl.api.store.RelationshipIterator;
-import org.neo4j.kernel.impl.api.store.StoreReadLayer;
-import org.neo4j.kernel.impl.api.store.StoreStatement;
-import org.neo4j.kernel.impl.core.Token;
 import org.neo4j.kernel.impl.index.IndexEntityType;
 import org.neo4j.kernel.impl.index.LegacyIndexStore;
-import org.neo4j.kernel.impl.store.SchemaStorage;
-import org.neo4j.kernel.impl.util.Cursors;
-import org.neo4j.kernel.impl.util.PrimitiveLongResourceIterator;
-import org.neo4j.kernel.impl.util.diffsets.ReadableDiffSets;
+import org.neo4j.register.Register.DoubleLongRegister;
+import org.neo4j.storageengine.api.Direction;
+import org.neo4j.storageengine.api.EntityType;
+import org.neo4j.storageengine.api.NodeItem;
+import org.neo4j.storageengine.api.PropertyItem;
+import org.neo4j.storageengine.api.RelationshipItem;
+import org.neo4j.storageengine.api.StorageProperty;
+import org.neo4j.storageengine.api.StorageStatement;
+import org.neo4j.storageengine.api.StoreReadLayer;
+import org.neo4j.storageengine.api.Token;
+import org.neo4j.storageengine.api.schema.IndexReader;
+import org.neo4j.storageengine.api.schema.PopulationProgress;
+import org.neo4j.storageengine.api.txstate.NodeState;
+import org.neo4j.storageengine.api.txstate.ReadableDiffSets;
 
+import static java.lang.String.format;
+import static org.neo4j.collection.primitive.PrimitiveIntCollections.filter;
+import static org.neo4j.collection.primitive.PrimitiveLongCollections.resourceIterator;
 import static org.neo4j.collection.primitive.PrimitiveLongCollections.single;
-import static org.neo4j.helpers.collection.Iterables.filter;
-import static org.neo4j.helpers.collection.IteratorUtil.iterator;
-import static org.neo4j.helpers.collection.IteratorUtil.resourceIterator;
-import static org.neo4j.helpers.collection.IteratorUtil.singleOrNull;
+import static org.neo4j.function.Predicates.any;
+import static org.neo4j.helpers.collection.Iterators.filter;
+import static org.neo4j.helpers.collection.Iterators.iterator;
+import static org.neo4j.helpers.collection.Iterators.singleOrNull;
 import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE;
-import static org.neo4j.kernel.impl.api.PropertyValueComparison.COMPARE_NUMBERS;
+import static org.neo4j.kernel.api.properties.DefinedProperty.NO_SUCH_PROPERTY;
+import static org.neo4j.kernel.impl.api.state.IndexTxStateUpdater.LabelChangeType.ADDED_LABEL;
+import static org.neo4j.kernel.impl.api.state.IndexTxStateUpdater.LabelChangeType.REMOVED_LABEL;
+import static org.neo4j.kernel.impl.util.Cursors.count;
+import static org.neo4j.kernel.impl.util.Cursors.empty;
+import static org.neo4j.register.Registers.newDoubleLongRegister;
+import static org.neo4j.storageengine.api.txstate.TxStateVisitor.EMPTY;
 
 public class StateHandlingStatementOperations implements
         KeyReadOperations,
@@ -111,19 +133,21 @@ public class StateHandlingStatementOperations implements
         LegacyIndexWriteOperations
 {
     private final StoreReadLayer storeLayer;
-    private final LegacyPropertyTrackers legacyPropertyTrackers;
+    private final AutoIndexing autoIndexing;
     private final ConstraintIndexCreator constraintIndexCreator;
     private final LegacyIndexStore legacyIndexStore;
+    private final IndexTxStateUpdater indexTxStateUpdater;
 
     public StateHandlingStatementOperations(
-            StoreReadLayer storeLayer, LegacyPropertyTrackers propertyTrackers,
+            StoreReadLayer storeLayer, AutoIndexing propertyTrackers,
             ConstraintIndexCreator constraintIndexCreator,
             LegacyIndexStore legacyIndexStore )
     {
         this.storeLayer = storeLayer;
-        this.legacyPropertyTrackers = propertyTrackers;
+        this.autoIndexing = propertyTrackers;
         this.constraintIndexCreator = constraintIndexCreator;
         this.legacyIndexStore = legacyIndexStore;
+        this.indexTxStateUpdater = new IndexTxStateUpdater( storeLayer, this );
     }
 
     // <Cursors>
@@ -137,30 +161,15 @@ public class StateHandlingStatementOperations implements
             node.close();
             throw new EntityNotFoundException( EntityType.NODE, nodeId );
         }
-        else
-        {
-            return node;
-        }
+        return node;
     }
 
-    @Override
-    public Cursor<NodeItem> nodeCursor( KernelStatement statement, long nodeId )
+    private Cursor<NodeItem> nodeCursor( KernelStatement statement, long nodeId )
     {
         Cursor<NodeItem> cursor = statement.getStoreStatement().acquireSingleNodeCursor( nodeId );
         if ( statement.hasTxStateWithChanges() )
         {
             return statement.txState().augmentSingleNodeCursor( cursor, nodeId );
-        }
-        return cursor;
-    }
-
-    @Override
-    public Cursor<NodeItem> nodeCursor( TxStateHolder txStateHolder, StoreStatement statement, long nodeId )
-    {
-        Cursor<NodeItem> cursor = statement.acquireSingleNodeCursor( nodeId );
-        if ( txStateHolder.hasTxStateWithChanges() )
-        {
-            return txStateHolder.txState().augmentSingleNodeCursor( cursor, nodeId );
         }
         return cursor;
     }
@@ -175,46 +184,16 @@ public class StateHandlingStatementOperations implements
             relationship.close();
             throw new EntityNotFoundException( EntityType.RELATIONSHIP, relationshipId );
         }
-        else
-        {
-            return relationship;
-        }
+        return relationship;
     }
 
-    @Override
-    public Cursor<RelationshipItem> relationshipCursor( KernelStatement statement, long relationshipId )
+    private Cursor<RelationshipItem> relationshipCursor( KernelStatement statement, long relationshipId )
     {
-        Cursor<RelationshipItem> cursor = statement.getStoreStatement().acquireSingleRelationshipCursor(
-                relationshipId );
+        Cursor<RelationshipItem> cursor =
+                statement.getStoreStatement().acquireSingleRelationshipCursor( relationshipId );
         if ( statement.hasTxStateWithChanges() )
         {
             return statement.txState().augmentSingleRelationshipCursor( cursor, relationshipId );
-        }
-        return cursor;
-    }
-
-    @Override
-    public Cursor<RelationshipItem> relationshipCursor( TxStateHolder txStateHolder, StoreStatement statement,
-            long relationshipId )
-    {
-        Cursor<RelationshipItem> cursor = statement.acquireSingleRelationshipCursor( relationshipId );
-        if ( txStateHolder.hasTxStateWithChanges() )
-        {
-            return txStateHolder.txState().augmentSingleRelationshipCursor( cursor, relationshipId );
-        }
-        else
-        {
-            return cursor;
-        }
-    }
-
-    @Override
-    public Cursor<NodeItem> nodeCursorGetAll( KernelStatement statement )
-    {
-        Cursor<NodeItem> cursor = statement.getStoreStatement().nodesGetAllCursor();
-        if ( statement.hasTxStateWithChanges() )
-        {
-            return statement.txState().augmentNodesGetAllCursor( cursor );
         }
         return cursor;
     }
@@ -231,88 +210,206 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
-    public Cursor<NodeItem> nodeCursorGetForLabel( KernelStatement statement, int labelId )
+    public Cursor<RelationshipItem> nodeGetRelationships( KernelStatement statement, NodeItem node,
+            Direction direction )
     {
-        // TODO Filter this properly
-        return statement.getStoreStatement().acquireIteratorNodeCursor(
-                storeLayer.nodesGetForLabel( statement, labelId ) );
+        Cursor<RelationshipItem> cursor;
+        if ( statement.hasTxStateWithChanges() && statement.txState().nodeIsAddedInThisTx( node.id() ) )
+        {
+            cursor = empty();
+        }
+        else
+        {
+            cursor = storeLayer.nodeGetRelationships( statement.getStoreStatement(), node, direction );
+        }
+        if ( !statement.hasTxStateWithChanges() )
+        {
+            return cursor;
+        }
+        NodeState nodeState = statement.txState().getNodeState( node.id() );
+        return statement.txState().augmentNodeRelationshipCursor( cursor, nodeState, direction );
     }
 
     @Override
-    public Cursor<NodeItem> nodeCursorGetFromIndexSeek( KernelStatement statement, IndexDescriptor index, Object value )
-            throws IndexNotFoundKernelException
+    public Cursor<RelationshipItem> nodeGetRelationships( KernelStatement statement, NodeItem node, Direction direction,
+            int[] relTypes )
     {
-        // TODO Filter this properly
-        return statement.getStoreStatement().acquireIteratorNodeCursor( storeLayer.nodesGetFromIndexSeek( statement,
-                index, value ) );
+        Cursor<RelationshipItem> cursor;
+        if ( statement.hasTxStateWithChanges() && statement.txState().nodeIsAddedInThisTx( node.id() ) )
+        {
+            cursor = empty();
+        }
+        else
+        {
+            cursor = storeLayer.nodeGetRelationships( statement.getStoreStatement(), node, direction, any( relTypes ) );
+        }
+        if ( !statement.hasTxStateWithChanges() )
+        {
+            return cursor;
+        }
+        NodeState nodeState = statement.txState().getNodeState( node.id() );
+        return statement.txState().augmentNodeRelationshipCursor( cursor, nodeState, direction, relTypes );
     }
 
     @Override
-    public Cursor<NodeItem> nodeCursorGetFromIndexScan( KernelStatement statement, IndexDescriptor index )
-            throws IndexNotFoundKernelException
+    public Cursor<PropertyItem> nodeGetProperties( KernelStatement statement, NodeItem node )
     {
-        // TODO Filter this properly
-        return statement.getStoreStatement().acquireIteratorNodeCursor(
-                storeLayer.nodesGetFromIndexScan( statement, index ) );
+        Cursor<PropertyItem> cursor;
+        if ( statement.hasTxStateWithChanges() && statement.txState().nodeIsAddedInThisTx( node.id() ) )
+        {
+            cursor = empty();
+        }
+        else
+        {
+            cursor = storeLayer.nodeGetProperties( statement.getStoreStatement(), node, statement );
+        }
+
+        return statement.hasTxStateWithChanges()
+               ? statement.txState().augmentPropertyCursor( cursor, statement.txState().getNodeState( node.id() ) )
+               : cursor;
     }
 
     @Override
-    public Cursor<NodeItem> nodeCursorGetFromIndexSeekByPrefix( KernelStatement statement,
-            IndexDescriptor index,
-            String prefix ) throws IndexNotFoundKernelException
+    public PrimitiveIntCollection nodeGetPropertyKeys( KernelStatement statement, NodeItem node )
     {
-        // TODO Filter this properly
-        return statement.getStoreStatement().acquireIteratorNodeCursor( storeLayer.nodesGetFromIndexRangeSeekByPrefix(
-                statement, index, prefix ) );
+        PrimitiveIntStack keys = new PrimitiveIntStack();
+        try ( Cursor<PropertyItem> properties = nodeGetProperties( statement, node ) )
+        {
+            while ( properties.next() )
+            {
+                keys.push( properties.get().propertyKeyId() );
+            }
+        }
+
+        return keys;
     }
 
     @Override
-    public Cursor<NodeItem> nodeCursorGetFromIndexRangeSeekByNumber( KernelStatement statement,
-            IndexDescriptor index,
-            Number lower, boolean includeLower,
-            Number upper, boolean includeUpper )
-            throws IndexNotFoundKernelException
-
+    public Object nodeGetProperty( KernelStatement statement, NodeItem node, int propertyKeyId )
     {
-        // TODO Filter this properly
-        return COMPARE_NUMBERS.isEmptyRange( lower, includeLower, upper, includeUpper ) ? Cursors.<NodeItem>empty() :
-               statement.getStoreStatement().acquireIteratorNodeCursor(
-                       storeLayer.nodesGetFromInclusiveNumericIndexRangeSeek( statement, index, lower, upper
-                       ) );
+        try ( Cursor<PropertyItem> cursor = nodeGetPropertyCursor( statement, node, propertyKeyId ) )
+        {
+            if ( cursor.next() )
+            {
+                return cursor.get().value();
+            }
+        }
+        catch ( NotFoundException e )
+        {
+            return null;
+        }
+
+        return null;
     }
 
     @Override
-    public Cursor<NodeItem> nodeCursorGetFromIndexRangeSeekByString( KernelStatement statement,
-            IndexDescriptor index,
-            String lower, boolean includeLower,
-            String upper, boolean includeUpper )
-            throws IndexNotFoundKernelException
-
+    public boolean nodeHasProperty( KernelStatement statement, NodeItem node, int propertyKeyId )
     {
-        // TODO Filter this properly
-        return statement.getStoreStatement().acquireIteratorNodeCursor(
-                storeLayer.nodesGetFromIndexRangeSeekByString( statement, index, lower, includeLower, upper,
-                        includeUpper ) );
+        try ( Cursor<PropertyItem> cursor = nodeGetPropertyCursor( statement, node, propertyKeyId ) )
+        {
+            return cursor.next();
+        }
+    }
+
+    private Cursor<PropertyItem> nodeGetPropertyCursor( KernelStatement statement, NodeItem node, int propertyKeyId )
+    {
+
+        Cursor<PropertyItem> cursor;
+        if ( statement.hasTxStateWithChanges() && statement.txState().nodeIsAddedInThisTx( node.id() ) )
+        {
+            cursor = empty();
+        }
+        else
+        {
+            cursor = storeLayer.nodeGetProperty( statement.getStoreStatement(), node, propertyKeyId, statement );
+        }
+
+        return statement.hasTxStateWithChanges()
+               ? statement.txState().augmentSinglePropertyCursor(
+                       cursor, statement.txState().getNodeState( node.id() ), propertyKeyId )
+               : cursor;
     }
 
     @Override
-    public Cursor<NodeItem> nodeCursorGetFromIndexRangeSeekByPrefix( KernelStatement statement, IndexDescriptor index,
-            String prefix )
-            throws IndexNotFoundKernelException
+    public Cursor<PropertyItem> relationshipGetProperties( KernelStatement statement, RelationshipItem relationship )
     {
-        // TODO Filter this properly
-        return statement.getStoreStatement().acquireIteratorNodeCursor(
-                storeLayer.nodesGetFromIndexRangeSeekByPrefix( statement, index, prefix ) );
+        Cursor<PropertyItem> cursor;
+        if ( statement.hasTxStateWithChanges() && statement.txState().relationshipIsAddedInThisTx( relationship.id() ) )
+        {
+            cursor = empty();
+        }
+        else
+        {
+            cursor = storeLayer.relationshipGetProperties( statement.getStoreStatement(), relationship, statement );
+        }
+
+        return statement.hasTxStateWithChanges()
+               ? statement.txState()
+                       .augmentPropertyCursor( cursor, statement.txState().getRelationshipState( relationship.id() ) )
+               : cursor;
     }
 
     @Override
-    public Cursor<NodeItem> nodeCursorGetFromUniqueIndexSeek( KernelStatement statement,
-            IndexDescriptor index,
-            Object value ) throws IndexBrokenKernelException, IndexNotFoundKernelException
+    public PrimitiveIntCollection relationshipGetPropertyKeys( KernelStatement statement,
+            RelationshipItem relationship )
     {
-        // TODO Filter this properly
-        return statement.getStoreStatement().acquireIteratorNodeCursor(
-                storeLayer.nodeGetFromUniqueIndexSeek( statement, index, value ) );
+        PrimitiveIntStack keys = new PrimitiveIntStack();
+        try ( Cursor<PropertyItem> properties = relationshipGetProperties( statement, relationship ) )
+        {
+            while ( properties.next() )
+            {
+                keys.push( properties.get().propertyKeyId() );
+            }
+        }
+
+        return keys;
+    }
+
+    @Override
+    public Object relationshipGetProperty( KernelStatement statement, RelationshipItem relationship, int propertyKeyId )
+    {
+        try ( Cursor<PropertyItem> cursor = relationshipGetPropertyCursor( statement, relationship, propertyKeyId ) )
+        {
+            if ( cursor.next() )
+            {
+                return cursor.get().value();
+            }
+        }
+        catch ( NotFoundException e )
+        {
+            return null;
+        }
+
+        return null;
+    }
+
+    @Override
+    public boolean relationshipHasProperty( KernelStatement statement, RelationshipItem relationship, int propertyKeyId )
+    {
+        try ( Cursor<PropertyItem> cursor = relationshipGetPropertyCursor( statement, relationship, propertyKeyId ) )
+        {
+            return cursor.next();
+        }
+    }
+
+    private Cursor<PropertyItem> relationshipGetPropertyCursor( KernelStatement statement,
+            RelationshipItem relationship, int propertyKeyId )
+    {
+        Cursor<PropertyItem> cursor;
+        if ( statement.hasTxStateWithChanges() && statement.txState().relationshipIsAddedInThisTx( relationship.id() ) )
+        {
+            cursor = empty();
+        }
+        else
+        {
+            cursor = storeLayer
+                    .relationshipGetProperty( statement.getStoreStatement(), relationship, propertyKeyId, statement );
+        }
+
+        return statement.hasTxStateWithChanges()
+               ? statement.txState().augmentSinglePropertyCursor( cursor, statement.txState()
+                        .getRelationshipState( relationship.id() ), propertyKeyId )
+               : cursor;
     }
 
     // </Cursors>
@@ -321,18 +418,27 @@ public class StateHandlingStatementOperations implements
     public long nodeCreate( KernelStatement state )
     {
         long nodeId = storeLayer.reserveNode();
-        state.txState().nodeDoCreate( nodeId );
+        state.txState().nodeDoCreate(nodeId);
         return nodeId;
     }
 
     @Override
-    public void nodeDelete( KernelStatement state, long nodeId ) throws EntityNotFoundException
+    public void nodeDelete( KernelStatement state, long nodeId )
+            throws AutoIndexingKernelException, EntityNotFoundException, InvalidTransactionTypeKernelException
     {
-        legacyPropertyTrackers.nodeDelete( nodeId );
+        autoIndexing.nodes().entityRemoved( state.dataWriteOperations(), nodeId );
         try ( Cursor<NodeItem> cursor = nodeCursorById( state, nodeId ) )
         {
             state.txState().nodeDoDelete( cursor.get().id() );
         }
+    }
+
+    @Override
+    public int nodeDetachDelete( KernelStatement state, long nodeId )
+            throws EntityNotFoundException, AutoIndexingKernelException, InvalidTransactionTypeKernelException
+    {
+        nodeDelete( state, nodeId );
+        return 0;
     }
 
     @Override
@@ -354,7 +460,8 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
-    public void relationshipDelete( final KernelStatement state, long relationshipId ) throws EntityNotFoundException
+    public void relationshipDelete( final KernelStatement state, long relationshipId )
+            throws EntityNotFoundException, InvalidTransactionTypeKernelException, AutoIndexingKernelException
     {
         try ( Cursor<RelationshipItem> cursor = relationshipCursorById( state, relationshipId ) )
         {
@@ -362,9 +469,8 @@ public class StateHandlingStatementOperations implements
 
             // NOTE: We implicitly delegate to neoStoreTransaction via txState.legacyState here. This is because that
             // call returns modified properties, which node manager uses to update legacy tx state. This will be cleaned up
-
             // once we've removed legacy tx state.
-            legacyPropertyTrackers.relationshipDelete( relationship.id() );
+            autoIndexing.relationships().entityRemoved( state.dataWriteOperations(), relationshipId );
             final TransactionState txState = state.txState();
             if ( txState.relationshipIsAddedInThisTx( relationship.id() ) )
             {
@@ -381,14 +487,15 @@ public class StateHandlingStatementOperations implements
     @Override
     public PrimitiveLongIterator nodesGetAll( KernelStatement state )
     {
-        return state.txState().augmentNodesGetAll( storeLayer.nodesGetAll() );
+        PrimitiveLongIterator iterator = storeLayer.nodesGetAll();
+        return state.hasTxStateWithChanges() ? state.txState().augmentNodesGetAll( iterator ) : iterator;
     }
 
     @Override
-
     public RelationshipIterator relationshipsGetAll( KernelStatement state )
     {
-        return state.txState().augmentRelationshipsGetAll( storeLayer.relationshipsGetAll() );
+        RelationshipIterator iterator = storeLayer.relationshipsGetAll();
+        return state.hasTxStateWithChanges() ? state.txState().augmentRelationshipsGetAll( iterator ) : iterator;
     }
 
     @Override
@@ -397,35 +504,17 @@ public class StateHandlingStatementOperations implements
         try ( Cursor<NodeItem> cursor = nodeCursorById( state, nodeId ) )
         {
             NodeItem node = cursor.get();
-            try ( Cursor<LabelItem> labels = node.label( labelId ) )
+            if ( node.hasLabel( labelId ) )
             {
-                if ( labels.next() )
-                {
-                    // Label is already in state or in store, no-op
-                    return false;
-                }
+                // Label is already in state or in store, no-op
+                return false;
             }
 
             state.txState().nodeDoAddLabel( labelId, node.id() );
 
-            try ( Cursor<PropertyItem> properties = node.properties() )
-            {
-                while ( properties.next() )
-                {
-                    PropertyItem propertyItem = properties.get();
-                    IndexDescriptor descriptor = indexesGetForLabelAndPropertyKey( state, labelId,
-                            propertyItem.propertyKeyId() );
-                    if ( descriptor != null )
-                    {
-                        DefinedProperty after = Property.property( propertyItem.propertyKeyId(),
-                                propertyItem.value() );
+            indexTxStateUpdater.onLabelChange( state, labelId, node, ADDED_LABEL );
 
-                        state.txState().indexDoUpdateProperty( descriptor, node.id(), null, after );
-                    }
-                }
-
-                return true;
-            }
+            return true;
         }
     }
 
@@ -435,26 +524,15 @@ public class StateHandlingStatementOperations implements
         try ( Cursor<NodeItem> cursor = nodeCursorById( state, nodeId ) )
         {
             NodeItem node = cursor.get();
-            try ( Cursor<LabelItem> labels = node.label( labelId ) )
+            if ( !node.hasLabel( labelId ) )
             {
-                if ( !labels.next() )
-                {
-                    // Label does not exist in state or in store, no-op
-                    return false;
-                }
+                // Label does not exist in state or in store, no-op
+                return false;
             }
 
             state.txState().nodeDoRemoveLabel( labelId, node.id() );
 
-            try ( Cursor<PropertyItem> properties = node.properties() )
-            {
-                while ( properties.next() )
-                {
-                    PropertyItem propItem = properties.get();
-                    DefinedProperty property = Property.property( propItem.propertyKeyId(), propItem.value() );
-                    indexUpdateProperty( state, node.id(), labelId, property.propertyKeyId(), property, null );
-                }
-            }
+            indexTxStateUpdater.onLabelChange( state, labelId, node, REMOVED_LABEL );
 
             return true;
         }
@@ -467,19 +545,33 @@ public class StateHandlingStatementOperations implements
         {
             PrimitiveLongIterator wLabelChanges =
                     state.txState().nodesWithLabelChanged( labelId ).augment(
-                            storeLayer.nodesGetForLabel( state, labelId ) );
+                            storeLayer.nodesGetForLabel( state.getStoreStatement(), labelId ) );
             return state.txState().addedAndRemovedNodes().augmentWithRemovals( wLabelChanges );
         }
 
-        return storeLayer.nodesGetForLabel( state, labelId );
+        return storeLayer.nodesGetForLabel( state.getStoreStatement(), labelId );
     }
 
     @Override
-    public IndexDescriptor indexCreate( KernelStatement state, int labelId, int propertyKey )
+    public long nodesGetCount( KernelStatement state )
     {
-        IndexDescriptor rule = new IndexDescriptor( labelId, propertyKey );
-        state.txState().indexRuleDoAdd( rule );
-        return rule;
+        long base = storeLayer.nodesGetCount();
+        return state.hasTxStateWithChanges() ? base + state.txState().addedAndRemovedNodes().delta() : base;
+    }
+
+    @Override
+    public long relationshipsGetCount( KernelStatement state )
+    {
+        long base = storeLayer.relationshipsGetCount();
+        return state.hasTxStateWithChanges() ? base + state.txState().addedAndRemovedRelationships().delta() : base;
+    }
+
+    @Override
+    public IndexDescriptor indexCreate( KernelStatement state, LabelSchemaDescriptor descriptor )
+    {
+        IndexDescriptor indexDescriptor = IndexDescriptorFactory.forSchema( descriptor );
+        state.txState().indexRuleDoAdd( indexDescriptor );
+        return indexDescriptor;
     }
 
     @Override
@@ -491,18 +583,17 @@ public class StateHandlingStatementOperations implements
     @Override
     public void uniqueIndexDrop( KernelStatement state, IndexDescriptor descriptor ) throws DropIndexFailureException
     {
-        state.txState().constraintIndexDoDrop( descriptor );
+        state.txState().indexDoDrop( descriptor );
     }
 
-    @Override
-    public UniquenessConstraint uniquePropertyConstraintCreate( KernelStatement state, int labelId, int propertyKeyId )
+    private IndexBackedConstraintDescriptor indexBackedConstraintCreate( KernelStatement state, IndexBackedConstraintDescriptor constraint )
             throws CreateConstraintFailureException
     {
-        UniquenessConstraint constraint = new UniquenessConstraint( labelId, propertyKeyId );
+        LabelSchemaDescriptor descriptor = constraint.schema();
         try
         {
-            IndexDescriptor index = new IndexDescriptor( labelId, propertyKeyId );
-            if ( state.txState().constraintIndexDoUnRemove( index ) ) // ..., DROP, *CREATE*
+            if ( state.hasTxStateWithChanges() &&
+                 state.txState().indexDoUnRemove( constraint.ownedIndexDescriptor() ) ) // ..., DROP, *CREATE*
             { // creation is undoing a drop
                 if ( !state.txState().constraintDoUnRemove( constraint ) ) // CREATE, ..., DROP, *CREATE*
                 { // ... the drop we are undoing did itself undo a prior create...
@@ -512,63 +603,97 @@ public class StateHandlingStatementOperations implements
             }
             else // *CREATE*
             { // create from scratch
-                for ( Iterator<NodePropertyConstraint> it = storeLayer.constraintsGetForLabelAndPropertyKey(
-                        labelId, propertyKeyId ); it.hasNext(); )
+                Iterator<ConstraintDescriptor> it = storeLayer.constraintsGetForSchema( descriptor );
+                while ( it.hasNext() )
                 {
                     if ( it.next().equals( constraint ) )
                     {
                         return constraint;
                     }
                 }
-                long indexId = constraintIndexCreator.createUniquenessConstraintIndex(
-                        state, this, labelId, propertyKeyId );
+                long indexId = constraintIndexCreator.createUniquenessConstraintIndex( state, this, descriptor );
                 state.txState().constraintDoAdd( constraint, indexId );
             }
             return constraint;
         }
-        catch ( ConstraintVerificationFailedKernelException | DropIndexFailureException | TransactionFailureException
-                e )
+        catch ( UniquePropertyValueValidationException |
+                DropIndexFailureException |
+                TransactionFailureException |
+                AlreadyConstrainedException e )
         {
             throw new CreateConstraintFailureException( constraint, e );
         }
     }
 
     @Override
-    public NodePropertyExistenceConstraint nodePropertyExistenceConstraintCreate( KernelStatement state, int labelId,
-            int propertyKeyId ) throws CreateConstraintFailureException
+    public NodeKeyConstraintDescriptor nodeKeyConstraintCreate( KernelStatement state,
+            LabelSchemaDescriptor descriptor )
+            throws CreateConstraintFailureException
     {
-        NodePropertyExistenceConstraint constraint = new NodePropertyExistenceConstraint( labelId, propertyKeyId );
+        NodeKeyConstraintDescriptor constraint = ConstraintDescriptorFactory.nodeKeyForSchema( descriptor );
+        indexBackedConstraintCreate( state, constraint );
+        return constraint;
+    }
+
+    @Override
+    public UniquenessConstraintDescriptor uniquePropertyConstraintCreate( KernelStatement state, LabelSchemaDescriptor descriptor )
+            throws CreateConstraintFailureException
+    {
+        UniquenessConstraintDescriptor constraint = ConstraintDescriptorFactory.uniqueForSchema( descriptor );
+        indexBackedConstraintCreate( state, constraint );
+        return constraint;
+    }
+
+    @Override
+    public NodeExistenceConstraintDescriptor nodePropertyExistenceConstraintCreate(
+            KernelStatement state,
+            LabelSchemaDescriptor descriptor
+    ) throws CreateConstraintFailureException
+    {
+        NodeExistenceConstraintDescriptor constraint = ConstraintDescriptorFactory.existsForSchema( descriptor );
         state.txState().constraintDoAdd( constraint );
         return constraint;
     }
 
     @Override
-    public RelationshipPropertyExistenceConstraint relationshipPropertyExistenceConstraintCreate( KernelStatement state,
-            int relTypeId, int propertyKeyId ) throws AlreadyConstrainedException, CreateConstraintFailureException
+    public RelExistenceConstraintDescriptor relationshipPropertyExistenceConstraintCreate(
+            KernelStatement state,
+            RelationTypeSchemaDescriptor descriptor
+    ) throws AlreadyConstrainedException, CreateConstraintFailureException
     {
-        RelationshipPropertyExistenceConstraint constraint =
-                new RelationshipPropertyExistenceConstraint( relTypeId, propertyKeyId );
+        RelExistenceConstraintDescriptor constraint = ConstraintDescriptorFactory.existsForSchema( descriptor );
         state.txState().constraintDoAdd( constraint );
         return constraint;
     }
 
     @Override
-    public Iterator<NodePropertyConstraint> constraintsGetForLabelAndPropertyKey( KernelStatement state,
-            int labelId, int propertyKeyId )
+    public Iterator<ConstraintDescriptor> constraintsGetForSchema( KernelStatement state, SchemaDescriptor descriptor )
     {
-        Iterator<NodePropertyConstraint> constraints =
-                storeLayer.constraintsGetForLabelAndPropertyKey( labelId, propertyKeyId );
+        Iterator<ConstraintDescriptor> constraints = storeLayer.constraintsGetForSchema( descriptor );
         if ( state.hasTxStateWithChanges() )
         {
-            return state.txState().constraintsChangesForLabelAndProperty( labelId, propertyKeyId ).apply( constraints );
+            return state.txState().constraintsChangesForSchema( descriptor ).apply( constraints );
         }
         return constraints;
     }
 
     @Override
-    public Iterator<NodePropertyConstraint> constraintsGetForLabel( KernelStatement state, int labelId )
+    public boolean constraintExists( KernelStatement state, ConstraintDescriptor descriptor )
     {
-        Iterator<NodePropertyConstraint> constraints = storeLayer.constraintsGetForLabel( labelId );
+        boolean inStore = storeLayer.constraintExists( descriptor );
+        if ( state.hasTxStateWithChanges() )
+        {
+            ReadableDiffSets<ConstraintDescriptor> diffSet =
+                    state.txState().constraintsChangesForSchema( descriptor.schema() );
+            return diffSet.isAdded( descriptor ) || (inStore && !diffSet.isRemoved( descriptor ));
+        }
+        return inStore;
+    }
+
+    @Override
+    public Iterator<ConstraintDescriptor> constraintsGetForLabel( KernelStatement state, int labelId )
+    {
+        Iterator<ConstraintDescriptor> constraints = storeLayer.constraintsGetForLabel( labelId );
         if ( state.hasTxStateWithChanges() )
         {
             return state.txState().constraintsChangesForLabel( labelId ).apply( constraints );
@@ -577,25 +702,10 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
-    public Iterator<RelationshipPropertyConstraint> constraintsGetForRelationshipTypeAndPropertyKey(
-            KernelStatement state, int relTypeId, int propertyKeyId )
-    {
-        Iterator<RelationshipPropertyConstraint> constraints =
-                storeLayer.constraintsGetForRelationshipTypeAndPropertyKey( relTypeId, propertyKeyId );
-        if ( state.hasTxStateWithChanges() )
-        {
-            return state.txState()
-                    .constraintsChangesForRelationshipTypeAndProperty( relTypeId, propertyKeyId )
-                    .apply( constraints );
-        }
-        return constraints;
-    }
-
-    @Override
-    public Iterator<RelationshipPropertyConstraint> constraintsGetForRelationshipType( KernelStatement state,
+    public Iterator<ConstraintDescriptor> constraintsGetForRelationshipType( KernelStatement state,
             int typeId )
     {
-        Iterator<RelationshipPropertyConstraint> constraints = storeLayer.constraintsGetForRelationshipType( typeId );
+        Iterator<ConstraintDescriptor> constraints = storeLayer.constraintsGetForRelationshipType( typeId );
         if ( state.hasTxStateWithChanges() )
         {
             return state.txState().constraintsChangesForRelationshipType( typeId ).apply( constraints );
@@ -604,9 +714,9 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
-    public Iterator<PropertyConstraint> constraintsGetAll( KernelStatement state )
+    public Iterator<ConstraintDescriptor> constraintsGetAll( KernelStatement state )
     {
-        Iterator<PropertyConstraint> constraints = storeLayer.constraintsGetAll();
+        Iterator<ConstraintDescriptor> constraints = storeLayer.constraintsGetAll();
         if ( state.hasTxStateWithChanges() )
         {
             return state.txState().constraintsChanges().apply( constraints );
@@ -614,83 +724,24 @@ public class StateHandlingStatementOperations implements
         return constraints;
     }
 
-
     @Override
-    public void constraintDrop( KernelStatement state, NodePropertyConstraint constraint )
+    public void constraintDrop( KernelStatement state, ConstraintDescriptor constraint )
     {
         state.txState().constraintDoDrop( constraint );
     }
 
     @Override
-    public void constraintDrop( KernelStatement state, RelationshipPropertyConstraint constraint )
-            throws DropConstraintFailureException
+    public IndexDescriptor indexGetForSchema( KernelStatement state, LabelSchemaDescriptor descriptor )
     {
-        state.txState().constraintDoDrop( constraint );
-    }
-
-    @Override
-    public void procedureCreate( KernelStatement state, ProcedureSignature signature, String language, String code )
-    {
-        state.txState().procedureDoCreate( signature, language, code );
-    }
-
-    @Override
-    public void procedureDrop( KernelStatement statement, ProcedureName name ) throws ProcedureException, ProcedureConstraintViolation
-    {
-        statement.txState().procedureDoDrop( procedureGet( statement, name ) );
-    }
-
-    @Override
-    public Iterator<ProcedureDescriptor> proceduresGetAll( KernelStatement statement )
-    {
-        Iterator<ProcedureDescriptor> procs = storeLayer.proceduresGetAll();
-        return statement.hasTxStateWithChanges() ? statement.txState().augmentProcedures( procs ) : procs;
-    }
-
-    @Override
-    public ProcedureDescriptor procedureGet( KernelStatement statement, ProcedureName name )
-            throws ProcedureException
-    {
-        if(statement.hasTxStateWithChanges())
-        {
-            TransactionState state = statement.txState();
-            ProcedureDescriptor procedure = state.getProcedure( name );
-            if( procedure != null )
-            {
-                return procedure;
-            }
-        }
-        return storeLayer.procedureGet( name );
-    }
-
-    @Override
-    public IndexDescriptor indexesGetForLabelAndPropertyKey( KernelStatement state, int labelId, int propertyKey )
-    {
-        IndexDescriptor indexDescriptor = storeLayer.indexesGetForLabelAndPropertyKey( labelId, propertyKey );
-
+        IndexDescriptor indexDescriptor = storeLayer.indexGetForSchema( descriptor );
         Iterator<IndexDescriptor> rules = iterator( indexDescriptor );
         if ( state.hasTxStateWithChanges() )
         {
-            rules = filterByPropertyKeyId(
-                    state.txState().indexDiffSetsByLabel( labelId ).apply( rules ),
-                    propertyKey );
+            rules = filter(
+                    SchemaDescriptor.equalTo( descriptor ),
+                    state.txState().indexDiffSetsByLabel( descriptor.getLabelId() ).apply( rules ) );
         }
         return singleOrNull( rules );
-    }
-
-    private Iterator<IndexDescriptor> filterByPropertyKeyId(
-            Iterator<IndexDescriptor> descriptorIterator,
-            final int propertyKey )
-    {
-        Predicate<IndexDescriptor> predicate = new Predicate<IndexDescriptor>()
-        {
-            @Override
-            public boolean test( IndexDescriptor item )
-            {
-                return item.getPropertyKeyId() == propertyKey;
-            }
-        };
-        return filter( predicate, descriptorIterator );
     }
 
     @Override
@@ -700,13 +751,8 @@ public class StateHandlingStatementOperations implements
         // If index is in our state, then return populating
         if ( state.hasTxStateWithChanges() )
         {
-            if ( checkIndexState( descriptor, state.txState().indexDiffSetsByLabel( descriptor.getLabelId() ) ) )
-            {
-                return InternalIndexState.POPULATING;
-            }
-            ReadableDiffSets<IndexDescriptor> changes =
-                    state.txState().constraintIndexDiffSetsByLabel( descriptor.getLabelId() );
-            if ( checkIndexState( descriptor, changes ) )
+            if ( checkIndexState( descriptor,
+                    state.txState().indexDiffSetsByLabel( descriptor.schema().getLabelId() ) ) )
             {
                 return InternalIndexState.POPULATING;
             }
@@ -715,19 +761,34 @@ public class StateHandlingStatementOperations implements
         return storeLayer.indexGetState( descriptor );
     }
 
-    private boolean checkIndexState( IndexDescriptor indexRule, ReadableDiffSets<IndexDescriptor> diffSet )
+    @Override
+    public PopulationProgress indexGetPopulationProgress( KernelStatement state, IndexDescriptor descriptor ) throws
+            IndexNotFoundKernelException
+    {
+        // If index is in our state, then return 0%
+        if ( state.hasTxStateWithChanges() )
+        {
+            if ( checkIndexState( descriptor,
+                    state.txState().indexDiffSetsByLabel( descriptor.schema().getLabelId() ) ) )
+            {
+                return PopulationProgress.NONE;
+            }
+        }
+
+        return storeLayer.indexGetPopulationProgress( descriptor.schema() );
+    }
+
+    private boolean checkIndexState( IndexDescriptor index, ReadableDiffSets<IndexDescriptor> diffSet )
             throws IndexNotFoundKernelException
     {
-        if ( diffSet.isAdded( indexRule ) )
+        if ( diffSet.isAdded( index ) )
         {
             return true;
         }
-        if ( diffSet.isRemoved( indexRule ) )
+        if ( diffSet.isRemoved( index ) )
         {
-            throw new IndexNotFoundKernelException( String.format( "Index for label id %d on property id %d has been " +
-                            "dropped in this transaction.",
-                    indexRule.getLabelId(),
-                    indexRule.getPropertyKeyId() ) );
+            throw new IndexNotFoundKernelException( format( "Index on %s has been dropped in this transaction.",
+                    index.userDescription( SchemaUtil.idTokenNameLookup ) ) );
         }
         return false;
     }
@@ -738,9 +799,8 @@ public class StateHandlingStatementOperations implements
         if ( state.hasTxStateWithChanges() )
         {
             return state.txState().indexDiffSetsByLabel( labelId )
-                    .apply( storeLayer.indexesGetForLabel( labelId ) );
+                                        .apply( storeLayer.indexesGetForLabel( labelId ) );
         }
-
         return storeLayer.indexesGetForLabel( labelId );
     }
 
@@ -756,111 +816,136 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
-    public Iterator<IndexDescriptor> uniqueIndexesGetForLabel( KernelStatement state, int labelId )
+    public long nodeGetFromUniqueIndexSeek(
+            KernelStatement state, IndexDescriptor index, IndexQuery.ExactPredicate... query )
+            throws IndexNotFoundKernelException, IndexBrokenKernelException, IndexNotApplicableKernelException
     {
-        if ( state.hasTxStateWithChanges() )
-        {
-            return state.txState().constraintIndexDiffSetsByLabel( labelId )
-                    .apply( storeLayer.uniqueIndexesGetForLabel( labelId ) );
-        }
+        IndexReader reader = state.getStoreStatement().getFreshIndexReader( index );
 
-        return storeLayer.uniqueIndexesGetForLabel( labelId );
-    }
-
-    @Override
-    public Iterator<IndexDescriptor> uniqueIndexesGetAll( KernelStatement state )
-    {
-        if ( state.hasTxStateWithChanges() )
-        {
-            return state.txState().constraintIndexChanges()
-                    .apply( storeLayer.uniqueIndexesGetAll() );
-        }
-
-        return storeLayer.uniqueIndexesGetAll();
-    }
-
-    @Override
-    public long nodeGetFromUniqueIndexSeek( KernelStatement state, IndexDescriptor index, Object value )
-            throws IndexNotFoundKernelException, IndexBrokenKernelException
-    {
-        PrimitiveLongResourceIterator committed = storeLayer.nodeGetFromUniqueIndexSeek( state, index, value );
-        PrimitiveLongIterator exactMatches = filterExactIndexMatches( state, index, value, committed );
-        PrimitiveLongIterator changesFiltered = filterIndexStateChangesForScanOrSeek( state, index, value,
-                exactMatches );
+        /* Here we have an intricate scenario where we need to return the PrimitiveLongIterator
+         * since subsequent filtering will happen outside, but at the same time have the ability to
+         * close the IndexReader when done iterating over the lookup result. This is because we get
+         * a fresh reader that isn't associated with the current transaction and hence will not be
+         * automatically closed. */
+        PrimitiveLongResourceIterator committed = resourceIterator( reader.query( query ), reader );
+        PrimitiveLongIterator exactMatches = LookupFilter.exactIndexMatches( this, state, committed, query );
+        PrimitiveLongIterator changesFiltered =
+                filterIndexStateChangesForSeek( state, exactMatches, index, OrderedPropertyValues.of( query ) );
         return single( resourceIterator( changesFiltered, committed ), NO_SUCH_NODE );
     }
 
     @Override
-    public PrimitiveLongIterator nodesGetFromIndexSeek( KernelStatement state, IndexDescriptor index, Object value )
-            throws IndexNotFoundKernelException
+    public PrimitiveLongIterator indexQuery( KernelStatement state, IndexDescriptor index, IndexQuery... predicates )
+            throws IndexNotFoundKernelException, IndexNotApplicableKernelException
     {
-        PrimitiveLongIterator committed = storeLayer.nodesGetFromIndexSeek( state, index, value );
-        PrimitiveLongIterator exactMatches = filterExactIndexMatches( state, index, value, committed );
-        return filterIndexStateChangesForScanOrSeek( state, index, value, exactMatches );
+        StorageStatement storeStatement = state.getStoreStatement();
+        IndexReader reader = storeStatement.getIndexReader( index );
+        PrimitiveLongIterator committed = reader.query( predicates );
+        PrimitiveLongIterator exactMatches = LookupFilter.exactIndexMatches( this, state, committed, predicates );
+
+        IndexQuery firstPredicate = predicates[0];
+        switch ( firstPredicate.type() )
+        {
+        case exact:
+            IndexQuery.ExactPredicate[] exactPreds = assertOnlyExactPredicates( predicates );
+            return filterIndexStateChangesForSeek( state, exactMatches, index, OrderedPropertyValues.of( exactPreds ) );
+        case stringSuffix:
+        case stringContains:
+        case exists:
+            return filterIndexStateChangesForScan( state, exactMatches, index );
+
+        case rangeNumeric:
+        {
+            assertSinglePredicate( predicates );
+            IndexQuery.NumberRangePredicate numPred = (IndexQuery.NumberRangePredicate) firstPredicate;
+            return filterIndexStateChangesForRangeSeekByNumber( state, index, numPred.from(),
+                    numPred.fromInclusive(), numPred.to(), numPred.toInclusive(), exactMatches );
+        }
+        case rangeString:
+        {
+            assertSinglePredicate( predicates );
+            IndexQuery.StringRangePredicate strPred = (IndexQuery.StringRangePredicate) firstPredicate;
+            return filterIndexStateChangesForRangeSeekByString(
+                    state, index, strPred.from(), strPred.fromInclusive(), strPred.to(),
+                    strPred.toInclusive(), committed );
+        }
+        case stringPrefix:
+        {
+            assertSinglePredicate( predicates );
+            IndexQuery.StringPrefixPredicate strPred = (IndexQuery.StringPrefixPredicate) firstPredicate;
+            return filterIndexStateChangesForRangeSeekByPrefix( state, index, strPred.prefix(), committed );
+        }
+        default:
+            throw new UnsupportedOperationException( "Query not supported: " + Arrays.toString( predicates ) );
+        }
+    }
+
+    private IndexQuery.ExactPredicate[] assertOnlyExactPredicates( IndexQuery[] predicates )
+    {
+        IndexQuery.ExactPredicate[] exactPredicates;
+        if ( predicates.getClass() == IndexQuery.ExactPredicate[].class )
+        {
+            exactPredicates = (IndexQuery.ExactPredicate[]) predicates;
+        }
+        else
+        {
+            exactPredicates = new IndexQuery.ExactPredicate[predicates.length];
+            for ( int i = 0; i < predicates.length; i++ )
+            {
+                if ( predicates[i] instanceof IndexQuery.ExactPredicate )
+                {
+                    exactPredicates[i] = (IndexQuery.ExactPredicate) predicates[i];
+                }
+                else
+                {
+                    // TODO: what to throw?
+                    throw new UnsupportedOperationException( "Query not supported: " + Arrays.toString( predicates ) );
+                }
+            }
+        }
+        return exactPredicates;
+    }
+
+    private void assertSinglePredicate( IndexQuery[] predicates )
+    {
+        if ( predicates.length != 1 )
+        {
+            // TODO: what to throw?
+            throw new UnsupportedOperationException( "Query not supported: " + Arrays.toString( predicates ) );
+        }
     }
 
     @Override
-    public PrimitiveLongIterator nodesGetFromIndexRangeSeekByNumber( KernelStatement state, IndexDescriptor index,
-            Number lower, boolean includeLower,
-            Number upper, boolean includeUpper ) throws IndexNotFoundKernelException
-
+    public long nodesCountIndexed( KernelStatement statement, IndexDescriptor index, long nodeId, Object value )
+            throws IndexNotFoundKernelException, IndexBrokenKernelException
     {
-        PrimitiveLongIterator committed = COMPARE_NUMBERS.isEmptyRange( lower, includeLower, upper, includeUpper )
-                ? PrimitiveLongCollections.emptyIterator()
-                : storeLayer.nodesGetFromInclusiveNumericIndexRangeSeek( state, index, lower, upper );
-        PrimitiveLongIterator exactMatches = filterExactRangeMatches( state, index, committed, lower, includeLower,
-                upper, includeUpper );
-        return filterIndexStateChangesForRangeSeekByNumber( state, index, lower, includeLower, upper, includeUpper,
-                exactMatches );
+        IndexReader reader = statement.getStoreStatement().getIndexReader( index );
+        return reader.countIndexedNodes( nodeId, value );
     }
 
-    @Override
-    public PrimitiveLongIterator nodesGetFromIndexRangeSeekByString( KernelStatement state, IndexDescriptor index,
-            String lower, boolean includeLower,
-            String upper, boolean includeUpper ) throws IndexNotFoundKernelException
-
-    {
-        PrimitiveLongIterator committed = storeLayer.nodesGetFromIndexRangeSeekByString( state, index, lower,
-                includeLower, upper, includeUpper );
-        return filterIndexStateChangesForRangeSeekByString( state, index, lower, includeLower, upper, includeUpper,
-                committed );
-    }
-
-    @Override
-    public PrimitiveLongIterator nodesGetFromIndexRangeSeekByPrefix( KernelStatement state, IndexDescriptor index,
-            String prefix ) throws IndexNotFoundKernelException
-    {
-        PrimitiveLongIterator committed = storeLayer.nodesGetFromIndexRangeSeekByPrefix( state, index, prefix );
-        return filterIndexStateChangesForRangeSeekByPrefix( state, index, prefix, committed );
-    }
-
-    @Override
-    public PrimitiveLongIterator nodesGetFromIndexScan( KernelStatement state, IndexDescriptor index )
-            throws IndexNotFoundKernelException
-    {
-        PrimitiveLongIterator committed = storeLayer.nodesGetFromIndexScan( state, index );
-        return filterIndexStateChangesForScanOrSeek( state, index, null, committed );
-    }
-
-    private PrimitiveLongIterator filterExactIndexMatches( final KernelStatement state, IndexDescriptor index,
-            Object value, PrimitiveLongIterator committed )
-    {
-        return LookupFilter.exactIndexMatches( this, state, committed, index.getPropertyKeyId(), value );
-    }
-
-    private PrimitiveLongIterator filterExactRangeMatches( final KernelStatement state, IndexDescriptor index,
-            PrimitiveLongIterator committed, Number lower, boolean includeLower, Number upper, boolean includeUpper )
-    {
-        return LookupFilter.exactRangeMatches( this, state, committed, index.getPropertyKeyId(), lower, includeLower,
-                upper, includeUpper );
-    }
-
-    private PrimitiveLongIterator filterIndexStateChangesForScanOrSeek( KernelStatement state, IndexDescriptor index,
-            Object value, PrimitiveLongIterator nodeIds )
+    private PrimitiveLongIterator filterIndexStateChangesForScan(
+            KernelStatement state, PrimitiveLongIterator nodeIds, IndexDescriptor index )
     {
         if ( state.hasTxStateWithChanges() )
         {
-            ReadableDiffSets<Long> labelPropertyChanges = state.txState().indexUpdatesForScanOrSeek( index, value );
+            ReadableDiffSets<Long> labelPropertyChanges =
+                    state.txState().indexUpdatesForScan( index );
+            ReadableDiffSets<Long> nodes = state.txState().addedAndRemovedNodes();
+
+            // Apply to actual index lookup
+            return nodes.augmentWithRemovals( labelPropertyChanges.augment( nodeIds ) );
+        }
+        return nodeIds;
+    }
+
+    private PrimitiveLongIterator filterIndexStateChangesForSeek(
+            KernelStatement state, PrimitiveLongIterator nodeIds, IndexDescriptor index,
+            OrderedPropertyValues propertyValues )
+    {
+        if ( state.hasTxStateWithChanges() )
+        {
+            ReadableDiffSets<Long> labelPropertyChanges =
+                    state.txState().indexUpdatesForSeek( index, propertyValues );
             ReadableDiffSets<Long> nodes = state.txState().addedAndRemovedNodes();
 
             // Apply to actual index lookup
@@ -878,7 +963,8 @@ public class StateHandlingStatementOperations implements
         if ( state.hasTxStateWithChanges() )
         {
             ReadableDiffSets<Long> labelPropertyChangesForNumber =
-                    state.txState().indexUpdatesForRangeSeekByNumber( index, lower, includeLower, upper, includeUpper );
+                    state.txState().indexUpdatesForRangeSeekByNumber(
+                            index, lower, includeLower, upper, includeUpper );
             ReadableDiffSets<Long> nodes = state.txState().addedAndRemovedNodes();
 
             // Apply to actual index lookup
@@ -897,7 +983,8 @@ public class StateHandlingStatementOperations implements
         if ( state.hasTxStateWithChanges() )
         {
             ReadableDiffSets<Long> labelPropertyChangesForString =
-                    state.txState().indexUpdatesForRangeSeekByString( index, lower, includeLower, upper, includeUpper );
+                    state.txState().indexUpdatesForRangeSeekByString(
+                            index, lower, includeLower, upper, includeUpper );
             ReadableDiffSets<Long> nodes = state.txState().addedAndRemovedNodes();
 
             // Apply to actual index lookup
@@ -926,65 +1013,74 @@ public class StateHandlingStatementOperations implements
 
     @Override
     public Property nodeSetProperty( KernelStatement state, long nodeId, DefinedProperty property )
-            throws EntityNotFoundException
+            throws EntityNotFoundException, InvalidTransactionTypeKernelException, AutoIndexingKernelException
     {
+        DataWriteOperations ops = state.dataWriteOperations();
         try ( Cursor<NodeItem> cursor = nodeCursorById( state, nodeId ) )
         {
             NodeItem node = cursor.get();
-            Property existingProperty;
-            try ( Cursor<PropertyItem> properties = node.property( property.propertyKeyId() ) )
+            DefinedProperty existingProperty = NO_SUCH_PROPERTY;
+            try ( Cursor<PropertyItem> properties = nodeGetPropertyCursor( state, node, property.propertyKeyId() ) )
             {
                 if ( !properties.next() )
                 {
-                    legacyPropertyTrackers.nodeAddStoreProperty( node.id(), property );
-                    existingProperty = Property.noProperty( property.propertyKeyId(), EntityType.NODE, node.id() );
+                    autoIndexing.nodes().propertyAdded( ops, nodeId, property );
                 }
                 else
                 {
                     existingProperty = Property.property( properties.get().propertyKeyId(), properties.get().value() );
-                    legacyPropertyTrackers.nodeChangeStoreProperty( node.id(), (DefinedProperty) existingProperty,
-                            property );
+                    autoIndexing.nodes().propertyChanged( ops, nodeId, existingProperty, property );
                 }
             }
 
-            state.txState().nodeDoReplaceProperty( node.id(), existingProperty, property );
-
-            PrimitiveIntCollection labelIds = getLabels( node );
-
-            indexesUpdateProperty( state, node.id(), labelIds, property.propertyKeyId(),
-                    existingProperty instanceof DefinedProperty ? (DefinedProperty) existingProperty : null,
-                    property );
-
-            return existingProperty;
+            if ( existingProperty == NO_SUCH_PROPERTY )
+            {
+                state.txState().nodeDoAddProperty( node.id(), property );
+                indexTxStateUpdater.onPropertyAdd( state, node, property );
+                return Property.noProperty( property.propertyKeyId(), EntityType.NODE, node.id() );
+            }
+            else
+            {
+                if ( !property.equals( existingProperty ) )
+                {
+                    state.txState().nodeDoChangeProperty( node.id(), existingProperty, property );
+                    indexTxStateUpdater.onPropertyChange( state, node, existingProperty, property );
+                }
+                return existingProperty;
+            }
         }
     }
 
     @Override
     public Property relationshipSetProperty( KernelStatement state,
             long relationshipId,
-            DefinedProperty property ) throws EntityNotFoundException
+            DefinedProperty property )
+            throws EntityNotFoundException, InvalidTransactionTypeKernelException, AutoIndexingKernelException
     {
+        DataWriteOperations ops = state.dataWriteOperations();
         try ( Cursor<RelationshipItem> cursor = relationshipCursorById( state, relationshipId ) )
         {
             RelationshipItem relationship = cursor.get();
             Property existingProperty;
-            try ( Cursor<PropertyItem> properties = relationship.property( property.propertyKeyId() ) )
+            try ( Cursor<PropertyItem> properties = relationshipGetPropertyCursor( state, relationship,
+                    property.propertyKeyId() ) )
             {
                 if ( !properties.next() )
                 {
-                    legacyPropertyTrackers.relationshipAddStoreProperty( relationship.id(), property );
-                    existingProperty = Property.noProperty( property.propertyKeyId(), EntityType.RELATIONSHIP,
-                            relationship.id() );
+                    autoIndexing.relationships().propertyAdded( ops, relationshipId, property );
+                    existingProperty =
+                            Property.noProperty( property.propertyKeyId(), EntityType.RELATIONSHIP, relationship.id() );
                 }
                 else
                 {
                     existingProperty = Property.property( properties.get().propertyKeyId(), properties.get().value() );
-                    legacyPropertyTrackers.relationshipChangeStoreProperty( relationship.id(),
-                            (DefinedProperty) existingProperty, property );
+                    autoIndexing.relationships().propertyChanged( ops, relationshipId, existingProperty, property );
                 }
             }
-
-            state.txState().relationshipDoReplaceProperty( relationship.id(), existingProperty, property );
+            if ( !property.equals( existingProperty ) )
+            {
+                state.txState().relationshipDoReplaceProperty( relationship.id(), existingProperty, property );
+            }
             return existingProperty;
         }
     }
@@ -996,35 +1092,40 @@ public class StateHandlingStatementOperations implements
         Property existingProperty = existingPropertyValue == null ?
                 Property.noGraphProperty( property.propertyKeyId() ) :
                 Property.property( property.propertyKeyId(), existingPropertyValue );
-        state.txState().graphDoReplaceProperty( existingProperty, property );
+
+        if ( !property.equals( existingProperty ) )
+        {
+            state.txState().graphDoReplaceProperty( existingProperty, property );
+        }
+
         return existingProperty;
     }
 
     @Override
     public Property nodeRemoveProperty( KernelStatement state, long nodeId, int propertyKeyId )
-            throws EntityNotFoundException
+            throws EntityNotFoundException, InvalidTransactionTypeKernelException, AutoIndexingKernelException
     {
+        DataWriteOperations ops = state.dataWriteOperations();
         try ( Cursor<NodeItem> cursor = nodeCursorById( state, nodeId ) )
         {
             NodeItem node = cursor.get();
-            PrimitiveIntCollection labelIds = getLabels( node );
-            Property existingProperty;
-            try ( Cursor<PropertyItem> properties = node.property( propertyKeyId ) )
+            DefinedProperty existingProperty = NO_SUCH_PROPERTY;
+            try ( Cursor<PropertyItem> properties = nodeGetPropertyCursor( state, node, propertyKeyId ) )
             {
-                if ( !properties.next() )
-                {
-                    existingProperty = Property.noProperty( propertyKeyId, EntityType.NODE, node.id() );
-                }
-                else
+                if ( properties.next() )
                 {
                     existingProperty = Property.property( properties.get().propertyKeyId(), properties.get().value() );
 
-                    legacyPropertyTrackers.nodeRemoveStoreProperty( node.id(), (DefinedProperty) existingProperty );
-                    state.txState().nodeDoRemoveProperty( node.id(), (DefinedProperty) existingProperty );
+                    autoIndexing.nodes().propertyRemoved( ops, nodeId, propertyKeyId );
+                    state.txState().nodeDoRemoveProperty( node.id(), existingProperty );
 
-                    indexesUpdateProperty( state, node.id(), labelIds, propertyKeyId,
-                            (DefinedProperty) existingProperty, null );
+                    indexTxStateUpdater.onPropertyRemove( state, node, existingProperty );
                 }
+            }
+
+            if ( existingProperty == NO_SUCH_PROPERTY )
+            {
+                return Property.noProperty( propertyKeyId, EntityType.NODE, node.id() );
             }
             return existingProperty;
         }
@@ -1033,13 +1134,16 @@ public class StateHandlingStatementOperations implements
     @Override
     public Property relationshipRemoveProperty( KernelStatement state,
             long relationshipId,
-            int propertyKeyId ) throws EntityNotFoundException
+            int propertyKeyId )
+            throws EntityNotFoundException, InvalidTransactionTypeKernelException, AutoIndexingKernelException
     {
+        DataWriteOperations ops = state.dataWriteOperations();
         try ( Cursor<RelationshipItem> cursor = relationshipCursorById( state, relationshipId ) )
         {
             RelationshipItem relationship = cursor.get();
             Property existingProperty;
-            try ( Cursor<PropertyItem> properties = relationship.property( propertyKeyId ) )
+            try ( Cursor<PropertyItem> properties = relationshipGetPropertyCursor( state, relationship,
+                    propertyKeyId ) )
             {
                 if ( !properties.next() )
                 {
@@ -1049,10 +1153,9 @@ public class StateHandlingStatementOperations implements
                 {
                     existingProperty = Property.property( properties.get().propertyKeyId(), properties.get().value() );
 
-                    legacyPropertyTrackers.relationshipRemoveStoreProperty( relationship.id(),
-                            (DefinedProperty) existingProperty );
-                    state.txState().relationshipDoRemoveProperty( relationship.id(),
-                            (DefinedProperty) existingProperty );
+                    autoIndexing.relationships().propertyRemoved( ops, relationshipId, propertyKeyId );
+                    state.txState()
+                            .relationshipDoRemoveProperty( relationship.id(), (DefinedProperty) existingProperty );
                 }
             }
             return existingProperty;
@@ -1069,34 +1172,7 @@ public class StateHandlingStatementOperations implements
             state.txState().graphDoRemoveProperty( existingProperty );
             return existingProperty;
         }
-        else
-        {
-            return Property.noGraphProperty( propertyKeyId );
-        }
-    }
-
-    private void indexesUpdateProperty( KernelStatement state,
-            long nodeId,
-            PrimitiveIntCollection labels,
-            int propertyKey,
-            DefinedProperty before,
-            DefinedProperty after )
-    {
-        PrimitiveIntIterator labelIterator = labels.iterator();
-        while ( labelIterator.hasNext() )
-        {
-            indexUpdateProperty( state, nodeId, labelIterator.next(), propertyKey, before, after );
-        }
-    }
-
-    private void indexUpdateProperty( KernelStatement state, long nodeId, int labelId, int propertyKey,
-            DefinedProperty before, DefinedProperty after )
-    {
-        IndexDescriptor descriptor = indexesGetForLabelAndPropertyKey( state, labelId, propertyKey );
-        if ( descriptor != null )
-        {
-            state.txState().indexDoUpdateProperty( descriptor, nodeId, before, after );
-        }
+        return Property.noGraphProperty( propertyKeyId );
     }
 
     @Override
@@ -1107,7 +1183,7 @@ public class StateHandlingStatementOperations implements
             return new PropertyKeyIdIterator( graphGetAllProperties( state ) );
         }
 
-        return storeLayer.graphGetPropertyKeys( state );
+        return storeLayer.graphGetPropertyKeys();
     }
 
     @Override
@@ -1119,10 +1195,10 @@ public class StateHandlingStatementOperations implements
     @Override
     public Object graphGetProperty( KernelStatement state, int propertyKeyId )
     {
-        Iterator<DefinedProperty> properties = graphGetAllProperties( state );
+        Iterator<StorageProperty> properties = graphGetAllProperties( state );
         while ( properties.hasNext() )
         {
-            DefinedProperty property = properties.next();
+            DefinedProperty property = (DefinedProperty) properties.next();
             if ( property.propertyKeyId() == propertyKeyId )
             {
                 return property.value();
@@ -1131,7 +1207,7 @@ public class StateHandlingStatementOperations implements
         return null;
     }
 
-    private Iterator<DefinedProperty> graphGetAllProperties( KernelStatement state )
+    private Iterator<StorageProperty> graphGetAllProperties( KernelStatement state )
     {
         if ( state.hasTxStateWithChanges() )
         {
@@ -1142,13 +1218,63 @@ public class StateHandlingStatementOperations implements
     }
 
     @Override
-    public long countsForNode( KernelStatement statement, int labelId )
+    public long countsForNode( final KernelStatement statement, int labelId )
+    {
+        long count = countsForNodeWithoutTxState( statement, labelId );
+        if ( statement.hasTxStateWithChanges() )
+        {
+            CountsRecordState counts = new CountsRecordState();
+            try
+            {
+                statement.txState().accept( new TransactionCountingStateVisitor( EMPTY, storeLayer,
+                        statement.getStoreStatement(), statement.txState(), counts ) );
+                if ( counts.hasChanges() )
+                {
+                    count += counts.nodeCount( labelId, newDoubleLongRegister() ).readSecond();
+                }
+            }
+            catch ( ConstraintValidationException | CreateConstraintFailureException e )
+            {
+                throw new IllegalArgumentException( "Unexpected error: " + e.getMessage() );
+            }
+        }
+        return count;
+    }
+
+    @Override
+    public long countsForNodeWithoutTxState( final KernelStatement statement, int labelId )
     {
         return storeLayer.countsForNode( labelId );
     }
 
     @Override
     public long countsForRelationship( KernelStatement statement, int startLabelId, int typeId, int endLabelId )
+    {
+        long count = countsForRelationshipWithoutTxState( statement, startLabelId, typeId, endLabelId );
+        if ( statement.hasTxStateWithChanges() )
+        {
+            CountsRecordState counts = new CountsRecordState();
+            try
+            {
+                statement.txState().accept( new TransactionCountingStateVisitor( EMPTY, storeLayer,
+                        statement.getStoreStatement(), statement.txState(), counts ) );
+                if ( counts.hasChanges() )
+                {
+                    count += counts.relationshipCount( startLabelId, typeId, endLabelId, newDoubleLongRegister() )
+                            .readSecond();
+                }
+            }
+            catch ( ConstraintValidationException | CreateConstraintFailureException e )
+            {
+                throw new IllegalArgumentException( "Unexpected error: " + e.getMessage() );
+            }
+        }
+        return count;
+    }
+
+    @Override
+    public long countsForRelationshipWithoutTxState( KernelStatement statement, int startLabelId, int typeId,
+            int endLabelId )
     {
         return storeLayer.countsForRelationship( startLabelId, typeId, endLabelId );
     }
@@ -1157,14 +1283,28 @@ public class StateHandlingStatementOperations implements
     public long indexSize( KernelStatement statement, IndexDescriptor descriptor )
             throws IndexNotFoundKernelException
     {
-        return storeLayer.indexSize( descriptor );
+        return storeLayer.indexSize( descriptor.schema() );
     }
 
     @Override
     public double indexUniqueValuesPercentage( KernelStatement statement, IndexDescriptor descriptor )
             throws IndexNotFoundKernelException
     {
-        return storeLayer.indexUniqueValuesPercentage( descriptor );
+        return storeLayer.indexUniqueValuesPercentage( descriptor.schema() );
+    }
+
+    @Override
+    public DoubleLongRegister indexUpdatesAndSize( KernelStatement statement, IndexDescriptor index,
+            DoubleLongRegister target ) throws IndexNotFoundKernelException
+    {
+        return storeLayer.indexUpdatesAndSize( index.schema(), target );
+    }
+
+    @Override
+    public DoubleLongRegister indexSample( KernelStatement statement, IndexDescriptor index, DoubleLongRegister target )
+            throws IndexNotFoundKernelException
+    {
+        return storeLayer.indexSample( index.schema(), target );
     }
 
     //
@@ -1173,23 +1313,22 @@ public class StateHandlingStatementOperations implements
 
     @Override
     public Long indexGetOwningUniquenessConstraintId( KernelStatement state, IndexDescriptor index )
-            throws SchemaRuleNotFoundException
     {
         return storeLayer.indexGetOwningUniquenessConstraintId( index );
     }
 
     @Override
-    public long indexGetCommittedId( KernelStatement state, IndexDescriptor index, SchemaStorage.IndexRuleKind kind )
+    public long indexGetCommittedId( KernelStatement state, IndexDescriptor index )
             throws SchemaRuleNotFoundException
     {
-        return storeLayer.indexGetCommittedId( index, kind );
+        return storeLayer.indexGetCommittedId( index );
     }
 
     @Override
     public String indexGetFailure( Statement state, IndexDescriptor descriptor )
             throws IndexNotFoundKernelException
     {
-        return storeLayer.indexGetFailure( descriptor );
+        return storeLayer.indexGetFailure( descriptor.schema() );
     }
 
     @Override
@@ -1226,6 +1365,12 @@ public class StateHandlingStatementOperations implements
     public Iterator<Token> labelsGetAllTokens( Statement state )
     {
         return storeLayer.labelsGetAllTokens();
+    }
+
+    @Override
+    public Iterator<Token> relationshipTypesGetAllTokens( Statement state )
+    {
+        return storeLayer.relationshipTypeGetAllTokens();
     }
 
     @Override
@@ -1285,30 +1430,22 @@ public class StateHandlingStatementOperations implements
         state.txState().relationshipTypeDoCreateForName( relationshipTypeName, id );
     }
 
-    private static int[] deduplicate( int[] types )
+    @Override
+    public int labelCount( KernelStatement statement )
     {
-        int unique = 0;
-        for ( int i = 0; i < types.length; i++ )
-        {
-            int type = types[i];
-            for ( int j = 0; j < unique; j++ )
-            {
-                if ( type == types[j] )
-                {
-                    type = -1; // signal that this relationship is not unique
-                    break; // we will not find more than one conflict
-                }
-            }
-            if ( type != -1 )
-            { // this has to be done outside the inner loop, otherwise we'd never accept a single one...
-                types[unique++] = types[i];
-            }
-        }
-        if ( unique < types.length )
-        {
-            types = Arrays.copyOf( types, unique );
-        }
-        return types;
+        return storeLayer.labelCount();
+    }
+
+    @Override
+    public int propertyKeyCount( KernelStatement statement )
+    {
+        return storeLayer.propertyKeyCount();
+    }
+
+    @Override
+    public int relationshipTypeCount( KernelStatement statement )
+    {
+        return storeLayer.relationshipTypeCount();
     }
 
     // <Legacy index>
@@ -1395,7 +1532,7 @@ public class StateHandlingStatementOperations implements
     @Override
     public void nodeLegacyIndexCreate( KernelStatement statement, String indexName, Map<String, String> customConfig )
     {
-        statement.txState().nodeLegacyIndexDoCreate( indexName, customConfig );
+        statement.legacyIndexTxState().createIndex( IndexEntityType.Node, indexName, customConfig );
     }
 
     @Override
@@ -1410,7 +1547,7 @@ public class StateHandlingStatementOperations implements
             String indexName,
             Map<String, String> customConfig )
     {
-        statement.txState().relationshipLegacyIndexDoCreate( indexName, customConfig );
+        statement.legacyIndexTxState().createIndex( IndexEntityType.Relationship, indexName, customConfig );
     }
 
     @Override
@@ -1611,16 +1748,82 @@ public class StateHandlingStatementOperations implements
     }
     // </Legacy index>
 
-    private PrimitiveIntCollection getLabels( NodeItem node )
+    @Override
+    public boolean nodeExists( KernelStatement statement, long id )
     {
-        PrimitiveIntStack labelIds = new PrimitiveIntStack();
-        try ( Cursor<LabelItem> labels = node.labels() )
+        if ( statement.hasTxStateWithChanges() )
         {
-            while ( labels.next() )
+            TransactionState txState = statement.txState();
+            if ( txState.nodeIsDeletedInThisTx( id ) )
             {
-                labelIds.push( labels.get().getAsInt() );
+                return false;
+            }
+            else if ( txState.nodeIsAddedInThisTx( id ) )
+            {
+                return true;
             }
         }
-        return labelIds;
+        return storeLayer.nodeExists( id );
+    }
+
+    @Override
+    public PrimitiveIntSet relationshipTypes( KernelStatement statement, NodeItem node )
+    {
+        if ( statement.hasTxStateWithChanges() && statement.txState().nodeIsAddedInThisTx( node.id() ) )
+        {
+            return statement.txState().getNodeState( node.id() ).relationshipTypes();
+        }
+
+        // Read types in the current transaction
+        PrimitiveIntSet types = statement.hasTxStateWithChanges()
+                                ? statement.txState().getNodeState( node.id() ).relationshipTypes()
+                                : Primitive.intSet();
+
+        // Augment with types stored on disk, minus any types where all rels of that type are deleted
+        // in current tx.
+        types.addAll( filter( storeLayer.relationshipTypes( statement.getStoreStatement(), node ).iterator(),
+                ( current ) -> !types.contains( current ) && degree( statement, node, Direction.BOTH, current ) > 0 ) );
+
+        return types;
+    }
+
+    @Override
+    public int degree( KernelStatement statement, NodeItem node, Direction direction )
+    {
+        int degree = statement.hasTxStateWithChanges() && statement.txState().nodeIsAddedInThisTx( node.id() )
+                     ? 0
+                     : computeDegree( statement, node, direction, null );
+
+        return statement.hasTxStateWithChanges()
+                ? statement.txState().getNodeState( node.id() ).augmentDegree( direction, degree )
+                : degree;
+    }
+
+    @Override
+    public int degree( KernelStatement statement, NodeItem node, Direction direction, int relType )
+    {
+        int degree = statement.hasTxStateWithChanges() && statement.txState().nodeIsAddedInThisTx( node.id() )
+                     ? 0
+                     : computeDegree( statement, node, direction, relType );
+
+        return statement.hasTxStateWithChanges()
+               ? statement.txState().getNodeState( node.id() ).augmentDegree( direction, degree, relType )
+               : degree;
+    }
+
+    private int computeDegree( KernelStatement statement, NodeItem node,  Direction direction, Integer relType )
+    {
+        StorageStatement storeStatement = statement.getStoreStatement();
+        if ( node.isDense() )
+        {
+            return storeLayer.degreeRelationshipsInGroup( storeStatement, node.id(), node.nextGroupId(),
+                    direction, relType );
+        }
+        else
+        {
+            return count( relType == null
+                          ? storeLayer.nodeGetRelationships( storeStatement, node, direction )
+                          : storeLayer.nodeGetRelationships( storeStatement, node, direction, t -> t == relType ) );
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,7 +26,7 @@ final class MuninnPageEvictionCallback implements PageEvictionCallback
 {
     private final MuninnPagedFile file;
 
-    public MuninnPageEvictionCallback( MuninnPagedFile file )
+    MuninnPageEvictionCallback( MuninnPagedFile file )
     {
         this.file = file;
     }
@@ -35,8 +35,8 @@ final class MuninnPageEvictionCallback implements PageEvictionCallback
     public void onEvict( long filePageId, Page page )
     {
         MuninnPage removed = file.evictPage( filePageId );
-        assert removed == page:
+        assert removed == page :
                 "Removed unexpected page when cleaning up translation table for filePageId " + filePageId + ". " +
-                "Evicted " + page + " but removed " + removed + " from the translation table.";
+                        "Evicted " + page + " but removed " + removed + " from the translation table.";
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.kernel.ha.cluster;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
@@ -37,7 +38,7 @@ import static org.mockito.Mockito.verify;
 public class DefaultConversationSPITest
 {
 
-    @Mock
+    @Mock( answer = Answers.RETURNS_MOCKS )
     private Locks locks;
     @Mock
     private JobScheduler jobScheduler;

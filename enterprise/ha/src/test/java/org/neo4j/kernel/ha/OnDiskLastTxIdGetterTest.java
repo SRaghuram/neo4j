@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,32 +19,48 @@
  */
 package org.neo4j.kernel.ha;
 
+import org.junit.Rule;
 import org.junit.Test;
+
+import java.io.File;
+import java.util.function.LongSupplier;
 
 import org.neo4j.kernel.ha.transaction.OnDiskLastTxIdGetter;
 import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.transaction.state.NeoStoresSupplier;
+import org.neo4j.kernel.impl.store.StoreFactory;
+import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class OnDiskLastTxIdGetterTest
 {
+    @Rule
+    public PageCacheRule pageCacheRule = new PageCacheRule();
+    @Rule
+    public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+
     @Test
     public void testGetLastTxIdNoFilePresent() throws Exception
     {
         // This is a sign that we have some bad coupling on our hands.
         // We currently have to do this because of our lifecycle and construction ordering.
-        NeoStoresSupplier supplier = mock( NeoStoresSupplier.class );
-        NeoStores neoStores = mock( NeoStores.class );
-        MetaDataStore metaDataStore = mock( MetaDataStore.class );
-        when( supplier.get() ).thenReturn( neoStores );
-        when( neoStores.getMetaDataStore() ).thenReturn( metaDataStore );
-        when( metaDataStore.getLastCommittedTransactionId() ).thenReturn( 13L );
-
-        OnDiskLastTxIdGetter getter = new OnDiskLastTxIdGetter( supplier );
+        OnDiskLastTxIdGetter getter = new OnDiskLastTxIdGetter( () -> 13L );
         assertEquals( 13L, getter.getLastTxId() );
+    }
+
+    @Test
+    public void lastTransactionIdIsBaseTxIdWhileNeoStoresAreStopped()
+    {
+        final StoreFactory storeFactory = new StoreFactory( new File( "store" ), pageCacheRule.getPageCache( fs.get() ),
+                fs.get(), NullLogProvider.getInstance() );
+        final NeoStores neoStores = storeFactory.openAllNeoStores( true );
+        neoStores.close();
+
+        LongSupplier supplier = () -> neoStores.getMetaDataStore().getLastCommittedTransactionId();
+        OnDiskLastTxIdGetter diskLastTxIdGetter = new OnDiskLastTxIdGetter( supplier );
+        assertEquals( TransactionIdStore.BASE_TX_ID, diskLastTxIdGetter.getLastTxId() );
     }
 }

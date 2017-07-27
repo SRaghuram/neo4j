@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,20 +22,22 @@ package org.neo4j.test;
 import java.io.Closeable;
 import java.io.PrintStream;
 import java.lang.Thread.State;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.Predicate;
 
-import org.neo4j.function.Predicate;
 import org.neo4j.logging.Logger;
 
 import static java.lang.String.format;
+import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -130,20 +132,16 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Closeable
     {
         lastExecutionTrigger = new Exception();
         executionState = ExecutionState.REQUESTED_EXECUTION;
-        return commandExecutor.submit( new Callable<R>()
+        return commandExecutor.submit( () ->
         {
-            @Override
-            public R call() throws Exception
+            executionState = ExecutionState.EXECUTING;
+            try
             {
-                executionState = ExecutionState.EXECUTING;
-                try
-                {
-                    return cmd.doWork( state );
-                }
-                finally
-                {
-                    executionState = ExecutionState.EXECUTED;
-                }
+                return cmd.doWork( state );
+            }
+            finally
+            {
+                executionState = ExecutionState.EXECUTED;
             }
         } );
     }
@@ -173,7 +171,7 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Closeable
         }
     }
 
-    void awaitStartExecuting() throws InterruptedException
+    public void awaitStartExecuting() throws InterruptedException
     {
         while ( executionState == ExecutionState.REQUESTED_EXECUTION )
         {
@@ -223,17 +221,45 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Closeable
 
     public WaitDetails waitUntilWaiting() throws TimeoutException
     {
-        return waitUntilThreadState( Thread.State.WAITING, Thread.State.TIMED_WAITING );
+        return waitUntilWaiting( details -> true );
     }
 
     public WaitDetails waitUntilBlocked() throws TimeoutException
     {
-        return waitUntilThreadState( Thread.State.BLOCKED );
+        return waitUntilBlocked( details -> true );
+    }
+
+    public WaitDetails waitUntilWaiting( Predicate<WaitDetails> correctWait ) throws TimeoutException
+    {
+        return waitUntilThreadState( correctWait, Thread.State.WAITING, Thread.State.TIMED_WAITING );
+    }
+
+    public WaitDetails waitUntilBlocked( Predicate<WaitDetails> correctWait ) throws TimeoutException
+    {
+        return waitUntilThreadState( correctWait, Thread.State.BLOCKED );
     }
 
     public WaitDetails waitUntilThreadState( final Thread.State... possibleStates ) throws TimeoutException
     {
-        return waitUntil( new AnyThreadState( possibleStates ) );
+        return waitUntilThreadState( details -> true, possibleStates );
+    }
+
+    public WaitDetails waitUntilThreadState( Predicate<WaitDetails> correctWait,
+            final Thread.State... possibleStates ) throws TimeoutException
+    {
+        long end = currentTimeMillis() + timeout;
+        WaitDetails details = null;
+        while ( !correctWait.test( details = waitUntil( new AnyThreadState( possibleStates )) ) )
+        {
+            LockSupport.parkNanos( MILLISECONDS.toNanos( 20 ) );
+            if ( currentTimeMillis() > end )
+            {
+                throw new TimeoutException( "Wanted to wait for any of " + Arrays.toString( possibleStates ) +
+                        " over at " + correctWait + ", but didn't managed to get there in " + timeout + "ms. " +
+                        "instead ended up waiting in " + details );
+            }
+        }
+        return details;
     }
 
     public WaitDetails waitUntil( Predicate<Thread> condition ) throws TimeoutException
@@ -364,13 +390,13 @@ public class OtherThreadExecutor<T> implements ThreadFactory, Closeable
 
     public void interrupt()
     {
-        if(thread != null)
+        if ( thread != null )
         {
             thread.interrupt();
         }
     }
 
-    void printStackTrace( PrintStream out )
+    public void printStackTrace( PrintStream out )
     {
         Thread thread = getThread();
         out.println( thread );

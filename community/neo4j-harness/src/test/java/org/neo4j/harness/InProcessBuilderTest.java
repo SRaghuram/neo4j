@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyManagementException;
@@ -40,21 +41,25 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
+import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.extensionpackage.MyUnmanagedExtension;
-import org.neo4j.helpers.collection.IteratorUtil;
-import org.neo4j.server.configuration.Configurator;
-import org.neo4j.server.configuration.ServerSettings;
+import org.neo4j.helpers.HostnamePort;
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.HttpConnector;
+import org.neo4j.kernel.configuration.HttpConnector.Encryption;
+import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.server.rest.domain.JsonParseException;
-import org.neo4j.test.SuppressOutput;
-import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
-import org.neo4j.tooling.GlobalGraphOperations;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
@@ -64,13 +69,15 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.harness.TestServerBuilders.newInProcessBuilder;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 public class InProcessBuilderTest
 {
     @Rule
-    public TargetDirectory.TestDirectory testDir = TargetDirectory.testDirForTest( InProcessBuilderTest.class );
+    public TestDirectory testDir = TestDirectory.testDirectory();
 
-    @Rule public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    @Rule
+    public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
 
     @Test
     public void shouldLaunchAServerInSpecifiedDirectory() throws Exception
@@ -80,15 +87,20 @@ public class InProcessBuilderTest
         workDir.mkdir();
 
         // When
-        try(ServerControls server = newInProcessBuilder( workDir ).newServer())
+        try ( ServerControls server = getTestServerBuilder( workDir ).newServer() )
         {
             // Then
             assertThat( HTTP.GET( server.httpURI().toString() ).status(), equalTo( 200 ) );
-            assertThat( workDir.list().length, equalTo(1));
+            assertThat( workDir.list().length, equalTo( 1 ) );
         }
 
         // And after it's been closed, it should've cleaned up after itself.
         assertThat( Arrays.toString( workDir.list() ), workDir.list().length, equalTo( 0 ) );
+    }
+
+    private TestServerBuilder getTestServerBuilder( File workDir )
+    {
+        return newInProcessBuilder( workDir );
     }
 
     @Test
@@ -98,16 +110,22 @@ public class InProcessBuilderTest
         trustAllSSLCerts();
 
         // When
-        try ( ServerControls server = newInProcessBuilder( testDir.directory() )
-                .withConfig( Configurator.WEBSERVER_HTTPS_ENABLED_PROPERTY_KEY, "true")
-                .withConfig( ServerSettings.tls_certificate_file.name(), testDir.file( "cert" ).getAbsolutePath() )
-                .withConfig( Configurator.WEBSERVER_KEYSTORE_PATH_PROPERTY_KEY, testDir.file( "keystore" ).getAbsolutePath() )
-                .withConfig( ServerSettings.tls_key_file.name(), testDir.file( "key" ).getAbsolutePath() )
+        HttpConnector httpConnector = new HttpConnector( "0", Encryption.NONE );
+        HttpConnector httpsConnector = new HttpConnector( "1", Encryption.TLS );
+        try ( ServerControls server = getTestServerBuilder( testDir.directory() )
+                .withConfig( httpConnector.type, "HTTP" )
+                .withConfig( httpConnector.enabled, "true" )
+                .withConfig( httpConnector.encryption, "NONE" )
+                .withConfig( httpsConnector.type, "HTTP" )
+                .withConfig( httpsConnector.enabled, "true" )
+                .withConfig( httpsConnector.encryption, "TLS" )
+                .withConfig( httpsConnector.address, "localhost:7473" )
+                .withConfig( LegacySslPolicyConfig.certificates_directory.name(), testDir.directory( "certificates" ).getAbsolutePath() )
                 .withConfig( GraphDatabaseSettings.dense_node_threshold, "20" )
                 .newServer() )
         {
             // Then
-            assertThat( HTTP.GET( server.httpsURI().toString() ).status(), equalTo( 200 ) );
+            assertThat( HTTP.GET( server.httpsURI().get().toString() ).status(), equalTo( 200 ) );
             assertDBConfig( server, "20", GraphDatabaseSettings.dense_node_threshold.name() );
         }
     }
@@ -116,9 +134,9 @@ public class InProcessBuilderTest
     public void shouldMountUnmanagedExtensionsByClass() throws Exception
     {
         // When
-        try(ServerControls server = newInProcessBuilder( testDir.directory() )
+        try ( ServerControls server = getTestServerBuilder( testDir.directory() )
                 .withExtension( "/path/to/my/extension", MyUnmanagedExtension.class )
-                .newServer())
+                .newServer() )
         {
             // Then
             assertThat( HTTP.GET( server.httpURI().toString() + "path/to/my/extension/myExtension" ).status(),
@@ -130,9 +148,9 @@ public class InProcessBuilderTest
     public void shouldMountUnmanagedExtensionsByPackage() throws Exception
     {
         // When
-        try(ServerControls server = newInProcessBuilder( testDir.directory() )
+        try ( ServerControls server = getTestServerBuilder( testDir.directory() )
                 .withExtension( "/path/to/my/extension", "org.neo4j.harness.extensionpackage" )
-                .newServer())
+                .newServer() )
         {
             // Then
             assertThat( HTTP.GET( server.httpURI().toString() + "path/to/my/extension/myExtension" ).status(),
@@ -144,10 +162,10 @@ public class InProcessBuilderTest
     public void shouldFindFreePort() throws Exception
     {
         // Given one server is running
-        try(ServerControls firstServer = newInProcessBuilder( testDir.directory() ).newServer())
+        try ( ServerControls firstServer = getTestServerBuilder( testDir.directory() ).newServer() )
         {
             // When I start a second server
-            try(ServerControls secondServer = newInProcessBuilder( testDir.directory() ).newServer())
+            try ( ServerControls secondServer = getTestServerBuilder( testDir.directory() ).newServer() )
             {
                 // Then
                 assertThat( secondServer.httpURI().getPort(), not( firstServer.httpURI().getPort() ) );
@@ -160,12 +178,12 @@ public class InProcessBuilderTest
     {
         // When
         // create graph db with one node upfront
-        Path dir = Files.createTempDirectory( getClass().getSimpleName() +
-                "_shouldRunBuilderOnExistingStorageDir" );
+        Path dir = Files.createTempDirectory( getClass().getSimpleName() + "_shouldRunBuilderOnExistingStorageDir" );
+        File storeDir = Config.embeddedDefaults( stringMap( DatabaseManagementSystemSettings.data_directory.name(), dir.toString() ) )
+                .get( DatabaseManagementSystemSettings.database_path );
         try
         {
-
-            GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( dir.toString() );
+            GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
             try
             {
                 db.execute( "create ()" );
@@ -175,16 +193,15 @@ public class InProcessBuilderTest
                 db.shutdown();
             }
 
-            try ( ServerControls server = newInProcessBuilder( testDir.directory() ).copyFrom( dir.toFile() )
+            try ( ServerControls server = getTestServerBuilder( testDir.directory() ).copyFrom( dir.toFile() )
                     .newServer() )
             {
                 // Then
                 try ( Transaction tx = server.graph().beginTx() )
                 {
-                    ResourceIterable<Node> allNodes = GlobalGraphOperations.at(
-                            server.graph() ).getAllNodes();
+                    ResourceIterable<Node> allNodes = Iterables.asResourceIterable( server.graph().getAllNodes() );
 
-                    assertTrue( IteratorUtil.count( allNodes ) > 0 );
+                    assertTrue( Iterables.count( allNodes ) > 0 );
 
                     // When: create another node
                     server.graph().createNode();
@@ -193,12 +210,12 @@ public class InProcessBuilderTest
             }
 
             // Then: we still only have one node since the server is supposed to work on a copy
-            db = new TestGraphDatabaseFactory().newEmbeddedDatabase( dir.toString() );
+            db = new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
             try
             {
                 try ( Transaction tx = db.beginTx() )
                 {
-                    assertEquals( 1, IteratorUtil.count( GlobalGraphOperations.at( db ).getAllNodes() ) );
+                    assertEquals( 1, Iterables.count( db.getAllNodes() ) );
                     tx.success();
                 }
             }
@@ -214,20 +231,36 @@ public class InProcessBuilderTest
     }
 
     @Test
+    public void shouldOpenBoltPort() throws Throwable
+    {
+        // given
+        try ( ServerControls controls = newInProcessBuilder().newServer() )
+        {
+            URI uri = controls.boltURI();
+
+            // when
+            new SocketConnection().connect( new HostnamePort( uri.getHost(), uri.getPort() ) );
+
+            // then no exception
+        }
+    }
+
+    @Test
     public void shouldFailWhenProvidingANonDirectoryAsSource() throws IOException
     {
 
         File notADirectory = File.createTempFile( "prefix", "suffix" );
         assertFalse( notADirectory.isDirectory() );
 
-        try ( ServerControls server = newInProcessBuilder( ).copyFrom( notADirectory )
-                .newServer() )
+        try ( ServerControls ignored = newInProcessBuilder().copyFrom( notADirectory ).newServer() )
         {
-            fail("server should not start");
-        } catch (RuntimeException rte) {
+            fail( "server should not start" );
+        }
+        catch ( RuntimeException rte )
+        {
             Throwable cause = rte.getCause();
-            assertTrue( cause instanceof IOException);
-            assertTrue( cause.getMessage().contains( "exists but is not a directory" ));
+            assertTrue( cause instanceof IOException );
+            assertTrue( cause.getMessage().contains( "exists but is not a directory" ) );
         }
 
     }
@@ -240,16 +273,16 @@ public class InProcessBuilderTest
         boolean foundKey = false;
         for ( JsonNode attribute : configurationBean )
         {
-            if(attribute.get("name").asText().equals( key ))
+            if ( attribute.get( "name" ).asText().equals( key ) )
             {
-                assertThat(attribute.get("value").asText(), equalTo( expected ));
+                assertThat( attribute.get( "value" ).asText(), equalTo( expected ) );
                 foundKey = true;
                 break;
             }
         }
-        if(!foundKey)
+        if ( !foundKey )
         {
-            fail("No config key '" + key + "'.");
+            fail( "No config key '" + key + "'." );
         }
     }
 
@@ -268,7 +301,8 @@ public class InProcessBuilderTest
 
     private void trustAllSSLCerts() throws NoSuchAlgorithmException, KeyManagementException
     {
-        TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager()
+        TrustManager[] trustAllCerts = new TrustManager[]{
+                new X509TrustManager()
         {
             @Override
             public void checkClientTrusted( X509Certificate[] arg0, String arg1 )
@@ -287,7 +321,8 @@ public class InProcessBuilderTest
             {
                 return null;
             }
-        }};
+        }
+        };
 
         // Install the all-trusting trust manager
         SSLContext sc = SSLContext.getInstance( "TLS" );

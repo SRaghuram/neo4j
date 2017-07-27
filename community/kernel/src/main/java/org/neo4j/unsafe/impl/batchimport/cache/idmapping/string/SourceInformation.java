@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,7 +37,7 @@ class SourceInformation implements Cloneable
     SourceInformation decode( long sourceInformation )
     {
         sourceId = (int) ((sourceInformation & ~LINE_NUMBER_MASK) >>> 48); // >>> we don't want the sign to matter
-        lineNumber = (sourceInformation & LINE_NUMBER_MASK);
+        lineNumber = sourceInformation & LINE_NUMBER_MASK;
         return this;
     }
 

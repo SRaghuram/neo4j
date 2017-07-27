@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,15 @@
  */
 package org.neo4j.kernel.impl.core;
 
-import org.neo4j.function.Supplier;
+import java.util.Optional;
+import java.util.function.Supplier;
+
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.NotInTransactionException;
-import org.neo4j.kernel.TopLevelTransaction;
 import org.neo4j.graphdb.TransactionTerminatedException;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 /**
@@ -34,7 +36,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
  */
 public class ThreadToStatementContextBridge extends LifecycleAdapter implements Supplier<Statement>
 {
-    private final ThreadLocal<TopLevelTransaction> threadToTransactionMap = new ThreadLocal<>();
+    private final ThreadLocal<KernelTransaction> threadToTransactionMap = new ThreadLocal<>();
     private boolean isShutdown;
 
     public boolean hasTransaction()
@@ -43,7 +45,7 @@ public class ThreadToStatementContextBridge extends LifecycleAdapter implements 
         return threadToTransactionMap.get() != null;
     }
 
-    public void bindTransactionToCurrentThread( TopLevelTransaction transaction )
+    public void bindTransactionToCurrentThread( KernelTransaction transaction )
     {
         if ( threadToTransactionMap.get() != null )
         {
@@ -64,15 +66,16 @@ public class ThreadToStatementContextBridge extends LifecycleAdapter implements 
         return getKernelTransactionBoundToThisThread( true ).acquireStatement();
     }
 
-    private void assertInUnterminatedTransaction( TopLevelTransaction transaction )
+    private void assertInUnterminatedTransaction( KernelTransaction transaction )
     {
         if ( transaction == null )
         {
-            throw new NotInTransactionException();
+            throw new BridgeNotInTransactionException();
         }
-        if ( transaction.getTransaction().shouldBeTerminated() )
+        Optional<Status> terminationReason = transaction.getReasonIfTerminated();
+        if ( terminationReason.isPresent() )
         {
-            throw new TransactionTerminatedException();
+            throw new TransactionTerminatedException( terminationReason.get() );
         }
     }
 
@@ -92,13 +95,13 @@ public class ThreadToStatementContextBridge extends LifecycleAdapter implements 
     {
         if ( isShutdown )
         {
-            throw new DatabaseShutdownException();
+            throw new BridgeDatabaseShutdownException();
         }
     }
 
-    public TopLevelTransaction getTopLevelTransactionBoundToThisThread( boolean strict )
+    public KernelTransaction getTopLevelTransactionBoundToThisThread( boolean strict )
     {
-        TopLevelTransaction transaction = threadToTransactionMap.get();
+        KernelTransaction transaction = threadToTransactionMap.get();
         if ( strict )
         {
             assertInUnterminatedTransaction( transaction );
@@ -108,7 +111,26 @@ public class ThreadToStatementContextBridge extends LifecycleAdapter implements 
 
     public KernelTransaction getKernelTransactionBoundToThisThread( boolean strict )
     {
-        TopLevelTransaction tx = getTopLevelTransactionBoundToThisThread( strict );
-        return tx != null ? tx.getTransaction() : null;
+        checkIfShutdown();
+        return getTopLevelTransactionBoundToThisThread( strict );
+    }
+
+    // Exeptions below extend the public API exceptions with versions that have status codes.
+    private static class BridgeNotInTransactionException extends NotInTransactionException implements Status.HasStatus
+    {
+        @Override
+        public Status status()
+        {
+            return Status.Request.TransactionRequired;
+        }
+    }
+
+    private static class BridgeDatabaseShutdownException extends DatabaseShutdownException implements Status.HasStatus
+    {
+        @Override
+        public Status status()
+        {
+            return Status.General.DatabaseUnavailable;
+        }
     }
 }

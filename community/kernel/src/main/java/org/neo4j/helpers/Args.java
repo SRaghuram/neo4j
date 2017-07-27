@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,11 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.function.Function;
 
-import org.neo4j.function.Function;
+import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.impl.util.Validator;
-
-import static org.neo4j.helpers.collection.IteratorUtil.firstOrNull;
 
 /**
  * Parses a String[] argument from a main-method. It expects values to be either
@@ -113,16 +112,12 @@ public class Args
         }
     }
 
-    private static final Function<String,Option<String>> DEFAULT_OPTION_PARSER = new Function<String,Option<String>>()
+    private static final Function<String,Option<String>> DEFAULT_OPTION_PARSER = from ->
     {
-        @Override
-        public Option<String> apply( String from )
-        {
-            int metadataStartIndex = from.indexOf( OPTION_METADATA_DELIMITER );
-            return metadataStartIndex == -1
-                    ? new Option<>( from, null )
-                    : new Option<>( from.substring( 0, metadataStartIndex ), from.substring( metadataStartIndex + 1 ) );
-        }
+        int metadataStartIndex = from.indexOf( OPTION_METADATA_DELIMITER );
+        return metadataStartIndex == -1
+                ? new Option<>( from, null )
+                : new Option<>( from.substring( 0, metadataStartIndex ), from.substring( metadataStartIndex + 1 ) );
     };
 
     private final String[] args;
@@ -187,7 +182,7 @@ public class Args
         Map<String,String> result = new HashMap<>();
         for ( Map.Entry<String,List<Option<String>>> entry : map.entrySet() )
         {
-            Option<String> value = firstOrNull( entry.getValue() );
+            Option<String> value = Iterables.firstOrNull( entry.getValue() );
             result.put( entry.getKey(), value != null ? value.value() : null );
         }
         return result;
@@ -218,6 +213,11 @@ public class Args
         return values.get( 0 ).value();
     }
 
+    /**
+     * Get a config option by name.
+     * @param key name of the option, without any `-` or `--` prefix, eg. "o".
+     * @return the string value of the option, or null if the user has not specified it
+     */
     public String get( String key )
     {
         return getSingleOptionOrNull( key );
@@ -251,21 +251,61 @@ public class Args
         return value != null ? TimeUtil.parseTimeMillis.apply(value) : defaultValueInMillis;
     }
 
-    public Boolean getBoolean( String key, Boolean defaultValue )
+    /**
+     * Like calling {@link #getBoolean(String, Boolean)} with {@code false} for default value.
+     * This is the most common case, i.e. returns {@code true} if boolean argument was specified as:
+     * <ul>
+     * <li>--myboolean</li>
+     * <li>--myboolean=true</li>
+     * </ul>
+     * Otherwise {@code false.
+     * }
+     * @param key argument key.
+     * @return {@code true} if argument was specified w/o value, or w/ value {@code true}, otherwise {@code false}.
+     */
+    public boolean getBoolean( String key )
     {
-        String value = getSingleOptionOrNull( key );
-        return value != null ? Boolean.parseBoolean( value ) : defaultValue;
+        return getBoolean( key, false );
     }
 
-    public Boolean getBoolean( String key, Boolean defaultValueIfNotFound,
-            Boolean defaultValueIfNoValue )
+    /**
+     * Like calling {@link #getBoolean(String, Boolean, Boolean)} with {@code true} for
+     * {@code defaultValueIfNoValue}, i.e. specifying {@code --myarg} will interpret it as {@code true}.
+     *
+     * @param key argument key.
+     * @param defaultValueIfNotSpecified used if argument not specified.
+     * @return argument boolean value depending on what was specified, see above.
+     */
+    public Boolean getBoolean( String key, Boolean defaultValueIfNotSpecified )
+    {
+        return getBoolean( key, defaultValueIfNotSpecified, Boolean.TRUE );
+    }
+
+    /**
+     * Parses a {@code boolean} argument. There are a couple of cases:
+     * <ul>
+     * <li>The argument isn't specified. In this case the value of {@code defaultValueIfNotSpecified}
+     * will be returned.</li>
+     * <li>The argument is specified without value, for example <pre>--myboolean</pre>. In this case
+     * the value of {@code defaultValueIfNotSpecified} will be returned.</li>
+     * <li>The argument is specified with value, for example <pre>--myboolean=true</pre>.
+     * In this case the actual value will be returned.</li>
+     * </ul>
+     *
+     * @param key argument key.
+     * @param defaultValueIfNotSpecified used if argument not specified.
+     * @param defaultValueIfSpecifiedButNoValue used if argument specified w/o value.
+     * @return argument boolean value depending on what was specified, see above.
+     */
+    public Boolean getBoolean( String key, Boolean defaultValueIfNotSpecified,
+            Boolean defaultValueIfSpecifiedButNoValue )
     {
         String value = getSingleOptionOrNull( key );
         if ( value != null )
         {
             return Boolean.parseBoolean( value );
         }
-        return this.map.containsKey( key ) ? defaultValueIfNoValue : defaultValueIfNotFound;
+        return this.map.containsKey( key ) ? defaultValueIfSpecifiedButNoValue : defaultValueIfNotSpecified;
     }
 
     public <T extends Enum<T>> T getEnum( Class<T> enumClass, String key, T defaultValue )
@@ -286,9 +326,24 @@ public class Args
         throw new IllegalArgumentException( "No enum instance '" + raw + "' in " + enumClass.getName() );
     }
 
+    /**
+     * Orphans are arguments specified without options flags, eg:
+     *
+     * <pre>myprogram -o blah orphan1 orphan2</pre>
+     *
+     * Would yield a list here of {@code "orphan1"} and {@code "orphan2"}.
+     *
+     * @return list of orphan arguments
+     */
     public List<String> orphans()
     {
         return new ArrayList<>( this.orphans );
+    }
+
+    /** @see #orphans() **/
+    public String[] orphansAsArray()
+    {
+        return orphans.toArray( new String[orphans.size()] );
     }
 
     public String[] asArgs()
@@ -498,7 +553,7 @@ public class Args
      * An option can be specified multiple times; this method will allow interpreting all values for
      * the given key, returning a {@link Collection}. This is the only means of extracting multiple values
      * for any given option. All other methods revolve around zero or one value for an option.
-     * 
+     *
      * @param key Key of the option
      * @param defaultValue Default value value of the option
      * @param converter Converter to use
@@ -525,7 +580,7 @@ public class Args
      * for any given option. All other methods revolve around zero or one value for an option.
      * This is also the only means of extracting metadata about a options. Metadata can be supplied as part
      * of the option key, like --my-option:Metadata "my value".
-     * 
+     *
      * @param key Key of the option
      * @param defaultValue Default value value of the option
      * @param converter Converter to use

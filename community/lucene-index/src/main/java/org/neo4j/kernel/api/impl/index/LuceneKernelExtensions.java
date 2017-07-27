@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,29 +19,15 @@
  */
 package org.neo4j.kernel.api.impl.index;
 
-import org.neo4j.function.Function;
-import org.neo4j.function.Functions;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 
 public class LuceneKernelExtensions
 {
     public static DirectoryFactory directoryFactory( boolean ephemeral, FileSystemAbstraction fileSystem )
     {
-        if ( ephemeral )
-        {
-            return fileSystem.getOrCreateThirdPartyFileSystem( DirectoryFactory.class, IN_MEMORY_FACTORY );
-        }
         return fileSystem.getOrCreateThirdPartyFileSystem( DirectoryFactory.class,
-                Functions.<Class<DirectoryFactory>, DirectoryFactory>constant( DirectoryFactory.PERSISTENT ) );
+                clazz -> ephemeral ? new DirectoryFactory.InMemoryDirectoryFactory() : DirectoryFactory.PERSISTENT );
     }
 
-    public static final Function<Class<DirectoryFactory>, DirectoryFactory> IN_MEMORY_FACTORY =
-            new Function<Class<DirectoryFactory>, DirectoryFactory>()
-    {
-        @Override
-        public DirectoryFactory apply( Class<DirectoryFactory> directoryFactoryClass )
-        {
-            return new DirectoryFactory.InMemoryDirectoryFactory();
-        }
-    };
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,12 @@
  */
 package org.neo4j.kernel.impl.transaction;
 
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.TransactionId;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.util.ArrayQueueOutOfOrderSequence;
 import org.neo4j.kernel.impl.util.OutOfOrderSequence;
@@ -33,24 +36,28 @@ import org.neo4j.kernel.impl.util.OutOfOrderSequence;
 public class DeadSimpleTransactionIdStore implements TransactionIdStore
 {
     private final AtomicLong committingTransactionId = new AtomicLong();
-    private final OutOfOrderSequence committedTransactionId = new ArrayQueueOutOfOrderSequence( -1, 100, new long[3] );
     private final OutOfOrderSequence closedTransactionId = new ArrayQueueOutOfOrderSequence( -1, 100, new long[1] );
+    private final AtomicReference<TransactionId> committedTransactionId =
+            new AtomicReference<>( new TransactionId( BASE_TX_ID, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP ) );
     private final long previouslyCommittedTxId;
     private final long initialTransactionChecksum;
+    private final long previouslyCommittedTxCommitTimestamp;
 
     public DeadSimpleTransactionIdStore()
     {
-        this( BASE_TX_ID, 0, BASE_TX_LOG_VERSION, BASE_TX_LOG_BYTE_OFFSET );
+        this( BASE_TX_ID, 0, BASE_TX_COMMIT_TIMESTAMP, BASE_TX_LOG_VERSION, BASE_TX_LOG_BYTE_OFFSET );
     }
 
     public DeadSimpleTransactionIdStore( long previouslyCommittedTxId, long checksum,
-            long previouslyCommittedTxLogVersion, long previouslyCommittedTxLogByteOffset )
+            long previouslyCommittedTxCommitTimestamp, long previouslyCommittedTxLogVersion,
+            long previouslyCommittedTxLogByteOffset )
     {
         assert previouslyCommittedTxId >= BASE_TX_ID : "cannot start from a tx id less than BASE_TX_ID";
-        setLastCommittedAndClosedTransactionId( previouslyCommittedTxId, checksum,
-                previouslyCommittedTxLogVersion, previouslyCommittedTxLogByteOffset );
+        setLastCommittedAndClosedTransactionId( previouslyCommittedTxId, checksum, previouslyCommittedTxCommitTimestamp,
+                previouslyCommittedTxLogByteOffset, previouslyCommittedTxLogVersion );
         this.previouslyCommittedTxId = previouslyCommittedTxId;
         this.initialTransactionChecksum = checksum;
+        this.previouslyCommittedTxCommitTimestamp = previouslyCommittedTxCommitTimestamp;
     }
 
     @Override
@@ -60,27 +67,32 @@ public class DeadSimpleTransactionIdStore implements TransactionIdStore
     }
 
     @Override
-    public void transactionCommitted( long transactionId, long checksum )
+    public synchronized void transactionCommitted( long transactionId, long checksum, long commitTimestamp )
     {
-        committedTransactionId.offer( transactionId, new long[]{checksum} );
+        TransactionId current = committedTransactionId.get();
+        if ( current == null || transactionId > current.transactionId() )
+        {
+            committedTransactionId.set( new TransactionId( transactionId, checksum, commitTimestamp ) );
+        }
     }
 
     @Override
     public long getLastCommittedTransactionId()
     {
-        return committedTransactionId.getHighestGapFreeNumber();
+        return committedTransactionId.get().transactionId();
     }
 
     @Override
-    public long[] getLastCommittedTransaction()
+    public TransactionId getLastCommittedTransaction()
     {
         return committedTransactionId.get();
     }
 
     @Override
-    public long[] getUpgradeTransaction()
+    public TransactionId getUpgradeTransaction()
     {
-        return new long[] {previouslyCommittedTxId, initialTransactionChecksum};
+        return new TransactionId( previouslyCommittedTxId, initialTransactionChecksum,
+                previouslyCommittedTxCommitTimestamp );
     }
 
     @Override
@@ -90,17 +102,24 @@ public class DeadSimpleTransactionIdStore implements TransactionIdStore
     }
 
     @Override
+    public void awaitClosedTransactionId( long txId, long timeoutMillis ) throws InterruptedException, TimeoutException
+    {
+        throw new UnsupportedOperationException( "Not implemented" );
+    }
+
+    @Override
     public long[] getLastClosedTransaction()
     {
         return closedTransactionId.get();
     }
 
     @Override
-    public void setLastCommittedAndClosedTransactionId( long transactionId, long checksum, long logVersion, long byteOffset )
+    public void setLastCommittedAndClosedTransactionId( long transactionId, long checksum, long commitTimestamp,
+            long byteOffset, long logVersion )
     {
         committingTransactionId.set( transactionId );
-        committedTransactionId.set( transactionId, new long[]{checksum, logVersion, byteOffset} );
-        closedTransactionId.set( transactionId, new long[]{checksum, logVersion, byteOffset} );
+        committedTransactionId.set( new TransactionId( transactionId, checksum, commitTimestamp ) );
+        closedTransactionId.set( transactionId, new long[]{logVersion, byteOffset} );
     }
 
     @Override
@@ -112,7 +131,7 @@ public class DeadSimpleTransactionIdStore implements TransactionIdStore
     @Override
     public boolean closedTransactionIdIsOnParWithOpenedTransactionId()
     {
-        return closedTransactionId.getHighestGapFreeNumber() == committedTransactionId.getHighestGapFreeNumber();
+        return closedTransactionId.getHighestGapFreeNumber() == committedTransactionId.get().transactionId();
     }
 
     @Override

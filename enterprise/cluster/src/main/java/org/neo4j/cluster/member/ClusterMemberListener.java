@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,7 @@ import org.neo4j.cluster.InstanceId;
 import org.neo4j.kernel.impl.store.StoreId;
 
 /**
- * A HighAvailabilityListener is listening for events from elections and availability state.
+ * A ClusterMemberListener is listening for events from elections and availability state.
  * <p>
  * These are invoked by translating atomic broadcast messages to methods on this interface.
  */
@@ -57,12 +57,21 @@ public interface ClusterMemberListener
      */
     void memberIsUnavailable( String role, InstanceId unavailableId );
 
+    /**
+     * Called when a member is considered failed, by quorum.
+     *
+     * @param instanceId of the failed server
+     */
     void memberIsFailed( InstanceId instanceId );
 
+    /**
+     * Called when a member is considered alive again, by quorum.
+     *
+     * @param instanceId of the now alive server
+     */
     void memberIsAlive( InstanceId instanceId );
 
-    public abstract class Adapter
-            implements ClusterMemberListener
+    abstract class Adapter implements ClusterMemberListener
     {
         @Override
         public void coordinatorIsElected( InstanceId coordinatorId )

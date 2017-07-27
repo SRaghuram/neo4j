@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,7 +28,7 @@ import javax.management.MBeanOperationInfo;
 
 /**
  * Used to provide JMX documentation to management beans.
- * 
+ *
  * Annotate the M(X)Bean interface and its methods to provide documentation.
  */
 @Target( { ElementType.METHOD, ElementType.TYPE, ElementType.FIELD } )

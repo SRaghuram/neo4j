@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,7 +37,7 @@ public interface RecordProcessor<T extends AbstractBaseRecord>
 
     void done();
 
-    public static class Multiple<T extends AbstractBaseRecord> implements RecordProcessor<T>
+    class Multiple<T extends AbstractBaseRecord> implements RecordProcessor<T>
     {
         private final RecordProcessor<T>[] processors;
 

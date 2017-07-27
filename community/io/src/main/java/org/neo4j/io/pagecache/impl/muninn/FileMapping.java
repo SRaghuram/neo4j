@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,7 @@ final class FileMapping
     public final File file;
     public final MuninnPagedFile pagedFile;
 
-    public FileMapping( File file, MuninnPagedFile pagedFile )
+    FileMapping( File file, MuninnPagedFile pagedFile )
     {
         this.file = file;
         this.pagedFile = pagedFile;
@@ -37,6 +37,6 @@ final class FileMapping
     public String toString()
     {
         return String.format( "FileMapping[fname = %s, refCount = %s] :: %s",
-                file.getName(), pagedFile.getRefCount(), next );
+                file, pagedFile.getRefCount(), next );
     }
 }

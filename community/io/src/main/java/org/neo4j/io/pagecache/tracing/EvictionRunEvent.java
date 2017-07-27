@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -47,5 +47,5 @@ public interface EvictionRunEvent extends AutoCloseablePageCacheTracerEvent
     /**
      * An eviction is started as part of this eviction run.
      */
-    public EvictionEvent beginEviction();
+    EvictionEvent beginEviction();
 }

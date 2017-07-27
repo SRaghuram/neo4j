@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -57,7 +57,7 @@ public class NodeDynamicLabelOrphanChainStartCheck
                     {
                         // if this node record is in use but doesn't point to the dynamic label record
                         // that label record has an invalid owner
-                        long recordId = record.getLongId();
+                        long recordId = record.getId();
                         if ( fieldPointsToDynamicRecordOfLabels( nodeRecord.getLabelField() ) )
                         {
                             long dynamicLabelRecordId = firstDynamicLabelRecordId( nodeRecord.getLabelField() );

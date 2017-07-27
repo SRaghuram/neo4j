@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,22 +27,22 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Visitable;
-import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.StatementTokenNameLookup;
 import org.neo4j.kernel.api.TokenNameLookup;
-import org.neo4j.kernel.api.constraints.NodePropertyExistenceConstraint;
-import org.neo4j.kernel.api.constraints.RelationshipPropertyExistenceConstraint;
-import org.neo4j.kernel.api.constraints.PropertyConstraint;
-import org.neo4j.kernel.api.constraints.UniquenessConstraint;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.NodeExistenceConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.RelExistenceConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.UniquenessConstraintDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.tooling.GlobalGraphOperations;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static java.lang.String.format;
+import static org.neo4j.helpers.collection.Iterators.loop;
 import static org.neo4j.kernel.api.ReadOperations.ANY_LABEL;
 import static org.neo4j.kernel.api.ReadOperations.ANY_RELATIONSHIP_TYPE;
 
@@ -57,16 +57,14 @@ public class GraphDbStructureGuide implements Visitable<DbStructureVisitor>
         }
     };
 
-    private final GraphDatabaseAPI db;
+    private final GraphDatabaseService db;
     private final ThreadToStatementContextBridge bridge;
-    private final GlobalGraphOperations glops;
 
     public GraphDbStructureGuide( GraphDatabaseService graph )
     {
-        this.db = (GraphDatabaseAPI) graph;
-        DependencyResolver dependencyResolver = db.getDependencyResolver();
-        this.bridge = dependencyResolver.resolveDependency( ThreadToStatementContextBridge.class );
-        this.glops = GlobalGraphOperations.at( db );
+        this.db = graph;
+        DependencyResolver dependencies = ((GraphDatabaseAPI) graph).getDependencyResolver();
+        this.bridge = dependencies.resolveDependency( ThreadToStatementContextBridge.class );
     }
 
     public void accept( DbStructureVisitor visitor )
@@ -106,7 +104,7 @@ public class GraphDbStructureGuide implements Visitable<DbStructureVisitor>
 
     private void showLabels( ReadOperations read, DbStructureVisitor visitor )
     {
-        for ( Label label : glops.getAllLabels() )
+        for ( Label label : db.getAllLabels() )
         {
             int labelId = read.labelGetForName( label.name() );
             visitor.visitLabel( labelId, label.name() );
@@ -115,7 +113,7 @@ public class GraphDbStructureGuide implements Visitable<DbStructureVisitor>
 
     private void showPropertyKeys( ReadOperations read, DbStructureVisitor visitor )
     {
-        for ( String propertyKeyName : glops.getAllPropertyKeys() )
+        for ( String propertyKeyName : db.getAllPropertyKeys() )
         {
             int propertyKeyId = read.propertyKeyGetForName( propertyKeyName );
             visitor.visitPropertyKey( propertyKeyId, propertyKeyName );
@@ -124,7 +122,7 @@ public class GraphDbStructureGuide implements Visitable<DbStructureVisitor>
 
     private void showRelTypes( ReadOperations read, DbStructureVisitor visitor )
     {
-        for ( RelationshipType relType : glops.getAllRelationshipTypes() )
+        for ( RelationshipType relType : db.getAllRelationshipTypes() )
         {
             int relTypeId = read.relationshipTypeGetForName( relType.name() );
             visitor.visitRelationshipType( relTypeId, relType.name() );
@@ -136,57 +134,40 @@ public class GraphDbStructureGuide implements Visitable<DbStructureVisitor>
         TokenNameLookup nameLookup = new StatementTokenNameLookup( read );
 
         showIndices( visitor, read, nameLookup );
-        showUniqueIndices( visitor, read, nameLookup );
         showUniqueConstraints( visitor, read, nameLookup );
     }
 
     private void showIndices( DbStructureVisitor visitor, ReadOperations read, TokenNameLookup nameLookup ) throws IndexNotFoundKernelException
     {
-        Iterator<IndexDescriptor> indexDescriptors = read.indexesGetAll();
-        while ( indexDescriptors.hasNext() )
+        for ( IndexDescriptor descriptor : loop( IndexDescriptor.sortByType( read.indexesGetAll() ) ) )
         {
-            IndexDescriptor descriptor = indexDescriptors.next();
-            String userDescription = descriptor.userDescription( nameLookup );
+            String userDescription = descriptor.schema().userDescription( nameLookup );
             double uniqueValuesPercentage = read.indexUniqueValuesSelectivity( descriptor );
             long size = read.indexSize( descriptor );
             visitor.visitIndex( descriptor, userDescription , uniqueValuesPercentage, size );
         }
     }
 
-    private void showUniqueIndices( DbStructureVisitor visitor, ReadOperations read, TokenNameLookup nameLookup ) throws IndexNotFoundKernelException
-
-    {
-        Iterator<IndexDescriptor> indexDescriptors = read.uniqueIndexesGetAll();
-        while ( indexDescriptors.hasNext() )
-        {
-            IndexDescriptor descriptor = indexDescriptors.next();
-            String userDescription = descriptor.userDescription( nameLookup );
-            double uniqueValuesPercentage = read.indexUniqueValuesSelectivity( descriptor );
-            long size = read.indexSize( descriptor );
-            visitor.visitUniqueIndex( descriptor, userDescription, uniqueValuesPercentage, size );
-        }
-    }
-
     private void showUniqueConstraints( DbStructureVisitor visitor, ReadOperations read, TokenNameLookup nameLookup )
     {
-        Iterator<PropertyConstraint> constraints = read.constraintsGetAll();
+        Iterator<ConstraintDescriptor> constraints = read.constraintsGetAll();
         while ( constraints.hasNext() )
         {
-            PropertyConstraint constraint = constraints.next();
-            String userDescription = constraint.userDescription( nameLookup );
+            ConstraintDescriptor constraint = constraints.next();
+            String userDescription = constraint.prettyPrint( nameLookup );
 
-            if ( constraint instanceof UniquenessConstraint )
+            if ( constraint instanceof UniquenessConstraintDescriptor )
             {
-                visitor.visitUniqueConstraint( (UniquenessConstraint) constraint, userDescription );
+                visitor.visitUniqueConstraint( (UniquenessConstraintDescriptor) constraint, userDescription );
             }
-            else if ( constraint instanceof NodePropertyExistenceConstraint )
+            else if ( constraint instanceof NodeExistenceConstraintDescriptor )
             {
-                NodePropertyExistenceConstraint existenceConstraint = (NodePropertyExistenceConstraint) constraint;
+                NodeExistenceConstraintDescriptor existenceConstraint = (NodeExistenceConstraintDescriptor) constraint;
                 visitor.visitNodePropertyExistenceConstraint( existenceConstraint, userDescription );
             }
-            else if ( constraint instanceof RelationshipPropertyExistenceConstraint )
+            else if ( constraint instanceof RelExistenceConstraintDescriptor )
             {
-                RelationshipPropertyExistenceConstraint existenceConstraint = (RelationshipPropertyExistenceConstraint) constraint;
+                RelExistenceConstraintDescriptor existenceConstraint = (RelExistenceConstraintDescriptor) constraint;
                 visitor.visitRelationshipPropertyExistenceConstraint( existenceConstraint, userDescription );
             }
             else
@@ -206,7 +187,7 @@ public class GraphDbStructureGuide implements Visitable<DbStructureVisitor>
     private void showNodeCounts( ReadOperations read, DbStructureVisitor visitor )
     {
         visitor.visitAllNodesCount( read.countsForNode( ANY_LABEL ) );
-        for ( Label label : glops.getAllLabels() )
+        for ( Label label : db.getAllLabels() )
         {
             int labelId = read.labelGetForName( label.name() );
             visitor.visitNodeCount( labelId, label.name(), read.countsForNode( labelId ) );
@@ -218,7 +199,7 @@ public class GraphDbStructureGuide implements Visitable<DbStructureVisitor>
         noSide( read, visitor, WILDCARD_REL_TYPE, ANY_RELATIONSHIP_TYPE );
 
         // one label only
-        for ( Label label : glops.getAllLabels() )
+        for ( Label label : db.getAllLabels() )
         {
             int labelId = read.labelGetForName( label.name() );
 
@@ -227,12 +208,12 @@ public class GraphDbStructureGuide implements Visitable<DbStructureVisitor>
         }
 
         // fixed rel type
-        for ( RelationshipType relType : glops.getAllRelationshipTypes() )
+        for ( RelationshipType relType : db.getAllRelationshipTypes() )
         {
             int relTypeId = read.relationshipTypeGetForName( relType.name() );
             noSide( read, visitor, relType, relTypeId );
 
-            for ( Label label : glops.getAllLabels() )
+            for ( Label label : db.getAllLabels() )
             {
                 int labelId = read.labelGetForName( label.name() );
 

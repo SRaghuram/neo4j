@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,12 +21,14 @@ package org.neo4j.kernel.impl.api.index;
 
 import java.io.IOException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 
-import org.neo4j.kernel.api.exceptions.index.IndexCapacityExceededException;
-import org.neo4j.kernel.api.index.IndexEntryConflictException;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.index.IndexUpdater;
+import org.neo4j.kernel.impl.api.index.updater.DelegatingIndexUpdater;
 
 /**
  * {@link IndexProxy} layer that enforces the dynamic contract of {@link IndexProxy} (cf. Test)
@@ -53,7 +55,7 @@ public class ContractCheckingIndexProxy extends DelegatingIndexProxy
      * to prevent calls to close() or drop() to go through while there are pending
      * commits.
      **/
-    private static enum State
+    private enum State
     {
         INIT, STARTING, STARTED, CLOSED
     }
@@ -97,7 +99,7 @@ public class ContractCheckingIndexProxy extends DelegatingIndexProxy
             return new DelegatingIndexUpdater( super.newUpdater( mode ) )
             {
                 @Override
-                public void close() throws IOException, IndexEntryConflictException, IndexCapacityExceededException
+                public void close() throws IOException, IndexEntryConflictException
                 {
                     try
                     {
@@ -134,14 +136,18 @@ public class ContractCheckingIndexProxy extends DelegatingIndexProxy
     public Future<Void> drop() throws IOException
     {
         if ( state.compareAndSet( State.INIT, State.CLOSED ) )
+        {
             return super.drop();
+        }
 
         if ( State.STARTING.equals( state.get() ) )
+        {
             throw new IllegalStateException( "Concurrent drop while creating index" );
+        }
 
         if ( state.compareAndSet( State.STARTED, State.CLOSED ) )
         {
-            ensureNoOpenCalls( "drop" );
+            waitOpenCallsToClose();
             return super.drop();
         }
 
@@ -152,18 +158,30 @@ public class ContractCheckingIndexProxy extends DelegatingIndexProxy
     public Future<Void> close() throws IOException
     {
         if ( state.compareAndSet( State.INIT, State.CLOSED ) )
+        {
             return super.close();
+        }
 
         if ( state.compareAndSet( State.STARTING, State.CLOSED ) )
+        {
             throw new IllegalStateException( "Concurrent close while creating index" );
+        }
 
         if ( state.compareAndSet( State.STARTED, State.CLOSED ) )
         {
-            ensureNoOpenCalls( "close" );
+            waitOpenCallsToClose();
             return super.close();
         }
 
         throw new IllegalStateException( "IndexProxy already closed" );
+    }
+
+    private void waitOpenCallsToClose()
+    {
+        while ( openCalls.intValue() > 0 )
+        {
+            LockSupport.parkNanos( TimeUnit.MILLISECONDS.toNanos( 10 ) );
+        }
     }
 
     private void openCall( String name )
@@ -175,17 +193,14 @@ public class ContractCheckingIndexProxy extends DelegatingIndexProxy
             openCalls.incrementAndGet();
             // ensure that the previous increment actually gets seen by closers
             if ( State.CLOSED.equals( state.get() ) )
-                throw new IllegalStateException("Cannot call " + name + "() after index has been closed" );
+            {
+                throw new IllegalStateException( "Cannot call " + name + "() after index has been closed" );
+            }
         }
         else
-            throw new IllegalStateException("Cannot call " + name + "() before index has been started" );
-    }
-
-    private void ensureNoOpenCalls(String name)
-    {
-        if (openCalls.get() > 0)
-            throw new IllegalStateException( "Concurrent " + name + "() while updates have not completed" );
-
+        {
+            throw new IllegalStateException("Cannot call " + name + "() when index state is " + state.get() );
+        }
     }
 
     private void closeCall()

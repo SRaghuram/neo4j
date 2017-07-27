@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,21 +19,23 @@
  */
 package org.neo4j.kernel.ha.lock;
 
+import java.util.Objects;
+
 public class LockResult
 {
     private final LockStatus status;
-    private final String deadlockMessage;
-    
+    private final String message;
+
     public LockResult( LockStatus status )
     {
         this.status = status;
-        this.deadlockMessage = null;
+        this.message = null;
     }
-    
-    public LockResult( String deadlockMessage )
+
+    public LockResult( LockStatus status, String message )
     {
-        this.status = LockStatus.DEAD_LOCKED;
-        this.deadlockMessage = deadlockMessage;
+        this.status = status;
+        this.message = message;
     }
 
     public LockStatus getStatus()
@@ -41,14 +43,36 @@ public class LockResult
         return status;
     }
 
-    public String getDeadlockMessage()
+    public String getMessage()
     {
-        return deadlockMessage;
+        return message;
     }
-    
+
     @Override
     public String toString()
     {
-        return "LockResult[" + status + ", " + deadlockMessage + "]";
+        return "LockResult[" + status + ", " + message + "]";
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        LockResult that = (LockResult) o;
+        return Objects.equals( status, that.status ) &&
+                Objects.equals( message, that.message );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( status, message );
     }
 }

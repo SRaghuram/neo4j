@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,6 @@ package org.neo4j.kernel.extension;
 
 import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
 
-
 public class UnsatisfiedDependencyStrategies
 {
     public static UnsatisfiedDependencyStrategy fail()
@@ -35,7 +34,7 @@ public class UnsatisfiedDependencyStrategies
             }
         };
     }
-    
+
     public static UnsatisfiedDependencyStrategy ignore()
     {
         return new UnsatisfiedDependencyStrategy()

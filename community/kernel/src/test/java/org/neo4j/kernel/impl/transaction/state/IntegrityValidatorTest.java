@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,18 +21,20 @@ package org.neo4j.kernel.impl.transaction.state;
 
 import org.junit.Test;
 
-import org.neo4j.kernel.api.exceptions.schema.UniquenessConstraintVerificationFailedKernelException;
+import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
+import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory;
+import org.neo4j.kernel.api.schema.constaints.UniquenessConstraintDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexingService;
-import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.record.UniquePropertyConstraintRule;
+import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.record.ConstraintRule;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.impl.store.record.UniquePropertyConstraintRule.uniquenessConstraintRule;
-import static org.powermock.api.mockito.PowerMockito.mock;
 
 public class IntegrityValidatorTest
 {
@@ -43,11 +45,13 @@ public class IntegrityValidatorTest
         NeoStores store = mock( NeoStores.class );
         IndexingService indexes = mock(IndexingService.class);
         IntegrityValidator validator = new IntegrityValidator(store, indexes);
+        UniquenessConstraintDescriptor constraint = ConstraintDescriptorFactory.uniqueForLabel( 1, 1 );
 
-        doThrow( new UniquenessConstraintVerificationFailedKernelException( null, new RuntimeException() ) )
-                .when( indexes ).validateIndex( 2l );
+        doThrow( new UniquePropertyValueValidationException( constraint,
+                ConstraintValidationException.Phase.VERIFICATION, new RuntimeException() ) )
+                .when( indexes ).validateIndex( 2L );
 
-        UniquePropertyConstraintRule record = uniquenessConstraintRule( 1l, 1, 1, 2l );
+        ConstraintRule record = ConstraintRule.constraintRule( 1L, constraint, 2L );
 
         // When
         try
@@ -55,9 +59,9 @@ public class IntegrityValidatorTest
             validator.validateSchemaRule( record );
             fail("Should have thrown integrity error.");
         }
-        catch(Exception e)
+        catch ( Exception e )
         {
-            // good 
+            // good
         }
     }
 
@@ -69,16 +73,16 @@ public class IntegrityValidatorTest
         IndexingService indexes = mock(IndexingService.class);
         IntegrityValidator validator = new IntegrityValidator(store, indexes );
 
-        NodeRecord record = new NodeRecord( 1l, false, 1l, -1l );
+        NodeRecord record = new NodeRecord( 1L, false, 1L, -1L );
         record.setInUse( false );
 
         // When
         try
         {
             validator.validateNodeRecord( record );
-            fail("Should have thrown integrity error.");
+            fail( "Should have thrown integrity error." );
         }
-        catch(Exception e)
+        catch ( Exception e )
         {
             // good
         }
@@ -92,16 +96,16 @@ public class IntegrityValidatorTest
         MetaDataStore metaDataStore = mock( MetaDataStore.class );
         when( store.getMetaDataStore() ).thenReturn( metaDataStore );
         IndexingService indexes = mock( IndexingService.class );
-        when( metaDataStore.getLatestConstraintIntroducingTx() ).thenReturn( 10l );
+        when( metaDataStore.getLatestConstraintIntroducingTx() ).thenReturn( 10L );
         IntegrityValidator validator = new IntegrityValidator( store, indexes );
 
         // When
         try
         {
             validator.validateTransactionStartKnowledge( 1 );
-            fail("Should have thrown integrity error.");
+            fail( "Should have thrown integrity error." );
         }
-        catch(Exception e)
+        catch ( Exception e )
         {
             // good
         }

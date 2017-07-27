@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,18 +17,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.codegen;
 
-import static org.neo4j.codegen.Resource.withResource;
+import java.util.Iterator;
+import java.util.function.Consumer;
+
+import static org.neo4j.codegen.LocalVariables.copy;
+import static org.neo4j.codegen.MethodReference.methodReference;
 import static org.neo4j.codegen.TypeReference.typeReference;
 
 public class CodeBlock implements AutoCloseable
 {
+
     final ClassGenerator clazz;
     private MethodEmitter emitter;
     private final CodeBlock parent;
     private boolean done;
+
+    protected LocalVariables localVariables = new LocalVariables();
 
     CodeBlock( CodeBlock parent )
     {
@@ -36,18 +42,30 @@ public class CodeBlock implements AutoCloseable
         this.emitter = parent.emitter;
         parent.emitter = InvalidState.IN_SUB_BLOCK;
         this.parent = parent;
+        //copy over local variables from parent
+        this.localVariables = copy( parent.localVariables );
     }
 
-    CodeBlock( ClassGenerator clazz, MethodEmitter emitter )
+    CodeBlock( ClassGenerator clazz, MethodEmitter emitter, Parameter... parameters )
     {
         this.clazz = clazz;
         this.emitter = emitter;
         this.parent = null;
+        localVariables.createNew( clazz.handle(), "this" );
+        for ( Parameter parameter : parameters )
+        {
+            localVariables.createNew( parameter.type(), parameter.name() );
+        }
     }
 
     public ClassGenerator classGenerator()
     {
         return clazz;
+    }
+
+    public CodeBlock parent()
+    {
+        return parent;
     }
 
     @Override
@@ -65,7 +83,7 @@ public class CodeBlock implements AutoCloseable
         this.emitter = InvalidState.BLOCK_CLOSED;
     }
 
-    private void endBlock()
+    protected void endBlock()
     {
         if ( !done )
         {
@@ -79,21 +97,21 @@ public class CodeBlock implements AutoCloseable
         emitter.expression( expression );
     }
 
-    TypeReference local( String name )
+    LocalVariable local( String name )
     {
-        return null;
+        return localVariables.get( name );
     }
 
     public LocalVariable declare( TypeReference type, String name )
     {
-        LocalVariable local = new LocalVariable( type, name );
+        LocalVariable local = localVariables.createNew( type, name );
         emitter.declare( local );
         return local;
     }
 
     public void assign( LocalVariable local, Expression value )
     {
-        emitter.assign( local, value );
+        emitter.assignVariableInScope( local, value );
     }
 
     public void assign( Class<?> type, String name, Expression value )
@@ -103,7 +121,8 @@ public class CodeBlock implements AutoCloseable
 
     public void assign( TypeReference type, String name, Expression value )
     {
-        emitter.assign( type, name, value );
+        LocalVariable variable = localVariables.createNew( type, name );
+        emitter.assign( variable, value );
     }
 
     public void put( Expression target, FieldReference field, Expression value )
@@ -118,13 +137,26 @@ public class CodeBlock implements AutoCloseable
 
     public Expression load( String name )
     {
-        return Expression.load( local( name ), name );
+        return Expression.load( local( name ) );
     }
 
+    /*
+     * Foreach is just syntactic sugar for a while loop.
+     *
+     */
     public CodeBlock forEach( Parameter local, Expression iterable )
     {
-        emitter.beginForEach( local, iterable );
-        return new CodeBlock( this );
+        String iteratorName = local.name() + "Iter";
+
+        assign( Iterator.class, iteratorName, Expression.invoke( iterable,
+                MethodReference.methodReference( Iterable.class, Iterator.class, "iterator" ) ) );
+        CodeBlock block = whileLoop( Expression
+                .invoke( load( iteratorName ), methodReference( Iterator.class, boolean.class, "hasNext" ) ) );
+        block.assign( local.type(), local.name(),
+                Expression.cast( local.type(), Expression.invoke( block.load( iteratorName ),
+                        methodReference( Iterator.class, Object.class, "next" ) ) ) );
+
+        return block;
     }
 
     public CodeBlock whileLoop( Expression test )
@@ -139,34 +171,15 @@ public class CodeBlock implements AutoCloseable
         return new CodeBlock( this );
     }
 
-    CodeBlock emitCatch( Parameter exception )
+    public CodeBlock block()
     {
-        endBlock();
-        emitter.beginCatch( exception );
+        emitter.beginBlock();
         return new CodeBlock( this );
     }
 
-    CodeBlock emitFinally()
+    public void tryCatch( Consumer<CodeBlock> body, Consumer<CodeBlock> onError, Parameter exception )
     {
-        endBlock();
-        emitter.beginFinally();
-        return new CodeBlock( this );
-    }
-
-    public CodeBlock tryBlock( Class<?> resourceType, String resourceName, Expression resource )
-    {
-        return tryBlock( withResource( resourceType, resourceName, resource ) );
-    }
-
-    public CodeBlock tryBlock( TypeReference resourceType, String resourceName, Expression resource )
-    {
-        return tryBlock( withResource( resourceType, resourceName, resource ) );
-    }
-
-    public TryBlock tryBlock( Resource... resources )
-    {
-        emitter.beginTry( resources );
-        return new TryBlock( this );
+        emitter.tryCatchBlock( body, onError, localVariables.createNew( exception.type(), exception.name() ), this );
     }
 
     public void returns()

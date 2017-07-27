@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,6 @@ import org.neo4j.unsafe.impl.batchimport.stats.StepStats;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
-
 import static org.neo4j.helpers.Format.duration;
 
 /**
@@ -50,34 +49,19 @@ public class DetailedExecutionMonitor extends ExecutionMonitor.Adapter
     }
 
     @Override
-    public void start( StageExecution[] executions )
+    public void start( StageExecution execution )
     {
-        StringBuilder names = new StringBuilder();
-        for ( StageExecution execution : executions )
-        {
-            names.append( names.length() > 0 ? ", " : "" ).append( execution.getStageName() );
-        }
-        out.println( format( "%n>>>>> EXECUTING STAGE(s) %s <<<<<%n", names ) );
+        out.println( format( "%n>>>>> EXECUTING STAGE %s <<<<<%n", execution.getStageName() ) );
     }
 
     @Override
-    public void end( StageExecution[] executions, long totalTimeMillis )
+    public void end( StageExecution execution, long totalTimeMillis )
     {
-        out.println( "Stage total time " + duration( totalTimeMillis ) );
+        out.println( format( "Stage total time %s", duration( totalTimeMillis ) ) );
     }
 
     @Override
-    public void check( StageExecution[] executions )
-    {
-        boolean first = true;
-        for ( StageExecution execution : executions )
-        {
-            printStats( execution, first );
-            first = false;
-        }
-    }
-
-    private void printStats( StageExecution execution, boolean first )
+    public void check( StageExecution execution )
     {
         Step<?> bottleNeck = execution.stepsOrderedBy( Keys.avg_processing_time, false ).iterator().next().first();
 
@@ -86,7 +70,7 @@ public class DetailedExecutionMonitor extends ExecutionMonitor.Adapter
         for ( Step<?> step : execution.steps() )
         {
             StepStats stats = step.stats();
-            builder.append( i > 0 ? format( "%n  " ) : (first ? "--" : " -") )
+            builder.append( i > 0 ? format( "%n  " ) : "--" )
                    .append( stats.toString( DetailLevel.BASIC ) )
                    .append( step == bottleNeck ? "  <== BOTTLE NECK" : "" );
             i++;

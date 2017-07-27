@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,14 @@
  */
 package org.neo4j.kernel.impl.store.kvstore;
 
+import java.io.Closeable;
 import java.io.IOException;
+
+import org.neo4j.io.pagecache.tracing.AutoCloseablePageCacheTracerEvent;
 
 import static org.neo4j.kernel.impl.store.kvstore.DataProvider.EMPTY_DATA_PROVIDER;
 
-abstract class ReadableState<Key>
+abstract class ReadableState<Key> implements Closeable
 {
     protected abstract KeyFormat<Key> keyFormat();
 
@@ -36,8 +39,6 @@ abstract class ReadableState<Key>
     protected abstract DataProvider dataProvider() throws IOException;
 
     protected abstract int storedEntryCount();
-
-    abstract void close() throws IOException;
 
     static <Key> ReadableState<Key> store( final KeyFormat<Key> keys, final KeyValueStoreFile store )
     {
@@ -80,7 +81,7 @@ abstract class ReadableState<Key>
             }
 
             @Override
-            void close() throws IOException
+            public void close() throws IOException
             {
                 store.close();
             }
@@ -128,7 +129,7 @@ abstract class ReadableState<Key>
             }
 
             @Override
-            void close() throws IOException
+            public void close() throws IOException
             {
             }
         };

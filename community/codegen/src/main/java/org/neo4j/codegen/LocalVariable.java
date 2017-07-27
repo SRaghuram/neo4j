@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,18 +17,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.codegen;
 
 public class LocalVariable extends Expression
 {
     private final TypeReference type;
     private final String name;
+    private final int index;
 
-    LocalVariable( TypeReference type, String name )
+    LocalVariable( TypeReference type, String name, int index )
     {
+        super( type );
         this.type = type;
         this.name = name;
+        this.index = index;
     }
 
     public TypeReference type()
@@ -41,9 +43,14 @@ public class LocalVariable extends Expression
         return name;
     }
 
+    public int index()
+    {
+        return index;
+    }
+
     @Override
     public void accept( ExpressionVisitor visitor )
     {
-        visitor.load( type, name );
+        visitor.load( this );
     }
 }

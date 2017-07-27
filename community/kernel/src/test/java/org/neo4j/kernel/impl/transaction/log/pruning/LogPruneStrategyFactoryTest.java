@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,27 +23,24 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.transaction.log.pruning.ThresholdConfigParser.ThresholdConfigValue;
 
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.kernel.impl.transaction.log.pruning.LogPruneStrategyFactory.getThresholdByType;
 
 public class LogPruneStrategyFactoryTest
 {
-
     @Test
     public void testLogPruneThresholdsByType() throws Exception
     {
-        assertThat( getPruneStrategy( "files", "25", "25 files" ), instanceOf( FileCountThreshold.class ) );
-        assertThat( getPruneStrategy( "size", "16G", "16G size" ), instanceOf( FileSizeThreshold.class ) );
-        assertThat( getPruneStrategy( "txs", "4G", "4G txs" ), instanceOf( TransactionCountThreshold.class ) );
-        assertThat( getPruneStrategy( "hours", "100", "100 hours" ), instanceOf( TransactionTimespanThreshold.class ) );
-        assertThat( getPruneStrategy( "days", "100k", "100k days" ),
-                    instanceOf( TransactionTimespanThreshold.class) );
-    }
+        FileSystemAbstraction fsa = Mockito.mock( FileSystemAbstraction.class );
 
-    private Threshold getPruneStrategy(String type, String value, String configValue)
-    {
-        FileSystemAbstraction fileSystem = Mockito.mock( FileSystemAbstraction.class );
-        return LogPruneStrategyFactory.getThresholdByType( fileSystem, type, value, configValue );
+        assertThat( getThresholdByType( fsa, new ThresholdConfigValue( "files", 25 ), "" ), instanceOf( FileCountThreshold.class ) );
+        assertThat( getThresholdByType( fsa, new ThresholdConfigValue( "size", 16000 ), "" ), instanceOf( FileSizeThreshold.class ) );
+        assertThat( getThresholdByType( fsa, new ThresholdConfigValue( "txs", 4000 ), "" ), instanceOf( EntryCountThreshold.class ) );
+        assertThat( getThresholdByType( fsa, new ThresholdConfigValue( "entries", 4000 ), "" ), instanceOf( EntryCountThreshold.class ) );
+        assertThat( getThresholdByType( fsa, new ThresholdConfigValue( "hours", 100 ), "" ), instanceOf( EntryTimespanThreshold.class ) );
+        assertThat( getThresholdByType( fsa, new ThresholdConfigValue( "days", 100_000 ), "" ), instanceOf( EntryTimespanThreshold.class) );
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,8 +22,8 @@ package org.neo4j.ha;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.InvalidTransactionTypeException;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.schema.ConstraintCreator;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.impl.ha.ClusterManager;
@@ -49,7 +49,7 @@ public class ConstraintsInHAIT
         try
         {
             ConstraintCreator constraintCreator = slave.schema()
-                    .constraintFor( DynamicLabel.label( "LabelName" ) ).assertPropertyIsUnique( "PropertyName" );
+                    .constraintFor( Label.label( "LabelName" ) ).assertPropertyIsUnique( "PropertyName" );
 
             // when
             constraintCreator.create();

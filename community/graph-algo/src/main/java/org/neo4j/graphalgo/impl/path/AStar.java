@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -39,13 +39,11 @@ import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PathExpander;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipExpander;
 import org.neo4j.graphdb.traversal.BranchState;
 import org.neo4j.graphdb.traversal.TraversalMetadata;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 
 import static org.neo4j.helpers.collection.Iterables.option;
-import static org.neo4j.kernel.StandardExpander.toPathExpander;
 
 public class AStar implements PathFinder<WeightedPath>
 {
@@ -53,12 +51,6 @@ public class AStar implements PathFinder<WeightedPath>
     private final CostEvaluator<Double> lengthEvaluator;
     private final EstimateEvaluator<Double> estimateEvaluator;
     private Metadata lastMetadata;
-
-    public AStar( RelationshipExpander expander,
-            CostEvaluator<Double> lengthEvaluator, EstimateEvaluator<Double> estimateEvaluator )
-    {
-        this( toPathExpander( expander ), lengthEvaluator, estimateEvaluator );
-    }
 
     public AStar( PathExpander<?> expander,
             CostEvaluator<Double> lengthEvaluator, EstimateEvaluator<Double> estimateEvaluator )
@@ -81,16 +73,26 @@ public class AStar implements PathFinder<WeightedPath>
             {
                 // Hit, return path
                 double weight = iterator.visitData.get( node.getId() ).wayLength;
-                LinkedList<Relationship> rels = new LinkedList<Relationship>();
-                Relationship rel = graphDb.getRelationshipById( iterator.visitData.get( node.getId() ).cameFromRelationship );
-                while ( rel != null )
+                final Path path;
+                if ( start.getId() == end.getId() )
                 {
-                    rels.addFirst( rel );
-                    node = rel.getOtherNode( node );
-                    long nextRelId = iterator.visitData.get( node.getId() ).cameFromRelationship;
-                    rel = nextRelId == -1 ? null : graphDb.getRelationshipById( nextRelId );
+                    // Nothing to iterate over
+                    path = PathImpl.singular( start );
                 }
-                Path path = toPath( start, rels );
+                else
+                {
+                    LinkedList<Relationship> rels = new LinkedList<Relationship>();
+                    Relationship rel = graphDb.getRelationshipById(
+                            iterator.visitData.get( node.getId() ).cameFromRelationship );
+                    while ( rel != null )
+                    {
+                        rels.addFirst( rel );
+                        node = rel.getOtherNode( node );
+                        long nextRelId = iterator.visitData.get( node.getId() ).cameFromRelationship;
+                        rel = nextRelId == -1 ? null : graphDb.getRelationshipById( nextRelId );
+                    }
+                    path = toPath( start, rels );
+                }
                 lastMetadata.paths++;
                 return new WeightedPathImpl( weight, path );
             }
@@ -194,7 +196,8 @@ public class AStar implements PathFinder<WeightedPath>
                 expand();
             }
 
-            return (lastNode = popLowestScoreNode());
+            lastNode = popLowestScoreNode();
+            return lastNode;
         }
 
         @SuppressWarnings( "unchecked" )

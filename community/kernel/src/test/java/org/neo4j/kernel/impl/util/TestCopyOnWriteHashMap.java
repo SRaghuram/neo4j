@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,13 @@
  */
 package org.neo4j.kernel.impl.util;
 
-import static org.neo4j.kernel.impl.traversal.TraversalTestBase.assertContains;
+import org.junit.Test;
 
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.junit.Test;
+import static org.neo4j.kernel.impl.traversal.TraversalTestBase.assertContains;
 
 public class TestCopyOnWriteHashMap
 {
@@ -36,9 +36,9 @@ public class TestCopyOnWriteHashMap
         map.put( 0, "0" );
         map.put( 1, "1" );
         map.put( 2, "2" );
-        
+
         assertContains( map.keySet(), 0, 1, 2 );
-        
+
         Iterator<Integer> keys = map.keySet().iterator();
         map.remove( 1 );
         assertContains( keys, 0, 1, 2 );
@@ -53,9 +53,9 @@ public class TestCopyOnWriteHashMap
         map.put( 2, "2" );
         @SuppressWarnings( "unchecked" )
         Map.Entry<Integer, String>[] allEntries = map.entrySet().toArray( new Map.Entry[0] );
-        
+
         assertContains( map.entrySet(), allEntries );
-        
+
         Iterator<Entry<Integer, String>> entries = map.entrySet().iterator();
         map.remove( 1 );
         assertContains( entries, allEntries );

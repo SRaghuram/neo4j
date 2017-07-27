@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,17 +22,21 @@ package org.neo4j.kernel.impl.store.record;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
 
-
-public class DynamicRecord extends Abstract64BitRecord
+public class DynamicRecord extends AbstractBaseRecord
 {
+    public static final byte[] NO_DATA = new byte[0];
     private static final int MAX_BYTES_IN_TO_STRING = 8, MAX_CHARS_IN_TO_STRING = 16;
 
-    private byte[] data = null;
+    private byte[] data;
     private int length;
-    private long nextBlock = Record.NO_NEXT_BLOCK.intValue();
+    private long nextBlock;
     private int type;
-    private boolean startRecord = true;
+    private boolean startRecord;
 
+    /**
+     * @deprecated use {@link #initialize(boolean, boolean, long, int, int)} instead.
+     */
+    @Deprecated
     public static DynamicRecord dynamicRecord( long id, boolean inUse )
     {
         DynamicRecord record = new DynamicRecord( id );
@@ -40,6 +44,10 @@ public class DynamicRecord extends Abstract64BitRecord
         return record;
     }
 
+    /**
+     * @deprecated use {@link #initialize(boolean, boolean, long, int, int)} instead.
+     */
+    @Deprecated
     public static DynamicRecord dynamicRecord( long id, boolean inUse, boolean isStartRecord, long nextBlock, int type,
                                                byte [] data )
     {
@@ -56,18 +64,48 @@ public class DynamicRecord extends Abstract64BitRecord
     {
         super( id );
     }
-    
+
+    public DynamicRecord initialize( boolean inUse, boolean isStartRecord, long nextBlock,
+            int type, int length )
+    {
+        super.initialize( inUse );
+        this.startRecord = isStartRecord;
+        this.nextBlock = nextBlock;
+        this.type = type;
+        this.data = NO_DATA;
+        this.length = length;
+        return this;
+    }
+
+    @Override
+    public void clear()
+    {
+        initialize( false, true, Record.NO_NEXT_BLOCK.intValue(), -1, 0 );
+    }
+
     public void setStartRecord( boolean startRecord )
     {
         this.startRecord = startRecord;
     }
-    
+
     public boolean isStartRecord()
     {
         return startRecord;
     }
 
-    public int getType()
+    /**
+     * @return The {@link PropertyType} of this record or null if unset or non valid
+     */
+    public PropertyType getType()
+    {
+        return PropertyType.getPropertyTypeOrNull( (long) (this.type << 24) );
+    }
+
+    /**
+     * @return The {@link #type} field of this record, as set by previous invocations to {@link #setType(int)} or
+     * {@link #initialize(boolean, boolean, long, int, int)}
+     */
+    public int getTypeAsInt()
     {
         return type;
     }
@@ -77,24 +115,9 @@ public class DynamicRecord extends Abstract64BitRecord
         this.type = type;
     }
 
-    public boolean isLight()
-    {
-        return data == null;
-    }
-
     public void setLength( int length )
     {
         this.length = length;
-    }
-
-    @Override
-    public void setInUse( boolean inUse )
-    {
-        super.setInUse( inUse );
-        if ( !inUse )
-        {
-            data = null;
-        }
     }
 
     public void setInUse( boolean inUse, int type )
@@ -136,72 +159,57 @@ public class DynamicRecord extends Abstract64BitRecord
         buf.append( "DynamicRecord[" )
                 .append( getId() )
                 .append( ",used=" ).append(inUse() ).append( "," )
-                .append( "light=" ).append( isLight() )
                 .append("(" ).append( length ).append( "),type=" );
-        PropertyType type = PropertyType.getPropertyType( this.type << 24, true );
-        if ( type == null ) buf.append( this.type ); else buf.append( type.name() );
-        buf.append( ",data=" );
-        if ( data != null )
+        PropertyType type = getType();
+        if ( type == null )
         {
-            if ( type == PropertyType.STRING && data.length <= MAX_CHARS_IN_TO_STRING )
-            {
-                buf.append( '"' );
-                buf.append( PropertyStore.decodeString( data ) );
-                buf.append( "\"," );
-            }
-            else
-            {
-                buf.append( "byte[" );
-                if ( data.length <= MAX_BYTES_IN_TO_STRING )
-                {
-                    for ( int i = 0; i < data.length; i++ )
-                    {
-                        if (i != 0) buf.append( ',' );
-                        buf.append( data[i] );
-                    }
-                }
-                else
-                {
-                    buf.append( "size=" ).append( data.length );
-                }
-                buf.append( "]," );
-            }
+            buf.append( this.type );
         }
         else
         {
-            buf.append( "null," );
+            buf.append( type.name() );
+        }
+        buf.append( ",data=" );
+        if ( type == PropertyType.STRING && data.length <= MAX_CHARS_IN_TO_STRING )
+        {
+            buf.append( '"' );
+            buf.append( PropertyStore.decodeString( data ) );
+            buf.append( "\"," );
+        }
+        else
+        {
+            buf.append( "byte[" );
+            if ( data.length <= MAX_BYTES_IN_TO_STRING )
+            {
+                for ( int i = 0; i < data.length; i++ )
+                {
+                    if ( i != 0 )
+                    {
+                        buf.append( ',' );
+                    }
+                    buf.append( data[i] );
+                }
+            }
+            else
+            {
+                buf.append( "size=" ).append( data.length );
+            }
+            buf.append( "]," );
         }
         buf.append( "start=" ).append( startRecord );
         buf.append( ",next=" ).append( nextBlock ).append( "]" );
         return buf.toString();
     }
-    
+
     @Override
     public DynamicRecord clone()
     {
-        DynamicRecord result = new DynamicRecord( getLongId() );
+        DynamicRecord clone = new DynamicRecord( getId() ).initialize( inUse(),
+                startRecord, nextBlock, type, length );
         if ( data != null )
-            result.data = data.clone();
-        result.setInUse( inUse() );
-        result.length = length;
-        result.nextBlock = nextBlock;
-        result.type = type;
-        result.startRecord = startRecord;
-        return result;
-    }
-    
-    @Override
-    public boolean equals( Object obj )
-    {
-        if ( !( obj instanceof DynamicRecord ) )
-            return false;
-        return ((DynamicRecord) obj).getId() == getId();
-    }
-    
-    @Override
-    public int hashCode()
-    {
-        long id = getId();
-        return (int) (( id >>> 32 ) ^ id );
+        {
+            clone.setData( data.clone() );
+        }
+        return clone;
     }
 }

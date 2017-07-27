@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,26 +21,19 @@ package org.neo4j.ha.correctness;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.function.Function;
 
 import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.com.message.MessageType;
-import org.neo4j.function.Function;
 import org.neo4j.helpers.collection.Iterables;
 
 class MessageDeliveryAction implements ClusterAction
 {
-    public static final Function<Message,ClusterAction> MESSAGE_TO_ACTION = new Function<Message, ClusterAction>()
-    {
-        @Override
-        public ClusterAction apply( Message message )
-        {
-            return new MessageDeliveryAction( message );
-        }
-    };
+    public static final Function<Message,ClusterAction> MESSAGE_TO_ACTION = MessageDeliveryAction::new;
 
     private final Message message;
 
-    public MessageDeliveryAction( Message message )
+    MessageDeliveryAction( Message message )
     {
         this.message = message;
     }
@@ -62,7 +55,8 @@ class MessageDeliveryAction implements ClusterAction
     @Override
     public String toString()
     {
-        return "("+message.getHeader( Message.FROM ) + ")-[" + message.getMessageType().name() + "]->(" + message.getHeader( Message.TO ) + ")";
+        return "(" + message.getHeader( Message.FROM ) + ")-[" + message.getMessageType().name() + "]->(" +
+                message.getHeader( Message.TO ) + ")";
     }
 
     @Override
@@ -83,33 +77,33 @@ class MessageDeliveryAction implements ClusterAction
 
     private boolean messageEquals( Message first, Message other )
     {
-        if( !first.getMessageType().equals( other.getMessageType() ))
+        if ( !first.getMessageType().equals( other.getMessageType() ) )
         {
             return false;
         }
 
-        if( !first.getHeader( Message.FROM ).equals( other.getHeader( Message.FROM ) ))
+        if ( !first.getHeader( Message.FROM ).equals( other.getHeader( Message.FROM ) ) )
         {
             return false;
         }
 
-        if( !first.getHeader( Message.TO ).equals( other.getHeader( Message.TO ) ))
+        if ( !first.getHeader( Message.TO ).equals( other.getHeader( Message.TO ) ) )
         {
             return false;
         }
 
-        if(first.getPayload() instanceof Message && other.getPayload() instanceof Message)
+        if ( first.getPayload() instanceof Message && other.getPayload() instanceof Message )
         {
-            return messageEquals((Message)first.getPayload(), (Message)other.getPayload() );
+            return messageEquals( (Message) first.getPayload(), (Message) other.getPayload() );
         }
-        else if(first.getPayload() == null)
+        else if ( first.getPayload() == null )
         {
-            if(other.getPayload() != null)
+            if ( other.getPayload() != null )
             {
                 return false;
             }
         }
-        else if( !first.getPayload().equals( other.getPayload() ))
+        else if ( !first.getPayload().equals( other.getPayload() ) )
         {
             return false;
         }

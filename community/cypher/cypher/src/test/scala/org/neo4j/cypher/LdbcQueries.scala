@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,10 @@
  */
 package org.neo4j.cypher
 
-import org.joda.time.{DateTimeZone, DateTime}
+import org.joda.time.{DateTime, DateTimeZone}
 
 /**
- * These are the 14 LDBC queries that runs in the LDBC projects. The queries are (semi-)generated so the idea is rather
+ * These are the 14 LDBC stream that runs in the LDBC projects. The stream are (semi-)generated so the idea is rather
  * to have them easy to generate than easy to read so refactor with caution.
  */
 object LdbcQueries {
@@ -57,6 +57,8 @@ object LdbcQueries {
       "CREATE INDEX ON :Person(birthday_month)",
       "CREATE INDEX ON :Person(birthday_day)"
     )
+
+    def supportedInCompiledRuntime: Boolean = false
   }
 
   object Query1 extends LdbcQuery {
@@ -267,7 +269,7 @@ object LdbcQueries {
 
     val query = """MATCH (:Person {id:{1}})-[:KNOWS]-(friend:Person)<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message)
                   |WHERE message.creationDate <= {2} AND (message:Post OR message:Comment)
-                  |RETURN friend.id AS personId, friend.firstName AS personFirstName, friend.lastName AS personLastName, message.id AS messageId, CASE has(message.content) WHEN true THEN message.content ELSE message.imageFile END AS messageContent,
+                  |RETURN friend.id AS personId, friend.firstName AS personFirstName, friend.lastName AS personLastName, message.id AS messageId, CASE exists(message.content) WHEN true THEN message.content ELSE message.imageFile END AS messageContent,
                   | message.creationDate AS messageDate
                   |ORDER BY messageDate DESC, messageId ASC
                   |LIMIT {3}""".stripMargin
@@ -756,7 +758,7 @@ object LdbcQueries {
                   |      WITH liker, head(collect({msg: message, likeTime: likeCreationDate})) AS latestLike, person
                   |    RETURN liker.id AS personId, liker.firstName AS personFirstName, liker.lastName AS personLastName,
                   |    latestLike.likeTime AS likeTime, not((liker)-[:KNOWS]-(person)) AS isNew, latestLike.msg.id AS messageId,
-                  |    CASE has(latestLike.msg.content) WHEN true THEN latestLike.msg.content
+                  |    CASE exists(latestLike.msg.content) WHEN true THEN latestLike.msg.content
                   |    ELSE latestLike.msg.imageFile END AS messageContent, latestLike.likeTime - latestLike.msg.creationDate AS latencyAsMilli
                   |    ORDER BY likeTime DESC, personId ASC
                   |      LIMIT {2}""".stripMargin
@@ -892,6 +894,8 @@ object LdbcQueries {
       Map("personId" -> 3, "commentContent" -> "C12", "commentId" -> 12, "personLastName" -> "three-ᚠさ丵פش", "commentCreationDate" -> 2, "personFirstName" -> "friend"),
       Map("personId" -> 3, "commentContent" -> "C01", "commentId" -> 10, "personLastName" -> "three-ᚠさ丵פش", "commentCreationDate" -> 1, "personFirstName" -> "friend"),
       Map("personId" -> 3, "commentContent" -> "C11", "commentId" -> 11, "personLastName" -> "three-ᚠさ丵פش", "commentCreationDate" -> 1, "personFirstName" -> "friend"))
+
+    override def supportedInCompiledRuntime = true
   }
 
   object Query9 extends LdbcQuery {
@@ -963,7 +967,7 @@ object LdbcQueries {
 
     val query = """MATCH (:Person {id:{1}})-[:KNOWS*1..2]-(friend:Person)<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message)
                   |WHERE message.creationDate < {2}
-                  |RETURN DISTINCT message.id AS messageId, CASE has(message.content) WHEN true THEN message.content ELSE message.imageFile END AS messageContent,
+                  |RETURN DISTINCT message.id AS messageId, CASE exists(message.content) WHEN true THEN message.content ELSE message.imageFile END AS messageContent,
                   | message.creationDate AS messageCreationDate, friend.id AS personId, friend.firstName AS personFirstName, friend.lastName AS personLastName
                   |ORDER BY message.creationDate DESC, message.id ASC
                   |LIMIT {3}""".stripMargin
@@ -1465,6 +1469,48 @@ object LdbcQueries {
       Map("weight" -> 3.0, "pathNodeIds" -> List(0, 1, 2, 4, 6, 5)))
   }
 
-  val LDBC_QUERIES = Seq(Query1, Query2, Query3, Query4, Query5, Query6, Query7, Query8,
-    Query9, Query10, Query11, Query12, Query13, Query14)
+  object Query14_v2 extends LdbcQuery {
+
+    val name = "LDBC Query 14 v2"
+
+    val createQuery = Query14.createQuery
+
+    def createParams = Map.empty
+
+    val query = """MATCH path = allShortestPaths((person1:Person {id:{1}})-[:KNOWS*0..]-(person2:Person {id:{2}}))
+                  |RETURN
+                  |extract(n IN nodes(path) | n.id) AS pathNodeIds,
+                  |reduce(weight=0.0, r IN rels(path) |
+                  |           weight +
+                  |           length(()-[r]->()<-[:COMMENT_HAS_CREATOR]-(:Comment)-[:REPLY_OF_POST]->(:Post)-[:POST_HAS_CREATOR]->()-[r]->())*1.0 +
+                  |           length(()<-[r]-()<-[:COMMENT_HAS_CREATOR]-(:Comment)-[:REPLY_OF_POST]->(:Post)-[:POST_HAS_CREATOR]->()<-[r]-())*1.0 +
+                  |           length(()<-[r]-()-[:COMMENT_HAS_CREATOR]-(:Comment)-[:REPLY_OF_COMMENT]-(:Comment)-[:COMMENT_HAS_CREATOR]-()<-[r]-())*0.5
+                  |) AS weight
+                  |ORDER BY weight DESC""".stripMargin
+
+    def params = Map("1" -> 0, "2" -> 5)
+
+    def expectedResult = List(
+      Map("weight" -> 5.5, "pathNodeIds" -> List(0, 1, 7, 4, 8, 5)),
+      Map("weight" -> 4.5, "pathNodeIds" -> List(0, 1, 7, 4, 6, 5)),
+      Map("weight" -> 4.0, "pathNodeIds" -> List(0, 1, 2, 4, 8, 5)),
+      Map("weight" -> 3.0, "pathNodeIds" -> List(0, 1, 2, 4, 6, 5)))
+  }
+
+  val LDBC_QUERIES = Seq(
+    Query1,
+    Query2,
+    Query3,
+    Query4,
+    Query5,
+    Query6,
+    Query7,
+    Query8,
+    Query9,
+    Query10,
+    Query11,
+    Query12,
+    Query13,
+    Query14,
+    Query14_v2)
 }

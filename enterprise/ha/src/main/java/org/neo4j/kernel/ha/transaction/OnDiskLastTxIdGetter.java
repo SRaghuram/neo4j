@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,36 +19,34 @@
  */
 package org.neo4j.kernel.ha.transaction;
 
-import org.neo4j.function.Supplier;
+import java.util.function.LongSupplier;
 import org.neo4j.kernel.impl.core.LastTxIdGetter;
-import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 
 public class OnDiskLastTxIdGetter implements LastTxIdGetter
 {
-    private final Supplier<NeoStores> neoStoresSupplier;
+    private final LongSupplier txIdSupplier;
 
-    public OnDiskLastTxIdGetter( Supplier<NeoStores> neoStoresSupplier )
+    public OnDiskLastTxIdGetter( LongSupplier txIdSupplier )
     {
-        this.neoStoresSupplier = neoStoresSupplier;
+        this.txIdSupplier = txIdSupplier;
     }
 
+    /** This method is used to construct credentials for election process.
+      * And can be invoked at any moment of instance lifecycle.
+      * It mean that its possible that we will be invoked when neo stores are stopped
+      * (for example while we copy store) in that case we will return TransactionIdStore.BASE_TX_ID
+      */
     @Override
     public long getLastTxId()
     {
-        TransactionIdStore neoStore = getNeoStores().getMetaDataStore();
-        return neoStore.getLastCommittedTransactionId();
-    }
-
-    private NeoStores getNeoStores()
-    {
-        // Note that it is important that we resolve the NeoStores dependency anew every
-        // time we want to read the last transaction id.
-        // The reason is that a mode switch can stop and restart the database innards,
-        // leaving us with a stale NeoStores, not connected to a working page cache,
-        // if we cache it.
-        // We avoid this problem by simply not caching it, and instead looking it up
-        // every time.
-        return neoStoresSupplier.get();
+        try
+        {
+            return txIdSupplier.getAsLong();
+        }
+        catch ( Throwable e )
+        {
+            return TransactionIdStore.BASE_TX_ID;
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -48,7 +48,7 @@ public class Utils
     private Utils()
     {
     }
-    
+
     public static String assembleClassPathFromPackage( File directory )
     {
         List<File> jarFiles = new ArrayList<File>();
@@ -61,21 +61,27 @@ public class Utils
             }
         };
         gatherFiles( jarFiles, directory, jarFilter );
-        
+
         StringBuilder classpath = new StringBuilder();
         for ( File file : jarFiles )
+        {
             classpath.append( classpath.length() > 0 ? File.pathSeparator : "" ).append( file.getAbsolutePath() );
+        }
         return classpath.toString();
     }
-    
+
     private static void gatherFiles( List<File> jarFiles, File directory, FileFilter filter )
     {
         for ( File file : directory.listFiles() )
         {
             if ( file.isDirectory() )
+            {
                 gatherFiles( jarFiles, file, filter );
+            }
             else if ( filter.accept( file ) )
+            {
                 jarFiles.add( file );
+            }
         }
     }
 
@@ -90,7 +96,7 @@ public class Utils
             copyURLToFile( website, tmpDownload, 5000, 10000 );
             moveFile( tmpDownload, downloaded );
         }
-        
+
         File unpacked = new File( targetDirectory, downloadedFileName );
         if ( !unpacked.exists() )
         {
@@ -102,7 +108,7 @@ public class Utils
         }
         return unpacked;
     }
-    
+
     public static List<File> unzip( File zipFile, File targetDir ) throws IOException
     {
         List<File> files = new ArrayList<File>();
@@ -135,7 +141,7 @@ public class Utils
             zip.close();
         }
     }
-    
+
     public static void copyInputStreamToFile( InputStream stream, File target ) throws IOException
     {
         OutputStream out = null;
@@ -149,7 +155,7 @@ public class Utils
             closeQuietly( out );
         }
     }
-    
+
     public static Process execJava( String classPath, String mainClass, String... args ) throws Exception
     {
         List<String> allArgs = new ArrayList<String>( asList( "java", "-cp", classPath, mainClass ) );

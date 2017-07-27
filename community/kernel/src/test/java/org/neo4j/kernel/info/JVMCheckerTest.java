@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,21 +26,20 @@ import org.neo4j.logging.BufferingLog;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-
 import static org.neo4j.kernel.info.JvmChecker.INCOMPATIBLE_JVM_VERSION_WARNING;
 import static org.neo4j.kernel.info.JvmChecker.INCOMPATIBLE_JVM_WARNING;
 
 public class JVMCheckerTest
 {
     @Test
-    public void shouldNotIssueWarningWhenUsingHotspotServerVmVersion7() throws Exception
+    public void shouldIssueWarningWhenUsingHotspotServerVmVersion7() throws Exception
     {
         BufferingLog bufferingLogger = new BufferingLog();
 
         new JvmChecker( bufferingLogger, new CannedJvmMetadataRepository( "Java HotSpot(TM) 64-Bit Server VM",
                 "1.7.0-b147" ) ).checkJvmCompatibilityAndIssueWarning();
 
-        assertTrue( bufferingLogger.toString().isEmpty() );
+        assertThat( bufferingLogger.toString().trim(), is( INCOMPATIBLE_JVM_VERSION_WARNING ) );
     }
 
     @Test
@@ -55,36 +54,47 @@ public class JVMCheckerTest
     }
 
     @Test
-    public void shouldNotIssueWarningWhenUsingHotspotServerVmVersion7InThe32BitVersion() throws Exception
+    public void shouldNotIssueWarningWhenUsingIbmJ9Vm()
+    {
+        BufferingLog bufferingLogger = new BufferingLog();
+
+        new JvmChecker( bufferingLogger, new CannedJvmMetadataRepository( "IBM J9 VM", "1.8" ) )
+                .checkJvmCompatibilityAndIssueWarning();
+
+        assertTrue( bufferingLogger.toString().isEmpty() );
+    }
+
+    @Test
+    public void shouldIssueWarningWhenUsingHotspotServerVmVersion7InThe32BitVersion() throws Exception
     {
         BufferingLog bufferingLogger = new BufferingLog();
 
         new JvmChecker( bufferingLogger, new CannedJvmMetadataRepository( "Java HotSpot(TM) Server VM",
                 "1.7.0_25-b15" ) ).checkJvmCompatibilityAndIssueWarning();
 
-        assertTrue( bufferingLogger.toString().isEmpty() );
+        assertThat( bufferingLogger.toString().trim(), is( INCOMPATIBLE_JVM_VERSION_WARNING ) );
     }
 
     @Test
-    public void shouldNotIssueWarningWhenUsingOpenJDKServerVmVersion7() throws Exception
+    public void shouldIssueWarningWhenUsingOpenJDKServerVmVersion7() throws Exception
     {
         BufferingLog bufferingLogger = new BufferingLog();
 
         new JvmChecker( bufferingLogger, new CannedJvmMetadataRepository( "OpenJDK 64-Bit Server VM",
                 "1.7.0-b147" ) ).checkJvmCompatibilityAndIssueWarning();
 
-        assertTrue( bufferingLogger.toString().isEmpty() );
+        assertThat( bufferingLogger.toString().trim(), is( INCOMPATIBLE_JVM_VERSION_WARNING ) );
     }
 
     @Test
-    public void shouldNotIssueWarningWhenUsingOpenJDKClientVmVersion7() throws Exception
+    public void shouldIssueWarningWhenUsingOpenJDKClientVmVersion7() throws Exception
     {
         BufferingLog bufferingLogger = new BufferingLog();
 
         new JvmChecker( bufferingLogger, new CannedJvmMetadataRepository( "OpenJDK Client VM",
                 "1.7.0-b147" ) ).checkJvmCompatibilityAndIssueWarning();
 
-        assertTrue( bufferingLogger.toString().isEmpty() );
+        assertThat( bufferingLogger.toString().trim(), is( INCOMPATIBLE_JVM_VERSION_WARNING ) );
     }
 
     @Test

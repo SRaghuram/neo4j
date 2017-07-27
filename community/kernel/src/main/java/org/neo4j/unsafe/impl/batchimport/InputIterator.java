@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,47 +19,116 @@
  */
 package org.neo4j.unsafe.impl.batchimport;
 
-import java.util.NoSuchElementException;
-
 import org.neo4j.csv.reader.Readables;
 import org.neo4j.csv.reader.SourceTraceability;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
+import org.neo4j.unsafe.impl.batchimport.staging.Panicable;
 
 /**
  * A {@link ResourceIterator} with added methods suitable for {@link Input} into a {@link BatchImporter}.
  */
-public interface InputIterator<T> extends ResourceIterator<T>, SourceTraceability
+public interface InputIterator<T> extends ResourceIterator<T>, SourceTraceability, Parallelizable, Panicable
 {
-    public static class Adapter<T> extends SourceTraceability.Adapter implements InputIterator<T>
+    abstract class Adapter<T> extends PrefetchingIterator<T> implements InputIterator<T>
     {
+        private final SourceTraceability defaults = new SourceTraceability.Adapter()
+        {
+            @Override
+            public String sourceDescription()
+            {
+                return Readables.EMPTY.sourceDescription();
+            }
+        };
+
         @Override
         public String sourceDescription()
         {
-            return Readables.EMPTY.sourceDescription();
+            return defaults.sourceDescription();
+        }
+
+        @Override
+        public long lineNumber()
+        {
+            return defaults.lineNumber();
+        }
+
+        @Override
+        public long position()
+        {
+            return defaults.position();
+        }
+
+        @Override
+        public void receivePanic( Throwable cause )
+        {
         }
 
         @Override
         public void close()
         {   // Nothing to close
         }
+    }
 
-        @Override
-        public boolean hasNext()
+    class Delegate<T> extends PrefetchingIterator<T> implements InputIterator<T>
+    {
+        protected final InputIterator<T> actual;
+
+        public Delegate( InputIterator<T> actual )
         {
-            return false;
+            this.actual = actual;
         }
 
         @Override
-        public T next()
+        public void close()
         {
-            throw new NoSuchElementException();
+            actual.close();
         }
 
         @Override
-        public void remove()
+        protected T fetchNextOrNull()
         {
-            throw new UnsupportedOperationException();
+            return actual.hasNext() ? actual.next() : null;
+        }
+
+        @Override
+        public String sourceDescription()
+        {
+            return actual.sourceDescription();
+        }
+
+        @Override
+        public long lineNumber()
+        {
+            return actual.lineNumber();
+        }
+
+        @Override
+        public long position()
+        {
+            return actual.position();
+        }
+
+        @Override
+        public int processors( int delta )
+        {
+            return actual.processors( delta );
+        }
+
+        @Override
+        public void receivePanic( Throwable cause )
+        {
+            actual.receivePanic( cause );
+        }
+    }
+
+    class Empty<T> extends Adapter<T>
+    {
+        @Override
+        protected T fetchNextOrNull()
+        {
+            return null;
         }
     }
 }

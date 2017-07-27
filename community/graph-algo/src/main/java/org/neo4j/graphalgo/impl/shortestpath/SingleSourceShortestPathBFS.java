@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -86,7 +86,7 @@ public class SingleSourceShortestPathBFS implements
     {
         distances = new HashMap<Node,Integer>();
         predecessors = new HashMap<Node,List<Relationship>>();
-        currentLayer = new LinkedList<Node>();;
+        currentLayer = new LinkedList<Node>();
         nextLayer = new LinkedList<Node>();
         currentLayer.add( startNode );
         depth = 0;

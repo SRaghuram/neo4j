@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,14 +32,35 @@ public class ServerListRepresentation extends ListRepresentation
     {
         for ( Object val : content )
         {
-            if (val instanceof Number) serializer.addNumber( (Number) val );
-            else if (val instanceof String) serializer.addString(  (String) val );
-            else if (val instanceof Iterable) serializer.addList( ObjectToRepresentationConverter.getListRepresentation( (Iterable) val ) );
-            else if (val instanceof Map) serializer.addMapping( ObjectToRepresentationConverter.getMapRepresentation( (Map) val ) );
-            else if (val instanceof MappingRepresentation) serializer.addMapping( (MappingRepresentation) val  );
-            else if (val instanceof Representation) ((Representation)val).addTo( serializer );
+            if ( val instanceof Number )
+            {
+                serializer.addNumber( (Number) val );
+            }
+            else if ( val instanceof String )
+            {
+                serializer.addString( (String) val );
+            }
+            else if ( val instanceof Iterable )
+            {
+                serializer.addList( ObjectToRepresentationConverter.getListRepresentation( (Iterable) val ) );
+            }
+            else if ( val instanceof Map )
+            {
+                serializer.addMapping( ObjectToRepresentationConverter.getMapRepresentation( (Map) val ) );
+            }
+            else if ( val instanceof MappingRepresentation )
+            {
+                serializer.addMapping( (MappingRepresentation) val );
+            }
+            else if ( val instanceof Representation )
+            {
+                ((Representation) val).addTo( serializer );
+            }
             //default
-            else serializer.addString( val.toString() );
+            else
+            {
+                serializer.addString( val.toString() );
+            }
         }
     }
 }

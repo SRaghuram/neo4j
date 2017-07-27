@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -144,7 +143,10 @@ public class DefaultFormat extends RepresentationFormat
         Set<String> missing = null;
         for ( String key : requiredKeys )
         {
-            if ( !map.containsKey( key ) ) ( missing == null ? ( missing = new HashSet<String>() ) : missing ).add( key );
+            if ( !map.containsKey( key ) )
+            {
+                (missing == null ? (missing = new HashSet<String>()) : missing).add( key );
+            }
         }
         if ( missing != null )
         {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,8 +25,8 @@ import org.neo4j.desktop.config.Installation;
 import org.neo4j.desktop.config.osx.DarwinInstallation;
 import org.neo4j.desktop.config.unix.UnixInstallation;
 import org.neo4j.desktop.config.windows.WindowsInstallation;
+import org.neo4j.desktop.model.DesktopModel;
 import org.neo4j.desktop.runtime.DatabaseActions;
-import org.neo4j.desktop.ui.DesktopModel;
 import org.neo4j.desktop.ui.MainWindow;
 import org.neo4j.desktop.ui.PlatformUI;
 
@@ -42,8 +42,15 @@ public final class Neo4jDesktop
     {
         preStartInitialize();
 
-        Neo4jDesktop app = new Neo4jDesktop();
+        Neo4jDesktop app = new Neo4jDesktop( new Parameters( args ) );
         app.start();
+    }
+
+    private final Parameters parameters;
+
+    public Neo4jDesktop( Parameters parameters )
+    {
+        this.parameters = parameters;
     }
 
     public static void preStartInitialize()
@@ -59,7 +66,7 @@ public final class Neo4jDesktop
             Installation installation = getInstallation();
             installation.initialize();
 
-            DesktopModel model = new DesktopModel( installation );
+            DesktopModel model = new DesktopModel( installation, parameters );
             DatabaseActions databaseActions = new DatabaseActions( model );
             addShutdownHook( databaseActions );
 

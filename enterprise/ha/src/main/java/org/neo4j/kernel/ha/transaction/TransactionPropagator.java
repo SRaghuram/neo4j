@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,12 +29,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.cluster.InstanceId;
 import org.neo4j.com.ComException;
-import org.neo4j.function.Predicate;
 import org.neo4j.helpers.NamedThreadFactory;
 import org.neo4j.helpers.collection.FilteringIterator;
 import org.neo4j.kernel.configuration.Config;
@@ -43,11 +41,12 @@ import org.neo4j.kernel.ha.com.master.Slave;
 import org.neo4j.kernel.ha.com.master.SlavePriorities;
 import org.neo4j.kernel.ha.com.master.SlavePriority;
 import org.neo4j.kernel.ha.com.master.Slaves;
-import org.neo4j.kernel.impl.util.CappedOperation;
+import org.neo4j.kernel.impl.util.CappedLogger;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
+import org.neo4j.time.Clocks;
 
-import static org.neo4j.kernel.impl.util.CappedOperation.time;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Pushes transactions committed on master to one or more slaves. Number of slaves receiving each transactions
@@ -103,8 +102,11 @@ public class TransactionPropagator implements Lifecycle
             {
                 switch ( config.get( HaSettings.tx_push_strategy ) )
                 {
-                    case fixed:
-                        return SlavePriorities.fixed();
+                    case fixed_descending:
+                        return SlavePriorities.fixedDescending();
+
+                    case fixed_ascending:
+                        return SlavePriorities.fixedAscending();
 
                     case round_robin:
                         return SlavePriorities.roundRobin();
@@ -147,28 +149,8 @@ public class TransactionPropagator implements Lifecycle
     private final Configuration config;
     private final Slaves slaves;
     private final CommitPusher pusher;
-    private final CappedOperation<ReplicationContext> slaveCommitFailureLogger =
-            new CappedOperation<ReplicationContext>(
-                    CappedOperation.time( 5, TimeUnit.SECONDS ),
-                    CappedOperation.differentItemClasses() )
-            {
-                @Override
-                protected void triggered( ReplicationContext context )
-                {
-                    log.error( "Slave " + context.slave.getServerId() + ": Replication commit threw" +
-                               (context.throwable instanceof ComException ? " communication" : "") +
-                               " exception:", context.throwable );
-                }
-            };
-    private final CappedOperation<String> pushedToTooFewSlaveLogger =
-            new CappedOperation<String>( time( 5, TimeUnit.SECONDS ) )
-            {
-                @Override
-                protected void triggered( String message )
-                {
-                    log.warn( message );
-                }
-            };
+    private final CappedLogger slaveCommitFailureLogger;
+    private final CappedLogger pushedToTooFewSlaveLogger;
 
     public TransactionPropagator( Configuration config, Log log, Slaves slaves, CommitPusher pusher )
     {
@@ -176,15 +158,17 @@ public class TransactionPropagator implements Lifecycle
         this.log = log;
         this.slaves = slaves;
         this.pusher = pusher;
+        slaveCommitFailureLogger = new CappedLogger( log ).setTimeLimit( 5, SECONDS, Clocks.systemClock() );
+        pushedToTooFewSlaveLogger = new CappedLogger( log ).setTimeLimit( 5, SECONDS, Clocks.systemClock() );
     }
 
     @Override
-    public void init() throws Throwable
+    public void init()
     {
     }
 
     @Override
-    public void start() throws Throwable
+    public void start()
     {
         this.slaveCommitters = Executors.newCachedThreadPool( new NamedThreadFactory( "slave-committer" ) );
         desiredReplicationFactor = config.getTxPushFactor();
@@ -192,17 +176,23 @@ public class TransactionPropagator implements Lifecycle
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop()
     {
         this.slaveCommitters.shutdown();
     }
 
     @Override
-    public void shutdown() throws Throwable
+    public void shutdown()
     {
     }
 
-    public void committed( long txId, int authorId )
+    /**
+     *
+     * @param txId transaction id to replicate
+     * @param authorId author id for such transaction id
+     * @return the number of missed replicas (e.g., desired replication factor - number of successful replications)
+     */
+    public int committed( long txId, int authorId )
     {
         int replicationFactor = desiredReplicationFactor;
         // If the author is not this instance, then we need to push to one less - the committer already has it
@@ -214,16 +204,17 @@ public class TransactionPropagator implements Lifecycle
 
         if ( replicationFactor == 0 )
         {
-            return;
+            return replicationFactor;
         }
         Collection<ReplicationContext> committers = new HashSet<>();
+
         try
         {
             // TODO: Move this logic into {@link CommitPusher}
             // Commit at the configured amount of slaves in parallel.
             int successfulReplications = 0;
-            Iterator<Slave> slaveList = filter( replicationStrategy.prioritize( slaves.getSlaves() ).iterator(),
-                    authorId );
+            Iterator<Slave> slaveList =
+                    filter( replicationStrategy.prioritize( slaves.getSlaves() ).iterator(), authorId );
             CompletionNotifier notifier = new CompletionNotifier();
 
             // Start as many initial committers as needed
@@ -258,7 +249,17 @@ public class TransactionPropagator implements Lifecycle
                     // This committer failed, spawn another one
                     {
                         Slave newSlave = slaveList.next();
-                        Callable<Void> slaveCommitter = slaveCommitter( newSlave, txId, notifier );
+                        Callable<Void> slaveCommitter;
+                        try
+                        {
+                            slaveCommitter = slaveCommitter( newSlave, txId, notifier );
+                        }
+                        catch ( Throwable t )
+                        {
+                            log.error( "Unknown error commit master transaction at slave", t );
+                            return desiredReplicationFactor /* missed them all :( */;
+                        }
+
                         toAdd.add( new ReplicationContext( slaveCommitters.submit( slaveCommitter ), newSlave ) );
                     }
                     toRemove.add( context );
@@ -284,36 +285,30 @@ public class TransactionPropagator implements Lifecycle
             }
 
             // We did the best we could, have we committed successfully on enough slaves?
-            if ( !(successfulReplications >= replicationFactor) )
+            if ( successfulReplications < replicationFactor )
             {
-                pushedToTooFewSlaveLogger.event( "Transaction " + txId + " couldn't commit on enough slaves, desired " +
-                        replicationFactor + ", but could only commit at " + successfulReplications );
+                pushedToTooFewSlaveLogger
+                        .info( "Transaction " + txId + " couldn't commit on enough slaves, desired " +
+                               replicationFactor +
+                               ", but could only commit at " + successfulReplications );
             }
-        }
-        catch ( Throwable t )
-        {
-            log.error( "Unknown error commit master transaction at slave", t );
+
+            return replicationFactor - successfulReplications;
         }
         finally
         {
             // Cancel all ongoing committers in the executor
-            for ( ReplicationContext context : committers )
+            for ( ReplicationContext committer : committers )
             {
-                context.future.cancel( false );
+                committer.future.cancel( false );
             }
         }
     }
 
     private Iterator<Slave> filter( Iterator<Slave> slaves, final Integer externalAuthorServerId )
     {
-        return externalAuthorServerId == null ? slaves : new FilteringIterator<>( slaves, new Predicate<Slave>()
-        {
-            @Override
-            public boolean test( Slave item )
-            {
-                return item.getServerId() != externalAuthorServerId;
-            }
-        } );
+        return externalAuthorServerId == null ? slaves : new FilteringIterator<>( slaves,
+                item -> item.getServerId() != externalAuthorServerId );
     }
 
     private boolean isSuccessful( ReplicationContext context )
@@ -330,7 +325,9 @@ public class TransactionPropagator implements Lifecycle
         catch ( ExecutionException e )
         {
             context.throwable = e.getCause();
-            slaveCommitFailureLogger.event( context );
+            slaveCommitFailureLogger.error( "Slave " + context.slave.getServerId() + ": Replication commit threw" +
+                                            (context.throwable instanceof ComException ? " communication" : "") +
+                                            " exception:", context.throwable );
             return false;
         }
         catch ( CancellationException e )

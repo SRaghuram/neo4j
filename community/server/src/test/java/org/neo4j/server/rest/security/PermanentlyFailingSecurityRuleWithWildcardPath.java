@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,26 +21,20 @@ package org.neo4j.server.rest.security;
 
 import javax.servlet.http.HttpServletRequest;
 
-
-
 public class PermanentlyFailingSecurityRuleWithWildcardPath implements SecurityRule
 {
 
     public static final String REALM = "WallyWorld"; // as per RFC2617 :-)
-
 
     public boolean isAuthorized( HttpServletRequest request )
     {
         return false;
     }
 
-    //START SNIPPET: failingRuleWithWildcardPath
     public String forUriPath()
     {
         return "/protected/*";
     }
-    // END SNIPPET: failingRuleWithWildcardPath
-
 
     public String wwwAuthenticateHeader()
     {

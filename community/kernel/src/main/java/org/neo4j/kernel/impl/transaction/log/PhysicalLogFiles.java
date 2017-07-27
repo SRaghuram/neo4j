@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 
 import static java.lang.Math.max;
-
+import static java.lang.Math.min;
 import static org.neo4j.kernel.impl.transaction.log.PhysicalLogFile.DEFAULT_VERSION_SUFFIX;
 import static org.neo4j.kernel.impl.transaction.log.PhysicalLogFile.REGEX_DEFAULT_VERSION_SUFFIX;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
@@ -44,14 +44,16 @@ public class PhysicalLogFiles
         void visit( File file, long logVersion );
     }
 
-    private static class HighestLogVersionVisitor implements LogVersionVisitor
+    private static class RangeLogVersionVisitor implements LogVersionVisitor
     {
+        private long lowest = -1;
         private long highest = -1;
 
         @Override
         public void visit( File file, long logVersion )
         {
             highest = max( highest, logVersion );
+            lowest = lowest == -1 ? logVersion : min( lowest, logVersion );
         }
     }
 
@@ -86,16 +88,23 @@ public class PhysicalLogFiles
         return readLogHeader( fileSystem, getLogFileForVersion( version ) );
     }
 
-    public boolean hasAnyTransaction( long version )
+    public boolean hasAnyEntries( long version )
     {
         return fileSystem.getFileSize( getLogFileForVersion( version ) ) > LOG_HEADER_SIZE;
     }
 
     public long getHighestLogVersion()
     {
-        HighestLogVersionVisitor visitor = new HighestLogVersionVisitor();
+        RangeLogVersionVisitor visitor = new RangeLogVersionVisitor();
         accept( visitor );
         return visitor.highest;
+    }
+
+    public long getLowestLogVersion()
+    {
+        RangeLogVersionVisitor visitor = new RangeLogVersionVisitor();
+        accept( visitor );
+        return visitor.lowest;
     }
 
     public void accept( LogVersionVisitor visitor )

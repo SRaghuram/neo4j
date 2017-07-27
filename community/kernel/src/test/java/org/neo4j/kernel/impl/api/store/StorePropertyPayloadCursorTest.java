@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,111 +19,184 @@
  */
 package org.neo4j.kernel.impl.api.store;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
 import org.neo4j.helpers.Strings;
-import org.neo4j.helpers.collection.IteratorUtil;
-import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.io.pagecache.StubPageCursor;
+import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.kernel.impl.store.AbstractDynamicStore;
 import org.neo4j.kernel.impl.store.DynamicArrayStore;
 import org.neo4j.kernel.impl.store.DynamicRecordAllocator;
 import org.neo4j.kernel.impl.store.DynamicStringStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
+import org.neo4j.kernel.impl.store.RecordCursor;
+import org.neo4j.kernel.impl.store.StandaloneDynamicRecordAllocator;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
+import org.neo4j.kernel.impl.store.record.RecordLoad;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.kernel.impl.api.store.StorePropertyCursor.payloadValueAsObject;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.api.store.StorePropertyPayloadCursorTest.Param.param;
 import static org.neo4j.kernel.impl.api.store.StorePropertyPayloadCursorTest.Param.paramArg;
 import static org.neo4j.kernel.impl.api.store.StorePropertyPayloadCursorTest.Params.params;
-import static org.neo4j.test.Assert.assertObjectOrArrayEquals;
+import static org.neo4j.test.assertion.Assert.assertObjectOrArrayEquals;
 
 @RunWith( Enclosed.class )
 public class StorePropertyPayloadCursorTest
 {
-    @Test
-    public void shouldBeOkToClearUnusedCursor()
+    public static class BasicContract
     {
-        // Given
-        StorePropertyPayloadCursor cursor = newCursor( "cat-dog" );
+        @Test
+        public void nextShouldAlwaysReturnFalseWhenNotInitialized()
+        {
+            StorePropertyPayloadCursor cursor = new StorePropertyPayloadCursor( mock( RecordCursor.class ),
+                    mock( RecordCursor.class ) );
 
-        // When
-        cursor.clear();
+            assertFalse( cursor.next() );
 
-        // Then
-        // clear() on an unused cursor works just fine
-    }
+            // Should still be true the Nth time
+            assertFalse( cursor.next() );
+        }
 
-    @Test
-    public void shouldBeOkToClearPartiallyExhaustedCursor()
-    {
-        // Given
-        StorePropertyPayloadCursor cursor = newCursor( 1, 2, 3L );
+        @Test
+        public void nextShouldAlwaysReturnFalseWhenCleared()
+        {
+            StorePropertyPayloadCursor cursor = newCursor( "cat-dog" );
 
-        cursor.next();
-        cursor.next();
+            assertTrue( cursor.next() );
 
-        // When
-        cursor.clear();
+            cursor.clear();
 
-        // Then
-        // clear() on an used cursor works just fine
-    }
+            // Should still be true the Nth time
+            assertFalse( cursor.next() );
+            assertFalse( cursor.next() );
+        }
 
-    @Test
-    public void shouldBeOkToClearExhaustedCursor()
-    {
-        // Given
-        StorePropertyPayloadCursor cursor = newCursor( 1, 2, 3 );
+        @Test
+        public void shouldBeOkToClearUnusedCursor()
+        {
+            // Given
+            StorePropertyPayloadCursor cursor = newCursor( "cat-dog" );
 
-        cursor.next();
-        cursor.next();
-        cursor.next();
+            // When
+            cursor.clear();
 
-        // When
-        cursor.clear();
+            // Then
+            // clear() on an unused cursor works just fine
+        }
 
-        // Then
-        // clear() on an exhausted cursor works just fine
-    }
+        @Test
+        public void shouldBeOkToClearPartiallyExhaustedCursor()
+        {
+            // Given
+            StorePropertyPayloadCursor cursor = newCursor( 1, 2, 3L );
 
-    @Test
-    public void shouldBePossibleToCallClearOnEmptyCursor()
-    {
-        // Given
-        StorePropertyPayloadCursor cursor = newCursor();
+            assertTrue( cursor.next() );
+            assertTrue( cursor.next() );
 
-        // When
-        cursor.clear();
+            // When
+            cursor.clear();
 
-        // Then
-        // clear() on an empty cursor works just fine
-    }
+            // Then
+            // clear() on an used cursor works just fine
+        }
 
-    @Test
-    public void shouldBePossibleToCallNextOnEmptyCursor()
-    {
-        // Given
-        StorePropertyPayloadCursor cursor = newCursor();
+        @Test
+        public void shouldBeOkToClearExhaustedCursor()
+        {
+            // Given
+            StorePropertyPayloadCursor cursor = newCursor( 1, 2, 3 );
 
-        // When
-        cursor.next();
+            assertTrue( cursor.next() );
+            assertTrue( cursor.next() );
+            assertTrue( cursor.next() );
 
-        // Then
-        // next() on an empty cursor works just fine
+            // When
+            cursor.clear();
+
+            // Then
+            // clear() on an exhausted cursor works just fine
+        }
+
+        @Test
+        public void shouldBePossibleToCallClearOnEmptyCursor()
+        {
+            // Given
+            StorePropertyPayloadCursor cursor = newCursor();
+
+            // When
+            cursor.clear();
+
+            // Then
+            // clear() on an empty cursor works just fine
+        }
+
+        @Test
+        public void shouldBePossibleToCallNextOnEmptyCursor()
+        {
+            // Given
+            StorePropertyPayloadCursor cursor = newCursor();
+
+            // When
+            assertFalse( cursor.next() );
+
+            // Then
+            // next() on an empty cursor works just fine
+        }
+
+        @Test
+        public void shouldUseDynamicStringAndArrayStoresThroughDifferentCursors()
+        {
+            // Given
+            DynamicStringStore dynamicStringStore = newDynamicStoreMock( DynamicStringStore.class );
+            DynamicArrayStore dynamicArrayStore = newDynamicStoreMock( DynamicArrayStore.class );
+
+            String string = RandomStringUtils.randomAlphanumeric( 5000 );
+            byte[] array = RandomStringUtils.randomAlphanumeric( 10000 ).getBytes();
+            StorePropertyPayloadCursor cursor = newCursor( dynamicStringStore, dynamicArrayStore, string, array );
+
+            // When
+            assertTrue( cursor.next() );
+            assertNotNull( cursor.stringValue() );
+
+            assertTrue( cursor.next() );
+            assertNotNull( cursor.arrayValue() );
+
+            assertFalse( cursor.next() );
+
+            // Then
+            verify( dynamicStringStore ).newRecordCursor( any( DynamicRecord.class ) );
+            verify( dynamicArrayStore ).newRecordCursor( any( DynamicRecord.class ) );
+        }
+
+        @Test
+        public void nextMultipleInvocations()
+        {
+            StorePropertyPayloadCursor cursor = newCursor();
+
+            assertFalse( cursor.next() );
+            assertFalse( cursor.next() );
+            assertFalse( cursor.next() );
+            assertFalse( cursor.next() );
+        }
+
     }
 
     @RunWith( Parameterized.class )
@@ -185,7 +258,7 @@ public class StorePropertyPayloadCursorTest
             // Then
             assertTrue( next );
             assertEquals( param.type, cursor.type() );
-            assertObjectOrArrayEquals( param.value, payloadValueAsObject( cursor ) );
+            assertObjectOrArrayEquals( param.value, cursor.value() );
         }
     }
 
@@ -365,7 +438,7 @@ public class StorePropertyPayloadCursorTest
                 // Then
                 assertTrue( next );
                 assertEquals( param.type, cursor.type() );
-                assertObjectOrArrayEquals( param.value, payloadValueAsObject( cursor ) );
+                assertObjectOrArrayEquals( param.value, cursor.value() );
             }
         }
     }
@@ -390,20 +463,27 @@ public class StorePropertyPayloadCursorTest
         DynamicStringStore dynamicStringStore = mock( DynamicStringStore.class );
         DynamicArrayStore dynamicArrayStore = mock( DynamicArrayStore.class );
 
-        StorePropertyPayloadCursor cursor = new StorePropertyPayloadCursor( dynamicStringStore, dynamicArrayStore );
+        return newCursor( dynamicStringStore, dynamicArrayStore, values );
+    }
 
-        PageCursor pageCursor = newPageCursor( values );
-        cursor.init( pageCursor );
+    private static StorePropertyPayloadCursor newCursor( DynamicStringStore dynamicStringStore,
+            DynamicArrayStore dynamicArrayStore, Object... values )
+    {
+        StorePropertyPayloadCursor cursor = new StorePropertyPayloadCursor(
+                dynamicStringStore.newRecordCursor( null ), dynamicArrayStore.newRecordCursor( null ) );
+
+        long[] blocks = asBlocks( values );
+        cursor.init( blocks, blocks.length );
 
         return cursor;
     }
 
-    private static PageCursor newPageCursor( Object... values )
+    private static long[] asBlocks( Object... values )
     {
-        RecordAllocator stringAllocator = new RecordAllocator();
-        RecordAllocator arrayAllocator = new RecordAllocator();
-
-        ByteBuffer page = ByteBuffer.allocateDirect( StorePropertyPayloadCursor.MAX_NUMBER_OF_PAYLOAD_LONG_ARRAY * 8 );
+        DynamicRecordAllocator stringAllocator = new StandaloneDynamicRecordAllocator();
+        DynamicRecordAllocator arrayAllocator = new StandaloneDynamicRecordAllocator();
+        long[] blocks = new long[PropertyType.getPayloadSizeLongs()];
+        int cursor = 0;
         for ( int i = 0; i < values.length; i++ )
         {
             Object value = values[i];
@@ -411,17 +491,26 @@ public class StorePropertyPayloadCursorTest
             PropertyBlock block = new PropertyBlock();
             PropertyStore.encodeValue( block, i, value, stringAllocator, arrayAllocator );
             long[] valueBlocks = block.getValueBlocks();
-            for ( long valueBlock : valueBlocks )
-            {
-                page.putLong( valueBlock );
-            }
+            System.arraycopy( valueBlocks, 0, blocks, cursor, valueBlocks.length );
+            cursor += valueBlocks.length;
         }
-        while ( page.remaining() > 0 )
-        {
-            page.put( (byte) 0 );
-        }
+        return blocks;
+    }
 
-        return new StubPageCursor( 1, page );
+    @SuppressWarnings( "unchecked" )
+    private static <S extends AbstractDynamicStore> S newDynamicStoreMock( Class<S> clazz )
+    {
+        RecordCursor<DynamicRecord> recordCursor = mock( RecordCursor.class );
+        when( recordCursor.next() ).thenReturn( true ).thenReturn( false );
+        DynamicRecord dynamicRecord = new DynamicRecord( 42 );
+        dynamicRecord.setData( new byte[]{1, 1, 1, 1, 1} );
+        when( recordCursor.get() ).thenReturn( dynamicRecord );
+        when( recordCursor.acquire( anyLong(), any( RecordLoad.class ) ) ).thenReturn( recordCursor );
+
+        S store = mock( clazz );
+        when( store.newRecordCursor( any( DynamicRecord.class ) ) ).thenReturn( recordCursor );
+
+        return store;
     }
 
     static class Param
@@ -469,33 +558,13 @@ public class StorePropertyPayloadCursorTest
         @Override
         public Iterator<Param> iterator()
         {
-            return IteratorUtil.iterator( params );
+            return Iterators.iterator( params );
         }
 
         @Override
         public String toString()
         {
             return "{params=" + Arrays.toString( params ) + "}";
-        }
-    }
-
-    private static class RecordAllocator implements DynamicRecordAllocator
-    {
-        long id;
-
-        @Override
-        public int dataSize()
-        {
-            return 120;
-        }
-
-        @Override
-        public DynamicRecord nextUsedRecordOrNew( Iterator<DynamicRecord> recordsToUseFirst )
-        {
-            DynamicRecord record = new DynamicRecord( id++ );
-            record.setCreated();
-            record.setInUse( true );
-            return record;
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,32 +24,41 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.collection.primitive.PrimitiveLongObjectMap;
-import org.neo4j.collection.primitive.PrimitiveLongSet;
-import org.neo4j.collection.primitive.PrimitiveLongVisitor;
-import org.neo4j.helpers.collection.Visitor;
-import org.neo4j.kernel.impl.store.record.PropertyRecord;
-import org.neo4j.kernel.impl.transaction.command.Command;
+import org.neo4j.kernel.impl.api.BatchTransactionApplier;
+import org.neo4j.kernel.impl.api.TransactionApplier;
+import org.neo4j.kernel.impl.locking.LockGroup;
 import org.neo4j.kernel.impl.transaction.command.Command.NodeCommand;
 import org.neo4j.kernel.impl.transaction.command.Command.PropertyCommand;
-import org.neo4j.kernel.impl.transaction.command.CommandHandler;
+import org.neo4j.storageengine.api.CommandsToApply;
 
 import static org.neo4j.collection.primitive.Primitive.longObjectMap;
-import static org.neo4j.collection.primitive.Primitive.longSet;
+import static org.neo4j.kernel.impl.store.NodeLabelsField.fieldPointsToDynamicRecordOfLabels;
 
-class NodePropertyCommandsExtractor
-        extends CommandHandler.Adapter implements Visitor<Command,IOException>
+/**
+ * Implements both BatchTransactionApplier and TransactionApplier in order to reduce garbage.
+ * Gathers node/property commands by node id, preparing for extraction of {@link NodeUpdates updates}.
+ */
+public class NodePropertyCommandsExtractor extends TransactionApplier.Adapter
+        implements BatchTransactionApplier
 {
-    final PrimitiveLongObjectMap<NodeCommand> nodeCommandsById = longObjectMap();
-    final PrimitiveLongObjectMap<List<PropertyCommand>> propertyCommandsByNodeIds = longObjectMap();
+    private final PrimitiveLongObjectMap<NodeCommand> nodeCommandsById = longObjectMap();
+    private final PrimitiveLongObjectMap<List<PropertyCommand>> propertyCommandsByNodeIds = longObjectMap();
+    private boolean hasUpdates;
 
     @Override
-    public boolean visit( Command element ) throws IOException
+    public TransactionApplier startTx( CommandsToApply transaction )
     {
-        element.handle( this );
-        return false;
+        return this;
     }
 
-    public void clear()
+    @Override
+    public TransactionApplier startTx( CommandsToApply transaction, LockGroup lockGroup )
+    {
+        return startTx( transaction );
+    }
+
+    @Override
+    public void close() throws Exception
     {
         nodeCommandsById.clear();
         propertyCommandsByNodeIds.clear();
@@ -59,14 +68,33 @@ class NodePropertyCommandsExtractor
     public boolean visitNodeCommand( NodeCommand command ) throws IOException
     {
         nodeCommandsById.put( command.getKey(), command );
+        if ( !hasUpdates && mayResultInIndexUpdates( command ) )
+        {
+            hasUpdates = true;
+        }
         return false;
+    }
+
+    public static boolean mayResultInIndexUpdates( NodeCommand command )
+    {
+        long before = command.getBefore().getLabelField();
+        long after = command.getAfter().getLabelField();
+        return before != after ||
+                // Because we don't know here, there may have been changes to a dynamic label record
+                // even though it still points to the same one
+                fieldPointsToDynamicRecordOfLabels( before ) || fieldPointsToDynamicRecordOfLabels( after );
+
+    }
+
+    public static boolean mayResultInIndexUpdates( PropertyCommand command )
+    {
+        return command.getAfter().isNodeSet();
     }
 
     @Override
     public boolean visitPropertyCommand( PropertyCommand command ) throws IOException
     {
-        PropertyRecord record = command.getAfter();
-        if ( record.isNodeSet() )
+        if ( mayResultInIndexUpdates( command ) )
         {
             long nodeId = command.getAfter().getNodeId();
             List<PropertyCommand> group = propertyCommandsByNodeIds.get( nodeId );
@@ -75,22 +103,23 @@ class NodePropertyCommandsExtractor
                 propertyCommandsByNodeIds.put( nodeId, group = new ArrayList<>() );
             }
             group.add( command );
+            hasUpdates = true;
         }
         return false;
     }
 
     public boolean containsAnyNodeOrPropertyUpdate()
     {
-        return !nodeCommandsById.isEmpty() || !propertyCommandsByNodeIds.isEmpty();
+        return hasUpdates;
     }
 
-    public void visitUpdatedNodeIds( PrimitiveLongVisitor<RuntimeException> updatedNodeVisitor )
+    public PrimitiveLongObjectMap<NodeCommand> nodeCommandsById()
     {
-        try ( PrimitiveLongSet uniqueIds = longSet( nodeCommandsById.size() + propertyCommandsByNodeIds.size() ) )
-        {
-            uniqueIds.addAll( nodeCommandsById.iterator() );
-            uniqueIds.addAll( propertyCommandsByNodeIds.iterator() );
-            uniqueIds.visitKeys( updatedNodeVisitor );
-        }
+        return nodeCommandsById;
+    }
+
+    public PrimitiveLongObjectMap<List<PropertyCommand>> propertyCommandsByNodeIds()
+    {
+        return propertyCommandsByNodeIds;
     }
 }

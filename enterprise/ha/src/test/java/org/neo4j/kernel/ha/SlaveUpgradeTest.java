@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,8 +28,8 @@ import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.graphdb.factory.TestHighlyAvailableGraphDatabaseFactory;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.impl.storemigration.MigrationTestUtils;
-import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByDatabaseModeException;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationException;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertThat;
@@ -37,6 +37,9 @@ import static org.junit.Assert.fail;
 
 public class SlaveUpgradeTest
 {
+    @Rule
+    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+
     @Test
     public void haShouldFailToStartWithOldStore() throws Exception
     {
@@ -46,18 +49,17 @@ public class SlaveUpgradeTest
             MigrationTestUtils.find20FormatStoreDirectory( dir );
 
             new TestHighlyAvailableGraphDatabaseFactory()
-                    .newHighlyAvailableDatabaseBuilder( dir.getAbsolutePath() )
-                    .setConfig( ClusterSettings.server_id, "1" ).newGraphDatabase();
+                    .newEmbeddedDatabaseBuilder( dir )
+                    .setConfig( ClusterSettings.server_id, "1" )
+                    .setConfig( ClusterSettings.initial_hosts, "localhost:9999" )
+                    .newGraphDatabase();
 
             fail( "Should exit abnormally" );
         }
         catch ( Exception e )
         {
             Throwable rootCause = Exceptions.rootCause( e );
-            assertThat( rootCause, instanceOf( UpgradeNotAllowedByDatabaseModeException.class ) );
+            assertThat( rootCause, instanceOf( UpgradeNotAllowedByConfigurationException.class ) );
         }
     }
-
-    @Rule
-    public final TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,14 @@
  */
 package org.neo4j.index.lucene;
 
-import org.neo4j.graphdb.index.IndexProviders;
-import org.neo4j.index.impl.lucene.LuceneIndexImplementation;
+import org.neo4j.index.impl.lucene.legacy.LuceneIndexImplementation;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.spi.legacyindex.IndexProviders;
 
 public class LuceneKernelExtensionFactory extends KernelExtensionFactory<LuceneKernelExtensionFactory.Dependencies>
 {
@@ -36,6 +37,8 @@ public class LuceneKernelExtensionFactory extends KernelExtensionFactory<LuceneK
         IndexProviders getIndexProviders();
 
         IndexConfigStore getIndexStore();
+
+        FileSystemAbstraction fileSystem();
     }
 
     public LuceneKernelExtensionFactory()
@@ -46,7 +49,12 @@ public class LuceneKernelExtensionFactory extends KernelExtensionFactory<LuceneK
     @Override
     public Lifecycle newInstance( KernelContext context, Dependencies dependencies ) throws Throwable
     {
-        return new LuceneKernelExtension( context.storeDir(), dependencies.getConfig(), dependencies.getIndexStore(),
-                context.fileSystem(), dependencies.getIndexProviders() );
+        return new LuceneKernelExtension(
+                context.storeDir(),
+                dependencies.getConfig(),
+                dependencies::getIndexStore,
+                dependencies.fileSystem(),
+                dependencies.getIndexProviders(),
+                context.databaseInfo().operationalMode );
     }
 }

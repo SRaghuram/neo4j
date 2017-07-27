@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,8 +29,13 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.neo4j.graphdb.QueryExecutionType.QueryType.*;
-import static org.neo4j.graphdb.QueryExecutionType.*;
+import static org.neo4j.graphdb.QueryExecutionType.QueryType.READ_ONLY;
+import static org.neo4j.graphdb.QueryExecutionType.QueryType.READ_WRITE;
+import static org.neo4j.graphdb.QueryExecutionType.QueryType.SCHEMA_WRITE;
+import static org.neo4j.graphdb.QueryExecutionType.QueryType.WRITE;
+import static org.neo4j.graphdb.QueryExecutionType.explained;
+import static org.neo4j.graphdb.QueryExecutionType.profiled;
+import static org.neo4j.graphdb.QueryExecutionType.query;
 
 @RunWith(Parameterized.class)
 public class QueryExecutionTypeTest
@@ -157,7 +162,7 @@ public class QueryExecutionTypeTest
         final boolean convertToQuery;
         boolean isProfiled, requestedExecutionPlanDescription, isExplained, canContainResults, canUpdateData, canUpdateSchema;
 
-        public Assumptions( QueryExecutionType type, boolean convertToQuery )
+        Assumptions( QueryExecutionType type, boolean convertToQuery )
         {
             this.type = type;
             this.convertToQuery = convertToQuery;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,12 +23,11 @@ import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.util.HashMap;
 
-import org.neo4j.helpers.Pair;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.helpers.collection.Pair;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.extension.KernelExtensions;
 import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.logging.Log;
-import org.neo4j.server.webadmin.console.ScriptSession;
 import org.neo4j.shell.ShellClient;
 import org.neo4j.shell.ShellException;
 import org.neo4j.shell.ShellServer;

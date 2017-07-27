@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,6 +24,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+
+import org.neo4j.desktop.model.DesktopModel;
 
 import static javax.swing.JOptionPane.ERROR_MESSAGE;
 import static org.neo4j.desktop.ui.ScrollableOptionPane.showWrappedMessageDialog;
@@ -53,13 +55,13 @@ public class OpenDirectoryActionListener implements ActionListener
             catch ( IOException exception )
             {
                 String message =
-                        "Could not open directory or create directory: " + directory + "\n\n" + exception.getMessage();
+                        "Could not openDirectory directory or create directory: " + directory + "\n\n" + exception.getMessage();
                 showError( message );
             }
         }
         else
         {
-            String message = "Could not open directory or create directory: " + directory;
+            String message = "Could not openDirectory directory or create directory: " + directory;
             showError( message );
         }
     }

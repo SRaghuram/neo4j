@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -36,7 +36,6 @@ import org.neo4j.kernel.impl.util.AutoCreatingHashMap;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import static org.neo4j.kernel.impl.util.AutoCreatingHashMap.nested;
 
 class ExpectedTransactionData
@@ -127,17 +126,23 @@ class ExpectedTransactionData
     void assignedProperty( Node node, String key, Object value, Object valueBeforeTx )
     {
         valueBeforeTx = removeProperty( expectedRemovedNodeProperties, node, key, valueBeforeTx );
-        Map<String,PropertyEntryImpl<Node>> map = expectedAssignedNodeProperties.get( node );
-        PropertyEntryImpl<Node> prev = map.get( key );
-        map.put( key, property( node, key, value, prev != null ? prev.previouslyCommitedValue() : valueBeforeTx ) );
+        if ( !value.equals( valueBeforeTx ) )
+        {
+            Map<String,PropertyEntryImpl<Node>> map = expectedAssignedNodeProperties.get( node );
+            PropertyEntryImpl<Node> prev = map.get( key );
+            map.put( key, property( node, key, value, prev != null ? prev.previouslyCommitedValue() : valueBeforeTx ) );
+        }
     }
 
     void assignedProperty( Relationship rel, String key, Object value, Object valueBeforeTx )
     {
         valueBeforeTx = removeProperty( expectedRemovedRelationshipProperties, rel, key, valueBeforeTx );
-        Map<String,PropertyEntryImpl<Relationship>> map = expectedAssignedRelationshipProperties.get( rel );
-        PropertyEntryImpl<Relationship> prev = map.get( key );
-        map.put( key, property( rel, key, value, prev != null ? prev.previouslyCommitedValue() : valueBeforeTx ) );
+        if ( !value.equals( valueBeforeTx ) )
+        {
+            Map<String,PropertyEntryImpl<Relationship>> map = expectedAssignedRelationshipProperties.get( rel );
+            PropertyEntryImpl<Relationship> prev = map.get( key );
+            map.put( key, property( rel, key, value, prev != null ? prev.previouslyCommitedValue() : valueBeforeTx ) );
+        }
     }
 
     void assignedLabel( Node node, Label label )

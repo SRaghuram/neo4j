@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -81,6 +81,9 @@ public enum SnapshotState
                             // go to ready state, if someone needs snapshots they should ask for it explicitly.
                             return ready;
                         }
+
+                        default:
+                            break;
                     }
                     return this;
                 }
@@ -95,17 +98,12 @@ public enum SnapshotState
                 )
                         throws Throwable
                 {
-                    switch ( message.getMessageType() )
+                    if ( message.getMessageType() == SnapshotMessage.snapshot )
                     {
-                        case snapshot:
-                        {
-                            SnapshotMessage.SnapshotState state = message.getPayload();
-
-                            // If we have already delivered everything that is rolled into this snapshot, ignore it
-                            state.setState( context.getSnapshotProvider(), context.getClusterContext().getObjectInputStreamFactory() );
-
-                            return ready;
-                        }
+                        SnapshotMessage.SnapshotState state = message.getPayload();
+                        state.setState( context.getSnapshotProvider(),
+                                context.getClusterContext().getObjectInputStreamFactory() );
+                        return ready;
                     }
 
                     return this;
@@ -164,6 +162,9 @@ public enum SnapshotState
                         {
                             return start;
                         }
+
+                        default:
+                            break;
                     }
 
                     return this;

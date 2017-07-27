@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,13 @@
  */
 package org.neo4j.com;
 
+import java.time.Clock;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.neo4j.helpers.Clock;
-
-import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
+import org.neo4j.time.Clocks;
 
 public abstract class ResourcePool<R>
 {
@@ -84,14 +83,14 @@ public abstract class ResourcePool<R>
             public TimeoutCheckStrategy( long interval, Clock clock )
             {
                 this.interval = interval;
-                this.lastCheckTime = clock.currentTimeMillis();
+                this.lastCheckTime = clock.millis();
                 this.clock = clock;
             }
 
             @Override
             public boolean shouldCheck()
             {
-                long currentTime = clock.currentTimeMillis();
+                long currentTime = clock.millis();
                 if ( currentTime > lastCheckTime + interval )
                 {
                     lastCheckTime = currentTime;
@@ -104,7 +103,8 @@ public abstract class ResourcePool<R>
 
     public static final int DEFAULT_CHECK_INTERVAL = 60 * 1000;
 
-    private final LinkedList<R> unused = new LinkedList<>();
+    // protected for testing
+    protected final LinkedList<R> unused = new LinkedList<>();
     private final Map<Thread,R> current = new ConcurrentHashMap<>();
     private final Monitor<R> monitor;
     private final int minSize;
@@ -115,8 +115,8 @@ public abstract class ResourcePool<R>
 
     protected ResourcePool( int minSize )
     {
-        this( minSize, new CheckStrategy.TimeoutCheckStrategy( DEFAULT_CHECK_INTERVAL, SYSTEM_CLOCK ),
-                new Monitor.Adapter<R>() );
+        this( minSize, new CheckStrategy.TimeoutCheckStrategy( DEFAULT_CHECK_INTERVAL, Clocks.systemClock() ),
+                new Monitor.Adapter<>() );
     }
 
     protected ResourcePool( int minSize, CheckStrategy strategy, Monitor<R> monitor )

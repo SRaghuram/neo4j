@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,18 +21,20 @@ package org.neo4j.kernel.impl.transaction.log;
 
 import java.io.File;
 
-import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
-import org.neo4j.kernel.impl.transaction.state.RecoveryVisitor;
+import org.neo4j.kernel.recovery.Recovery;
+import org.neo4j.kernel.recovery.PositionToRecoverFrom;
 import org.neo4j.logging.Log;
 
 import static java.lang.String.format;
 
-public class LoggingLogFileMonitor implements PhysicalLogFile.Monitor, RecoveryVisitor.Monitor, LogRotation.Monitor,
-        Recovery.Monitor
+public class LoggingLogFileMonitor implements
+        PhysicalLogFile.Monitor,
+        LogRotation.Monitor,
+        Recovery.Monitor,
+        PositionToRecoverFrom.Monitor
 {
-    private int numberOfRecoveredTransactions;
-    private long firstTransactionRecovered, lastTransactionRecovered;
+    private long firstTransactionRecovered = -1, lastTransactionRecovered;
     private final Log log;
 
     public LoggingLogFileMonitor( Log log )
@@ -47,12 +49,7 @@ public class LoggingLogFileMonitor implements PhysicalLogFile.Monitor, RecoveryV
     }
 
     @Override
-    public void logRecovered( LogPosition endPosition )
-    {
-    }
-
-    @Override
-    public void recoveryCompleted()
+    public void recoveryCompleted( int numberOfRecoveredTransactions )
     {
         if ( numberOfRecoveredTransactions != 0 )
         {
@@ -80,18 +77,38 @@ public class LoggingLogFileMonitor implements PhysicalLogFile.Monitor, RecoveryV
     @Override
     public void transactionRecovered( long txId )
     {
-        if ( numberOfRecoveredTransactions == 0 )
+        if ( firstTransactionRecovered == -1 )
         {
             firstTransactionRecovered = txId;
         }
         lastTransactionRecovered = txId;
-        numberOfRecoveredTransactions++;
     }
 
     @Override
     public void opened( File logFile, long logVersion, long lastTransactionId, boolean clean )
     {
         log.info( format( "Opened logical log [%s] version=%d, lastTxId=%d (%s)",
-                logFile, logVersion, lastTransactionId,  (clean ? "clean" : "recovered") ) );
+                logFile, logVersion, lastTransactionId, clean ? "clean" : "recovered" ) );
+    }
+
+    @Override
+    public void noCommitsAfterLastCheckPoint( LogPosition logPosition )
+    {
+        log.info( format( "No commits found after last check point (which is at %s)",
+                logPosition != null ? logPosition.toString() : "<no log position given>" ) );
+    }
+
+    @Override
+    public void commitsAfterLastCheckPoint( LogPosition logPosition, long firstTxIdAfterLastCheckPoint )
+    {
+        log.info( format(
+                "Commits found after last check point (which is at %s). First txId after last checkpoint: %d ",
+                logPosition, firstTxIdAfterLastCheckPoint ) );
+    }
+
+    @Override
+    public void noCheckPointFound()
+    {
+        log.info( "No check point found in transaction log" );
     }
 }

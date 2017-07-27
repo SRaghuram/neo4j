@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,21 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
+import java.util.Collection;
+
+import org.neo4j.kernel.api.index.IndexEntryUpdate;
+import org.neo4j.storageengine.api.schema.PopulationProgress;
+
 public interface StoreScan<FAILURE extends Exception>
 {
     void run() throws FAILURE;
 
     void stop();
+
+    void acceptUpdate( MultipleIndexPopulator.MultipleIndexUpdater updater, IndexEntryUpdate update,
+            long currentlyIndexedNodeId );
+
+    PopulationProgress getProgress();
+
+    void configure( Collection<MultipleIndexPopulator.IndexPopulation> populations );
 }

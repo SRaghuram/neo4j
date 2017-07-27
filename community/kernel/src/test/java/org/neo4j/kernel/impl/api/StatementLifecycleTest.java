@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,43 +21,57 @@ package org.neo4j.kernel.impl.api;
 
 import org.junit.Test;
 
+import org.neo4j.kernel.impl.factory.CanWrite;
+import org.neo4j.kernel.impl.locking.LockTracer;
+import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.storageengine.api.StorageStatement;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 public class StatementLifecycleTest
 {
     @Test
-    public void shouldReleaseItselfWhenClosed() throws Exception
+    public void shouldReleaseStoreStatementOnlyWhenReferenceCountDownToZero() throws Exception
     {
         // given
         KernelTransactionImplementation transaction = mock( KernelTransactionImplementation.class );
-        KernelStatement statement = new KernelStatement( transaction, mock( IndexReaderFactory.class ), null,
-                null, null, null, null );
+        StorageStatement storageStatement = mock( StorageStatement.class );
+        KernelStatement statement = getKernelStatement( transaction, storageStatement );
+        statement.acquire();
+        verify( storageStatement ).acquire();
         statement.acquire();
 
         // when
         statement.close();
+        verifyNoMoreInteractions( storageStatement );
 
         // then
-        verify( transaction ).releaseStatement( statement );
+        statement.close();
+        verify( storageStatement ).release();
     }
 
     @Test
-    public void shouldReleaseWhenAllNestedStatementsClosed() throws Exception
+    public void shouldReleaseStoreStatementWhenForceClosingStatements() throws Exception
     {
         // given
         KernelTransactionImplementation transaction = mock( KernelTransactionImplementation.class );
-        KernelStatement statement = new KernelStatement( transaction, mock( IndexReaderFactory.class ), null,
-                null, null, null, null );
-        statement.acquire();
+        StorageStatement storageStatement = mock( StorageStatement.class );
+        KernelStatement statement = getKernelStatement( transaction, storageStatement );
         statement.acquire();
 
         // when
-        statement.close();
-        statement.close();
+        statement.forceClose();
 
         // then
-        verify( transaction ).releaseStatement( statement );
+        verify( storageStatement ).release();
     }
 
+    private KernelStatement getKernelStatement( KernelTransactionImplementation transaction,
+            StorageStatement storageStatement )
+    {
+        return new KernelStatement( transaction, null, storageStatement, new Procedures(), new CanWrite(),
+                LockTracer.NONE );
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,11 +27,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 
-import static java.util.Arrays.asList;
-
-import static org.neo4j.helpers.collection.IteratorUtil.addToCollection;
-import static org.neo4j.helpers.collection.IteratorUtil.single;
-
 public class IndexCreatorImpl implements IndexCreator
 {
     private final Collection<String> propertyKeys;
@@ -40,7 +35,7 @@ public class IndexCreatorImpl implements IndexCreator
 
     public IndexCreatorImpl( InternalSchemaActions actions, Label label )
     {
-        this( actions, label, new ArrayList<String>() );
+        this( actions, label, new ArrayList<>() );
     }
 
     private IndexCreatorImpl( InternalSchemaActions actions, Label label, Collection<String> propertyKeys )
@@ -51,18 +46,12 @@ public class IndexCreatorImpl implements IndexCreator
 
         assertInUnterminatedTransaction();
     }
-    
+
     @Override
     public IndexCreator on( String propertyKey )
     {
         assertInUnterminatedTransaction();
-
-        if ( !propertyKeys.isEmpty() )
-            throw new UnsupportedOperationException(
-                    "Compound indexes are not yet supported, only one property per index is allowed." );
-        return
-            new IndexCreatorImpl( actions, label,
-                                  addToCollection( asList( propertyKey ), new ArrayList<>( propertyKeys ) ) );
+        return new IndexCreatorImpl( actions, label, copyAndAdd( propertyKeys, propertyKey) );
     }
 
     @Override
@@ -71,13 +60,22 @@ public class IndexCreatorImpl implements IndexCreator
         assertInUnterminatedTransaction();
 
         if ( propertyKeys.isEmpty() )
+        {
             throw new ConstraintViolationException( "An index needs at least one property key to index" );
+        }
 
-        return actions.createIndexDefinition( label, single( propertyKeys ) );
+        return actions.createIndexDefinition( label, propertyKeys.toArray( new String[propertyKeys.size()] ) );
     }
 
     protected void assertInUnterminatedTransaction()
     {
-        actions.assertInUnterminatedTransaction();
+        actions.assertInOpenTransaction();
+    }
+
+    private Collection<String> copyAndAdd( Collection<String> propertyKeys, String propertyKey )
+    {
+        Collection<String> ret = new ArrayList<>( propertyKeys );
+        ret.add( propertyKey );
+        return ret;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,78 +32,6 @@ import static java.lang.String.format;
 public abstract class PortableInstallation implements Installation
 {
 
-    protected void mkdirs( File path, String description )
-    {
-        if ( path.exists() )
-        {
-            if ( !path.isDirectory() )
-            {
-                throw new PathAlreadyExistException( path, description );
-            }
-        }
-        else if ( !path.mkdirs() )
-        {
-            throw new CannotMakeDirectory( path, description );
-        }
-    }
-
-    @Override
-    public File getPluginsDirectory()
-    {
-        try
-        {
-            File installationDirectory = getInstallationDirectory();
-            return new File( installationDirectory, "plugins" );
-        }
-        catch ( URISyntaxException e )
-        {
-            throw new CannotFindInstallationDirectory( e );
-        }
-    }
-
-    @Override
-    public File getInstallationDirectory() throws URISyntaxException
-    {
-        return getInstallationBinDirectory().getParentFile();
-    }
-
-    @Override
-    public File getInstallationBinDirectory() throws URISyntaxException
-    {
-        File appFile = new File( Installation.class.getProtectionDomain().getCodeSource().getLocation().toURI() );
-        return appFile.getParentFile();
-    }
-
-    @Override
-    public File getInstallationJreBinDirectory() throws URISyntaxException
-    {
-        return new File( getInstallationDirectory(), "jre/bin" );
-    }
-
-    private static class PathAlreadyExistException extends RuntimeException
-    {
-        public PathAlreadyExistException( File path, String description )
-        {
-            super( format( "%s already exists but is not a %s.", description, path.getAbsolutePath() ) );
-        }
-    }
-
-    private static class CannotMakeDirectory extends RuntimeException
-    {
-        public CannotMakeDirectory( File path, String description )
-        {
-            super( format( "Could not make %s %s", description, path.getAbsolutePath() ) );
-        }
-    }
-
-    private static class CannotFindInstallationDirectory extends RuntimeException
-    {
-        public CannotFindInstallationDirectory( Exception cause )
-        {
-            super( cause );
-        }
-    }
-
     @Override
     public File getDatabaseDirectory()
     {
@@ -133,18 +61,13 @@ public abstract class PortableInstallation implements Installation
         for ( File file : locations )
         {
             File candidateFile = file.getAbsoluteFile();
-            if ( candidateFile.exists() && candidateFile.isDirectory() && candidateFile.canWrite() ) {
+            if ( candidateFile.exists() && candidateFile.isDirectory() && candidateFile.canWrite() )
+            {
                 result = candidateFile;
                 break;
             }
         }
         return result;
-    }
-
-    @Override
-    public File getDatabaseConfigurationFile()
-    {
-        return new File( getDatabaseDirectory(), NEO4J_PROPERTIES_FILENAME );
     }
 
     @Override
@@ -158,22 +81,10 @@ public abstract class PortableInstallation implements Installation
         }
     }
 
-    private void createVmOptionsFile( File file ) throws Exception
-    {
-        Template template = new Template( getDefaultVmOptions() );
-        template.write( file );
-    }
-
     @Override
     public InputStream getDefaultDatabaseConfiguration()
     {
-        return getResourceStream( DEFAULT_DATABASE_CONFIG_RESOURCE_NAME );
-    }
-
-    @Override
-    public InputStream getDefaultServerConfiguration()
-    {
-        return getResourceStream( DEFAULT_SERVER_CONFIG_RESOURCE_NAME );
+        return getResourceStream( DEFAULT_CONFIG_RESOURCE_NAME );
     }
 
     @Override
@@ -182,8 +93,73 @@ public abstract class PortableInstallation implements Installation
         return getResourceStream( DEFAULT_VMOPTIONS_TEMPLATE_RESOURCE_NAME );
     }
 
+    @Override
+    public File getInstallationDirectory() throws URISyntaxException
+    {
+        return getInstallationBinDirectory().getParentFile();
+    }
+
+    @Override
+    public File getInstallationBinDirectory() throws URISyntaxException
+    {
+        File appFile = new File( Installation.class.getProtectionDomain().getCodeSource().getLocation().toURI() );
+        return appFile.getParentFile();
+    }
+
+    @Override
+    public File getInstallationJreBinDirectory() throws URISyntaxException
+    {
+        return new File( getInstallationDirectory(), "jre/bin" );
+    }
+
     private InputStream getResourceStream( String defaultDatabaseConfigResourceName )
     {
         return PortableInstallation.class.getResourceAsStream( defaultDatabaseConfigResourceName );
+    }
+    protected void mkdirs( File path, String description )
+    {
+        if ( path.exists() )
+        {
+            if ( !path.isDirectory() )
+            {
+                throw new PathAlreadyExistException( path, description );
+            }
+        }
+        else if ( !path.mkdirs() )
+        {
+            throw new CannotMakeDirectory( path, description );
+        }
+    }
+
+    private static class PathAlreadyExistException extends RuntimeException
+    {
+        PathAlreadyExistException( File path, String description )
+        {
+            super( format( "%s already exists but is not a %s.", description, path.getAbsolutePath() ) );
+        }
+    }
+
+    private static class CannotMakeDirectory extends RuntimeException
+    {
+        CannotMakeDirectory( File path, String description )
+        {
+            super( format( "Could not make %s %s", description, path.getAbsolutePath() ) );
+        }
+    }
+
+    private static class CannotFindInstallationDirectory extends RuntimeException
+    {
+
+        CannotFindInstallationDirectory( Exception cause )
+        {
+            super( cause );
+        }
+
+    }
+
+    private void createVmOptionsFile( File file ) throws Exception
+    {
+        Template template = new Template( getDefaultVmOptions() );
+        template.write( file );
     }
 }

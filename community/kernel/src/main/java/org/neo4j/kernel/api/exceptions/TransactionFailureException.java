@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -39,9 +39,9 @@ public class TransactionFailureException extends KernelException
         super( statusCode, message, parameters );
     }
 
-    // To satisfy KernelHealth
+    // To satisfy DatabaseHealth
     public TransactionFailureException( String message, Throwable cause )
     {
-        super( Status.Transaction.CouldNotBegin, cause, message );
+        super( Status.Transaction.TransactionStartFailed, cause, message );
     }
 }

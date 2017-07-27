@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,21 +19,24 @@
  */
 package org.neo4j.server.rest.transactional;
 
-import java.net.URI;
-
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import org.neo4j.helpers.Clock;
+
+import java.net.URI;
+import java.time.Clock;
+import javax.servlet.http.HttpServletRequest;
+
+import org.neo4j.kernel.GraphDatabaseQueryService;
+import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.security.SecurityContext;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.rest.transactional.error.InvalidConcurrentTransactionAccess;
 import org.neo4j.server.rest.web.TransactionUriScheme;
 import org.neo4j.test.DoubleLatch;
 
-import javax.servlet.http.HttpServletRequest;
-
 import static javax.xml.bind.DatatypeConverter.parseLong;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,36 +49,31 @@ public class ConcurrentTransactionAccessTest
         TransactionRegistry registry =
                 new TransactionHandleRegistry( mock( Clock.class), 0, NullLogProvider.getInstance() );
         TransitionalPeriodTransactionMessContainer kernel = mock( TransitionalPeriodTransactionMessContainer.class );
-        when(kernel.newTransaction()).thenReturn( mock(TransitionalTxManagementKernelTransaction.class) );
-        TransactionFacade actions = new TransactionFacade( kernel, null, registry, NullLogProvider.getInstance() );
+        GraphDatabaseQueryService queryService = mock( GraphDatabaseQueryService.class );
+        when(kernel.newTransaction( any( KernelTransaction.Type.class ), any( SecurityContext.class ), anyLong() ) )
+                .thenReturn( mock(TransitionalTxManagementKernelTransaction.class) );
+        TransactionFacade actions = new TransactionFacade( kernel, null, queryService, registry, NullLogProvider.getInstance() );
 
-        final TransactionHandle transactionHandle = actions.newTransactionHandle( new DisgustingUriScheme() );
+        final TransactionHandle transactionHandle =
+                actions.newTransactionHandle( new DisgustingUriScheme(), true, SecurityContext.AUTH_DISABLED, -1 );
 
         final DoubleLatch latch = new DoubleLatch();
 
         final StatementDeserializer statements = mock( StatementDeserializer.class );
-        when( statements.hasNext() ).thenAnswer( new Answer<Boolean>()
+        when( statements.hasNext() ).thenAnswer( invocation ->
         {
-            @Override
-            public Boolean answer( InvocationOnMock invocation ) throws Throwable
-            {
-                latch.startAndAwaitFinish();
-                return false;
-            }
+            latch.startAndWaitForAllToStartAndFinish();
+            return false;
         } );
 
-        new Thread( new Runnable()
+        new Thread( () ->
         {
-            @Override
-            public void run()
-            {
-                // start and block until finish
-                transactionHandle.execute( statements, mock( ExecutionResultSerializer.class ), mock(
-                        HttpServletRequest.class ) );
-            }
+            // start and block until finish
+            transactionHandle.execute( statements, mock( ExecutionResultSerializer.class ), mock(
+                    HttpServletRequest.class ) );
         } ).start();
 
-        latch.awaitStart();
+        latch.waitForAllToStart();
 
         try
         {

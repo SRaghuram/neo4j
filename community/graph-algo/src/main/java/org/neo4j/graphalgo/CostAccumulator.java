@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ package org.neo4j.graphalgo;
  * CostEvaluator is used to get the cost for a single relationship. These costs
  * are then added through a CostAccumulator. Costs for alternative paths are
  * compared with a common java.util.Comparator.
- * 
+ *
  * @author Patrik Larsson
  * @param <T> The data type the edge weights are represented by.
  */

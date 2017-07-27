@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,12 +19,14 @@
  */
 package org.neo4j.kernel.impl.locking;
 
+import org.neo4j.storageengine.api.lock.ResourceType;
+
 public class LockCountVisitor implements  Locks.Visitor
 {
     private int lockCount = 0;
 
     @Override
-    public void visit( Locks.ResourceType resourceType, long resourceId, String description, long estimatedWaitTime,
+    public void visit( ResourceType resourceType, long resourceId, String description, long estimatedWaitTime,
             long lockIdentityHashCode )
     {
         lockCount++;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,27 +30,27 @@ class TypedId
     private final String type;
     private final long id;
     private final boolean isNode;
-    
+
     /**
      * @param typedId the serialized string.
      */
-    public TypedId( String typedId )
+    TypedId( String typedId )
     {
         this( typedId.substring( 0, 1 ),
             Long.parseLong( typedId.substring( 1 ) ) );
     }
-    
+
     /**
      * @param type the type
      * @param id the object's id.
      */
-    public TypedId( String type, long id )
+    TypedId( String type, long id )
     {
         this.type = type;
         this.id = id;
         this.isNode = type.equals( NodeOrRelationship.TYPE_NODE );
     }
-    
+
     /**
      * @return the type.
      */
@@ -58,7 +58,7 @@ class TypedId
     {
         return this.type;
     }
-    
+
     /**
      * @return the object's id.
      */
@@ -66,7 +66,7 @@ class TypedId
     {
         return this.id;
     }
-    
+
     /**
      * @return whether or not the type is a {@link Node}.
      */
@@ -74,7 +74,7 @@ class TypedId
     {
         return this.isNode;
     }
-    
+
     /**
      * @return whether or not the type is a {@link Relationship}.
      */
@@ -82,7 +82,7 @@ class TypedId
     {
         return !this.isNode;
     }
-    
+
     @Override
     public boolean equals( Object o )
     {
@@ -90,11 +90,11 @@ class TypedId
         {
             return false;
         }
-        TypedId other = ( TypedId ) o;
+        TypedId other = (TypedId) o;
         return this.type.equals( other.type ) &&
             this.id == other.id;
     }
-    
+
     @Override
     public int hashCode()
     {
@@ -103,7 +103,7 @@ class TypedId
         code = 31 * code + this.type.hashCode();
         return code;
     }
-    
+
     @Override
     public String toString()
     {

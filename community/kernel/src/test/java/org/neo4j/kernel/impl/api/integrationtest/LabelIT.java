@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,19 +19,20 @@
  */
 package org.neo4j.kernel.impl.api.integrationtest;
 
-import java.util.Iterator;
-
 import org.junit.Test;
 
+import java.util.Iterator;
+
 import org.neo4j.kernel.api.DataWriteOperations;
-import org.neo4j.kernel.api.TokenWriteOperations;
-import org.neo4j.kernel.impl.core.Token;
+import org.neo4j.kernel.api.ReadOperations;
+import org.neo4j.kernel.api.Statement;
+import org.neo4j.kernel.api.security.AnonymousContext;
+import org.neo4j.storageengine.api.Token;
 
 import static org.hamcrest.core.IsCollectionContaining.hasItems;
 import static org.junit.Assert.assertThat;
-
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
+import static org.neo4j.helpers.collection.Iterators.asCollection;
 
 public class LabelIT extends KernelIntegrationTest
 {
@@ -39,53 +40,42 @@ public class LabelIT extends KernelIntegrationTest
     public void shouldListAllLabels() throws Exception
     {
         // given
-        int label1Id;
-        int label2Id;
-        {
-            TokenWriteOperations statement = tokenWriteOperationsInNewTransaction();
-            label1Id = statement.labelGetOrCreateForName( "label1" );
-            label2Id = statement.labelGetOrCreateForName( "label2" );
+        Statement statement = statementInNewTransaction( AnonymousContext.writeToken() );
+        int label1Id = statement.tokenWriteOperations().labelGetOrCreateForName( "label1" );
+        int label2Id = statement.tokenWriteOperations().labelGetOrCreateForName( "label2" );
 
-            // when
-            Iterator<Token> labelIdsBeforeCommit = statement.labelsGetAllTokens();
+        // when
+        Iterator<Token> labelIdsBeforeCommit = statement.readOperations().labelsGetAllTokens();
 
-            // then
-            assertThat( asCollection( labelIdsBeforeCommit ),
-                        hasItems( new Token( "label1", label1Id ), new Token( "label2", label2Id )) );
+        // then
+        assertThat( asCollection( labelIdsBeforeCommit ),
+                hasItems( new Token( "label1", label1Id ), new Token( "label2", label2Id ) ) );
 
-            // when
-            commit();
-        }
-        {
-            DataWriteOperations statement = dataWriteOperationsInNewTransaction();
-            Iterator<Token> labelIdsAfterCommit = statement.labelsGetAllTokens();
+        // when
+        commit();
 
-            // then
-            assertThat(asCollection( labelIdsAfterCommit ) ,
-                    hasItems( new Token( "label1", label1Id ), new Token( "label2", label2Id ) ));
-        }
+        ReadOperations readOperations = readOperationsInNewTransaction();
+        Iterator<Token> labelIdsAfterCommit = readOperations.labelsGetAllTokens();
+
+        // then
+        assertThat( asCollection( labelIdsAfterCommit ),
+                hasItems( new Token( "label1", label1Id ), new Token( "label2", label2Id ) ) );
     }
 
     @Test
     public void addingAndRemovingLabelInSameTxShouldHaveNoEffect() throws Exception
     {
         // Given a node with a label
-        int label;
-        long node;
-        {
-            DataWriteOperations stmt = dataWriteOperationsInNewTransaction();
-            label = stmt.labelGetOrCreateForName( "Label 1" );
-            node = stmt.nodeCreate();
-            stmt.nodeAddLabel( node, label );
-            commit();
-        }
+        Statement statement = statementInNewTransaction( AnonymousContext.writeToken() );
+        int label = statement.tokenWriteOperations().labelGetOrCreateForName( "Label 1" );
+        long node = statement.dataWriteOperations().nodeCreate();
+        statement.dataWriteOperations().nodeAddLabel( node, label );
+        commit();
 
         // When I add and remove that label in the same tx
-        {
-            DataWriteOperations stmt = dataWriteOperationsInNewTransaction();
-            stmt.nodeRemoveLabel( node, label );
-            stmt.nodeAddLabel( node, label );
-        }
+        DataWriteOperations dataWriteOperations = dataWriteOperationsInNewTransaction();
+        dataWriteOperations.nodeRemoveLabel( node, label );
+        dataWriteOperations.nodeAddLabel( node, label );
 
         // Then commit should not throw exceptions
         commit();

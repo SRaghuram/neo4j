@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,23 +24,23 @@ import java.util.Set;
 
 import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.protocol.ConfigurationContext;
+import org.neo4j.cluster.protocol.LoggingContext;
 import org.neo4j.cluster.protocol.TimeoutsContext;
-import org.neo4j.kernel.impl.logging.LogService;
 
 /**
  * Context used by the {@link HeartbeatState} state machine.
  */
 public interface HeartbeatContext
-    extends TimeoutsContext, ConfigurationContext, LogService
+    extends TimeoutsContext, ConfigurationContext, LoggingContext
 {
     void started();
 
     /**
      * @return True iff the node was suspected
      */
-    boolean alive( final InstanceId node );
+    boolean alive( InstanceId node );
 
-    void suspect( final InstanceId node );
+    void suspect( InstanceId node );
 
     void suspicions( InstanceId from, Set<InstanceId> suspicions );
 

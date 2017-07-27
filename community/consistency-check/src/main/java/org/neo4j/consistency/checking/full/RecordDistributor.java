@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,12 @@
  */
 package org.neo4j.consistency.checking.full;
 
+import java.util.Iterator;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.neo4j.function.Function;
+import org.neo4j.consistency.checking.full.QueueDistribution.QueueDistributor;
 import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.Workers;
 
@@ -31,47 +33,61 @@ import org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.Workers;
  */
 public class RecordDistributor
 {
-    public static <RECORD,WORKER extends RecordCheckWorker<RECORD>> void distributeRecords(
+    public static <RECORD> void distributeRecords(
             int numberOfThreads,
             String workerNames,
             int queueSize,
-            Function<BlockingQueue<RECORD>,WORKER> workerFactory,
-            Iterable<RECORD> records,
-            ProgressListener progress )
+            Iterator<RECORD> records,
+            final ProgressListener progress,
+            RecordProcessor<RECORD> processor,
+            QueueDistributor<RECORD> idDistributor )
     {
-        ArrayBlockingQueue<RECORD>[] recordQ = new ArrayBlockingQueue[numberOfThreads];
-        Workers<WORKER> workers = new Workers<>( workerNames );
+        if ( !records.hasNext() )
+        {
+            return;
+        }
+
+        @SuppressWarnings( "unchecked" )
+        final ArrayBlockingQueue<RECORD>[] recordQ = new ArrayBlockingQueue[numberOfThreads];
+        final Workers<RecordCheckWorker<RECORD>> workers = new Workers<>( workerNames );
+        final AtomicInteger idGroup = new AtomicInteger( -1 );
         for ( int threadId = 0; threadId < numberOfThreads; threadId++ )
         {
             recordQ[threadId] = new ArrayBlockingQueue<>( queueSize );
-            workers.start( workerFactory.apply( recordQ[threadId] ) );
+            workers.start( new RecordCheckWorker<>( threadId, idGroup, recordQ[threadId], processor ) );
         }
 
-        int[] recsProcessed = new int[numberOfThreads];
-        int qIndex = 0;
-        for ( RECORD record : records )
+        final int[] recsProcessed = new int[numberOfThreads];
+        RecordConsumer<RECORD> recordConsumer = ( record, qIndex ) ->
         {
-            try
-            {
-                // Put records round-robin style into the queue of each thread, where a Worker
-                // will sit and pull from and process.
-                qIndex = (qIndex + 1)%numberOfThreads;
-                recordQ[qIndex].put( record );
-                recsProcessed[qIndex]++;
-            }
-            catch ( InterruptedException e )
-            {
-                Thread.currentThread().interrupt();
-                break;
-            }
-            progress.add( 1 );
-        }
-        for ( WORKER worker : workers )
-        {
-            worker.done();
-        }
+            recordQ[qIndex].put( record );
+            recsProcessed[qIndex]++;
+        };
+
         try
         {
+            while ( records.hasNext() )
+            {
+                try
+                {
+                    // Put records into the queues using the queue distributor. Each Worker will pull and process.
+                    RECORD record = records.next();
+                    idDistributor.distribute( record, recordConsumer );
+                    progress.add( 1 );
+                }
+                catch ( InterruptedException e )
+                {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+
+            // No more records to distribute, mark as done so that the workers will exit when no more records in queue.
+            for ( RecordCheckWorker<RECORD> worker : workers )
+            {
+                worker.done();
+            }
+
             workers.awaitAndThrowOnError( RuntimeException.class );
         }
         catch ( InterruptedException e )
@@ -79,5 +95,24 @@ public class RecordDistributor
             Thread.currentThread().interrupt();
             throw new RuntimeException( "Was interrupted while awaiting completion" );
         }
+    }
+
+    /**
+     * Consumers records from a {@link QueueDistribution}, feeding into correct queue.
+     */
+    interface RecordConsumer<RECORD>
+    {
+        void accept( RECORD record, int qIndex ) throws InterruptedException;
+    }
+
+    public static long calculateRecodsPerCpu( long highId, int numberOfThreads )
+    {
+        boolean hasRest = highId % numberOfThreads > 0;
+        long result = highId / numberOfThreads;
+        if ( hasRest )
+        {
+            result++;
+        }
+        return result;
     }
 }

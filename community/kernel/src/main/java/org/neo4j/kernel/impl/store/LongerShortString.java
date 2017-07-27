@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,12 @@
  */
 package org.neo4j.kernel.impl.store;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.util.Bits;
+import org.neo4j.string.UTF8;
 import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
 
 /**
@@ -48,7 +49,10 @@ public enum LongerShortString
         @Override
         int encTranslate( byte b )
         {
-            if ( b >= '0' && b <= '9' ) return b - '0';
+            if ( b >= '0' && b <= '9' )
+            {
+                return b - '0';
+            }
             switch ( b )
             {
             // interm.    encoded
@@ -71,7 +75,10 @@ public enum LongerShortString
         @Override
         char decTranslate( byte codePoint )
         {
-            if ( codePoint < 10 ) return (char) ( codePoint + '0' );
+            if ( codePoint < 10 )
+            {
+                return (char) (codePoint + '0');
+            }
             return decPunctuation( codePoint - 10 + 6 );
         }
     },
@@ -88,7 +95,10 @@ public enum LongerShortString
         @Override
         int encTranslate( byte b )
         {
-            if ( b >= '0' && b <= '9' ) return b - '0';
+            if ( b >= '0' && b <= '9' )
+            {
+                return b - '0';
+            }
             switch ( b )
             {
             case 0: return 0xA;
@@ -110,7 +120,10 @@ public enum LongerShortString
         @Override
         char decTranslate( byte codePoint )
         {
-            if ( codePoint < 0xA ) return (char) ( codePoint + '0' );
+            if ( codePoint < 0xA )
+            {
+                return (char) (codePoint + '0');
+            }
             switch ( codePoint )
             {
             case 0xA: return ' ';
@@ -148,8 +161,14 @@ public enum LongerShortString
         @Override
         char decTranslate( byte codePoint )
         {
-            if ( codePoint == 0 ) return ' ';
-            if ( codePoint <= 0x1A ) return (char) ( codePoint + 'A' - 1 );
+            if ( codePoint == 0 )
+            {
+                return ' ';
+            }
+            if ( codePoint <= 0x1A )
+            {
+                return (char) (codePoint + 'A' - 1);
+            }
             return decPunctuation( codePoint - 0x1A );
         }
     },
@@ -179,8 +198,14 @@ public enum LongerShortString
         @Override
         char decTranslate( byte codePoint )
         {
-            if ( codePoint == 0 ) return ' ';
-            if ( codePoint <= 0x1A ) return (char) ( codePoint + 'a' - 1 );
+            if ( codePoint == 0 )
+            {
+                return ' ';
+            }
+            if ( codePoint <= 0x1A )
+            {
+                return (char) (codePoint + 'a' - 1);
+            }
             return decPunctuation( codePoint - 0x1A );
         }
     },
@@ -205,7 +230,10 @@ public enum LongerShortString
         int encPunctuation( byte b )
         {
             int encOffset = 0x60;
-            if ( b == 7 ) return encOffset;
+            if ( b == 7 )
+            {
+                return encOffset;
+            }
 
             int offset = encOffset + 0x1B;
             switch ( b )
@@ -222,8 +250,14 @@ public enum LongerShortString
         @Override
         char decTranslate( byte codePoint )
         {
-            if ( codePoint == 0 ) return ',';
-            if ( codePoint <= 0x1A ) return (char) ( codePoint + 'a' - 1 );
+            if ( codePoint == 0 )
+            {
+                return ',';
+            }
+            if ( codePoint <= 0x1A )
+            {
+                return (char) (codePoint + 'a' - 1);
+            }
             switch ( codePoint )
             {
             case 0x1E: return '+';
@@ -248,10 +282,22 @@ public enum LongerShortString
         @Override
         int encTranslate( byte b )
         {
-            if ( b == 0 ) return 0; // space
-            if ( b >= 0x61 && b <= 0x7A ) return b - 0x60; // lower-case letters
-            if ( b >= 0x30 && b <= 0x39 ) return b - 0x10; // digits
-            if ( b >= 0x1 && b <= 0x16 ) return b + 0x29; // symbols
+            if ( b == 0 )
+            {
+                return 0; // space
+            }
+            if ( b >= 0x61 && b <= 0x7A )
+            {
+                return b - 0x60; // lower-case letters
+            }
+            if ( b >= 0x30 && b <= 0x39 )
+            {
+                return b - 0x10; // digits
+            }
+            if ( b >= 0x1 && b <= 0x16 )
+            {
+                return b + 0x29; // symbols
+            }
             throw cannotEncode( b );
         }
 
@@ -265,11 +311,23 @@ public enum LongerShortString
         @Override
         char decTranslate( byte codePoint )
         {
-            if ( codePoint == 0 ) return ' ';
-            if ( codePoint <= 0x1A ) return (char) ( codePoint + 'a' - 1 );
-            if ( codePoint <= 0x29 ) return (char) (codePoint - 0x20 + '0');
-            if ( codePoint <= 0x2E ) return decPunctuation( codePoint - 0x29 );
-            return decPunctuation( codePoint - 0x2F + 9);
+            if ( codePoint == 0 )
+            {
+                return ' ';
+            }
+            if ( codePoint <= 0x1A )
+            {
+                return (char) (codePoint + 'a' - 1);
+            }
+            if ( codePoint <= 0x29 )
+            {
+                return (char) (codePoint - 0x20 + '0');
+            }
+            if ( codePoint <= 0x2E )
+            {
+                return decPunctuation( codePoint - 0x29 );
+            }
+            return decPunctuation( codePoint - 0x2F + 9 );
         }
     },
     /**
@@ -295,7 +353,10 @@ public enum LongerShortString
         int encTranslate( byte b )
         {
             // Punctuation is in the same places as European
-            if ( b < 0x20 ) return encPunctuation( b ); // Punctuation
+            if ( b < 0x20 )
+            {
+                return encPunctuation( b ); // Punctuation
+            }
             // But the rest is transposed by 0x40
             return EUROPEAN.encTranslate( b ) - 0x40;
         }
@@ -330,11 +391,26 @@ public enum LongerShortString
         @Override
         char decTranslate( byte codePoint )
         {
-            if ( codePoint == 0x0 ) return ' ';
-            if ( codePoint <= 0x1A ) return (char)('A' + codePoint - 0x1);
-            if ( codePoint <= 0x1F ) return decPunctuation( codePoint - 0x1B + 1 );
-            if ( codePoint == 0x20 ) return ';';
-            if ( codePoint <= 0x3A ) return (char)('a' + codePoint - 0x21);
+            if ( codePoint == 0x0 )
+            {
+                return ' ';
+            }
+            if ( codePoint <= 0x1A )
+            {
+                return (char) ('A' + codePoint - 0x1);
+            }
+            if ( codePoint <= 0x1F )
+            {
+                return decPunctuation( codePoint - 0x1B + 1 );
+            }
+            if ( codePoint == 0x20 )
+            {
+                return ';';
+            }
+            if ( codePoint <= 0x3A )
+            {
+                return (char) ('a' + codePoint - 0x21);
+            }
             return decPunctuation( codePoint - 0x3B + 9 );
         }
 
@@ -342,7 +418,10 @@ public enum LongerShortString
         int encTranslate( byte b )
         {
             // Punctuation is in the same places as European
-            if ( b < 0x20 ) return encPunctuation( b ); // Punctuation
+            if ( b < 0x20 )
+            {
+                return encPunctuation( b ); // Punctuation
+            }
             // But the rest is transposed by 0x40
 //            return EUROPEAN.encTranslate( b ) - 0x40;
             return b - 0x40;
@@ -391,19 +470,38 @@ public enum LongerShortString
         @Override
         char decTranslate( byte codePoint )
         {
-            if ( codePoint < 0x40 )
+            int code = codePoint & 0xFF;
+            if ( code < 0x40 )
             {
-                if ( codePoint == 0x17 ) return '.';
-                if ( codePoint == 0x37 ) return '-';
-                return (char) ( codePoint + 0xC0 );
+                if ( code == 0x17 )
+                {
+                    return '.';
+                }
+                if ( code == 0x37 )
+                {
+                    return '-';
+                }
+                return (char) (code + 0xC0);
             }
             else
             {
-                if ( codePoint == 0x40 ) return ' ';
-                if ( codePoint == 0x60 ) return '_';
-                if ( codePoint >= 0x5B && codePoint < 0x60 ) return (char) ( '0' + codePoint - 0x5B );
-                if ( codePoint >= 0x7B && codePoint < 0x80 ) return (char) ( '5' + codePoint - 0x7B );
-                return (char) codePoint;
+                if ( code == 0x40 )
+                {
+                    return ' ';
+                }
+                if ( code == 0x60 )
+                {
+                    return '_';
+                }
+                if ( code >= 0x5B && code < 0x60 )
+                {
+                    return (char) ('0' + code - 0x5B);
+                }
+                if ( code >= 0x7B && code < 0x80 )
+                {
+                    return (char) ('5' + code - 0x7B);
+                }
+                return (char) code;
             }
         }
 
@@ -442,8 +540,14 @@ public enum LongerShortString
         @Override
         int encTranslate( byte b )
         {
-            if ( b >= '0' && b <= '9' ) return b - '0';
-            if ( b >= 'a' && b <= 'f' ) return b - 'a' + 10;
+            if ( b >= '0' && b <= '9' )
+            {
+                return b - '0';
+            }
+            if ( b >= 'a' && b <= 'f' )
+            {
+                return b - 'a' + 10;
+            }
             throw cannotEncode( b );
         }
 
@@ -456,7 +560,10 @@ public enum LongerShortString
         @Override
         char decTranslate( byte codePoint )
         {
-            if ( codePoint < 10 ) return (char) ( codePoint + '0' );
+            if ( codePoint < 10 )
+            {
+                return (char) (codePoint + '0');
+            }
             return (char) ( codePoint + 'a' - 10 );
         }
     },
@@ -473,8 +580,14 @@ public enum LongerShortString
         @Override
         int encTranslate( byte b )
         {
-            if ( b >= '0' && b <= '9' ) return b - '0';
-            if ( b >= 'A' && b <= 'F' ) return b - 'A' + 10;
+            if ( b >= '0' && b <= '9' )
+            {
+                return b - '0';
+            }
+            if ( b >= 'A' && b <= 'F' )
+            {
+                return b - 'A' + 10;
+            }
             throw cannotEncode( b );
         }
 
@@ -487,7 +600,10 @@ public enum LongerShortString
         @Override
         char decTranslate( byte codePoint )
         {
-            if ( codePoint < 10 ) return (char) ( codePoint + '0' );
+            if ( codePoint < 10 )
+            {
+                return (char) (codePoint + '0');
+            }
             return (char) ( codePoint + 'A' - 10 );
         }
     };
@@ -497,12 +613,13 @@ public enum LongerShortString
     public static final int ALL_BIT_MASK = bitMask( LongerShortString.values() );
     public static final int ENCODING_UTF8 = 0;
     public static final int ENCODING_LATIN1 = 10;
+    private static final int HEADER_SIZE = 39; // bits
 
     final int encodingHeader;
     final long mask;
     final int step;
 
-    private LongerShortString( int encodingHeader, int step )
+    LongerShortString( int encodingHeader, int step )
     {
         this.encodingHeader = encodingHeader;
         this.mask = Bits.rightOverflowMask( step );
@@ -512,7 +629,7 @@ public enum LongerShortString
     int maxLength( int payloadSize )
     {
         // key-type-encoding-length
-        return ((payloadSize << 3)-24-4-4-6)/step;
+        return ((payloadSize << 3) - 24 - 4 - 4 - 6) / step;
     }
 
     final IllegalArgumentException cannotEncode( byte b )
@@ -532,10 +649,22 @@ public enum LongerShortString
 
     int encTranslate( byte b )
     {
-        if ( b < 0 ) return ( 0xFF & b ) - 0xC0; // European chars
-        if ( b < 0x20 ) return encPunctuation( b ); // Punctuation
-        if ( b >= '0' && b <= '4' ) return 0x5B + b - '0'; // Numbers
-        if ( b >= '5' && b <= '9' ) return 0x7B + b - '5'; // Numbers
+        if ( b < 0 )
+        {
+            return (0xFF & b) - 0xC0; // European chars
+        }
+        if ( b < 0x20 )
+        {
+            return encPunctuation( b ); // Punctuation
+        }
+        if ( b >= '0' && b <= '4' )
+        {
+            return 0x5B + b - '0'; // Numbers
+        }
+        if ( b >= '5' && b <= '9' )
+        {
+            return 0x7B + b - '5'; // Numbers
+        }
         return b; // Alphabetical
     }
 
@@ -603,8 +732,14 @@ public enum LongerShortString
         int maxBytes = PropertyType.getPayloadSize();
         if ( stringLength <= maxBytes - 5 )
         {
-            if ( encodeLatin1( keyId, string, target ) ) return true;
-            if ( encodeUTF8( keyId, string, target, payloadSize ) ) return true;
+            if ( encodeLatin1( keyId, string, target ) )
+            {
+                return true;
+            }
+            if ( encodeUTF8( keyId, string, target, payloadSize ) )
+            {
+                return true;
+            }
         }
         return false;
     }
@@ -763,39 +898,61 @@ public enum LongerShortString
      */
     public static String decode( PropertyBlock block )
     {
-        Bits bits = Bits.bitsFromLongs( block.getValueBlocks() );
-        return decode( bits );
+        return decode( block.getValueBlocks(), 0, block.getValueBlocks().length );
     }
 
-    public static String decode(Bits bits)
+    public static String decode( long[] blocks, int offset, int length )
     {
-        long firstLong = bits.getLongs()[0];
-        if ( ( firstLong & 0xFFFFFF0FFFFFFFFFL ) == 0 ) return "";
-        bits.getInt( 24 ); // Get rid of the key
-        bits.getByte( 4 ); // Get rid of the type
-        int encoding = bits.getByte( 5 ); //(int) ( ( firstLong & 0xF00000000L ) >>> 32 );
-        int stringLength = bits.getByte( 6 ); //(int) ( ( firstLong & 0xFC000000L ) >>> 26 );
-        if ( encoding == LongerShortString.ENCODING_UTF8 ) return decodeUTF8( bits, stringLength );
-        if ( encoding == ENCODING_LATIN1 ) return decodeLatin1( bits, stringLength );
+        long firstLong = blocks[offset];
+        if ( (firstLong & 0xFFFFFF0FFFFFFFFFL) == 0 )
+        {
+            return "";
+        }
+        // key(24b) + type(4) = 28
+        int encoding = (int) ((firstLong & 0x1F0000000L) >>> 28); // 5 bits of encoding
+        int stringLength = (int) ((firstLong & 0x7E00000000L) >>> 33); // 6 bits of stringLength
+        if ( encoding == LongerShortString.ENCODING_UTF8 )
+        {
+            return decodeUTF8( blocks, offset, stringLength );
+        }
+        if ( encoding == ENCODING_LATIN1 )
+        {
+            return decodeLatin1( blocks, offset, stringLength );
+        }
 
         LongerShortString table = getEncodingTable( encoding );
+        assert table != null : "We only decode LongerShortStrings after we have consistently read the PropertyBlock " +
+                "data from the page cache. Thus, we should never have an invalid encoding header here.";
         char[] result = new char[stringLength];
         // encode shifts in the bytes with the first char at the MSB, therefore
         // we must "unshift" in the reverse order
-        for ( int i = 0; i < stringLength; i++ )
-        {
-            byte codePoint = bits.getByte( table.step );
-            result[i] = table.decTranslate( codePoint );
-        }
+        decode( result, blocks, offset, table );
 
         // We know the char array is unshared, so use sharing constructor explicitly
         return UnsafeUtil.newSharedArrayString( result );
     }
 
+    private static void decode( char[] result, long[] blocks, int offset, LongerShortString table )
+    {
+        int block = offset;
+        int maskShift = HEADER_SIZE;
+        long baseMask = table.mask;
+        for ( int i = 0; i < result.length; i++ )
+        {
+            byte codePoint = (byte) ((blocks[block] >>> maskShift) & baseMask);
+            maskShift += table.step;
+            if ( maskShift >= 64 && block + 1 < blocks.length )
+            {
+                maskShift %= 64;
+                codePoint |= (blocks[++block] & (baseMask >>> (table.step - maskShift))) << (table.step - maskShift);
+            }
+            result[i] = table.decTranslate( codePoint );
+        }
+    }
 
     // lookup table by encoding header
     // +2 because of ENCODING_LATIN1 gap and one based index
-    private final static LongerShortString[] ENCODINGS_BY_ENCODING = new LongerShortString[ENCODING_COUNT + 2];
+    private static final LongerShortString[] ENCODINGS_BY_ENCODING = new LongerShortString[ENCODING_COUNT + 2];
 
     static
     {
@@ -805,11 +962,16 @@ public enum LongerShortString
         }
     }
 
+    /**
+     * Get encoding table for the given encoding header, or {@code null} if the encoding header is invalid.
+     */
     private static LongerShortString getEncodingTable( int encodingHeader )
     {
-        final LongerShortString encoding = ENCODINGS_BY_ENCODING[encodingHeader];
-        if (encoding==null) throw new IllegalArgumentException( "Invalid encoding '" + encoding + "'" );
-        return encoding;
+        if ( encodingHeader < 0 | ENCODINGS_BY_ENCODING.length <= encodingHeader )
+        {
+            return null;
+        }
+        return ENCODINGS_BY_ENCODING[encodingHeader];
     }
 
     private static Bits newBits( LongerShortString encoding, int length )
@@ -827,7 +989,10 @@ public enum LongerShortString
         int length = string.length();
         Bits bits = newBitsForStep8(length);
         writeHeader( bits, keyId, ENCODING_LATIN1, length );
-        if ( !writeLatin1Characters( string, bits ) ) return false;
+        if ( !writeLatin1Characters( string, bits ) )
+        {
+            return false;
+        }
         target.setValueBlocks( bits.getLongs() );
         return true;
     }
@@ -838,42 +1003,46 @@ public enum LongerShortString
         for ( int i = 0; i < length; i++ )
         {
             char c = string.charAt( i );
-            if ( c < 0 || c >= 256 ) return false;
+            if ( c >= 256 )
+            {
+                return false;
+            }
             bits.put( c, 8 ); // Just the lower byte
         }
         return true;
     }
 
-    private static boolean encodeUTF8( int keyId, String string,
-            PropertyBlock target, int payloadSize )
+    private static boolean encodeUTF8( int keyId, String string, PropertyBlock target, int payloadSize )
     {
-        try
+        byte[] bytes = string.getBytes( StandardCharsets.UTF_8 );
+        final int length = bytes.length;
+        if ( length > payloadSize - 3/*key*/ - 2/*enc+len*/ )
         {
-            byte[] bytes = string.getBytes( "UTF-8" );
-            final int length = bytes.length;
-            if ( length > payloadSize-3/*key*/-2/*enc+len*/ ) return false;
-            Bits bits = newBitsForStep8(length);
-            writeHeader( bits, keyId, ENCODING_UTF8, length); // In this case it isn't the string length, but the number of bytes
-            for ( byte value : bytes )
-            {
-                bits.put( value );
-            }
-            target.setValueBlocks( bits.getLongs() );
-            return true;
+            return false;
         }
-        catch ( UnsupportedEncodingException e )
+        Bits bits = newBitsForStep8(length);
+        writeHeader( bits, keyId, ENCODING_UTF8, length); // In this case it isn't the string length, but the number of bytes
+        for ( byte value : bytes )
         {
-            throw new IllegalStateException( "All JVMs must support UTF-8", e );
+            bits.put( value );
         }
+        target.setValueBlocks( bits.getLongs() );
+        return true;
     }
 
     private boolean doEncode(int keyId, byte[] data, PropertyBlock target,
                              int payloadSize, final int length)
     {
-        if ( length > maxLength( payloadSize ) ) return false;
-        Bits bits = newBits( this, length);
-        writeHeader( bits, keyId, encodingHeader, length);
-        if (length >0) translateData(bits, data, length, step);
+        if ( length > maxLength( payloadSize ) )
+        {
+            return false;
+        }
+        Bits bits = newBits( this, length );
+        writeHeader( bits, keyId, encodingHeader, length );
+        if ( length > 0 )
+        {
+            translateData( bits, data, length, step );
+        }
         target.setValueBlocks( bits.getLongs() );
         return true;
     }
@@ -886,31 +1055,42 @@ public enum LongerShortString
         }
     }
 
-    private static String decodeLatin1( Bits bits, int stringLength )
-    { // see decode
+    private static String decodeLatin1( long[] blocks, int offset, int stringLength )
+    {
         char[] result = new char[stringLength];
-        for ( int i = 0; i < stringLength; i++ )
+        int block = offset;
+        int maskShift = HEADER_SIZE;
+        for ( int i = 0; i < result.length; i++ )
         {
-            result[i] = (char) bits.getShort( 8 );
+            char codePoint = (char) ((blocks[block] >>> maskShift) & 0xFF);
+            maskShift += 8;
+            if ( maskShift >= 64 )
+            {
+                maskShift %= 64;
+                codePoint |= (blocks[++block] & (0xFF >>> (8 - maskShift))) << (8 - maskShift);
+            }
+            result[i] = codePoint;
         }
-        return new String( result );
+        return UnsafeUtil.newSharedArrayString( result );
     }
 
-    private static String decodeUTF8( Bits bits, int stringLength )
+    private static String decodeUTF8( long[] blocks, int offset, int stringLength )
     {
         byte[] result = new byte[stringLength];
-        for ( int i = 0; i < stringLength; i++ )
+        int block = offset;
+        int maskShift = HEADER_SIZE;
+        for ( int i = 0; i < result.length; i++ )
         {
-            result[i] = bits.getByte();
+            byte codePoint = (byte) (blocks[block] >>> maskShift);
+            maskShift += 8;
+            if ( maskShift >= 64 )
+            {
+                maskShift %= 64;
+                codePoint |= (blocks[++block] & (0xFF >>> (8 - maskShift))) << (8 - maskShift);
+            }
+            result[i] = codePoint;
         }
-        try
-        {
-            return new String( result, "UTF-8" );
-        }
-        catch ( UnsupportedEncodingException e )
-        {
-            throw new IllegalStateException( "All JVMs must support UTF-8", e );
-        }
+        return UTF8.decode( result );
     }
 
     public static int calculateNumberOfBlocksUsed( long firstBlock )
@@ -920,24 +1100,28 @@ public enum LongerShortString
          */
         int encoding = (int) ( ( firstBlock & 0x1F0000000L ) >> 28 );
         int length = (int) ( ( firstBlock & 0x7E00000000L ) >> 33 );
-        /*
-        Bits bits = Bits.bitsFromLongs( new long[] {firstBlock} );
-        bits.getInt( 24 ); // key
-        bits.getByte( 4 ); // type
-        int encoding = bits.getByte( 5 );
-        int length = bits.getByte( 6 );
-        */
-        if (encoding==ENCODING_UTF8 || encoding == ENCODING_LATIN1) return calculateNumberOfBlocksUsedForStep8(length);
-        return calculateNumberOfBlocksUsed( getEncodingTable(encoding), length );
+        if ( encoding == ENCODING_UTF8 || encoding == ENCODING_LATIN1 )
+        {
+            return calculateNumberOfBlocksUsedForStep8(length);
+        }
+
+        LongerShortString encodingTable = getEncodingTable( encoding );
+        if ( encodingTable == null )
+        {
+            // We probably did an inconsistent read of the first block
+            return PropertyType.BLOCKS_USED_FOR_BAD_TYPE_OR_ENCODING;
+        }
+        return calculateNumberOfBlocksUsed( encodingTable, length );
     }
 
     public static int calculateNumberOfBlocksUsedForStep8( int length )
     {
-        return totalBits(length << 3); // * 8
+        return totalBits( length << 3 ); // * 8
     }
+
     public static int calculateNumberOfBlocksUsed( LongerShortString encoding, int length )
     {
-        return totalBits(length * encoding.step);
+        return totalBits( length * encoding.step );
     }
 
     private static int totalBits( int bitsForCharacters )

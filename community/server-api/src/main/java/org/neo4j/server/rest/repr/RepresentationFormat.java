@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,10 +22,11 @@ package org.neo4j.server.rest.repr;
 import java.net.URI;
 import java.net.URISyntaxException;
 import javax.ws.rs.core.MediaType;
+
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.plugins.ParameterList;
 import org.neo4j.server.rest.web.NodeNotFoundException;
 import org.neo4j.server.rest.web.RelationshipNotFoundException;
@@ -59,7 +60,9 @@ public abstract class RepresentationFormat implements InputFormat
     ListWriter serializeList( RepresentationType type )
     {
         if ( type.listName == null )
+        {
             throw new IllegalStateException( "Invalid list type: " + type );
+        }
         return serializeList( type.listName );
     }
 
@@ -333,8 +336,10 @@ public abstract class RepresentationFormat implements InputFormat
         if ( value instanceof Number && !( value instanceof Float || value instanceof Double ) )
         {
             short primitive = ( (Number) value ).shortValue();
-            if ( primitive != ( (Number) value ).longValue() )
+            if ( primitive != ((Number) value).longValue() )
+            {
                 throw new BadInputException( "Input did not fit in short" );
+            }
             return primitive;
         }
         if ( value instanceof String )
@@ -379,8 +384,10 @@ public abstract class RepresentationFormat implements InputFormat
         if ( value instanceof Number && !( value instanceof Float || value instanceof Double ) )
         {
             int primitive = ( (Number) value ).intValue();
-            if ( primitive != ( (Number) value ).longValue() )
+            if ( primitive != ((Number) value).longValue() )
+            {
                 throw new BadInputException( "Input did not fit in int" );
+            }
             return primitive;
         }
         if ( value instanceof String )
@@ -449,8 +456,10 @@ public abstract class RepresentationFormat implements InputFormat
         if ( value instanceof Number )
         {
             int primitive = ( (Number) value ).intValue();
-            if ( primitive != ( (Number) value ).longValue() || ( primitive > 0xFFFF ) )
+            if ( primitive != ((Number) value).longValue() || (primitive > 0xFFFF) )
+            {
                 throw new BadInputException( "Input did not fit in char" );
+            }
             return Character.valueOf( (char) primitive );
         }
         if ( value instanceof String && ( (String) value ).length() == 1 )
@@ -466,8 +475,10 @@ public abstract class RepresentationFormat implements InputFormat
         if ( value instanceof Number )
         {
             byte primitive = ( (Number) value ).byteValue();
-            if ( primitive != ( (Number) value ).longValue() )
+            if ( primitive != ((Number) value).longValue() )
+            {
                 throw new BadInputException( "Input did not fit in byte" );
+            }
             return primitive;
         }
         if ( value instanceof String )
@@ -505,6 +516,7 @@ public abstract class RepresentationFormat implements InputFormat
         throw new BadInputException( "Could not convert!" );
     }
 
-    public void complete() {
+    public void complete()
+    {
     }
 }

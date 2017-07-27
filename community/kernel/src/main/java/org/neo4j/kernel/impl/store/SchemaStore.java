@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,39 +21,45 @@ package org.neo4j.kernel.impl.store;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.nio.file.OpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
-import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.IdGeneratorFactory;
-import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.api.exceptions.schema.MalformedSchemaRuleException;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.store.allocator.ReusableRecordsCompositeAllocator;
+import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
-import org.neo4j.kernel.impl.store.record.RecordSerializer;
-import org.neo4j.kernel.impl.store.record.SchemaRule;
+import org.neo4j.kernel.impl.store.record.SchemaRuleSerialization;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.schema.SchemaRule;
 
-import static org.neo4j.kernel.impl.store.record.SchemaRule.Kind.deserialize;
+import static java.util.Collections.singleton;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
 
 public class SchemaStore extends AbstractDynamicStore implements Iterable<SchemaRule>
 {
     // store version, each store ends with this string (byte encoded)
     public static final String TYPE_DESCRIPTOR = "SchemaStore";
-    public static final int BLOCK_SIZE = 56; // + BLOCK_HEADER_SIZE == 64
+    public static final int BLOCK_SIZE = 56;
 
-    @SuppressWarnings("deprecation")
     public SchemaStore(
             File fileName,
             Config conf,
             IdType idType,
             IdGeneratorFactory idGeneratorFactory,
             PageCache pageCache,
-            LogProvider logProvider )
+            LogProvider logProvider,
+            RecordFormats recordFormats,
+            OpenOption... openOptions )
     {
-        super( fileName, conf, idType, idGeneratorFactory, pageCache, logProvider, BLOCK_SIZE );
+        super( fileName, conf, idType, idGeneratorFactory, pageCache, logProvider, TYPE_DESCRIPTOR, BLOCK_SIZE,
+                recordFormats.dynamic(), recordFormats.storeVersion(), openOptions );
     }
 
     @Override
@@ -62,19 +68,12 @@ public class SchemaStore extends AbstractDynamicStore implements Iterable<Schema
         processor.processSchema( this, record );
     }
 
-    @Override
-    public String getTypeDescriptor()
+    public List<DynamicRecord> allocateFrom( SchemaRule rule )
     {
-        return TYPE_DESCRIPTOR;
-    }
-
-    public Collection<DynamicRecord> allocateFrom( SchemaRule rule )
-    {
-        RecordSerializer serializer = new RecordSerializer();
-        serializer = serializer.append( rule );
-        Collection<DynamicRecord> records = new ArrayList<>();
-        allocateRecordsFromBytes( records, serializer.serialize(),
-                IteratorUtil.iterator( forceGetRecord( rule.getId() ) ), this );
+        List<DynamicRecord> records = new ArrayList<>();
+        DynamicRecord record = getRecord( rule.getId(), nextRecord(), CHECK );
+        DynamicRecordAllocator recordAllocator = new ReusableRecordsCompositeAllocator( singleton( record ), this );
+        allocateRecordsFromBytes( records, rule.serialize(), recordAllocator );
         return records;
     }
 
@@ -93,6 +92,6 @@ public class SchemaStore extends AbstractDynamicStore implements Iterable<Schema
             throws MalformedSchemaRuleException
     {
         ByteBuffer scratchBuffer = concatData( records, buffer );
-        return deserialize( id, scratchBuffer );
+        return SchemaRuleSerialization.deserialize( id, scratchBuffer );
     }
 }

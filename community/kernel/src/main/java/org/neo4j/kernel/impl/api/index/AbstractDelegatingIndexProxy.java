@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,15 +25,18 @@ import java.util.concurrent.Future;
 
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.kernel.api.exceptions.index.IndexActivationFailedKernelException;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintVerificationFailedKernelException;
-import org.neo4j.kernel.api.index.IndexConfiguration;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.index.IndexReader;
+import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.index.PropertyAccessor;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.storageengine.api.schema.IndexReader;
+import org.neo4j.storageengine.api.schema.PopulationProgress;
 
 public abstract class AbstractDelegatingIndexProxy implements IndexProxy
 {
@@ -70,6 +73,12 @@ public abstract class AbstractDelegatingIndexProxy implements IndexProxy
     }
 
     @Override
+    public LabelSchemaDescriptor schema()
+    {
+        return getDelegate().schema();
+    }
+
+    @Override
     public SchemaIndexProvider.Descriptor getProviderDescriptor()
     {
         return getDelegate().getProviderDescriptor();
@@ -79,12 +88,6 @@ public abstract class AbstractDelegatingIndexProxy implements IndexProxy
     public void force() throws IOException
     {
         getDelegate().force();
-    }
-
-    @Override
-    public void flush() throws IOException
-    {
-        getDelegate().flush();
     }
 
     @Override
@@ -112,7 +115,7 @@ public abstract class AbstractDelegatingIndexProxy implements IndexProxy
     }
 
     @Override
-    public void validate() throws ConstraintVerificationFailedKernelException, IndexPopulationFailedKernelException
+    public void validate() throws IndexPopulationFailedKernelException, UniquePropertyValueValidationException
     {
         getDelegate().validate();
     }
@@ -121,6 +124,12 @@ public abstract class AbstractDelegatingIndexProxy implements IndexProxy
     public IndexPopulationFailure getPopulationFailure() throws IllegalStateException
     {
         return getDelegate().getPopulationFailure();
+    }
+
+    @Override
+    public PopulationProgress getIndexPopulationProgress()
+    {
+        return getDelegate().getIndexPopulationProgress();
     }
 
     @Override
@@ -136,8 +145,8 @@ public abstract class AbstractDelegatingIndexProxy implements IndexProxy
     }
 
     @Override
-    public IndexConfiguration config()
+    public void verifyDeferredConstraints( PropertyAccessor accessor ) throws IndexEntryConflictException, IOException
     {
-        return getDelegate().config();
+        getDelegate().verifyDeferredConstraints( accessor );
     }
 }

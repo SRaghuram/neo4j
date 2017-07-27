@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,24 +28,24 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.mockfs.DelegatingFileSystemAbstraction;
-import org.neo4j.kernel.impl.store.AbstractDynamicStore;
-import org.neo4j.kernel.impl.store.NodeStore;
-import org.neo4j.kernel.impl.store.PropertyStore;
-import org.neo4j.kernel.impl.store.RelationshipGroupStore;
-import org.neo4j.kernel.impl.store.RelationshipStore;
-import org.neo4j.kernel.impl.store.SchemaStore;
+import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.StoreFileChannel;
+import org.neo4j.kernel.impl.store.SchemaStore;
+import org.neo4j.kernel.impl.store.format.standard.DynamicRecordFormat;
+import org.neo4j.kernel.impl.store.format.standard.NodeRecordFormat;
+import org.neo4j.kernel.impl.store.format.standard.PropertyRecordFormat;
+import org.neo4j.kernel.impl.store.format.standard.RelationshipGroupRecordFormat;
+import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.test.impl.ChannelInputStream;
 import org.neo4j.test.impl.ChannelOutputStream;
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 
 public class JumpingFileSystemAbstraction extends DelegatingFileSystemAbstraction
 {
-    private final EphemeralFileSystemAbstraction ephemeralFileSystem;
     private final int sizePerJump;
 
     public JumpingFileSystemAbstraction( int sizePerJump )
@@ -56,7 +56,6 @@ public class JumpingFileSystemAbstraction extends DelegatingFileSystemAbstractio
     private JumpingFileSystemAbstraction( EphemeralFileSystemAbstraction ephemeralFileSystem, int sizePerJump )
     {
         super( ephemeralFileSystem );
-        this.ephemeralFileSystem = ephemeralFileSystem;
         this.sizePerJump = sizePerJump;
     }
 
@@ -91,15 +90,15 @@ public class JumpingFileSystemAbstraction extends DelegatingFileSystemAbstractio
     }
 
     @Override
-    public Reader openAsReader( File fileName, String encoding ) throws IOException
+    public Reader openAsReader( File fileName, Charset charset ) throws IOException
     {
-        return new InputStreamReader( openAsInputStream( fileName ), encoding );
+        return new InputStreamReader( openAsInputStream( fileName ), charset );
     }
 
     @Override
-    public Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException
+    public Writer openAsWriter( File fileName, Charset charset, boolean append ) throws IOException
     {
-        return new OutputStreamWriter( openAsOutputStream( fileName, append ), encoding );
+        return new OutputStreamWriter( openAsOutputStream( fileName, append ), charset );
     }
 
     @Override
@@ -108,37 +107,42 @@ public class JumpingFileSystemAbstraction extends DelegatingFileSystemAbstractio
         return open( fileName, "rw" );
     }
 
+    public static int getRecordSize( int dataSize )
+    {
+        return dataSize + DynamicRecordFormat.RECORD_HEADER_SIZE;
+    }
+
     private int recordSizeFor( File fileName )
     {
         if ( fileName.getName().endsWith( "nodestore.db" ) )
         {
-            return NodeStore.RECORD_SIZE;
+            return NodeRecordFormat.RECORD_SIZE;
         }
         else if ( fileName.getName().endsWith( "relationshipstore.db" ) )
         {
-            return RelationshipStore.RECORD_SIZE;
+            return RelationshipRecordFormat.RECORD_SIZE;
         }
         else if ( fileName.getName().endsWith( "propertystore.db.strings" ) ||
                 fileName.getName().endsWith( "propertystore.db.arrays" ) )
         {
-            return AbstractDynamicStore.getRecordSize( PropertyStore.DEFAULT_DATA_BLOCK_SIZE );
+            return getRecordSize( PropertyRecordFormat.DEFAULT_DATA_BLOCK_SIZE );
         }
         else if ( fileName.getName().endsWith( "propertystore.db" ) )
         {
-            return PropertyStore.RECORD_SIZE;
+            return PropertyRecordFormat.RECORD_SIZE;
         }
         else if ( fileName.getName().endsWith( "nodestore.db.labels" ) )
         {
             return Integer.parseInt( GraphDatabaseSettings.label_block_size.getDefaultValue() ) +
-                    AbstractDynamicStore.BLOCK_HEADER_SIZE;
+                    DynamicRecordFormat.RECORD_HEADER_SIZE;
         }
         else if ( fileName.getName().endsWith( "schemastore.db" ) )
         {
-            return AbstractDynamicStore.getRecordSize( SchemaStore.BLOCK_SIZE );
+            return getRecordSize( SchemaStore.BLOCK_SIZE );
         }
         else if ( fileName.getName().endsWith( "relationshipgroupstore.db" ) )
         {
-            return AbstractDynamicStore.getRecordSize( RelationshipGroupStore.RECORD_SIZE );
+            return getRecordSize( RelationshipGroupRecordFormat.RECORD_SIZE );
         }
         throw new IllegalArgumentException( fileName.getPath() );
     }
@@ -160,41 +164,41 @@ public class JumpingFileSystemAbstraction extends DelegatingFileSystemAbstractio
 
         private long translateIncoming( long position, boolean allowFix )
         {
-            long actualRecord = position/recordSize;
-            if ( actualRecord < sizePerJump/2 )
+            long actualRecord = position / recordSize;
+            if ( actualRecord < sizePerJump / 2 )
             {
                 return position;
             }
             else
             {
-                long jumpIndex = (actualRecord+sizePerJump)/0x100000000L;
+                long jumpIndex = (actualRecord + sizePerJump) / 0x100000000L;
                 long diff = actualRecord - jumpIndex * 0x100000000L;
                 diff = assertWithinDiff( diff, allowFix );
-                long offsettedRecord = jumpIndex*sizePerJump + diff;
-                return offsettedRecord*recordSize;
+                long offsettedRecord = jumpIndex * sizePerJump + diff;
+                return offsettedRecord * recordSize;
             }
         }
 
         private long translateOutgoing( long offsettedPosition )
         {
-            long offsettedRecord = offsettedPosition/recordSize;
-            if ( offsettedRecord < sizePerJump/2 )
+            long offsettedRecord = offsettedPosition / recordSize;
+            if ( offsettedRecord < sizePerJump / 2 )
             {
                 return offsettedPosition;
             }
             else
             {
-                long jumpIndex = (offsettedRecord-sizePerJump/2) / sizePerJump + 1;
-                long diff = ((offsettedRecord-sizePerJump/2) % sizePerJump) - sizePerJump/2;
+                long jumpIndex = (offsettedRecord - sizePerJump / 2) / sizePerJump + 1;
+                long diff = ((offsettedRecord - sizePerJump / 2) % sizePerJump) - sizePerJump / 2;
                 assertWithinDiff( diff, false );
-                long actualRecord = jumpIndex*0x100000000L - sizePerJump/2 + diff;
-                return actualRecord*recordSize;
+                long actualRecord = jumpIndex * 0x100000000L - sizePerJump / 2 + diff;
+                return actualRecord * recordSize;
             }
         }
 
         private long assertWithinDiff( long diff, boolean allowFix )
         {
-            if ( diff < -sizePerJump/2 || diff > sizePerJump/2 )
+            if ( diff < -sizePerJump / 2 || diff > sizePerJump / 2 )
             {
                 if ( allowFix )
                 {
@@ -251,10 +255,5 @@ public class JumpingFileSystemAbstraction extends DelegatingFileSystemAbstractio
         {
             return super.write( src, translateIncoming( position ) );
         }
-    }
-
-    public void shutdown()
-    {
-        ephemeralFileSystem.shutdown();
     }
 }

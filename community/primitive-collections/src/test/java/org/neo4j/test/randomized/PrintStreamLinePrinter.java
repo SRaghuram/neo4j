@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,13 +30,13 @@ public class PrintStreamLinePrinter implements LinePrinter
     {
         this( out, 0 );
     }
-    
+
     public PrintStreamLinePrinter( PrintStream out, int indentation )
     {
         this.out = out;
         this.indentation = indentation;
     }
-    
+
     @Override
     public void println( String line )
     {
@@ -50,6 +50,6 @@ public class PrintStreamLinePrinter implements LinePrinter
     @Override
     public LinePrinter indent()
     {
-        return new PrintStreamLinePrinter( out, indentation+1 );
+        return new PrintStreamLinePrinter( out, indentation + 1 );
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,8 @@
  */
 package org.neo4j.codegen;
 
+import java.util.function.Consumer;
+
 public interface MethodEmitter
 {
     void done();
@@ -31,25 +33,21 @@ public interface MethodEmitter
 
     void returns( Expression value );
 
-    void assign( TypeReference type, String name, Expression value );
+    void assign( LocalVariable local, Expression value );
 
     void beginWhile( Expression test );
 
     void beginIf( Expression test );
 
-    void beginFinally();
+    void beginBlock();
 
     void endBlock();
 
-    void beginTry( Resource... resources );
+    <T> void tryCatchBlock( Consumer<T> body, Consumer<T> handler, LocalVariable exception, T block);
 
     void throwException( Expression exception );
 
-    void beginCatch( Parameter exception );
-
     void declare( LocalVariable local );
 
-    void assign( LocalVariable local, Expression value );
-
-    void beginForEach( Parameter local, Expression iterable );
+    void assignVariableInScope( LocalVariable local, Expression value );
 }

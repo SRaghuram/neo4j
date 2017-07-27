@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,34 +20,33 @@
 package org.neo4j.csv.reader;
 
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
+import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import static java.lang.String.format;
-import static java.util.Arrays.asList;
-
 import static org.neo4j.csv.reader.CharSeekers.charSeeker;
 import static org.neo4j.csv.reader.Readables.wrap;
 
 @RunWith( Parameterized.class )
 public class BufferedCharSeekerTest
 {
+    private static final String TEST_SOURCE = "TestSource";
     private final boolean useThreadAhead;
 
     @Parameters( name = "{1}" )
@@ -319,13 +318,16 @@ public class BufferedCharSeekerTest
         assertArrayEquals( new String[] {"four", "five", "six"}, nextLineOfAllStrings( seeker, mark ) );
     }
 
-    @Ignore( "TODO add test for characters with surrogate code points or whatever they are called," +
-             " basically consisting of two char values instead of one. Add such a test when adding " +
-             "support for reading such characters in the BufferedCharSeeker" )
     @Test
-    public void shouldHandleDoubleCharValues()
+    public void shouldHandleDoubleCharValues() throws IOException
     {
-        fail( "Test not implemented" );
+        seeker = seeker( "v\uD800\uDC00lue one\t\"v\uD801\uDC01lue two\"\tv\uD804\uDC03lue three" );
+        assertTrue( seeker.seek( mark, TAB ) );
+        assertEquals( "v𐀀lue one", seeker.extract( mark, extractors.string() ).value() );
+        assertTrue( seeker.seek( mark, TAB ) );
+        assertEquals( "v𐐁lue two", seeker.extract( mark, extractors.string() ).value() );
+        assertTrue( seeker.seek( mark, TAB ) );
+        assertEquals( "v𑀃lue three", seeker.extract( mark, extractors.string() ).value() );
     }
 
     @Test
@@ -366,7 +368,7 @@ public class BufferedCharSeekerTest
     public void shouldReadQuotedValuesWithNewLinesInside() throws Exception
     {
         // GIVEN
-        seeker = seeker( "value one\t\"value\ntwo\"\tvalue three", config( 1_000, true ) );
+        seeker = seeker( "value one\t\"value\ntwo\"\tvalue three", withMultilineFields( config(), true ) );
 
         // WHEN/THEN
         assertTrue( seeker.seek( mark, TAB ) );
@@ -401,10 +403,11 @@ public class BufferedCharSeekerTest
     }
 
     @Test
-    public void shouldHandleSlashEncodedQuotes() throws Exception
+    public void shouldHandleSlashEncodedQuotesIfConfiguredWithLegacyStyleQuoting() throws Exception
     {
         // GIVEN
-        seeker = seeker( "\"value \\\"one\\\"\"\t\"\\\"value\\\" two\"\t\"va\\\"lue\\\" three\"" );
+        seeker = seeker( "\"value \\\"one\\\"\"\t\"\\\"value\\\" two\"\t\"va\\\"lue\\\" three\"",
+                withLegacyStyleQuoting( config(), true ) );
 
         // WHEN/THEN
         assertTrue( seeker.seek( mark, TAB ) );
@@ -483,11 +486,11 @@ public class BufferedCharSeekerTest
     }
 
     @Test
-    public void shouldEscapeBackslashesInQuotes() throws Exception
+    public void shouldEscapeBackslashesInQuotesIfConfiguredWithLegacyStyleQuoting() throws Exception
     {
         // GIVEN
         //                4,    "\\\"",   "f\oo"
-        seeker = seeker( "4,\"\\\\\\\"\",\"f\\oo\"" );
+        seeker = seeker( "4,\"\\\\\\\"\",\"f\\oo\"", withLegacyStyleQuoting( config(), true ) );
 
         // WHEN/THEN
         assertNextValue( seeker, mark, COMMA, "4" );
@@ -560,6 +563,55 @@ public class BufferedCharSeekerTest
         shouldParseMultilineFieldWhereEndQuoteIsOnItsOwnLine( "%n" );
     }
 
+    @Test
+    public void shouldFailOnReadingFieldLargerThanBufferSize() throws Exception
+    {
+        // GIVEN
+        String data = lines( "\n",
+                "a,b,c",
+                "d,e,f",
+                "\"g,h,i",
+                "abcdefghijlkmopqrstuvwxyz,l,m" );
+        seeker = seeker( data, withMultilineFields( config( 20 ), true ) );
+
+        // WHEN
+        assertNextValue( seeker, mark, COMMA, "a" );
+        assertNextValue( seeker, mark, COMMA, "b" );
+        assertNextValue( seeker, mark, COMMA, "c" );
+        assertTrue( mark.isEndOfLine() );
+        assertNextValue( seeker, mark, COMMA, "d" );
+        assertNextValue( seeker, mark, COMMA, "e" );
+        assertNextValue( seeker, mark, COMMA, "f" );
+        assertTrue( mark.isEndOfLine() );
+
+        // THEN
+        try
+        {
+            seeker.seek( mark, COMMA );
+            fail( "Should have failed" );
+        }
+        catch ( IllegalStateException e )
+        {
+            // Good
+            String source = seeker.sourceDescription();
+            assertTrue( e.getMessage().contains( "Tried to read" ) );
+            assertTrue( e.getMessage().contains( source + ":3" ) );
+        }
+    }
+
+    @Test
+    public void shouldNotInterpretBackslashQuoteDifferentlyIfDisabledLegacyStyleQuoting() throws Exception
+    {
+        // GIVEN data with the quote character ' for easier readability
+        char slash = '\\';
+        String data = lines( "\n", "'abc''def" + slash + "''ghi'" );
+        seeker = seeker( data, withLegacyStyleQuoting( withQuoteCharacter( config(), '\'' ), false ) );
+
+        // WHEN/THEN
+        assertNextValue( seeker, mark, COMMA, "abc'def" + slash + "'ghi" );
+        assertFalse( seeker.seek( mark, COMMA ) );
+    }
+
     private void shouldParseMultilineFieldWhereEndQuoteIsOnItsOwnLine( String newline ) throws Exception
     {
         // GIVEN
@@ -573,7 +625,7 @@ public class BufferedCharSeekerTest
                 "",
                 "Quux\"",
                 "" );
-        seeker = seeker( data, config( 1_000, true ) );
+        seeker = seeker( data, withMultilineFields( config(), true ) );
 
         // THEN
         assertNextValue( seeker, mark, COMMA, "1" );
@@ -620,7 +672,7 @@ public class BufferedCharSeekerTest
 
     private String randomWeirdValue( char... except )
     {
-        int length = random.nextInt( 10 )+5;
+        int length = random.nextInt( 10 ) + 5;
         char[] chars = new char[length];
         for ( int i = 0; i < length; i++ )
         {
@@ -697,7 +749,7 @@ public class BufferedCharSeekerTest
 
     private CharSeeker seeker( CharReadable readable )
     {
-        return seeker( readable, config( 1_000 ) );
+        return seeker( readable, config() );
     }
 
     private CharSeeker seeker( CharReadable readable, Configuration config )
@@ -707,33 +759,75 @@ public class BufferedCharSeekerTest
 
     private CharSeeker seeker( String data )
     {
-        return seeker( data, config( 1_000 ) );
+        return seeker( data, config() );
     }
 
     private CharSeeker seeker( String data, Configuration config )
     {
-        return seeker( wrap( new StringReader( data ) ), config );
+        return seeker( wrap( stringReaderWithName( data, TEST_SOURCE ) ), config );
+    }
+
+    private Reader stringReaderWithName( String data, final String name )
+    {
+        return new StringReader( data )
+        {
+            @Override
+            public String toString()
+            {
+                return name;
+            }
+        };
+    }
+
+    private static Configuration config()
+    {
+        return config( 1_000 );
     }
 
     private static Configuration config( final int bufferSize )
     {
-        return config( bufferSize, Configuration.DEFAULT.multilineFields() );
+        return new Configuration.Overridden( Configuration.DEFAULT )
+        {
+            @Override
+            public int bufferSize()
+            {
+                return bufferSize;
+            }
+        };
     }
 
-    private static Configuration config( final int bufferSize, final boolean multiline )
+    private static Configuration withMultilineFields( Configuration config, boolean multiline )
     {
-        return new Configuration.Overridden( Configuration.DEFAULT )
+        return new Configuration.Overridden( config )
         {
             @Override
             public boolean multilineFields()
             {
                 return multiline;
             }
+        };
+    }
 
+    private static Configuration withLegacyStyleQuoting( Configuration config, boolean legacyStyleQuoting )
+    {
+        return new Configuration.Overridden( config )
+        {
             @Override
-            public int bufferSize()
+            public boolean legacyStyleQuoting()
             {
-                return bufferSize;
+                return legacyStyleQuoting;
+            }
+        };
+    }
+
+    private static Configuration withQuoteCharacter( Configuration config, char quoteCharacter )
+    {
+        return new Configuration.Overridden( config )
+        {
+            @Override
+            public char quotationCharacter()
+            {
+                return quoteCharacter;
             }
         };
     }
@@ -773,6 +867,12 @@ public class BufferedCharSeekerTest
             buffer.compact( buffer, from );
             buffer.readFrom( reader, maxBytesPerRead );
             return buffer;
+        }
+
+        @Override
+        public int read( char[] into, int offset, int length ) throws IOException
+        {
+            throw new UnsupportedOperationException();
         }
 
         @Override

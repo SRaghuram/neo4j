@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,17 +19,11 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import org.neo4j.kernel.KernelHealth;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.api.index.IndexUpdatesValidator;
-import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
-import org.neo4j.kernel.impl.transaction.state.NeoStoreInjectedTransactionValidator;
+import org.neo4j.storageengine.api.StorageEngine;
 
 public interface CommitProcessFactory
 {
-    TransactionCommitProcess create( TransactionAppender appender, KernelHealth kernelHealth,
-                                     NeoStores neoStores, TransactionRepresentationStoreApplier storeApplier,
-                                     NeoStoreInjectedTransactionValidator txValidator,
-                                     IndexUpdatesValidator indexUpdatesValidator, Config config );
+    TransactionCommitProcess create( TransactionAppender appender, StorageEngine storageEngine, Config config );
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,13 +21,15 @@ package org.neo4j.kernel;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
+import org.neo4j.kernel.internal.Version;
+
+import static org.junit.Assert.assertNotEquals;
 
 public class VersionIT
 {
     @Test
     public void canGetKernelRevision() throws Exception
     {
-        assertFalse( "Kernel revision not specified", "".equals( Version.getKernelVersion() ) );
+        assertNotEquals( "Kernel revision not specified", "", Version.getKernelVersion() );
     }
 }

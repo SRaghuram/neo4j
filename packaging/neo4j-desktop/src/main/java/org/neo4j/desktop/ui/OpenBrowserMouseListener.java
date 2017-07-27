@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import javax.swing.JLabel;
 
+import org.neo4j.desktop.model.DesktopModel;
+
 import static java.awt.Cursor.DEFAULT_CURSOR;
 import static java.awt.Cursor.HAND_CURSOR;
 import static java.awt.Cursor.getPredefinedCursor;
@@ -35,7 +37,7 @@ import static javax.swing.JOptionPane.ERROR_MESSAGE;
 import static org.neo4j.desktop.ui.ScrollableOptionPane.showWrappedMessageDialog;
 
 /**
- * {@link MouseListener} that can open links in the systems default browser, presumably using {@link Desktop}. 
+ * {@link MouseListener} that can openDirectory links in the systems default browser, presumably using {@link Desktop}.
  */
 public class OpenBrowserMouseListener extends MouseAdapter
 {
@@ -65,7 +67,7 @@ public class OpenBrowserMouseListener extends MouseAdapter
     private void showError( Exception e )
     {
         showWrappedMessageDialog( link,
-                format( "Couldn't open the browser: %s", e.getMessage() ),
+                format( "Couldn't openDirectory the browser: %s", e.getMessage() ),
                 "Error",
                 ERROR_MESSAGE );
     }

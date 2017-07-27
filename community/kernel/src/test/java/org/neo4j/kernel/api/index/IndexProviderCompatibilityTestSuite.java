@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,41 +26,53 @@ import org.junit.runners.Suite;
 
 import java.io.File;
 
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.test.runner.ParameterizedSuiteRunner;
 
 @RunWith( ParameterizedSuiteRunner.class )
 @Suite.SuiteClasses( {
-        NonUniqueIndexPopulatorCompatibility.class,
-        UniqueIndexPopulatorCompatibility.class,
-        NonUniqueIndexAccessorCompatibility.class,
-        UniqueIndexAccessorCompatibility.class,
+        SimpleIndexPopulatorCompatibility.General.class,
+        SimpleIndexPopulatorCompatibility.Unique.class,
+        CompositeIndexPopulatorCompatibility.General.class,
+        CompositeIndexPopulatorCompatibility.Unique.class,
+        SimpleIndexAccessorCompatibility.General.class,
+        SimpleIndexAccessorCompatibility.Unique.class,
+        CompositeIndexAccessorCompatibility.General.class,
+        CompositeIndexAccessorCompatibility.Unique.class,
         UniqueConstraintCompatibility.class
 } )
 public abstract class IndexProviderCompatibilityTestSuite
 {
-    @Rule
-    public TargetDirectory.TestDirectory testDir = TargetDirectory.testDirForTest( getClass() );
-    protected File graphDbDir;
-    protected FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+    protected abstract SchemaIndexProvider createIndexProvider( FileSystemAbstraction fs, File graphDbDir );
 
-    @Before
-    public void setup()
+    public abstract static class Compatibility
     {
-        graphDbDir = testDir.graphDbDir();
-    }
+        @Rule
+        public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+        @Rule
+        public final TestDirectory testDir = TestDirectory.testDirectory( getClass() );
 
-    protected abstract SchemaIndexProvider createIndexProvider();
+        protected File graphDbDir;
+        protected FileSystemAbstraction fs;
+        protected final IndexProviderCompatibilityTestSuite testSuite;
+        protected SchemaIndexProvider indexProvider;
+        protected IndexDescriptor descriptor;
 
-    public static abstract class Compatibility
-    {
-        protected final SchemaIndexProvider indexProvider;
-        protected IndexDescriptor descriptor = new IndexDescriptor( 1, 2 );
-
-        public Compatibility( IndexProviderCompatibilityTestSuite testSuite )
+        @Before
+        public void setup()
         {
-            this.indexProvider = testSuite.createIndexProvider();
+            fs = fileSystemRule.get();
+            graphDbDir = testDir.graphDbDir();
+            indexProvider = testSuite.createIndexProvider( fs, graphDbDir );
+        }
+
+        public Compatibility( IndexProviderCompatibilityTestSuite testSuite, IndexDescriptor descriptor )
+        {
+            this.testSuite = testSuite;
+            this.descriptor = descriptor;
         }
     }
 }

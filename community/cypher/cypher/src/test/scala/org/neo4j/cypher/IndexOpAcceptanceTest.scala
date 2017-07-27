@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,13 @@
  */
 package org.neo4j.cypher
 
-import org.neo4j.kernel.api.exceptions.schema.{NoSuchIndexException, DropIndexFailureException}
+import java.io.{File, FileOutputStream}
 import java.util.concurrent.TimeUnit
-import java.io.{FileOutputStream, File}
-import org.neo4j.graphdb.factory.GraphDatabaseFactory
+
+import org.neo4j.cypher.ExecutionEngineHelper.createEngine
+import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
 import org.neo4j.graphdb.GraphDatabaseService
+import org.neo4j.kernel.api.exceptions.schema.{DropIndexFailureException, NoSuchIndexException}
 import org.neo4j.test.TestGraphDatabaseFactory
 
 class IndexOpAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport {
@@ -33,7 +35,7 @@ class IndexOpAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
     execute("CREATE INDEX ON :Person(name)")
 
     // THEN
-    graph.inTx{
+    graph.inTx {
       graph.indexPropsForLabel("Person") should equal(List(List("name")))
     }
   }
@@ -68,7 +70,7 @@ class IndexOpAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
     execute("DROP INDEX ON :Person(name)")
 
     // THEN
-    graph.inTx{
+    graph.inTx {
       graph.indexPropsForLabel("Person") shouldBe empty
     }
   }
@@ -94,12 +96,13 @@ class IndexOpAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
   }
 
   private def createDbWithFailedIndex: GraphDatabaseService = {
-    new File("target/test-data/impermanent-db").deleteAll()
-    var graph = new TestGraphDatabaseFactory().newEmbeddedDatabase("target/test-data/impermanent-db")
-    eengine = new ExecutionEngine(graph)
+    val storeDir = new File("target/test-data/impermanent-db")
+    storeDir.deleteAll()
+    graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newEmbeddedDatabase(storeDir))
+    eengine = createEngine(graph)
     execute("CREATE INDEX ON :Person(name)")
     execute("create (:Person {name:42})")
-    val tx = graph.beginTx()
+    val tx = graph.getGraphDatabaseService.beginTx()
     try {
       graph.schema().awaitIndexesOnline(3, TimeUnit.SECONDS)
       tx.success()
@@ -112,8 +115,8 @@ class IndexOpAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
     stream.write(65)
     stream.close()
 
-    graph = new TestGraphDatabaseFactory().newEmbeddedDatabase("target/test-data/impermanent-db")
-    eengine = new ExecutionEngine(graph)
-    graph
+    graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newEmbeddedDatabase(storeDir))
+    eengine = createEngine(graph)
+    graph.getGraphDatabaseService
   }
 }

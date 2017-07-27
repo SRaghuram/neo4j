@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -93,7 +93,7 @@ public class PropertyRecordCheck
         }
     }
 
-    public static enum PropertyField implements
+    public enum PropertyField implements
             RecordField<PropertyRecord, ConsistencyReport.PropertyConsistencyReport>,
             ComparativeRecordChecker<PropertyRecord, PropertyRecord, ConsistencyReport.PropertyConsistencyReport>
     {
@@ -151,7 +151,7 @@ public class PropertyRecordCheck
         };
         private final Record NONE;
 
-        private PropertyField( Record none )
+        PropertyField( Record none )
         {
             this.NONE = none;
         }
@@ -224,7 +224,7 @@ public class PropertyRecordCheck
         };
     }
 
-    private static abstract class DynamicReference implements
+    private abstract static class DynamicReference implements
             ComparativeRecordChecker<PropertyRecord, DynamicRecord, ConsistencyReport.PropertyConsistencyReport>
     {
         final PropertyBlock block;

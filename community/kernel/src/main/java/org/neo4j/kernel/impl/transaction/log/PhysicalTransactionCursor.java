@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,33 +24,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
+import org.neo4j.storageengine.api.StorageCommand;
 
-public class PhysicalTransactionCursor<T extends ReadableLogChannel>
-        implements IOCursor<CommittedTransactionRepresentation>
+public class PhysicalTransactionCursor<T extends ReadableClosablePositionAwareChannel>
+        implements TransactionCursor
 {
+    private final T channel;
     private final LogEntryCursor logEntryCursor;
-    private final Marker<T> marker;
+    private final LogPositionMarker lastGoodPositionMarker = new LogPositionMarker();
 
     private CommittedTransactionRepresentation current;
-    private long lastKnownGoodPosition;
 
     public PhysicalTransactionCursor( T channel, LogEntryReader<T> entryReader ) throws IOException
     {
-        this.marker = new Marker<>( channel );
-        this.lastKnownGoodPosition = marker.currentPosition();
-        this.logEntryCursor = new LogEntryCursor( (LogEntryReader<ReadableLogChannel>) entryReader, channel );
-    }
-
-    protected List<Command> commandList()
-    {
-        return new ArrayList<>();
+        this.channel = channel;
+        this.logEntryCursor =
+                new LogEntryCursor( (LogEntryReader<ReadableClosablePositionAwareChannel>) entryReader, channel );
     }
 
     @Override
@@ -73,7 +68,7 @@ public class PhysicalTransactionCursor<T extends ReadableLogChannel>
             if ( entry instanceof CheckPoint )
             {
                 // this is a good position anyhow
-                lastKnownGoodPosition = marker.currentPosition();
+                channel.getCurrentPosition( lastGoodPositionMarker );
                 continue;
             }
 
@@ -81,7 +76,7 @@ public class PhysicalTransactionCursor<T extends ReadableLogChannel>
             LogEntryStart startEntry = entry.as();
             LogEntryCommit commitEntry;
 
-            List<Command> entries = commandList();
+            List<StorageCommand> entries = new ArrayList<>();
             while ( true )
             {
                 if ( !logEntryCursor.next() )
@@ -105,7 +100,7 @@ public class PhysicalTransactionCursor<T extends ReadableLogChannel>
                     startEntry.getLocalId(), startEntry.getTimeWritten(),
                     startEntry.getLastCommittedTxWhenTransactionStarted(), commitEntry.getTimeWritten(), -1 );
             current = new CommittedTransactionRepresentation( startEntry, transaction, commitEntry );
-            lastKnownGoodPosition = marker.currentPosition();
+            channel.getCurrentPosition( lastGoodPositionMarker );
             return true;
         }
     }
@@ -116,24 +111,13 @@ public class PhysicalTransactionCursor<T extends ReadableLogChannel>
         logEntryCursor.close();
     }
 
-    public long lastKnownGoodPosition()
+    /**
+     * @return last known good position, which is a {@link LogPosition} after a {@link CheckPoint} or
+     * a {@link LogEntryCommit}.
+     */
+    @Override
+    public LogPosition position()
     {
-        return lastKnownGoodPosition;
-    }
-
-    private static class Marker<T extends ReadableLogChannel>
-    {
-        private final LogPositionMarker marker = new LogPositionMarker();
-        private final T channel;
-
-        public Marker( T channel )
-        {
-            this.channel = channel;
-        }
-
-        public long currentPosition() throws IOException
-        {
-            return channel.getCurrentPosition( marker ).getByteOffset();
-        }
+        return lastGoodPositionMarker.newPosition();
     }
 }

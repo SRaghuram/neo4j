@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,15 +25,15 @@ import java.util.Set;
 
 import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.protocol.ConfigurationContext;
+import org.neo4j.cluster.protocol.LoggingContext;
 import org.neo4j.cluster.protocol.TimeoutsContext;
 import org.neo4j.cluster.protocol.cluster.ClusterMessage;
-import org.neo4j.kernel.impl.logging.LogService;
 
 /**
  * Context used by {@link ElectionState}.
  */
 public interface ElectionContext
-    extends TimeoutsContext, LogService, ConfigurationContext
+    extends TimeoutsContext, LoggingContext, ConfigurationContext
 {
 
     void created();
@@ -48,28 +48,22 @@ public interface ElectionContext
 
     Iterable<String> getRoles( InstanceId server );
 
-    void unelect( String roleName );
-
     boolean isElectionProcessInProgress( String role );
-
-    void startDemotionProcess( String role, final InstanceId demoteNode );
 
     void startElectionProcess( String role );
 
-    void startPromotionProcess( String role, final InstanceId promoteNode );
-
-    public boolean voted( String role, InstanceId suggestedNode, Comparable<Object> suggestionCredentials,
+    boolean voted( String role, InstanceId suggestedNode, ElectionCredentials suggestionCredentials,
                        long electionVersion );
 
     InstanceId getElectionWinner( String role );
 
-    Comparable<Object> getCredentialsForRole( String role );
+    ElectionCredentials getCredentialsForRole( String role );
 
     int getVoteCount( String role );
 
     int getNeededVoteCount();
 
-    public void forgetElection( String role );
+    void forgetElection( String role );
 
     Iterable<String> getRolesRequiringElection();
 
@@ -87,13 +81,13 @@ public interface ElectionContext
 
     boolean hasCurrentlyElectedVoted( String role, InstanceId currentElected );
 
-    public Set<InstanceId> getFailed();
+    Set<InstanceId> getFailed();
 
-    public ClusterMessage.VersionedConfigurationStateChange newConfigurationStateChange();
+    ClusterMessage.VersionedConfigurationStateChange newConfigurationStateChange();
 
-    public VoteRequest voteRequestForRole( ElectionRole role );
+    VoteRequest voteRequestForRole( ElectionRole role );
 
-    public class VoteRequest implements Serializable
+    class VoteRequest implements Serializable
     {
         private static final long serialVersionUID = -715604979485263049L;
 

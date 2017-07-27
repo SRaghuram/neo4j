@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,7 +37,8 @@ import org.neo4j.kernel.impl.store.MetaDataStore.Position;
 import org.neo4j.management.BranchedStore;
 import org.neo4j.management.BranchedStoreInfo;
 
-import static org.neo4j.kernel.ha.BranchedDataPolicy.getBranchedDataRootDirectory;
+import static org.neo4j.com.storecopy.StoreUtil.getBranchedDataRootDirectory;
+
 
 @Service.Implementation(ManagementBeanProvider.class)
 public final class BranchedStoreBean extends ManagementBeanProvider

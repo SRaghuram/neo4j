@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,8 @@
  */
 package org.neo4j.index;
 
-import org.junit.Before;
-import org.junit.Rule;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -30,18 +30,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.DatabaseRule;
-import org.neo4j.test.ImpermanentDatabaseRule;
-
-import static org.junit.Assert.assertEquals;
+import org.neo4j.test.rule.DatabaseRule;
+import org.neo4j.test.rule.ImpermanentDatabaseRule;
 
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
-
-import static org.neo4j.graphdb.DynamicLabel.label;
-import static org.neo4j.helpers.collection.IteratorUtil.count;
+import static org.junit.Assert.assertEquals;
+import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.helpers.collection.Iterators.count;
 
 @RunWith(Parameterized.class)
 public class IndexTxStateLookupTest
@@ -184,12 +182,11 @@ public class IndexTxStateLookupTest
         return charArray( result );
     }
 
-    @Rule
-    public final DatabaseRule db = new ImpermanentDatabaseRule();
+    @ClassRule
+    public static final DatabaseRule db = new ImpermanentDatabaseRule();
 
     private final Object store;
     private final Object lookup;
-    private GraphDatabaseService graphDb;
 
     public IndexTxStateLookupTest( Object store, Object lookup )
     {
@@ -202,19 +199,18 @@ public class IndexTxStateLookupTest
         return object instanceof NamedObject ? ((NamedObject)object).object : object;
     }
 
-    @Before
-    public void given()
+    @BeforeClass
+    public static void given()
     {
-        graphDb = db.getGraphDatabaseService();
         // database with an index on `(:Node).prop`
-        try ( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            graphDb.schema().indexFor( label( "Node" ) ).on( "prop" ).create();
+            db.schema().indexFor( label( "Node" ) ).on( "prop" ).create();
             tx.success();
         }
-        try ( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            graphDb.schema().awaitIndexesOnline( 5, SECONDS );
+            db.schema().awaitIndexesOnline( 10, SECONDS );
             tx.success();
         }
     }
@@ -222,28 +218,30 @@ public class IndexTxStateLookupTest
     @Test
     public void lookupWithinTransaction() throws Exception
     {
-        try ( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // when
-            graphDb.createNode( label( "Node" ) ).setProperty( "prop", store );
+            db.createNode( label( "Node" ) ).setProperty( "prop", store );
 
             // then
-            assertEquals( 1, count( graphDb.findNodes( label( "Node" ), "prop", lookup ) ) );
-            tx.success();
+            assertEquals( 1, count( db.findNodes( label( "Node" ), "prop", lookup ) ) );
+
+            // no need to actually commit this node
         }
     }
 
     @Test
     public void lookupWithinTransactionWithCacheEviction() throws Exception
     {
-        try ( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // when
-            graphDb.createNode( label( "Node" ) ).setProperty( "prop", store );
+            db.createNode( label( "Node" ) ).setProperty( "prop", store );
 
             // then
-            assertEquals( 1, count( graphDb.findNodes( label( "Node" ), "prop", lookup ) ) );
-            tx.success();
+            assertEquals( 1, count( db.findNodes( label( "Node" ), "prop", lookup ) ) );
+
+            // no need to actually commit this node
         }
     }
 
@@ -251,15 +249,26 @@ public class IndexTxStateLookupTest
     public void lookupWithoutTransaction() throws Exception
     {
         // when
-        try ( Transaction tx = graphDb.beginTx() )
+        Node node;
+        try ( Transaction tx = db.beginTx() )
         {
-            graphDb.createNode( label( "Node" ) ).setProperty( "prop", store );
+            (node = db.createNode( label( "Node" ) )).setProperty( "prop", store );
             tx.success();
         }
         // then
-        try ( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            assertEquals( 1, count( graphDb.findNodes( label( "Node" ), "prop", lookup ) ) );
+            assertEquals( 1, count( db.findNodes( label( "Node" ), "prop", lookup ) ) );
+            tx.success();
+        }
+        deleteNode( node );
+    }
+
+    private void deleteNode( Node node )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            node.delete();
             tx.success();
         }
     }
@@ -268,16 +277,18 @@ public class IndexTxStateLookupTest
     public void lookupWithoutTransactionWithCacheEviction() throws Exception
     {
         // when
-        try ( Transaction tx = graphDb.beginTx() )
+        Node node;
+        try ( Transaction tx = db.beginTx() )
         {
-            graphDb.createNode( label( "Node" ) ).setProperty( "prop", store );
+            (node = db.createNode( label( "Node" ) )).setProperty( "prop", store );
             tx.success();
         }
         // then
-        try ( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            assertEquals( 1, count( graphDb.findNodes( label( "Node" ), "prop", lookup ) ) );
+            assertEquals( 1, count( db.findNodes( label( "Node" ), "prop", lookup ) ) );
             tx.success();
         }
+        deleteNode( node );
     }
 }

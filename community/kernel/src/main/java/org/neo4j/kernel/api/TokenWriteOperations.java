@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,28 @@
  */
 package org.neo4j.kernel.api;
 
-public interface TokenWriteOperations extends ReadOperations, TokenWrite
+import org.neo4j.kernel.api.exceptions.schema.IllegalTokenNameException;
+import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
+
+public interface TokenWriteOperations
 {
+    /**
+     * Returns a label id for a label name. If the label doesn't exist prior to
+     * this call it gets created.
+     */
+    int labelGetOrCreateForName( String labelName ) throws IllegalTokenNameException, TooManyLabelsException;
+
+    /**
+     * Returns a property key id for a property key. If the key doesn't exist prior to
+     * this call it gets created.
+     */
+    int propertyKeyGetOrCreateForName( String propertyKeyName ) throws IllegalTokenNameException;
+
+    int relationshipTypeGetOrCreateForName( String relationshipTypeName ) throws IllegalTokenNameException;
+
+    void labelCreateForName( String labelName, int id ) throws IllegalTokenNameException, TooManyLabelsException;
+
+    void propertyKeyCreateForName( String propertyKeyName, int id ) throws IllegalTokenNameException;
+
+    void relationshipTypeCreateForName( String relationshipTypeName, int id ) throws IllegalTokenNameException;
 }

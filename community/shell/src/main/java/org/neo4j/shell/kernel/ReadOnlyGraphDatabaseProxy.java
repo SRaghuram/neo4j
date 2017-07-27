@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,22 +31,20 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.ReturnableEvaluator;
-import org.neo4j.graphdb.StopEvaluator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.Traverser;
-import org.neo4j.graphdb.Traverser.Order;
 import org.neo4j.graphdb.event.KernelEventHandler;
 import org.neo4j.graphdb.event.TransactionEventHandler;
 import org.neo4j.graphdb.index.AutoIndexer;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.index.IndexManager;
+import org.neo4j.graphdb.index.IndexPopulationProgress;
 import org.neo4j.graphdb.index.RelationshipAutoIndexer;
 import org.neo4j.graphdb.index.RelationshipIndex;
 import org.neo4j.graphdb.schema.ConstraintCreator;
@@ -54,13 +52,16 @@ import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
+import org.neo4j.graphdb.security.URLAccessValidationError;
 import org.neo4j.graphdb.traversal.BidirectionalTraversalDescription;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.helpers.collection.IterableWrapper;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.helpers.collection.PrefetchingResourceIterator;
+import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.store.StoreId;
-import org.neo4j.kernel.impl.traversal.OldTraverserWrapper;
-import org.neo4j.kernel.security.URLAccessValidationError;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDatabaseAPI, IndexManager
 {
@@ -92,19 +93,51 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
     }
 
     @Override
+    public InternalTransaction beginTransaction( KernelTransaction.Type type, SecurityContext securityContext )
+    {
+        return actual.beginTransaction( type, securityContext );
+    }
+
+    @Override
+    public InternalTransaction beginTransaction( KernelTransaction.Type type, SecurityContext securityContext, long timeout,
+            TimeUnit unit )
+    {
+        return actual.beginTransaction( type, securityContext, timeout, unit );
+    }
+
+    @Override
     public Transaction beginTx()
     {
         return actual.beginTx();
     }
 
     @Override
+    public Transaction beginTx( long timeout, TimeUnit unit )
+    {
+        return actual.beginTx( timeout, unit );
+    }
+
+    @Override
     public Result execute( String query )
     {
-        return execute( query, Collections.<String, Object>emptyMap() );
+        return execute( query, Collections.emptyMap() );
+    }
+
+    @Override
+    public Result execute( String query, long timeout, TimeUnit unit ) throws QueryExecutionException
+    {
+        return execute( query, Collections.emptyMap(), timeout, unit );
     }
 
     @Override
     public Result execute( String query, Map<String, Object> parameters )
+    {
+        return readOnly();
+    }
+
+    @Override
+    public Result execute( String query, Map<String,Object> parameters, long timeout, TimeUnit unit ) throws
+            QueryExecutionException
     {
         return readOnly();
     }
@@ -132,7 +165,7 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
     }
 
     @Override
-    public Iterable<Node> getAllNodes()
+    public ResourceIterable<Node> getAllNodes()
     {
         return nodes( actual.getAllNodes() );
     }
@@ -150,9 +183,60 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
     }
 
     @Override
-    public Iterable<RelationshipType> getRelationshipTypes()
+    public ResourceIterable<Relationship> getAllRelationships()
     {
-        return actual.getRelationshipTypes();
+        return new ResourceIterable<Relationship>()
+        {
+            @Override
+            public ResourceIterator<Relationship> iterator()
+            {
+                final ResourceIterator<Relationship> iterator = actual.getAllRelationships().iterator();
+                return new PrefetchingResourceIterator<Relationship>()
+                {
+                    @Override
+                    protected Relationship fetchNextOrNull()
+                    {
+                        return new ReadOnlyRelationshipProxy( iterator.next() );
+                    }
+
+                    @Override
+                    public void close()
+                    {
+                        iterator.close();
+                    }
+                };
+            }
+        };
+    }
+
+    @Override
+    public ResourceIterable<Label> getAllLabelsInUse()
+    {
+        return actual.getAllLabelsInUse();
+    }
+
+    @Override
+    public ResourceIterable<RelationshipType> getAllRelationshipTypesInUse()
+    {
+        return actual.getAllRelationshipTypesInUse();
+    }
+
+    @Override
+    public ResourceIterable<Label> getAllLabels()
+    {
+        return actual.getAllLabels();
+    }
+
+    @Override
+    public ResourceIterable<RelationshipType> getAllRelationshipTypes()
+    {
+        return actual.getAllRelationshipTypes();
+    }
+
+    @Override
+    public ResourceIterable<String> getAllPropertyKeys()
+    {
+        return actual.getAllPropertyKeys();
     }
 
     @Override
@@ -309,34 +393,6 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
         public boolean hasRelationship( RelationshipType type, Direction dir )
         {
             return actual.hasRelationship( type, dir );
-        }
-
-        @Override
-        public Traverser traverse( Order traversalOrder, StopEvaluator stopEvaluator,
-                                   ReturnableEvaluator returnableEvaluator, RelationshipType relationshipType,
-                                   Direction direction )
-        {
-            return OldTraverserWrapper.traverse( this, traversalOrder, stopEvaluator,
-                    returnableEvaluator, relationshipType, direction );
-        }
-
-        @Override
-        public Traverser traverse( Order traversalOrder, StopEvaluator stopEvaluator,
-                                   ReturnableEvaluator returnableEvaluator, RelationshipType firstRelationshipType,
-                                   Direction firstDirection, RelationshipType secondRelationshipType,
-                                   Direction secondDirection )
-        {
-            return OldTraverserWrapper.traverse( this, traversalOrder, stopEvaluator,
-                    returnableEvaluator, firstRelationshipType, firstDirection,
-                    secondRelationshipType, secondDirection );
-        }
-
-        @Override
-        public Traverser traverse( Order traversalOrder, StopEvaluator stopEvaluator,
-                                   ReturnableEvaluator returnableEvaluator, Object... relationshipTypesAndDirections )
-        {
-            return OldTraverserWrapper.traverse( this, traversalOrder, stopEvaluator,
-                    returnableEvaluator, relationshipTypesAndDirections );
         }
 
         @Override
@@ -579,16 +635,9 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
         }
     }
 
-    public Iterable<Node> nodes( Iterable<Node> nodes )
+    public ResourceIterable<Node> nodes( ResourceIterable<Node> nodes )
     {
-        return new IterableWrapper<Node, Node>( nodes )
-        {
-            @Override
-            protected Node underlyingObjectToObject( Node node )
-            {
-                return new ReadOnlyNodeProxy( node );
-            }
-        };
+        return () -> nodes.iterator().map( ReadOnlyNodeProxy::new );
     }
 
     public Iterable<Relationship> relationships( Iterable<Relationship> relationships )
@@ -825,7 +874,7 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
         public IndexHits<Relationship> get( String key, Object valueOrNull, Node startNodeOrNull,
                                             Node endNodeOrNull )
         {
-            return new ReadOnlyIndexHitsProxy<Relationship>( this, actual.get( key, valueOrNull,
+            return new ReadOnlyIndexHitsProxy<>( this, actual.get( key, valueOrNull,
                     startNodeOrNull, endNodeOrNull ) );
         }
 
@@ -833,7 +882,7 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
         public IndexHits<Relationship> query( String key, Object queryOrQueryObjectOrNull,
                                               Node startNodeOrNull, Node endNodeOrNull )
         {
-            return new ReadOnlyIndexHitsProxy<Relationship>( this, actual.query( key,
+            return new ReadOnlyIndexHitsProxy<>( this, actual.query( key,
                     queryOrQueryObjectOrNull, startNodeOrNull, endNodeOrNull ) );
         }
 
@@ -841,7 +890,7 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
         public IndexHits<Relationship> query( Object queryOrQueryObjectOrNull,
                                               Node startNodeOrNull, Node endNodeOrNull )
         {
-            return new ReadOnlyIndexHitsProxy<Relationship>( this, actual.query(
+            return new ReadOnlyIndexHitsProxy<>( this, actual.query(
                     queryOrQueryObjectOrNull, startNodeOrNull, endNodeOrNull ) );
         }
 
@@ -858,8 +907,7 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
         }
     }
 
-    private static class ReadOnlyIndexHitsProxy<T extends PropertyContainer> implements
-            IndexHits<T>
+    private static class ReadOnlyIndexHitsProxy<T extends PropertyContainer> implements IndexHits<T>
     {
         private final ReadOnlyIndexProxy<T, ?> index;
         private final IndexHits<T> actual;
@@ -923,7 +971,7 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
     {
         private final Schema actual;
 
-        public ReadOnlySchemaProxy( Schema actual )
+        ReadOnlySchemaProxy( Schema actual )
         {
 
             this.actual = actual;
@@ -951,6 +999,12 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
         public IndexState getIndexState( IndexDefinition index )
         {
             return actual.getIndexState( index );
+        }
+
+        @Override
+        public IndexPopulationProgress getIndexPopulationProgress( IndexDefinition index )
+        {
+            return actual.getIndexPopulationProgress( index );
         }
 
         @Override
@@ -1036,11 +1090,5 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, GraphDa
     public ResourceIterator<Node> findNodes( Label label )
     {
         return actual.findNodes( label );
-    }
-
-    @Override
-    public ResourceIterable<Node> findNodesByLabelAndProperty( Label label, String key, Object value )
-    {
-        return actual.findNodesByLabelAndProperty( label, key, value );
     }
 }

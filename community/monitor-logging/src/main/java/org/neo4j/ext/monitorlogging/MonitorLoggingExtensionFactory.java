@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,17 +19,19 @@
  */
 package org.neo4j.ext.monitorlogging;
 
-import org.neo4j.helpers.Service;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.impl.logging.LogService;
-import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.kernel.monitoring.Monitors;
-
 import java.io.InputStream;
 import java.util.Properties;
 
+import org.neo4j.helpers.Service;
+import org.neo4j.kernel.extension.KernelExtensionFactory;
+import org.neo4j.kernel.impl.logging.LogService;
+import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.monitoring.Monitors;
+
 @Service.Implementation(KernelExtensionFactory.class)
-public class MonitorLoggingExtensionFactory  extends KernelExtensionFactory<MonitorLoggingExtensionFactory.Dependencies> {
+public class MonitorLoggingExtensionFactory  extends KernelExtensionFactory<MonitorLoggingExtensionFactory.Dependencies>
+{
 
     static final String KEY = "kernel monitor logging";
     private static final String filename = "/org/neo4j/ext/monitorlogging/monitorlogging.properties";
@@ -47,7 +49,7 @@ public class MonitorLoggingExtensionFactory  extends KernelExtensionFactory<Moni
     }
 
     @Override
-    public Lifecycle newKernelExtension( Dependencies dependencies ) throws Throwable
+    public Lifecycle newInstance( KernelContext context, Dependencies dependencies ) throws Throwable
     {
         LogService logService = dependencies.getLogService();
         Properties props = loadProperties( logService );

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -39,7 +39,7 @@ public class InputRelationshipDeserialization extends InputEntityDeserialization
     private Object startNode;
     private Object endNode;
 
-    public InputRelationshipDeserialization( SourceTraceability source, Header header, Groups groups )
+    public InputRelationshipDeserialization( Header header, SourceTraceability source, Groups groups )
     {
         super( source );
         this.header = header;

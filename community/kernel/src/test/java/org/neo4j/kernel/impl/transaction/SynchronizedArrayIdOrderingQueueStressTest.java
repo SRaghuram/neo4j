@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,23 +19,21 @@
  */
 package org.neo4j.kernel.impl.transaction;
 
-import static java.lang.System.currentTimeMillis;
-import static java.util.concurrent.TimeUnit.SECONDS;
-
-import static org.junit.Assert.assertTrue;
-
-import static org.neo4j.test.DoubleLatch.awaitLatch;
+import org.junit.Test;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.junit.Test;
-
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.kernel.impl.util.IdOrderingQueue;
 import org.neo4j.kernel.impl.util.SynchronizedArrayIdOrderingQueue;
+
+import static java.lang.System.currentTimeMillis;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertTrue;
+import static org.neo4j.test.DoubleLatch.awaitLatch;
 
 public class SynchronizedArrayIdOrderingQueueStressTest
 {
@@ -76,7 +74,7 @@ public class SynchronizedArrayIdOrderingQueueStressTest
         private final AtomicInteger removedCount = new AtomicInteger();
         private volatile long previousId = -1;
 
-        public VerifyingIdOrderingQueue( IdOrderingQueue delegate )
+        VerifyingIdOrderingQueue( IdOrderingQueue delegate )
         {
             this.delegate = delegate;
         }
@@ -156,8 +154,8 @@ public class SynchronizedArrayIdOrderingQueueStressTest
         private final CountDownLatch readySignal;
         private volatile Exception exception;
 
-        public Committer( IdOrderingQueue queue, PrimitiveLongIterator idSource,
-                AtomicLong endTime, CountDownLatch readySignal, CountDownLatch startSignal )
+        Committer( IdOrderingQueue queue, PrimitiveLongIterator idSource, AtomicLong endTime,
+                CountDownLatch readySignal, CountDownLatch startSignal )
         {
             this.queue = queue;
             this.idSource = idSource;
@@ -220,7 +218,7 @@ public class SynchronizedArrayIdOrderingQueueStressTest
 
         public int next()
         {
-            return (stride++%max) + 1;
+            return (stride++ % max) + 1;
         }
     }
 }

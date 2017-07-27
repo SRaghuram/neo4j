@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,7 @@ import java.io.PrintWriter;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 
 import static java.lang.String.format;
 
@@ -57,7 +57,7 @@ public class DbStructureTool
                 generatedClassWithPackage
         );
 
-        GraphDatabaseService graph = new GraphDatabaseFactory().newEmbeddedDatabase( dbDir );
+        GraphDatabaseService graph = new GraphDatabaseFactory().newEmbeddedDatabase( new File( dbDir ) );
         try
         {
             if ( writeToFile )

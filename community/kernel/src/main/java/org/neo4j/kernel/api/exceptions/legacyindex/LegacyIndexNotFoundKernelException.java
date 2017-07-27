@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,6 +26,6 @@ public class LegacyIndexNotFoundKernelException extends KernelException
 {
     public LegacyIndexNotFoundKernelException( String message, Object... parameters )
     {
-        super( Status.LegacyIndex.NoSuchIndex, message, parameters );
+        super( Status.LegacyIndex.LegacyIndexNotFound, message, parameters );
     }
 }

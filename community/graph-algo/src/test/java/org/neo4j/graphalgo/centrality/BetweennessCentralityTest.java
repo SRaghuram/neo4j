@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,14 @@
  */
 package org.neo4j.graphalgo.centrality;
 
-import static org.junit.Assert.assertTrue;
+import common.Neo4jAlgoTestCase;
+import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.junit.Test;
 import org.neo4j.graphalgo.CostEvaluator;
 import org.neo4j.graphalgo.impl.centrality.BetweennessCentrality;
 import org.neo4j.graphalgo.impl.shortestpath.SingleSourceShortestPath;
@@ -37,7 +37,7 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 
-import common.Neo4jAlgoTestCase;
+import static org.junit.Assert.assertTrue;
 
 public class BetweennessCentralityTest extends Neo4jAlgoTestCase
 {
@@ -106,7 +106,6 @@ public class BetweennessCentralityTest extends Neo4jAlgoTestCase
         assertCentrality( betweennessCentrality, "d", 3.0 );
         assertCentrality( betweennessCentrality, "e", 0.0 );
     }
-    
 
     @Test
     public void testXlike()
@@ -140,9 +139,7 @@ public class BetweennessCentralityTest extends Neo4jAlgoTestCase
 
     class DependencyTest extends BetweennessCentrality<Double>
     {
-        public DependencyTest(
-            SingleSourceShortestPath<Double> singleSourceShortestPath,
-            Set<Node> nodeSet )
+        DependencyTest( SingleSourceShortestPath<Double> singleSourceShortestPath, Set<Node> nodeSet )
         {
             super( singleSourceShortestPath, nodeSet );
         }

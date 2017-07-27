@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,12 @@ package org.neo4j.udc;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.neo4j.kernel.impl.util.JobScheduler;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+
+import static java.util.concurrent.TimeUnit.DAYS;
+import static org.neo4j.kernel.impl.util.JobScheduler.Groups.udc;
+
 /**
  * An in-memory storage location for usage metadata.
  * Any component is allowed to publish it's usage date here, and it can be any object,
@@ -29,9 +35,16 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * This service is meant as a diagnostic and informational tool, notably used by UDC.
  */
-public class UsageData
+public class UsageData extends LifecycleAdapter
 {
     private final ConcurrentHashMap<UsageDataKey, Object> store = new ConcurrentHashMap<>();
+    private final JobScheduler scheduler;
+    private JobScheduler.JobHandle featureDecayJob;
+
+    public UsageData( JobScheduler scheduler )
+    {
+        this.scheduler = scheduler;
+    }
 
     public <T> void set( UsageDataKey<T> key, T value )
     {
@@ -41,13 +54,13 @@ public class UsageData
     public <T> T get( UsageDataKey<T> key )
     {
         Object o = store.get( key );
-        if( o == null )
+        if ( o == null )
         {
             // When items are missing, if there is a default value, we do a get-or-create style operation
             // This allows outside actors to get-or-create rich objects and know they will get the same object out
             // that other threads would use, which is helpful when we store mutable objects
             T value = key.generateDefaultValue();
-            if(value == null)
+            if ( value == null )
             {
                 return null;
             }
@@ -58,4 +71,18 @@ public class UsageData
         return (T) o;
     }
 
+    @Override
+    public void stop() throws Throwable
+    {
+        if ( featureDecayJob != null )
+        {
+            featureDecayJob.cancel( false );
+        }
+    }
+
+    @Override
+    public void start() throws Throwable
+    {
+        featureDecayJob = scheduler.schedule( udc, get( UsageDataKeys.features )::sweep, 1, DAYS );
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,9 @@
  */
 package org.neo4j.unsafe.impl.batchimport.input;
 
-import java.io.OutputStream;
-
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.InputIterable;
+import org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdGenerator;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
 
@@ -52,8 +51,9 @@ public interface Input
      * @return {@link IdMapper} which will get populated by {@link InputNode#id() input node ids}
      * and later queried by {@link InputRelationship#startNode()} and {@link InputRelationship#endNode()} ids
      * to resolve potentially temporary input node ids to actual node ids in the database.
+     * @param numberArrayFactory The factory for creating data-structures to use for caching internally in the IdMapper.
      */
-    IdMapper idMapper();
+    IdMapper idMapper( NumberArrayFactory numberArrayFactory );
 
     /**
      * @return {@link IdGenerator} which is responsible for generating actual node ids from input node ids.
@@ -61,15 +61,8 @@ public interface Input
     IdGenerator idGenerator();
 
     /**
-     * @return whether or not {@link InputRelationship input relationships} returned by {@link #relationships()}
-     * specify specific actual relationship ids to be used in the database. Either all
-     * {@link InputRelationship input relationships} must specify specific ids or none.
-     */
-    boolean specificRelationshipIds();
-
-    /**
      * @return a {@link Collector} capable of writing {@link InputRelationship bad relationships}
      * and {@link InputNode duplicate nodes} to an output stream for later handling.
      */
-    Collector badCollector( OutputStream out );
+    Collector badCollector();
 }

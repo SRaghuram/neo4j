@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -167,6 +167,26 @@ public class Primitive
             public long next()
             {
                 return longs[i++];
+            }
+        };
+    }
+
+    public static PrimitiveIntIterator iterator( final int... ints )
+    {
+        return new PrimitiveIntIterator()
+        {
+            int i;
+
+            @Override
+            public boolean hasNext()
+            {
+                return i < ints.length;
+            }
+
+            @Override
+            public int next()
+            {
+                return ints[i++];
             }
         };
     }

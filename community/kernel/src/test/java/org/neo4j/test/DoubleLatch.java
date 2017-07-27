@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,10 +24,10 @@ import java.util.concurrent.TimeUnit;
 
 public class DoubleLatch
 {
-    private static final int FIVE_MINUTES = 5 * 60 * 1000;
+    private static final long FIVE_MINUTES = TimeUnit.MINUTES.toMillis( 5 );
     private final CountDownLatch startSignal;
     private final CountDownLatch finishSignal;
-    private final int numberOfContestants;
+    private final boolean awaitUninterruptibly;
 
     public DoubleLatch()
     {
@@ -36,31 +36,42 @@ public class DoubleLatch
 
     public DoubleLatch( int numberOfContestants )
     {
-        this.numberOfContestants = numberOfContestants;
+        this( numberOfContestants, false );
+    }
+
+    public DoubleLatch( int numberOfContestants, boolean awaitUninterruptibly )
+    {
         this.startSignal = new CountDownLatch( numberOfContestants );
         this.finishSignal = new CountDownLatch( numberOfContestants );
+        this.awaitUninterruptibly = awaitUninterruptibly;
     }
 
-    public int getNumberOfContestants()
+    public void startAndWaitForAllToStartAndFinish()
     {
-        return numberOfContestants;
+        startAndWaitForAllToStart();
+        waitForAllToFinish();
     }
 
-    public void startAndAwaitFinish()
+    public void startAndWaitForAllToStart()
     {
         start();
-        awaitLatch( finishSignal );
-    }
-
-    public void awaitStart()
-    {
-        awaitLatch( startSignal );
+        waitForAllToStart();
     }
 
     public void start()
     {
         startSignal.countDown();
-        awaitLatch( startSignal );
+    }
+
+    public void waitForAllToStart()
+    {
+        awaitLatch( startSignal, awaitUninterruptibly );
+    }
+
+    public void finishAndWaitForAllToFinish()
+    {
+        finish();
+        waitForAllToFinish();
     }
 
     public void finish()
@@ -68,31 +79,47 @@ public class DoubleLatch
         finishSignal.countDown();
     }
 
-    public void awaitFinish()
+    public void waitForAllToFinish()
     {
-        awaitLatch( finishSignal );
+        awaitLatch( finishSignal, awaitUninterruptibly );
     }
 
     public static void awaitLatch( CountDownLatch latch )
     {
-        long deadline = System.currentTimeMillis() + FIVE_MINUTES;
-        long remaining;
+        awaitLatch( latch, false );
+    }
 
-        while( ( remaining = deadline - System.currentTimeMillis() ) >= 0 )
+    public static void awaitLatch( CountDownLatch latch, boolean uninterruptedWaiting )
+    {
+        long now = System.currentTimeMillis();
+        long deadline = System.currentTimeMillis() + FIVE_MINUTES;
+
+        while ( now < deadline )
         {
             try
             {
-                latch.await( remaining, TimeUnit.MILLISECONDS  );
-                return;
+
+                long waitingTime = Math.min( Math.max(0, deadline - now), 5000L );
+                if ( latch.await( waitingTime, TimeUnit.MILLISECONDS ) )
+                {
+                    return;
+                }
+                else
+                {
+                    Thread.yield();
+                }
             }
             catch ( InterruptedException e )
             {
                 Thread.interrupted();
-                new RuntimeException( "Thread interrupted while waiting on latch", e).printStackTrace();
+                if ( ! uninterruptedWaiting )
+                {
+                    throw new RuntimeException( "Thread interrupted while waiting on latch", e );
+                }
             }
-            Thread.yield();
+            now = System.currentTimeMillis();
         }
-        throw new RuntimeException( "Failed to acquire latch" );
+        throw new AssertionError( "Latch specified waiting time elapsed." );
     }
 
     @Override

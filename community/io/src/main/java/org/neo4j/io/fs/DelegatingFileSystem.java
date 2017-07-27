@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -135,14 +135,7 @@ public abstract class DelegatingFileSystem extends FileSystem
     public PathMatcher getPathMatcher( String syntaxAndPattern )
     {
         final PathMatcher matcher = delegate.getPathMatcher( syntaxAndPattern );
-        return new PathMatcher()
-        {
-            @Override
-            public boolean matches( Path path )
-            {
-                return matcher.matches( DelegatingPath.getDelegate( path ) );
-            }
-        };
+        return path -> matcher.matches( DelegatingPath.getDelegate( path ) );
     }
 
     @Override

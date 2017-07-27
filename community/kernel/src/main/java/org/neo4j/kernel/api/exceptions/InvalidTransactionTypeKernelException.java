@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,6 @@ public class InvalidTransactionTypeKernelException extends KernelException
 {
     public InvalidTransactionTypeKernelException(String message)
     {
-        super( Status.Transaction.InvalidType, (Throwable) null, message );
+        super( Status.Transaction.ForbiddenDueToTransactionType, (Throwable) null, message );
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,56 +27,41 @@ import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.com.message.MessageType;
 import org.neo4j.cluster.protocol.ConfigurationContext;
+import org.neo4j.cluster.protocol.LoggingContext;
 import org.neo4j.cluster.protocol.TimeoutsContext;
 import org.neo4j.cluster.protocol.cluster.ClusterConfiguration;
 import org.neo4j.cluster.timeout.Timeouts;
-import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static org.neo4j.helpers.collection.Iterables.limit;
-import static org.neo4j.helpers.collection.Iterables.toList;
+import static org.neo4j.helpers.collection.Iterables.asList;
 
+/**
+ * This serves as a base class for contexts of distributed state machines, and holds
+ * various generally useful information, and provides access to logging.
+ */
 class AbstractContextImpl
-        implements TimeoutsContext, LogService, ConfigurationContext
+        implements TimeoutsContext, LoggingContext, ConfigurationContext
 {
     protected final org.neo4j.cluster.InstanceId me;
     protected final CommonContextState commonState;
-    protected final LogService logService;
+    protected final LogProvider logProvider;
     protected final Timeouts timeouts;
 
-    AbstractContextImpl( org.neo4j.cluster.InstanceId me, CommonContextState commonState,
-                         LogService logService,
-                         Timeouts timeouts )
+    AbstractContextImpl( InstanceId me, CommonContextState commonState,
+            LogProvider logProvider, Timeouts timeouts )
     {
         this.me = me;
         this.commonState = commonState;
-        this.logService = logService;
+        this.logProvider = logProvider;
         this.timeouts = timeouts;
     }
 
+    // LoggingContext
     @Override
-    public LogProvider getUserLogProvider()
+    public Log getLog( Class loggingClass )
     {
-        return logService.getUserLogProvider();
-    }
-
-    @Override
-    public Log getUserLog( Class loggingClass )
-    {
-        return logService.getUserLog( loggingClass );
-    }
-
-    @Override
-    public LogProvider getInternalLogProvider()
-    {
-        return logService.getInternalLogProvider();
-    }
-
-    @Override
-    public Log getInternalLog( Class loggingClass )
-    {
-        return logService.getInternalLog( loggingClass );
+        return logProvider.getLog( loggingClass );
     }
 
     // TimeoutsContext
@@ -87,16 +72,22 @@ class AbstractContextImpl
     }
 
     @Override
-    public void cancelTimeout( Object key )
+    public long getTimeoutFor( Message<? extends MessageType> timeoutMessage )
     {
-        timeouts.cancelTimeout( key );
+        return timeouts.getTimeoutFor( timeoutMessage );
+    }
+
+    @Override
+    public Message<? extends MessageType> cancelTimeout( Object key )
+    {
+        return timeouts.cancelTimeout( key );
     }
 
     // ConfigurationContext
     @Override
     public List<URI> getMemberURIs()
     {
-        return toList( commonState.configuration().getMemberURIs() );
+        return asList( commonState.configuration().getMemberURIs() );
     }
 
     @Override
@@ -109,14 +100,6 @@ class AbstractContextImpl
     public URI boundAt()
     {
         return commonState.boundAt();
-    }
-
-    @Override
-    public List<URI> getAcceptors()
-    {
-        // Only use 2f+1 acceptors
-        return toList( limit( commonState.configuration()
-                .getAllowedFailures() * 2 + 1, commonState.configuration().getMemberURIs() ) );
     }
 
     @Override

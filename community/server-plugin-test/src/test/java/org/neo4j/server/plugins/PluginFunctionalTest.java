@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,10 @@
  */
 package org.neo4j.server.plugins;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,10 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.ws.rs.core.MediaType;
-
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.server.helpers.FunctionalTestHelper;
@@ -412,7 +412,8 @@ public class PluginFunctionalTest extends SharedServerTestBase
     }
 
     @Test
-    public void shouldHandleNullPath() throws Exception {
+    public void shouldHandleNullPath() throws Exception
+    {
         long n = functionalTestHelper.getGraphDbHelper()
                 .createNode();
 

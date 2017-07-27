@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,32 +19,20 @@
  */
 package org.neo4j.metrics;
 
-import org.neo4j.io.pagecache.monitoring.PageCacheMonitor;
-import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.logging.LogService;
-import org.neo4j.kernel.impl.transaction.TransactionCounters;
+import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.metrics.source.Neo4jMetricsBuilder;
 
-public class MetricsKernelExtensionFactory
-        extends KernelExtensionFactory<MetricsKernelExtensionFactory.Dependencies>
+public class MetricsKernelExtensionFactory extends KernelExtensionFactory<MetricsKernelExtensionFactory.Dependencies>
 {
-    public interface Dependencies
+    public interface Dependencies extends Neo4jMetricsBuilder.Dependencies
     {
         Config configuration();
 
         LogService logService();
-
-        // Things to get metrics from
-        TransactionCounters transactionCounters();
-
-        PageCacheMonitor pageCacheCounters();
-
-        IdGeneratorFactory idGeneratorFactory();
-
-        Monitors monitors();
     }
 
     public MetricsKernelExtensionFactory()
@@ -53,13 +41,13 @@ public class MetricsKernelExtensionFactory
     }
 
     @Override
-    public Lifecycle newKernelExtension( Dependencies dependencies ) throws Throwable
+    public Lifecycle newInstance( KernelContext context, Dependencies dependencies ) throws Throwable
     {
-        return new MetricsExtension( dependencies );
+        return new MetricsExtension( context, dependencies );
     }
 
     @Override
-    public Class getSettingsClass()
+    public Class<MetricsSettings> getSettingsClass()
     {
         return MetricsSettings.class;
     }

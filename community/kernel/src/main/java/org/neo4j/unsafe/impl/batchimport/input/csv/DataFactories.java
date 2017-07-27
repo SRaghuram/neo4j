@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.neo4j.csv.reader.CharReadable;
 import org.neo4j.csv.reader.CharSeeker;
@@ -33,8 +34,6 @@ import org.neo4j.csv.reader.Extractor;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.csv.reader.Mark;
 import org.neo4j.function.Factory;
-import org.neo4j.function.Function;
-import org.neo4j.function.Supplier;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.unsafe.impl.batchimport.input.DuplicateHeaderException;
 import org.neo4j.unsafe.impl.batchimport.input.HeaderException;
@@ -45,7 +44,6 @@ import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 import org.neo4j.unsafe.impl.batchimport.input.MissingHeaderException;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header.Entry;
 
-import static org.neo4j.csv.reader.CharSeekers.charSeeker;
 import static org.neo4j.csv.reader.Readables.files;
 
 /**
@@ -59,7 +57,7 @@ public class DataFactories
      *
      * @return {@link DataFactory} that returns a {@link CharSeeker} over all the supplied {@code files}.
      */
-    public static <ENTITY extends InputEntity> DataFactory<ENTITY> data( final Function<ENTITY,ENTITY> decorator,
+    public static <ENTITY extends InputEntity> DataFactory<ENTITY> data( final Decorator<ENTITY> decorator,
             final Charset charset, final File... files )
     {
         if ( files.length == 0 )
@@ -67,32 +65,25 @@ public class DataFactories
             throw new IllegalArgumentException( "No files specified" );
         }
 
-        return new DataFactory<ENTITY>()
+        return config -> new Data<ENTITY>()
         {
             @Override
-            public Data<ENTITY> create( final Configuration config )
+            public CharReadable stream()
             {
-                return new Data<ENTITY>()
+                try
                 {
-                    @Override
-                    public CharSeeker stream()
-                    {
-                        try
-                        {
-                            return charSeeker( files( charset, files ), config, true );
-                        }
-                        catch ( IOException e )
-                        {
-                            throw new InputException( e.getMessage(), e );
-                        }
-                    }
+                    return files( charset, files );
+                }
+                catch ( IOException e )
+                {
+                    throw new InputException( e.getMessage(), e );
+                }
+            }
 
-                    @Override
-                    public Function<ENTITY,ENTITY> decorator()
-                    {
-                        return decorator;
-                    }
-                };
+            @Override
+            public Decorator<ENTITY> decorator()
+            {
+                return decorator;
             }
         };
     }
@@ -102,28 +93,21 @@ public class DataFactories
      * multiple times.
      * @return {@link DataFactory} that returns a {@link CharSeeker} over the supplied {@code readable}
      */
-    public static <ENTITY extends InputEntity> DataFactory<ENTITY> data( final Function<ENTITY,ENTITY> decorator,
+    public static <ENTITY extends InputEntity> DataFactory<ENTITY> data( final Decorator<ENTITY> decorator,
             final Supplier<CharReadable> readable )
     {
-        return new DataFactory<ENTITY>()
+        return config -> new Data<ENTITY>()
         {
             @Override
-            public Data<ENTITY> create( final Configuration config )
+            public CharReadable stream()
             {
-                return new Data<ENTITY>()
-                {
-                    @Override
-                    public CharSeeker stream()
-                    {
-                        return charSeeker( readable.get(), config, true );
-                    }
+                return readable.get();
+            }
 
-                    @Override
-                    public Function<ENTITY,ENTITY> decorator()
-                    {
-                        return decorator;
-                    }
-                };
+            @Override
+            public Decorator<ENTITY> decorator()
+            {
+                return decorator;
             }
         };
     }
@@ -133,21 +117,11 @@ public class DataFactories
      * from the top of the data file.
      *
      * This header factory can be used even when the header exists in a separate file, if that file
-     * is the first in the list of files supplied to {@link #data(File...)}.
+     * is the first in the list of files supplied to {@link #data}.
      */
     public static Header.Factory defaultFormatNodeFileHeader()
     {
-        return new DefaultNodeFileHeaderParser( READ_FROM_DATA_SEEKER );
-    }
-
-    /**
-     * Header parser that will read header information, using the default node header format,
-     * from a {@link Readable} containing that data.
-     * @param reader {@link Readable} containing header data.
-     */
-    public static Header.Factory defaultFormatNodeFileHeader( CharReadable reader )
-    {
-        return new DefaultNodeFileHeaderParser( new HeaderFromSeparateReaderFactory( reader ) );
+        return new DefaultNodeFileHeaderParser();
     }
 
     /**
@@ -155,119 +129,35 @@ public class DataFactories
      * from the top of the data file.
      *
      * This header factory can be used even when the header exists in a separate file, if that file
-     * is the first in the list of files supplied to {@link #data(File...)}.
+     * is the first in the list of files supplied to {@link #data}.
      */
     public static Header.Factory defaultFormatRelationshipFileHeader()
     {
-        return new DefaultRelationshipFileHeaderParser( READ_FROM_DATA_SEEKER );
+        return new DefaultRelationshipFileHeaderParser();
     }
 
-    /**
-     * Header parser that will read header information, using the default relationship header format,
-     * from a {@link Readable} containing that data.
-     * @param reader {@link Readable} containing header data.
-     */
-    public static Header.Factory defaultFormatRelationshipFileHeader( CharReadable reader )
-    {
-        return new DefaultRelationshipFileHeaderParser( new HeaderFromSeparateReaderFactory( reader ) );
-    }
-
-    /**
-     * Provides {@link CharSeeker} to read and parse header information from.
-     */
-    private interface HeaderCharSeekerFactory
-    {
-        /**
-         * @param seeker the {@link CharSeeker} for the data file, if that's what we want.
-         * @param config
-         * @return the {@link CharSeeker} to extract header information from.
-         * @throws IOException if {@link CharSeeker} couldn't be provided.
-         */
-        CharSeeker open( CharSeeker seeker, Configuration config ) throws IOException;
-
-        /**
-         * Closes the header {@link CharSeeker}. Only close if {@link #open(CharSeeker, Configuration)} opens its own.
-         * @param seeker {@link CharSeeker} returned from {@link #open(CharSeeker, Configuration)}.
-         */
-        void close( CharSeeker seeker );
-    }
-
-    /**
-     * Just uses the provided {@link CharSeeker} containing the data itself.
-     */
-    private static final HeaderCharSeekerFactory READ_FROM_DATA_SEEKER = new HeaderCharSeekerFactory()
-    {
-        @Override
-        public CharSeeker open( CharSeeker seeker, Configuration config )
-        {
-            return seeker;
-        }
-
-        @Override
-        public void close( CharSeeker seeker )
-        {   // Leave it open for data reading later
-        }
-    };
-
-    private static abstract class SeparateHeaderReaderFactory implements HeaderCharSeekerFactory
-    {
-        @Override
-        public void close( CharSeeker seeker )
-        {
-            try
-            {
-                seeker.close();
-            }
-            catch ( IOException e )
-            {
-                throw new RuntimeException( "Unable to close header reader", e );
-            }
-        }
-    }
-
-    private static class HeaderFromSeparateReaderFactory extends SeparateHeaderReaderFactory
-    {
-        private final CharReadable readable;
-
-        HeaderFromSeparateReaderFactory( CharReadable readable )
-        {
-            this.readable = readable;
-        }
-
-        @Override
-        public CharSeeker open( CharSeeker seeker, Configuration config ) throws IOException
-        {
-            return charSeeker( readable, config, true );
-        }
-    }
-
-    private static abstract class AbstractDefaultFileHeaderParser implements Header.Factory
+    private abstract static class AbstractDefaultFileHeaderParser implements Header.Factory
     {
         private final Type[] mandatoryTypes;
-        private final HeaderCharSeekerFactory headerCharSeekerFactory;
 
-        protected AbstractDefaultFileHeaderParser( HeaderCharSeekerFactory headerCharSeekerFactory,
-                Type... mandatoryTypes )
+        protected AbstractDefaultFileHeaderParser( Type... mandatoryTypes )
         {
-            this.headerCharSeekerFactory = headerCharSeekerFactory;
             this.mandatoryTypes = mandatoryTypes;
         }
 
         @Override
         public Header create( CharSeeker dataSeeker, Configuration config, IdType idType )
         {
-            CharSeeker headerSeeker = null;
             try
             {
-                headerSeeker = headerCharSeekerFactory.open( dataSeeker, config );
                 Mark mark = new Mark();
-                Extractors extractors = new Extractors( config.arrayDelimiter() );
+                Extractors extractors = new Extractors( config.arrayDelimiter(), config.emptyQuotedStringsAsNull(), config.trimStrings() );
                 Extractor<?> idExtractor = idType.extractor( extractors );
                 int delimiter = config.delimiter();
                 List<Header.Entry> columns = new ArrayList<>();
-                for ( int i = 0; !mark.isEndOfLine() && headerSeeker.seek( mark, delimiter ); i++ )
+                for ( int i = 0; !mark.isEndOfLine() && dataSeeker.seek( mark, delimiter ); i++ )
                 {
-                    String entryString = headerSeeker.tryExtract( mark, extractors.string() )
+                    String entryString = dataSeeker.tryExtract( mark, extractors.string() )
                             ? extractors.string().value() : null;
                     HeaderEntrySpec spec = new HeaderEntrySpec( entryString );
 
@@ -288,13 +178,6 @@ public class DataFactories
             catch ( IOException e )
             {
                 throw new RuntimeException( e );
-            }
-            finally
-            {
-                if ( headerSeeker != null )
-                {
-                    headerCharSeekerFactory.close( headerSeeker );
-                }
             }
         }
 
@@ -333,7 +216,7 @@ public class DataFactories
             {
                 if ( !singletonEntries.containsKey( type ) )
                 {
-                    throw new MissingHeaderException( type );
+                    throw new MissingHeaderException( type, entries );
                 }
             }
         }
@@ -374,7 +257,7 @@ public class DataFactories
             if ( rawHeaderField != null && (typeIndex = rawHeaderField.lastIndexOf( ':' )) != -1 )
             {   // Specific type given
                 name = typeIndex > 0 ? rawHeaderField.substring( 0, typeIndex ) : null;
-                type = rawHeaderField.substring( typeIndex+1 );
+                type = rawHeaderField.substring( typeIndex + 1 );
                 int groupNameStartIndex = type.indexOf( '(' );
                 if ( groupNameStartIndex != -1 )
                 {   // Specific group given also
@@ -384,7 +267,7 @@ public class DataFactories
                                 "' is invalid, format expected to be 'name:TYPE(group)' " +
                                 "where TYPE and (group) are optional" );
                     }
-                    groupName = type.substring( groupNameStartIndex+1, type.length()-1 );
+                    groupName = type.substring( groupNameStartIndex + 1, type.length() - 1 );
                     type = type.substring( 0, groupNameStartIndex );
                 }
             }
@@ -397,11 +280,6 @@ public class DataFactories
 
     private static class DefaultNodeFileHeaderParser extends AbstractDefaultFileHeaderParser
     {
-        public DefaultNodeFileHeaderParser( HeaderCharSeekerFactory headerCharSeekerFactory )
-        {
-            super( headerCharSeekerFactory );
-        }
-
         @Override
         protected Header.Entry entry( int index, String name, String typeSpec, String groupName, Extractors extractors,
                 Extractor<?> idExtractor )
@@ -441,10 +319,10 @@ public class DataFactories
 
     private static class DefaultRelationshipFileHeaderParser extends AbstractDefaultFileHeaderParser
     {
-        protected DefaultRelationshipFileHeaderParser( HeaderCharSeekerFactory headerCharSeekerFactory )
+        protected DefaultRelationshipFileHeaderParser()
         {
             // Don't have TYPE as mandatory since a decorator could provide that
-            super( headerCharSeekerFactory, Type.START_ID, Type.END_ID );
+            super( Type.START_ID, Type.END_ID );
         }
 
         @Override

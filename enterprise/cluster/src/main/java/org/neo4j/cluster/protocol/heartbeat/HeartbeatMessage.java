@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -41,7 +41,9 @@ public enum HeartbeatMessage
     public static class IAmAliveState
             implements Serializable
     {
-        private final InstanceId server;
+        private static final long serialVersionUID = 6799806932628197123L;
+
+        private InstanceId server;
 
         public IAmAliveState( InstanceId server )
         {
@@ -109,7 +111,7 @@ public enum HeartbeatMessage
         @Override
         public String toString()
         {
-            return "Suspicions:"+suspicions;
+            return "Suspicions:" + suspicions;
         }
 
         @Override

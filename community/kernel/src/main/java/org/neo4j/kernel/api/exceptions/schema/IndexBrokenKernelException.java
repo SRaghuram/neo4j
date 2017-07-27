@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,6 +26,6 @@ public class IndexBrokenKernelException extends KernelException
 {
     public IndexBrokenKernelException( String indexFailureCause )
     {
-        super( Status.General.FailedIndex, "The index is in a failed state: '%s'.", indexFailureCause );
+        super( Status.General.IndexCorruptionDetected, "The index is in a failed state: '%s'.", indexFailureCause );
     }
 }

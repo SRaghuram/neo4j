@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -58,7 +58,7 @@ public class HighAvailabilityLogger
     public void enteredCluster( ClusterConfiguration clusterConfiguration )
     {
         myUri = clusterConfiguration.getUriForId( myId );
-        log.info( "Instance %s joined the cluster", printId( myId, myUri ) );
+        log.info( "Instance %s entered the cluster", printId( myId, myUri ) );
     }
 
     /**

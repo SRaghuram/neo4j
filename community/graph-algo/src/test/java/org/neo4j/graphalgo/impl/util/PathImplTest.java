@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,6 +25,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.util.Iterator;
 import java.util.List;
 
 import org.neo4j.graphdb.Node;
@@ -37,7 +38,9 @@ import org.neo4j.kernel.impl.core.RelationshipProxy;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -48,11 +51,33 @@ public class PathImplTest
     private RelationshipProxy.RelationshipActions relationshipActions = mock( RelationshipProxy.RelationshipActions.class );
 
     @Test
+    public void singularNodeWorksForwardsAndBackwards()
+    {
+        Node node = createNode( 1337L );
+        Path path = PathImpl.singular( node );
+
+        assertEquals( node, path.startNode() );
+        assertEquals( node, path.endNode() );
+
+        Iterator<Node> forwardIterator = path.nodes().iterator();
+
+        assertTrue( forwardIterator.hasNext() );
+        assertEquals( node, forwardIterator.next() );
+        assertFalse( forwardIterator.hasNext() );
+
+        Iterator<Node> reverseIterator = path.reverseNodes().iterator();
+
+        assertTrue( reverseIterator.hasNext() );
+        assertEquals( node, reverseIterator.next() );
+        assertFalse( reverseIterator.hasNext() );
+    }
+
+    @Test
     public void pathsWithTheSameContentsShouldBeEqual() throws Exception
     {
 
-        Node node = createNode( 1337l );
-        Relationship relationship = createRelationship( 1337l, 7331l );
+        Node node = createNode( 1337L );
+        Relationship relationship = createRelationship( 1337L, 7331L );
 
         // Given
         Path firstPath = new PathImpl.Builder( node ).push( relationship ).build();
@@ -66,12 +91,12 @@ public class PathImplTest
     @Test
     public void pathsWithDifferentLengthAreNotEqual() throws Exception
     {
-        Node node = createNode( 1337l );
-        Relationship relationship = createRelationship( 1337l, 7331l );
+        Node node = createNode( 1337L );
+        Relationship relationship = createRelationship( 1337L, 7331L );
 
         // Given
         Path firstPath = new PathImpl.Builder( node ).push( relationship ).build();
-        Path secondPath = new PathImpl.Builder( node ).push( relationship ).push( createRelationship( 1337l, 7331l ) ).build();
+        Path secondPath = new PathImpl.Builder( node ).push( relationship ).push( createRelationship( 1337L, 7331L ) ).build();
 
         // When Then
         assertThat( firstPath, not( equalTo( secondPath ) ) );
@@ -89,7 +114,7 @@ public class PathImplTest
                                 .build( new PathImpl.Builder( createNodeProxy( 3 ) ) );
 
         Iterable<Node> nodes = path.reverseNodes();
-        List<Node> nodeList = Iterables.toList( nodes );
+        List<Node> nodeList = Iterables.asList( nodes );
 
         Assert.assertEquals( 3, nodeList.size() );
         Assert.assertEquals( 3, nodeList.get( 0 ).getId() );
@@ -108,7 +133,7 @@ public class PathImplTest
                 .build( new PathImpl.Builder( createNodeProxy( 3 ) ) );
 
         Iterable<Node> nodes = path.nodes();
-        List<Node> nodeList = Iterables.toList( nodes );
+        List<Node> nodeList = Iterables.asList( nodes );
 
         Assert.assertEquals( 3, nodeList.size() );
         Assert.assertEquals( 1, nodeList.get( 0 ).getId() );
@@ -118,7 +143,7 @@ public class PathImplTest
 
     private RelationshipProxy createRelationshipProxy( int startNodeId, int endNodeId )
     {
-        return new RelationshipProxy( relationshipActions, 1l, startNodeId, 1, endNodeId );
+        return new RelationshipProxy( relationshipActions, 1L, startNodeId, 1, endNodeId );
     }
 
     private NodeProxy createNodeProxy( int nodeId )

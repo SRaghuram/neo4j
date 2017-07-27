@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,24 +22,45 @@ package org.neo4j.graphdb.factory;
 import java.io.File;
 import java.util.Map;
 
-import org.neo4j.graphdb.EnterpriseGraphDatabase;
+import org.neo4j.kernel.enterprise.EnterpriseGraphDatabase;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.factory.Edition;
 
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
+
+/**
+ * Factory for Neo4j database instances with Enterprise Edition features.
+ *
+ * @see org.neo4j.graphdb.factory.GraphDatabaseFactory
+ */
 public class EnterpriseGraphDatabaseFactory extends GraphDatabaseFactory
 {
     @Override
     protected GraphDatabaseBuilder.DatabaseCreator createDatabaseCreator( final File storeDir,
-            final GraphDatabaseFactoryState state )
+                                                                          final GraphDatabaseFactoryState state )
     {
         return new GraphDatabaseBuilder.DatabaseCreator()
         {
             @Override
             public GraphDatabaseService newDatabase( Map<String,String> config )
             {
-                config.put( "ephemeral", "false" );
+                return newDatabase( Config.embeddedDefaults( config ) );
+            }
 
-                return new EnterpriseGraphDatabase( storeDir, config, state.databaseDependencies() );
+            @Override
+            public GraphDatabaseService newDatabase( Config config )
+            {
+                return new EnterpriseGraphDatabase( storeDir,
+                        config.with( stringMap( "unsupported.dbms.ephemeral", "false" ) ),
+                        state.databaseDependencies() );
             }
         };
+    }
+
+    @Override
+    public String getEdition()
+    {
+        return Edition.enterprise.toString();
     }
 }

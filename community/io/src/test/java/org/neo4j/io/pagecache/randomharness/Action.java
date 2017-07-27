@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,19 +24,41 @@ abstract class Action
     private final Command command;
     private final String format;
     private final Object[] parameters;
+    private final Action innerAction;
 
     protected Action( Command command, String format, Object... parameters )
+    {
+        this( command, null, format, parameters );
+    }
+
+    protected Action( Command command, Action innerAction, String format, Object... parameters )
     {
         this.command = command;
         this.format = format;
         this.parameters = parameters;
+        this.innerAction = innerAction;
     }
 
     abstract void perform() throws Exception;
 
+    protected void performInnerAction() throws Exception
+    {
+        if ( innerAction != null )
+        {
+            innerAction.perform();
+        }
+    }
+
     @Override
     public String toString()
     {
-        return String.format( command + format, parameters );
+        if ( innerAction == null )
+        {
+            return String.format( command + format, parameters );
+        }
+        else
+        {
+            return String.format( command + format + ", and then " + innerAction, parameters );
+        }
     }
 }

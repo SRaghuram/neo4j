@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,7 @@ import org.neo4j.unsafe.impl.batchimport.cache.LongArray;
 import org.neo4j.unsafe.impl.batchimport.cache.LongBitsManipulator;
 
 import static org.neo4j.consistency.checking.cache.CacheSlots.ID_SLOT_SIZE;
-import static org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory.AUTO;
+import static org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory.AUTO_WITHOUT_PAGECACHE;
 
 /**
  * Simply combining a {@link LongArray} with {@link LongBitsManipulator}, so that each long can be split up into
@@ -38,7 +38,7 @@ public class PackedMultiFieldCache
 
     public PackedMultiFieldCache( int... slotSizes )
     {
-        this( AUTO.newDynamicLongArray( 1_000_000, 0 ), slotSizes );
+        this( AUTO_WITHOUT_PAGECACHE.newDynamicLongArray( 1_000_000, 0 ), slotSizes );
     }
 
     public PackedMultiFieldCache( LongArray array, int... slotSizes )

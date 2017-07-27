@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,52 +21,27 @@ package org.neo4j.desktop.config.osx;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 
-import org.neo4j.desktop.config.portable.PortableEnvironment;
+import org.neo4j.desktop.config.portable.Environment;
 
-class DarwinEnvironment extends PortableEnvironment
+class DarwinEnvironment extends Environment
 {
     @Override
-    public void openBrowser( String url ) throws IOException, URISyntaxException
+    public void editFile( File file ) throws IOException, SecurityException
     {
-        if ( isPortableBrowseSupported() )
+        try
         {
-            portableBrowse( url );
-            return;
+            super.editFile( file );
         }
-
-        throw new UnsupportedOperationException( "Cannot browse to URL: " + url );
-    }
-
-    @Override
-    public void editFile( File file ) throws IOException
-    {
-        if ( isPortableEditFileSupported() )
+        catch ( IOException | UnsupportedOperationException ex )
         {
-            portableEditFile( file );
-            return;
+            Runtime.getRuntime().exec( new String[]{"open", "-nt", file.getAbsolutePath()} );
         }
-
-        throw new UnsupportedOperationException( "Cannot edit file: " + file );
-    }
-
-    @Override
-    public void openDirectory( File directory ) throws IOException
-    {
-        if ( isPortableOpenSupported() )
-        {
-            portableOpen( directory );
-            return;
-        }
-
-        throw new UnsupportedOperationException( "Cannot open directory: " + directory );
     }
 
     @Override
     public void openCommandPrompt( File binDirectory, File jreBinDirectory, File workingDirectory ) throws IOException
     {
-        String commands[] = { "open", "-na", "Terminal", "openNeoTerminal.sh" };
-        Runtime.getRuntime().exec( commands );
+        Runtime.getRuntime().exec( new String[] { "open", "-na", "Terminal", "openNeoTerminal.sh" } );
     }
 }

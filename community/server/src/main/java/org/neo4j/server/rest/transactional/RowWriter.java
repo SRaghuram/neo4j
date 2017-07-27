@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,16 +19,17 @@
  */
 package org.neo4j.server.rest.transactional;
 
-import java.io.IOException;
-
 import org.codehaus.jackson.JsonGenerator;
+
+import java.io.IOException;
 
 import org.neo4j.graphdb.Result;
 
 class RowWriter implements ResultDataContentWriter
 {
     @Override
-    public void write( JsonGenerator out, Iterable<String> columns, Result.ResultRow row ) throws IOException
+    public void write( JsonGenerator out, Iterable<String> columns, Result.ResultRow row,
+            TransactionStateChecker txStateChecker ) throws IOException
     {
         out.writeArrayFieldStart( "row" );
         try
@@ -36,6 +37,32 @@ class RowWriter implements ResultDataContentWriter
             for ( String key : columns )
             {
                 out.writeObject( row.get( key ) );
+            }
+        }
+        finally
+        {
+            out.writeEndArray();
+            writeMeta( out, columns, row );
+        }
+    }
+
+    private void writeMeta( JsonGenerator out, Iterable<String> columns, Result.ResultRow row ) throws IOException
+    {
+        out.writeArrayFieldStart( "meta" );
+        try
+        {
+            /*
+             * The way we've designed this JSON serialization is by injecting a custom codec
+             * to write the entities. Unfortunately, there seems to be no way to control state
+             * inside the JsonGenerator, and so we need to make a second call to write out the
+             * meta information, directly to the injected codec. This is not very pretty,
+             * but time is expensive, and redesigning one of three server serialization
+             * formats is not a priority.
+             */
+            Neo4jJsonCodec codec = (Neo4jJsonCodec) out.getCodec();
+            for ( String key : columns )
+            {
+                codec.writeMeta( out, row.get( key ) );
             }
         }
         finally

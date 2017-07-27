@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,28 +19,24 @@
  */
 package org.neo4j.kernel.api.txstate;
 
-import java.util.Map;
-
-import org.neo4j.kernel.api.constraints.NodePropertyConstraint;
-import org.neo4j.kernel.api.constraints.NodePropertyExistenceConstraint;
-import org.neo4j.kernel.api.constraints.RelationshipPropertyConstraint;
-import org.neo4j.kernel.api.constraints.RelationshipPropertyExistenceConstraint;
-import org.neo4j.kernel.api.constraints.UniquenessConstraint;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.procedures.ProcedureDescriptor;
-import org.neo4j.kernel.api.procedures.ProcedureSignature;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.OrderedPropertyValues;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.IndexBackedConstraintDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 
 /**
  * Kernel transaction state, please see {@link org.neo4j.kernel.impl.api.state.TxState} for implementation details.
  *
  * This interface defines the mutating methods for the transaction state, methods for reading are defined in
- * {@link ReadableTxState}. These mutating methods follow the rule that they all contain the word "Do" in the name.
+ * {@link ReadableTransactionState}. These mutating methods follow the rule that they all contain the word "Do" in the name.
  * This naming convention helps deciding where to set {@link #hasChanges()} in the
  * {@link org.neo4j.kernel.impl.api.state.TxState main implementation class}.
  */
-public interface TransactionState extends ReadableTxState
+public interface TransactionState extends ReadableTransactionState
 {
     // ENTITY RELATED
 
@@ -54,7 +50,9 @@ public interface TransactionState extends ReadableTxState
 
     void nodeDoDelete( long nodeId );
 
-    void nodeDoReplaceProperty( long nodeId, Property replacedProperty, DefinedProperty newProperty );
+    void nodeDoAddProperty( long nodeId, DefinedProperty newProperty );
+
+    void nodeDoChangeProperty( long nodeId, DefinedProperty replacedProperty, DefinedProperty newProperty );
 
     void relationshipDoReplaceProperty( long relationshipId,
                                         Property replacedProperty, DefinedProperty newProperty );
@@ -83,35 +81,17 @@ public interface TransactionState extends ReadableTxState
 
     void indexRuleDoAdd( IndexDescriptor descriptor );
 
-    void constraintIndexRuleDoAdd( IndexDescriptor descriptor );
-
     void indexDoDrop( IndexDescriptor descriptor );
 
-    void constraintIndexDoDrop( IndexDescriptor descriptor );
+    boolean indexDoUnRemove( IndexDescriptor constraint );
 
-    void constraintDoAdd( UniquenessConstraint constraint, long indexId );
+    void constraintDoAdd( ConstraintDescriptor constraint );
 
-    void constraintDoAdd( NodePropertyExistenceConstraint constraint );
+    void constraintDoAdd( IndexBackedConstraintDescriptor constraint, long indexId );
 
-    void constraintDoAdd( RelationshipPropertyExistenceConstraint constraint );
+    void constraintDoDrop( ConstraintDescriptor constraint );
 
-    void constraintDoDrop( NodePropertyConstraint constraint );
+    boolean constraintDoUnRemove( ConstraintDescriptor constraint );
 
-    void constraintDoDrop( RelationshipPropertyConstraint constraint );
-
-    boolean constraintDoUnRemove( NodePropertyConstraint constraint );
-
-    boolean constraintIndexDoUnRemove( IndexDescriptor index );
-
-    // <Legacy index>
-    void nodeLegacyIndexDoCreate( String indexName, Map<String, String> customConfig );
-
-    void relationshipLegacyIndexDoCreate( String indexName, Map<String, String> customConfig );
-    // </Legacy index>
-
-    void indexDoUpdateProperty( IndexDescriptor descriptor, long nodeId, DefinedProperty before, DefinedProperty after );
-
-    void procedureDoCreate( ProcedureSignature signature, String language, String code );
-
-    void procedureDoDrop( ProcedureDescriptor name );
+    void indexDoUpdateEntry( LabelSchemaDescriptor descriptor, long nodeId, OrderedPropertyValues before, OrderedPropertyValues after );
 }

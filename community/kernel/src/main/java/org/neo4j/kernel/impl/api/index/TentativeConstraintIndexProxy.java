@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,37 +24,36 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.neo4j.helpers.ThisShouldNotHappenError;
-import org.neo4j.kernel.api.constraints.UniquenessConstraint;
-import org.neo4j.kernel.api.exceptions.index.IndexCapacityExceededException;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintVerificationFailedKernelException;
-import org.neo4j.kernel.api.exceptions.schema.UniquenessConstraintVerificationFailedKernelException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.index.IndexEntryConflictException;
-import org.neo4j.kernel.api.index.IndexReader;
+import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
+import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
+import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.InternalIndexState;
-import org.neo4j.kernel.api.index.NodePropertyUpdate;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory;
+import org.neo4j.kernel.impl.api.index.updater.DelegatingIndexUpdater;
+import org.neo4j.storageengine.api.schema.IndexReader;
 
 /**
  * What is a tentative constraint index proxy? Well, the way we build uniqueness constraints is as follows:
  * <ol>
  * <li>Begin a transaction T, which will be the "parent" transaction in this process</li>
  * <li>Execute a mini transaction Tt which will create the index rule to start the index population</li>
- * <li>Sit and wait for the index to be built</li>
- * <li>Execute yet another mini transaction Tu which will create the constraint rule and connect the two</li>
+ * <li>In T: Sit and wait for the index to be built</li>
+ * <li>In T: Create the constraint rule and connect the two</li>
  * </ol>
  *
  * The fully populated index flips to a tentative index. The reason for that is to guard for incoming transactions
  * that gets applied.
  * Such incoming transactions have potentially been verified on another instance with a slightly dated view
- * of the schema and has furthermore made it through some additional checks on this instance since the constraint
- * transaction Tu hasn't yet committed. Transaction data gets applied to the neo store first and the index second, so at
+ * of the schema and has furthermore made it through some additional checks on this instance since transaction T
+ * hasn't yet fully committed. Transaction data gets applied to the neo store first and the index second, so at
  * the point where the applying transaction sees that it violates the constraint it has already modified the store and
- * cannot back out. However the constraint transaction T (and specifically Tu) can. So a violated constraint while
+ * cannot back out. However the constraint transaction T can. So a violated constraint while
  * in tentative mode does not fail the transaction violating the constraint, but keeps the failure around and will
- * eventually fail Tu, and in extension T.
+ * eventually fail T instead.
  */
 public class TentativeConstraintIndexProxy extends AbstractDelegatingIndexProxy
 {
@@ -71,14 +70,14 @@ public class TentativeConstraintIndexProxy extends AbstractDelegatingIndexProxy
     @Override
     public IndexUpdater newUpdater( IndexUpdateMode mode )
     {
-        switch( mode )
+        switch ( mode )
         {
             case ONLINE:
                 return new DelegatingIndexUpdater( target.accessor.newUpdater( mode ) )
                 {
                     @Override
-                    public void process( NodePropertyUpdate update )
-                            throws IOException, IndexEntryConflictException, IndexCapacityExceededException
+                    public void process( IndexEntryUpdate update )
+                            throws IOException, IndexEntryConflictException
                     {
                         try
                         {
@@ -91,7 +90,7 @@ public class TentativeConstraintIndexProxy extends AbstractDelegatingIndexProxy
                     }
 
                     @Override
-                    public void close() throws IOException, IndexEntryConflictException, IndexCapacityExceededException
+                    public void close() throws IOException, IndexEntryConflictException
                     {
                         try
                         {
@@ -104,11 +103,11 @@ public class TentativeConstraintIndexProxy extends AbstractDelegatingIndexProxy
                     }
                 };
 
-            case BATCHED:
+            case RECOVERY:
                 return super.newUpdater( mode );
 
             default:
-                throw new ThisShouldNotHappenError( "Stefan", "Unsupported IndexUpdateMode" );
+                throw new IllegalArgumentException( "Unsupported update mode: " + mode );
 
         }
     }
@@ -138,14 +137,16 @@ public class TentativeConstraintIndexProxy extends AbstractDelegatingIndexProxy
     }
 
     @Override
-    public void validate() throws ConstraintVerificationFailedKernelException
+    public void validate() throws UniquePropertyValueValidationException
     {
         if ( !failures.isEmpty() )
         {
-            IndexDescriptor descriptor = getDescriptor();
-            throw new UniquenessConstraintVerificationFailedKernelException(
-                    new UniquenessConstraint( descriptor.getLabelId(), descriptor.getPropertyKeyId() ),
-                    new HashSet<>( failures ) );
+            LabelSchemaDescriptor descriptor = getDescriptor().schema();
+            throw new UniquePropertyValueValidationException(
+                    ConstraintDescriptorFactory.uniqueForLabel( descriptor.getLabelId(), descriptor.getPropertyId() ),
+                    ConstraintValidationException.Phase.VERIFICATION,
+                    new HashSet<>( failures )
+                );
         }
     }
 

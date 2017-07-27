@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -40,6 +40,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
+import java.time.Clock;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -48,7 +49,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.com.monitor.RequestMonitor;
-import org.neo4j.helpers.Clock;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.collection.Visitor;
@@ -106,10 +106,10 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
     // It's ok if there are more transactions, since these worker threads doesn't
     // do any actual work themselves, but spawn off other worker threads doing the
     // actual work. So this is more like a core Netty I/O pool worker size.
-    public final static int DEFAULT_MAX_NUMBER_OF_CONCURRENT_TRANSACTIONS = 200;
+    public static final int DEFAULT_MAX_NUMBER_OF_CONCURRENT_TRANSACTIONS = 200;
     static final byte INTERNAL_PROTOCOL_VERSION = 2;
     private final T requestTarget;
-    private IdleChannelReaper connectedSlaveChannels;
+    private final IdleChannelReaper connectedSlaveChannels;
     private final Log msgLog;
     private final Map<Channel,PartialRequest> partialRequests = new ConcurrentHashMap<>();
     private final Configuration config;
@@ -448,7 +448,7 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
             }
 
             bufferToWriteTo.clear();
-            final ChunkingChannelBuffer chunkingBuffer = new ChunkingChannelBuffer( bufferToWriteTo, channel, chunkSize,
+            ChunkingChannelBuffer chunkingBuffer = newChunkingBuffer( bufferToWriteTo, channel, chunkSize,
                     getInternalProtocolVersion(), applicationProtocolVersion );
             submitSilent( targetCallExecutor, new TargetCaller( type, channel, context, chunkingBuffer,
                     bufferToReadFrom ) );
@@ -545,9 +545,15 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
 
     private ChunkingChannelBuffer newChunkingBuffer( Channel channel )
     {
-        return new ChunkingChannelBuffer( ChannelBuffers.dynamicBuffer(),
-                channel,
-                chunkSize, getInternalProtocolVersion(), applicationProtocolVersion );
+        return newChunkingBuffer( ChannelBuffers.dynamicBuffer(), channel, chunkSize, getInternalProtocolVersion(),
+                applicationProtocolVersion );
+    }
+
+    protected ChunkingChannelBuffer newChunkingBuffer( ChannelBuffer bufferToWriteTo, Channel channel, int capacity,
+            byte internalProtocolVersion, byte applicationProtocolVersion )
+    {
+        return new ChunkingChannelBuffer( bufferToWriteTo, channel, capacity, internalProtocolVersion,
+                applicationProtocolVersion );
     }
 
     private class TargetCaller implements Response.Handler, Runnable
@@ -611,10 +617,10 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
         }
 
         @Override
-        public Visitor<CommittedTransactionRepresentation,IOException> transactions()
+        public Visitor<CommittedTransactionRepresentation,Exception> transactions()
         {
             targetBuffer.writeByte( 1 );
-            return new CommittedTransactionSerializer( targetBuffer );
+            return new CommittedTransactionSerializer( new NetworkFlushableChannel(  targetBuffer ) );
         }
     }
 
@@ -624,7 +630,7 @@ public abstract class Server<T, R> extends SimpleChannelHandler implements Chann
         final ChannelBuffer buffer;
         final RequestType<T> type;
 
-        public PartialRequest( RequestType<T> type, RequestContext context, ChannelBuffer buffer )
+        PartialRequest( RequestType<T> type, RequestContext context, ChannelBuffer buffer )
         {
             this.type = type;
             this.context = context;

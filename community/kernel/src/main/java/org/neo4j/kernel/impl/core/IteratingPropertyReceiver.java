@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,36 +22,38 @@ package org.neo4j.kernel.impl.core;
 import java.util.Arrays;
 
 import org.neo4j.helpers.collection.PrefetchingIterator;
-import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.impl.transaction.state.TransactionRecordState.PropertyReceiver;
+import org.neo4j.storageengine.api.StorageProperty;
 
 /**
  * A {@link PropertyReceiver} which can be iterated over once populated. The receiver and iterator is the
  * same object to save garbage.
  */
-public class IteratingPropertyReceiver extends PrefetchingIterator<DefinedProperty> implements PropertyReceiver
+public class IteratingPropertyReceiver<P extends StorageProperty> extends PrefetchingIterator<P>
+        implements PropertyReceiver<P>
 {
-    private DefinedProperty[] properties = new DefinedProperty[9];
+    private StorageProperty[] properties = new StorageProperty[9];
     private int writeCursor;
     private int readCursor;
 
     @Override
-    public void receive( DefinedProperty property, long propertyRecordId )
+    public void receive( P property, long propertyRecordId )
     {
         if ( writeCursor >= properties.length )
         {
-            properties = Arrays.copyOf( properties, properties.length*2 );
+            properties = Arrays.copyOf( properties, properties.length * 2 );
         }
         properties[writeCursor++] = property;
     }
 
+    @SuppressWarnings( "unchecked" )
     @Override
-    protected DefinedProperty fetchNextOrNull()
+    protected P fetchNextOrNull()
     {
         if ( readCursor >= properties.length )
         {
             return null;
         }
-        return properties[readCursor++];
+        return (P) properties[readCursor++];
     }
 }

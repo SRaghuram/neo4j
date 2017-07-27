@@ -8,106 +8,60 @@ Import-Module "$src\Neo4j-Management.psm1"
 InModuleScope Neo4j-Management {
   Describe "Stop-Neo4jServer" {
 
-    Context "Invalid or missing default neo4j installation" {
-      Mock Get-Neo4jServer { return }
-      $result = Stop-Neo4jServer
-      
-      It "return null if missing default" {
-        $result | Should BeNullOrEmpty      
-      }
-      It "calls Get-Neo4Server" {
-        Assert-MockCalled Get-Neo4jServer -Times 1
-      }
+    # Setup mocking environment
+    #  Mock Java environment
+    $javaHome = global:New-MockJavaHome
+    Mock Get-Neo4jEnv { $javaHome } -ParameterFilter { $Name -eq 'JAVA_HOME' }
+    Mock Set-Neo4jEnv { }
+    Mock Test-Path { $false } -ParameterFilter {
+      $Path -like 'Registry::*\JavaSoft\Java Runtime Environment'
     }
-
-    Context "Invalid or missing specified neo4j installation" {
-      Mock Get-Neo4jServer { return }
-      $result = Stop-Neo4jServer -Neo4jServer 'TestDrive:\some-dir-that-doesnt-exist'
-  
-      It "return null if invalid directory" {
-        $result | Should BeNullOrEmpty      
-      }
-      It "calls Get-Neo4Server" {
-        Assert-MockCalled Get-Neo4jServer -Times 1
-      }
+    Mock Get-ItemProperty { $null } -ParameterFilter {
+      $Path -like 'Registry::*\JavaSoft\Java Runtime Environment*'
     }
-
-    Context "Invalid or missing server object" {
-      Mock Confirm-Neo4jServerObject { return $false }
-      
-      It "throws error for an invalid server object" {
-        { Stop-Neo4jServer -Neo4jServer (New-Object -TypeName PSCustomObject) -ErrorAction Stop } | Should Throw
-      }
-  
-      It "calls Confirm-Neo4jServerObject" {
-        Assert-MockCalled Confirm-Neo4jServerObject -Times 1
-      }
-    }
+    # Mock Neo4j environment
+    Mock Get-Neo4jEnv { $global:mockNeo4jHome } -ParameterFilter { $Name -eq 'NEO4J_HOME' }
 
     Context "Missing service name in configuration files" {
-      Mock Get-Neo4jServer { return $serverObject = New-Object -TypeName PSCustomObject -Property @{ 'Home' = 'TestDrive:\Path'; 'ServerVersion' = '99.99'; 'ServerType' = 'Community';} }    
-      Mock Get-Neo4jSetting { return $null }
+      Mock Stop-Service { }
+
+      $serverObject = global:New-MockNeo4jInstall -WindowsService ''
 
       It "throws error for missing service name in configuration file" {
-        { Stop-Neo4jServer -ErrorAction Stop } | Should Throw
-      }
-      
-      It "calls Get-Neo4jSetting" {
-        Assert-MockCalled Get-Neo4jSetting -Times 1
+        { Stop-Neo4jServer -Neo4jServer $serverObject -ErrorAction Stop } | Should Throw
       }
     }
 
-    Context "Stop service by name in configuration file" {
-      Mock Get-Neo4jServer { return $serverObject = New-Object -TypeName PSCustomObject -Property @{ 'Home' = 'TestDrive:\Path'; 'ServerVersion' = '99.99'; 'ServerType' = 'Community';} }    
-      Mock Get-Neo4jSetting { return @{'Value' = 'SomeServiceName'} }
-      Mock Stop-Service -Verifiable { return 1 } -ParameterFilter { $Name -eq 'SomeServiceName'}
-      
-      $result = Stop-Neo4jServer
+    Context "Stop service succesfully but didn't stop" {
+      Mock Stop-Service { throw "Called Stop-Service incorrectly"}
+      Mock Stop-Service -Verifiable { @{ Status = 'Stop Pending'} } -ParameterFilter { $Name -eq $global:mockServiceName}
 
-      It "result is exit code" {
-        $result | Should Be 1
+      $serverObject = global:New-MockNeo4jInstall
+
+      $result = Stop-Neo4jServer -Neo4jServer $serverObject
+      It "result is 2" {
+        $result | Should Be 2
       }
-      
+
       It "calls verified mocks" {
         Assert-VerifiableMocks
       }
     }
 
-    Context "Stop service by named parameter" {
-      Mock Get-Neo4jServer { return $serverObject = New-Object -TypeName PSCustomObject -Property @{ 'Home' = 'TestDrive:\Path'; 'ServerVersion' = '99.99'; 'ServerType' = 'Community';} }    
-      Mock Get-Neo4jSetting { return @{'Value' = 'SomeServiceName'} }
-      Mock Stop-Service -Verifiable { return 1 } -ParameterFilter { $Name -eq 'SomeOtherServiceName'}
-      
-      $result = Stop-Neo4jServer -ServiceName 'SomeOtherServiceName'
+    Context "Stop service succesfully" {
+      Mock Stop-Service { throw "Called Stop-Service incorrectly"}
+      Mock Stop-Service -Verifiable { @{ Status = 'Stopped'} } -ParameterFilter { $Name -eq $global:mockServiceName}
 
-      It "result is exit code" {
-        $result | Should Be 1
+      $serverObject = global:New-MockNeo4jInstall
+
+      $result = Stop-Neo4jServer -Neo4jServer $serverObject
+      It "result is 0" {
+        $result | Should Be 0
       }
 
-      It "does not call Get-Neo4jSetting" {
-        Assert-MockCalled Get-Neo4jSetting -Times 0
-      }
-      
       It "calls verified mocks" {
         Assert-VerifiableMocks
       }
     }
-
-    Context "Stop service and passthru server object" {
-      Mock Get-Neo4jServer { return $serverObject = New-Object -TypeName PSCustomObject -Property @{ 'Home' = 'TestDrive:\Path'; 'ServerVersion' = '99.99'; 'ServerType' = 'Community';} }    
-      Mock Get-Neo4jSetting { return @{'Value' = 'SomeServiceName'} }
-      Mock Stop-Service -Verifiable { return 1 } -ParameterFilter { $Name -eq 'SomeServiceName'}
-      
-      $result = Stop-Neo4jServer -PassThru
-
-      It "result is Neo4j Server object" {
-        $result.GetType().ToString() | Should Be 'System.Management.Automation.PSCustomObject'
-      }
-      
-      It "calls verified mocks" {
-        Assert-VerifiableMocks
-      }
-    }
-
   }
 }

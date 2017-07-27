@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,24 +20,33 @@
 package org.neo4j.graphdb.factory;
 
 import java.io.File;
-import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.impl.factory.CommunityFacadeFactory;
+import org.neo4j.graphdb.security.URLAccessRule;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.factory.CommunityEditionModule;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.factory.Edition;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.graphdb.security.URLAccessRule;
 import org.neo4j.logging.LogProvider;
 
-import static java.util.Arrays.asList;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 /**
- * Creates a {@link org.neo4j.graphdb.GraphDatabaseService}.
+ * Creates a {@link org.neo4j.graphdb.GraphDatabaseService} with Community Edition features.
  * <p>
  * Use {@link #newEmbeddedDatabase(File)} or
  * {@link #newEmbeddedDatabaseBuilder(File)} to create a database instance.
+ * <p>
+ * <strong>Note:</strong> If you are using the Enterprise Edition of Neo4j in embedded mode, you have to create your
+ * database with the <a href="EnterpriseGraphDatabaseFactory.html">{@code EnterpriseGraphDatabaseFactory}</a>
+ * to enable the Enterprise Edition features, or the
+ * <a href="HighlyAvailableGraphDatabaseFactory.html">{@code HighlyAvailableGraphDatabaseFactory}</a> for the
+ * Enterprise and High-Availability features. There is no factory for the Causal Clustering features, because it is
+ * currently not possible to run a causal cluster in embedded mode.
  */
 public class GraphDatabaseFactory
 {
@@ -63,31 +72,9 @@ public class GraphDatabaseFactory
         return new GraphDatabaseFactoryState( getCurrentState() );
     }
 
-    /**
-     * @deprecated use {@link #newEmbeddedDatabase(File)} instead.
-     * @param storeDir the location of the database
-     * @return the database
-     */
-    @Deprecated
-    public GraphDatabaseService newEmbeddedDatabase( String storeDir )
-    {
-        return newEmbeddedDatabase( new File( storeDir ) );
-    }
-
     public GraphDatabaseService newEmbeddedDatabase( File storeDir )
     {
         return newEmbeddedDatabaseBuilder( storeDir ).newGraphDatabase();
-    }
-
-    /**
-     * @deprecated use {@link #newEmbeddedDatabaseBuilder(File)} instead
-     * @param storeDir the location of the database
-     * @return a builder which is used to configure and start a database
-     */
-    @Deprecated
-    public GraphDatabaseBuilder newEmbeddedDatabaseBuilder( String storeDir )
-    {
-        return newEmbeddedDatabaseBuilder( new File( storeDir ) );
     }
 
     public GraphDatabaseBuilder newEmbeddedDatabaseBuilder( File storeDir )
@@ -112,9 +99,15 @@ public class GraphDatabaseFactory
             @Override
             public GraphDatabaseService newDatabase( Map<String,String> config )
             {
-                config.put( "ephemeral", "false" );
-                GraphDatabaseFacadeFactory.Dependencies dependencies = state.databaseDependencies();
-                return GraphDatabaseFactory.this.newDatabase( storeDir, config, dependencies );
+                return newDatabase( Config.embeddedDefaults( config ) );
+            }
+
+            @Override
+            public GraphDatabaseService newDatabase( @Nonnull Config config )
+            {
+                return GraphDatabaseFactory.this.newEmbeddedDatabase( storeDir,
+                        config.with( stringMap( "unsupported.dbms.ephemeral", "false" ) ),
+                        state.databaseDependencies() );
             }
         };
     }
@@ -124,60 +117,27 @@ public class GraphDatabaseFactory
         // Let the default configuration pass through.
     }
 
-    protected GraphDatabaseService newDatabase( File storeDir, Map<String,String> config, GraphDatabaseFacadeFactory.Dependencies dependencies )
-    {
-        return new CommunityFacadeFactory().newFacade( storeDir, config, dependencies );
-    }
-
     /**
-     * @deprecated Manipulating kernel extensions is deprecated and will be moved to internal components.
-     * 
-     * @return kernel extensions
+     * See {@link #newDatabase(File, Config, GraphDatabaseFacadeFactory.Dependencies)} instead.
      */
     @Deprecated
-    public Iterable<KernelExtensionFactory<?>> getKernelExtension()
+    protected GraphDatabaseService newDatabase( File storeDir, Map<String,String> settings,
+                                                GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
-        return getCurrentState().getKernelExtension();
+        return newDatabase( storeDir, Config.embeddedDefaults( settings ), dependencies );
     }
 
-    /**
-     * @deprecated Manipulating kernel extensions is deprecated and will be moved to internal components.
-     * 
-     * @param newKernelExtensions New kernel extensions to add
-     * @return the factory
-     */
-    @Deprecated
-    public GraphDatabaseFactory addKernelExtensions( Iterable<KernelExtensionFactory<?>> newKernelExtensions )
+    protected GraphDatabaseService newEmbeddedDatabase( File storeDir, Config config,
+                                                        GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
-        getCurrentState().addKernelExtensions( newKernelExtensions );
-        return this;
+        return GraphDatabaseFactory.this.newDatabase( storeDir, config, dependencies );
     }
 
-    /**
-     * @deprecated Manipulating kernel extensions is deprecated and will be moved to internal components.
-     * 
-     * @param newKernelExtension New kernel extension too add
-     * @return the factory
-     */
-    @Deprecated
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    public GraphDatabaseFactory addKernelExtension( KernelExtensionFactory<?> newKernelExtension )
+    protected GraphDatabaseService newDatabase( File storeDir, Config config,
+                                                GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
-        List extensions = asList( newKernelExtension );
-        return addKernelExtensions( extensions );
-    }
-
-    /**
-     * @deprecated Manipulating kernel extensions is deprecated and will be moved to internal components.
-     * 
-     * @param newKernelExtensions New kernel extensions to set
-     * @return the factory
-     */
-    @Deprecated
-    public GraphDatabaseFactory setKernelExtensions( Iterable<KernelExtensionFactory<?>> newKernelExtensions )
-    {
-        getCurrentState().setKernelExtensions( newKernelExtensions );
-        return this;
+        return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, CommunityEditionModule::new )
+                .newFacade( storeDir, config, dependencies );
     }
 
     public GraphDatabaseFactory addURLAccessRule( String protocol, URLAccessRule rule )
@@ -196,5 +156,10 @@ public class GraphDatabaseFactory
     {
         getCurrentState().setMonitors( monitors );
         return this;
+    }
+
+    public String getEdition()
+    {
+        return Edition.community.toString();
     }
 }

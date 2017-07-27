@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,19 +32,12 @@ public class LogEntryVersionTest
         {
             // GIVEN
             byte code = version.byteCode();
-            byte logHeaderFormatVersion = version.logHeaderFormatVersion();
 
             // WHEN
-            LogEntryVersion selectedVersion = LogEntryVersion.byVersion( code, logHeaderFormatVersion );
+            LogEntryVersion selectedVersion = LogEntryVersion.byVersion( code );
 
             // THEN
             assertEquals( version, selectedVersion );
         }
-    }
-
-    @Test
-    public void shouldDisregardLogHeaderFormatVersionForUniqueVersions() throws Exception
-    {
-        assertEquals( LogEntryVersion.V2_1, LogEntryVersion.byVersion( LogEntryVersion.V2_1.byteCode(), (byte)99 ) );
     }
 }

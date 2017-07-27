@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,27 +32,41 @@ import java.io.RandomAccessFile;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import java.nio.file.CopyOption;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.WatchService;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
-import org.neo4j.function.Function;
+import org.neo4j.io.IOUtils;
+import org.neo4j.io.fs.watcher.DefaultFileSystemWatcher;
+import org.neo4j.io.fs.watcher.FileWatcher;
 
 import static java.lang.String.format;
 
 /**
  * Default file system abstraction that creates files using the underlying file system.
  */
-public class DefaultFileSystemAbstraction
-        implements FileSystemAbstraction
+public class DefaultFileSystemAbstraction implements FileSystemAbstraction
 {
     static final String UNABLE_TO_CREATE_DIRECTORY_FORMAT = "Unable to create directory path [%s] for Neo4j store.";
+
+    @Override
+    public FileWatcher fileWatcher() throws IOException
+    {
+        WatchService watchService = FileSystems.getDefault().newWatchService();
+        return new DefaultFileSystemWatcher( watchService );
+    }
 
     @Override
     public StoreFileChannel open( File fileName, String mode ) throws IOException
     {
         // Returning only the channel is ok, because the channel, when close()d will close its parent File.
         FileChannel channel = new RandomAccessFile( fileName, mode ).getChannel();
-        return new StoreFileChannel( channel );
+        return getStoreFileChannel( channel );
     }
 
     @Override
@@ -68,15 +82,15 @@ public class DefaultFileSystemAbstraction
     }
 
     @Override
-    public Reader openAsReader( File fileName, String encoding ) throws IOException
+    public Reader openAsReader( File fileName, Charset charset ) throws IOException
     {
-        return new InputStreamReader( new FileInputStream( fileName ), encoding );
+        return new InputStreamReader( new FileInputStream( fileName ), charset );
     }
 
     @Override
-    public Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException
+    public Writer openAsWriter( File fileName, Charset charset, boolean append ) throws IOException
     {
-        return new OutputStreamWriter( new FileOutputStream( fileName, append ), encoding );
+        return new OutputStreamWriter( new FileOutputStream( fileName, append ), charset );
     }
 
     @Override
@@ -94,14 +108,14 @@ public class DefaultFileSystemAbstraction
     @Override
     public void mkdirs( File path ) throws IOException
     {
-        if (path.exists())
+        if ( path.exists() )
         {
             return;
         }
 
-        boolean directoriesWereCreated = path.mkdirs();
+        path.mkdirs();
 
-        if (directoriesWereCreated)
+        if ( path.exists() )
         {
             return;
         }
@@ -134,9 +148,9 @@ public class DefaultFileSystemAbstraction
     }
 
     @Override
-    public boolean renameFile( File from, File to ) throws IOException
+    public void renameFile( File from, File to, CopyOption... copyOptions ) throws IOException
     {
-        return FileUtils.renameFile( from, to );
+        Files.move( from.toPath(), to.toPath(), copyOptions );
     }
 
     @Override
@@ -194,5 +208,28 @@ public class DefaultFileSystemAbstraction
     public void truncate( File path, long size ) throws IOException
     {
         FileUtils.truncateFile( path, size );
+    }
+
+    @Override
+    public long lastModifiedTime( File file )
+    {
+        return file.lastModified();
+    }
+
+    @Override
+    public void deleteFileOrThrow( File file ) throws IOException
+    {
+        Files.delete( file.toPath() );
+    }
+
+    protected StoreFileChannel getStoreFileChannel( FileChannel channel )
+    {
+        return new StoreFileChannel( channel );
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+        IOUtils.closeAll( thirdPartyFileSystems.values() );
     }
 }

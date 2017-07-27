@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,14 +17,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.cypher.internal.tracing;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.neo4j.cypher.internal.compiler.v2_3.CompilationPhaseTracer;
+import org.neo4j.cypher.internal.frontend.v3_2.phases.CompilationPhaseTracer;
 
 public class TimingCompilationTracer implements CompilationTracer
 {
@@ -83,7 +82,7 @@ public class TimingCompilationTracer implements CompilationTracer
         return new Query( clock, query, listener );
     }
 
-    private static abstract class Event implements AutoCloseable
+    private abstract static class Event implements AutoCloseable
     {
         private Clock clock;
         private long time;

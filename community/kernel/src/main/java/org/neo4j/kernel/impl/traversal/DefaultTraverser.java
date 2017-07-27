@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.traversal;
 
+import org.neo4j.function.Factory;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
@@ -26,7 +27,6 @@ import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.traversal.TraversalMetadata;
 import org.neo4j.graphdb.traversal.Traverser;
-import org.neo4j.helpers.Factory;
 import org.neo4j.helpers.collection.PrefetchingResourceIterator;
 
 public class DefaultTraverser implements Traverser
@@ -35,7 +35,7 @@ public class DefaultTraverser implements Traverser
 
     private TraversalMetadata lastIterator;
 
-    DefaultTraverser(Factory<TraverserIterator> traverserIteratorFactory )
+    DefaultTraverser( Factory<TraverserIterator> traverserIteratorFactory )
     {
         this.traverserIteratorFactory = traverserIteratorFactory;
     }
@@ -108,7 +108,7 @@ public class DefaultTraverser implements Traverser
         return lastIterator;
     }
 
-    private static abstract class ResourcePathIterableWrapper<T> implements ResourceIterable<T>
+    private abstract static class ResourcePathIterableWrapper<T> implements ResourceIterable<T>
     {
         private final ResourceIterable<Path> iterableToWrap;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,9 @@
  */
 package org.neo4j.cypher
 
-import org.neo4j.cypher.internal.compiler.v2_3.executionplan.InternalExecutionResult
-import org.neo4j.cypher.internal.compiler.v2_3.planDescription.InternalPlanDescription
-import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherFunSuite
-import org.neo4j.graphdb.{Node, PropertyContainer}
+import org.neo4j.cypher.internal.frontend.v3_2.test_helpers.CypherFunSuite
+import org.neo4j.graphdb.{Node, PropertyContainer, Result}
+import org.neo4j.kernel.api.exceptions.Status
 import org.scalatest.matchers.{MatchResult, Matcher}
 
 import scala.collection.JavaConverters._
@@ -30,7 +29,7 @@ import scala.collection.JavaConverters._
 abstract class GraphDatabaseFunSuite extends CypherFunSuite with GraphDatabaseTestSupport
 
 abstract class ExecutionEngineFunSuite
-  extends CypherFunSuite with GraphDatabaseTestSupport with ExecutionEngineTestSupport {
+  extends CypherFunSuite with GraphDatabaseTestSupport with ExecutionEngineTestSupport with QueryPlanTestSupport {
 
   case class haveProperty(propName: String) extends Matcher[PropertyContainer] {
     def apply(left: PropertyContainer): MatchResult = {
@@ -76,22 +75,16 @@ abstract class ExecutionEngineFunSuite
     }
   }
 
-  def use(operators: String*): Matcher[InternalExecutionResult] = new Matcher[InternalExecutionResult] {
-    override def apply(result: InternalExecutionResult): MatchResult = {
-      val plan: InternalPlanDescription = result.executionPlanDescription()
-      MatchResult(
-        matches = operators.forall(plan.find(_).nonEmpty),
-        rawFailureMessage = s"Plan should use ${operators.mkString(",")}:\n$plan",
-        rawNegatedFailureMessage = s"Plan should not use ${operators.mkString(",")}:\n$plan")
-    }
+  def shouldHaveWarnings(result: Result, statusCodes: List[Status]) {
+    val resultCodes = result.getNotifications.asScala.map(_.getCode)
+    statusCodes.foreach(statusCode => resultCodes should contain(statusCode.code.serialize()))
   }
 
-  def haveCount(count: Int): Matcher[InternalExecutionResult] = new Matcher[InternalExecutionResult] {
-    override def apply(result: InternalExecutionResult): MatchResult = {
-      MatchResult(
-        matches = count == result.toList.length,
-        rawFailureMessage = s"Result should have $count rows",
-        rawNegatedFailureMessage = s"Plan should not have $count rows")
-    }
+  def shouldHaveWarning(result: Result, notification: Status) {
+    shouldHaveWarnings(result, List(notification))
+  }
+
+  def shouldHaveNoWarnings(result: Result) {
+    shouldHaveWarnings(result, List())
   }
 }

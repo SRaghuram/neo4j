@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,8 +31,8 @@ public interface Action<T,F>
      * For outputting a test case, this is the code that represents this action.
      */
     void printAsCode( T source, LinePrinter out, boolean includeChecks );
-    
-    public abstract static class Adapter<T,F> implements Action<T,F>
+
+    abstract class Adapter<T,F> implements Action<T,F>
     {
         @Override
         public void printAsCode( T source, LinePrinter out, boolean includeChecks )

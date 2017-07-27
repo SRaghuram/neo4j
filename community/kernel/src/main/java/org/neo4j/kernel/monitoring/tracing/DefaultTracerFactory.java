@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,8 +21,12 @@ package org.neo4j.kernel.monitoring.tracing;
 
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.kernel.impl.api.DefaultTransactionTracer;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.DefaultCheckPointerTracer;
 import org.neo4j.kernel.impl.transaction.tracing.CheckPointTracer;
 import org.neo4j.kernel.impl.transaction.tracing.TransactionTracer;
+import org.neo4j.kernel.impl.util.JobScheduler;
+import org.neo4j.kernel.monitoring.Monitors;
 
 /**
  * The default TracerFactory, when nothing else is otherwise configured.
@@ -36,20 +40,22 @@ public class DefaultTracerFactory implements TracerFactory
     }
 
     @Override
-    public PageCacheTracer createPageCacheTracer()
+    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler )
     {
         return new DefaultPageCacheTracer();
     }
 
     @Override
-    public TransactionTracer createTransactionTracer()
+    public TransactionTracer createTransactionTracer( Monitors monitors, JobScheduler jobScheduler )
     {
-        return TransactionTracer.NULL;
+        DefaultTransactionTracer.Monitor monitor = monitors.newMonitor( DefaultTransactionTracer.Monitor.class );
+        return new DefaultTransactionTracer( monitor, jobScheduler );
     }
 
     @Override
-    public CheckPointTracer createCheckPointTracer()
+    public CheckPointTracer createCheckPointTracer( Monitors monitors, JobScheduler jobScheduler )
     {
-        return CheckPointTracer.NULL;
+        DefaultCheckPointerTracer.Monitor monitor = monitors.newMonitor( DefaultCheckPointerTracer.Monitor.class );
+        return new DefaultCheckPointerTracer( monitor, jobScheduler );
     }
 }

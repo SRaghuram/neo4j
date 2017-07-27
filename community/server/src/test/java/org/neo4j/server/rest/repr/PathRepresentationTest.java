@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,12 +20,13 @@
 package org.neo4j.server.rest.repr;
 
 import org.junit.Test;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Path;
-import org.neo4j.graphdb.Relationship;
 
 import java.util.List;
 import java.util.Map;
+
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.Relationship;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -34,11 +35,11 @@ import static org.neo4j.server.rest.repr.RepresentationTestAccess.serialize;
 import static org.neo4j.server.rest.repr.RepresentationTestBase.NODE_URI_PATTERN;
 import static org.neo4j.server.rest.repr.RepresentationTestBase.RELATIONSHIP_URI_PATTERN;
 import static org.neo4j.server.rest.repr.RepresentationTestBase.assertUriMatches;
-import static org.neo4j.test.mocking.GraphMock.node;
-import static org.neo4j.test.mocking.GraphMock.path;
-import static org.neo4j.test.mocking.GraphMock.relationship;
-import static org.neo4j.test.mocking.Link.link;
-import static org.neo4j.test.mocking.Properties.properties;
+import static org.neo4j.test.mockito.mock.GraphMock.node;
+import static org.neo4j.test.mockito.mock.GraphMock.path;
+import static org.neo4j.test.mockito.mock.GraphMock.relationship;
+import static org.neo4j.test.mockito.mock.Link.link;
+import static org.neo4j.test.mockito.mock.Properties.properties;
 
 public class PathRepresentationTest
 {
@@ -95,7 +96,7 @@ public class PathRepresentationTest
      * This contains two forward relationships and one backward relationship
      * which is represented in the "directions" value of the output. We should
      * therefore see something like the following:
-     * 
+     *
      * {
      *     "length" : 3,
      *     "start" : "http://neo4j.org/node/0",
@@ -128,7 +129,6 @@ public class PathRepresentationTest
                 path( a, link( ab, b ), link( cb, c ), link( cd, d ) ));
     }
 
-
     public static void verifySerialisation( Map<String, Object> pathrep )
     {
         assertNotNull( pathrep.get( "length" ) );
@@ -141,7 +141,8 @@ public class PathRepresentationTest
         assertTrue( nodes instanceof List );
         List nodeList = (List) nodes;
         assertEquals( length + 1, nodeList.size() );
-        for ( Object node : nodeList ) {
+        for ( Object node : nodeList )
+        {
             assertUriMatches( NODE_URI_PATTERN, node.toString() );
         }
 
@@ -149,7 +150,8 @@ public class PathRepresentationTest
         assertTrue( rels instanceof List );
         List relList = (List) rels;
         assertEquals( length, relList.size() );
-        for ( Object rel : relList ) {
+        for ( Object rel : relList )
+        {
             assertUriMatches( RELATIONSHIP_URI_PATTERN, rel.toString() );
         }
 

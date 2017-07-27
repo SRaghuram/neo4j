@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,7 +31,7 @@ public class DynamicIntArray extends DynamicNumberArray<IntArray> implements Int
 
     public DynamicIntArray( NumberArrayFactory factory, long chunkSize, int defaultValue )
     {
-        super( factory, chunkSize );
+        super( factory, chunkSize, new IntArray[0] );
         this.defaultValue = defaultValue;
     }
 
@@ -39,36 +39,18 @@ public class DynamicIntArray extends DynamicNumberArray<IntArray> implements Int
     public int get( long index )
     {
         IntArray chunk = chunkOrNullAt( index );
-        return chunk != null ? chunk.get( index( index ) ) : defaultValue;
+        return chunk != null ? chunk.get( index ) : defaultValue;
     }
 
     @Override
     public void set( long index, int value )
     {
-        ensureChunkAt( index ).set( index( index ), value );
+        at( index ).set( index, value );
     }
 
     @Override
-    public void swap( long fromIndex, long toIndex, int numberOfEntries )
+    protected IntArray addChunk( long chunkSize, long base )
     {
-        // Let's just do this the stupid way. There's room for optimization here
-        for ( int i = 0; i < numberOfEntries; i++ )
-        {
-            int intermediary = get( fromIndex+i );
-            set( fromIndex+i, get( toIndex+i ) );
-            set( toIndex+i, intermediary );
-        }
-    }
-
-    @Override
-    protected IntArray addChunk( long chunkSize )
-    {
-        return factory.newIntArray( chunkSize, defaultValue );
-    }
-
-    @Override
-    public IntArray fixate()
-    {
-        return new FixedIntArray( chunks, chunkSize, defaultValue );
+        return factory.newIntArray( chunkSize, defaultValue, base );
     }
 }

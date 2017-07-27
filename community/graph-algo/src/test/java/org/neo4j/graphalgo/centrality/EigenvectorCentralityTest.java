@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -101,7 +101,6 @@ public abstract class EigenvectorCentralityTest extends Neo4jAlgoTestCase
         assertApproximateCentrality( eigenvectorCentrality, "c", 0.637, 0.02 );
         assertApproximateCentrality( eigenvectorCentrality, "d", 0.481, 0.02 );
     }
-
 
     @Test
     public void shouldHandleFirstNodeBeingOrphanInRelationshipSet()

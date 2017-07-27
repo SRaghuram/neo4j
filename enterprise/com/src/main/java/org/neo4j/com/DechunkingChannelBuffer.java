@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,11 @@
  */
 package org.neo4j.com;
 
-import static org.neo4j.kernel.impl.util.Bits.numbersToBitString;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.ChannelBufferIndexFinder;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.queue.BlockingReadHandler;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,13 +36,9 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.ChannelBufferIndexFinder;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.queue.BlockingReadHandler;
+import static org.neo4j.kernel.impl.util.Bits.numbersToBitString;
 
-public class DechunkingChannelBuffer implements ChannelBuffer
+class DechunkingChannelBuffer implements ChannelBuffer
 {
     private final BlockingReadHandler<ChannelBuffer> reader;
     private ChannelBuffer buffer;
@@ -59,7 +59,7 @@ public class DechunkingChannelBuffer implements ChannelBuffer
         readNextChunk();
     }
 
-    protected ChannelBuffer readNext()
+    private ChannelBuffer readNext()
     {
         try
         {
@@ -70,11 +70,7 @@ public class DechunkingChannelBuffer implements ChannelBuffer
             }
             return result;
         }
-        catch ( IOException e )
-        {
-            throw new ComException( e );
-        }
-        catch ( InterruptedException e )
+        catch ( IOException | InterruptedException e )
         {
             throw new ComException( e );
         }
@@ -149,8 +145,10 @@ public class DechunkingChannelBuffer implements ChannelBuffer
         Throwable cause;
         try
         {
-            ObjectInputStream input = new ObjectInputStream( asInputStream() );
-            cause = (Throwable) input.readObject();
+            try ( ObjectInputStream input = new ObjectInputStream( asInputStream() ) )
+            {
+                cause = (Throwable) input.readObject();
+            }
         }
         catch ( Throwable e )
         {
@@ -159,14 +157,26 @@ public class DechunkingChannelBuffer implements ChannelBuffer
             // We hit this when we try to read the exception of the first one, and in reading it hit the second
             // chunk with the "real" exception. This should be revisited to 1) clear up the chunking and 2) handle
             // serialized exceptions spanning multiple chunks.
-            if ( e instanceof RuntimeException ) throw (RuntimeException) e;
-            if ( e instanceof Error ) throw (Error) e;
+            if ( e instanceof RuntimeException )
+            {
+                throw (RuntimeException) e;
+            }
+            if ( e instanceof Error )
+            {
+                throw (Error) e;
+            }
 
             throw new ComException( e );
         }
 
-        if ( cause instanceof RuntimeException ) throw (RuntimeException) cause;
-        if ( cause instanceof Error ) throw (Error) cause;
+        if ( cause instanceof RuntimeException )
+        {
+            throw (RuntimeException) cause;
+        }
+        if ( cause instanceof Error )
+        {
+            throw (Error) cause;
+        }
         throw new ComException( cause );
     }
 
@@ -288,7 +298,7 @@ public class DechunkingChannelBuffer implements ChannelBuffer
         buffer.discardReadBytes();
         if ( hasMarkedReaderIndex )
         {
-            buffer.readerIndex( oldReaderIndex-bytesToDiscard );
+            buffer.readerIndex( oldReaderIndex - bytesToDiscard );
         }
     }
 

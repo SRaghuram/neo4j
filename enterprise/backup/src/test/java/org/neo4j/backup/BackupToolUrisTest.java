@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,19 +19,18 @@
  */
 package org.neo4j.backup;
 
-import java.io.File;
-import java.io.PrintStream;
-import java.util.List;
-
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.File;
+import java.io.PrintStream;
+import java.util.List;
+
 import org.neo4j.kernel.configuration.Config;
 
 import static java.util.Arrays.asList;
-
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -96,7 +95,7 @@ public class BackupToolUrisTest
                     eq( host ),
                     eq( port ),
                     eq( new File( "/var/backup/graph" ) ),
-                    eq( true ),
+                    eq( ConsistencyCheck.FULL ),
                     any( Config.class ),
                     eq( BackupClient.BIG_READ_TIMEOUT ),
                     eq( false )
@@ -200,7 +199,7 @@ public class BackupToolUrisTest
                     eq( host ),
                     eq( port ),
                     eq( new File( "/var/backup/graph" ) ),
-                    eq( true ),
+                    eq( ConsistencyCheck.FULL ),
                     any( Config.class ),
                     eq( BackupClient.BIG_READ_TIMEOUT ),
                     eq( false )

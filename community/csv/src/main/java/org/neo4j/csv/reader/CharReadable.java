@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -56,7 +56,14 @@ public interface CharReadable extends Closeable, SourceTraceability
      */
     SectionedCharBuffer read( SectionedCharBuffer buffer, int from ) throws IOException;
 
-    public static abstract class Adapter extends SourceTraceability.Adapter implements CharReadable
+    /**
+     * Reads characters into the given array starting at {@code offset}, reading {@code length} number of characters.
+     *
+     * Similar to {@link Reader#read(char[], int, int)}
+     */
+    int read( char[] into, int offset, int length ) throws IOException;
+
+    abstract class Adapter extends SourceTraceability.Adapter implements CharReadable
     {
         @Override
         public void close() throws IOException

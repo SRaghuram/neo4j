@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,15 @@
  */
 package org.neo4j.server.rest.repr;
 
-import org.neo4j.helpers.collection.MapUtil;
-
-import javax.ws.rs.core.MediaType;
 import java.io.OutputStream;
+import javax.ws.rs.core.MediaType;
+
+import org.neo4j.helpers.collection.MapUtil;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 
-public interface StreamingFormat {
+public interface StreamingFormat
+{
     String STREAM_HEADER = "X-Stream";
     MediaType MEDIA_TYPE = new MediaType( APPLICATION_JSON_TYPE.getType(),
             APPLICATION_JSON_TYPE.getSubtype(), MapUtil.stringMap("stream", "true", "charset", "UTF-8") );

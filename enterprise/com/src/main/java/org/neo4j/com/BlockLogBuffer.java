@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,12 +19,12 @@
  */
 package org.neo4j.com;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
-
-import org.jboss.netty.buffer.ChannelBuffer;
 
 import org.neo4j.kernel.monitoring.ByteCounterMonitor;
 
@@ -43,7 +43,7 @@ public class BlockLogBuffer implements Closeable
     // First byte of every chunk that is not the last one
     static final byte FULL_BLOCK_AND_MORE = 0;
     static final int MAX_SIZE = 256; /* soft limit, incl. header */
-    static final int DATA_SIZE = MAX_SIZE-1;
+    static final int DATA_SIZE = MAX_SIZE - 1;
 
     private final ChannelBuffer target;
     private final ByteCounterMonitor monitor;
@@ -82,7 +82,7 @@ public class BlockLogBuffer implements Closeable
         }
         return this;
     }
-    
+
     private void flush( int howManyBytesToWrite ) throws IOException
     {
         target.writeBytes( byteArray, 0, howManyBytesToWrite );
@@ -91,7 +91,7 @@ public class BlockLogBuffer implements Closeable
         clearInternalBuffer();
         byteBuffer.put( byteArray, howManyBytesToWrite, pos - howManyBytesToWrite );
     }
-    
+
 //    @Override
 //    public void emptyBufferIntoChannelAndClearIt() throws IOException
 //    {

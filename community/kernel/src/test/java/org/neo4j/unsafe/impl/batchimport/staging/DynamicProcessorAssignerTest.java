@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,6 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-
 import static org.neo4j.unsafe.impl.batchimport.staging.ControlledStep.stepWithStats;
 import static org.neo4j.unsafe.impl.batchimport.staging.Step.ORDER_SEND_DOWNSTREAM;
 import static org.neo4j.unsafe.impl.batchimport.stats.Keys.avg_processing_time;
@@ -41,88 +40,88 @@ public class DynamicProcessorAssignerTest
     public void shouldAssignAdditionalCPUToBottleNeckStep() throws Exception
     {
         // GIVEN
-        Configuration config = movingAverageConfig( 10 );
-        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config, 5 );
+        Configuration config = config( 10, 5 );
+        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config );
 
         ControlledStep<?> slowStep = stepWithStats( "slow", 0, avg_processing_time, 10L, done_batches, 10L );
         ControlledStep<?> fastStep = stepWithStats( "fast", 0, avg_processing_time, 2L, done_batches, 10L );
 
-        StageExecution[] execution = executionOf( config, slowStep, fastStep );
+        StageExecution execution = executionOf( config, slowStep, fastStep );
         assigner.start( execution );
 
         // WHEN
         assigner.check( execution );
 
         // THEN
-        assertEquals( 5, slowStep.numberOfProcessors() );
-        assertEquals( 1, fastStep.numberOfProcessors() );
+        assertEquals( 5, slowStep.processors( 0 ) );
+        assertEquals( 1, fastStep.processors( 0 ) );
     }
 
     @Test
     public void shouldRemoveCPUsFromWayTooFastStep() throws Exception
     {
         // GIVEN
-        Configuration config = movingAverageConfig( 10 );
+        Configuration config = config( 10, 3 );
         // available processors = 2 is enough because it will see the fast step as only using 20% of a processor
         // and it rounds down. So there's room for assigning one more.
-        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config, 3 );
+        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config );
 
-        ControlledStep<?> slowStep = spy( stepWithStats( "slow", 1, avg_processing_time, 10L, done_batches, 10L ) );
+        ControlledStep<?> slowStep = spy( stepWithStats( "slow", 1, avg_processing_time, 6L, done_batches, 10L )
+                .setProcessors( 2 ) );
         ControlledStep<?> fastStep = spy( stepWithStats( "fast", 0, avg_processing_time, 2L, done_batches, 10L )
-                .setNumberOfProcessors( 2 ) );
+                .setProcessors( 2 ) );
 
-        StageExecution[] execution = executionOf( config, slowStep, fastStep );
+        StageExecution execution = executionOf( config, slowStep, fastStep );
         assigner.start( execution );
 
         // WHEN checking
         assigner.check( execution );
 
         // THEN one processor should be removed from the fast step
-        verify( fastStep, times( 0 ) ).incrementNumberOfProcessors();
-        verify( fastStep, times( 1 ) ).decrementNumberOfProcessors();
+        verify( fastStep, times( 1 ) ).processors( -1 );
     }
 
     @Test
     public void shouldRemoveCPUsButNotSoThatTheFastStepBecomesBottleneck() throws Exception
     {
         // GIVEN
-        Configuration config = movingAverageConfig( 10 );
-        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config, 3 );
+        Configuration config = config( 10, 3 );
+        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config );
 
         ControlledStep<?> slowStep = spy( stepWithStats( "slow", 1, avg_processing_time, 10L, done_batches, 10L ) );
         ControlledStep<?> fastStep = spy( stepWithStats( "fast", 0, avg_processing_time, 7L, done_batches, 10L )
-                .setNumberOfProcessors( 3 ) );
+                .setProcessors( 3 ) );
 
-        StageExecution[] execution = executionOf( config, slowStep, fastStep );
+        StageExecution execution = executionOf( config, slowStep, fastStep );
         assigner.start( execution );
 
         // WHEN checking the first time
         assigner.check( execution );
 
         // THEN one processor should be removed from the fast step
-        verify( fastStep, times( 0 ) ).incrementNumberOfProcessors();
-        verify( fastStep, times( 0 ) ).decrementNumberOfProcessors();
+        verify( fastStep, times( 0 ) ).processors( 1 );
+        verify( fastStep, times( 0 ) ).processors( -1 );
     }
 
     @Test
     public void shouldHandleZeroAverage() throws Exception
     {
         // GIVEN
-        Configuration config = movingAverageConfig( 10 );
-        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config, 5 );
+        Configuration config = config( 10, 5 );
+        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config );
 
         ControlledStep<?> aStep = stepWithStats( "slow", 0, avg_processing_time, 0L, done_batches, 0L );
         ControlledStep<?> anotherStep = stepWithStats( "fast", 0, avg_processing_time, 0L, done_batches, 0L );
 
-        StageExecution[] execution = executionOf( config, aStep, anotherStep );
+        StageExecution execution = executionOf( config, aStep, anotherStep );
         assigner.start( execution );
 
         // WHEN
         assigner.check( execution );
 
         // THEN
-        assertEquals( 1, aStep.numberOfProcessors() );
-        assertEquals( 1, anotherStep.numberOfProcessors() );
+        assertEquals( 1, aStep.processors( 0 ) );
+        assertEquals( 1, anotherStep.processors( 0 ) );
     }
 
     @Test
@@ -134,37 +133,69 @@ public class DynamicProcessorAssignerTest
         // have those be assigned to a more appropriate step instead, where it will benefit the Stage more.
 
         // GIVEN
-        Configuration config = movingAverageConfig( 10 );
-        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config, 5 );
-        Step<?> wayFastest = stepWithStats( "wayFastest", 0, avg_processing_time, 0L, done_batches, 20L );
+        Configuration config = config( 10, 3 );
+        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config );
+        Step<?> wayFastest = stepWithStats( "wayFastest", 0, avg_processing_time, 50L, done_batches, 20L );
         Step<?> fast = spy( stepWithStats( "fast", 0, avg_processing_time, 100L, done_batches, 20L )
-                .setNumberOfProcessors( 3 ) );
+                .setProcessors( 3 ) );
         Step<?> slow = stepWithStats( "slow", 1, avg_processing_time, 220L, done_batches, 20L );
-        StageExecution[] execution = executionOf( config, slow, wayFastest, fast );
+        StageExecution execution = executionOf( config, slow, wayFastest, fast );
         assigner.start( execution );
 
         // WHEN
         assigner.check( execution );
 
         // THEN
-        verify( fast ).decrementNumberOfProcessors();
+        verify( fast ).processors( -1 );
     }
 
-    private Configuration movingAverageConfig( final int movingAverage )
+    @Test
+    public void shouldRemoveCPUsFromTooFastStepEvenIfNotAllPermitsAreUsed() throws Exception
     {
-        return new Configuration.Default()
+        // GIVEN
+        Configuration config = config( 10, 20 );
+        DynamicProcessorAssigner assigner = new DynamicProcessorAssigner( config );
+        Step<?> wayFastest = spy( stepWithStats( "wayFastest", 0,
+                avg_processing_time, 50L,
+                done_batches, 20L )
+                .setProcessors( 5 ) );
+        Step<?> fast = spy( stepWithStats( "fast", 0,
+                avg_processing_time, 100L,
+                done_batches, 20L )
+                .setProcessors( 3 ) );
+        Step<?> slow = stepWithStats( "slow", 1,
+                avg_processing_time, 220L,
+                done_batches, 20L );
+        StageExecution execution = executionOf( config, slow, wayFastest, fast );
+        assigner.start( execution );
+
+        // WHEN
+        assigner.check( execution );
+
+        // THEN
+        verify( wayFastest ).processors( -1 );
+    }
+
+    private Configuration config( final int movingAverage, int processors )
+    {
+        return new Configuration()
         {
             @Override
             public int movingAverageSize()
             {
                 return movingAverage;
             }
+
+            @Override
+            public int maxNumberOfProcessors()
+            {
+                return processors;
+            }
         };
     }
 
-    private StageExecution[] executionOf( Configuration config, Step<?>... steps )
+    private StageExecution executionOf( Configuration config, Step<?>... steps )
     {
-        StageExecution execution = new StageExecution( "Test", config, Arrays.asList( steps ), ORDER_SEND_DOWNSTREAM );
-        return new StageExecution[] {execution};
+        return new StageExecution( "Test", config, Arrays.asList( steps ), ORDER_SEND_DOWNSTREAM );
     }
 }

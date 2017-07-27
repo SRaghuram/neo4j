@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.helpers.collection.IterableWrapper;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.server.rest.transactional.error.Neo4jError;
@@ -59,7 +60,7 @@ public class ExceptionRepresentation extends MappingRepresentation
         // For legacy reasons, this actually serializes into two separate formats - the old format, which simply
         // serializes a single exception, and the new format which serializes multiple errors and provides simple
         // status codes.
-        if(includeLegacyRepresentation)
+        if ( includeLegacyRepresentation )
         {
             renderWithLegacyFormat( errors.get( 0 ).cause(), serializer );
         }
@@ -87,14 +88,17 @@ public class ExceptionRepresentation extends MappingRepresentation
             Collection<String> lines = new ArrayList<String>( trace.length );
             for ( StackTraceElement element : trace )
             {
-                if (element.toString().matches( ".*(jetty|jersey|sun\\.reflect|mortbay|javax\\.servlet).*" )) continue;
+                if ( element.toString().matches( ".*(jetty|jersey|sun\\.reflect|mortbay|javax\\.servlet).*" ) )
+                {
+                    continue;
+                }
                 lines.add( element.toString() );
             }
             serializer.putList( "stackTrace", ListRepresentation.string( lines ) );
         }
 
         Throwable cause = exception.getCause();
-        if(cause != null)
+        if ( cause != null )
         {
             serializer.putMapping( "cause", new ExceptionRepresentation( cause ) );
         }
@@ -104,7 +108,7 @@ public class ExceptionRepresentation extends MappingRepresentation
     {
         private final Neo4jError error;
 
-        public ErrorEntryRepresentation( Neo4jError error )
+        ErrorEntryRepresentation( Neo4jError error )
         {
             super( "error-entry" );
             this.error = error;
@@ -115,7 +119,7 @@ public class ExceptionRepresentation extends MappingRepresentation
         {
             serializer.putString( "code", error.status().code().serialize() );
             serializer.putString( "message", error.getMessage() );
-            if(error.shouldSerializeStackTrace())
+            if ( error.shouldSerializeStackTrace() )
             {
                 serializer.putString( "stackTrace", error.getStackTraceAsString() );
             }
@@ -136,14 +140,18 @@ public class ExceptionRepresentation extends MappingRepresentation
 
     private static Status statusCode( Throwable current )
     {
-        while(current != null)
+        while ( current != null )
         {
-            if(current instanceof Status.HasStatus)
+            if ( current instanceof Status.HasStatus )
             {
-                return ((Status.HasStatus)current).status();
+                return ((Status.HasStatus) current).status();
+            }
+            if ( current instanceof ConstraintViolationException )
+            {
+                return Status.Schema.ConstraintValidationFailed;
             }
             current = current.getCause();
         }
-        return Status.General.UnknownFailure;
+        return Status.General.UnknownError;
     }
 }

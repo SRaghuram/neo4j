@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -44,7 +44,7 @@ public class InputNodeDeserialization extends InputEntityDeserialization<InputNo
     private String[] labels = new String[10];
     private int labelsCursor;
 
-    public InputNodeDeserialization( SourceTraceability source, Header header, Groups groups, boolean idsAreExternal )
+    public InputNodeDeserialization( Header header, SourceTraceability source, Groups groups, boolean idsAreExternal )
     {
         super( source );
         this.header = header;

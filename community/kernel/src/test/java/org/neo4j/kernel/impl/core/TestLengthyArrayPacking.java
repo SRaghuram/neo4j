@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,8 +28,7 @@ import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
-import static org.neo4j.kernel.impl.store.PropertyStore.DEFAULT_DATA_BLOCK_SIZE;
+import static org.neo4j.kernel.impl.store.format.standard.PropertyRecordFormat.DEFAULT_DATA_BLOCK_SIZE;
 
 public class TestLengthyArrayPacking extends AbstractNeo4jTestCase
 {
@@ -45,7 +44,7 @@ public class TestLengthyArrayPacking extends AbstractNeo4jTestCase
         int[] arrayWhichUnpackedWouldFillTwoDynamicRecords = new int[40];
         for ( int i = 0; i < arrayWhichUnpackedWouldFillTwoDynamicRecords.length; i++ )
         {
-            arrayWhichUnpackedWouldFillTwoDynamicRecords[i] = i*i;
+            arrayWhichUnpackedWouldFillTwoDynamicRecords[i] = i * i;
         }
         Node node = getGraphDb().createNode();
         String key = "the array";
@@ -53,9 +52,8 @@ public class TestLengthyArrayPacking extends AbstractNeo4jTestCase
         newTransaction();
 
         // Make sure it only requires one dynamic record
-        assertEquals( arrayRecordsBefore+1, dynamicArrayRecordsInUse() );
-        assertTrue( Arrays.equals( arrayWhichUnpackedWouldFillTwoDynamicRecords,
-                (int[]) node.getProperty( key ) ) );
+        assertEquals( arrayRecordsBefore + 1, dynamicArrayRecordsInUse() );
+        assertTrue( Arrays.equals( arrayWhichUnpackedWouldFillTwoDynamicRecords, (int[]) node.getProperty( key ) ) );
     }
 
     // Tests for strings, although the test class name suggests otherwise
@@ -63,14 +61,14 @@ public class TestLengthyArrayPacking extends AbstractNeo4jTestCase
     @Test
     public void makeSureLongLatin1StringUsesOneBytePerChar() throws Exception
     {
-        String string = stringOfLength( SOME_LATIN_1_CHARS, DEFAULT_DATA_BLOCK_SIZE*2-1 );
+        String string = stringOfLength( SOME_LATIN_1_CHARS, DEFAULT_DATA_BLOCK_SIZE * 2 - 1 );
         makeSureRightAmountOfDynamicRecordsUsed( string, 2, STRING_RECORD_COUNTER );
     }
 
     @Test
     public void makeSureLongUtf8StringUsesLessThanTwoBytesPerChar() throws Exception
     {
-        String string = stringOfLength( SOME_MIXED_CHARS, DEFAULT_DATA_BLOCK_SIZE+10 );
+        String string = stringOfLength( SOME_MIXED_CHARS, DEFAULT_DATA_BLOCK_SIZE + 10 );
         makeSureRightAmountOfDynamicRecordsUsed( string, 2, STRING_RECORD_COUNTER );
     }
 
@@ -79,7 +77,10 @@ public class TestLengthyArrayPacking extends AbstractNeo4jTestCase
     {
         // Exactly 120 bytes: 5b header + (19+4)*5. w/o compression 5+(19*2 + 4)*5
         String[] stringArray = new String[5];
-        for ( int i = 0; i < stringArray.length; i++ ) stringArray[i] = stringOfLength( SOME_LATIN_1_CHARS, 19 );
+        for ( int i = 0; i < stringArray.length; i++ )
+        {
+            stringArray[i] = stringOfLength( SOME_LATIN_1_CHARS, 19 );
+        }
         makeSureRightAmountOfDynamicRecordsUsed( stringArray, 1, ARRAY_RECORD_COUNTER );
     }
 
@@ -87,7 +88,10 @@ public class TestLengthyArrayPacking extends AbstractNeo4jTestCase
     public void makeSureLongUtf8StringArrayUsesLessThanTwoBytePerChar() throws Exception
     {
         String[] stringArray = new String[7];
-        for ( int i = 0; i < stringArray.length; i++ ) stringArray[i] = stringOfLength( SOME_MIXED_CHARS, 20 );
+        for ( int i = 0; i < stringArray.length; i++ )
+        {
+            stringArray[i] = stringOfLength( SOME_MIXED_CHARS, 20 );
+        }
         makeSureRightAmountOfDynamicRecordsUsed( stringArray, 2, ARRAY_RECORD_COUNTER );
     }
 
@@ -99,7 +103,7 @@ public class TestLengthyArrayPacking extends AbstractNeo4jTestCase
         node.setProperty( "name", value );
         newTransaction();
         long stringRecordsAfter = recordCounter.count();
-        assertEquals( stringRecordsBefore+expectedAddedDynamicRecords, stringRecordsAfter );
+        assertEquals( stringRecordsBefore + expectedAddedDynamicRecords, stringRecordsAfter );
     }
 
     private String stringOfLength( String possibilities, int length )
@@ -107,7 +111,7 @@ public class TestLengthyArrayPacking extends AbstractNeo4jTestCase
         StringBuilder builder = new StringBuilder();
         for ( int i = 0; i < length; i++ )
         {
-            builder.append( possibilities.charAt( i%possibilities.length() ) );
+            builder.append( possibilities.charAt( i % possibilities.length() ) );
         }
         return builder.toString();
     }

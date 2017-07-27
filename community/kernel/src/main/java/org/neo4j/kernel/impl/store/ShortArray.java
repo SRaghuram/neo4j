@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -47,7 +47,8 @@ public enum ShortArray
                 {
                     result.put( value ? 1 : 0, 1 );
                 }
-            } else
+            }
+            else
             {
                 for ( boolean value : (Boolean[]) array )
                 {
@@ -103,7 +104,8 @@ public enum ShortArray
                 {
                     highest = Math.max( getRequiredBits( value ), highest );
                 }
-            } else
+            }
+            else
             {
                 for ( byte value : (Byte[]) array )
                 {
@@ -123,7 +125,8 @@ public enum ShortArray
                 {
                     result.put( b, requiredBits );
                 }
-            } else
+            }
+            else
             {
                 for ( byte b : (Byte[]) array )
                 {
@@ -180,7 +183,8 @@ public enum ShortArray
                 {
                     highest = Math.max( getRequiredBits( value ), highest );
                 }
-            } else
+            }
+            else
             {
                 for ( short value : (Short[]) array )
                 {
@@ -200,7 +204,8 @@ public enum ShortArray
                 {
                     result.put( value, requiredBits );
                 }
-            } else
+            }
+            else
             {
                 for ( short value : (Short[]) array )
                 {
@@ -256,7 +261,8 @@ public enum ShortArray
                 {
                     highest = Math.max( getRequiredBits( value ), highest );
                 }
-            } else
+            }
+            else
             {
                 for ( char value : (Character[]) array )
                 {
@@ -276,7 +282,8 @@ public enum ShortArray
                 {
                     result.put( value, requiredBits );
                 }
-            } else
+            }
+            else
             {
                 for ( char value : (Character[]) array )
                 {
@@ -332,7 +339,8 @@ public enum ShortArray
                 {
                     highest = Math.max( getRequiredBits( value ), highest );
                 }
-            } else
+            }
+            else
             {
                 for ( int value : (Integer[]) array )
                 {
@@ -352,7 +360,8 @@ public enum ShortArray
                 {
                     result.put( value, requiredBits );
                 }
-            } else
+            }
+            else
             {
                 for ( int value : (Integer[]) array )
                 {
@@ -399,7 +408,6 @@ public enum ShortArray
             return 1;
         }
 
-
         @Override
         int getRequiredBits( Object array, int arrayLength )
         {
@@ -410,7 +418,8 @@ public enum ShortArray
                 {
                     highest = Math.max( getRequiredBits( value ), highest );
                 }
-            } else
+            }
+            else
             {
                 for ( long value : (Long[]) array )
                 {
@@ -430,7 +439,8 @@ public enum ShortArray
                 {
                     result.put( value, requiredBits );
                 }
-            } else
+            }
+            else
             {
                 for ( long value : (Long[]) array )
                 {
@@ -487,7 +497,8 @@ public enum ShortArray
                 {
                     highest = Math.max( getRequiredBits( value ), highest );
                 }
-            } else
+            }
+            else
             {
                 for ( float value : (Float[]) array )
                 {
@@ -507,7 +518,8 @@ public enum ShortArray
                 {
                     result.put( Float.floatToIntBits( value ), requiredBits );
                 }
-            } else
+            }
+            else
             {
                 for ( float value : (Float[]) array )
                 {
@@ -564,7 +576,8 @@ public enum ShortArray
                 {
                     highest = Math.max( getRequiredBits( value ), highest );
                 }
-            } else
+            }
+            else
             {
                 for ( double value : (Double[]) array )
                 {
@@ -584,7 +597,8 @@ public enum ShortArray
                 {
                     result.put( Double.doubleToLongBits( value ), requiredBits );
                 }
-            } else
+            }
+            else
             {
                 for ( double value : (Double[]) array )
                 {
@@ -629,11 +643,12 @@ public enum ShortArray
         return array.getClass().getComponentType().isPrimitive();
     }
 
-    private static final Map<Class<?>, ShortArray> all = new IdentityHashMap<>( values().length * 2 );
+    private static final ShortArray[] TYPES = ShortArray.values();
+    private static final Map<Class<?>, ShortArray> all = new IdentityHashMap<>( TYPES.length * 2 );
 
     static
     {
-        for ( ShortArray shortArray : values() )
+        for ( ShortArray shortArray : TYPES )
         {
             all.put( shortArray.primitiveClass, shortArray );
             all.put( shortArray.boxedClass, shortArray );
@@ -736,10 +751,9 @@ public enum ShortArray
         return type.createArray(arrayLength, bits, requiredBits);
     }
 
-
     private static boolean willFit( int requiredBits, int arrayLength, int payloadSizeInBytes )
     {
-        int totalBitsRequired = requiredBits*arrayLength;
+        int totalBitsRequired = requiredBits * arrayLength;
         int maxBits = payloadSizeInBytes * 8 - 24 - 4 - 4 - 6 - 6;
         return totalBitsRequired <= maxBits;
     }
@@ -772,7 +786,7 @@ public enum ShortArray
 
     public static ShortArray typeOf( byte typeId )
     {
-        return ShortArray.values()[typeId-1];
+        return TYPES[typeId - 1];
     }
 
     public static ShortArray typeOf( Object array )
@@ -782,13 +796,14 @@ public enum ShortArray
 
     public static int calculateNumberOfBlocksUsed( long firstBlock )
     {
-        Bits bits = Bits.bitsFromLongs( new long[] {firstBlock} );
-        // bbbb][bbll,llll][yyyy,tttt][kkkk,kkkk][kkkk,kkkk][kkkk,kkkk]
-        bits.getInt( 24 ); // Get rid of key
-        bits.getByte( 4 ); // Get rid of short array type
-        bits.getByte( 4 ); // Get rid of the type
-        int arrayLength = bits.getByte( 6 );
-        int requiredBits = bits.getByte( 6 );
+        // inside the high 4B of the first block of a short array sits the header
+        int highInt = (int) (firstBlock >>> 32);
+        // bits 32-37 contains number of items (length)
+        int arrayLength = highInt & 0b11_1111;
+        highInt >>>= 6;
+        // bits 38-43 contains number of requires bits per item
+        int requiredBits = highInt & 0b11_1111;
+        // no values can be represented by 0 bits, so we use that value for 64 instead
         if ( requiredBits == 0 )
         {
             requiredBits = 64;
@@ -798,7 +813,7 @@ public enum ShortArray
 
     public static int calculateNumberOfBlocksUsed( int arrayLength, int requiredBits )
     {
-        int bitsForItems = arrayLength*requiredBits;
+        int bitsForItems = arrayLength * requiredBits;
         /*
          * Key, Property Type (ARRAY), Array Type, Array Length, Bits Per Member, Data
          */

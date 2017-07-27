@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.coreapi;
 
+import java.util.function.Supplier;
+
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -35,17 +37,15 @@ import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.exceptions.InvalidTransactionTypeKernelException;
 import org.neo4j.kernel.api.exceptions.legacyindex.LegacyIndexNotFoundKernelException;
 import org.neo4j.kernel.impl.api.legacyindex.AbstractIndexHits;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 
 import static java.lang.String.format;
-
 import static org.neo4j.collection.primitive.PrimitiveLongCollections.single;
 import static org.neo4j.kernel.impl.locking.ResourceTypes.LEGACY_INDEX;
 import static org.neo4j.kernel.impl.locking.ResourceTypes.legacyIndexResourceId;
 
 public class LegacyIndexProxy<T extends PropertyContainer> implements Index<T>
 {
-    public static enum Type
+    public enum Type
     {
         NODE
                 {
@@ -250,15 +250,15 @@ public class LegacyIndexProxy<T extends PropertyContainer> implements Index<T>
 
     protected final String name;
     protected final Type type;
-    protected final ThreadToStatementContextBridge statementContextBridge;
-    private final Lookup lookup;
+    protected final Supplier<Statement> statementContextBridge;
+    private final GraphDatabaseService gds;
 
-    public LegacyIndexProxy( String name, Type type, Lookup lookup,
-                             ThreadToStatementContextBridge statementContextBridge )
+    public LegacyIndexProxy( String name, Type type, GraphDatabaseService gds,
+                             Supplier<Statement> statementContextBridge )
     {
         this.name = name;
         this.type = type;
-        this.lookup = lookup;
+        this.gds = gds;
         this.statementContextBridge = statementContextBridge;
     }
 
@@ -312,7 +312,7 @@ public class LegacyIndexProxy<T extends PropertyContainer> implements Index<T>
             @Override
             protected T fetchNextOrNull()
             {
-                statementContextBridge.assertInUnterminatedTransaction();
+                statementContextBridge.get();
                 while ( ids.hasNext() )
                 {
                     long id = ids.next();
@@ -336,12 +336,18 @@ public class LegacyIndexProxy<T extends PropertyContainer> implements Index<T>
                 }
                 return null;
             }
+
+            @Override
+            public void close()
+            {
+                ids.close();
+            }
         };
     }
 
     private T entityOf( long id )
     {
-        return type.entity( id, lookup.getGraphDatabaseService() );
+        return type.entity( id, gds );
     }
 
     @Override
@@ -379,7 +385,7 @@ public class LegacyIndexProxy<T extends PropertyContainer> implements Index<T>
     @Override
     public GraphDatabaseService getGraphDatabase()
     {
-        return lookup.getGraphDatabaseService();
+        return gds;
     }
 
     @Override

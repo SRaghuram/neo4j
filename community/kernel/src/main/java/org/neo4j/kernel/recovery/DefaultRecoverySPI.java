@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,114 +20,127 @@
 package org.neo4j.kernel.recovery;
 
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.RecoveryLabelScanWriterProvider;
-import org.neo4j.kernel.impl.api.RecoveryLegacyIndexApplierLookup;
-import org.neo4j.kernel.impl.api.index.RecoveryIndexingUpdatesValidator;
-import org.neo4j.kernel.impl.store.UnderlyingStorageException;
+import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.kernel.impl.api.TransactionQueue;
+import org.neo4j.kernel.impl.api.TransactionToApply;
+import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
+import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogVersionRepository;
-import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
+import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
-import org.neo4j.kernel.impl.transaction.log.rotation.StoreFlusher;
+import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
+import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
+import org.neo4j.storageengine.api.StorageEngine;
 
-import static org.neo4j.kernel.impl.transaction.log.PhysicalLogFile.tryOpenForVersion;
+import static org.neo4j.kernel.impl.transaction.log.Commitment.NO_COMMITMENT;
+import static org.neo4j.storageengine.api.TransactionApplicationMode.RECOVERY;
 
 public class DefaultRecoverySPI implements Recovery.SPI
 {
-    private final RecoveryLabelScanWriterProvider labelScanWriters;
-    private final RecoveryLegacyIndexApplierLookup legacyIndexApplierLookup;
-    private final StoreFlusher storeFlusher;
-    private final Visitor<LogVersionedStoreChannel,IOException> logFileRecoverer;
-    private final PhysicalLogFiles logFiles;
-    private final FileSystemAbstraction fileSystemAbstraction;
     private final LogVersionRepository logVersionRepository;
     private final PositionToRecoverFrom positionToRecoverFrom;
-    private final RecoveryIndexingUpdatesValidator indexUpdatesValidator;
+    private final PhysicalLogFiles logFiles;
+    private final FileSystemAbstraction fs;
+    private final StorageEngine storageEngine;
+    private final TransactionIdStore transactionIdStore;
+    private final LogicalTransactionStore logicalTransactionStore;
+    private Visitor<CommittedTransactionRepresentation,Exception> recoveryVisitor;
+    private TransactionQueue transactionsToApply;
 
-    public DefaultRecoverySPI( RecoveryLabelScanWriterProvider labelScanWriters,
-            RecoveryLegacyIndexApplierLookup legacyIndexApplierLookup,
-            StoreFlusher storeFlusher, Visitor<LogVersionedStoreChannel,IOException> logFileRecoverer,
-            PhysicalLogFiles logFiles, FileSystemAbstraction fileSystemAbstraction,
+    public DefaultRecoverySPI(
+            StorageEngine storageEngine,
+            PhysicalLogFiles logFiles, FileSystemAbstraction fs,
             LogVersionRepository logVersionRepository, LatestCheckPointFinder checkPointFinder,
-            RecoveryIndexingUpdatesValidator indexUpdatesValidator )
+            TransactionIdStore transactionIdStore, LogicalTransactionStore logicalTransactionStore,
+            PositionToRecoverFrom.Monitor monitor )
     {
-        this.labelScanWriters = labelScanWriters;
-        this.legacyIndexApplierLookup = legacyIndexApplierLookup;
-        this.storeFlusher = storeFlusher;
-        this.logFileRecoverer = logFileRecoverer;
+        this.storageEngine = storageEngine;
         this.logFiles = logFiles;
-        this.fileSystemAbstraction = fileSystemAbstraction;
+        this.fs = fs;
         this.logVersionRepository = logVersionRepository;
-        this.indexUpdatesValidator = indexUpdatesValidator;
-        this.positionToRecoverFrom = new PositionToRecoverFrom( checkPointFinder );
+        this.transactionIdStore = transactionIdStore;
+        this.logicalTransactionStore = logicalTransactionStore;
+        this.positionToRecoverFrom = new PositionToRecoverFrom( checkPointFinder, monitor );
     }
 
     @Override
     public void forceEverything()
     {
-        try
-        {
-            labelScanWriters.close();
-            legacyIndexApplierLookup.close();
-            indexUpdatesValidator.close();
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( e );
-        }
-        storeFlusher.forceEverything();
-    }
-
-    @Override
-    public Visitor<LogVersionedStoreChannel,IOException> getRecoverer()
-    {
-        return logFileRecoverer;
-    }
-
-    @Override
-    public Iterator<LogVersionedStoreChannel> getLogFiles( final long fromVersion ) throws IOException
-    {
-        return new Iterator<LogVersionedStoreChannel>()
-        {
-            private long currentVersion = fromVersion;
-            private LogVersionedStoreChannel current =
-                    tryOpenForVersion( logFiles, fileSystemAbstraction, currentVersion );
-
-            @Override
-            public boolean hasNext()
-            {
-                return current != null;
-            }
-
-            @Override
-            public LogVersionedStoreChannel next()
-            {
-                if ( current == null )
-                {
-                    throw new NoSuchElementException();
-                }
-
-                LogVersionedStoreChannel tmp = current;
-                current = tryOpenForVersion( logFiles, fileSystemAbstraction, ++currentVersion );
-                return tmp;
-            }
-
-            @Override
-            public void remove()
-            {
-                throw new UnsupportedOperationException();
-            }
-        };
+        IOLimiter unlimited = IOLimiter.unlimited(); // Runs during recovery; go as fast as possible.
+        storageEngine.flushAndForce( unlimited );
     }
 
     @Override
     public LogPosition getPositionToRecoverFrom() throws IOException
     {
         return positionToRecoverFrom.apply( logVersionRepository.getCurrentLogVersion() );
+    }
+
+    @Override
+    public Visitor<CommittedTransactionRepresentation,Exception> startRecovery()
+    {
+        // Calling this method means that recovery is required, tell storage engine about it
+        // This method will be called before recovery actually starts and so will ensure that
+        // each store is aware that recovery will be performed. At this point all the stores have
+        // already started btw.
+        // Go and read more at {@link CommonAbstractStore#deleteIdGenerator()}
+        storageEngine.prepareForRecoveryRequired();
+
+        transactionsToApply = new TransactionQueue( 10_000, (first,last) -> storageEngine.apply( first, RECOVERY ) );
+        recoveryVisitor = new RecoveryVisitor( transactionsToApply );
+
+        return recoveryVisitor;
+    }
+
+    @Override
+    public TransactionCursor getTransactions( LogPosition position ) throws IOException
+    {
+        return logicalTransactionStore.getTransactions( position );
+    }
+
+    @Override
+    public void allTransactionsRecovered( CommittedTransactionRepresentation lastRecoveredTransaction,
+            LogPosition positionAfterLastRecoveredTransaction ) throws Exception
+    {
+        if ( lastRecoveredTransaction != null )
+        {
+            transactionsToApply.empty();
+            transactionIdStore.setLastCommittedAndClosedTransactionId(
+                    lastRecoveredTransaction.getCommitEntry().getTxId(),
+                    LogEntryStart.checksum( lastRecoveredTransaction.getStartEntry() ),
+                    lastRecoveredTransaction.getCommitEntry().getTimeWritten(),
+                    positionAfterLastRecoveredTransaction.getByteOffset(),
+                    positionAfterLastRecoveredTransaction.getLogVersion() );
+        }
+
+        fs.truncate( logFiles.getLogFileForVersion( positionAfterLastRecoveredTransaction.getLogVersion() ),
+                positionAfterLastRecoveredTransaction.getByteOffset() );
+    }
+
+    static class RecoveryVisitor implements Visitor<CommittedTransactionRepresentation,Exception>
+    {
+        private final TransactionQueue transactionsToApply;
+
+        RecoveryVisitor( TransactionQueue transactionsToApply )
+        {
+            this.transactionsToApply = transactionsToApply;
+        }
+
+        @Override
+        public boolean visit( CommittedTransactionRepresentation transaction ) throws Exception
+        {
+            TransactionRepresentation txRepresentation = transaction.getTransactionRepresentation();
+            long txId = transaction.getCommitEntry().getTxId();
+            TransactionToApply tx = new TransactionToApply( txRepresentation, txId );
+            tx.commitment( NO_COMMITMENT, txId );
+            tx.logPosition( transaction.getStartEntry().getStartPosition() );
+            transactionsToApply.queue( tx );
+            return false;
+        }
     }
 }

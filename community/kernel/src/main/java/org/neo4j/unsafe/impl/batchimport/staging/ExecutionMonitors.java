@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,6 @@
 package org.neo4j.unsafe.impl.batchimport.staging;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-
 import static org.neo4j.unsafe.impl.batchimport.staging.SpectrumExecutionMonitor.DEFAULT_WIDTH;
 
 /**
@@ -41,12 +40,12 @@ public class ExecutionMonitors
     private static final ExecutionMonitor INVISIBLE = new ExecutionMonitor()
     {
         @Override
-        public void start( StageExecution[] executions )
+        public void start( StageExecution execution )
         {   // Do nothing
         }
 
         @Override
-        public void end( StageExecution[] executions, long totalTimeMillis )
+        public void end( StageExecution execution, long totalTimeMillis )
         {   // Do nothing
         }
 
@@ -57,7 +56,7 @@ public class ExecutionMonitors
         }
 
         @Override
-        public void check( StageExecution[] executions )
+        public void check( StageExecution execution )
         {   // Do nothing
         }
 

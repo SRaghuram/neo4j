@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,15 +21,13 @@ package org.neo4j.io.pagecache.randomharness;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 
 public class StandardRecordFormat extends RecordFormat
 {
-    private static final Charset CHARSET = Charset.forName( "UTF-8" );
-
     @Override
     public int getRecordSize()
     {
@@ -78,9 +76,10 @@ public class StandardRecordFormat extends RecordFormat
     public void write( Record record, PageCursor cursor )
     {
         StandardRecord r = (StandardRecord) record;
+        byte[] pathBytes = r.file.getPath().getBytes( StandardCharsets.UTF_8 );
+        byte fileByte = pathBytes[pathBytes.length - 1];
         cursor.putByte( r.type );
-        byte[] pathBytes = r.file.getPath().getBytes( CHARSET );
-        cursor.putByte( pathBytes[pathBytes.length - 1] );
+        cursor.putByte( fileByte );
         cursor.putShort( r.fill1 );
         cursor.putInt( r.recordId );
         cursor.putLong( r.fill2 );
@@ -94,7 +93,7 @@ public class StandardRecordFormat extends RecordFormat
         final short fill1;
         final long fill2;
 
-        public StandardRecord( File file, int recordId )
+        StandardRecord( File file, int recordId )
         {
             this.type = 42;
             this.file = file;
@@ -111,10 +110,10 @@ public class StandardRecordFormat extends RecordFormat
             fill2 = d;
         }
 
-        public StandardRecord( byte type, byte fileName, short fill1, int recordId, long fill2 )
+        StandardRecord( byte type, byte fileName, short fill1, int recordId, long fill2 )
         {
             this.type = type;
-            this.file = fileName == 0? null : new File( new String( new byte[] {fileName} ) );
+            this.file = fileName == 0 ? null : new File( new String( new byte[]{fileName} ) );
             this.fill1 = fill1;
             this.recordId = recordId;
             this.fill2 = fill2;
@@ -149,8 +148,8 @@ public class StandardRecordFormat extends RecordFormat
                 return false;
             }
             // We only look at the last letter of the path, because that's all that we can store in the record.
-            byte[] thisPath = file.getPath().getBytes( CHARSET );
-            byte[] thatPath = record.file.getPath().getBytes( CHARSET );
+            byte[] thisPath = file.getPath().getBytes( StandardCharsets.UTF_8 );
+            byte[] thatPath = record.file.getPath().getBytes( StandardCharsets.UTF_8 );
             return thisPath[thisPath.length - 1] == thatPath[thatPath.length - 1];
         }
 
@@ -167,8 +166,8 @@ public class StandardRecordFormat extends RecordFormat
 
         private static int xorshift( int x )
         {
-            x ^= (x << 6);
-            x ^= (x >>> 21);
+            x ^= x << 6;
+            x ^= x >>> 21;
             return x ^ (x << 7);
         }
 

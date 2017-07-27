@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,22 +28,25 @@ import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.helpers.Service;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.impl.factory.CommunityFacadeFactory;
+import org.neo4j.kernel.impl.factory.CommunityEditionModule;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory.Dependencies;
 import org.neo4j.kernel.impl.factory.PlatformModule;
 import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.logging.SimpleLogService;
+import org.neo4j.kernel.internal.EmbeddedGraphDatabase;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
-import static org.neo4j.helpers.Settings.TRUE;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.GraphDatabaseDependencies.newDependencies;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 import static org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory.Configuration.ephemeral;
-import static org.neo4j.test.GraphDatabaseServiceCleaner.cleanDatabaseContent;
 
 /**
  * A database meant to be used in unit tests. It will always be empty on start.
@@ -130,21 +133,29 @@ public class ImpermanentGraphDatabase extends EmbeddedGraphDatabase
     public ImpermanentGraphDatabase( File storeDir, Map<String, String> params, GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
         super( storeDir, params, dependencies );
+        trackUnclosedUse( storeDir );
+    }
 
+    public ImpermanentGraphDatabase( File storeDir, Config config,
+            GraphDatabaseFacadeFactory.Dependencies dependencies )
+    {
+        super( storeDir, config, dependencies );
         trackUnclosedUse( storeDir );
     }
 
     @Override
     protected void create( File storeDir, Map<String, String> params, GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
-        new CommunityFacadeFactory()
+        new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, CommunityEditionModule::new )
         {
             @Override
-            protected PlatformModule createPlatform( File storeDir, Map<String, String> params, Dependencies dependencies, GraphDatabaseFacade graphDatabaseFacade )
+            protected PlatformModule createPlatform( File storeDir, Config config, Dependencies dependencies,
+                    GraphDatabaseFacade graphDatabaseFacade )
             {
-                return new ImpermanentPlatformModule( storeDir, params, dependencies, graphDatabaseFacade );
+                return new ImpermanentPlatformModule( storeDir, config, databaseInfo, dependencies,
+                        graphDatabaseFacade );
             }
-        }.newFacade( storeDir, new HashMap<>( params ), dependencies, this );
+        }.initFacade( storeDir, params, dependencies, this );
     }
 
     private void trackUnclosedUse( File storeDir )
@@ -171,7 +182,13 @@ public class ImpermanentGraphDatabase extends EmbeddedGraphDatabase
         super.shutdown();
     }
 
-    private static Map<String, String> withForcedInMemoryConfiguration( Map<String, String> params )
+    private static Config withForcedInMemoryConfiguration( Config config )
+    {
+        return config.with( stringMap( ephemeral.name(), TRUE ) )
+                .withDefaults( stringMap( pagecache_memory.name(), "8M" ) );
+    }
+
+    /*private static Map<String, String> withForcedInMemoryConfiguration( Map<String, String> params )
     {
         Map<String, String> result = new HashMap<>( params );
         // To signal to index provides that we should be in-memory
@@ -181,20 +198,15 @@ public class ImpermanentGraphDatabase extends EmbeddedGraphDatabase
             result.put( pagecache_memory.name(), "8M" );
         }
         return result;
-    }
-
-    public void cleanContent()
-    {
-        cleanDatabaseContent( this );
-    }
+    }*/
 
     protected static class ImpermanentPlatformModule extends PlatformModule
     {
-        public ImpermanentPlatformModule( File storeDir, Map<String, String> params,
-                                          GraphDatabaseFacadeFactory.Dependencies dependencies,
+        public ImpermanentPlatformModule( File storeDir, Config config, DatabaseInfo databaseInfo,
+                                          Dependencies dependencies,
                                           GraphDatabaseFacade graphDatabaseFacade )
         {
-            super( storeDir, withForcedInMemoryConfiguration(params), dependencies, graphDatabaseFacade );
+            super( storeDir, withForcedInMemoryConfiguration(config), databaseInfo, dependencies, graphDatabaseFacade );
         }
 
         @Override

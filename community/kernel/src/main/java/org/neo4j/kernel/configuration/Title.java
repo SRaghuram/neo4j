@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,7 +26,6 @@ import java.lang.annotation.Target;
 
 /**
  * Used to add a short description title for settings in {@link org.neo4j.graphdb.factory.GraphDatabaseSettings}.
- * These can then be accessed through the {@link org.neo4j.graphdb.factory.GraphDatabaseSettingsResourceBundle}.
  */
 @Retention( RetentionPolicy.RUNTIME )
 @Target( ElementType.FIELD )

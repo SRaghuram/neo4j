@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,10 +23,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.index.IndexReader;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexProxy;
 import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.storageengine.api.schema.IndexReader;
 
 public interface IndexReaderFactory
 {
@@ -49,7 +49,7 @@ public interface IndexReaderFactory
         @Override
         public IndexReader newReader( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
         {
-            if( indexReaders == null )
+            if ( indexReaders == null )
             {
                 indexReaders = new HashMap<>();
             }
@@ -63,9 +63,10 @@ public interface IndexReaderFactory
             return reader;
         }
 
+        @Override
         public IndexReader newUnCachedReader( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
         {
-            IndexProxy index = indexingService.getIndexProxy( descriptor );
+            IndexProxy index = indexingService.getIndexProxy( descriptor.schema() );
             return index.newReader();
         }
 
@@ -78,6 +79,7 @@ public interface IndexReaderFactory
                 {
                     indexReader.close();
                 }
+                indexReaders.clear();
             }
         }
     }

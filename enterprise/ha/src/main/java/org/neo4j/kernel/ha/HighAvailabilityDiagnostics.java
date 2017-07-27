@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -60,7 +60,7 @@ public class HighAvailabilityDiagnostics
         builder.append( "High Availability diagnostics\n" ).
                 append( "Member state:" ).append( memberStateMachine.getCurrentState().name() ).append( "\n" ).
                 append( "State machines:\n" );
-        
+
         clusterClient.dumpDiagnostics( builder );
         logger.log( builder.toString() );
     }

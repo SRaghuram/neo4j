@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,7 +34,7 @@ import org.neo4j.cluster.statemachine.State;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
-import static org.neo4j.helpers.collection.Iterables.first;
+import static org.neo4j.helpers.collection.Iterables.firstOrNull;
 
 /**
  * State machine that implements the {@link Election} API.
@@ -51,18 +51,14 @@ public enum ElectionState
                 )
                         throws Throwable
                 {
-                    switch ( message.getMessageType() )
+                    if ( message.getMessageType() == ElectionMessage.created )
                     {
-                        case created:
-                        {
-                            context.created();
-                            return election;
-                        }
-
-                        case join:
-                        {
-                            return election;
-                        }
+                        context.created();
+                        return election;
+                    }
+                    else if ( message.getMessageType() == ElectionMessage.join )
+                    {
+                        return election;
                     }
 
                     return this;
@@ -78,7 +74,7 @@ public enum ElectionState
                 )
                         throws Throwable
                 {
-                    Log log = context.getInternalLog( ElectionState.class );
+                    Log log = context.getLog( ElectionState.class );
                     switch ( message.getMessageType() )
                     {
                         case demote:
@@ -99,7 +95,7 @@ public enum ElectionState
                             if ( context.isInCluster() )
                             {
                                 // Only the first alive server should try elections. Everyone else waits
-                                List<InstanceId> aliveInstances = Iterables.toList(context.getAlive());
+                                List<InstanceId> aliveInstances = Iterables.asList(context.getAlive());
                                 Collections.sort( aliveInstances );
                                 boolean isElector = aliveInstances.indexOf( context.getMyId() ) == 0;
 
@@ -115,7 +111,7 @@ public enum ElectionState
                                         {
                                             log.debug( "Starting election process for role " + role );
 
-                                            context.startDemotionProcess( role, demoteNode );
+                                            context.startElectionProcess( role );
 
                                             // Allow other live nodes to vote which one should take over
                                             for ( Map.Entry<InstanceId, URI> server : context.getMembers().entrySet() )
@@ -145,6 +141,11 @@ public enum ElectionState
                         {
                             if ( !context.electionOk() )
                             {
+                                log.warn( "Context says election is not OK to proceed. " +
+                                        "Failed instances are: " +
+                                        context.getFailed() +
+                                        ", cluster members are: " +
+                                        context.getMembers()  );
                                 break;
                             }
                             if ( context.isInCluster() )
@@ -160,7 +161,7 @@ public enum ElectionState
                                         String roleName = role.getName();
                                         if ( !context.isElectionProcessInProgress( roleName ) )
                                         {
-                                            context.getInternalLog(ElectionState.class).debug(
+                                            context.getLog( ElectionState.class ).debug(
                                                     "Starting election process for role " + roleName );
 
                                             context.startElectionProcess( roleName );
@@ -211,39 +212,11 @@ public enum ElectionState
                                 }
                                 else
                                 {
-                                    List<InstanceId> aliveInstances = Iterables.toList( context.getAlive() );
+                                    List<InstanceId> aliveInstances = Iterables.asList( context.getAlive() );
                                     Collections.sort( aliveInstances );
                                     outgoing.offer( message.setHeader( Message.TO,
-                                            context.getUriForId( first( aliveInstances ) ).toString() ) );
+                                            context.getUriForId( firstOrNull( aliveInstances ) ).toString() ) );
                                 }
-                            }
-                            break;
-                        }
-
-                        case promote:
-                        {
-                            Object[] args = message.getPayload();
-                            InstanceId promoteNode = (InstanceId) args[0];
-                            String role = (String) args[1];
-
-                            // Start election process for coordinator role
-                            if ( context.isInCluster() && !context.isElectionProcessInProgress( role ) )
-                            {
-                                context.startPromotionProcess( role, promoteNode );
-
-                                // Allow other live nodes to vote which one should take over
-                                for ( Map.Entry<InstanceId, URI> server : context.getMembers().entrySet() )
-                                {
-                                    if ( !context.getFailed().contains( server.getKey() ) )
-                                    {
-
-                                        // This is a candidate - allow it to vote itself for promotion
-                                        outgoing.offer( Message.to( ElectionMessage.vote, server.getValue(),
-                                                context.voteRequestForRole( new ElectionRole( role ) ) ) );
-                                    }
-                                }
-                                context.setTimeout( "election-" + role, Message.timeout( ElectionMessage
-                                                .electionTimeout, message, new ElectionTimeoutData( role, message ) ) );
                             }
                             break;
                         }
@@ -269,7 +242,7 @@ public enum ElectionState
                                 version = ((ElectionMessage.VersionedVotedData) data).getVersion();
                             }
                             boolean accepted =
-                                    context.voted( data.getRole(), data.getInstanceId(), data.getVoteCredentials(),
+                                    context.voted( data.getRole(), data.getInstanceId(), data.getElectionCredentials(),
                                             version );
 
                             String voter = message.hasHeader( Message.FROM ) ? message.getHeader( Message.FROM ) : "I";
@@ -350,6 +323,9 @@ public enum ElectionState
                         {
                             return start;
                         }
+
+                        default:
+                            break;
                     }
 
                     return this;

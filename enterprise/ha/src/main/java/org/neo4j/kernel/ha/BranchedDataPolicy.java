@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,33 +20,47 @@
 package org.neo4j.kernel.ha;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 
-import org.neo4j.io.fs.FileUtils;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.impl.logging.LogService;
+import org.neo4j.logging.Log;
+
+import static org.neo4j.com.storecopy.StoreUtil.cleanStoreDir;
+import static org.neo4j.com.storecopy.StoreUtil.deleteRecursive;
+import static org.neo4j.com.storecopy.StoreUtil.getBranchedDataRootDirectory;
+import static org.neo4j.com.storecopy.StoreUtil.isBranchedDataDirectory;
+import static org.neo4j.com.storecopy.StoreUtil.moveAwayDb;
+import static org.neo4j.com.storecopy.StoreUtil.newBranchedDataDir;
 
 public enum BranchedDataPolicy
 {
     keep_all
             {
                 @Override
-                public void handle( File storeDir ) throws IOException
+                public void handle( File storeDir, PageCache pageCache, LogService logService ) throws IOException
                 {
-                    moveAwayDb( storeDir, newBranchedDataDir( storeDir ) );
+                    Log msgLog = logService.getInternalLog( getClass() );
+                    File branchedDataDir = newBranchedDataDir( storeDir );
+                    msgLog.debug( "Moving store from " + storeDir + " to " + branchedDataDir );
+                    moveAwayDb( storeDir, branchedDataDir, pageCache );
                 }
             },
     keep_last
             {
                 @Override
-                public void handle( File storeDir ) throws IOException
+                public void handle( File storeDir, PageCache pageCache, LogService logService ) throws IOException
                 {
+                    Log msgLog = logService.getInternalLog( getClass() );
+
                     File branchedDataDir = newBranchedDataDir( storeDir );
-                    moveAwayDb( storeDir, branchedDataDir );
+                    msgLog.debug( "Moving store from " + storeDir + " to " + branchedDataDir );
+                    moveAwayDb( storeDir, branchedDataDir, pageCache );
                     for ( File file : getBranchedDataRootDirectory( storeDir ).listFiles() )
                     {
                         if ( isBranchedDataDirectory( file ) && !file.equals( branchedDataDir ) )
                         {
-                            FileUtils.deleteRecursively( file );
+                            deleteRecursive( file, pageCache );
                         }
                     }
                 }
@@ -54,94 +68,13 @@ public enum BranchedDataPolicy
     keep_none
             {
                 @Override
-                public void handle( File storeDir ) throws IOException
+                public void handle( File storeDir, PageCache pageCache, LogService logService ) throws IOException
                 {
-                    for ( File file : relevantDbFiles( storeDir ) )
-                    {
-                        FileUtils.deleteRecursively( file );
-                    }
+                    Log msgLog = logService.getInternalLog( getClass() );
+                    msgLog.debug( "Removing store  " + storeDir );
+                    cleanStoreDir( storeDir, pageCache );
                 }
             };
 
-    // Branched directories will end up in <dbStoreDir>/branched/<timestamp>/
-    static String BRANCH_SUBDIRECTORY = "branched";
-
-    public abstract void handle( File storeDir ) throws IOException;
-
-    protected void moveAwayDb( File storeDir, File branchedDataDir ) throws IOException
-    {
-        for ( File file : relevantDbFiles( storeDir ) )
-        {
-            FileUtils.moveFileToDirectory( file, branchedDataDir );
-        }
-    }
-
-    File newBranchedDataDir( File storeDir )
-    {
-        File result = getBranchedDataDirectory( storeDir, System.currentTimeMillis() );
-        result.mkdirs();
-        return result;
-    }
-
-    File[] relevantDbFiles( File storeDir )
-    {
-        if ( !storeDir.exists() )
-        {
-            return new File[0];
-        }
-
-        return storeDir.listFiles( new FileFilter()
-        {
-            @Override
-            public boolean accept( File file )
-            {
-                return !file.getName().startsWith( "metrics" ) && !file.getName().startsWith( "messages." ) && !isBranchedDataRootDirectory( file );
-            }
-        } );
-    }
-
-    public static boolean isBranchedDataRootDirectory( File directory )
-    {
-        return directory.isDirectory() && directory.getName().equals( BRANCH_SUBDIRECTORY );
-    }
-
-    public static boolean isBranchedDataDirectory( File directory )
-    {
-        return directory.isDirectory() && directory.getParentFile().getName().equals( BRANCH_SUBDIRECTORY ) &&
-                isAllDigits( directory.getName() );
-    }
-
-    private static boolean isAllDigits( String string )
-    {
-        for ( char c : string.toCharArray() )
-        {
-            if ( !Character.isDigit( c ) )
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public static File getBranchedDataRootDirectory( File storeDir )
-    {
-        return new File( storeDir, BRANCH_SUBDIRECTORY );
-    }
-
-    public static File getBranchedDataDirectory( File storeDir, long timestamp )
-    {
-        return new File( getBranchedDataRootDirectory( storeDir ), "" + timestamp );
-    }
-
-    public static File[] listBranchedDataDirectories( File storeDir )
-    {
-        return getBranchedDataRootDirectory( storeDir ).listFiles( new FileFilter()
-        {
-            @Override
-            public boolean accept( File directory )
-            {
-                return isBranchedDataDirectory( directory );
-            }
-        } );
-    }
+    public abstract void handle( File storeDir, PageCache pageCache, LogService msgLog ) throws IOException;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,6 +30,7 @@ import java.util.Random;
 import org.neo4j.graphalgo.EstimateEvaluator;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
 import org.neo4j.unsafe.batchinsert.BatchInserters;
 
@@ -68,23 +69,26 @@ public class GeoDataGenerator
 
     public void generate( File storeDir ) throws IOException
     {
-        BatchInserter inserter = BatchInserters.inserter( storeDir.getAbsoluteFile() );
-        Grid grid = new Grid();
-        try
+        try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction())
         {
-            for ( int i = 0; i < numberOfNodes; i++ )
+            BatchInserter inserter = BatchInserters.inserter( storeDir.getAbsoluteFile(), fileSystem );
+            Grid grid = new Grid();
+            try
             {
-                grid.createNodeAtRandomLocation( random, inserter );
-            }
+                for ( int i = 0; i < numberOfNodes; i++ )
+                {
+                    grid.createNodeAtRandomLocation( random, inserter );
+                }
 
-            for ( int i = 0; i < numberOfConnections; i++ )
-            {
-                grid.createConnection( random, inserter );
+                for ( int i = 0; i < numberOfConnections; i++ )
+                {
+                    grid.createConnection( random, inserter );
+                }
             }
-        }
-        finally
-        {
-            inserter.shutdown();
+            finally
+            {
+                inserter.shutdown();
+            }
         }
     }
 
@@ -147,12 +151,12 @@ public class GeoDataGenerator
 
         void createNodeAtRandomLocation( Random random, BatchInserter inserter )
         {
-            double x = random.nextInt( width-1 ) + random.nextFloat();
-            double y = random.nextInt( height-1 ) + random.nextFloat();
+            double x = random.nextInt( width - 1 ) + random.nextFloat();
+            double y = random.nextInt( height - 1 ) + random.nextFloat();
             nodePropertyScratchMap.put( "x", x );
             nodePropertyScratchMap.put( "y", y );
             long node = inserter.createNode( nodePropertyScratchMap );
-            cells[(int)(x/sizeX)][(int)(y/sizeY)].add( new PositionedNode( node, x, y ) );
+            cells[(int) (x / sizeX)][(int) (y / sizeY)].add( new PositionedNode( node, x, y ) );
         }
 
         void createConnection( Random random, BatchInserter inserter )
@@ -186,7 +190,7 @@ public class GeoDataGenerator
             }
             if ( result >= maxPosition )
             {
-                result = maxPosition-1;
+                result = maxPosition - 1;
             }
             return result;
         }
@@ -205,13 +209,13 @@ public class GeoDataGenerator
 
         private double factor( Random random, double value, double maxDivergence )
         {
-            double divergence = random.nextDouble()*maxDivergence;
+            double divergence = random.nextDouble() * maxDivergence;
             divergence = random.nextBoolean() ? 1d - divergence : 1d + divergence;
             return value * divergence;
         }
     }
 
-    public static enum RelationshipTypes implements RelationshipType
+    public enum RelationshipTypes implements RelationshipType
     {
         CONNECTION;
     }

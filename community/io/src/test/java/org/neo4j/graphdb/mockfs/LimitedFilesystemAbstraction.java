@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,6 +27,8 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.Charset;
+import java.nio.file.CopyOption;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -35,7 +37,7 @@ import org.neo4j.test.impl.ChannelOutputStream;
 
 public class LimitedFilesystemAbstraction extends DelegatingFileSystemAbstraction
 {
-    private boolean outOfSpace;
+    private volatile boolean outOfSpace;
 
     public LimitedFilesystemAbstraction( FileSystemAbstraction delegate )
     {
@@ -61,13 +63,13 @@ public class LimitedFilesystemAbstraction extends DelegatingFileSystemAbstractio
     }
 
     @Override
-    public Reader openAsReader( File fileName, String encoding ) throws IOException
+    public Reader openAsReader( File fileName, Charset charset ) throws IOException
     {
-        return new InputStreamReader( openAsInputStream( fileName ), encoding );
+        return new InputStreamReader( openAsInputStream( fileName ), charset );
     }
 
     @Override
-    public Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException
+    public Writer openAsWriter( File fileName, Charset charset, boolean append ) throws IOException
     {
         return new OutputStreamWriter( openAsOutputStream( fileName, append ) );
     }
@@ -87,10 +89,10 @@ public class LimitedFilesystemAbstraction extends DelegatingFileSystemAbstractio
     }
 
     @Override
-    public boolean renameFile( File from, File to ) throws IOException
+    public void renameFile( File from, File to, CopyOption... copyOptions ) throws IOException
     {
         ensureHasSpace();
-        return super.renameFile( from, to );
+        super.renameFile( from, to, copyOptions );
     }
 
     public void runOutOfDiskSpace( boolean outOfSpace )
@@ -100,7 +102,7 @@ public class LimitedFilesystemAbstraction extends DelegatingFileSystemAbstractio
 
     public void ensureHasSpace() throws IOException
     {
-        if( outOfSpace )
+        if ( outOfSpace )
         {
             throw new IOException( "No space left on device" );
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,18 +19,24 @@
  */
 package org.neo4j.consistency.store.synthetic;
 
-import org.neo4j.kernel.impl.store.record.Abstract64BitRecord;
+import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 
 /**
  * Synthetic record type that stands in for a real record to fit in conveniently
  * with consistency checking
  */
-public class IndexEntry extends Abstract64BitRecord
+public class IndexEntry extends AbstractBaseRecord
 {
     public IndexEntry( long nodeId )
     {
         super( nodeId );
         setInUse( true );
+    }
+
+    @Override
+    public void clear()
+    {
+        initialize( false );
     }
 
     @Override

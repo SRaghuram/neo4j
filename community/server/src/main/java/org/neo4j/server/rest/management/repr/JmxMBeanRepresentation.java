@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.server.rest.management.repr;
 import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import javax.management.InstanceNotFoundException;
@@ -61,7 +62,7 @@ public class JmxMBeanRepresentation extends ObjectRepresentation
     {
         try
         {
-            String value = URLEncoder.encode( beanName.toString(), "UTF-8" )
+            String value = URLEncoder.encode( beanName.toString(), StandardCharsets.UTF_8.name() )
                     .replace( "%3A", "/" );
             return ValueRepresentation.string( value );
         }

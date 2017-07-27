@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,17 +19,24 @@
  */
 package org.neo4j.cypher
 
-import org.neo4j.cypher.internal.compiler.v2_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.{CypherFunSuite, CypherTestSupport}
+import org.mockito.Mockito.when
+import org.neo4j.cypher.internal.compiler.v3_2.planner.logical.idp.DefaultIDPSolverConfig
+import org.neo4j.cypher.internal.compiler.v3_2.spi.PlanContext
+import org.neo4j.cypher.internal.compiler.v3_2.CypherCompilerConfiguration
+import org.neo4j.cypher.internal.frontend.v3_2.phases.devNullLogger
+import org.neo4j.cypher.internal.frontend.v3_2.test_helpers.{CypherFunSuite, CypherTestSupport}
 import org.neo4j.cypher.internal.helpers.GraphIcing
-import org.neo4j.cypher.internal.spi.v2_3.TransactionBoundPlanContext
+import org.neo4j.cypher.internal.spi.v3_2.TransactionBoundQueryContext.IndexSearchMonitor
+import org.neo4j.cypher.internal.spi.v3_2.{TransactionBoundPlanContext, TransactionalContextWrapper}
+import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
 import org.neo4j.graphdb._
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
-import org.neo4j.kernel.api.{DataWriteOperations, KernelAPI}
+import org.neo4j.graphdb.config.Setting
+import org.neo4j.kernel.api.KernelAPI
+import org.neo4j.kernel.api.proc._
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
-import org.neo4j.kernel.{GraphDatabaseAPI, monitoring}
-import org.neo4j.test.ImpermanentGraphDatabase
-import org.neo4j.tooling.GlobalGraphOperations
+import org.neo4j.kernel.{GraphDatabaseQueryService, monitoring}
+import org.neo4j.test.TestGraphDatabaseFactory
+import org.scalatest.matchers.{MatchResult, Matcher}
 
 import scala.collection.JavaConverters._
 import scala.collection.Map
@@ -37,19 +44,18 @@ import scala.collection.Map
 trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
   self: CypherFunSuite  =>
 
-  var graph: GraphDatabaseAPI with Snitch = null
+  var graph: GraphDatabaseCypherService = null
   var nodes: List[Node] = null
 
-  def databaseConfig(): Map[String,String] = Map()
+  def databaseConfig(): Map[Setting[_],String] = Map()
 
   override protected def initTest() {
     super.initTest()
     graph = createGraphDatabase()
   }
 
-  protected def createGraphDatabase(): GraphDatabaseAPI with Snitch = {
-    val config: Map[String, String] = databaseConfig() + (GraphDatabaseSettings.pagecache_memory.name -> "8M")
-    new ImpermanentGraphDatabase(config.asJava) with Snitch
+  protected def createGraphDatabase(config: Map[Setting[_], String] = databaseConfig()): GraphDatabaseCypherService = {
+    new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentDatabase(config.asJava))
   }
 
   override protected def stopTest() {
@@ -90,11 +96,11 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
   }
 
   def countNodes() = graph.inTx {
-    GlobalGraphOperations.at(graph).getAllNodes.asScala.size
+    graph.getAllNodes.asScala.size
   }
 
   def countRelationships() = graph.inTx {
-    GlobalGraphOperations.at(graph).getAllRelationships.asScala.size
+    graph.getAllRelationships.asScala.size
   }
 
   def createNode(): Node = createNode(Map[String, Any]())
@@ -115,7 +121,7 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
 
     graph.inTx {
       labels.foreach {
-        name => n.addLabel(DynamicLabel.label(name))
+        name => n.addLabel(Label.label(name))
       }
 
       props.foreach {
@@ -131,29 +137,21 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
   def createNode(values: (String, Any)*): Node = createNode(values.toMap)
 
   def deleteAllEntities() = graph.inTx {
-    val relIterator = GlobalGraphOperations.at(graph).getAllRelationships.iterator()
+    val relIterator = graph.getAllRelationships.iterator()
 
     while (relIterator.hasNext) {
       relIterator.next().delete()
     }
 
-    val nodeIterator = GlobalGraphOperations.at(graph).getAllNodes.iterator()
+    val nodeIterator = graph.getAllNodes.iterator()
     while (nodeIterator.hasNext) {
       nodeIterator.next().delete()
     }
   }
 
-  def execStatement[T](f: (DataWriteOperations => T)): T = {
-    val tx = graph.beginTx
-    val result = f(statement.dataWriteOperations())
-    tx.success()
-    tx.close()
-    result
-  }
-
   def nodeIds = nodes.map(_.getId).toArray
 
-  val REL = DynamicRelationshipType.withName("REL")
+  val REL = RelationshipType.withName("REL")
 
   def relate(a: Node, b: Node): Relationship = relate(a, b, "REL")
 
@@ -169,7 +167,7 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
   }
 
   def relate(n1: Node, n2: Node, relType: String, props: Map[String, Any] = Map()): Relationship = graph.inTx {
-    val r = n1.createRelationshipTo(n2, DynamicRelationshipType.withName(relType))
+    val r = n1.createRelationshipTo(n2, RelationshipType.withName(relType))
 
     props.foreach((kv) => r.setProperty(kv._1, kv._2))
     r
@@ -180,7 +178,7 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
       case ((from, relType), to) => {
         val f = node(from)
         val t = node(to)
-        f.createRelationshipTo(t, DynamicRelationshipType.withName(relType))
+        f.createRelationshipTo(t, RelationshipType.withName(relType))
       }
     }
   }
@@ -189,7 +187,7 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
     nodes.find(_.getProperty("name") == name).get
   }
 
-  def relType(name: String): RelationshipType = GlobalGraphOperations.at(graph).getAllRelationshipTypes.asScala.find(_.name() == name).get
+  def relType(name: String): RelationshipType = graph.getAllRelationshipTypes.asScala.find(_.name() == name).get
 
   def createNodes(names: String*): List[Node] = {
     nodes = names.map(x => createNode(Map("name" -> x))).toList
@@ -218,21 +216,88 @@ trait GraphDatabaseTestSupport extends CypherTestSupport with GraphIcing {
     (a, b, c, d)
   }
 
+  def registerProcedure[T <: CallableProcedure](qualifiedName: String)(f: ProcedureSignature.Builder => T): T = {
+    val parts = qualifiedName.split('.')
+    val namespace = parts.reverse.tail.reverse
+    val name = parts.last
+    registerProcedure(namespace: _*)(name)(f)
+  }
+
+  def registerProcedure[T <: CallableProcedure](namespace: String*)(name: String)(f: ProcedureSignature.Builder => T): T = {
+    val builder = ProcedureSignature.procedureSignature(namespace.toArray, name)
+    val proc = f(builder)
+    kernelAPI.registerProcedure(proc)
+    proc
+  }
+
+  def registerUserDefinedFunction[T <: CallableUserFunction](qualifiedName: String)(f: UserFunctionSignature.Builder => T): T = {
+    val parts = qualifiedName.split('.')
+    val namespace = parts.reverse.tail.reverse
+    val name = parts.last
+    registerUserFunction(namespace: _*)(name)(f)
+  }
+
+  def registerUserDefinedAggregationFunction[T <: CallableUserAggregationFunction](qualifiedName: String)(f: UserFunctionSignature.Builder => T): T = {
+    val parts = qualifiedName.split('.')
+    val namespace = parts.reverse.tail.reverse
+    val name = parts.last
+    registerUserAggregationFunction(namespace: _*)(name)(f)
+  }
+
+  def registerUserFunction[T <: CallableUserFunction](namespace: String*)(name: String)(f: UserFunctionSignature.Builder => T): T = {
+    val builder = UserFunctionSignature.functionSignature(namespace.toArray, name)
+    val func = f(builder)
+    kernelAPI.registerUserFunction(func)
+    func
+  }
+
+  def registerUserAggregationFunction[T <: CallableUserAggregationFunction](namespace: String*)(name: String)(f: UserFunctionSignature.Builder => T): T = {
+    val builder = UserFunctionSignature.functionSignature(namespace.toArray, name)
+    val func = f(builder)
+    kernelAPI.registerUserAggregationFunction(func)
+    func
+  }
+
   def statement = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).get()
 
   def kernelMonitors = graph.getDependencyResolver.resolveDependency(classOf[monitoring.Monitors])
 
   def kernelAPI = graph.getDependencyResolver.resolveDependency(classOf[KernelAPI])
 
-  def planContext: PlanContext = new TransactionBoundPlanContext(statement, graph)
-}
+  def planContext: PlanContext = {
+    val tc = mock[TransactionalContextWrapper]
+    when(tc.statement).thenReturn(statement)
+    when(tc.readOperations).thenReturn(statement.readOperations())
+    when(tc.graph).thenReturn(graph)
+    new TransactionBoundPlanContext(tc, devNullLogger)
+  }
 
-trait Snitch extends GraphDatabaseAPI {
-  val createdNodes = collection.mutable.Queue[Node]()
+  def indexSearchMonitor = kernelMonitors.newMonitor(classOf[IndexSearchMonitor])
 
-  abstract override def createNode(): Node = {
-    val n = super.createNode()
-    createdNodes.enqueue(n)
-    n
+  val config = CypherCompilerConfiguration(
+    queryCacheSize = 100,
+    statsDivergenceThreshold = 0.5,
+    queryPlanTTL = 1000,
+    useErrorsOverWarnings = false,
+    nonIndexedLabelWarningThreshold = 10000,
+    idpMaxTableSize = DefaultIDPSolverConfig.maxTableSize,
+    idpIterationDuration = DefaultIDPSolverConfig.iterationDurationLimit,
+    errorIfShortestPathFallbackUsedAtRuntime = false,
+    errorIfShortestPathHasCommonNodesAtRuntime = true,
+    legacyCsvQuoteEscaping = false
+  )
+
+  case class haveConstraints(expectedConstraints: String*) extends Matcher[GraphDatabaseQueryService] {
+    def apply(graph: GraphDatabaseQueryService): MatchResult = {
+      graph.inTx {
+        val constraintNames = graph.schema().getConstraints.asScala.toList.map(i => s"${i.getConstraintType}:${i.getLabel}(${i.getPropertyKeys.asScala.toList.mkString(",")})")
+        val result = expectedConstraints.forall(i => constraintNames.contains(i.toString))
+        MatchResult(
+          result,
+          s"Expected graph to have constraints ${expectedConstraints.mkString(", ")}, but it was ${constraintNames.mkString(", ")}",
+          s"Expected graph to not have constraints ${expectedConstraints.mkString(", ")}, but it did."
+        )
+      }
+    }
   }
 }

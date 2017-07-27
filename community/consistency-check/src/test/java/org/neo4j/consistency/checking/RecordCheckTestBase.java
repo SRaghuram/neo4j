@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,11 @@
  */
 package org.neo4j.consistency.checking;
 
-import org.neo4j.consistency.checking.full.MandatoryProperties;
 import org.neo4j.consistency.checking.full.MultiPassStore;
 import org.neo4j.consistency.checking.full.Stage;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.store.RecordAccess;
 import org.neo4j.consistency.store.RecordAccessStub;
-import org.neo4j.function.Functions;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
@@ -101,21 +99,12 @@ public abstract class RecordCheckTestBase<RECORD extends AbstractBaseRecord,
 
     public static RecordCheck<PropertyRecord, ConsistencyReport.PropertyConsistencyReport> dummyPropertyChecker()
     {
-        return new RecordCheck<PropertyRecord, ConsistencyReport.PropertyConsistencyReport>()
-        {
-            @Override
-            public void check( PropertyRecord record,
-                               CheckerEngine<PropertyRecord, ConsistencyReport.PropertyConsistencyReport> engine,
-                               RecordAccess records )
-            {
-            }
-        };
+        return ( record, engine, records ) -> {};
     }
 
     public static PrimitiveRecordCheck<NeoStoreRecord, ConsistencyReport.NeoStoreConsistencyReport> dummyNeoStoreCheck()
     {
-        return new NeoStoreCheck( new PropertyChain<NeoStoreRecord,ConsistencyReport.NeoStoreConsistencyReport>(
-                Functions.<NeoStoreRecord,MandatoryProperties.Check<NeoStoreRecord,ConsistencyReport.NeoStoreConsistencyReport>>nullFunction() ) )
+        return new NeoStoreCheck( new PropertyChain<>( from -> null ) )
         {
             @Override
             public void check( NeoStoreRecord record,
@@ -242,16 +231,8 @@ public abstract class RecordCheckTestBase<RECORD extends AbstractBaseRecord,
 
     static PropertyBlock propertyBlock( PropertyKeyTokenRecord key, DynamicRecord value )
     {
-        PropertyType type;
-        if ( value.getType() == PropertyType.STRING.intValue() )
-        {
-            type = PropertyType.STRING;
-        }
-        else if ( value.getType() == PropertyType.ARRAY.intValue() )
-        {
-            type = PropertyType.ARRAY;
-        }
-        else
+        PropertyType type = value.getType();
+        if ( value.getType() != PropertyType.STRING && value.getType() != PropertyType.ARRAY )
         {
             fail( "Dynamic record must be either STRING or ARRAY" );
             return null;

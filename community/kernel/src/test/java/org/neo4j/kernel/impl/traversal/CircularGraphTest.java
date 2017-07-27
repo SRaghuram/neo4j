@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,22 +19,19 @@
  */
 package org.neo4j.kernel.impl.traversal;
 
-import java.util.Iterator;
-
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Iterator;
+
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.ReturnableEvaluator;
-import org.neo4j.graphdb.StopEvaluator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.TraversalPosition;
-import org.neo4j.graphdb.Traverser;
-import org.neo4j.graphdb.Traverser.Order;
+import org.neo4j.graphdb.traversal.Evaluation;
+import org.neo4j.graphdb.traversal.Evaluator;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -60,34 +57,20 @@ public class CircularGraphTest extends TraversalTestBase
 
         try ( Transaction tx2 = beginTx() )
         {
-            final RelationshipType type = DynamicRelationshipType.withName( "TO" );
-            Traverser t = node( "1" ).traverse( Order.DEPTH_FIRST, new StopEvaluator()
+            final RelationshipType type = RelationshipType.withName( "TO" );
+            Iterator<Node> nodes = getGraphDb().traversalDescription()
+                    .depthFirst()
+                    .relationships( type, Direction.OUTGOING )
+                    .evaluator( path ->
                     {
-                        public boolean isStopNode( TraversalPosition position )
-                        {
-                            Relationship last = position.lastRelationshipTraversed();
-                            if ( last != null && last.isType( type ) )
-                            {
-                                Node node = position.currentNode();
-                                long currentTime = (Long) node.getProperty( "timestamp" );
-                                return currentTime >= timestamp;
-                            }
-                            return false;
-                        }
-                    }, new ReturnableEvaluator()
-                    {
-                        public boolean isReturnableNode( TraversalPosition position )
-                        {
-                            Relationship last = position.lastRelationshipTraversed();
-                            if ( last != null && last.isType( type ) )
-                            {
-                                return true;
-                            }
-                            return false;
-                        }
-                    }, type, Direction.OUTGOING
-            );
-            Iterator<Node> nodes = t.iterator();
+                        Relationship rel = path.lastRelationship();
+                        boolean relIsOfType = rel != null && rel.isType( type );
+                        boolean prune =
+                                relIsOfType && (Long) path.endNode().getProperty( "timestamp" ) >= timestamp;
+                        return Evaluation.of( relIsOfType, !prune );
+                    } )
+                    .traverse( node( "1" ) )
+                    .nodes().iterator();
 
             assertEquals( "2", nodes.next().getProperty( "name" ) );
             assertEquals( "3", nodes.next().getProperty( "name" ) );

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -59,7 +59,7 @@ public class SystemOutDebugWindow
         System.setOut( sysStreamPrinter );
         System.setErr( sysStreamPrinter );
     }
-    
+
     private void init()
     {
         frame = new JFrame( "Debug" );
@@ -70,7 +70,7 @@ public class SystemOutDebugWindow
         text = new JTextArea();
         panel.add( "status", text );
         frame.add( new JScrollPane( panel ) );
-        
+
         frame.pack();
         frame.setBounds( START_X, START_Y, START_WIDTH, START_HEIGHT );
         frame.setVisible( false );

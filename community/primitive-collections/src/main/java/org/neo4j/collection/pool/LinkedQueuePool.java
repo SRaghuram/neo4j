@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,25 +22,25 @@ package org.neo4j.collection.pool;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.LongSupplier;
 
 import org.neo4j.function.Factory;
-import org.neo4j.function.primitive.LongSupplier;
 
 public class LinkedQueuePool<R> implements Pool<R>
 {
     public interface Monitor<R>
     {
-        public void updatedCurrentPeakSize( int currentPeakSize );
+        void updatedCurrentPeakSize( int currentPeakSize );
 
-        public void updatedTargetSize( int targetSize );
+        void updatedTargetSize( int targetSize );
 
-        public void created( R resource );
+        void created( R resource );
 
-        public void acquired( R resource );
+        void acquired( R resource );
 
-        public void disposed( R resource );
+        void disposed( R resource );
 
-        public class Adapter<R> implements Monitor<R>
+        class Adapter<R> implements Monitor<R>
         {
             @Override
             public void updatedCurrentPeakSize( int currentPeakSize )
@@ -71,9 +71,9 @@ public class LinkedQueuePool<R> implements Pool<R>
 
     public interface CheckStrategy
     {
-        public boolean shouldCheck();
+        boolean shouldCheck();
 
-        public class TimeoutCheckStrategy implements CheckStrategy
+        class TimeoutCheckStrategy implements CheckStrategy
         {
             private final long interval;
             private long lastCheckTime;
@@ -81,14 +81,7 @@ public class LinkedQueuePool<R> implements Pool<R>
 
             public TimeoutCheckStrategy( long interval )
             {
-                this(interval, new LongSupplier()
-                {
-                    @Override
-                    public long getAsLong()
-                    {
-                        return System.currentTimeMillis();
-                    }
-                });
+                this( interval, System::currentTimeMillis );
             }
 
             public TimeoutCheckStrategy( long interval, LongSupplier clock )
@@ -198,14 +191,9 @@ public class LinkedQueuePool<R> implements Pool<R>
      */
     public void disposeAll()
     {
-        for(R resource = unused.poll(); resource != null; resource = unused.poll())
+        for ( R resource = unused.poll(); resource != null; resource = unused.poll() )
         {
             dispose( resource );
         }
-    }
-
-    public void close( boolean force )
-    {
-        disposeAll();
     }
 }

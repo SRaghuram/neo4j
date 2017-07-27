@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -76,7 +76,6 @@ public class SecurityFilterTest
         verify( filterChain, times(0) ).doFilter( any( HttpServletRequest.class ), any( HttpServletResponse.class ) );
     }
 
-
     @Test
     public void shouldActivateRuleThatAcceptsTheRequestForAMatchingPath() throws Exception
     {
@@ -112,7 +111,6 @@ public class SecurityFilterTest
         when( securityRule2.forUriPath() ).thenReturn( "/securityRule2" );
 
         SecurityFilter securityFilter = new SecurityFilter( securityRule1, securityRule2 );
-
 
         HttpServletRequest request = mock( HttpServletRequest.class );
         HttpServletResponse response = mock( HttpServletResponse.class );

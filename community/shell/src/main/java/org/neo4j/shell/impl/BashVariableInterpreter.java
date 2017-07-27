@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,15 +26,14 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.kernel.internal.Version;
 import org.neo4j.shell.Session;
 import org.neo4j.shell.ShellException;
 import org.neo4j.shell.ShellServer;
 
-import static org.neo4j.kernel.Version.getKernel;
-
 /**
  * Can replace the prompt string (PS1) with common Bash variable interpretation,
- * f.ex. "\h [\t] \W $ " would result in "shell [10:05:30] 1243 $" 
+ * f.ex. "\h [\t] \W $ " would result in "shell [10:05:30] 1243 $"
  */
 public class BashVariableInterpreter
 {
@@ -51,8 +50,8 @@ public class BashVariableInterpreter
         STATIC_REPLACERS.put( "@", new DateReplacer( "KK:mm aa" ) );
         STATIC_REPLACERS.put( "A", new DateReplacer( "HH:mm" ) );
         STATIC_REPLACERS.put( "u", new StaticReplacer( "user" ) );
-        STATIC_REPLACERS.put( "v", new StaticReplacer( getKernel().getReleaseVersion() ) );
-        STATIC_REPLACERS.put( "V", new StaticReplacer( getKernel().getVersion() ) );
+        STATIC_REPLACERS.put( "v", new StaticReplacer( Version.getNeo4jVersion() ) );
+        STATIC_REPLACERS.put( "V", new StaticReplacer( Version.getKernelVersion() ) );
     }
 
     private final Map<String, Replacer> localReplacers = new HashMap<String, Replacer>();
@@ -97,7 +96,7 @@ public class BashVariableInterpreter
     /**
      * A replacer which can return a string to replace a variable.
      */
-    public static interface Replacer
+    public interface Replacer
     {
         /**
          * Returns a string to replace something else.
@@ -122,7 +121,7 @@ public class BashVariableInterpreter
          * @param value the value to return from
          * {@link #getReplacement(ShellServer, Session)}.
          */
-        public StaticReplacer( String value )
+        StaticReplacer( String value )
         {
             this.value = value;
         }
@@ -144,7 +143,7 @@ public class BashVariableInterpreter
         /**
          * @param format the date format, see {@link SimpleDateFormat}.
          */
-        public DateReplacer( String format )
+        DateReplacer( String format )
         {
             this.format = new SimpleDateFormat( format );
         }

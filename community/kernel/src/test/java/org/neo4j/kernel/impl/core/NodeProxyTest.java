@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,26 +19,34 @@
  */
 package org.neo4j.kernel.impl.core;
 
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.junit.Test;
 
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.helpers.collection.Iterators;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.helpers.NamedThreadFactory.named;
+import static org.neo4j.test.DoubleLatch.awaitLatch;
 
 public class NodeProxyTest extends PropertyContainerProxyTest
 {
@@ -73,6 +81,78 @@ public class NodeProxyTest extends PropertyContainerProxyTest
         catch ( NotFoundException exception )
         {
             assertThat( exception.getMessage(), containsString( PROPERTY_KEY ) );
+        }
+    }
+
+    @Test
+    public void createDropNodeLongStringProperty()
+    {
+        Label markerLabel = Label.label( "marker" );
+        String testPropertyKey = "testProperty";
+        String propertyValue = RandomStringUtils.randomAscii( 255 );
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( markerLabel );
+            node.setProperty( testPropertyKey, propertyValue );
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = Iterators.single( db.findNodes( markerLabel ) );
+            assertEquals( propertyValue, node.getProperty( testPropertyKey ) );
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = Iterators.single( db.findNodes( markerLabel ) );
+            node.removeProperty( testPropertyKey );
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = Iterators.single( db.findNodes( markerLabel ) );
+            assertFalse( node.hasProperty( testPropertyKey ) );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void createDropNodeLongArrayProperty()
+    {
+        Label markerLabel = Label.label( "marker" );
+        String testPropertyKey = "testProperty";
+        byte[] propertyValue = RandomUtils.nextBytes( 1024 );
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( markerLabel );
+            node.setProperty( testPropertyKey, propertyValue );
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = Iterators.single( db.findNodes( markerLabel ) );
+            assertArrayEquals( propertyValue, (byte[]) node.getProperty( testPropertyKey ) );
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = Iterators.single( db.findNodes( markerLabel ) );
+            node.removeProperty( testPropertyKey );
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = Iterators.single( db.findNodes( markerLabel ) );
+            assertFalse( node.hasProperty( testPropertyKey ) );
+            tx.success();
         }
     }
 
@@ -156,13 +236,13 @@ public class NodeProxyTest extends PropertyContainerProxyTest
         }
     }
 
-    @Test( timeout = 10_000 )
+    @Test
     public void getAllPropertiesShouldWorkFineWithConcurrentPropertyModifications() throws Exception
     {
         // Given
         ExecutorService executor = cleanup.add( Executors.newFixedThreadPool( 2, named( "Test-executor-thread" ) ) );
 
-        final int propertiesCount = 1000;
+        final int propertiesCount = 100;
 
         final long nodeId;
         try ( Transaction tx = db.beginTx() )
@@ -176,7 +256,7 @@ public class NodeProxyTest extends PropertyContainerProxyTest
             tx.success();
         }
 
-        final AtomicBoolean start = new AtomicBoolean();
+        final CountDownLatch start = new CountDownLatch( 1 );
         final AtomicBoolean writerDone = new AtomicBoolean();
 
         Runnable writer = new Runnable()
@@ -184,20 +264,27 @@ public class NodeProxyTest extends PropertyContainerProxyTest
             @Override
             public void run()
             {
-                try ( Transaction tx = db.beginTx() )
+                try
                 {
-                    Node node = db.getNodeById( nodeId );
-                    while ( !start.get() )
+                    awaitLatch( start );
+                    int propertyKey = 0;
+                    while ( propertyKey < propertiesCount )
                     {
-                        // busy wait
+                        try ( Transaction tx = db.beginTx() )
+                        {
+                            Node node = db.getNodeById( nodeId );
+                            for ( int i = 0; i < 10 && propertyKey < propertiesCount; i++, propertyKey++ )
+                            {
+                                node.setProperty( "property-" + propertyKey, UUID.randomUUID().toString() );
+                            }
+                            tx.success();
+                        }
                     }
-                    for ( int i = 0; i < propertiesCount; i++ )
-                    {
-                        node.setProperty( "property-" + i, UUID.randomUUID().toString() );
-                    }
-                    tx.success();
                 }
-                writerDone.set( true );
+                finally
+                {
+                    writerDone.set( true );
+                }
             }
         };
         Runnable reader = new Runnable()
@@ -208,10 +295,7 @@ public class NodeProxyTest extends PropertyContainerProxyTest
                 try ( Transaction tx = db.beginTx() )
                 {
                     Node node = db.getNodeById( nodeId );
-                    while ( !start.get() )
-                    {
-                        // busy wait
-                    }
+                    awaitLatch( start );
                     while ( !writerDone.get() )
                     {
                         int size = node.getAllProperties().size();
@@ -222,11 +306,10 @@ public class NodeProxyTest extends PropertyContainerProxyTest
             }
         };
 
-
         Future<?> readerFuture = executor.submit( reader );
         Future<?> writerFuture = executor.submit( writer );
 
-        start.set( true );
+        start.countDown();
 
         // When
         writerFuture.get();

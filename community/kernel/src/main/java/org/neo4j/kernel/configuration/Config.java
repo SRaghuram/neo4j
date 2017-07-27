@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,216 +19,356 @@
  */
 package org.neo4j.kernel.configuration;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 
+import org.neo4j.configuration.ConfigOptions;
+import org.neo4j.configuration.ConfigValue;
+import org.neo4j.configuration.LoadableConfig;
+import org.neo4j.graphdb.config.Configuration;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.helpers.Function;
-import org.neo4j.helpers.Functions;
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.graphdb.config.SettingValidator;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.configuration.HttpConnector.Encryption;
 import org.neo4j.kernel.info.DiagnosticsPhase;
 import org.neo4j.kernel.info.DiagnosticsProvider;
 import org.neo4j.logging.BufferingLog;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.Logger;
 
-import static java.lang.Character.isDigit;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static org.neo4j.kernel.configuration.Connector.ConnectorType.BOLT;
+import static org.neo4j.kernel.configuration.Connector.ConnectorType.HTTP;
+import static org.neo4j.kernel.configuration.HttpConnector.Encryption.NONE;
+import static org.neo4j.kernel.configuration.HttpConnector.Encryption.TLS;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 
 /**
- * This class holds the overall configuration of a Neo4j database instance. Use the accessors
- * to convert the internal key-value settings to other types.
+ * This class holds the overall configuration of a Neo4j database instance. Use the accessors to convert the internal
+ * key-value settings to other types.
  * <p>
- * Users can assume that old settings have been migrated to their new counterparts, and that defaults
- * have been applied.
- * <p>
- * UI's can change configuration by calling applyChanges. Any listener, such as services that use
- * this configuration, can be notified of changes by implementing the {@link ConfigurationChangeListener} interface.
+ * Users can assume that old settings have been migrated to their new counterparts, and that defaults have been
+ * applied.
  */
-public class Config implements DiagnosticsProvider
+public class Config implements DiagnosticsProvider, Configuration
 {
-    private final List<ConfigurationChangeListener> listeners = new CopyOnWriteArrayList<>();
-    private final Map<String, String> params = new ConcurrentHashMap<>(  );
-    private final Function<String, String> settingsFunction;
+    private final List<ConfigOptions> configOptions;
 
-    // Messages to this log get replayed into a real logger once logging has been
-    // instantiated.
-    private final BufferingLog bufferedLog = new BufferingLog();
-    private Log log = bufferedLog;
+    private final Map<String,String> params = new ConcurrentHashMap<>();
+    private final ConfigurationMigrator migrator;
+    private final Optional<File> configFile;
+    private final List<ConfigurationValidator> validators = new ArrayList<>();
+    // Messages to this log get replayed into a real logger once logging has been instantiated.
+    private Log log;
+    private ConfigValues settingsFunction;
 
-    private Iterable<Class<?>> settingsClasses = emptyList();
-    private ConfigurationMigrator migrator;
-    private ConfigurationValidator validator;
-
-    public Config()
+    /**
+     * @return a configuration with embedded defaults
+     */
+    public static Config empty()
     {
-        this( new HashMap<String, String>(), Collections.<Class<?>>emptyList() );
+        return embeddedDefaults( Optional.empty() );
     }
 
-    public Config( Map<String, String> inputParams )
+    /**
+     * @return a configuration with embedded defaults
+     */
+    public static Config defaults()
     {
-        this( inputParams, Collections.<Class<?>>emptyList() );
+        return embeddedDefaults( Optional.empty() );
     }
 
-    public Config( Map<String, String> inputParams, Class<?>... settingsClasses )
+    /**
+     * @return a configuration with embedded defaults
+     */
+    public static Config embeddedDefaults( Map<String,String> additionalConfig )
     {
-        this( inputParams, asList( settingsClasses ) );
+        return embeddedDefaults( Optional.empty(), additionalConfig );
     }
 
-    public Config( Map<String, String> inputParams, Iterable<Class<?>> settingsClasses )
+    /**
+     * @return a configuration with embedded defaults
+     */
+    public static Config embeddedDefaults( Optional<File> configFile )
     {
-        this.settingsFunction = Functions.map( params );
-        this.params.putAll( inputParams );
-        registerSettingsClasses( settingsClasses );
+        return embeddedDefaults( configFile, emptyMap() );
     }
 
-    /** Add more settings classes. */
-    public Config registerSettingsClasses( Iterable<Class<?>> settingsClasses )
+    /**
+     * @return a configuration with embedded defaults
+     */
+    public static Config embeddedDefaults( ConfigurationValidator... validators )
     {
-        this.settingsClasses = Iterables.concat( settingsClasses, this.settingsClasses );
-        this.migrator = new AnnotationBasedConfigurationMigrator( settingsClasses );
-        this.validator = new ConfigurationValidator( settingsClasses );
-
-        // Apply the requirements and changes the new settings classes introduce
-        this.applyChanges( getParams() );
-
-        return this;
+        return embeddedDefaults( Optional.empty(), emptyMap(), asList( validators ) );
     }
 
-    // TODO: Get rid of this, to allow us to have something more
-    // elaborate as internal storage (eg. something that can keep meta data with
-    // properties).
-    public Map<String, String> getParams()
+    /**
+     * @return a configuration with embedded defaults
+     */
+    public static Config embeddedDefaults( Optional<File> configFile, Map<String,String> additionalConfig )
     {
-        return new HashMap<>( this.params );
+        return embeddedDefaults( configFile, additionalConfig, emptyList() );
+    }
+
+    /**
+     * @return a configuration with embedded defaults
+     */
+    public static Config embeddedDefaults( Map<String,String> additionalConfig,
+            Collection<ConfigurationValidator> additionalValidators )
+    {
+        return Config.embeddedDefaults( Optional.empty(), additionalConfig, additionalValidators );
+    }
+
+    /**
+     * @return a configuration with embedded defaults
+     */
+    public static Config embeddedDefaults( Optional<File> configFile, Map<String,String> additionalConfig,
+            Collection<ConfigurationValidator> additionalValidators )
+    {
+        return new Config( configFile, additionalConfig, settings ->
+        {
+        }, additionalValidators, Optional.empty() );
+    }
+
+    /**
+     * @return a configuration with server defaults
+     */
+    public static Config serverDefaults()
+    {
+        return serverDefaults( Optional.empty(), emptyMap(), emptyList() );
+    }
+
+    /**
+     * @return a configuration with server defaults
+     */
+    public static Config serverDefaults( Map<String,String> additionalConfig )
+    {
+        return serverDefaults( Optional.empty(), additionalConfig, emptyList() );
+    }
+
+    /**
+     * @return a configuration with server defaults
+     */
+    public static Config serverDefaults( Optional<File> configFile, Map<String,String> additionalConfig,
+            Collection<ConfigurationValidator> additionalValidators )
+    {
+        ArrayList<ConfigurationValidator> validators = new ArrayList<>();
+        validators.addAll( additionalValidators );
+        validators.add( new ServerConfigurationValidator() );
+
+        HttpConnector http = new HttpConnector( "http", NONE );
+        HttpConnector https = new HttpConnector( "https", TLS );
+        BoltConnector bolt = new BoltConnector( "bolt" );
+        return new Config( configFile,
+                additionalConfig,
+                settings ->
+                {
+                    settings.putIfAbsent( GraphDatabaseSettings.auth_enabled.name(), TRUE );
+                    settings.putIfAbsent( http.enabled.name(), TRUE );
+                    settings.putIfAbsent( https.enabled.name(), TRUE );
+                    settings.putIfAbsent( bolt.enabled.name(), TRUE );
+                },
+                validators,
+                Optional.empty() );
+
+    }
+
+    private Config( Optional<File> configFile,
+            Map<String,String> overriddenSettings,
+            Consumer<Map<String,String>> settingsPostProcessor,
+            Collection<ConfigurationValidator> additionalValidators,
+            Optional<Log> log )
+    {
+        this( configFile, overriddenSettings, settingsPostProcessor, additionalValidators, log,
+                LoadableConfig.allConfigClasses() );
+    }
+
+    /**
+     * Only package-local to support tests of this class. Other uses should use public factory methods.
+     */
+    Config( Optional<File> configFile,
+            Map<String,String> overriddenSettings,
+            Consumer<Map<String,String>> settingsPostProcessor,
+            Collection<ConfigurationValidator> additionalValidators,
+            Optional<Log> log,
+            List<LoadableConfig> settingsClasses )
+    {
+        this.log = log.orElse( new BufferingLog() );
+        this.configFile = configFile;
+
+        configOptions = settingsClasses.stream()
+                .map( LoadableConfig::getConfigOptions )
+                .flatMap( List::stream )
+                .collect( Collectors.toList() );
+
+        validators.addAll( additionalValidators );
+        migrator = new AnnotationBasedConfigurationMigrator( settingsClasses );
+
+        Map<String,String> settings = initSettings( configFile, settingsPostProcessor, overriddenSettings, this.log );
+        replaceSettings( settings, configFile.isPresent() );
+    }
+
+    /**
+     * Returns a copy of this config with the given modifications.
+     *
+     * @return a new modified config, leaves this config unchanged.
+     */
+    public Config with( Map<String,String> additionalConfig )
+    {
+        Map<String,String> newParams = new HashMap<>( params ); // copy is returned
+        newParams.putAll( additionalConfig );
+        return new Config( Optional.empty(), newParams, settings ->
+        {
+        }, validators, Optional.of( log ) );
+    }
+
+    /**
+     * Returns a copy of this config with the given modifications except for any settings which already have a
+     * specified value.
+     *
+     * @return a new modified config, leaves this config unchanged.
+     */
+    public Config withDefaults( Map<String,String> additionalDefaults )
+    {
+        Map<String,String> newParams = new HashMap<>( this.params ); // copy is returned
+        additionalDefaults.entrySet().forEach( s -> newParams.putIfAbsent( s.getKey(), s.getValue() ) );
+        return new Config( Optional.empty(), newParams, settings ->
+        {
+        }, validators, Optional.of( log ) );
     }
 
     /**
      * Retrieve a configuration property.
      */
+    @Override
     public <T> T get( Setting<T> setting )
     {
-        return setting.apply( settingsFunction );
+        return setting.apply( params::get );
     }
 
     /**
-     * Use {@link Config#applyChanges(java.util.Map)} instead, so changes are applied in
-     * bulk and the ConfigurationChangeListeners can process the changes in one go.
+     * Unlike the public {@link Setting} instances, the function passed in here has access to
+     * the raw setting data, meaning it can provide functionality that cross multiple settings
+     * and other more advanced use cases.
      */
-    @Deprecated
-    public Config setProperty( String key, Object value )
+    public <T> T view( Function<ConfigValues,T> projection )
     {
-        // This method here is for supporting legacy server configurator api.
-        // None should call this except external users,
-        // as "ideally" properties should not be changed once they are loaded.
-        this.params.put( key, value.toString() );
-        this.applyChanges( new HashMap<>( params ) );
+        return projection.apply( settingsFunction );
+    }
+
+    /**
+     * Augment the existing config with new settings, overriding any conflicting settings, but keeping all old
+     * non-overlapping ones.
+     *
+     * @param changes settings to add and override
+     */
+    public Config augment( Map<String,String> changes )
+    {
+        Map<String,String> params = new HashMap<>( this.params );
+        params.putAll( changes );
+        replaceSettings( params, false );
         return this;
     }
 
     /**
      * Augment the existing config with new settings, overriding any conflicting settings, but keeping all old
      * non-overlapping ones.
-     * @param changes settings to add and override
+     * @param config config to add and override with
+     * @return combined config
      */
-    public Config augment( Map<String,String> changes )
+    public Config augment( Config config )
     {
-        Map<String,String> params = getParams();
-        params.putAll( changes );
-        applyChanges( params );
-        return this;
+        return augment( config.params );
     }
 
     /**
-     * Replace the current set of configuration parameters with another one.
+     * Specify a log where errors and warnings will be reported.
+     *
+     * @param log to use
      */
-    public synchronized Config applyChanges( Map<String, String> newConfiguration )
-    {
-        newConfiguration = migrator.apply( newConfiguration, log );
-
-        // Make sure all changes are valid
-        validator.validate( newConfiguration );
-
-        // Figure out what changed
-        if ( listeners.isEmpty() )
-        {
-            // Make the change
-            params.clear();
-            params.putAll( newConfiguration );
-        }
-        else
-        {
-            List<ConfigurationChange> configurationChanges = new ArrayList<>();
-            for ( Map.Entry<String, String> stringStringEntry : newConfiguration.entrySet() )
-            {
-                String oldValue = params.get( stringStringEntry.getKey() );
-                String newValue = stringStringEntry.getValue();
-                if ( !(oldValue == null && newValue == null) &&
-                        (oldValue == null || newValue == null || !oldValue.equals( newValue )) )
-                {
-                    configurationChanges.add( new ConfigurationChange( stringStringEntry.getKey(), oldValue,
-                            newValue ) );
-                }
-            }
-
-            if ( configurationChanges.isEmpty() )
-            {
-                // Don't bother... nothing changed.
-                return this;
-            }
-
-            // Make the change
-            params.clear();
-            for ( Map.Entry<String, String> entry : newConfiguration.entrySet() )
-            {
-                // Filter out nulls because we are using a ConcurrentHashMap under the covers, which doesn't support
-                // null keys or values.
-                String value = entry.getValue();
-                if ( value != null )
-                {
-                    params.put( entry.getKey(), value );
-                }
-            }
-
-            // Notify listeners
-            for ( ConfigurationChangeListener listener : listeners )
-            {
-                listener.notifyConfigurationChanges( configurationChanges );
-            }
-        }
-
-        return this;
-    }
-
-    public Iterable<Class<?>> getSettingsClasses()
-    {
-        return settingsClasses;
-    }
-
     public void setLogger( Log log )
     {
-        if ( this.log == bufferedLog )
+        if ( this.log instanceof BufferingLog )
         {
-            bufferedLog.replayInto( log );
+            ((BufferingLog) this.log).replayInto( log );
         }
         this.log = log;
     }
 
-    public void addConfigurationChangeListener( ConfigurationChangeListener listener )
+    /**
+     * Return the keys of settings which have been configured (via a file or code).
+     *
+     * @return setting keys
+     */
+    public Set<String> getConfiguredSettingKeys()
     {
-        listeners.add( listener );
+        return new HashSet<>( params.keySet() );
     }
 
-    public void removeConfigurationChangeListener( ConfigurationChangeListener listener )
+    /**
+     * @param key to lookup in the config
+     * @return the value or none if it doesn't exist in the config
+     */
+    public Optional<String> getRaw( @Nonnull String key )
     {
-        listeners.remove( listener );
+        return Optional.ofNullable( params.get( key ) );
+    }
+
+    /**
+     * @return a map of raw  configuration keys and values
+     */
+    public Map<String,String> getRaw()
+    {
+        return new HashMap<>( params );
+    }
+
+    /**
+     * @return a configured setting
+     */
+    public Optional<?> getValue( @Nonnull String key )
+    {
+        return configOptions.stream()
+                .map( it -> it.asConfigValues( params ) )
+                .flatMap( List::stream )
+                .filter( it -> it.name().equals( key ) )
+                .map( ConfigValue::value )
+                .findFirst()
+                .orElse( Optional.empty() );
+    }
+
+    /**
+     * @return all effective config values
+     */
+    public Map<String,ConfigValue> getConfigValues()
+    {
+        return configOptions.stream()
+                .map( it -> it.asConfigValues( params ) )
+                .flatMap( List::stream )
+                .collect( Collectors.toMap( ConfigValue::name, it -> it, ( val1, val2 ) ->
+                {
+                    throw new RuntimeException( "Duplicate setting: " + val1.name() + ": " + val1 + " and " + val2 );
+                } ) );
     }
 
     @Override
@@ -249,11 +389,16 @@ public class Config implements DiagnosticsProvider
         if ( phase.isInitialization() || phase.isExplicitlyRequested() )
         {
             logger.log( "Neo4j Kernel properties:" );
-            for ( Map.Entry<String, String> param : params.entrySet() )
+            for ( Map.Entry<String,String> param : params.entrySet() )
             {
                 logger.log( "%s=%s", param.getKey(), param.getValue() );
             }
         }
+    }
+
+    public Optional<Path> getConfigFile()
+    {
+        return configFile.map( File::toPath );
     }
 
     @Override
@@ -261,7 +406,7 @@ public class Config implements DiagnosticsProvider
     {
         List<String> keys = new ArrayList<>( params.keySet() );
         Collections.sort( keys );
-        LinkedHashMap<String, String> output = new LinkedHashMap<>();
+        LinkedHashMap<String,String> output = new LinkedHashMap<>();
         for ( String key : keys )
         {
             output.put( key, params.get( key ) );
@@ -270,63 +415,204 @@ public class Config implements DiagnosticsProvider
         return output.toString();
     }
 
-    public static long parseLongWithUnit( String numberWithPotentialUnit )
+    private synchronized void replaceSettings( Map<String,String> userSettings, boolean warnOnUnknownSettings )
     {
-        int firstNonDigitIndex = findFirstNonDigit( numberWithPotentialUnit );
-        String number = numberWithPotentialUnit.substring( 0, firstNonDigitIndex );
-
-        long multiplier = 1;
-        if ( firstNonDigitIndex < numberWithPotentialUnit.length() )
+        Map<String,String> validSettings = migrator.apply( userSettings, log );
+        List<SettingValidator> settingValidators = configOptions.stream()
+                .map( ConfigOptions::settingGroup )
+                .collect( Collectors.toList() );
+        // Validate settings
+        validSettings = new IndividualSettingsValidator( warnOnUnknownSettings )
+                .validate( settingValidators, validSettings, log, configFile.isPresent() );
+        for ( ConfigurationValidator validator : validators )
         {
-            String unit = numberWithPotentialUnit.substring( firstNonDigitIndex );
-            if ( unit.equalsIgnoreCase( "k" ) )
-            {
-                multiplier = 1024;
-            }
-            else if ( unit.equalsIgnoreCase( "m" ) )
-            {
-                multiplier = 1024 * 1024;
-            }
-            else if ( unit.equalsIgnoreCase( "g" ) )
-            {
-                multiplier = 1024 * 1024 * 1024;
-            }
-            else
-            {
-                throw new IllegalArgumentException(
-                        "Illegal unit '" + unit + "' for number '" + numberWithPotentialUnit + "'" );
-            }
+            validSettings = validator.validate( settingValidators, validSettings, log, configFile.isPresent() );
         }
 
-        return Long.parseLong( number ) * multiplier;
+        params.clear();
+        params.putAll( validSettings );
+        settingsFunction = new ConfigValues( params );
+
+        // We only warn when parsing the file so we don't warn about the same setting more than once
+        configFile.ifPresent( file -> warnAboutDeprecations( userSettings ) );
+    }
+
+    private void warnAboutDeprecations( Map<String,String> userSettings )
+    {
+        configOptions.stream()
+                .flatMap( it -> it.asConfigValues( userSettings ).stream() )
+                .filter( config -> userSettings.containsKey( config.name() ) && config.deprecated() )
+                .forEach( c ->
+                {
+                    if ( c.replacement().isPresent() )
+                    {
+                        log.warn( "%s is deprecated. Replaced by %s", c.name(), c.replacement().get() );
+                    }
+                    else
+                    {
+                        log.warn( "%s is deprecated.", c.name() );
+                    }
+                } );
+    }
+
+    @Nonnull
+    private static Map<String,String> initSettings( @Nonnull Optional<File> configFile,
+            @Nonnull Consumer<Map<String,String>> settingsPostProcessor,
+            @Nonnull Map<String,String> overriddenSettings,
+            @Nonnull Log log )
+    {
+        Map<String,String> settings = new HashMap<>();
+        configFile.ifPresent( file -> settings.putAll( loadFromFile( file, log ) ) );
+        settingsPostProcessor.accept( settings );
+        settings.putAll( overriddenSettings );
+        return settings;
+    }
+
+    @Nonnull
+    private static Map<String,String> loadFromFile( @Nonnull File file, @Nonnull Log log )
+    {
+        if ( !file.exists() )
+        {
+            log.warn( "Config file [%s] does not exist.", file );
+            return new HashMap<>();
+        }
+        try
+        {
+            return MapUtil.load( file );
+        }
+        catch ( IOException e )
+        {
+            log.error( "Unable to load config file [%s]: %s", file, e.getMessage() );
+            return new HashMap<>();
+        }
     }
 
     /**
-     * @return index of first non-digit character in {@code numberWithPotentialUnit}. If all digits then
-     * {@code numberWithPotentialUnit.length()} is returned.
+     * @return a list of all connector names like 'http' in 'dbms.connector.http.enabled = true'
      */
-    private static int findFirstNonDigit( String numberWithPotentialUnit )
+    @Nonnull
+    public List<String> allConnectorIdentifiers()
     {
-        int firstNonDigitIndex = numberWithPotentialUnit.length();
-        for ( int i = 0; i < numberWithPotentialUnit.length(); i++ )
-        {
-            if ( !isDigit( numberWithPotentialUnit.charAt( i ) ) )
-            {
-                firstNonDigitIndex = i;
-                break;
-            }
-        }
-        return firstNonDigitIndex;
+        return allConnectorIdentifiers( params );
     }
 
     /**
-     * Returns a copy of this config with the given modifications.
-     * @return a new modified config, leaves this config unchanged.
+     * @return a list of all connector names like 'http' in 'dbms.connector.http.enabled = true'
      */
-    public Config with( Map<String, String> additionalConfig )
+    @Nonnull
+    public static List<String> allConnectorIdentifiers( @Nonnull Map<String,String> params )
     {
-        Map<String, String> newParams = getParams(); // copy is returned
-        newParams.putAll( additionalConfig );
-        return new Config( newParams );
+        Pattern pattern = Pattern.compile(
+                Pattern.quote( "dbms.connector." ) + "([^\\.]+)\\.(.+)" );
+
+        return params.keySet().stream()
+                .map( pattern::matcher )
+                .filter( Matcher::matches )
+                .map( match -> match.group( 1 ) )
+                .distinct()
+                .collect( Collectors.toList() );
+    }
+
+    /**
+     * @return list of all configured bolt connectors
+     */
+    @Nonnull
+    public List<BoltConnector> boltConnectors()
+    {
+        return boltConnectors( params );
+    }
+
+    /**
+     * @return list of all configured bolt connectors
+     */
+    @Nonnull
+    public static List<BoltConnector> boltConnectors( @Nonnull Map<String,String> params )
+    {
+        return allConnectorIdentifiers( params ).stream()
+                .map( BoltConnector::new )
+                .filter( c ->
+                        c.group.groupKey.equalsIgnoreCase( "bolt" ) || BOLT.equals( c.type.apply( params::get ) ) )
+                .collect( Collectors.toList() );
+    }
+
+    /**
+     * @return list of all configured bolt connectors which are enabled
+     */
+    @Nonnull
+    public List<BoltConnector> enabledBoltConnectors()
+    {
+        return enabledBoltConnectors( params );
+    }
+
+    /**
+     * @return list of all configured bolt connectors which are enabled
+     */
+    @Nonnull
+    public static List<BoltConnector> enabledBoltConnectors( @Nonnull Map<String,String> params )
+    {
+        return boltConnectors( params ).stream()
+                .filter( c -> c.enabled.apply( params::get ) )
+                .collect( Collectors.toList() );
+    }
+
+    /**
+     * @return list of all configured http connectors
+     */
+    @Nonnull
+    public List<HttpConnector> httpConnectors()
+    {
+        return httpConnectors( params );
+    }
+
+    /**
+     * @return list of all configured http connectors
+     */
+    @Nonnull
+    public static List<HttpConnector> httpConnectors( @Nonnull Map<String,String> params )
+    {
+        return allConnectorIdentifiers( params ).stream()
+                .map( Connector::new )
+                .filter( c -> c.group.groupKey.equalsIgnoreCase( "http" ) ||
+                        c.group.groupKey.equalsIgnoreCase( "https" ) ||
+                        HTTP.equals( c.type.apply( params::get ) ) )
+                .map( c ->
+                {
+                    final String name = c.group.groupKey;
+                    final Encryption defaultEncryption;
+                    switch ( name )
+                    {
+                    case "https":
+                        defaultEncryption = TLS;
+                        break;
+                    case "http":
+                    default:
+                        defaultEncryption = NONE;
+                        break;
+                    }
+
+                    return new HttpConnector( name,
+                            HttpConnectorValidator.encryptionSetting( name, defaultEncryption ).apply( params::get ) );
+                } )
+                .collect( Collectors.toList() );
+    }
+
+    /**
+     * @return list of all configured http connectors which are enabled
+     */
+    @Nonnull
+    public List<HttpConnector> enabledHttpConnectors()
+    {
+        return enabledHttpConnectors( params );
+    }
+
+    /**
+     * @return list of all configured http connectors which are enabled
+     */
+    @Nonnull
+    public static List<HttpConnector> enabledHttpConnectors( @Nonnull Map<String,String> params )
+    {
+        return httpConnectors( params ).stream()
+                .filter( c -> c.enabled.apply( params::get ) )
+                .collect( Collectors.toList() );
     }
 }

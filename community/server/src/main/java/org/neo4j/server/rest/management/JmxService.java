@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.server.rest.management;
 import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -130,13 +131,9 @@ public class JmxService implements AdvertisableService
     {
         try
         {
-            return new ObjectName( domainName + ":" + URLDecoder.decode( objectName, "UTF-8" ) );
+            return new ObjectName( domainName + ":" + URLDecoder.decode( objectName, StandardCharsets.UTF_8.name() ) );
         }
-        catch ( MalformedObjectNameException e )
-        {
-            throw new WebApplicationException( e, 400 );
-        }
-        catch ( UnsupportedEncodingException e )
+        catch ( MalformedObjectNameException | UnsupportedEncodingException e )
         {
             throw new WebApplicationException( e, 400 );
         }

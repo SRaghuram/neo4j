@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,27 +19,36 @@
  */
 package org.neo4j.server.enterprise;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import javax.annotation.Nonnull;
+
+import org.neo4j.causalclustering.core.CausalClusterConfigurationValidator;
+import org.neo4j.configuration.HaConfigurationValidator;
 import org.neo4j.kernel.GraphDatabaseDependencies;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.ConfigurationValidator;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.server.CommunityBootstrapper;
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.advanced.AdvancedBootstrapper;
 
-public class EnterpriseBootstrapper extends AdvancedBootstrapper
+public class EnterpriseBootstrapper extends CommunityBootstrapper
 {
-    public static void main( String[] args )
+    @Override
+    protected NeoServer createNeoServer( Config configurator, GraphDatabaseDependencies dependencies,
+            LogProvider userLogProvider )
     {
-        int exit = start( new EnterpriseBootstrapper(), args );
-        if ( exit != 0 )
-        {
-            System.exit( exit );
-        }
+        return new EnterpriseNeoServer( configurator, dependencies, userLogProvider );
     }
 
     @Override
-    protected NeoServer createNeoServer( Config configurator, GraphDatabaseDependencies dependencies, LogProvider
-            userLogProvider )
+    @Nonnull
+    protected Collection<ConfigurationValidator> configurationValidators()
     {
-        return new EnterpriseNeoServer( configurator, dependencies, userLogProvider );
+        ArrayList<ConfigurationValidator> validators = new ArrayList<>();
+        validators.addAll( super.configurationValidators() );
+        validators.add( new HaConfigurationValidator() );
+        validators.add( new CausalClusterConfigurationValidator() );
+        return validators;
     }
 }

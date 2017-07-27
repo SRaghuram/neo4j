@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,7 @@ import org.neo4j.graphalgo.impl.util.IntegerEvaluator;
 /**
  * Factory for common evaluators used by some graph algos, f.ex
  * {@link CostEvaluator} and {@link EstimateEvaluator}.
- * 
+ *
  * @author Mattias Persson
  */
 public abstract class CommonEvaluators
@@ -41,12 +41,12 @@ public abstract class CommonEvaluators
     {
         return new DoubleEvaluatorWithDefault( relationshipCostPropertyKey, defaultCost );
     }
-    
+
     public static CostEvaluator<Integer> intCostEvaluator( String relationshipCostPropertyKey )
     {
         return new IntegerEvaluator( relationshipCostPropertyKey );
     }
-    
+
     public static EstimateEvaluator<Double> geoEstimateEvaluator(
             String latitudePropertyKey, String longitudePropertyKey )
     {

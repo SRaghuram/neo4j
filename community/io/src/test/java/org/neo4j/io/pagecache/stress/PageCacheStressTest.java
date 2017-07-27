@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,23 +20,20 @@
 package org.neo4j.io.pagecache.stress;
 
 import java.io.File;
-import java.nio.file.Files;
 
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageSwapperFactory;
-import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.SingleFilePageSwapperFactory;
 import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 
-import static java.lang.System.getProperty;
-import static java.nio.file.Paths.get;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.io.pagecache.stress.StressTestRecord.SizeOfCounter;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
 /**
@@ -59,27 +56,27 @@ import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 public class PageCacheStressTest
 {
     private final int numberOfPages;
-    private final int recordsPerPage;
     private final int numberOfThreads;
 
     private final int numberOfCachePages;
     private final int cachePageSize;
 
     private final PageCacheTracer tracer;
+    private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final Condition condition;
 
-    private final String workingDirectory;
+    private final File workingDirectory;
 
     private PageCacheStressTest( Builder builder )
     {
         this.numberOfPages = builder.numberOfPages;
-        this.recordsPerPage = builder.recordsPerPage;
         this.numberOfThreads = builder.numberOfThreads;
 
         this.numberOfCachePages = builder.numberOfCachePages;
         this.cachePageSize = builder.cachePageSize;
 
         this.tracer = builder.tracer;
+        this.pageCursorTracerSupplier = builder.pageCursorTracerSupplier;
         this.condition = builder.condition;
 
         this.workingDirectory = builder.workingDirectory;
@@ -87,82 +84,39 @@ public class PageCacheStressTest
 
     public void run() throws Exception
     {
-        DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-        PageSwapperFactory swapperFactory = new SingleFilePageSwapperFactory();
-        swapperFactory.setFileSystemAbstraction( fs );
-        PageCache pageCacheUnderTest = new MuninnPageCache(
-                swapperFactory, numberOfCachePages, cachePageSize, tracer );
-        PageCache pageCacheKeepingCount = new MuninnPageCache(
-                swapperFactory, numberOfCachePages, cachePageSize, tracer );
-
-        try
+        try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction() )
         {
-            File file = Files.createTempFile( get( workingDirectory ), "pagecachekeepingcounts", ".bin" ).toFile();
-            file.deleteOnExit();
-            PagedFile pagedFile = pageCacheKeepingCount.map( file, recordsPerPage * numberOfThreads * SizeOfCounter );
+            PageSwapperFactory swapperFactory = new SingleFilePageSwapperFactory();
+            swapperFactory.setFileSystemAbstraction( fs );
 
-            CountKeeperFactory countKeeperFactory = new CountKeeperFactory( pagedFile, recordsPerPage, numberOfThreads );
-            PageCacheStresser pageCacheStresser = new PageCacheStresser( numberOfPages, recordsPerPage, numberOfThreads, workingDirectory );
-
-            pageCacheStresser.stress( pageCacheUnderTest, condition, countKeeperFactory );
-
-            pagedFile.close();
-        }
-        finally
-        {
-            pageCacheUnderTest.close();
-            pageCacheKeepingCount.close();
+            try ( PageCache pageCacheUnderTest = new MuninnPageCache( swapperFactory, numberOfCachePages, cachePageSize,
+                    tracer, pageCursorTracerSupplier ) )
+            {
+                PageCacheStresser pageCacheStresser =
+                        new PageCacheStresser( numberOfPages, numberOfThreads, workingDirectory );
+                pageCacheStresser.stress( pageCacheUnderTest, condition );
+            }
         }
     }
 
-    /**
-     * Default stress test config:
-     *
-     * Target page size is 8192 which is what the product uses by default
-     *
-     * 8 threads => 8*8 bytes for counters + 8 bytes for checksum = 72 bytes per record
-     * <p>
-     * 8192 bytes per page / 72 bytes per record = 113 records per page
-     * <p>
-     * 8192 bytes per page - 72 bytes per record * 113 records per page =
-     * 8192 bytes per page - 8136 bytes for the records in the page =
-     * 56 bytes padding
-     * <p>
-     * 8136 bytes per page * 100,000 pages = 776 MB for the whole file
-     * <p>
-     * 8192 bytes per page * 10,000 pages = 78 MB cache in memory
-     *
-     * 8 threads * 1 counter per thread per record * 100,000 pages * 113 records per page * 8 bytes per counter =
-     * 8 counter per record * 11,300,000 records * 8 bytes per counter =
-     * 90,400,000 counters * 8 bytes per counter =
-     * 723,200,000 bytes = 690 MB memory for counters
-     */
     public static class Builder
     {
         int numberOfPages = 10000;
-        int recordsPerPage = 113;
         int numberOfThreads = 8;
-        int cachePagePadding = 56;
 
         int numberOfCachePages = 1000;
-        int cachePageSize;
+        int cachePageSize = 8192;
 
         PageCacheTracer tracer = NULL;
+        PageCursorTracerSupplier pageCursorTracerSupplier = DefaultPageCursorTracerSupplier.INSTANCE;
         Condition condition;
 
-        String workingDirectory = getProperty( "java.io.tmpdir" );
+        File workingDirectory;
 
         public PageCacheStressTest build()
         {
             assertThat( "the cache should cover only a fraction of the mapped file",
                     numberOfPages, is( greaterThanOrEqualTo( 10 * numberOfCachePages ) ) );
-
-            int pageSize = recordsPerPage * (numberOfThreads + 1) * SizeOfCounter;
-
-            assertThat( "padding should not allow another page to fit", cachePagePadding, is( lessThan( pageSize ) ) );
-
-            cachePageSize = pageSize + cachePagePadding;
-
             return new PageCacheStressTest( this );
         }
 
@@ -184,31 +138,19 @@ public class PageCacheStressTest
             return this;
         }
 
-        public Builder withRecordsPerPage( int value )
+        public Builder withNumberOfThreads( int numberOfThreads )
         {
-            this.recordsPerPage = value;
+            this.numberOfThreads = numberOfThreads;
             return this;
         }
 
-        public Builder withNumberOfThreads( int value )
+        public Builder withNumberOfCachePages( int numberOfCachePages )
         {
-            this.numberOfThreads = value;
+            this.numberOfCachePages = numberOfCachePages;
             return this;
         }
 
-        public Builder withCachePagePadding( int value )
-        {
-            this.cachePagePadding = value;
-            return this;
-        }
-
-        public Builder withNumberOfCachePages( int value )
-        {
-            this.numberOfCachePages = value;
-            return this;
-        }
-
-        public Builder withWorkingDirectory( String workingDirectory )
+        public Builder withWorkingDirectory( File workingDirectory )
         {
             this.workingDirectory = workingDirectory;
             return this;

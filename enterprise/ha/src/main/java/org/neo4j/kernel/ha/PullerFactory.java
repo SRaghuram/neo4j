@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,6 @@
 package org.neo4j.kernel.ha;
 
 import org.neo4j.cluster.InstanceId;
-import org.neo4j.com.storecopy.TransactionObligationFulfiller;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.AvailabilityGuard;
 import org.neo4j.kernel.ha.cluster.HighAvailabilityMemberStateMachine;
@@ -29,6 +28,7 @@ import org.neo4j.kernel.ha.com.master.Master;
 import org.neo4j.kernel.ha.com.slave.InvalidEpochExceptionHandler;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.util.JobScheduler;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 
 /**
@@ -48,12 +48,13 @@ public class PullerFactory
     private final DependencyResolver dependencyResolver;
     private final AvailabilityGuard availabilityGuard;
     private final HighAvailabilityMemberStateMachine memberStateMachine;
+    private final Monitors monitors;
 
     public PullerFactory( RequestContextFactory requestContextFactory, Master master,
             LastUpdateTime lastUpdateTime, LogProvider logging, InstanceId serverId,
             InvalidEpochExceptionHandler invalidEpochHandler, long pullInterval,
             JobScheduler jobScheduler, DependencyResolver dependencyResolver, AvailabilityGuard availabilityGuard,
-            HighAvailabilityMemberStateMachine memberStateMachine )
+            HighAvailabilityMemberStateMachine memberStateMachine, Monitors monitors )
     {
 
         this.requestContextFactory = requestContextFactory;
@@ -67,15 +68,17 @@ public class PullerFactory
         this.dependencyResolver = dependencyResolver;
         this.availabilityGuard = availabilityGuard;
         this.memberStateMachine = memberStateMachine;
+        this.monitors = monitors;
     }
 
-    public UpdatePuller createUpdatePuller()
+    public SlaveUpdatePuller createSlaveUpdatePuller()
     {
         return new SlaveUpdatePuller( requestContextFactory, master, lastUpdateTime, logging, serverId,
-                availabilityGuard, invalidEpochHandler );
+                availabilityGuard, invalidEpochHandler, jobScheduler,
+                monitors.newMonitor( SlaveUpdatePuller.Monitor.class ) );
     }
 
-    public TransactionObligationFulfiller createObligationFulfiller( UpdatePuller updatePuller )
+    public UpdatePullingTransactionObligationFulfiller createObligationFulfiller( UpdatePuller updatePuller )
     {
         return new UpdatePullingTransactionObligationFulfiller( updatePuller, memberStateMachine, serverId,
                 dependencyResolver.provideDependency( TransactionIdStore.class ) );

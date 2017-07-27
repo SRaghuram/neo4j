@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,16 +22,17 @@ package org.neo4j.kernel.impl.storemigration.legacylogs;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
-import org.neo4j.helpers.Pair;
+import org.neo4j.cursor.IOCursor;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.store.TransactionId;
+import org.neo4j.kernel.impl.storemigration.ExistingTargetStrategy;
 import org.neo4j.kernel.impl.storemigration.FileOperation;
-import org.neo4j.kernel.impl.transaction.log.IOCursor;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
-import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
@@ -116,10 +117,10 @@ public class LegacyLogs
         }
     }
 
-    public long getTransactionChecksum( File storeDir, long transactionId ) throws IOException
+    public Optional<TransactionId> getTransactionInformation( File storeDir, long transactionId ) throws IOException
     {
         List<File> logFiles = Arrays.asList( fs.listFiles( storeDir, versionedLegacyLogFilesFilter ) );
-        Collections.sort( logFiles, NEWEST_FIRST );
+        logFiles.sort( NEWEST_FIRST );
         for ( File file : logFiles )
         {
             Pair<LogHeader, IOCursor<LogEntry>> pair = reader.openReadableChannel( file );
@@ -141,7 +142,8 @@ public class LegacyLogs
                         LogEntryCommit commitEntry = logEntry.as();
                         if ( commitEntry.getTxId() == transactionId )
                         {
-                            return startEntry.checksum();
+                            return Optional.of( new TransactionId( transactionId, startEntry.checksum(),
+                                    commitEntry.getTimeWritten() ) );
                         }
                     }
                 }
@@ -152,7 +154,7 @@ public class LegacyLogs
                 break;
             }
         }
-        throw new NoSuchTransactionException( transactionId );
+        return Optional.empty();
     }
 
     public void operate( FileOperation op, File from, File to ) throws IOException
@@ -160,7 +162,7 @@ public class LegacyLogs
         File[] logFiles = fs.listFiles( from, versionedLegacyLogFilesFilter );
         for ( File file : logFiles )
         {
-            op.perform( fs, file.getName(), from, false, to, true );
+            op.perform( fs, file.getName(), from, false, to, ExistingTargetStrategy.OVERWRITE );
         }
     }
 

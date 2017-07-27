@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,6 +26,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 import org.neo4j.io.pagecache.Page;
+import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
 
 /** A page backed by a simple byte buffer. */
 public class ByteBufferPage implements Page
@@ -63,7 +64,7 @@ public class ByteBufferPage implements Page
 
     public ByteBufferPage( ByteBuffer buffer )
     {
-        assert addressOf( buffer ) != 0:
+        assert addressOf( buffer ) != 0 :
                 "Probably not a DirectByteBuffer: " + buffer + " (address = " + addressOf( buffer ) + ")";
         this.buffer = buffer;
     }
@@ -134,5 +135,10 @@ public class ByteBufferPage implements Page
     public long address()
     {
         return addressOf( buffer );
+    }
+
+    public void zapPage()
+    {
+        UnsafeUtil.setMemory( address(), size(), (byte) 0 );
     }
 }

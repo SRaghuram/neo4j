@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,24 +23,23 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.impl.SingleFilePageSwapperFactory;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
-import org.neo4j.test.EphemeralFileSystemRule;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.mapped_memory_page_size;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_swapper;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.kernel.impl.pagecache.PageSwapperFactoryForTesting.TEST_PAGESWAPPER_NAME;
 
 public class ConfiguringPageCacheFactoryTest
 {
@@ -57,62 +56,80 @@ public class ConfiguringPageCacheFactoryTest
     }
 
     @Test
-    public void shouldUseConfiguredPageSizeAndFitAsManyPagesAsItCan() throws Throwable
+    public void shouldFitAsManyPagesAsItCan() throws Throwable
     {
         // Given
-        Config config = new Config();
-        config.applyChanges( stringMap(
-                mapped_memory_page_size.name(), "4096",
-                pagecache_memory.name(), Integer.toString( 4096 * 16 ) ) );
+        final int pageSize = 8192;
+        final int maxPages = 60;
+        Config config = Config.embeddedDefaults( stringMap( pagecache_memory.name(), Integer.toString( pageSize * maxPages ) ) );
 
         // When
         ConfiguringPageCacheFactory factory = new ConfiguringPageCacheFactory(
-                fsRule.get(), config, PageCacheTracer.NULL, NullLog.getInstance() );
+                fsRule.get(), config, PageCacheTracer.NULL, PageCursorTracerSupplier.NULL,
+                NullLog.getInstance() );
 
         // Then
         try ( PageCache cache = factory.getOrCreatePageCache() )
         {
-            assertThat( cache.pageSize(), equalTo( 4096 ) );
-            assertThat( cache.maxCachedPages(), equalTo( 16 ) );
+            assertThat( cache.pageSize(), equalTo( pageSize ) );
+            assertThat( cache.maxCachedPages(), equalTo( maxPages ) );
         }
     }
 
     @Test
-    public void mustUseConfiguredPageSwapper() throws Exception
+    public void shouldWarnWhenCreatedWithConfiguredPageCache() throws Exception
     {
         // Given
-        Config config = new Config();
-        config.applyChanges( stringMap(
-                pagecache_memory.name(), "8m",
-                pagecache_swapper.name(), "test" ) );
+        Config config = Config.embeddedDefaults( stringMap(
+                GraphDatabaseSettings.mapped_memory_page_size.name(), "4096",
+                pagecache_swapper.name(), TEST_PAGESWAPPER_NAME ) );
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+        Log log = logProvider.getLog( PageCache.class );
 
         // When
-        new ConfiguringPageCacheFactory( fsRule.get(), config, PageCacheTracer.NULL, NullLog.getInstance() );
+        ConfiguringPageCacheFactory pageCacheFactory = new ConfiguringPageCacheFactory( fsRule.get(), config,
+                PageCacheTracer.NULL, PageCursorTracerSupplier.NULL, log );
+
+        // Then
+        try ( PageCache pageCache = pageCacheFactory.getOrCreatePageCache() )
+        {
+            logProvider.assertContainsLogCallContaining(
+                    "The setting unsupported.dbms.memory.pagecache.pagesize does not have any effect. It is " +
+                            "deprecated and will be removed in a future version." );
+        }
+    }
+
+    @Test
+    public void mustUseAndLogConfiguredPageSwapper() throws Exception
+    {
+        // Given
+        Config config = Config.embeddedDefaults( stringMap(
+                pagecache_memory.name(), "8m",
+                pagecache_swapper.name(), TEST_PAGESWAPPER_NAME ) );
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+        Log log = logProvider.getLog( PageCache.class );
+
+        // When
+        new ConfiguringPageCacheFactory( fsRule.get(), config, PageCacheTracer.NULL,
+                PageCursorTracerSupplier.NULL, log );
 
         // Then
         assertThat( PageSwapperFactoryForTesting.countCreatedPageSwapperFactories(), is( 1 ) );
         assertThat( PageSwapperFactoryForTesting.countConfiguredPageSwapperFactories(), is( 1 ) );
+        logProvider.assertContainsMessageContaining( TEST_PAGESWAPPER_NAME );
     }
 
-    @Test
-    public void mustUsePageSwapperCachePageSizeHintAsDefault() throws Exception
+    @Test( expected = IllegalArgumentException.class )
+    public void mustThrowIfConfiguredPageSwapperCannotBeFound() throws Exception
     {
         // Given
-        int cachePageSizeHint = 16 * 1024;
-        PageSwapperFactoryForTesting.cachePageSizeHint.set( cachePageSizeHint );
-        Config config = new Config();
-        config.applyChanges( stringMap(
-                GraphDatabaseSettings.pagecache_swapper.name(), "test" ) );
+        Config config = Config.embeddedDefaults( stringMap(
+                pagecache_memory.name(), "8m",
+                pagecache_swapper.name(), "non-existing" ) );
 
         // When
-        ConfiguringPageCacheFactory factory = new ConfiguringPageCacheFactory(
-                fsRule.get(), config, PageCacheTracer.NULL, NullLog.getInstance() );
-
-        // Then
-        try ( PageCache cache = factory.getOrCreatePageCache() )
-        {
-            assertThat( cache.pageSize(), is( cachePageSizeHint ) );
-        }
+        new ConfiguringPageCacheFactory( fsRule.get(), config, PageCacheTracer.NULL,
+                PageCursorTracerSupplier.NULL, NullLog.getInstance() );
     }
 
     @Test
@@ -122,14 +139,13 @@ public class ConfiguringPageCacheFactoryTest
         int cachePageSizeHint = 16 * 1024;
         PageSwapperFactoryForTesting.cachePageSizeHint.set( cachePageSizeHint );
         PageSwapperFactoryForTesting.cachePageSizeHintIsStrict.set( true );
-        Config config = new Config();
-        config.applyChanges( stringMap(
-                GraphDatabaseSettings.mapped_memory_page_size.name(), "4096",
-                GraphDatabaseSettings.pagecache_swapper.name(), "test" ) );
+        Config config = Config.embeddedDefaults( stringMap(
+                GraphDatabaseSettings.pagecache_swapper.name(), TEST_PAGESWAPPER_NAME ) );
 
         // When
         ConfiguringPageCacheFactory factory = new ConfiguringPageCacheFactory(
-                fsRule.get(), config, PageCacheTracer.NULL, NullLog.getInstance() );
+                fsRule.get(), config, PageCacheTracer.NULL, PageCursorTracerSupplier.NULL,
+                NullLog.getInstance() );
 
         // Then
         try ( PageCache cache = factory.getOrCreatePageCache() )
@@ -138,52 +154,4 @@ public class ConfiguringPageCacheFactoryTest
         }
     }
 
-    public static class PageSwapperFactoryForTesting
-            extends SingleFilePageSwapperFactory
-            implements ConfigurablePageSwapperFactory
-    {
-        private static final AtomicInteger createdCounter = new AtomicInteger();
-        private static final AtomicInteger configuredCounter = new AtomicInteger();
-        private static final AtomicInteger cachePageSizeHint = new AtomicInteger( 8192 );
-        private static final AtomicBoolean cachePageSizeHintIsStrict = new AtomicBoolean();
-
-        public static int countCreatedPageSwapperFactories()
-        {
-            return createdCounter.get();
-        }
-
-        public static int countConfiguredPageSwapperFactories()
-        {
-            return configuredCounter.get();
-        }
-
-        public PageSwapperFactoryForTesting()
-        {
-            createdCounter.getAndIncrement();
-        }
-
-        @Override
-        public String implementationName()
-        {
-            return "test";
-        }
-
-        @Override
-        public int getCachePageSizeHint()
-        {
-            return cachePageSizeHint.get();
-        }
-
-        @Override
-        public boolean isCachePageSizeHintStrict()
-        {
-            return cachePageSizeHintIsStrict.get();
-        }
-
-        @Override
-        public void configure( Config config )
-        {
-            configuredCounter.getAndIncrement();
-        }
-    }
 }

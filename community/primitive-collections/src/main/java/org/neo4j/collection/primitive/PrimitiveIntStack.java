@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -58,7 +58,7 @@ public class PrimitiveIntStack implements PrimitiveIntCollection
     @Override
     public int size()
     {
-        return cursor+1;
+        return cursor + 1;
     }
 
     @Override
@@ -82,7 +82,10 @@ public class PrimitiveIntStack implements PrimitiveIntCollection
             @Override
             public int next()
             {
-                if( !hasNext() ) throw new NoSuchElementException();
+                if ( !hasNext() )
+                {
+                    throw new NoSuchElementException();
+                }
 
                 return array[idx++];
             }
@@ -103,7 +106,7 @@ public class PrimitiveIntStack implements PrimitiveIntCollection
 
     private void ensureCapacity()
     {
-        if ( cursor == array.length-1 )
+        if ( cursor == array.length - 1 )
         {
             array = copyOf( array, array.length << 1 );
         }

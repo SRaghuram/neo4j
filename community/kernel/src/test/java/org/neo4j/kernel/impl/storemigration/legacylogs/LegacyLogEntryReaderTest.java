@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,18 +20,19 @@
 package org.neo4j.kernel.impl.storemigration.legacylogs;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.function.Function;
 
-import org.neo4j.function.Function;
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
-import org.neo4j.helpers.Pair;
+import org.neo4j.cursor.IOCursor;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.command.Command;
-import org.neo4j.kernel.impl.transaction.log.IOCursor;
-import org.neo4j.kernel.impl.transaction.log.ReadableVersionableLogChannel;
+import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.IdentifiableLogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
@@ -39,6 +40,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.OnePhaseCommit;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -47,7 +49,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.kernel.impl.storemigration.legacylogs.LegacyLogFilenames.getLegacyLogFilename;
 import static org.neo4j.kernel.impl.transaction.log.LogPosition.UNSPECIFIED;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
@@ -57,13 +58,15 @@ import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_LO
 
 public class LegacyLogEntryReaderTest
 {
-    private final FileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
+    @Rule
+    public final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
+    private final FileSystemAbstraction fs = fileSystemRule.get();
     private final File input = new File( getLegacyLogFilename( 3 ) );
 
     @Before
     public void setup() throws IOException
     {
-        writeLogHeader( fs, input, 3l, -1 );
+        writeLogHeader( fs, input, 3L, -1 );
     }
 
     @Test
@@ -77,20 +80,20 @@ public class LegacyLogEntryReaderTest
 
         // then
         pair.other().close(); // not null cursor
-        assertEquals( new LogHeader( CURRENT_LOG_VERSION, 3l, BASE_TX_ID ), pair.first() );
+        assertEquals( new LogHeader( CURRENT_LOG_VERSION, 3L, BASE_TX_ID ), pair.first() );
     }
 
     @Test
     public void shouldReturnNoEntriesWhenTheChannelContainsNothing() throws IOException
     {
         // given
-        final LogEntryReader<ReadableVersionableLogChannel> logEntryReader = mock( LogEntryReader.class );
-        when( logEntryReader.readLogEntry( any( ReadableVersionableLogChannel.class ) ) ).thenReturn( null );
+        final LogEntryReader<ReadableLogChannel> logEntryReader = mock( LogEntryReader.class );
+        when( logEntryReader.readLogEntry( any( ReadableLogChannel.class ) ) ).thenReturn( null );
         final LegacyLogEntryReader reader = new LegacyLogEntryReader( fs,
-                new Function<LogHeader,LogEntryReader<ReadableVersionableLogChannel>>()
+                new Function<LogHeader,LogEntryReader<ReadableLogChannel>>()
         {
             @Override
-            public LogEntryReader<ReadableVersionableLogChannel> apply( LogHeader from ) throws RuntimeException
+            public LogEntryReader<ReadableLogChannel> apply( LogHeader from ) throws RuntimeException
             {
                 return logEntryReader;
             }
@@ -111,26 +114,19 @@ public class LegacyLogEntryReaderTest
     {
         // given
         final LogEntry start = new LogEntryStart( 0, 1, 2, 3, EMPTY_ADDITIONAL_ARRAY, UNSPECIFIED );
-        final LogEntry command = new LogEntryCommand( new Command.NodeCommand() );
+        NodeRecord record = new NodeRecord( 42 );
+        final LogEntry command = new LogEntryCommand( new Command.NodeCommand( record, record ) );
         final LogEntry commit = new OnePhaseCommit( 42, 43 );
 
-        final LogEntryReader<ReadableVersionableLogChannel> logEntryReader = mock( LogEntryReader.class );
-        when( logEntryReader.readLogEntry( any( ReadableVersionableLogChannel.class ) ) ).thenReturn(
+        final LogEntryReader<ReadableLogChannel> logEntryReader = mock( LogEntryReader.class );
+        when( logEntryReader.readLogEntry( any( ReadableLogChannel.class ) ) ).thenReturn(
                 new IdentifiableLogEntry( start, 1 ),
                 new IdentifiableLogEntry( command, 1 ),
                 new IdentifiableLogEntry( commit, 1 ),
                 null
         );
 
-        final LegacyLogEntryReader reader = new LegacyLogEntryReader( fs,
-                new Function<LogHeader,LogEntryReader<ReadableVersionableLogChannel>>()
-        {
-            @Override
-            public LogEntryReader<ReadableVersionableLogChannel> apply( LogHeader from ) throws RuntimeException
-            {
-                return logEntryReader;
-            }
-        } );
+        final LegacyLogEntryReader reader = new LegacyLogEntryReader( fs, from -> logEntryReader );
 
         // when
         final IOCursor<LogEntry> cursor = reader.openReadableChannel( input ).other();

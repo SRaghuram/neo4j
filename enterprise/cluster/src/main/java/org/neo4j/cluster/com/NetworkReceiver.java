@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,6 @@
  */
 package org.neo4j.cluster.com;
 
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.UnknownHostException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
@@ -45,6 +36,17 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
+
+import java.net.ConnectException;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 
 import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.com.message.MessageProcessor;
@@ -73,7 +75,6 @@ public class NetworkReceiver
         void processedMessage( Message message );
     }
 
-
     public interface Configuration
     {
         HostnamePort clusterServer();
@@ -100,18 +101,19 @@ public class NetworkReceiver
     // Receiving
     private NioServerSocketChannelFactory nioChannelFactory;
     private ServerBootstrap serverBootstrap;
-    private Iterable<MessageProcessor> processors = Listeners.newListeners();
+    private final Listeners<MessageProcessor> processors = new Listeners<>();
 
-    private Monitor monitor;
-    private Configuration config;
-    private Log msgLog;
+    private final Monitor monitor;
+    private final Configuration config;
+    private final Log msgLog;
 
-    private Map<URI, Channel> connections = new ConcurrentHashMap<URI, Channel>();
-    private Iterable<NetworkChannelsListener> listeners = Listeners.newListeners();
+    private final Map<URI, Channel> connections = new ConcurrentHashMap<>();
+    private final Listeners<NetworkChannelsListener> listeners = new Listeners<>();
 
     volatile boolean bindingDetected = false;
 
     private volatile boolean paused;
+    private int port;
 
     public NetworkReceiver( Monitor monitor, Configuration config, LogProvider logProvider )
     {
@@ -147,14 +149,16 @@ public class NetworkReceiver
         int maxPort = ports.length == 2 ? ports[1] : minPort;
 
         // Try all ports in the given range
-        listen( minPort, maxPort );
+        port = listen( minPort, maxPort );
+
+        msgLog.debug( "Started NetworkReceiver at " + config.clusterServer().getHost() + ":" + port );
     }
 
     @Override
     public void stop()
             throws Throwable
     {
-        msgLog.debug( "Shutting down NetworkReceiver" );
+        msgLog.debug( "Shutting down NetworkReceiver at " + config.clusterServer().getHost() + ":" + port );
 
         channels.close().awaitUninterruptibly();
         serverBootstrap.releaseExternalResources();
@@ -172,8 +176,8 @@ public class NetworkReceiver
         this.paused = paused;
     }
 
-    private void listen( int minPort, int maxPort )
-            throws URISyntaxException, ChannelException, UnknownHostException
+    private int listen( int minPort, int maxPort )
+            throws URISyntaxException, ChannelException
     {
         ChannelException ex = null;
         for ( int checkPort = minPort; checkPort <= maxPort; checkPort++ )
@@ -197,7 +201,7 @@ public class NetworkReceiver
                 listeningAt( getURI( localAddress ) );
 
                 channels.add( listenChannel );
-                return;
+                return checkPort;
             }
             catch ( ChannelException e )
             {
@@ -210,9 +214,10 @@ public class NetworkReceiver
     }
 
     // MessageSource implementation
+    @Override
     public void addMessageProcessor( MessageProcessor processor )
     {
-        processors = Listeners.addListener( processor, processors );
+        processors.add( processor );
     }
 
     public void receive( Message message )
@@ -238,52 +243,47 @@ public class NetworkReceiver
         }
     }
 
-    private URI getURI( InetSocketAddress address ) throws URISyntaxException
+    URI getURI( InetSocketAddress socketAddress )
     {
         String uri;
 
-        if ( address.getAddress().getHostAddress().startsWith( "0" ) )
-            uri = CLUSTER_SCHEME + "://0.0.0.0:" + address.getPort(); // Socket.toString() already prepends a /
+        InetAddress address = socketAddress.getAddress();
+
+        if ( address instanceof Inet6Address )
+        {
+            uri = CLUSTER_SCHEME + "://" + wrapAddressForIPv6Uri( address.getHostAddress() ) + ":" + socketAddress.getPort();
+        }
+        else if ( address instanceof Inet4Address )
+        {
+            uri = CLUSTER_SCHEME + "://" + address.getHostAddress() + ":" + socketAddress.getPort();
+        }
         else
         {
-            uri = CLUSTER_SCHEME + "://" + address.getAddress().getHostName() + ":" + address.getPort(); // Socket
+            throw new IllegalArgumentException( "Address type unknown" );
         }
-            // .toString() already prepends a /
 
         // Add name if given
-        if (config.name() != null)
-            uri += "/?name="+config.name();
+        if ( config.name() != null )
+        {
+            uri += "/?name=" + config.name();
+        }
 
         return URI.create( uri );
     }
 
-    public void listeningAt( final URI me )
+    public void listeningAt( URI me )
     {
-        Listeners.notifyListeners( listeners, new Listeners.Notification<NetworkChannelsListener>()
-        {
-            @Override
-            public void notify( NetworkChannelsListener listener )
-            {
-                listener.listeningAt( me );
-            }
-        } );
+        listeners.notify( listener -> listener.listeningAt( me ) );
     }
 
-    protected void openedChannel( final URI uri, Channel ctxChannel )
+    protected void openedChannel( URI uri, Channel ctxChannel )
     {
         connections.put( uri, ctxChannel );
 
-        Listeners.notifyListeners( listeners, new Listeners.Notification<NetworkChannelsListener>()
-        {
-            @Override
-            public void notify( NetworkChannelsListener listener )
-            {
-                listener.channelOpened( uri );
-            }
-        } );
+        listeners.notify( listener -> listener.channelOpened( uri ) );
     }
 
-    protected void closedChannel( final URI uri )
+    protected void closedChannel( URI uri )
     {
         Channel channel = connections.remove( uri );
         if ( channel != null )
@@ -291,19 +291,12 @@ public class NetworkReceiver
             channel.close();
         }
 
-        Listeners.notifyListeners( listeners, new Listeners.Notification<NetworkChannelsListener>()
-        {
-            @Override
-            public void notify( NetworkChannelsListener listener )
-            {
-                listener.channelClosed( uri );
-            }
-        } );
+        listeners.notify( listener -> listener.channelClosed( uri ) );
     }
 
     public void addNetworkChannelsListener( NetworkChannelsListener listener )
     {
-        listeners = Listeners.addListener( listener, listeners );
+        listeners.add( listener );
     }
 
     private class NetworkNodePipelineFactory
@@ -319,7 +312,7 @@ public class NetworkReceiver
         }
     }
 
-    private class MessageReceiver
+    class MessageReceiver
             extends SimpleChannelHandler
     {
         @Override
@@ -335,7 +328,7 @@ public class NetworkReceiver
         {
             if (!bindingDetected)
             {
-                InetSocketAddress local = ((InetSocketAddress)event.getChannel().getLocalAddress());
+                InetSocketAddress local = (InetSocketAddress)event.getChannel().getLocalAddress();
                 bindingDetected = true;
                 listeningAt( getURI( local ) );
             }
@@ -344,9 +337,13 @@ public class NetworkReceiver
 
             // Fix FROM header since sender cannot know it's correct IP/hostname
             InetSocketAddress remote = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
-            String remoteAddress = remote.getAddress().getHostName();
+            String remoteAddress = remote.getAddress().getHostAddress();
             URI fromHeader = URI.create( message.getHeader( Message.FROM ) );
-            fromHeader = URI.create(fromHeader.getScheme()+"://"+remoteAddress + ":" + fromHeader.getPort());
+            if ( remote.getAddress() instanceof Inet6Address )
+            {
+                remoteAddress = wrapAddressForIPv6Uri( remoteAddress );
+            }
+            fromHeader = URI.create( fromHeader.getScheme() + "://" + remoteAddress + ":" + fromHeader.getPort() );
             message.setHeader( Message.FROM, fromHeader.toASCIIString() );
 
             msgLog.debug( "Received:" + message );
@@ -375,5 +372,10 @@ public class NetworkReceiver
                 msgLog.error( "Receive exception:", e.getCause() );
             }
         }
+    }
+
+    private static String wrapAddressForIPv6Uri( String address )
+    {
+        return "[" + address + "]";
     }
 }

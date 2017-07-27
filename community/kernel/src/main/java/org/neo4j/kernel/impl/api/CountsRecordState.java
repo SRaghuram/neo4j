@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,9 +30,9 @@ import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.kernel.impl.transaction.state.RecordState;
 import org.neo4j.register.Register.DoubleLongRegister;
 import org.neo4j.register.Registers;
+import org.neo4j.storageengine.api.StorageCommand;
 
 import static java.util.Objects.requireNonNull;
-
 import static org.neo4j.kernel.api.ReadOperations.ANY_LABEL;
 import static org.neo4j.kernel.api.ReadOperations.ANY_RELATIONSHIP_TYPE;
 import static org.neo4j.kernel.impl.store.counts.keys.CountsKeyFactory.indexSampleKey;
@@ -42,8 +42,6 @@ import static org.neo4j.kernel.impl.store.counts.keys.CountsKeyFactory.relations
 
 public class CountsRecordState implements CountsAccessor, RecordState, CountsAccessor.Updater, CountsAccessor.IndexStatsUpdater
 {
-    /** Don't support these counts at the moment so don't compute them */
-    private static final boolean COMPUTE_DOUBLE_SIDED_RELATIONSHIP_COUNTS = false;
     private static final long DEFAULT_FIRST_VALUE = 0, DEFAULT_SECOND_VALUE = 0;
     private final Map<CountsKey, DoubleLongRegister> counts = new HashMap<>();
 
@@ -57,7 +55,7 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
     @Override
     public void incrementNodeCount( int labelId, long delta )
     {
-        counts( nodeKey( labelId ) ).increment( 0l, delta );
+        counts( nodeKey( labelId ) ).increment( 0L, delta );
     }
 
     @Override
@@ -69,9 +67,9 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
     }
 
     @Override
-    public DoubleLongRegister indexSample( int labelId, int propertyKeyId, DoubleLongRegister target )
+    public DoubleLongRegister indexSample( long indexId, DoubleLongRegister target )
     {
-        counts( indexSampleKey( labelId, propertyKeyId ) ).copyTo( target );
+        counts( indexSampleKey( indexId ) ).copyTo( target );
         return target;
     }
 
@@ -80,33 +78,33 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
     {
         if ( delta != 0 )
         {
-            counts( relationshipKey( startLabelId, typeId, endLabelId ) ).increment( 0l, delta );
+            counts( relationshipKey( startLabelId, typeId, endLabelId ) ).increment( 0L, delta );
         }
     }
 
     @Override
-    public DoubleLongRegister indexUpdatesAndSize( int labelId, int propertyKeyId, DoubleLongRegister target )
+    public DoubleLongRegister indexUpdatesAndSize( long indexId, DoubleLongRegister target )
     {
-        counts( indexStatisticsKey( labelId, propertyKeyId ) ).copyTo( target );
+        counts( indexStatisticsKey( indexId ) ).copyTo( target );
         return target;
     }
 
     @Override
-    public void replaceIndexUpdateAndSize( int labelId, int propertyKeyId, long updates, long size )
+    public void replaceIndexUpdateAndSize( long indexId, long updates, long size )
     {
-        counts( indexStatisticsKey( labelId, propertyKeyId ) ).write( updates, size );
+        counts( indexStatisticsKey( indexId ) ).write( updates, size );
     }
 
     @Override
-    public void incrementIndexUpdates( int labelId, int propertyKeyId, long delta )
+    public void incrementIndexUpdates( long indexId, long delta )
     {
-        counts( indexStatisticsKey( labelId, propertyKeyId ) ).increment( delta, 0l );
+        counts( indexStatisticsKey( indexId ) ).increment( delta, 0L );
     }
 
     @Override
-    public void replaceIndexSample( int labelId, int propertyKeyId, long unique, long size )
+    public void replaceIndexSample( long indexId, long unique, long size )
     {
-        counts( indexSampleKey( labelId, propertyKeyId ) ).write( unique, size );
+        counts( indexSampleKey( indexId ) ).write( unique, size );
     }
 
     @Override
@@ -126,7 +124,7 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
     }
 
     @Override
-    public void extractCommands( Collection<Command> target )
+    public void extractCommands( Collection<StorageCommand> target )
     {
         accept( new CommandCollector( target ) );
     }
@@ -142,17 +140,6 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
     public boolean hasChanges()
     {
         return !counts.isEmpty();
-    }
-
-    /**
-     * Set this counter up to a pristine state, as if it had just been initialized.
-     */
-    public void initialize()
-    {
-        if ( !counts.isEmpty() )
-        {
-            counts.clear();
-        }
     }
 
     public static final class Difference
@@ -190,7 +177,7 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
             {
                 return true;
             }
-            if ( (obj instanceof Difference) )
+            if ( obj instanceof Difference )
             {
                 Difference that = (Difference) obj;
                 return actualFirst == that.actualFirst && expectedFirst == that.expectedFirst
@@ -229,14 +216,6 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
         {
             incrementRelationshipCount( (int) startLabelId, ANY_RELATIONSHIP_TYPE, ANY_LABEL, 1 );
             incrementRelationshipCount( (int) startLabelId, type, ANY_LABEL, 1 );
-            if ( COMPUTE_DOUBLE_SIDED_RELATIONSHIP_COUNTS )
-            {
-                for ( long endLabelId : endLabels )
-                {
-                    incrementRelationshipCount( (int) startLabelId, ANY_RELATIONSHIP_TYPE, (int) endLabelId, 1 );
-                    incrementRelationshipCount( (int) startLabelId, type, (int) endLabelId, 1 );
-                }
-            }
         }
         for ( long endLabelId : endLabels )
         {
@@ -258,9 +237,9 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
 
     private static class CommandCollector extends CountsVisitor.Adapter
     {
-        private final Collection<Command> commands;
+        private final Collection<StorageCommand> commands;
 
-        CommandCollector( Collection<Command> commands )
+        CommandCollector( Collection<StorageCommand> commands )
         {
             this.commands = commands;
         }
@@ -270,7 +249,7 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
         {
             if ( count != 0 )
             {   // Only add commands for counts that actually change
-                commands.add( new Command.NodeCountsCommand().init( labelId, count ) );
+                commands.add( new Command.NodeCountsCommand( labelId, count ) );
             }
         }
 
@@ -279,7 +258,7 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
         {
             if ( count != 0 )
             {   // Only add commands for counts that actually change
-                commands.add( new Command.RelationshipCountsCommand().init( startLabelId, typeId, endLabelId, count ) );
+                commands.add( new Command.RelationshipCountsCommand( startLabelId, typeId, endLabelId, count ) );
             }
         }
     }
@@ -306,15 +285,15 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
             verify( relationshipKey( startLabelId, typeId, endLabelId ), 0, count );
         }
         @Override
-        public void visitIndexStatistics( int labelId, int propertyKeyId, long updates, long size )
+        public void visitIndexStatistics( long indexId, long updates, long size )
         {
-            verify( indexStatisticsKey( labelId, propertyKeyId ), updates, size );
+            verify( indexStatisticsKey( indexId ), updates, size );
         }
 
         @Override
-        public void visitIndexSample( int labelId, int propertyKeyId, long unique, long size )
+        public void visitIndexSample( long indexId, long unique, long size )
         {
-            verify( indexSampleKey( labelId, propertyKeyId ), unique, size );
+            verify( indexSampleKey( indexId ), unique, size );
         }
 
         private void verify( CountsKey key, long actualFirst, long actualSecond )
@@ -327,7 +306,8 @@ public class CountsRecordState implements CountsAccessor, RecordState, CountsAcc
                     differences.add( new Difference( key, 0, 0, actualFirst, actualSecond ) );
                 }
             }
-            else {
+            else
+            {
                 long expectedFirst = expected.readFirst();
                 long expectedSecond = expected.readSecond();
                 if ( expectedFirst != actualFirst || expectedSecond != actualSecond )

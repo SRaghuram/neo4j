@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,18 +19,26 @@
  */
 package org.neo4j.server;
 
+import java.io.IOException;
+import java.util.Map;
+
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import org.neo4j.bolt.v1.transport.socket.client.SecureSocketConnection;
 import org.neo4j.helpers.HostnamePort;
-import org.neo4j.bolt.transport.socket.client.SecureSocketConnection;
-import org.neo4j.server.configuration.ServerSettings;
+import org.neo4j.kernel.configuration.BoltConnector;
+import org.neo4j.server.rest.JaxRsResponse;
+import org.neo4j.server.rest.RestRequest;
+import org.neo4j.server.rest.domain.JsonHelper;
 import org.neo4j.test.server.ExclusiveServerTestBase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertFalse;
 import static org.neo4j.server.helpers.CommunityServerBuilder.server;
 
 public class BoltIT extends ExclusiveServerTestBase
@@ -43,18 +51,20 @@ public class BoltIT extends ExclusiveServerTestBase
     @After
     public void stopTheServer()
     {
-        server.stop();
+        if ( server != null )
+        {
+            server.stop();
+        }
     }
 
     @Test
     public void shouldLaunchBolt() throws Throwable
     {
         // When I run Neo4j with Bolt enabled
-        server = server()
-                .withProperty( ServerSettings.bolt_enabled.name(), "true" )
-                .withProperty( ServerSettings.bolt_tls_enabled.name(), "true" )
-                .usingDatabaseDir( tmpDir.getRoot().getAbsolutePath() )
-                .build();
+        server = server().withProperty( new BoltConnector( "bolt" ).type.name(), "BOLT" )
+                .withProperty( new BoltConnector( "bolt" ).enabled.name(), "true" )
+                .withProperty( new BoltConnector( "bolt" ).encryption_level.name(), "REQUIRED" )
+                .usingDataDir( tmpDir.getRoot().getAbsolutePath() ).build();
         server.start();
 
         // Then
@@ -64,24 +74,91 @@ public class BoltIT extends ExclusiveServerTestBase
     @Test
     public void shouldBeAbleToSpecifyHostAndPort() throws Throwable
     {
-        // When I run Neo4j with Bolt enabled, and a non-standard port configured
-        server = server()
-                .withProperty( ServerSettings.bolt_enabled.name(), "true" )
-                .withProperty( ServerSettings.bolt_tls_enabled.name(), "true" )
-                .withProperty( ServerSettings.bolt_socket_address.name(), "localhost:8776" )
-                .usingDatabaseDir( tmpDir.getRoot().getAbsolutePath() )
-                .build();
-        server.start();
+        // When
+        startServerWithBoltEnabled();
 
         // Then
-        assertEventuallyServerResponds( "localhost", 8776 );
+        assertEventuallyServerResponds( "localhost", 7687 );
+    }
+
+    @Test
+    public void boltAddressShouldAppearToComeFromTheSameOriginAsTheHttpAddressEvenThoughThisIsMorallyHazardous()
+            throws Throwable
+    {
+        // Given
+        String host = "neo4j.com";
+        startServerWithBoltEnabled();
+        RestRequest request = new RestRequest( server.baseUri() ).host( host );
+
+        // When
+        JaxRsResponse response = request.get();
+
+        // Then
+        Map<String,Object> map = JsonHelper.jsonToMap( response.getEntity() );
+        assertThat( String.valueOf( map.get( "bolt" ) ), containsString( "bolt://" + host ) );
+        assertFalse( String.valueOf( map.get( "bolt" ) ).contains( "bolt://bolt://" ) );
+    }
+
+    @Test
+    public void boltAddressShouldComeFromConfigWhenTheListenConfigIsNotLocalhost() throws Throwable
+    {
+        // Given
+        String host = "neo4j.com";
+
+        startServerWithBoltEnabled( host, 9999, "localhost", 7687 );
+        RestRequest request = new RestRequest( server.baseUri() ).host( host );
+
+        // When
+        JaxRsResponse response = request.get();
+
+        // Then
+        Map<String,Object> map = JsonHelper.jsonToMap( response.getEntity() );
+        assertThat( String.valueOf( map.get( "bolt" ) ), containsString( "bolt://" + host + ":" + 9999 ) );
+    }
+
+    @Test
+    public void boltPortShouldComeFromConfigButHostShouldMatchHttpHostHeaderWhenConfigIsLocalhostOrEmptyEvenThoughThisIsMorallyHazardous()
+            throws Throwable
+    {
+        // Given
+        String host = "neo4j.com";
+        startServerWithBoltEnabled( "localhost", 9999, "localhost", 7687 );
+        RestRequest request = new RestRequest( server.baseUri() ).host( host );
+
+        // When
+        JaxRsResponse response = request.get();
+
+        // Then
+        Map<String,Object> map = JsonHelper.jsonToMap( response.getEntity() );
+        assertThat( String.valueOf( map.get( "bolt" ) ), containsString( "bolt://" + host + ":9999" ) );
+    }
+
+    private void startServerWithBoltEnabled() throws IOException
+    {
+        startServerWithBoltEnabled( "localhost", 7687, "localhost", 7687 );
+    }
+
+    private void startServerWithBoltEnabled( String advertisedHost, int advertisedPort, String listenHost,
+            int listenPort ) throws IOException
+    {
+        server = server()
+                .withProperty( new BoltConnector( "bolt" ).type.name(), "BOLT" )
+                .withProperty( new BoltConnector( "bolt" ).enabled.name(), "true" )
+                .withProperty( new BoltConnector( "bolt" ).encryption_level.name(), "REQUIRED" )
+                .withProperty( new BoltConnector( "bolt" ).advertised_address.name(), advertisedHost + ":" +
+                        advertisedPort )
+                .withProperty( new BoltConnector( "bolt" ).listen_address.name(), listenHost + ":" + listenPort )
+                .usingDataDir( tmpDir.getRoot().getAbsolutePath() ).build();
+        server.start();
     }
 
     private void assertEventuallyServerResponds( String host, int port ) throws Exception
     {
         SecureSocketConnection conn = new SecureSocketConnection();
         conn.connect( new HostnamePort( host, port ) );
-        conn.send( new byte[]{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} );
-        assertThat( conn.recv( 4 ), equalTo( new byte[]{0, 0, 0, 1} ));
+        conn.send(
+                new byte[]{(byte) 0x60, (byte) 0x60, (byte) 0xB0, (byte) 0x17, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0} );
+        assertThat( conn.recv( 4 ), equalTo( new byte[]{0, 0, 0, 1} ) );
     }
 }

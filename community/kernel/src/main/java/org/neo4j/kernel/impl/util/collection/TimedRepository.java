@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,18 +19,17 @@
  */
 package org.neo4j.kernel.impl.util.collection;
 
+import java.time.Clock;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
-import org.neo4j.function.Consumer;
 import org.neo4j.function.Factory;
-import org.neo4j.helpers.Clock;
 
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
-
 import static org.neo4j.helpers.Format.duration;
 
 /**
@@ -57,10 +56,10 @@ public class TimedRepository<KEY, VALUE> implements Runnable
         private final VALUE value;
         private volatile long latestActivityTimestamp;
 
-        public Entry( VALUE value )
+        Entry( VALUE value )
         {
             this.value = value;
-            this.latestActivityTimestamp = clock.currentTimeMillis();
+            this.latestActivityTimestamp = clock.millis();
         }
 
         public boolean acquire()
@@ -75,7 +74,7 @@ public class TimedRepository<KEY, VALUE> implements Runnable
          */
         public boolean release()
         {
-            latestActivityTimestamp = clock.currentTimeMillis();
+            latestActivityTimestamp = clock.millis();
             return state.compareAndSet( IN_USE, IDLE );
         }
 
@@ -93,7 +92,7 @@ public class TimedRepository<KEY, VALUE> implements Runnable
         public String toString()
         {
             return format( "%s[%s last accessed at %d (%s ago)", getClass().getSimpleName(),
-                    value, latestActivityTimestamp, duration( currentTimeMillis()-latestActivityTimestamp ) );
+                    value, latestActivityTimestamp, duration( currentTimeMillis() - latestActivityTimestamp ) );
         }
     }
 
@@ -123,7 +122,7 @@ public class TimedRepository<KEY, VALUE> implements Runnable
      */
     public VALUE end( KEY key )
     {
-        while(true)
+        while ( true )
         {
             Entry entry = repo.get( key );
             if ( entry == null )
@@ -170,7 +169,7 @@ public class TimedRepository<KEY, VALUE> implements Runnable
         {
             throw new NoSuchEntryException( String.format("Cannot access '%s', no such entry exists.", key) );
         }
-        if(entry.acquire())
+        if ( entry.acquire() )
         {
             return entry.value;
         }
@@ -180,11 +179,11 @@ public class TimedRepository<KEY, VALUE> implements Runnable
     public void release( KEY key )
     {
         Entry entry = repo.get( key );
-        if(entry != null && !entry.release())
+        if ( entry != null && !entry.release() )
         {
             // This happens when another client has asked that this entry be ended while we were using it, leaving us
             // a note to not release the object back to the public, and to end its life when we are done with it.
-            end0(key, entry.value);
+            end0( key, entry.value );
         }
     }
 
@@ -193,22 +192,16 @@ public class TimedRepository<KEY, VALUE> implements Runnable
         return repo.keySet();
     }
 
-    protected VALUE getValue( KEY key )
-    {
-        Entry entry = repo.get( key );
-        return entry == null ? null : entry.value;
-    }
-
     @Override
     public void run()
     {
-        long maxAllowedAge = clock.currentTimeMillis() - timeout;
+        long maxAllowedAge = clock.millis() - timeout;
         for ( KEY key : keys() )
         {
             Entry entry = repo.get( key );
-            if(entry != null && entry.latestActivityTimestamp < maxAllowedAge)
+            if ( (entry != null) && (entry.latestActivityTimestamp < maxAllowedAge) )
             {
-                if(entry.acquire() && entry.latestActivityTimestamp < maxAllowedAge)
+                if ( (entry.latestActivityTimestamp < maxAllowedAge) && entry.acquire() )
                 {
                     end0( key, entry.value );
                 }

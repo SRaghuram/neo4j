@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,16 +19,16 @@
  */
 package org.neo4j.com;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
+import static org.junit.Assert.assertEquals;
+
 public class ToAssertionWriter implements MadeUpWriter
 {
     private int index;
-    
+
     @Override
     public void write( ReadableByteChannel data )
     {
@@ -46,7 +46,7 @@ public class ToAssertionWriter implements MadeUpWriter
                 while ( intermediate.remaining() > 0 )
                 {
                     byte value = intermediate.get();
-                    assertEquals( (index++)%10, value );
+                    assertEquals( (index++) % 10, value );
                 }
             }
             catch ( IOException e )

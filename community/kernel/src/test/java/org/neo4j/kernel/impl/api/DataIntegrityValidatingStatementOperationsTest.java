@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.kernel.impl.api;
 
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -33,11 +34,12 @@ import org.neo4j.kernel.api.exceptions.schema.DropIndexFailureException;
 import org.neo4j.kernel.api.exceptions.schema.IllegalTokenNameException;
 import org.neo4j.kernel.api.exceptions.schema.IndexBelongsToConstraintException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchIndexException;
+import org.neo4j.kernel.api.exceptions.schema.RepeatedPropertyInCompositeSchemaException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaKernelException;
-import org.neo4j.kernel.api.exceptions.schema.ProcedureConstraintViolation;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.procedures.ProcedureDescriptor;
-import org.neo4j.kernel.api.procedures.ProcedureSignature;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 import org.neo4j.kernel.impl.api.operations.KeyWriteOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
@@ -45,36 +47,46 @@ import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.helpers.collection.IteratorUtil.iterator;
-import static org.neo4j.kernel.api.procedures.ProcedureSignature.procedureSignature;
+import static org.neo4j.helpers.collection.Iterators.iterator;
 
 public class DataIntegrityValidatingStatementOperationsTest
 {
     @Rule
     public ExpectedException exception = ExpectedException.none();
 
+    LabelSchemaDescriptor descriptor = SchemaDescriptorFactory.forLabel( 0, 7 );
+    IndexDescriptor index = IndexDescriptorFactory.forLabel( 0, 7 );
+    IndexDescriptor uniqueIndex = IndexDescriptorFactory.uniqueForLabel( 0, 7 );
+    private SchemaReadOperations innerRead;
+    private SchemaWriteOperations innerWrite;
+    private KeyWriteOperations innerKeyWrite;
+    private DataIntegrityValidatingStatementOperations ops;
+
+    @Before
+    public void setup()
+    {
+        innerKeyWrite = mock( KeyWriteOperations.class );
+        innerRead = mock( SchemaReadOperations.class );
+        innerWrite = mock( SchemaWriteOperations.class );
+        ops = new DataIntegrityValidatingStatementOperations( innerKeyWrite, innerRead, innerWrite );
+    }
+
     @Test
     public void shouldDisallowReAddingIndex() throws Exception
     {
         // GIVEN
-        int label = 0, propertyKey = 7;
-        IndexDescriptor rule = new IndexDescriptor( label, propertyKey );
-        SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
-        SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
-        DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
-        when( innerRead.indexesGetForLabel( state, rule.getLabelId() ) ).thenAnswer( withIterator( rule ) );
+        when( innerRead.indexGetForSchema( state, descriptor ) ).thenReturn( index );
 
         // WHEN
         try
         {
-            ctx.indexCreate( state, label, propertyKey );
+            ops.indexCreate( state, descriptor );
             fail( "Should have thrown exception." );
         }
         catch ( AlreadyIndexedException e )
@@ -83,26 +95,19 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyInt(), anyInt() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
     }
 
     @Test
     public void shouldDisallowAddingIndexWhenConstraintIndexExists() throws Exception
     {
         // GIVEN
-        int label = 0, propertyKey = 7;
-        IndexDescriptor rule = new IndexDescriptor( label, propertyKey );
-        SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
-        SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
-        DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
-        when( innerRead.indexesGetForLabel( state, rule.getLabelId() ) ).thenAnswer( withIterator(  ) );
-        when( innerRead.uniqueIndexesGetForLabel( state, rule.getLabelId() ) ).thenAnswer( withIterator( rule ) );
+        when( innerRead.indexGetForSchema( state, descriptor ) ).thenReturn( uniqueIndex );
 
         // WHEN
         try
         {
-            ctx.indexCreate( state, label, propertyKey );
+            ops.indexCreate( state, descriptor );
             fail( "Should have thrown exception." );
         }
         catch ( AlreadyConstrainedException e )
@@ -111,26 +116,19 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyInt(), anyInt() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
     }
 
     @Test
     public void shouldDisallowDroppingIndexThatDoesNotExist() throws Exception
     {
         // GIVEN
-        int label = 0, propertyKey = 7;
-        IndexDescriptor indexDescriptor = new IndexDescriptor( label, propertyKey );
-        SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
-        SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
-        DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
-        when( innerRead.uniqueIndexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer( withIterator(  ) );
-        when( innerRead.indexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer( withIterator( ) );
+        when( innerRead.indexGetForSchema( state, descriptor ) ).thenReturn( null );
 
         // WHEN
         try
         {
-            ctx.indexDrop( state, indexDescriptor );
+            ops.indexDrop( state, index );
             fail( "Should have thrown exception." );
         }
         catch ( DropIndexFailureException e )
@@ -139,27 +137,19 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyInt(), anyInt() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
     }
 
     @Test
     public void shouldDisallowDroppingIndexWhenConstraintIndexExists() throws Exception
     {
         // GIVEN
-        int label = 0, propertyKey = 7;
-        IndexDescriptor indexDescriptor = new IndexDescriptor( label, propertyKey );
-        SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
-        SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
-        DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
-        when( innerRead.uniqueIndexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer(
-                withIterator( indexDescriptor ) );
-        when( innerRead.indexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer( withIterator() );
+        when( innerRead.indexGetForSchema( state, descriptor ) ).thenReturn( uniqueIndex );
 
         // WHEN
         try
         {
-            ctx.indexDrop( state, new IndexDescriptor( label, propertyKey ) );
+            ops.indexDrop( state, index );
             fail( "Should have thrown exception." );
         }
         catch ( DropIndexFailureException e )
@@ -168,27 +158,19 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyInt(), anyInt() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
     }
 
     @Test
     public void shouldDisallowDroppingConstraintIndexThatDoesNotExists() throws Exception
     {
         // GIVEN
-        int label = 0, propertyKey = 7;
-        IndexDescriptor indexDescriptor = new IndexDescriptor( label, propertyKey );
-        SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
-        SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
-        DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
-        when( innerRead.uniqueIndexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer(
-                withIterator( indexDescriptor ) );
-        when( innerRead.indexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer( withIterator() );
+        when( innerRead.indexGetForSchema( state, descriptor ) ).thenReturn( uniqueIndex );
 
         // WHEN
         try
         {
-            ctx.indexDrop( state, new IndexDescriptor( label, propertyKey ) );
+            ops.indexDrop( state, index );
             fail( "Should have thrown exception." );
         }
         catch ( DropIndexFailureException e )
@@ -197,27 +179,19 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyInt(), anyInt() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
     }
 
     @Test
     public void shouldDisallowDroppingConstraintIndexThatIsReallyJustRegularIndex() throws Exception
     {
         // GIVEN
-        int label = 0, propertyKey = 7;
-        IndexDescriptor indexDescriptor = new IndexDescriptor( label, propertyKey );
-        SchemaReadOperations innerRead = mock( SchemaReadOperations.class );
-        SchemaWriteOperations innerWrite = mock( SchemaWriteOperations.class );
-        DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, innerRead, innerWrite );
-        when( innerRead.uniqueIndexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer(
-                withIterator( indexDescriptor ) );
-        when( innerRead.indexesGetForLabel( state, indexDescriptor.getLabelId() ) ).thenAnswer( withIterator() );
+        when( innerRead.indexGetForSchema( state, descriptor ) ).thenReturn( uniqueIndex );
 
         // WHEN
         try
         {
-            ctx.indexDrop( state, new IndexDescriptor( label, propertyKey ) );
+            ops.indexDrop( state, index );
             fail( "Should have thrown exception." );
         }
         catch ( DropIndexFailureException e )
@@ -226,19 +200,15 @@ public class DataIntegrityValidatingStatementOperationsTest
         }
 
         // THEN
-        verify( innerWrite, never() ).indexCreate( eq( state ), anyInt(), anyInt() );
+        verify( innerWrite, never() ).indexCreate( eq( state ), anyObject() );
     }
 
     @Test
     public void shouldDisallowNullOrEmptyPropertyKey() throws Exception
     {
-        KeyWriteOperations inner = mock( KeyWriteOperations.class );
-        DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( inner, null, null );
-
         try
         {
-            ctx.propertyKeyGetOrCreateForName( state, null );
+            ops.propertyKeyGetOrCreateForName( state, null );
             fail( "Should not be able to create null property key" );
         }
         catch ( IllegalTokenNameException e )
@@ -247,7 +217,7 @@ public class DataIntegrityValidatingStatementOperationsTest
 
         try
         {
-            ctx.propertyKeyGetOrCreateForName( state, "" );
+            ops.propertyKeyGetOrCreateForName( state, "" );
             fail( "Should not be able to create empty property key" );
         }
         catch ( IllegalTokenNameException e )
@@ -258,13 +228,9 @@ public class DataIntegrityValidatingStatementOperationsTest
     @Test
     public void shouldDisallowNullOrEmptyLabelName() throws Exception
     {
-        KeyWriteOperations inner = mock( KeyWriteOperations.class );
-        DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( inner, null, null );
-
         try
         {
-            ctx.labelGetOrCreateForName( state, null );
+            ops.labelGetOrCreateForName( state, null );
             fail( "Should not be able to create null label" );
         }
         catch ( IllegalTokenNameException e )
@@ -273,7 +239,7 @@ public class DataIntegrityValidatingStatementOperationsTest
 
         try
         {
-            ctx.labelGetOrCreateForName( state, "" );
+            ops.labelGetOrCreateForName( state, "" );
             fail( "Should not be able to create empty label" );
         }
         catch ( IllegalTokenNameException e )
@@ -284,42 +250,37 @@ public class DataIntegrityValidatingStatementOperationsTest
     @Test( expected = SchemaKernelException.class )
     public void shouldFailInvalidLabelNames() throws Exception
     {
-        // Given
-        DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, null, null );
-
-        // When
-        ctx.labelGetOrCreateForName( state, "" );
+        ops.labelGetOrCreateForName( state, "" );
     }
 
     @Test( expected = SchemaKernelException.class )
     public void shouldFailOnNullLabel() throws Exception
     {
-        // Given
-        DataIntegrityValidatingStatementOperations ctx =
-                new DataIntegrityValidatingStatementOperations( null, null, null );
-
-        // When
-        ctx.labelGetOrCreateForName( state, null );
+        ops.labelGetOrCreateForName( state, null );
     }
 
-    @Test
-    public void shouldNotAllowCreatingProcedureWithConflictingName() throws Throwable
+    @Test( expected = RepeatedPropertyInCompositeSchemaException.class )
+    public void shouldFailIndexCreateOnRepeatedPropertyId() throws Exception
     {
-        // given
-        ProcedureSignature signature = procedureSignature( "my.procedure" ).build();
+        ops.indexCreate( state, SchemaDescriptorFactory.forLabel( 0, 1, 1 ) );
+    }
 
-        SchemaReadOperations readOps = mock( SchemaReadOperations.class );
-        when(readOps.procedureGet( state, signature.name() )).thenReturn( mock( ProcedureDescriptor.class ) );
+    @Test( expected = RepeatedPropertyInCompositeSchemaException.class )
+    public void shouldFailNodeExistenceCreateOnRepeatedPropertyId() throws Exception
+    {
+        ops.nodePropertyExistenceConstraintCreate( state, SchemaDescriptorFactory.forLabel( 0, 1, 1 ) );
+    }
 
-        DataIntegrityValidatingStatementOperations ops =
-                new DataIntegrityValidatingStatementOperations( null, readOps, null );
+    @Test( expected = RepeatedPropertyInCompositeSchemaException.class )
+    public void shouldFailRelExistenceCreateOnRepeatedPropertyId() throws Exception
+    {
+        ops.relationshipPropertyExistenceConstraintCreate( state, SchemaDescriptorFactory.forRelType( 0, 1, 1 ) );
+    }
 
-        // expect
-        exception.expect( ProcedureConstraintViolation.class );
-
-        // when I create a conflicting procedure
-        ops.procedureCreate( state, signature, "jakescript", "woo" );
+    @Test( expected = RepeatedPropertyInCompositeSchemaException.class )
+    public void shouldFailUniquenessCreateOnRepeatedPropertyId() throws Exception
+    {
+        ops.uniquePropertyConstraintCreate( state, SchemaDescriptorFactory.forLabel( 0, 1, 1 ) );
     }
 
     @SafeVarargs

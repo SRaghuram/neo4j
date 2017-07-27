@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,18 @@
  */
 package org.neo4j.kernel.impl.util.collection;
 
+import org.junit.Test;
+
 import java.util.List;
 
-import org.junit.Test;
-import org.neo4j.helpers.collection.IteratorUtil;
+import org.neo4j.collection.primitive.PrimitiveIntCollections;
 
 import static java.util.Arrays.asList;
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.TestCase.assertFalse;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 
 public class SimpleBitSetTest
@@ -155,10 +158,101 @@ public class SimpleBitSetTest
         set.put( 78 );
 
         // When
-        List<Integer> found = IteratorUtil.asList( set.iterator() );
+        List<Integer> found = PrimitiveIntCollections.toList( set.iterator() );
 
         // Then
         assertThat( found, equalTo( asList( 4, 7, 63, 78 ) ));
     }
 
+    @Test
+    public void checkPointOnUnchangedSetMustDoNothing() throws Exception
+    {
+        SimpleBitSet set = new SimpleBitSet( 16 );
+        int key = 10;
+        set.put( key );
+        long checkpoint = 0;
+        checkpoint = set.checkPointAndPut( checkpoint, key );
+        assertThat( set.checkPointAndPut( checkpoint, key ), is( checkpoint ) );
+        assertTrue( set.contains( key ) );
+    }
+
+    @Test
+    public void checkPointOnUnchangedSetButWithDifferentKeyMustUpdateSet() throws Exception
+    {
+        SimpleBitSet set = new SimpleBitSet( 16 );
+        int key = 10;
+        set.put( key );
+        long checkpoint = 0;
+        checkpoint = set.checkPointAndPut( checkpoint, key );
+        assertThat( set.checkPointAndPut( checkpoint, key + 1 ), is( not( checkpoint ) ) );
+        assertTrue( set.contains( key + 1 ) );
+        assertFalse( set.contains( key ) );
+    }
+
+    @Test
+    public void checkPointOnChangedSetMustClearState() throws Exception
+    {
+        SimpleBitSet set = new SimpleBitSet( 16 );
+        int key = 10;
+        set.put( key );
+        long checkpoint = 0;
+        checkpoint = set.checkPointAndPut( checkpoint, key );
+        set.put( key + 1 );
+        assertThat( set.checkPointAndPut( checkpoint, key ), is( not( checkpoint ) ) );
+        assertTrue( set.contains( key ) );
+        assertFalse( set.contains( key + 1 ) );
+    }
+
+    @Test
+    public void checkPointMustBeAbleToExpandCapacity() throws Exception
+    {
+        SimpleBitSet set = new SimpleBitSet( 16 );
+        int key = 10;
+        int key2 = 255;
+        set.put( key );
+        long checkpoint = 0;
+        checkpoint = set.checkPointAndPut( checkpoint, key );
+        assertThat( set.checkPointAndPut( checkpoint, key2 ), is( not( checkpoint ) ) );
+        assertTrue( set.contains( key2 ) );
+        assertFalse( set.contains( key ) );
+    }
+
+    @Test
+    public void modificationsMustTakeWriteLocks() throws Exception
+    {
+        // We can observe that a write lock was taken, by seeing that an optimistic read lock was invalidated.
+        SimpleBitSet set = new SimpleBitSet( 16 );
+        long stamp = set.tryOptimisticRead();
+
+        set.put( 8 );
+        assertFalse( set.validate( stamp ) );
+        stamp = set.tryOptimisticRead();
+
+        set.put( 8 );
+        assertFalse( set.validate( stamp ) );
+        stamp = set.tryOptimisticRead();
+
+        SimpleBitSet other = new SimpleBitSet( 16 );
+        other.put( 3 );
+        set.put( other );
+        assertFalse( set.validate( stamp ) );
+        stamp = set.tryOptimisticRead();
+
+        set.remove( 3 );
+        assertFalse( set.validate( stamp ) );
+        stamp = set.tryOptimisticRead();
+
+        set.remove( 3 );
+        assertFalse( set.validate( stamp ) );
+        stamp = set.tryOptimisticRead();
+
+        other.put( 8 );
+        set.remove( other );
+        assertFalse( set.validate( stamp ) );
+        stamp = set.tryOptimisticRead();
+
+        other.put( 8 );
+        set.remove( other );
+        assertFalse( set.validate( stamp ) );
+    }
 }

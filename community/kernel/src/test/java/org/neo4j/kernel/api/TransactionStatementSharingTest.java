@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,10 +21,13 @@ package org.neo4j.kernel.api;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
+import org.neo4j.kernel.api.security.AnonymousContext;
 
+import static org.junit.Assert.assertSame;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.api.KernelTransactionFactory.kernelTransaction;
+import static org.neo4j.kernel.api.security.SecurityContext.AUTH_DISABLED;
 
 public class TransactionStatementSharingTest
 {
@@ -32,7 +35,7 @@ public class TransactionStatementSharingTest
     public void shouldShareStatementStateForConcurrentReadStatementAndReadStatement() throws Exception
     {
         // given
-        KernelTransaction tx = kernelTransaction();
+        KernelTransaction tx = kernelTransaction( AnonymousContext.read() );
         ReadOperations stmt1 = tx.acquireStatement().readOperations();
 
         // when
@@ -46,7 +49,7 @@ public class TransactionStatementSharingTest
     public void shouldShareStatementStateForConcurrentReadStatementAndDataStatement() throws Exception
     {
         // given
-        KernelTransaction tx = kernelTransaction();
+        KernelTransaction tx = kernelTransaction( AnonymousContext.write() );
         ReadOperations stmt1 = tx.acquireStatement().readOperations();
 
         // when
@@ -60,7 +63,7 @@ public class TransactionStatementSharingTest
     public void shouldShareStatementStateForConcurrentReadStatementAndSchemaStatement() throws Exception
     {
         // given
-        KernelTransaction tx = kernelTransaction();
+        KernelTransaction tx = kernelTransaction( AUTH_DISABLED );
         ReadOperations stmt1 = tx.acquireStatement().readOperations();
 
         // when
@@ -74,7 +77,7 @@ public class TransactionStatementSharingTest
     public void shouldShareStatementStateForConcurrentDataStatementAndReadStatement() throws Exception
     {
         // given
-        KernelTransaction tx = kernelTransaction();
+        KernelTransaction tx = kernelTransaction( AnonymousContext.write() );
         DataWriteOperations stmt1 = tx.acquireStatement().dataWriteOperations();
 
         // when
@@ -88,7 +91,7 @@ public class TransactionStatementSharingTest
     public void shouldShareStatementStateForConcurrentDataStatementAndDataStatement() throws Exception
     {
         // given
-        KernelTransaction tx = kernelTransaction();
+        KernelTransaction tx = kernelTransaction( AnonymousContext.write() );
         DataWriteOperations stmt1 = tx.acquireStatement().dataWriteOperations();
 
         // when
@@ -102,7 +105,7 @@ public class TransactionStatementSharingTest
     public void shouldShareStatementStateForConcurrentSchemaStatementAndReadStatement() throws Exception
     {
         // given
-        KernelTransaction tx = kernelTransaction();
+        KernelTransaction tx = kernelTransaction( AUTH_DISABLED );
         SchemaWriteOperations stmt1 = tx.acquireStatement().schemaWriteOperations();
 
         // when
@@ -116,7 +119,7 @@ public class TransactionStatementSharingTest
     public void shouldShareStatementStateForConcurrentSchemaStatementAndSchemaStatement() throws Exception
     {
         // given
-        KernelTransaction tx = kernelTransaction();
+        KernelTransaction tx = kernelTransaction( AUTH_DISABLED );
         SchemaWriteOperations stmt1 = tx.acquireStatement().schemaWriteOperations();
 
         // when
@@ -130,15 +133,20 @@ public class TransactionStatementSharingTest
     public void shouldNotShareStateForSequentialReadStatementAndReadStatement() throws Exception
     {
         // given
-        KernelTransaction tx = kernelTransaction();
+        KernelTransactionFactory.Instances instances =
+                KernelTransactionFactory.kernelTransactionWithInternals( AnonymousContext.read() );
+        KernelTransaction tx = instances.transaction;
         Statement statement = tx.acquireStatement();
         ReadOperations ops1 = statement.readOperations();
+        verify( instances.storageStatement ).acquire();
         statement.close();
 
         // when
+        verify( instances.storageStatement ).release();
+        reset( instances.storageStatement );
         ReadOperations ops2 = tx.acquireStatement().readOperations();
 
         // then
-        assertNotSame( ops1, ops2 );
+        verify( instances.storageStatement ).acquire();
     }
 }

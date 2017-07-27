@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -84,7 +84,10 @@ public class JsonFormat extends RepresentationFormat
     @Override
     public Map<String, Object> readMap( String input, String... requiredKeys ) throws BadInputException
     {
-        if ( empty( input ) ) return DefaultFormat.validateKeys( Collections.<String,Object>emptyMap(), requiredKeys );
+        if ( empty( input ) )
+        {
+            return DefaultFormat.validateKeys( Collections.<String,Object>emptyMap(), requiredKeys );
+        }
         try
         {
             return DefaultFormat.validateKeys( JsonHelper.jsonToMap( stripByteOrderMark( input ) ), requiredKeys );
@@ -116,7 +119,10 @@ public class JsonFormat extends RepresentationFormat
     @Override
     public Object readValue( String input ) throws BadInputException
     {
-        if ( empty( input ) ) return Collections.emptyMap();
+        if ( empty( input ) )
+        {
+            return Collections.emptyMap();
+        }
         try
         {
             return assertSupportedPropertyValue( readJson( stripByteOrderMark( input ) ) );

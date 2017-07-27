@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,15 +23,16 @@ import java.util.NoSuchElementException;
 
 import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.Resource;
-import org.neo4j.kernel.api.cursor.RelationshipItem;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
+import org.neo4j.storageengine.api.RelationshipItem;
 
 /**
- * Convert a {@link RelationshipItem} cursor into a {@link RelationshipIterator} that implements {@link Resource).
+ * Convert a {@link RelationshipItem} cursor into a {@link RelationshipIterator} that implements {@link Resource}.
  */
 public class CursorRelationshipIterator implements RelationshipIterator, Resource
 {
     private Cursor<RelationshipItem> cursor;
+    private boolean hasDeterminedNext;
     private boolean hasNext;
 
     private long id;
@@ -42,7 +43,6 @@ public class CursorRelationshipIterator implements RelationshipIterator, Resourc
     public CursorRelationshipIterator( Cursor<RelationshipItem> resourceCursor )
     {
         cursor = resourceCursor;
-        hasNext = nextCursor();
     }
 
     private boolean nextCursor()
@@ -62,6 +62,11 @@ public class CursorRelationshipIterator implements RelationshipIterator, Resourc
     @Override
     public boolean hasNext()
     {
+        if ( !hasDeterminedNext )
+        {
+            hasNext = nextCursor();
+            hasDeterminedNext = true;
+        }
         return hasNext;
     }
 
@@ -83,7 +88,7 @@ public class CursorRelationshipIterator implements RelationshipIterator, Resourc
             }
             finally
             {
-                hasNext = nextCursor();
+                hasDeterminedNext = false;
             }
         }
         throw new NoSuchElementException();
@@ -96,7 +101,6 @@ public class CursorRelationshipIterator implements RelationshipIterator, Resourc
         visitor.visit( id, type, startNode, endNode );
         return false;
     }
-
 
     @Override
     public void close()

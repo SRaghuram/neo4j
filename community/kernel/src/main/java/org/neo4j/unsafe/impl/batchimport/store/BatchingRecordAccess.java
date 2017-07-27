@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,13 +22,14 @@ package org.neo4j.unsafe.impl.batchimport.store;
 import java.util.Collection;
 
 import org.neo4j.helpers.collection.IterableWrapper;
-import org.neo4j.kernel.impl.transaction.state.NeoStoreTransactionContext;
 import org.neo4j.kernel.impl.transaction.state.RecordAccess;
+import org.neo4j.kernel.impl.transaction.state.RecordChanges;
+import org.neo4j.kernel.impl.transaction.state.TransactionRecordState;
 import org.neo4j.kernel.impl.util.collection.ArrayCollection;
 
 /**
  * {@link RecordAccess} optimized for batching and an access pattern where records are created sequentially.
- * Mostly here as a bridge between a batch importer and existing record logic in {@link NeoStoreTransactionContext}
+ * Mostly here as a bridge between a batch importer and existing record logic in {@link TransactionRecordState}
  * and friends.
  */
 public abstract class BatchingRecordAccess<KEY,RECORD,ADDITIONAL> implements RecordAccess<KEY,RECORD,ADDITIONAL>
@@ -77,6 +78,12 @@ public abstract class BatchingRecordAccess<KEY,RECORD,ADDITIONAL> implements Rec
     }
 
     @Override
+    public RecordProxy<KEY,RECORD,ADDITIONAL> setRecord( KEY key, RECORD record, ADDITIONAL additionalData )
+    {
+        throw new UnsupportedOperationException( "Not supported" );
+    }
+
+    @Override
     public int changeSize()
     {
         return proxies.size();
@@ -99,7 +106,6 @@ public abstract class BatchingRecordAccess<KEY,RECORD,ADDITIONAL> implements Rec
         private final KEY key;
         private final RECORD record;
         private final ADDITIONAL additional;
-        private boolean changed;
 
         private BatchingRecordProxy( KEY key, RECORD record, ADDITIONAL additional )
         {
@@ -152,6 +158,12 @@ public abstract class BatchingRecordAccess<KEY,RECORD,ADDITIONAL> implements Rec
 
         @Override
         public boolean isChanged()
+        {
+            return true;
+        }
+
+        @Override
+        public boolean isCreated()
         {
             return true;
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.io.fs;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -26,21 +27,33 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.Charset;
+import java.nio.file.CopyOption;
+import java.util.function.Function;
 import java.util.zip.ZipOutputStream;
 
-import org.neo4j.function.Function;
+import org.neo4j.io.fs.watcher.FileWatcher;
 
-public interface FileSystemAbstraction
+public interface FileSystemAbstraction extends Closeable
 {
+
+    /**
+     * Create file watcher that provides possibilities to monitor directories on underlying file system
+     * abstraction
+     * @return specific file system abstract watcher
+     * @throws IOException in case exception occur during file watcher creation
+     */
+    FileWatcher fileWatcher() throws IOException;
+
     StoreChannel open( File fileName, String mode ) throws IOException;
 
     OutputStream openAsOutputStream( File fileName, boolean append ) throws IOException;
 
     InputStream openAsInputStream( File fileName ) throws IOException;
 
-    Reader openAsReader( File fileName, String encoding ) throws IOException;
+    Reader openAsReader( File fileName, Charset charset ) throws IOException;
 
-    Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException;
+    Writer openAsWriter( File fileName, Charset charset, boolean append ) throws IOException;
 
     StoreChannel create( File fileName ) throws IOException;
 
@@ -56,7 +69,7 @@ public interface FileSystemAbstraction
 
     void deleteRecursively( File directory ) throws IOException;
 
-    boolean renameFile( File from, File to ) throws IOException;
+    void renameFile( File from, File to, CopyOption... copyOptions ) throws IOException;
 
     File[] listFiles( File directory );
 
@@ -74,7 +87,11 @@ public interface FileSystemAbstraction
 
     void truncate( File path, long size ) throws IOException;
 
-    interface ThirdPartyFileSystem
+    long lastModifiedTime( File file ) throws IOException;
+
+    void deleteFileOrThrow( File file ) throws IOException;
+
+    interface ThirdPartyFileSystem extends Closeable
     {
         void close();
 

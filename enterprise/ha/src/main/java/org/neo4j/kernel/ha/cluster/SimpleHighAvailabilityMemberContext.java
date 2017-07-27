@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -74,5 +74,16 @@ public class SimpleHighAvailabilityMemberContext implements HighAvailabilityMemb
     public boolean isSlaveOnly()
     {
         return slaveOnly;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "SimpleHighAvailabilityMemberContext{" +
+                "electedMasterId=" + electedMasterId +
+                ", availableHaMasterId=" + availableHaMasterId +
+                ", myId=" + myId +
+                ", slaveOnly=" + slaveOnly +
+                '}';
     }
 }

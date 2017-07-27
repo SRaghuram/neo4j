@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,8 @@
  */
 package org.neo4j.logging;
 
-import org.neo4j.function.Consumer;
+import java.util.function.Consumer;
+import javax.annotation.Nonnull;
 
 /**
  * A {@link Logger} implementation that discards all messages
@@ -41,23 +42,22 @@ public final class NullLogger implements Logger
     }
 
     @Override
-    public void log( String message )
+    public void log( @Nonnull String message )
     {
     }
 
     @Override
-    public void log( String message, Throwable throwable )
+    public void log( @Nonnull String message, @Nonnull Throwable throwable )
     {
     }
 
     @Override
-    public void log( String format, Object... arguments )
+    public void log( @Nonnull String format, @Nonnull Object... arguments )
     {
     }
 
     @Override
-    public void bulk( Consumer<Logger> consumer )
+    public void bulk( @Nonnull Consumer<Logger> consumer )
     {
-        consumer.accept( this );
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,7 +34,9 @@ public class ChannelOutputStream extends OutputStream
     {
         this.channel = channel;
         if ( append )
+        {
             this.channel.position( this.channel.size() );
+        }
     }
 
     @Override
@@ -59,7 +61,7 @@ public class ChannelOutputStream extends OutputStream
         while ( written < len )
         {
             buffer.clear();
-            buffer.put( b, index, Math.min( len-written, buffer.capacity() ) );
+            buffer.put( b, index, Math.min( len - written, buffer.capacity() ) );
             buffer.flip();
             written += channel.write( buffer );
         }

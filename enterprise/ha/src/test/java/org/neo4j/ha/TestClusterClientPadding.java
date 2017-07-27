@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.impl.ha.ClusterManager.ManagedCluster;
 import org.neo4j.test.ha.ClusterRule;
@@ -35,14 +36,17 @@ import static org.neo4j.kernel.impl.ha.ClusterManager.masterSeesMembers;
 public class TestClusterClientPadding
 {
     @Rule
-    public ClusterRule clusterRule = new ClusterRule( getClass() );
+    public ClusterRule clusterRule = new ClusterRule( getClass() )
+            .withSharedSetting( ClusterSettings.heartbeat_interval, "1s" )
+            .withSharedSetting( ClusterSettings.heartbeat_timeout, "10s" );
+
     private ManagedCluster cluster;
 
     @Before
     public void setUp() throws Throwable
     {
-        cluster = clusterRule.provider( clusterWithAdditionalClients( 2, 1 ) )
-                .availabilityChecks( masterAvailable(), masterSeesMembers( 3 ), allSeesAllAsJoined() )
+        cluster = clusterRule.withCluster( clusterWithAdditionalClients( 2, 1 ) )
+                .withAvailabilityChecks( masterAvailable(), masterSeesMembers( 3 ), allSeesAllAsJoined() )
                 .startCluster();
     }
 

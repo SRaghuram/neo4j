@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,21 +19,23 @@
  */
 package org.neo4j.kernel.api;
 
-import org.neo4j.kernel.api.txstate.ReadableTxState;
-import org.neo4j.kernel.impl.api.store.StoreReadLayer;
+import org.neo4j.storageengine.api.StorageStatement;
+import org.neo4j.storageengine.api.StoreReadLayer;
+import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 
 /**
  * A mechanism to augment and monitor transactions before and after commit/rollback.
  */
 public interface TransactionHook<OUTCOME extends TransactionHook.Outcome>
 {
-    public interface Outcome
+    interface Outcome
     {
         boolean isSuccessful();
         Throwable failure();
     }
 
-    OUTCOME beforeCommit( ReadableTxState state, KernelTransaction transaction, StoreReadLayer storeReadLayer );
-    void afterCommit( ReadableTxState state, KernelTransaction transaction, OUTCOME outcome );
-    void afterRollback( ReadableTxState state, KernelTransaction transaction, OUTCOME outcome );
+    OUTCOME beforeCommit( ReadableTransactionState state, KernelTransaction transaction,
+            StoreReadLayer storeReadLayer, StorageStatement statement );
+    void afterCommit( ReadableTransactionState state, KernelTransaction transaction, OUTCOME outcome );
+    void afterRollback( ReadableTransactionState state, KernelTransaction transaction, OUTCOME outcome );
 }

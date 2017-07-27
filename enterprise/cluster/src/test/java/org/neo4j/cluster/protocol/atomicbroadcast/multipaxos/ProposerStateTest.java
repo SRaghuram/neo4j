@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,26 +19,25 @@
  */
 package org.neo4j.cluster.protocol.atomicbroadcast.multipaxos;
 
-import java.io.Serializable;
-import java.net.URI;
-
 import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
+
+import java.io.Serializable;
+import java.net.URI;
 
 import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.com.message.MessageHolder;
 import org.neo4j.cluster.com.message.MessageType;
 import org.neo4j.cluster.com.message.TrackingMessageHolder;
+import org.neo4j.cluster.protocol.MessageArgumentMatcher;
 import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.PaxosInstance.State;
-import org.neo4j.cluster.protocol.omega.MessageArgumentMatcher;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.NullLog;
 
 import static java.lang.Integer.parseInt;
 import static java.net.URI.create;
 import static java.util.Arrays.asList;
-
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.argThat;
@@ -47,7 +46,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.cluster.com.message.Message.to;
 import static org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE;
 import static org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.ProposerMessage.phase1Timeout;
@@ -62,7 +60,7 @@ public class ProposerStateTest
     public void ifProposingWithClosedInstanceThenRetryWithNextInstance() throws Throwable
     {
         ProposerContext context = Mockito.mock(ProposerContext.class);
-        when(context.getInternalLog( any( Class.class ) )).thenReturn( NullLog.getInstance() );
+        when(context.getLog( any( Class.class ) )).thenReturn( NullLog.getInstance() );
 
         org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId instanceId = new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( 42 );
         PaxosInstanceStore paxosInstanceStore = new PaxosInstanceStore();
@@ -107,7 +105,7 @@ public class ProposerStateTest
 
         // The instance is closed
         PaxosInstance paxosInstance = new PaxosInstance( paxosInstanceStore, instanceId ); // the instance
-        paxosInstance.propose( 2001, Iterables.toList(
+        paxosInstance.propose( 2001, Iterables.asList(
                 Iterables.<URI, URI>iterable( create( "http://something1" ), create( "http://something2" ),
                         create( "http://something3" ) ) ) );
 
@@ -116,8 +114,6 @@ public class ProposerStateTest
 
         MessageHolder mockHolder = mock( MessageHolder.class );
         ProposerState.proposer.handle(context, message, mockHolder);
-
-
 
     }
 
@@ -176,7 +172,7 @@ public class ProposerStateTest
         instance.ready( payload, true );
         instance.pending();
         ProposerContext context = mock( ProposerContext.class );
-        when( context.getInternalLog( any(Class.class) ) ).thenReturn( NullLog.getInstance() );
+        when( context.getLog( any( Class.class ) ) ).thenReturn( NullLog.getInstance() );
         when( context.getPaxosInstance( any( org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.class ) ) ).thenReturn( instance );
         when( context.getMyId() ).thenReturn( new org.neo4j.cluster.InstanceId( parseInt( instanceId ) ) );
         TrackingMessageHolder outgoing = new TrackingMessageHolder();

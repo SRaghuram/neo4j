@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,9 +26,8 @@ import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
-import org.neo4j.function.Consumer;
-import org.neo4j.function.Consumers;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.util.JobScheduler;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -42,16 +41,16 @@ import static org.neo4j.io.file.Files.createOrOpenAsOuputStream;
 
 public class StoreLogService extends AbstractLogService implements Lifecycle
 {
-    public static final String INTERNAL_LOG_NAME = "messages.log";
+    public static final String INTERNAL_LOG_NAME = "debug.log";
 
     public static class Builder
     {
         private LogProvider userLogProvider = NullLogProvider.getInstance();
         private Executor rotationExecutor;
         private long internalLogRotationThreshold = 0L;
-        private int internalLogRotationDelay = 0;
+        private long internalLogRotationDelay = 0L;
         private int maxInternalLogArchives = 0;
-        private Consumer<LogProvider> rotationListener = Consumers.noop();
+        private Consumer<LogProvider> rotationListener = (logProvider) -> {};
         private Map<String, Level> logLevels = new HashMap<>();
         private Level defaultLevel = Level.INFO;
 
@@ -65,15 +64,15 @@ public class StoreLogService extends AbstractLogService implements Lifecycle
             return this;
         }
 
-        public Builder withRotation( long internalLogRotationThreshold, int internalLogRotationDelay, int maxInternalLogArchives,
-                JobScheduler jobScheduler )
+        public Builder withRotation( long internalLogRotationThreshold, long internalLogRotationDelay,
+                int maxInternalLogArchives, JobScheduler jobScheduler )
         {
             return withRotation( internalLogRotationThreshold, internalLogRotationDelay, maxInternalLogArchives,
                     jobScheduler.executor( JobScheduler.Groups.internalLogRotation ) );
         }
 
-        public Builder withRotation( long internalLogRotationThreshold, int internalLogRotationDelay, int maxInternalLogArchives,
-                Executor rotationExecutor )
+        public Builder withRotation( long internalLogRotationThreshold, long internalLogRotationDelay,
+                int maxInternalLogArchives, Executor rotationExecutor )
         {
             this.internalLogRotationThreshold = internalLogRotationThreshold;
             this.internalLogRotationDelay = internalLogRotationDelay;
@@ -100,16 +99,11 @@ public class StoreLogService extends AbstractLogService implements Lifecycle
             return this;
         }
 
-        public StoreLogService inStoreDirectory( FileSystemAbstraction fileSystem, File storeDir ) throws IOException
-        {
-            return toFile( fileSystem, new File( storeDir, INTERNAL_LOG_NAME ) );
-        }
-
-        public StoreLogService toFile( FileSystemAbstraction fileSystem, File internalLogPath ) throws IOException
+        public StoreLogService inLogsDirectory(FileSystemAbstraction fileSystem, File logsDir ) throws IOException
         {
             return new StoreLogService(
                     userLogProvider,
-                    fileSystem, internalLogPath, logLevels, defaultLevel,
+                    fileSystem, new File( logsDir, INTERNAL_LOG_NAME ), logLevels, defaultLevel,
                     internalLogRotationThreshold, internalLogRotationDelay, maxInternalLogArchives, rotationExecutor, rotationListener );
         }
     }
@@ -119,14 +113,14 @@ public class StoreLogService extends AbstractLogService implements Lifecycle
         return new Builder().withUserLogProvider( userLogProvider );
     }
 
-    public static Builder withRotation( long internalLogRotationThreshold, int internalLogRotationDelay, int maxInternalLogArchives, JobScheduler jobScheduler )
+    public static Builder withRotation( long internalLogRotationThreshold, long internalLogRotationDelay, int maxInternalLogArchives, JobScheduler jobScheduler )
     {
         return new Builder().withRotation( internalLogRotationThreshold, internalLogRotationDelay, maxInternalLogArchives, jobScheduler );
     }
 
-    public static StoreLogService inStoreDirectory( FileSystemAbstraction fileSystem, File storeDir ) throws IOException
+    public static StoreLogService inLogsDirectory(FileSystemAbstraction fileSystem, File storeDir ) throws IOException
     {
-        return new Builder().inStoreDirectory( fileSystem, storeDir );
+        return new Builder().inLogsDirectory( fileSystem, storeDir );
     }
 
     private final Closeable closeable;
@@ -138,14 +132,14 @@ public class StoreLogService extends AbstractLogService implements Lifecycle
             Map<String, Level> logLevels,
             Level defaultLevel,
             long internalLogRotationThreshold,
-            int internalLogRotationDelay,
+            long internalLogRotationDelay,
             int maxInternalLogArchives,
             Executor rotationExecutor,
             final Consumer<LogProvider> rotationListener ) throws IOException
     {
         if ( !internalLog.getParentFile().exists() )
         {
-            internalLog.getParentFile().mkdirs();
+            fileSystem.mkdirs( internalLog.getParentFile() );
         }
 
         final FormattedLogProvider.Builder internalLogBuilder = FormattedLogProvider.withUTCTimeZone()
@@ -166,12 +160,25 @@ public class StoreLogService extends AbstractLogService implements Lifecycle
                     rotationExecutor, new RotatingFileOutputStreamSupplier.RotationListener()
             {
                 @Override
-                public void outputFileCreated( OutputStream newStream, OutputStream oldStream )
+                public void outputFileCreated( OutputStream newStream )
                 {
                     FormattedLogProvider logProvider = internalLogBuilder.toOutputStream( newStream );
                     logProvider.getLog( StoreLogService.class ).info( "Opened new internal log file" );
                     rotationListener.accept( logProvider );
+                }
+
+                @Override
+                public void rotationCompleted( OutputStream newStream )
+                {
+                    FormattedLogProvider logProvider = internalLogBuilder.toOutputStream( newStream );
                     logProvider.getLog( StoreLogService.class ).info( "Rotated internal log file" );
+                }
+
+                @Override
+                public void rotationError( Exception e, OutputStream outStream )
+                {
+                    FormattedLogProvider logProvider = internalLogBuilder.toOutputStream( outStream );
+                    logProvider.getLog( StoreLogService.class ).info( "Rotation of internal log file failed:", e );
                 }
             } );
             internalLogProvider = internalLogBuilder.toOutputStream( rotatingSupplier );

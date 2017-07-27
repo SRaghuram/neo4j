@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.server.enterprise.helpers;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
@@ -55,23 +56,24 @@ public class EnterpriseServerBuilder extends CommunityServerBuilder
     }
 
     @Override
-    public EnterpriseServerBuilder usingDatabaseDir( String dbDir )
+    public EnterpriseServerBuilder usingDataDir( String dataDir )
     {
-        super.usingDatabaseDir( dbDir );
+        super.usingDataDir( dataDir );
         return this;
     }
 
     @Override
-    protected CommunityNeoServer build(File configFile, Config config, GraphDatabaseFacadeFactory.Dependencies dependencies)
+    protected CommunityNeoServer build(Optional<File> configFile, Config config, GraphDatabaseFacadeFactory.Dependencies dependencies)
     {
         return new TestEnterpriseNeoServer( config, configFile, dependencies, logProvider );
     }
 
     private class TestEnterpriseNeoServer extends EnterpriseNeoServer
     {
-        private final File configFile;
+        private final Optional<File> configFile;
 
-        public TestEnterpriseNeoServer( Config config, File configFile, GraphDatabaseFacadeFactory.Dependencies dependencies, LogProvider logProvider )
+        TestEnterpriseNeoServer( Config config, Optional<File> configFile,
+                GraphDatabaseFacadeFactory.Dependencies dependencies, LogProvider logProvider )
         {
             super( config, dependencies, logProvider );
             this.configFile = configFile;
@@ -87,7 +89,7 @@ public class EnterpriseServerBuilder extends CommunityServerBuilder
         public void stop()
         {
             super.stop();
-            configFile.delete();
+            configFile.ifPresent( File::delete );
         }
     }
 }

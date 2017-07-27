@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,7 @@ package org.neo4j.unsafe.impl.batchimport.cache;
  */
 public class IdFieldManipulator
 {
-    private static final LongBitsManipulator MANIPULATOR = new LongBitsManipulator( 64-29 /*id*/, 29/*count*/ );
+    private static final LongBitsManipulator MANIPULATOR = new LongBitsManipulator( 64 - 29 /*id*/, 29/*count*/ );
     private static final long EMPTY_FIELD = MANIPULATOR.template( true, false );
 
     private IdFieldManipulator()
@@ -43,7 +43,7 @@ public class IdFieldManipulator
 
     public static long changeCount( long field, int diff )
     {
-        return setCount( field, getCount( field )+diff );
+        return setCount( field, getCount( field ) + diff );
     }
 
     public static int getCount( long field )

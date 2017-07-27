@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -58,9 +58,11 @@ public class Variables
     public static void checkIsValidVariableName( String key ) throws
         ShellException
     {
-        if (!isIdentifier( key ) ) throw new ShellException(
-                key + " is no valid variable name. May only contain " +
-                        "alphanumeric characters and underscores.");
+        if ( !isIdentifier( key ) )
+        {
+            throw new ShellException( key + " is no valid variable name. May only contain " +
+                    "alphanumeric characters and underscores." );
+        }
     }
 
     public static boolean isIdentifier( String key )

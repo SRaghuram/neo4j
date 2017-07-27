@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,7 +31,8 @@ import org.neo4j.unsafe.impl.batchimport.stats.Stat;
 import org.neo4j.unsafe.impl.batchimport.stats.StatsProvider;
 import org.neo4j.unsafe.impl.batchimport.stats.StepStats;
 
-import static org.junit.Assert.assertTrue;
+import static java.lang.Integer.max;
+import static java.lang.Integer.min;
 
 /**
  * A bit like a mocked {@link Step}, but easier to work with.
@@ -63,6 +64,7 @@ public class ControlledStep<T> implements Step<T>, StatsProvider
     private final Map<Key,ControlledStat> stats = new HashMap<>();
     private final int maxProcessors;
     private volatile int numberOfProcessors = 1;
+    private boolean completed;
 
     public ControlledStep( String name, int maxProcessors )
     {
@@ -73,42 +75,30 @@ public class ControlledStep<T> implements Step<T>, StatsProvider
     {
         this.maxProcessors = maxProcessors == 0 ? Integer.MAX_VALUE : maxProcessors;
         this.name = name;
-        setNumberOfProcessors( initialProcessorCount );
+        processors( initialProcessorCount - 1 );
     }
 
-    @Override
-    public int numberOfProcessors()
+    public ControlledStep<T> setProcessors( int numberOfProcessors )
     {
-        return numberOfProcessors;
-    }
-
-    public ControlledStep<T> setNumberOfProcessors( int numberOfProcessors )
-    {
-        assertTrue( numberOfProcessors <= maxProcessors );
+        // We don't have to assert max processors here since importer will not count every processor
+        // equally. A step being very idle (due to being very very fast) counts as almost nothing.
         this.numberOfProcessors = numberOfProcessors;
+        processors( numberOfProcessors - numberOfProcessors );
         return this;
     }
 
     @Override
-    public synchronized boolean incrementNumberOfProcessors()
+    public int processors( int delta )
     {
-        if ( numberOfProcessors >= maxProcessors )
+        if ( delta > 0 )
         {
-            return false;
+            numberOfProcessors = min( numberOfProcessors + delta, maxProcessors );
         }
-        numberOfProcessors++;
-        return true;
-    }
-
-    @Override
-    public synchronized boolean decrementNumberOfProcessors()
-    {
-        if ( numberOfProcessors == 1 )
+        else if ( delta < 0 )
         {
-            return false;
+            numberOfProcessors = max( 1, numberOfProcessors + delta );
         }
-        numberOfProcessors--;
-        return true;
+        return numberOfProcessors;
     }
 
     @Override
@@ -142,7 +132,7 @@ public class ControlledStep<T> implements Step<T>, StatsProvider
     @Override
     public boolean isCompleted()
     {
-        return false;
+        return completed;
     }
 
     @Override
@@ -175,6 +165,11 @@ public class ControlledStep<T> implements Step<T>, StatsProvider
     public Key[] keys()
     {
         return stats.keySet().toArray( new Key[stats.size()] );
+    }
+
+    public void complete()
+    {
+        completed = true;
     }
 
     private static class ControlledStat implements Stat

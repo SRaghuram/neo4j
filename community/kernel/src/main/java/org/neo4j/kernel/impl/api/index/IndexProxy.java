@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,17 +25,21 @@ import java.util.concurrent.Future;
 
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.kernel.api.exceptions.index.IndexActivationFailedKernelException;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintVerificationFailedKernelException;
+import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
 import org.neo4j.kernel.api.index.IndexAccessor;
-import org.neo4j.kernel.api.index.IndexConfiguration;
-import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.IndexPopulator;
-import org.neo4j.kernel.api.index.IndexReader;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.index.PropertyAccessor;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.LabelSchemaSupplier;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.storageengine.api.schema.IndexReader;
+import org.neo4j.storageengine.api.schema.PopulationProgress;
 
 /**
  * Controls access to {@link IndexPopulator}, {@link IndexAccessor} during different stages
@@ -55,7 +59,7 @@ import org.neo4j.kernel.api.index.SchemaIndexProvider;
  *
  * @see ContractCheckingIndexProxy
  */
-public interface IndexProxy
+public interface IndexProxy extends LabelSchemaSupplier
 {
     void start() throws IOException;
 
@@ -76,6 +80,8 @@ public interface IndexProxy
 
     IndexDescriptor getDescriptor();
 
+    LabelSchemaDescriptor schema();
+
     SchemaIndexProvider.Descriptor getProviderDescriptor();
 
     InternalIndexState getState();
@@ -85,9 +91,9 @@ public interface IndexProxy
      */
     IndexPopulationFailure getPopulationFailure() throws IllegalStateException;
 
-    void force() throws IOException;
+    PopulationProgress getIndexPopulationProgress();
 
-    void flush() throws IOException;
+    void force() throws IOException;
 
     /**
      * @throws IndexNotFoundKernelException if the index isn't online yet.
@@ -101,9 +107,12 @@ public interface IndexProxy
 
     void activate() throws IndexActivationFailedKernelException;
 
-    void validate() throws ConstraintVerificationFailedKernelException, IndexPopulationFailedKernelException;
+    void validate() throws IndexPopulationFailedKernelException, UniquePropertyValueValidationException;
 
     ResourceIterator<File> snapshotFiles() throws IOException;
 
-    IndexConfiguration config();
+    default void verifyDeferredConstraints( PropertyAccessor accessor )  throws IndexEntryConflictException, IOException
+    {
+        throw new IllegalStateException( this.toString() );
+    }
 }

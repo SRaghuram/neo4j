@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,13 @@
  */
 package org.neo4j.cluster.member.paxos;
 
+import org.junit.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-
-import org.junit.Test;
 
 import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.protocol.atomicbroadcast.ObjectStreamFactory;
@@ -93,7 +93,7 @@ public class MemberIsUnavailableTest
         {
             ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream( serialized );
             inputStream = new ObjectStreamFactory().create( byteArrayInputStream );
-            return ((MemberIsUnavailable) inputStream.readObject());
+            return (MemberIsUnavailable) inputStream.readObject();
         }
         finally
         {

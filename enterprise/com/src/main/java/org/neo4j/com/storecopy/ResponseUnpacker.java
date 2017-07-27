@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,44 +19,27 @@
  */
 package org.neo4j.com.storecopy;
 
-import java.io.IOException;
-
 import org.neo4j.com.Response;
-import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 
 public interface ResponseUnpacker
 {
     /**
      * @param txHandler for getting an insight into which transactions gets applied.
      */
-    void unpackResponse( Response<?> response, TxHandler txHandler ) throws IOException;
+    void unpackResponse( Response<?> response, TxHandler txHandler ) throws Exception;
 
-    public static final ResponseUnpacker NO_OP_RESPONSE_UNPACKER = new ResponseUnpacker()
+    ResponseUnpacker NO_OP_RESPONSE_UNPACKER = ( response, txHandler ) ->
     {
-        @Override
-        public void unpackResponse( Response<?> response, TxHandler txHandler ) throws IOException
+        /* Do nothing */
+    };
+
+    interface TxHandler
+    {
+        TxHandler NO_OP_TX_HANDLER = transactionId ->
         {
-            txHandler.done();
-        }
-    };
+            /* Do nothing */
+        };
 
-    public interface TxHandler
-    {
-        void accept( CommittedTransactionRepresentation tx );
-
-        void done();
+        void accept( long transactionId );
     }
-
-    public static final TxHandler NO_OP_TX_HANDLER = new TxHandler()
-    {
-        @Override
-        public void accept( CommittedTransactionRepresentation tx )
-        {   // Do nothing
-        }
-
-        @Override
-        public void done()
-        {   // Do nothing
-        }
-    };
 }

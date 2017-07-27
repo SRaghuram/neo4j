@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,13 +22,16 @@ package org.neo4j.server.web;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class SimpleUriBuilder {
+import org.neo4j.helpers.AdvertisedSocketAddress;
 
-    public URI buildURI(String address, int port, boolean isSsl)
+public class SimpleUriBuilder
+{
+
+    public URI buildURI( AdvertisedSocketAddress address, boolean isSsl )
     {
         StringBuilder sb = new StringBuilder();
         sb.append( "http" );
-        
+
         if ( isSsl )
         {
             sb.append( "s" );
@@ -36,8 +39,9 @@ public class SimpleUriBuilder {
         }
         sb.append( "://" );
 
-        sb.append( address );
+        sb.append( address.getHostname() );
 
+        int port = address.getPort();
         if ( port != 80 && port != 443)
         {
             sb.append( ":" );

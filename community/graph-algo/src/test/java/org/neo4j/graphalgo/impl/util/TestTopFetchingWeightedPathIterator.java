@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -93,7 +93,6 @@ public class TestTopFetchingWeightedPathIterator extends Neo4jAlgoTestCase
         Path c = graph.makePathWithRelProperty( length, "c1-0-c2-1-c3" );             // 1
         Path d = graph.makePathWithRelProperty( length, "d1-3-d2-0-d3" );             // 3
         Path e = graph.makePathWithRelProperty( length, "e1-0-e2-0-e3-0-e4-1-e5" );   // 1
-
 
         List<Path> list = Arrays.asList(
                 new Path[]{

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -38,7 +38,7 @@ public class LongBitsManipulator
         private final long maxValue;
         private final int bitOffset;
 
-        public Slot( int bits, long mask, int bitOffset )
+        Slot( int bits, long mask, int bitOffset )
         {
             this.mask = mask;
             this.bitOffset = bitOffset;
@@ -59,7 +59,7 @@ public class LongBitsManipulator
             }
 
             long otherBits = field & ~mask;
-            return ((value << bitOffset)&mask) | otherBits;
+            return ((value << bitOffset) & mask) | otherBits;
         }
 
         public long clear( long field, boolean trueForAllOnes )

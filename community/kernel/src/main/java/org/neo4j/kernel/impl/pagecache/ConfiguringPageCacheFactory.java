@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,41 +19,55 @@
  */
 package org.neo4j.kernel.impl.pagecache;
 
-import java.lang.management.ManagementFactory;
-import java.lang.reflect.Method;
-
 import org.neo4j.helpers.Service;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageSwapperFactory;
 import org.neo4j.io.pagecache.impl.SingleFilePageSwapperFactory;
 import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.util.OsBeanUtil;
 import org.neo4j.logging.Log;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.mapped_memory_page_size;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_swapper;
+import static org.neo4j.kernel.configuration.Settings.BYTES;
+import static org.neo4j.unsafe.impl.internal.dragons.FeatureToggles.getInteger;
 
 public class ConfiguringPageCacheFactory
 {
+    private static final int pageSize = getInteger( ConfiguringPageCacheFactory.class, "pageSize", 8192 );
     private final PageSwapperFactory swapperFactory;
     private final Config config;
-    private final PageCacheTracer tracer;
+    private final PageCacheTracer pageCacheTracer;
     private final Log log;
     private PageCache pageCache;
+    private PageCursorTracerSupplier pageCursorTracerSupplier;
 
-    public ConfiguringPageCacheFactory(
-            FileSystemAbstraction fs, Config config, PageCacheTracer tracer, Log log )
+    /**
+     * Construct configuring page cache factory
+     * @param fs fileSystem file system that page cache will be based on
+     * @param config page swapper configuration
+     * @param pageCacheTracer global page cache tracer
+     * @param pageCursorTracerSupplier supplier of thread local (transaction local) page cursor tracer that will provide
+     * thread local page cache statistics
+     * @param log page cache factory log
+     */
+    public ConfiguringPageCacheFactory( FileSystemAbstraction fs, Config config, PageCacheTracer pageCacheTracer,
+            PageCursorTracerSupplier pageCursorTracerSupplier, Log log )
     {
-        this.swapperFactory = createAndConfigureSwapperFactory( fs, config );
+        this.swapperFactory = createAndConfigureSwapperFactory( fs, config, log );
         this.config = config;
-        this.tracer = tracer;
+        this.pageCacheTracer = pageCacheTracer;
         this.log = log;
+        this.pageCursorTracerSupplier = pageCursorTracerSupplier;
     }
 
-    private PageSwapperFactory createAndConfigureSwapperFactory( FileSystemAbstraction fs, Config config )
+    private PageSwapperFactory createAndConfigureSwapperFactory( FileSystemAbstraction fs, Config config, Log log )
     {
         String desiredImplementation = config.get( pagecache_swapper );
 
@@ -66,12 +80,14 @@ public class ConfiguringPageCacheFactory
                     factory.setFileSystemAbstraction( fs );
                     if ( factory instanceof ConfigurablePageSwapperFactory )
                     {
-                        ConfigurablePageSwapperFactory cfactory = (ConfigurablePageSwapperFactory) factory;
-                        cfactory.configure( config );
+                        ConfigurablePageSwapperFactory configurableFactory = (ConfigurablePageSwapperFactory) factory;
+                        configurableFactory.configure( config );
                     }
+                    log.info( "Configured " + pagecache_swapper.name() + ": " + desiredImplementation );
                     return factory;
                 }
             }
+            throw new IllegalArgumentException( "Cannot find PageSwapperFactory: " + desiredImplementation );
         }
 
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory();
@@ -95,13 +111,13 @@ public class ConfiguringPageCacheFactory
         return new MuninnPageCache(
                 swapperFactory,
                 maxPages,
-                cachePageSize,
-                tracer );
+                cachePageSize, pageCacheTracer, pageCursorTracerSupplier );
     }
 
     public int calculateMaxPages( Config config, int cachePageSize )
     {
-        long pageCacheMemory = config.get( pagecache_memory );
+        Long pageCacheMemorySetting = config.get( pagecache_memory );
+        long pageCacheMemory = interpretMemorySetting( pageCacheMemorySetting );
         long maxHeap = Runtime.getRuntime().maxMemory();
         if ( pageCacheMemory / maxHeap > 100 )
         {
@@ -113,45 +129,93 @@ public class ConfiguringPageCacheFactory
         return (int) Math.min( Integer.MAX_VALUE - 2000, pageCount );
     }
 
+    private long interpretMemorySetting( Long pageCacheMemorySetting )
+    {
+        if ( pageCacheMemorySetting != null )
+        {
+            return pageCacheMemorySetting;
+        }
+        long heuristic = defaultHeuristicPageCacheMemory();
+        log.warn( "The " + pagecache_memory.name() + " setting has not been configured. It is recommended that this " +
+                  "setting is always explicitly configured, to ensure the system has a balanced configuration. " +
+                  "Until then, a computed heuristic value of " + heuristic + " bytes will be used instead. " );
+        return heuristic;
+    }
+
+    public static long defaultHeuristicPageCacheMemory()
+    {
+        // First check if we have a default override...
+        String defaultMemoryOverride = System.getProperty( "dbms.pagecache.memory.default.override" );
+        if ( defaultMemoryOverride != null )
+        {
+            return BYTES.apply( defaultMemoryOverride );
+        }
+
+        double ratioOfFreeMem = 0.50;
+        String defaultMemoryRatioOverride = System.getProperty( "dbms.pagecache.memory.ratio.default.override" );
+        if ( defaultMemoryRatioOverride != null )
+        {
+            ratioOfFreeMem = Double.parseDouble( defaultMemoryRatioOverride );
+        }
+
+        // Try to compute (RAM - maxheap) * 0.50 if we can get reliable numbers...
+        long maxHeapMemory = Runtime.getRuntime().maxMemory();
+        if ( 0 < maxHeapMemory && maxHeapMemory < Long.MAX_VALUE )
+        {
+            try
+            {
+                long physicalMemory = OsBeanUtil.getTotalPhysicalMemory();
+                if ( 0 < physicalMemory && physicalMemory < Long.MAX_VALUE && maxHeapMemory < physicalMemory )
+                {
+                    long heuristic = (long) ((physicalMemory - maxHeapMemory) * ratioOfFreeMem);
+                    long min = ByteUnit.mebiBytes( 32 ); // We'd like at least 32 MiBs.
+                    long max = Math.min( maxHeapMemory * 70, ByteUnit.gibiBytes( 20 ) );
+                    // Don't heuristically take more than 20 GiBs, and don't take more than 70 times our max heap.
+                    // 20 GiBs of page cache memory is ~2.6 million 8 KiB pages. If each page has an overhead of
+                    // 72 bytes, then this will take up ~175 MiBs of heap memory. We should be able to tolerate that
+                    // in most environments. The "no more than 70 times heap" heuristic is based on the page size over
+                    // the per page overhead, 8192 / 72 ~= 114, plus leaving some extra room on the heap for the rest
+                    // of the system. This means that we won't heuristically try to create a page cache that is too
+                    // large to fit on the heap.
+                    long memory = Math.min( max, Math.max( min, heuristic ) );
+                    return memory;
+                }
+            }
+            catch ( Exception ignore )
+            {
+            }
+        }
+        // ... otherwise we just go with 2 GiBs.
+        return ByteUnit.gibiBytes( 2 );
+    }
+
     public int calculatePageSize( Config config, PageSwapperFactory swapperFactory )
     {
-        int pageSwappersPageSizeHint = swapperFactory.getCachePageSizeHint();
-        int configuredPageSize = config.get( mapped_memory_page_size ).intValue();
-        if ( configuredPageSize == 0 || swapperFactory.isCachePageSizeHintStrict() )
+        if ( config.get( mapped_memory_page_size ).intValue() != 0 )
         {
-            return pageSwappersPageSizeHint;
+            log.warn( "The setting unsupported.dbms.memory.pagecache.pagesize does not have any effect. It is " +
+                    "deprecated and will be removed in a future version." );
         }
-        return configuredPageSize;
+        if ( swapperFactory.isCachePageSizeHintStrict() )
+        {
+            return swapperFactory.getCachePageSizeHint();
+        }
+        return pageSize;
     }
 
     public void dumpConfiguration()
     {
         int cachePageSize = calculatePageSize( config, swapperFactory );
-        int maxPages = calculateMaxPages( config, cachePageSize );
-        long totalPhysicalMemory = totalPhysicalMemory();
-        String totalPhysicalMemMb = totalPhysicalMemory == -1? "?" : "" + totalPhysicalMemory / 1024 / 1024;
-        long maxVmUsageMb = Runtime.getRuntime().maxMemory() / 1024 / 1024;
-        long pageCacheMb = (maxPages * cachePageSize) / 1024 / 1024;
+        long maxPages = calculateMaxPages( config, cachePageSize );
+        long totalPhysicalMemory = OsBeanUtil.getTotalPhysicalMemory();
+        String totalPhysicalMemMb = (totalPhysicalMemory == OsBeanUtil.VALUE_UNAVAILABLE)
+                                    ? "?" : "" + ByteUnit.Byte.toMebiBytes( totalPhysicalMemory );
+        long maxVmUsageMb = ByteUnit.Byte.toMebiBytes( Runtime.getRuntime().maxMemory() );
+        long pageCacheMb = ByteUnit.Byte.toMebiBytes(maxPages * cachePageSize);
         String msg = "Physical mem: " + totalPhysicalMemMb + " MiB," +
                      " Heap size: " + maxVmUsageMb + " MiB," +
                      " Page cache size: " + pageCacheMb + " MiB.";
 
         log.info( msg );
-    }
-
-    public long totalPhysicalMemory()
-    {
-        try
-        {
-            Class<?> beanClass = Thread.currentThread().getContextClassLoader().loadClass(
-                    "com.sun.management.OperatingSystemMXBean" );
-            Method method = beanClass.getMethod( "getTotalPhysicalMemorySize" );
-            return (long) method.invoke( ManagementFactory.getOperatingSystemMXBean() );
-        }
-        catch ( Exception | LinkageError e )
-        {
-            // We tried, but at this point we actually have no idea.
-            return -1;
-        }
     }
 }

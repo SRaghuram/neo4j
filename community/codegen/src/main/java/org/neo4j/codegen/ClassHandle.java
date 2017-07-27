@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,8 @@
  */
 package org.neo4j.codegen;
 
+import java.lang.reflect.Modifier;
+
 public class ClassHandle extends TypeReference
 {
     private final TypeReference parent;
@@ -27,7 +29,7 @@ public class ClassHandle extends TypeReference
 
     ClassHandle( String packageName, String name, TypeReference parent, CodeGenerator generator, long generation )
     {
-        super(packageName, name);
+        super(packageName, name, parent.isPrimitive(), parent.isArray(), false, "", Modifier.PUBLIC);
         this.parent = parent;
         this.generator = generator;
         this.generation = generation;
@@ -52,7 +54,7 @@ public class ClassHandle extends TypeReference
 
     public Class<?> loadClass() throws CompilationFailureException
     {
-        return generator.loadClass( name(), generation );
+        return generator.loadClass( fullName(), generation );
     }
 
     public TypeReference parent()

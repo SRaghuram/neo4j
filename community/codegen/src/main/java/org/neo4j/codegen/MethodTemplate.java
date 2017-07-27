@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,9 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.codegen;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -81,9 +81,26 @@ public class MethodTemplate
             super( parameters );
         }
 
-        public Builder invokeSuper( ExpressionTemplate... parameters )
+        public Builder invokeSuper()
         {
-            return expression( ExpressionTemplate.invokeSuperConstructor( parameters ) );
+            return expression(
+                    ExpressionTemplate.invokeSuperConstructor( new ExpressionTemplate[]{}, TypeReference.NO_TYPES ) );
+        }
+
+        public Builder invokeSuper( ExpressionTemplate[] parameters, Class<?>[] parameterTypes)
+        {
+            TypeReference[] references = new TypeReference[parameterTypes.length];
+            for ( int i = 0; i < parameterTypes.length; i++ )
+            {
+                references[i] = typeReference( parameterTypes[i] );
+            }
+
+            return invokeSuper( parameters, references );
+        }
+
+        public Builder invokeSuper( ExpressionTemplate[] parameters, TypeReference[] parameterTypes)
+        {
+            return expression( ExpressionTemplate.invokeSuperConstructor( parameters, parameterTypes ) );
         }
 
         @Override
@@ -99,11 +116,12 @@ public class MethodTemplate
         }
     }
 
-    public static abstract class Builder
+    public abstract static class Builder
     {
         final Parameter[] parameters;
         private final Map<String,TypeReference> locals = new HashMap<>();
         private final List<Statement> statements = new ArrayList<>();
+        private int modifiers = Modifier.PUBLIC;
 
         Builder( Parameter[] parameters )
         {
@@ -146,6 +164,12 @@ public class MethodTemplate
             return this;
         }
 
+        public Builder modiferes(int modifiers)
+        {
+            this.modifiers = modifiers;
+            return this;
+        }
+
         public Builder returns( ExpressionTemplate value )
         {
             statements.add( Statement.returns( value ) );
@@ -163,6 +187,11 @@ public class MethodTemplate
     public String name()
     {
         return name;
+    }
+
+    public int modifiers()
+    {
+        return modifiers;
     }
 
     public TypeReference[] parameterTypes()
@@ -207,6 +236,7 @@ public class MethodTemplate
     private final Statement[] statements;
     private final TypeReference returnType;
     private final String name;
+    private final int modifiers;
 
     private MethodTemplate( Builder builder, TypeReference returnType, String name )
     {
@@ -215,5 +245,6 @@ public class MethodTemplate
         this.declaration = builder.declaration();
         this.parameters = builder.parameters;
         this.statements = builder.statements.toArray( new Statement[builder.statements.size()] );
+        this.modifiers = builder.modifiers;
     }
 }

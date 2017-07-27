@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,16 @@
  */
 package org.neo4j.kernel.impl.api.index.inmemory;
 
+import java.io.File;
+
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.index.IndexProviderCompatibilityTestSuite;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 
 public class InMemoryIndexProviderTest extends IndexProviderCompatibilityTestSuite
 {
     @Override
-    protected SchemaIndexProvider createIndexProvider()
+    protected SchemaIndexProvider createIndexProvider( FileSystemAbstraction fs, File graphDbDir )
     {
         return new InMemoryIndexProvider();
     }

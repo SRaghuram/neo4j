@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,9 +20,11 @@
 package org.neo4j.kernel.ha.com.master;
 
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,6 +33,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.com.RequestContext;
@@ -39,19 +42,17 @@ import org.neo4j.com.Response;
 import org.neo4j.com.TransactionNotPresentOnMasterException;
 import org.neo4j.com.TransactionObligationResponse;
 import org.neo4j.com.storecopy.StoreWriter;
-import org.neo4j.function.Consumer;
-import org.neo4j.function.Factory;
-import org.neo4j.helpers.Clock;
-import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.cluster.ConversationSPI;
 import org.neo4j.kernel.ha.cluster.DefaultConversationSPI;
 import org.neo4j.kernel.ha.id.IdAllocation;
 import org.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLockManager;
+import org.neo4j.kernel.impl.locking.DumpLocksVisitor;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.kernel.impl.store.StoreId;
+import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.util.JobScheduler;
@@ -60,10 +61,14 @@ import org.neo4j.kernel.impl.util.collection.ConcurrentAccessException;
 import org.neo4j.kernel.impl.util.collection.TimedRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.logging.FormattedLog;
+import org.neo4j.test.rule.VerboseTimeout;
+import org.neo4j.time.Clocks;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.cluster.ClusterSettings.server_id;
+import static org.neo4j.com.StoreIdTestFactory.newStoreIdForCurrentVersion;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.ha.HaSettings.lock_read_timeout;
 
@@ -83,17 +88,31 @@ public class MasterImplConversationStopFuzzIT
     private static final int numberOfOperations = 1_000;
     private static final int numberOfResources = 100;
 
-    public static final StoreId StoreId = new StoreId();
+    public static final StoreId StoreId = newStoreIdForCurrentVersion();
 
     private final LifeSupport life = new LifeSupport();
     private final ExecutorService executor = Executors.newFixedThreadPool( numberOfWorkers + 1 );
     private final JobScheduler scheduler = life.add( new Neo4jJobScheduler() );
-    private final Config config = new Config( stringMap( server_id.name(), "0", lock_read_timeout.name(), "1" ) );
-    private final Locks locks = new ForsetiLockManager( ResourceTypes.NODE, ResourceTypes.SCHEMA );
+    private final Config config = Config.embeddedDefaults( stringMap( server_id.name(), "0", lock_read_timeout.name(), "1" ) );
+    private final Locks locks = new ForsetiLockManager( Config.defaults(), Clocks.systemClock(),
+            ResourceTypes.NODE, ResourceTypes.SCHEMA );
 
     private static MasterExecutionStatistic executionStatistic = new MasterExecutionStatistic();
 
-    @Test( timeout = 50000 )
+    @Rule
+    public VerboseTimeout timeout = VerboseTimeout.builder()
+            .withTimeout( 50, TimeUnit.SECONDS )
+            .describeOnFailure( locks, MasterImplConversationStopFuzzIT::getLocksDescriptionFunction )
+            .build();
+
+    @After
+    public void cleanup() throws InterruptedException
+    {
+        life.shutdown();
+        executor.shutdownNow();
+    }
+
+    @Test
     public void shouldHandleRandomizedLoad() throws Throwable
     {
         // Given
@@ -101,7 +120,7 @@ public class MasterImplConversationStopFuzzIT
         final ExposedConversationManager
                 conversationManager = new ExposedConversationManager( conversationSPI, config, 100, 0 );
 
-        ConversationTestMasterSPI conversationTestMasterSPI = new ConversationTestMasterSPI( conversationManager );
+        ConversationTestMasterSPI conversationTestMasterSPI = new ConversationTestMasterSPI();
         MasterImpl master = new MasterImpl( conversationTestMasterSPI, conversationManager,
                 new Monitors().newMonitor( MasterImpl.Monitor.class ), config );
         life.add( conversationManager);
@@ -122,11 +141,11 @@ public class MasterImplConversationStopFuzzIT
         assertTrue( executionStatistic.isSuccessfulExecution() );
     }
 
-    @After
-    public void cleanup() throws InterruptedException
+    private static String getLocksDescriptionFunction( Locks locks )
     {
-        life.shutdown();
-        executor.shutdownNow();
+        StringWriter stringWriter = new StringWriter();
+        locks.accept( new DumpLocksVisitor( FormattedLog.withUTCTimeZone().toWriter( stringWriter ) ) );
+        return stringWriter.toString();
     }
 
     private List<Callable<Void>> workers( MasterImpl master, int numWorkers )
@@ -146,7 +165,7 @@ public class MasterImplConversationStopFuzzIT
         private final int machineId;
 
         private State state = State.UNINITIALIZED;
-        private long lastTx = 0;
+        private final long lastTx = 0;
         private long epoch;
         private RequestContext requestContext;
 
@@ -227,7 +246,7 @@ public class MasterImplConversationStopFuzzIT
                                 }
                                 else
                                 {
-                                    worker.master.endLockSession( worker.requestContext, true );
+                                    endLockSession( worker );
                                     return IDLE;
                                 }
                             }
@@ -244,7 +263,7 @@ public class MasterImplConversationStopFuzzIT
                             }
                             else
                             {
-                                worker.master.endLockSession( worker.requestContext, true );
+                                endLockSession( worker );
                                 return IDLE;
                             }
                         }
@@ -279,7 +298,7 @@ public class MasterImplConversationStopFuzzIT
             return worker.random.nextInt( numberOfResources );
         }
 
-        public SlaveEmulatorWorker( MasterImpl master, int clientNumber)
+        SlaveEmulatorWorker( MasterImpl master, int clientNumber )
         {
             this.machineId = clientNumber;
             this.random = new Random( machineId );
@@ -290,7 +309,7 @@ public class MasterImplConversationStopFuzzIT
         public Void call() throws Exception
         {
             for ( int i = 0; i < numberOfOperations; i++ )
-            { 
+            {
                 state = state.next( this );
             }
             return null;
@@ -305,17 +324,16 @@ public class MasterImplConversationStopFuzzIT
         {
             return random.nextInt();
         }
+
+        private static void endLockSession( SlaveEmulatorWorker worker )
+        {
+            boolean successfulSession = worker.random.nextBoolean();
+            worker.master.endLockSession( worker.requestContext, successfulSession );
+        }
     }
 
     static class ConversationTestMasterSPI implements MasterImpl.SPI
     {
-        private ExposedConversationManager conversationManager;
-
-        public ConversationTestMasterSPI( ExposedConversationManager conversationManager )
-        {
-            this.conversationManager = conversationManager;
-        }
-
         @Override
         public boolean isAccessible()
         {
@@ -365,11 +383,6 @@ public class MasterImplConversationStopFuzzIT
         @Override
         public <T> Response<T> packTransactionObligationResponse( RequestContext context, T response )
         {
-            Conversation conversation = conversationManager.conversationStore.getValue( context );
-            if ( conversation != null )
-            {
-                assertTrue( conversation.isActive() );
-            }
             return packEmptyResponse( response );
         }
 
@@ -419,7 +432,7 @@ public class MasterImplConversationStopFuzzIT
         private volatile boolean running = true;
         private final ConversationManager conversationManager;
 
-        public ConversationKiller( ConversationManager conversationManager )
+        ConversationKiller( ConversationManager conversationManager )
         {
             this.conversationManager = conversationManager;
         }
@@ -459,11 +472,12 @@ public class MasterImplConversationStopFuzzIT
         }
     }
 
-    private class ExposedConversationManager extends ConversationManager {
+    private class ExposedConversationManager extends ConversationManager
+    {
 
-        private ExposedTimedRepository<RequestContext,Conversation> conversationStore;
+        private TimedRepository<RequestContext,Conversation> conversationStore;
 
-        public ExposedConversationManager( ConversationSPI spi, Config config, int activityCheckInterval,
+        ExposedConversationManager( ConversationSPI spi, Config config, int activityCheckInterval,
                 int lockTimeoutAddition )
         {
             super( spi, config, activityCheckInterval, lockTimeoutAddition );
@@ -472,26 +486,9 @@ public class MasterImplConversationStopFuzzIT
         @Override
         protected TimedRepository<RequestContext,Conversation> createConversationStore()
         {
-            conversationStore = new ExposedTimedRepository<>( getConversationFactory(), getConversationReaper(),
-                    1, Clock.SYSTEM_CLOCK );
+            conversationStore = new TimedRepository<>( getConversationFactory(), getConversationReaper(),
+                    1, Clocks.systemClock() );
             return conversationStore;
-        }
-
-    }
-
-    private class ExposedTimedRepository<KEY, VALUE> extends TimedRepository<KEY, VALUE>
-    {
-
-        private ExposedTimedRepository(  Factory<VALUE> provider, Consumer<VALUE> reaper, long timeout,
-                Clock clock)
-        {
-            super(provider, reaper, timeout, clock);
-        }
-
-        @Override
-        public VALUE getValue( KEY key )
-        {
-            return super.getValue( key );
         }
     }
 

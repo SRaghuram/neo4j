@@ -1,3 +1,0 @@
-2.3.0-M03
----------
-o Adds a Windows PowerShell for managing a Neo4j server

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,16 +22,24 @@ package org.neo4j.com.storecopy;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.util.Optional;
 
 import org.neo4j.com.RequestContext;
 import org.neo4j.com.Response;
 import org.neo4j.com.ServerFailureException;
+import org.neo4j.function.ThrowingAction;
+import org.neo4j.graphdb.Resource;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.helpers.Format;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
+import org.neo4j.storageengine.api.StoreFileMetadata;
 
 import static org.neo4j.com.RequestContext.anonymous;
 import static org.neo4j.io.fs.FileUtils.getMostCanonicalFile;
@@ -47,61 +55,61 @@ public class StoreCopyServer
 {
     public interface Monitor
     {
-        void startTryCheckPoint();
+        void startTryCheckPoint( String storeCopyIdentifier );
 
-        void finishTryCheckPoint();
+        void finishTryCheckPoint( String storeCopyIdentifier );
 
-        void startStreamingStoreFile( File file );
+        void startStreamingStoreFile( File file, String storeCopyIdentifier );
 
-        void finishStreamingStoreFile( File file );
+        void finishStreamingStoreFile( File file, String storeCopyIdentifier );
 
-        void startStreamingStoreFiles();
+        void startStreamingStoreFiles( String storeCopyIdentifier );
 
-        void finishStreamingStoreFiles();
+        void finishStreamingStoreFiles( String storeCopyIdentifier );
 
-        void startStreamingTransactions( long startTxId );
+        void startStreamingTransactions( long startTxId, String storeCopyIdentifier );
 
-        void finishStreamingTransactions( long endTxId );
+        void finishStreamingTransactions( long endTxId, String storeCopyIdentifier );
 
         class Adapter implements Monitor
         {
             @Override
-            public void startTryCheckPoint()
+            public void startTryCheckPoint( String storeCopyIdentifier )
             {   // empty
             }
 
             @Override
-            public void finishTryCheckPoint()
+            public void finishTryCheckPoint( String storeCopyIdentifier )
             {   // empty
             }
 
             @Override
-            public void startStreamingStoreFile( File file )
+            public void startStreamingStoreFile( File file, String storeCopyIdentifier )
             {   // empty
             }
 
             @Override
-            public void finishStreamingStoreFile( File file )
+            public void finishStreamingStoreFile( File file, String storeCopyIdentifier )
             {   // empty
             }
 
             @Override
-            public void startStreamingStoreFiles()
+            public void startStreamingStoreFiles( String storeCopyIdentifier )
             {   // empty
             }
 
             @Override
-            public void finishStreamingStoreFiles()
+            public void finishStreamingStoreFiles( String storeCopyIdentifier )
             {   // empty
             }
 
             @Override
-            public void startStreamingTransactions( long startTxId )
+            public void startStreamingTransactions( long startTxId, String storeCopyIdentifier )
             {   // empty
             }
 
             @Override
-            public void finishStreamingTransactions( long endTxId )
+            public void finishStreamingTransactions( long endTxId, String storeCopyIdentifier )
             {   // empty
             }
         }
@@ -112,15 +120,19 @@ public class StoreCopyServer
     private final FileSystemAbstraction fileSystem;
     private final File storeDirectory;
     private final Monitor monitor;
+    private final PageCache pageCache;
+    private final StoreCopyCheckPointMutex mutex;
 
     public StoreCopyServer( NeoStoreDataSource dataSource, CheckPointer checkPointer, FileSystemAbstraction fileSystem,
-            File storeDirectory, Monitor monitor )
+            File storeDirectory, Monitor monitor, PageCache pageCache, StoreCopyCheckPointMutex mutex )
     {
         this.dataSource = dataSource;
         this.checkPointer = checkPointer;
         this.fileSystem = fileSystem;
+        this.mutex = mutex;
         this.storeDirectory = getMostCanonicalFile( storeDirectory );
         this.monitor = monitor;
+        this.pageCache = pageCache;
     }
 
     public Monitor monitor()
@@ -129,36 +141,68 @@ public class StoreCopyServer
     }
 
     /**
+     * Trigger store flush (checkpoint) and write {@link NeoStoreDataSource#listStoreFiles(boolean) store files} to the
+     * given {@link StoreWriter}.
+     *
+     * @param triggerName name of the component asks for store files.
+     * @param writer store writer to write files to.
+     * @param includeLogs <code>true</code> if transaction logs should be copied, <code>false</code> otherwise.
      * @return a {@link RequestContext} specifying at which point the store copy started.
      */
-    public RequestContext flushStoresAndStreamStoreFiles( StoreWriter writer, boolean includeLogs )
+    public RequestContext flushStoresAndStreamStoreFiles( String triggerName, StoreWriter writer, boolean includeLogs )
     {
         try
         {
-            monitor.startTryCheckPoint();
-            long lastAppliedTransaction = checkPointer.tryCheckPoint();
-            monitor.finishTryCheckPoint();
-            ByteBuffer temporaryBuffer = ByteBuffer.allocateDirect( Format.MB );
+            String storeCopyIdentifier = Thread.currentThread().getName();
+            ThrowingAction<IOException> checkPointAction = () ->
+            {
+                monitor.startTryCheckPoint( storeCopyIdentifier );
+                checkPointer.tryCheckPoint( new SimpleTriggerInfo( triggerName ) );
+                monitor.finishTryCheckPoint( storeCopyIdentifier );
+            };
 
             // Copy the store files
-            monitor.startStreamingStoreFiles();
-            try ( ResourceIterator<File> files = dataSource.listStoreFiles( includeLogs ) )
+            long lastAppliedTransaction;
+            try ( Resource lock = mutex.storeCopy( checkPointAction );
+                    ResourceIterator<StoreFileMetadata> files = dataSource.listStoreFiles( includeLogs ) )
             {
+                lastAppliedTransaction = checkPointer.lastCheckPointedTransactionId();
+                monitor.startStreamingStoreFiles( storeCopyIdentifier );
+                ByteBuffer temporaryBuffer = ByteBuffer.allocateDirect( (int) ByteUnit.mebiBytes( 1 ) );
                 while ( files.hasNext() )
                 {
-                    File file = files.next();
-                    try ( StoreChannel fileChannel = fileSystem.open( file, "r" ) )
+                    StoreFileMetadata meta = files.next();
+                    File file = meta.file();
+                    int recordSize = meta.recordSize();
+
+                    // Read from paged file if mapping exists. Otherwise read through file system.
+                    // A file is mapped if it is a store, and we have a running database, which will be the case for
+                    // both online backup, and when we are the master of an HA cluster.
+                    final Optional<PagedFile> optionalPagedFile = pageCache.getExistingMapping( file );
+                    if ( optionalPagedFile.isPresent() )
                     {
-                        monitor.startStreamingStoreFile( file );
-                        writer.write( relativePath( storeDirectory, file ), fileChannel,
-                                temporaryBuffer, file.length() > 0 );
-                        monitor.finishStreamingStoreFile( file );
+                        try ( PagedFile pagedFile = optionalPagedFile.get() )
+                        {
+                            long fileSize = pagedFile.fileSize();
+                            try ( ReadableByteChannel fileChannel = pagedFile.openReadableByteChannel() )
+                            {
+                                doWrite( writer, temporaryBuffer, file, recordSize, fileChannel, fileSize, storeCopyIdentifier );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        try ( ReadableByteChannel fileChannel = fileSystem.open( file, "r" ) )
+                        {
+                            long fileSize = fileSystem.getFileSize( file );
+                            doWrite( writer, temporaryBuffer, file, recordSize, fileChannel, fileSize, storeCopyIdentifier );
+                        }
                     }
                 }
             }
             finally
             {
-                monitor.finishStreamingStoreFiles();
+                monitor.finishStreamingStoreFiles( storeCopyIdentifier );
             }
 
             return anonymous( lastAppliedTransaction );
@@ -167,5 +211,14 @@ public class StoreCopyServer
         {
             throw new ServerFailureException( e );
         }
+    }
+
+    private void doWrite( StoreWriter writer, ByteBuffer temporaryBuffer, File file, int recordSize,
+            ReadableByteChannel fileChannel, long fileSize, String storeCopyIdentifier ) throws IOException
+    {
+        monitor.startStreamingStoreFile( file, storeCopyIdentifier );
+        writer.write( relativePath( storeDirectory, file ), fileChannel,
+                temporaryBuffer, fileSize > 0, recordSize );
+        monitor.finishStreamingStoreFile( file, storeCopyIdentifier );
     }
 }

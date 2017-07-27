@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,19 @@ package org.neo4j.kernel.impl.index;
 
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageCommandReaderFactory;
+import org.neo4j.kernel.impl.transaction.log.InMemoryClosableChannel;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryVersion;
+import org.neo4j.storageengine.api.CommandReader;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class IndexDefineCommandTest
 {
@@ -46,7 +58,7 @@ public class IndexDefineCommandTest
             idc.getOrAssignKeyId( "dropThatOverflows" );
             fail( "IndexDefineCommand should not allow more than " + count + " indexes per transaction" );
         }
-        catch( IllegalStateException e )
+        catch ( IllegalStateException e )
         {
             // wonderful
         }
@@ -56,9 +68,68 @@ public class IndexDefineCommandTest
             idc.getOrAssignIndexNameId( "dropThatOverflows" );
             fail( "IndexDefineCommand should not allow more than " + count + " keys per transaction" );
         }
-        catch( IllegalStateException e )
+        catch ( IllegalStateException e )
         {
             // wonderful
         }
+    }
+
+    @Test
+    public void shouldWriteIndexDefineCommandIfMapWithinShortRange() throws IOException
+    {
+        // GIVEN
+        InMemoryClosableChannel channel =  new InMemoryClosableChannel( 10_000 );
+        IndexDefineCommand command = initIndexDefineCommand( 300 );
+
+        // WHEN
+        command.serialize( channel );
+
+        // THEN
+        CommandReader commandReader = new RecordStorageCommandReaderFactory().byVersion(
+                LogEntryVersion.CURRENT.byteCode() );
+        IndexDefineCommand read = (IndexDefineCommand) commandReader.read( channel );
+        assertEquals( command.getIndexNameIdRange(), read.getIndexNameIdRange() );
+        assertEquals( command.getKeyIdRange(), read.getKeyIdRange() );
+    }
+
+    @Test
+    public void shouldFailToWriteIndexDefineCommandIfMapIsLargerThanShort() throws IOException
+    {
+        // GIVEN
+        InMemoryClosableChannel channel =  new InMemoryClosableChannel( 1000 );
+        IndexDefineCommand command = mock( IndexDefineCommand.class );
+        Map<String,Integer> largeMap = initMap( 0xFFFF + 1 );
+        when( command.getIndexNameIdRange() ).thenReturn( largeMap );
+        when( command.getKeyIdRange() ).thenReturn( largeMap );
+
+        // WHEN
+        try
+        {
+            command.serialize( channel );
+            fail( "Expected an AssertionError" );
+        }
+        catch ( AssertionError e )
+        {
+            // THEN Fine
+        }
+    }
+
+    private IndexDefineCommand initIndexDefineCommand( int nbrOfEntries )
+    {
+        IndexDefineCommand command = new IndexDefineCommand();
+        Map<String,Integer> indexNames = initMap( nbrOfEntries );
+        Map<String,Integer> keys = initMap( nbrOfEntries );
+        command.init( indexNames, keys );
+        return command;
+    }
+
+    private Map<String,Integer> initMap( int nbrOfEntries )
+    {
+        Map<String, Integer> toReturn = new HashMap<>();
+        while ( nbrOfEntries-- > 0 )
+        {
+            toReturn.put( "key" + nbrOfEntries, nbrOfEntries );
+        }
+        return toReturn;
     }
 }

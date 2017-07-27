@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.server.rest.domain;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 public class URIHelper
 {
@@ -28,7 +29,7 @@ public class URIHelper
     {
         try
         {
-            return URLEncoder.encode( value, "utf-8" )
+            return URLEncoder.encode( value, StandardCharsets.UTF_8.name() )
                     .replaceAll( "\\+", "%20" );
         }
         catch ( UnsupportedEncodingException e )

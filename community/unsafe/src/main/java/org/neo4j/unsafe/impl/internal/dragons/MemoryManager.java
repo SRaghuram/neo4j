@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,10 @@ package org.neo4j.unsafe.impl.internal.dragons;
  */
 public final class MemoryManager
 {
-    private static final long GRAB_SIZE = 32 * 1024 * 1024; // 32 MiB
+    /**
+     * The amount of memory, in bytes, to grab in each Slab.
+     */
+    private static final long GRAB_SIZE = FeatureToggles.getInteger( MemoryManager.class, "GRAB_SIZE", 512 * 1024 ); // 512 KiB
 
     /**
      * The amount of memory that this memory manager can still allocate.
@@ -102,7 +105,7 @@ public final class MemoryManager
         private final long alignMask;
         private long nextAlignedPointer;
 
-        public Slab( Slab next, long size, long alignment )
+        Slab( Slab next, long size, long alignment )
         {
             this.next = next;
             this.address = UnsafeUtil.allocateMemory( size );

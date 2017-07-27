@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,10 +27,7 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.Collection;
 
-import org.neo4j.kernel.impl.logging.NullLogService;
-
 import org.neo4j.cluster.BindingListener;
-import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.cluster.InstanceId;
 import org.neo4j.cluster.MultiPaxosServerFactory;
 import org.neo4j.cluster.NetworkedServerFactory;
@@ -56,7 +53,6 @@ import org.neo4j.cluster.protocol.heartbeat.HeartbeatMessage;
 import org.neo4j.cluster.timeout.FixedTimeoutStrategy;
 import org.neo4j.cluster.timeout.MessageTimeoutStrategy;
 import org.neo4j.helpers.NamedThreadFactory;
-import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -92,7 +88,7 @@ public class MultiPaxosServer
             Monitors monitors = new Monitors();
             NetworkedServerFactory serverFactory = new NetworkedServerFactory( life,
                     new MultiPaxosServerFactory( new ClusterConfiguration( "default", NullLogProvider.getInstance() ),
-                            NullLogService.getInstance(), monitors.newMonitor( StateMachines.Monitor.class ) ),
+                            NullLogProvider.getInstance(), monitors.newMonitor( StateMachines.Monitor.class ) ),
                     timeoutStrategy, NullLogProvider.getInstance(), new ObjectStreamFactory(), new ObjectStreamFactory(),
                     monitors.newMonitor( NetworkReceiver.Monitor.class ),
                     monitors.newMonitor( NetworkSender.Monitor.class ),
@@ -101,7 +97,7 @@ public class MultiPaxosServer
 
             ServerIdElectionCredentialsProvider electionCredentialsProvider = new ServerIdElectionCredentialsProvider();
             server = serverFactory.newNetworkedServer(
-                    new Config( MapUtil.stringMap(), ClusterSettings.class ),
+                    Config.embeddedDefaults(),
                     new InMemoryAcceptorInstanceStore(),
                     electionCredentialsProvider );
             server.addBindingListener( electionCredentialsProvider );

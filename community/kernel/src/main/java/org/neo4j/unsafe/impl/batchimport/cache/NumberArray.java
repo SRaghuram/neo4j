@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,7 @@ package org.neo4j.unsafe.impl.batchimport.cache;
  *
  * @see NumberArrayFactory
  */
-public interface NumberArray extends MemoryStatsVisitor.Home, AutoCloseable
+public interface NumberArray<N extends NumberArray<N>> extends MemoryStatsVisitor.Visitable, AutoCloseable
 {
     /**
      * @return length of the array, i.e. the capacity.
@@ -32,14 +32,13 @@ public interface NumberArray extends MemoryStatsVisitor.Home, AutoCloseable
     long length();
 
     /**
-     * Swaps {@code numberOfEntries} items from {@code fromIndex} to {@code toIndex}, such that
+     * Swaps items from {@code fromIndex} to {@code toIndex}, such that
      * {@code fromIndex} and {@code toIndex}, {@code fromIndex+1} and {@code toIndex} a.s.o swaps places.
-     *
-     * @param fromIndex where to start swapping from.
+     * The number of items swapped is equal to the length of the default value of the array.
+     *  @param fromIndex where to start swapping from.
      * @param toIndex where to start swapping to.
-     * @param numberOfEntries number of entries to swap, starting from the given from/to indexes.
      */
-    void swap( long fromIndex, long toIndex, int numberOfEntries );
+    void swap( long fromIndex, long toIndex );
 
     /**
      * Sets all values to a default value.
@@ -53,18 +52,16 @@ public interface NumberArray extends MemoryStatsVisitor.Home, AutoCloseable
     void close();
 
     /**
-     * The dynamic capability of {@link NumberArray}, i.e {@link NumberArrayFactory#newDynamicIntArray(long, int)}
-     * or {@link NumberArrayFactory#newDynamicLongArray(long, long)} is a central part of {@link NumberArray}.
-     * Manipulating items in dynamic arrays will extend the array behind the scenes. Doing this, even checking
-     * the bounds is expensive, and so fixating a dynamic array after the point where it's known to not need
-     * to grow anymore will have better performance.
+     * Part of the nature of {@link NumberArray} is that {@link #length()} can be dynamically growing.
+     * For that to work some implementations (those coming from e.g
+     * {@link NumberArrayFactory#newDynamicIntArray(long, int)} and such dynamic calls) has an indirection,
+     * one that is a bit costly when comparing to raw array access. In scenarios where there will be two or
+     * more access to the same index in the array it will be more efficient to resolve this indirection once
+     * and return the "raw" array for that given index so that it can be used directly in multiple calls,
+     * knowing that the returned array holds the given index.
      *
-     * The returned instance will fail with {@link ArrayIndexOutOfBoundsException} if setting a value at an index
-     * that would have required the array to be extended. Although getting a value outside of its current range
-     * will still return the default value that the dynamic array had.
-     *
-     * @return a {@link NumberArray}, or subclass thereof which is a fixed version of this array, if this array
-     * is a dynamic array. A fixed array has better performance than a dynamic array.
+     * @param index index into the array which the returned array will contain.
+     * @return array sure to hold the given index.
      */
-    NumberArray fixate();
+    N at( long index );
 }

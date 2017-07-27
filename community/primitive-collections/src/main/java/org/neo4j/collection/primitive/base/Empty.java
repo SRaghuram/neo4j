@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -104,12 +104,6 @@ public class Empty
         }
 
         @Override
-        public boolean accept( long value )
-        {
-            return false;
-        }
-
-        @Override
         public boolean remove( long value )
         {
             return false;
@@ -155,12 +149,6 @@ public class Empty
 
         @Override
         public boolean test( int value )
-        {
-            return false;
-        }
-
-        @Override
-        public boolean accept( int value )
         {
             return false;
         }

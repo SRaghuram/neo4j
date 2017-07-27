@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,35 +17,35 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.neo4j.kernel.configuration;
+
+import org.junit.Test;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.neo4j.configuration.LoadableConfig;
+import org.neo4j.logging.Log;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.junit.Test;
-import org.neo4j.logging.Log;
+import static org.mockito.Mockito.mock;
 
 public class AnnotationBasedConfigurationMigratorTest
 {
 
     private static final AtomicBoolean wasCalled = new AtomicBoolean( false );
 
-    static class SomeSettings
+    static class SomeSettings implements LoadableConfig
     {
+        @SuppressWarnings( "unused" )
         @Migrator
-        private static ConfigurationMigrator migrator = new ConfigurationMigrator()
+        public static ConfigurationMigrator migrator = ( rawConfiguration, log ) ->
         {
-            @Override
-            public Map<String, String> apply( Map<String, String> rawConfiguration, Log log )
-            {
-                wasCalled.set( true );
-                return rawConfiguration;
-            }
+            wasCalled.set( true );
+            return rawConfiguration;
         };
     }
 
@@ -54,17 +54,15 @@ public class AnnotationBasedConfigurationMigratorTest
     {
 
         // Given
-        AnnotationBasedConfigurationMigrator migrator = new AnnotationBasedConfigurationMigrator( Arrays.asList( new Class<?>[]{SomeSettings.class} ) );
-
+        AnnotationBasedConfigurationMigrator migrator =
+                new AnnotationBasedConfigurationMigrator( Collections.singleton( new SomeSettings() ) );
 
         // When
-        migrator.apply( new HashMap<String,String>(), null );
+        migrator.apply( new HashMap<>(), mock( Log.class ) );
 
         // Then
-        assertThat(wasCalled.get(), is(true));
+        assertThat( wasCalled.get(), is( true ) );
 
     }
-
-
 
 }

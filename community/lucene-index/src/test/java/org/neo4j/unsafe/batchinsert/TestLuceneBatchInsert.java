@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.unsafe.batchinsert;
 
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -30,8 +31,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Predicate;
 
-import org.neo4j.function.Predicate;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
@@ -39,21 +40,23 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings.LabelIndex;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.index.IndexManager;
 import org.neo4j.helpers.Service;
-import org.neo4j.index.impl.lucene.LuceneBatchInserterIndexProviderNewImpl;
-import org.neo4j.index.impl.lucene.LuceneIndexImplementation;
-import org.neo4j.index.impl.lucene.MyStandardAnalyzer;
+import org.neo4j.helpers.collection.LruCache;
+import org.neo4j.index.impl.lucene.legacy.LuceneBatchInserterIndexProviderNewImpl;
+import org.neo4j.index.impl.lucene.legacy.LuceneIndexImplementation;
+import org.neo4j.index.impl.lucene.legacy.MyStandardAnalyzer;
 import org.neo4j.index.lucene.ValueContext;
 import org.neo4j.index.lucene.unsafe.batchinsert.LuceneBatchInserterIndexProvider;
+import org.neo4j.kernel.api.impl.labelscan.LuceneLabelScanStoreExtension;
+import org.neo4j.kernel.api.impl.schema.LuceneSchemaIndexProviderFactory;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.impl.api.index.inmemory.InMemoryIndexProviderFactory;
-import org.neo4j.kernel.impl.api.scan.InMemoryLabelScanStoreExtension;
-import org.neo4j.kernel.impl.cache.LruCache;
-import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.apache.lucene.search.NumericRangeQuery.newIntRange;
 import static org.hamcrest.core.Is.is;
@@ -67,13 +70,44 @@ import static org.neo4j.helpers.collection.Iterables.filter;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.index.Neo4jTestCase.assertContains;
-import static org.neo4j.index.impl.lucene.Contains.contains;
-import static org.neo4j.index.impl.lucene.IsEmpty.isEmpty;
-import static org.neo4j.index.impl.lucene.LuceneIndexImplementation.EXACT_CONFIG;
+import static org.neo4j.index.impl.lucene.legacy.Contains.contains;
+import static org.neo4j.index.impl.lucene.legacy.LuceneIndexImplementation.EXACT_CONFIG;
 import static org.neo4j.index.lucene.ValueContext.numeric;
 
 public class TestLuceneBatchInsert
 {
+    @Rule
+    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Rule
+    public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+
+    private File storeDir;
+    private BatchInserter inserter;
+    private GraphDatabaseService db;
+
+    @SuppressWarnings( { "rawtypes", "unchecked" } )
+    @Before
+    public void startInserter() throws Exception
+    {
+        storeDir = testDirectory.graphDbDir();
+        Iterable filteredKernelExtensions = filter( onlyRealLuceneExtensions(),
+                Service.load( KernelExtensionFactory.class ) );
+        inserter = BatchInserters.inserter( storeDir, fileSystemRule.get(),
+                stringMap( GraphDatabaseSettings.label_index.name(), LabelIndex.LUCENE.name() ),
+                filteredKernelExtensions );
+    }
+
+    @After
+    public void shutdown()
+    {
+        shutdownInserter();
+        if ( db != null )
+        {
+            db.shutdown();
+            db = null;
+        }
+    }
+
     @Test
     public void testSome() throws Exception
     {
@@ -250,7 +284,7 @@ public class TestLuceneBatchInsert
         assertThat( batchIndexResult3.size(), is( 1 ) );
 
         IndexHits<Long> batchIndexResult4 = batchIndex.query( "number", newIntRange( "number", 47, 98, false, false ) );
-        assertThat( batchIndexResult4, isEmpty() );
+        assertThat( batchIndexResult4, Matchers.emptyIterable() );
 
         provider.shutdown();
 
@@ -274,7 +308,7 @@ public class TestLuceneBatchInsert
             assertThat( indexResult3.size(), is( 1 ) );
 
             IndexHits<Node> indexResult4 = index.query( "number", newIntRange( "number", 47, 98, false, false ) );
-            assertThat( indexResult4, isEmpty() );
+            assertThat( indexResult4, Matchers.emptyIterable() );
             transaction.success();
         }
     }
@@ -511,39 +545,12 @@ public class TestLuceneBatchInsert
         }
     }
 
-    @Rule
-    public final TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
-
-    private File storeDir;
-    private BatchInserter inserter;
-    private GraphDatabaseService db;
-
-    @SuppressWarnings( { "rawtypes", "unchecked" } )
-    @Before
-    public void startInserter() throws Exception
-    {
-        storeDir = testDirectory.graphDbDir();
-        Iterable filteredKernelExtensions = filter( onlyRealLuceneExtensions(),
-                Service.load( KernelExtensionFactory.class ) );
-        inserter = BatchInserters.inserter( storeDir, stringMap(), filteredKernelExtensions );
-    }
-
     @SuppressWarnings( "rawtypes" )
     private Predicate<? super KernelExtensionFactory> onlyRealLuceneExtensions()
     {
-        return new Predicate<KernelExtensionFactory>()
-        {
-            @Override
-            public boolean test( KernelExtensionFactory extension )
-            {
-                if ( extension instanceof InMemoryLabelScanStoreExtension ||
-                        extension instanceof InMemoryIndexProviderFactory )
-                {
-                    return false;
-                }
-                return true;
-            }
-        };
+        return extension ->
+            extension instanceof LuceneLabelScanStoreExtension ||
+            extension instanceof LuceneSchemaIndexProviderFactory;
     }
 
     private void switchToGraphDatabaseService( ConfigurationParameter... config )
@@ -567,7 +574,7 @@ public class TestLuceneBatchInsert
         private final Setting<?> key;
         private final String value;
 
-        public ConfigurationParameter( Setting<?> key, String value )
+        ConfigurationParameter( Setting<?> key, String value )
         {
             this.key = key;
             this.value = value;
@@ -580,17 +587,6 @@ public class TestLuceneBatchInsert
         {
             inserter.shutdown();
             inserter = null;
-        }
-    }
-
-    @After
-    public void shutdown()
-    {
-        shutdownInserter();
-        if ( db != null )
-        {
-            db.shutdown();
-            db = null;
         }
     }
 }

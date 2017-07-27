@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -36,7 +36,7 @@ public class DoubleEvaluator implements CostEvaluator<Double>
     public Double getCost( Relationship relationship, Direction direction )
     {
         Object costProp = relationship.getProperty(costPropertyName);
-        if(costProp instanceof Number)
+        if ( costProp instanceof Number )
         {
             return ((Number) costProp).doubleValue();
         }

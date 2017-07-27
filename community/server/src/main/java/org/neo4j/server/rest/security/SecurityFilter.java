@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -36,7 +35,8 @@ import javax.servlet.http.HttpServletResponse;
 
 public class SecurityFilter implements Filter
 {
-    private final HashMap<UriPathWildcardMatcher, HashSet<ForbiddingSecurityRule>> rules = new HashMap<UriPathWildcardMatcher, HashSet<ForbiddingSecurityRule>>();
+    private final HashMap<UriPathWildcardMatcher,HashSet<ForbiddingSecurityRule>> rules =
+            new HashMap<UriPathWildcardMatcher,HashSet<ForbiddingSecurityRule>>();
 
     public SecurityFilter( SecurityRule rule, SecurityRule... rules )
     {
@@ -61,16 +61,17 @@ public class SecurityFilter implements Filter
                 ruleHashSet = new HashSet<ForbiddingSecurityRule>();
                 rules.put( uriPathWildcardMatcher, ruleHashSet );
             }
-            ruleHashSet.add( fromSecurityRule(r) );
+            ruleHashSet.add( fromSecurityRule( r ) );
         }
     }
 
-    private static ForbiddingSecurityRule fromSecurityRule(final SecurityRule rule) {
-        if (rule instanceof ForbiddingSecurityRule)
+    private static ForbiddingSecurityRule fromSecurityRule( final SecurityRule rule )
+    {
+        if ( rule instanceof ForbiddingSecurityRule )
         {
             return (ForbiddingSecurityRule) rule;
         }
-        return new ForbiddenRuleDecorator(rule);
+        return new ForbiddenRuleDecorator( rule );
     }
 
     private static Iterable<SecurityRule> merge( SecurityRule rule, SecurityRule[] rules )
@@ -84,14 +85,19 @@ public class SecurityFilter implements Filter
         return result;
     }
 
+    public static String basicAuthenticationResponse( String realm )
+    {
+        return "Basic realm=\"" + realm + "\"";
+    }
+
     @Override
     public void init( FilterConfig filterConfig ) throws ServletException
     {
     }
 
     @Override
-    public void doFilter( ServletRequest request, ServletResponse response, FilterChain chain ) throws IOException,
-            ServletException
+    public void doFilter( ServletRequest request, ServletResponse response, FilterChain chain )
+            throws IOException, ServletException
     {
 
         validateRequestType( request );
@@ -114,11 +120,12 @@ public class SecurityFilter implements Filter
                         createUnauthorizedChallenge( response, securityRule );
                         return;
                     }
-                    requestIsForbidden |= securityRule.isForbidden(httpReq);
+                    requestIsForbidden |= securityRule.isForbidden( httpReq );
                 }
             }
         }
-        if (requestIsForbidden) {
+        if ( requestIsForbidden )
+        {
             createForbiddenResponse( response );
             return;
         }
@@ -126,13 +133,12 @@ public class SecurityFilter implements Filter
         chain.doFilter( request, response );
     }
 
-
     private void validateRequestType( ServletRequest request ) throws ServletException
     {
         if ( !(request instanceof HttpServletRequest) )
         {
-            throw new ServletException( String.format( "Expected HttpServletRequest, received [%s]", request.getClass()
-                    .getCanonicalName() ) );
+            throw new ServletException( String.format( "Expected HttpServletRequest, received [%s]",
+                    request.getClass().getCanonicalName() ) );
         }
     }
 
@@ -141,8 +147,7 @@ public class SecurityFilter implements Filter
         if ( !(response instanceof HttpServletResponse) )
         {
             throw new ServletException( String.format( "Expected HttpServletResponse, received [%s]",
-                    response.getClass()
-                            .getCanonicalName() ) );
+                    response.getClass().getCanonicalName() ) );
         }
     }
 
@@ -156,9 +161,8 @@ public class SecurityFilter implements Filter
     private void createForbiddenResponse( ServletResponse response )
     {
         HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-        httpServletResponse.setStatus(403);
+        httpServletResponse.setStatus( 403 );
     }
-
 
     @Override
     public synchronized void destroy()
@@ -166,35 +170,36 @@ public class SecurityFilter implements Filter
         rules.clear();
     }
 
-    public static String basicAuthenticationResponse( String realm )
+    private static class ForbiddenRuleDecorator implements ForbiddingSecurityRule
     {
-        return "Basic realm=\"" + realm + "\"";
-    }
-
-    private static class ForbiddenRuleDecorator implements ForbiddingSecurityRule {
         private final SecurityRule innerRule;
 
-        public ForbiddenRuleDecorator(SecurityRule rule) {
+        ForbiddenRuleDecorator( SecurityRule rule )
+        {
             this.innerRule = rule;
         }
 
         @Override
-        public boolean isForbidden(HttpServletRequest request) {
+        public boolean isForbidden( HttpServletRequest request )
+        {
             return false;
         }
 
         @Override
-        public boolean isAuthorized(HttpServletRequest request) {
-            return innerRule.isAuthorized(request);
+        public boolean isAuthorized( HttpServletRequest request )
+        {
+            return innerRule.isAuthorized( request );
         }
 
         @Override
-        public String forUriPath() {
+        public String forUriPath()
+        {
             return innerRule.forUriPath();
         }
 
         @Override
-        public String wwwAuthenticateHeader() {
+        public String wwwAuthenticateHeader()
+        {
             return innerRule.wwwAuthenticateHeader();
         }
     }

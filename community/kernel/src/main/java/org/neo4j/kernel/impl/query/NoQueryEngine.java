@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,7 +28,7 @@ enum NoQueryEngine implements QueryExecutionEngine
     INSTANCE;
 
     @Override
-    public Result executeQuery( String query, Map<String, Object> parameters, QuerySession querySession )
+    public Result executeQuery( String query, Map<String,Object> parameters, TransactionalContext context )
     {
         throw noQueryEngine();
     }
@@ -40,7 +40,7 @@ enum NoQueryEngine implements QueryExecutionEngine
     }
 
     @Override
-    public Result profileQuery( String query, Map<String, Object> parameter, QuerySession session )
+    public Result profileQuery( String query, Map<String,Object> parameter, TransactionalContext context )
     {
         throw noQueryEngine();
     }

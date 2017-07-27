@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -38,12 +38,9 @@ public enum AcceptorState
                 )
                         throws Throwable
                 {
-                    switch ( message.getMessageType() )
+                    if ( message.getMessageType() == AcceptorMessage.join )
                     {
-                        case join:
-                        {
-                            return acceptor;
-                        }
+                        return acceptor;
                     }
 
                     return this;
@@ -85,7 +82,7 @@ public enum AcceptorState
                             else
                             {
                                 // Optimization - explicit reject
-                                context.getInternalLog( AcceptorState.class ).debug("Rejecting prepare from "
+                                context.getLog( AcceptorState.class ).debug("Rejecting prepare from "
                                         + message.getHeader( Message.FROM ) + " for instance "
                                         + message.getHeader( InstanceId.INSTANCE ) + " and ballot "
                                         + incomingState.getBallot() + " (i had a prepare state ballot = "
@@ -116,7 +113,7 @@ public enum AcceptorState
                             }
                             else
                             {
-                                context.getInternalLog( AcceptorState.class ).debug( "Reject " + instanceId
+                                context.getLog( AcceptorState.class ).debug( "Reject " + instanceId
                                         + " accept ballot:" + acceptState.getBallot() + " actual ballot:" +
                                         instance.getBallot() );
                                 outgoing.offer( message.copyHeadersTo( Message.respond( ProposerMessage
@@ -131,6 +128,9 @@ public enum AcceptorState
                             context.leave();
                             return start;
                         }
+
+                        default:
+                            break;
                     }
 
                     return this;

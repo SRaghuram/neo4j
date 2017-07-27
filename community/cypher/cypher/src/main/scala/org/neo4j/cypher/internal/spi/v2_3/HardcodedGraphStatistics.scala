@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,4 +22,4 @@ package org.neo4j.cypher.internal.spi.v2_3
 //This class should live here, but until we have to touch
 //disk, let's have it in the compiler. Convenient.
 case object HardcodedGraphStatistics
-  extends org.neo4j.cypher.internal.compiler.v2_3.HardcodedGraphStatisticsValues
+  extends org.neo4j.cypher.internal.compiler.v3_2.HardcodedGraphStatisticsValues

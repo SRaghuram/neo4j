@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,54 +20,31 @@
 package org.neo4j.kernel.impl.api.store;
 
 import org.neo4j.cursor.Cursor;
-import org.neo4j.kernel.api.cursor.EntityItem;
-import org.neo4j.kernel.api.cursor.PropertyItem;
-import org.neo4j.kernel.api.cursor.RelationshipItem;
-import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.RelationshipGroupStore;
-import org.neo4j.kernel.impl.store.RelationshipStore;
+import org.neo4j.kernel.impl.locking.Lock;
+import org.neo4j.kernel.impl.locking.LockService;
+import org.neo4j.kernel.impl.store.RecordCursor;
+import org.neo4j.kernel.impl.store.RecordCursors;
+import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
-import org.neo4j.kernel.impl.util.InstanceCache;
+import org.neo4j.storageengine.api.RelationshipItem;
+
+import static org.neo4j.kernel.impl.locking.LockService.NO_LOCK_SERVICE;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 
 /**
  * Base cursor for relationships.
  */
-public abstract class StoreAbstractRelationshipCursor extends EntityItem.EntityItemHelper
-        implements Cursor<RelationshipItem>, RelationshipItem
+public abstract class StoreAbstractRelationshipCursor implements Cursor<RelationshipItem>, RelationshipItem
 {
     protected final RelationshipRecord relationshipRecord;
-    protected final RelationshipStore relationshipStore;
-    protected final RelationshipGroupStore relationshipGroupStore;
-    protected StoreStatement storeStatement;
-
-    private InstanceCache<StoreSinglePropertyCursor> singlePropertyCursor;
-    private InstanceCache<StorePropertyCursor> allPropertyCursor;
-
-    public StoreAbstractRelationshipCursor( RelationshipRecord relationshipRecord, final NeoStores neoStores,
-            StoreStatement storeStatement )
+    final RecordCursor<RelationshipRecord> relationshipRecordCursor;
+    private final LockService lockService;
+    StoreAbstractRelationshipCursor( RelationshipRecord relationshipRecord, RecordCursors cursors,
+            LockService lockService )
     {
-        this.relationshipStore = neoStores.getRelationshipStore();
-        this.relationshipGroupStore = neoStores.getRelationshipGroupStore();
+        this.relationshipRecordCursor = cursors.relationship();
         this.relationshipRecord = relationshipRecord;
-
-        this.storeStatement = storeStatement;
-
-        singlePropertyCursor = new InstanceCache<StoreSinglePropertyCursor>()
-        {
-            @Override
-            protected StoreSinglePropertyCursor create()
-            {
-                return new StoreSinglePropertyCursor( neoStores.getPropertyStore(), this );
-            }
-        };
-        allPropertyCursor = new InstanceCache<StorePropertyCursor>()
-        {
-            @Override
-            protected StorePropertyCursor create()
-            {
-                return new StorePropertyCursor( neoStores.getPropertyStore(), this );
-            }
-        };
+        this.lockService = lockService;
     }
 
     @Override
@@ -104,18 +81,44 @@ public abstract class StoreAbstractRelationshipCursor extends EntityItem.EntityI
     public long otherNode( long nodeId )
     {
         return relationshipRecord.getFirstNode() == nodeId ?
-                relationshipRecord.getSecondNode() : relationshipRecord.getFirstNode();
+               relationshipRecord.getSecondNode() : relationshipRecord.getFirstNode();
     }
 
     @Override
-    public Cursor<PropertyItem> properties()
+    public long nextPropertyId()
     {
-        return allPropertyCursor.get().init( relationshipRecord.getNextProp() );
+        return relationshipRecord.getNextProp();
     }
 
     @Override
-    public Cursor<PropertyItem> property( int propertyKeyId )
+    public Lock lock()
     {
-        return singlePropertyCursor.get().init( relationshipRecord.getNextProp(), propertyKeyId );
+        Lock lock = lockService.acquireRelationshipLock( relationshipRecord.getId(), LockService.LockType.READ_LOCK );
+        if ( lockService != NO_LOCK_SERVICE )
+        {
+            boolean success = false;
+            try
+            {
+                // It's safer to re-read the relationship record here, specifically nextProp, after acquiring the lock
+                if ( !relationshipRecordCursor.next( relationshipRecord.getId(), relationshipRecord, FORCE ) )
+                {
+                    // So it looks like the node has been deleted. The current behavior of RelationshipStore#fillRecord
+                    // w/ FORCE is to only set the inUse field on loading an unused record. This should (and will)
+                    // change to be more of a centralized behavior by the stores. Anyway, setting this pointer
+                    // to the primitive equivalent of null the property cursor will just look empty from the
+                    // outside and the releasing of the lock will be done as usual.
+                    relationshipRecord.setNextProp( Record.NO_NEXT_PROPERTY.intValue() );
+                }
+                success = true;
+            }
+            finally
+            {
+                if ( !success )
+                {
+                    lock.release();
+                }
+            }
+        }
+        return lock;
     }
 }

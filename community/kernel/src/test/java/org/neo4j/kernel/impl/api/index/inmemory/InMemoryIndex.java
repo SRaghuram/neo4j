@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,26 +22,25 @@ package org.neo4j.kernel.impl.api.index.inmemory;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 
-import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.collection.primitive.PrimitiveLongSet;
 import org.neo4j.collection.primitive.PrimitiveLongVisitor;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.kernel.api.direct.BoundedIterable;
+import org.neo4j.helpers.collection.BoundedIterable;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.index.IndexAccessor;
-import org.neo4j.kernel.api.index.IndexEntryConflictException;
+import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexPopulator;
-import org.neo4j.kernel.api.index.IndexReader;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.InternalIndexState;
-import org.neo4j.kernel.api.index.NodePropertyUpdate;
 import org.neo4j.kernel.api.index.PropertyAccessor;
-import org.neo4j.kernel.api.index.Reservation;
 import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
-import org.neo4j.register.Register.DoubleLong;
+import org.neo4j.storageengine.api.schema.IndexReader;
+import org.neo4j.storageengine.api.schema.IndexSample;
 
-import static org.neo4j.helpers.collection.IteratorUtil.emptyIterator;
+import static org.neo4j.helpers.collection.Iterators.emptyIterator;
 
 class InMemoryIndex
 {
@@ -64,7 +63,7 @@ class InMemoryIndex
         this( new HashBasedIndex() );
     }
 
-    InMemoryIndex( InMemoryIndexImplementation indexData )
+    private InMemoryIndex( InMemoryIndexImplementation indexData )
     {
         this.indexData = indexData;
     }
@@ -92,20 +91,17 @@ class InMemoryIndex
         return new OnlineAccessor();
     }
 
-    protected final PrimitiveLongIterator indexSeek( Object propertyValue )
-    {
-        return indexData.seek( propertyValue );
-    }
-
-    protected boolean add( long nodeId, Object propertyValue, boolean applyIdempotently )
+    protected boolean add( long nodeId, Object[] propertyValues, boolean applyIdempotently )
             throws IndexEntryConflictException, IOException
     {
-        return indexData.add( nodeId, propertyValue, applyIdempotently );
+        assert propertyValues.length > 0;
+        return indexData.add( nodeId, applyIdempotently, propertyValues );
     }
 
-    protected void remove( long nodeId, Object propertyValue )
+    protected void remove( long nodeId, Object[] propertyValues )
     {
-        indexData.remove( nodeId, propertyValue );
+        assert propertyValues.length > 0;
+        indexData.remove( nodeId, propertyValues );
     }
 
     protected void remove( long nodeId )
@@ -131,9 +127,19 @@ class InMemoryIndex
         }
 
         @Override
-        public void add( long nodeId, Object propertyValue ) throws IndexEntryConflictException, IOException
+        public void add( Collection<? extends IndexEntryUpdate<?>> updates )
+                throws IndexEntryConflictException, IOException
         {
-            InMemoryIndex.this.add( nodeId, propertyValue, false );
+            for ( IndexEntryUpdate update : updates )
+            {
+                InMemoryIndex.this.add( update.getEntityId(), update.values(), false );
+            }
+        }
+
+        @Override
+        public void add( IndexEntryUpdate<?> update ) throws IndexEntryConflictException, IOException
+        {
+            InMemoryIndex.this.add( update.getEntityId(), update.values(), false );
         }
 
         @Override
@@ -171,11 +177,22 @@ class InMemoryIndex
         }
 
         @Override
-        public long sampleResult( DoubleLong.Out result )
+        public void includeSample( IndexEntryUpdate update )
+        {
+        }
+
+        @Override
+        public void configureSampling( boolean onlineSampling )
+        {
+            //nothing
+        }
+
+        @Override
+        public IndexSample sampleResult()
         {
             try
             {
-                return indexData.sampleIndex( result );
+                return indexData.createSampler().sampleIndex();
             }
             catch ( IndexNotFoundKernelException e )
             {
@@ -234,6 +251,13 @@ class InMemoryIndex
         {
             return emptyIterator();
         }
+
+        @Override
+        public void verifyDeferredConstraints( PropertyAccessor propertyAccessor )
+                throws IndexEntryConflictException, IOException
+        {
+            InMemoryIndex.this.verifyDeferredConstraints( propertyAccessor );
+        }
     }
 
     protected IndexUpdater newUpdater( IndexUpdateMode mode, boolean populating )
@@ -251,25 +275,19 @@ class InMemoryIndex
         }
 
         @Override
-        public Reservation validate( Iterable<NodePropertyUpdate> updates ) throws IOException
+        public void process( IndexEntryUpdate update ) throws IOException, IndexEntryConflictException
         {
-            return Reservation.EMPTY;
-        }
-
-        @Override
-        public void process( NodePropertyUpdate update ) throws IOException, IndexEntryConflictException
-        {
-            switch ( update.getUpdateMode() )
+            switch ( update.updateMode() )
             {
             case ADDED:
-                InMemoryIndex.this.add( update.getNodeId(), update.getValueAfter(), applyIdempotently );
+                InMemoryIndex.this.add( update.getEntityId(), update.values(), applyIdempotently );
                 break;
             case CHANGED:
-                InMemoryIndex.this.remove( update.getNodeId(), update.getValueBefore() );
-                add( update.getNodeId(), update.getValueAfter(), applyIdempotently );
+                InMemoryIndex.this.remove( update.getEntityId(), update.beforeValues() );
+                add( update.getEntityId(), update.values(), applyIdempotently );
                 break;
             case REMOVED:
-                InMemoryIndex.this.remove( update.getNodeId(), update.getValueBefore() );
+                InMemoryIndex.this.remove( update.getEntityId(), update.values() );
                 break;
             default:
                 throw new UnsupportedOperationException();

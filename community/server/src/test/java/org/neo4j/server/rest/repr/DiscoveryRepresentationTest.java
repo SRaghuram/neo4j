@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,15 @@
  */
 package org.neo4j.server.rest.repr;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import org.junit.Test;
 
 import java.net.URI;
 import java.util.Map;
 
-import org.junit.Test;
+import org.neo4j.helpers.AdvertisedSocketAddress;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class DiscoveryRepresentationTest
 {
@@ -34,19 +36,28 @@ public class DiscoveryRepresentationTest
     {
         String managementUri = "/management";
         String dataUri = "/data";
-        DiscoveryRepresentation dr = new DiscoveryRepresentation( managementUri, dataUri );
+        AdvertisedSocketAddress boltAddress = new AdvertisedSocketAddress( "localhost", 7687 );
+        DiscoveryRepresentation dr = new DiscoveryRepresentation( managementUri, dataUri, boltAddress );
 
-        Map<String, Object> mapOfUris = RepresentationTestAccess.serialize( dr );
+        Map<String,Object> mapOfUris = RepresentationTestAccess.serialize( dr );
 
         Object mappedManagementUri = mapOfUris.get( "management" );
         Object mappedDataUri = mapOfUris.get( "data" );
+        Object mappedBoltUri = mapOfUris.get( "bolt" );
 
         assertNotNull( mappedManagementUri );
         assertNotNull( mappedDataUri );
+        assertNotNull( mappedBoltUri );
 
         URI baseUri = RepresentationTestBase.BASE_URI;
 
         assertEquals( mappedManagementUri.toString(), Serializer.joinBaseWithRelativePath( baseUri, managementUri ) );
         assertEquals( mappedDataUri.toString(), Serializer.joinBaseWithRelativePath( baseUri, dataUri ) );
+        assertEquals( mappedBoltUri.toString(), toBoltUri( boltAddress ) );
+    }
+
+    private String toBoltUri( AdvertisedSocketAddress boltAddress )
+    {
+        return "bolt://" + boltAddress.getHostname() + ":" + boltAddress.getPort();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -40,7 +40,7 @@ public class RandomAdversary extends AbstractAdversary
         assert 0 <= errorRate && errorRate < 1.0 :
                 "Expected error rate in [0.0; 1.0[ but was " + errorRate;
         assert mischiefRate + errorRate + failureRate < 1.0 :
-                "Expected error rate + failure rate in [0.0; 1.0[ but was " +
+                "Expected mischief rate + error rate + failure rate in [0.0; 1.0[ but was " +
                         (mischiefRate + errorRate + failureRate);
 
         this.mischiefRate = mischiefRate;

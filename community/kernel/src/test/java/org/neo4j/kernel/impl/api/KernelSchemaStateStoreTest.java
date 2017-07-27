@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.api;
 
 import org.junit.Before;
 import org.junit.Test;
+
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.logging.AssertableLogProvider;
 
@@ -42,7 +43,6 @@ public class KernelSchemaStateStoreTest
         assertEquals( "created_value", result );
     }
 
-
     @Test
     public void should_flush()
     {
@@ -58,12 +58,12 @@ public class KernelSchemaStateStoreTest
 
         // AND ALSO
         logProvider.assertExactly(
-                inLog( KernelSchemaStateStore.class ).info( "Schema state store has been cleared." )
+                inLog( KernelSchemaStateStore.class ).debug( "Schema state store has been cleared." )
         );
     }
 
     private KernelSchemaStateStore stateStore;
-    private AssertableLogProvider logProvider = new AssertableLogProvider();
+    private final AssertableLogProvider logProvider = new AssertableLogProvider();
 
     @Before
     public void before()

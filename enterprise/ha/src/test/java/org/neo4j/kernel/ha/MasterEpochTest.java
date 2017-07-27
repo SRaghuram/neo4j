@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,6 @@ import org.junit.Test;
 
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.com.RequestContext;
-import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.com.master.ConversationManager;
 import org.neo4j.kernel.ha.com.master.HandshakeResult;
@@ -34,6 +33,7 @@ import org.neo4j.kernel.ha.com.master.MasterImplTest;
 import org.neo4j.kernel.ha.id.IdAllocation;
 import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.store.id.IdRange;
+import org.neo4j.kernel.impl.store.id.IdType;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -41,8 +41,8 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.collection.primitive.PrimitiveLongCollections.EMPTY_LONG_ARRAY;
+import static org.neo4j.com.StoreIdTestFactory.newStoreIdForCurrentVersion;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 public class MasterEpochTest
@@ -55,10 +55,10 @@ public class MasterEpochTest
         IdAllocation servedIdAllocation = idAllocation( 0, 999 );
         when( spi.allocateIds( any( IdType.class ) ) ).thenReturn( servedIdAllocation );
         when( spi.getTransactionChecksum( anyLong() ) ).thenReturn( 10L );
-        StoreId storeId = new StoreId();
+        StoreId storeId = newStoreIdForCurrentVersion();
         MasterImpl master = new MasterImpl( spi,
                 mock( ConversationManager.class ), mock( MasterImpl.Monitor.class ),
-                new Config( stringMap( ClusterSettings.server_id.name(), "1" ) ) );
+                Config.embeddedDefaults( stringMap( ClusterSettings.server_id.name(), "1" ) ) );
         HandshakeResult handshake = master.handshake( 1, storeId ).response();
         master.start();
 
@@ -67,7 +67,7 @@ public class MasterEpochTest
         assertEquals( servedIdAllocation.getHighestIdInUse(), idAllocation.getHighestIdInUse() );
         try
         {
-            master.allocateIds( context( handshake.epoch()+1 ), IdType.NODE );
+            master.allocateIds( context( handshake.epoch() + 1 ), IdType.NODE );
             fail( "Should fail with invalid epoch" );
         }
         catch ( InvalidEpochException e )
@@ -77,7 +77,7 @@ public class MasterEpochTest
 
     private IdAllocation idAllocation( long from, int length )
     {
-        return new IdAllocation( new IdRange( EMPTY_LONG_ARRAY, from, length ), from+length, 0 );
+        return new IdAllocation( new IdRange( EMPTY_LONG_ARRAY, from, length ), from + length, 0 );
     }
 
     private RequestContext context( long epoch )

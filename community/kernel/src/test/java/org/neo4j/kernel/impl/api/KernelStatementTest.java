@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,91 +21,66 @@ package org.neo4j.kernel.impl.api;
 
 import org.junit.Test;
 
-import org.neo4j.graphdb.TransactionTerminatedException;
-import org.neo4j.kernel.api.labelscan.LabelScanReader;
-import org.neo4j.kernel.api.labelscan.LabelScanStore;
+import java.util.Optional;
 
-import static org.junit.Assert.assertEquals;
+import org.neo4j.graphdb.NotInTransactionException;
+import org.neo4j.graphdb.TransactionTerminatedException;
+import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.txstate.TxStateHolder;
+import org.neo4j.kernel.impl.factory.AccessCapability;
+import org.neo4j.kernel.impl.factory.CanWrite;
+import org.neo4j.kernel.impl.locking.LockTracer;
+import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.storageengine.api.StorageStatement;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.api.security.SecurityContext.AUTH_DISABLED;
 
 public class KernelStatementTest
 {
-    @Test
-    public void shouldCloseOpenedLabelScanReader() throws Exception
-    {
-        // given
-        LabelScanStore scanStore = mock( LabelScanStore.class );
-        LabelScanReader scanReader = mock( LabelScanReader.class );
-
-        when( scanStore.newReader() ).thenReturn( scanReader );
-        KernelStatement statement =
-            new KernelStatement(
-                mock( KernelTransactionImplementation.class ),
-                mock( IndexReaderFactory.class ), scanStore, null, null, null, null );
-
-        statement.acquire();
-
-        // when
-        LabelScanReader actualReader = statement.getLabelScanReader();
-
-        // then
-        assertEquals( scanReader, actualReader );
-
-        // when
-        statement.close();
-
-        // then
-        verify( scanStore ).newReader();
-        verifyNoMoreInteractions( scanStore );
-
-        verify( scanReader ).close();
-        verifyNoMoreInteractions( scanReader );
-    }
-
     @Test(expected = TransactionTerminatedException.class)
     public void shouldThrowTerminateExceptionWhenTransactionTerminated() throws Exception
     {
         KernelTransactionImplementation transaction = mock( KernelTransactionImplementation.class );
-        when( transaction.shouldBeTerminated() ).thenReturn( true );
+        when( transaction.getReasonIfTerminated() ).thenReturn( Optional.of( Status.Transaction.Terminated ) );
+        when( transaction.securityContext() ).thenReturn( AUTH_DISABLED );
 
-        KernelStatement statement = new KernelStatement(
-            transaction, mock( IndexReaderFactory.class ),
-                mock( LabelScanStore.class ), null, null, null, null );
+        KernelStatement statement = new KernelStatement( transaction, null, mock( StorageStatement.class ), null, new CanWrite(),
+                LockTracer.NONE );
+        statement.acquire();
 
         statement.readOperations().nodeExists( 0 );
     }
 
     @Test
-    public void shouldCloseOpenedLabelScanReaderWhenForceClosed() throws Exception
+    public void shouldReleaseStorageStatementWhenForceClosed() throws Exception
     {
         // given
-        LabelScanStore scanStore = mock( LabelScanStore.class );
-        LabelScanReader scanReader = mock( LabelScanReader.class );
-
-        when( scanStore.newReader() ).thenReturn( scanReader );
-        KernelStatement statement =
-                new KernelStatement( mock( KernelTransactionImplementation.class ), mock( IndexReaderFactory.class ),
-                        scanStore, null, null, null, null );
-
+        StorageStatement storeStatement = mock( StorageStatement.class );
+        KernelStatement statement = new KernelStatement( mock( KernelTransactionImplementation.class ),
+                null, storeStatement, new Procedures(), new CanWrite(), LockTracer.NONE );
         statement.acquire();
-
-        // when
-        LabelScanReader actualReader = statement.getLabelScanReader();
-
-        // then
-        assertEquals( scanReader, actualReader );
 
         // when
         statement.forceClose();
 
         // then
-        verify( scanStore ).newReader();
-        verifyNoMoreInteractions( scanStore );
+        verify( storeStatement ).release();
+    }
 
-        verify( scanReader ).close();
-        verifyNoMoreInteractions( scanReader );
+    @Test(expected = NotInTransactionException.class)
+    public void assertStatementIsNotOpenWhileAcquireIsNotInvoked()
+    {
+        KernelTransactionImplementation transaction = mock( KernelTransactionImplementation.class );
+        TxStateHolder txStateHolder = mock( TxStateHolder.class );
+        StorageStatement storeStatement = mock( StorageStatement.class );
+        AccessCapability accessCapability = mock( AccessCapability.class );
+        Procedures procedures = mock( Procedures.class );
+        KernelStatement statement = new KernelStatement( transaction, txStateHolder,
+                storeStatement, procedures, accessCapability, LockTracer.NONE );
+
+        statement.assertOpen();
     }
 }

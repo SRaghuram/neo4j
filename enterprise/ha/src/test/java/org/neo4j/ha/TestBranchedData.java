@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,53 +19,67 @@
  */
 package org.neo4j.ha;
 
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.RuleChain;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Set;
-
-import org.junit.Rule;
-import org.junit.Test;
+import java.util.function.Consumer;
 
 import org.neo4j.cluster.ClusterSettings;
+import org.neo4j.com.storecopy.StoreUtil;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.TestHighlyAvailableGraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
+import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.NeoStoreDataSource;
-import org.neo4j.kernel.ha.BranchedDataPolicy;
 import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
+import org.neo4j.kernel.ha.cluster.SwitchToSlave.Monitor;
+import org.neo4j.kernel.ha.cluster.modeswitch.HighAvailabilityModeSwitcher;
 import org.neo4j.kernel.impl.ha.ClusterManager;
 import org.neo4j.kernel.impl.ha.ClusterManager.ManagedCluster;
 import org.neo4j.kernel.impl.ha.ClusterManager.RepairKit;
 import org.neo4j.kernel.impl.logging.StoreLogService;
 import org.neo4j.kernel.impl.util.Listener;
 import org.neo4j.kernel.lifecycle.LifeRule;
-import org.neo4j.test.TargetDirectory;
-import org.neo4j.test.TargetDirectory.TestDirectory;
+import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.tooling.GlobalGraphOperations;
+import org.neo4j.test.rule.DatabaseRule;
+import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
-import static org.neo4j.helpers.SillyUtils.nonNull;
-import static org.neo4j.helpers.collection.IteratorUtil.asSet;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.kernel.ha.cluster.modeswitch.HighAvailabilityModeSwitcher.MASTER;
+import static org.neo4j.kernel.ha.cluster.modeswitch.HighAvailabilityModeSwitcher.SLAVE;
+import static org.neo4j.kernel.ha.cluster.modeswitch.HighAvailabilityModeSwitcher.UNKNOWN;
 import static org.neo4j.kernel.impl.ha.ClusterManager.allSeesAllAsAvailable;
 import static org.neo4j.kernel.impl.ha.ClusterManager.clusterOfSize;
+import static org.neo4j.kernel.impl.ha.ClusterManager.memberThinksItIsRole;
+import static org.neo4j.test.rule.RetryACoupleOfTimesHandler.ANY_EXCEPTION;
+import static org.neo4j.test.rule.RetryACoupleOfTimesHandler.retryACoupleOfTimesOn;
 
 public class TestBranchedData
 {
-    public final @Rule LifeRule life = new LifeRule( true );
-    public final @Rule TestDirectory directory = TargetDirectory.testDirForTest( getClass() );
+    private final LifeRule life = new LifeRule( true );
+    private final TestDirectory directory = TestDirectory.testDirectory();
+
+    @Rule
+    public final RuleChain ruleChain = RuleChain
+            .outerRule( directory )
+            .around( life );
 
     @Test
     public void migrationOfBranchedDataDirectories() throws Exception
@@ -90,7 +104,7 @@ public class TestBranchedData
             assertFalse( "directory branched-" + timestamp + " still exists.",
                     new File( dir, "branched-" + timestamp ).exists() );
             assertTrue( "directory " + timestamp + " is not there",
-                    BranchedDataPolicy.getBranchedDataDirectory( dir, timestamp ).exists() );
+                    StoreUtil.getBranchedDataDirectory( dir, timestamp ).exists() );
         }
     }
 
@@ -99,15 +113,16 @@ public class TestBranchedData
     {
         // GIVEN
         File dir = directory.directory();
-        ClusterManager clusterManager = life.add( new ClusterManager( clusterOfSize( 2 ), dir, stringMap() ) );
-        ManagedCluster cluster = clusterManager.getDefaultCluster();
+        ClusterManager clusterManager = life.add( new ClusterManager.Builder( dir )
+                .withCluster( clusterOfSize( 2 ) ).build() );
+        ManagedCluster cluster = clusterManager.getCluster();
         cluster.await( allSeesAllAsAvailable() );
         createNode( cluster.getMaster(), "A" );
         cluster.sync();
 
         // WHEN
         HighlyAvailableGraphDatabase slave = cluster.getAnySlave();
-        String storeDir = slave.getStoreDir();
+        File storeDir = new File( slave.getStoreDir() );
         RepairKit starter = cluster.shutdown( slave );
         HighlyAvailableGraphDatabase master = cluster.getMaster();
         createNode( master, "B1" );
@@ -132,11 +147,12 @@ public class TestBranchedData
         // thor is whoever is the master to begin with
         // odin is whoever is picked as _the_ slave given thor as initial master
         File dir = directory.directory();
-        ClusterManager clusterManager = life.add( new ClusterManager( clusterOfSize( 3 ), dir, stringMap(
+        ClusterManager clusterManager = life.add( new ClusterManager.Builder( dir )
+                .withSharedConfig( stringMap(
                 // Effectively disable automatic transaction propagation within the cluster
                 HaSettings.tx_push_factor.name(), "0",
-                HaSettings.pull_interval.name(), "0" ) ) );
-        ManagedCluster cluster = clusterManager.getDefaultCluster();
+                HaSettings.pull_interval.name(), "0" ) ).build() );
+        ManagedCluster cluster = clusterManager.getCluster();
         cluster.await( allSeesAllAsAvailable() );
         HighlyAvailableGraphDatabase thor = cluster.getMaster();
         String indexName = "valhalla";
@@ -151,29 +167,37 @@ public class TestBranchedData
         RepairKit thorRepairKit = cluster.fail( thor );
         // try to create a transaction on odin until it succeeds
         cluster.await( ClusterManager.masterAvailable( thor ) );
-        createNode( odin, "B2", andIndexInto( indexName ) );
+        cluster.await( ClusterManager.memberThinksItIsRole( odin, HighAvailabilityModeSwitcher.MASTER ) );
         assertTrue( odin.isMaster() );
+        retryOnTransactionFailure( odin, db -> createNode( db, "B2", andIndexInto( indexName ) ) );
         // perform transactions so that index files changes under the hood
-        Set<File> odinLuceneFilesBefore = asSet( gatherLuceneFiles( odin, indexName ) );
-        for ( char prefix = 'C'; !changed( odinLuceneFilesBefore, asSet( gatherLuceneFiles( odin, indexName ) ) ); prefix++ )
+        Set<File> odinLuceneFilesBefore = Iterables.asSet( gatherLuceneFiles( odin, indexName ) );
+        for ( char prefix = 'C'; !changed( odinLuceneFilesBefore,
+                Iterables.asSet( gatherLuceneFiles( odin, indexName ) ) ); prefix++ )
         {
-            createNodes( odin, String.valueOf( prefix ), 10_000, andIndexInto( indexName ) );
+            char fixedPrefix = prefix;
+            retryOnTransactionFailure( odin, db ->
+                    createNodes( odin, String.valueOf( fixedPrefix ), 10_000, andIndexInto( indexName ) ) );
             cluster.force(); // Force will most likely cause lucene legacy indexes to commit and change file structure
         }
         // so anyways, when thor comes back into the cluster
         cluster.info( format( "%n   ==== REPAIRING CABLES ====%n" ) );
+        cluster.await( memberThinksItIsRole( thor, UNKNOWN ) );
+        BranchMonitor thorHasBranched = installBranchedDataMonitor( thor );
         thorRepairKit.repair();
-        while ( thor.isMaster() )
-        {
-            Thread.sleep( 100 );
-        }
-        cluster.await( ClusterManager.masterSeesAllSlavesAsAvailable() );
+        cluster.await( memberThinksItIsRole( thor, SLAVE ) );
+        cluster.await( memberThinksItIsRole( odin, MASTER ) );
+        cluster.await( allSeesAllAsAvailable() );
         assertFalse( thor.isMaster() );
+        assertTrue( "No store-copy performed", thorHasBranched.copyCompleted );
+        assertTrue( "Store-copy unsuccessful", thorHasBranched.copySucessful );
 
         // Now do some more transactions on current master (odin) and have thor pull those
-        for( int i = 0; i < 3; i++ )
+        for ( int i = 0; i < 3; i++ )
         {
-            createNodes( odin, String.valueOf( "" + i ), 100_000, andIndexInto( indexName ) );
+            int ii = i;
+            retryOnTransactionFailure( odin,
+                    db -> createNodes( odin, String.valueOf( "" + ii ), 10, andIndexInto( indexName ) ) );
             cluster.sync();
             cluster.force();
         }
@@ -186,6 +210,19 @@ public class TestBranchedData
         assertTrue( hasNode( odin, "0-0" ) );
     }
 
+    private BranchMonitor installBranchedDataMonitor( HighlyAvailableGraphDatabase odin )
+    {
+        BranchMonitor monitor = new BranchMonitor();
+        odin.getDependencyResolver().resolveDependency( Monitors.class ).addMonitorListener( monitor );
+        return monitor;
+    }
+
+    private void retryOnTransactionFailure( GraphDatabaseService db, Consumer<GraphDatabaseService> tx )
+            throws Exception
+    {
+        DatabaseRule.tx( db, retryACoupleOfTimesOn( ANY_EXCEPTION ), tx );
+    }
+
     private boolean changed( Set<File> before, Set<File> after )
     {
         return !before.containsAll( after ) && !after.containsAll( before );
@@ -195,11 +232,11 @@ public class TestBranchedData
     {
         Collection<File> result = new ArrayList<>();
         NeoStoreDataSource ds = db.getDependencyResolver().resolveDependency( NeoStoreDataSource.class );
-        try ( ResourceIterator<File> files = ds.listStoreFiles( false ) )
+        try ( ResourceIterator<StoreFileMetadata> files = ds.listStoreFiles( false ) )
         {
             while ( files.hasNext() )
             {
-                File file = files.next();
+                File file = files.next().file();
                 if ( file.getPath().contains( indexName ) )
                 {
                     result.add( file );
@@ -229,7 +266,7 @@ public class TestBranchedData
     {
         try ( Transaction tx = db.beginTx() )
         {
-            for ( Node node : GlobalGraphOperations.at( db ).getAllNodes() )
+            for ( Node node : db.getAllNodes() )
             {
                 if ( nodeName.equals( node.getProperty( "name", null ) ) )
                 {
@@ -241,9 +278,9 @@ public class TestBranchedData
     }
 
     @SuppressWarnings( "unchecked" )
-    private void createNodeOffline( String storeDir, String name )
+    private void createNodeOffline( File storeDir, String name )
     {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
+        GraphDatabaseService db = startGraphDatabaseService( storeDir );
         try
         {
             createNode( db, name );
@@ -298,12 +335,12 @@ public class TestBranchedData
         long timestamp = System.currentTimeMillis();
         File branchDir = new File( dir, "branched-" + timestamp );
         assertTrue( "create directory: " + branchDir, branchDir.mkdirs() );
-        for ( File file : nonNull( dir.listFiles() ) )
+        for ( File file : Objects.requireNonNull( dir.listFiles() ) )
         {
             String fileName = file.getName();
             if ( !fileName.equals( StoreLogService.INTERNAL_LOG_NAME ) && !file.getName().startsWith( "branched-" ) )
             {
-                assertTrue( FileUtils.renameFile( file, new File( branchDir, file.getName() ) ) );
+                FileUtils.renameFile( file, new File( branchDir, file.getName() ) );
             }
         }
         return timestamp;
@@ -311,7 +348,7 @@ public class TestBranchedData
 
     private void startDbAndCreateNode()
     {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
+        GraphDatabaseService db = startGraphDatabaseService( directory.absolutePath() );
         try ( Transaction tx = db.beginTx() )
         {
             db.createNode();
@@ -320,6 +357,24 @@ public class TestBranchedData
         finally
         {
             db.shutdown();
+        }
+    }
+
+    private GraphDatabaseService startGraphDatabaseService( File storeDir )
+    {
+        return new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
+    }
+
+    private static class BranchMonitor implements Monitor
+    {
+        private volatile boolean copyCompleted;
+        private volatile boolean copySucessful;
+
+        @Override
+        public void storeCopyCompleted( boolean wasSuccessful )
+        {
+            copyCompleted = true;
+            copySucessful = wasSuccessful;
         }
     }
 }

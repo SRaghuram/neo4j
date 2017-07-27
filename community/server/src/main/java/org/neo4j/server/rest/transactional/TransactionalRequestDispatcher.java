@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,18 +19,23 @@
  */
 package org.neo4j.server.rest.transactional;
 
-import static org.neo4j.server.rest.repr.RepresentationWriteHandler.DO_NOTHING;
-
 import com.sun.jersey.api.core.HttpContext;
 import com.sun.jersey.spi.dispatch.RequestDispatcher;
+
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.server.database.Database;
+import org.neo4j.server.rest.dbms.AuthorizedRequestWrapper;
 import org.neo4j.server.rest.repr.RepresentationWriteHandler;
 import org.neo4j.server.rest.web.BatchOperationService;
 import org.neo4j.server.rest.web.CypherService;
 import org.neo4j.server.rest.web.DatabaseMetadataService;
 import org.neo4j.server.rest.web.ExtensionService;
 import org.neo4j.server.rest.web.RestfulGraphDatabase;
+
+import static org.neo4j.server.rest.repr.RepresentationWriteHandler.DO_NOTHING;
 
 public class TransactionalRequestDispatcher implements RequestDispatcher
 {
@@ -48,11 +53,14 @@ public class TransactionalRequestDispatcher implements RequestDispatcher
     {
         RepresentationWriteHandler representationWriteHandler = DO_NOTHING;
 
+        SecurityContext securityContext = AuthorizedRequestWrapper.getSecurityContextFromHttpContext( httpContext );
+
+        final GraphDatabaseFacade graph = database.getGraph();
         if ( o instanceof RestfulGraphDatabase )
         {
             RestfulGraphDatabase restfulGraphDatabase = (RestfulGraphDatabase) o;
 
-            final Transaction transaction = database.getGraph().beginTx();
+            final Transaction transaction = graph.beginTransaction( KernelTransaction.Type.implicit, securityContext );
 
             restfulGraphDatabase.getOutputFormat().setRepresentationWriteHandler( representationWriteHandler = new
                     CommitOnSuccessfulStatusCodeRepresentationWriteHandler( httpContext, transaction ));
@@ -61,7 +69,7 @@ public class TransactionalRequestDispatcher implements RequestDispatcher
         {
             BatchOperationService batchOperationService = (BatchOperationService) o;
 
-            final Transaction transaction = database.getGraph().beginTx();
+            final Transaction transaction = graph.beginTransaction( KernelTransaction.Type.explicit, securityContext );
 
             batchOperationService.setRepresentationWriteHandler( representationWriteHandler = new
                     CommitOnSuccessfulStatusCodeRepresentationWriteHandler( httpContext, transaction ) );
@@ -70,7 +78,7 @@ public class TransactionalRequestDispatcher implements RequestDispatcher
         {
             CypherService cypherService = (CypherService) o;
 
-            final Transaction transaction = database.getGraph().beginTx();
+            final Transaction transaction = graph.beginTransaction( KernelTransaction.Type.explicit, securityContext );
 
             cypherService.getOutputFormat().setRepresentationWriteHandler( representationWriteHandler = new
                     CommitOnSuccessfulStatusCodeRepresentationWriteHandler( httpContext, transaction ) );
@@ -79,7 +87,7 @@ public class TransactionalRequestDispatcher implements RequestDispatcher
         {
             DatabaseMetadataService databaseMetadataService = (DatabaseMetadataService) o;
 
-            final Transaction transaction = database.getGraph().beginTx();
+            final Transaction transaction = graph.beginTransaction( KernelTransaction.Type.implicit, securityContext );
 
             databaseMetadataService.setRepresentationWriteHandler( representationWriteHandler = new
                     RepresentationWriteHandler()
@@ -114,7 +122,7 @@ public class TransactionalRequestDispatcher implements RequestDispatcher
                 @Override
                 public void onRepresentationStartWriting()
                 {
-                    transaction = database.getGraph().beginTx();
+                    transaction = graph.beginTransaction( KernelTransaction.Type.implicit, securityContext );
                 }
 
                 @Override

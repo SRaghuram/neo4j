@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -161,22 +161,24 @@ public abstract class ShortestPathBasedCentrality<CentralityType,ShortestPathCos
             processShortestPaths( startNode, singleSourceShortestPath );
         }
     }
-    
+
     /**
      * This method allows to skip the calculation of the centrality via
      * the calculate method. This is to allow user defined calculation of
      * the centralities via the processShortestPaths method.
      */
-    public void skipCalculation(){
-    	doneCalculation = true;
+    public void skipCalculation()
+    {
+        doneCalculation = true;
     }
-    
-	/**
+
+    /**
      * Checks if the calculation is already done
-     * @return	status of the calculation
+     * @return    status of the calculation
      */
-    public boolean isCalculated(){
-    	return doneCalculation;
+    public boolean isCalculated()
+    {
+        return doneCalculation;
     }
 
     /**

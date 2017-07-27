@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,30 +19,28 @@
  */
 package org.neo4j.kernel.impl.traversal;
 
-import java.util.Iterator;
-
 import org.junit.Test;
+
+import java.util.Iterator;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.traversal.Traverser;
-import org.neo4j.kernel.Uniqueness;
+import org.neo4j.graphdb.traversal.Uniqueness;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import static org.neo4j.graphdb.Direction.OUTGOING;
-import static org.neo4j.graphdb.DynamicRelationshipType.withName;
+import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.graphdb.traversal.Evaluators.includeWhereEndNodeIs;
-import static org.neo4j.kernel.Traversal.traversal;
-import static org.neo4j.kernel.Uniqueness.NODE_GLOBAL;
-import static org.neo4j.kernel.Uniqueness.NODE_LEVEL;
-import static org.neo4j.kernel.Uniqueness.RELATIONSHIP_GLOBAL;
-import static org.neo4j.kernel.Uniqueness.RELATIONSHIP_LEVEL;
+import static org.neo4j.graphdb.traversal.Uniqueness.NODE_GLOBAL;
+import static org.neo4j.graphdb.traversal.Uniqueness.NODE_LEVEL;
+import static org.neo4j.graphdb.traversal.Uniqueness.RELATIONSHIP_GLOBAL;
+import static org.neo4j.graphdb.traversal.Uniqueness.RELATIONSHIP_LEVEL;
 
 public class TestUniqueness extends TraversalTestBase
 {
@@ -63,7 +61,7 @@ public class TestUniqueness extends TraversalTestBase
         {
             Node a = getNodeWithName( "a" );
             Node e = getNodeWithName( "e" );
-            Path[] paths = splitPathsOnePerLevel( traversal().relationships( to, OUTGOING )
+            Path[] paths = splitPathsOnePerLevel( getGraphDb().traversalDescription().relationships( to, OUTGOING )
                     .uniqueness( NODE_LEVEL ).evaluator( includeWhereEndNodeIs( e ) ).traverse( a ) );
             NodePathRepresentation pathRepresentation = new NodePathRepresentation( NAME_PROPERTY_REPRESENTATION );
 
@@ -89,7 +87,8 @@ public class TestUniqueness extends TraversalTestBase
         {
             Node a = getNodeWithName( "a" );
             Node c = getNodeWithName( "c" );
-            Iterator<Path> path = traversal().relationships( to, OUTGOING ).uniqueness( NODE_GLOBAL ).evaluator(
+            Iterator<Path> path =
+                    getGraphDb().traversalDescription().relationships( to, OUTGOING ).uniqueness( NODE_GLOBAL ).evaluator(
                     includeWhereEndNodeIs( c ) ).traverse( a ).iterator();
             Path thePath = path.next();
             assertFalse( path.hasNext() );
@@ -111,13 +110,13 @@ public class TestUniqueness extends TraversalTestBase
         createGraph( "a TO b", "b TO c", "a TO b", "b TO c", "a TO c", "a TO c", "c TO d" );
         RelationshipType to = withName( "TO" );
 
-
         try ( Transaction tx = beginTx() )
         {
             Node a = getNodeWithName( "a" );
             Node d = getNodeWithName( "d" );
 
-            Iterator<Path> paths = traversal().relationships( to, OUTGOING ).uniqueness( Uniqueness.NONE ).evaluator(
+            Iterator<Path> paths =
+                    getGraphDb().traversalDescription().relationships( to, OUTGOING ).uniqueness( Uniqueness.NONE ).evaluator(
                     includeWhereEndNodeIs( d ) ).traverse( a ).iterator();
             int count = 0;
             while ( paths.hasNext() )
@@ -128,7 +127,7 @@ public class TestUniqueness extends TraversalTestBase
             assertEquals( "wrong number of paths calculated, the test assumption is wrong", 6, count );
 
             // Now do the same traversal but with unique per level relationships
-            paths = traversal().relationships( to, OUTGOING ).uniqueness( RELATIONSHIP_LEVEL ).evaluator(
+            paths = getGraphDb().traversalDescription().relationships( to, OUTGOING ).uniqueness( RELATIONSHIP_LEVEL ).evaluator(
                     includeWhereEndNodeIs( d ) ).traverse( a ).iterator();
             count = 0;
             while ( paths.hasNext() )
@@ -141,7 +140,7 @@ public class TestUniqueness extends TraversalTestBase
             *  And yet again, but this time with global uniqueness, it should present only one path, since
             *  c TO d is contained on all paths.
             */
-            paths = traversal().relationships( to, OUTGOING ).uniqueness( RELATIONSHIP_GLOBAL ).evaluator(
+            paths = getGraphDb().traversalDescription().relationships( to, OUTGOING ).uniqueness( RELATIONSHIP_GLOBAL ).evaluator(
                     includeWhereEndNodeIs( d ) ).traverse( a ).iterator();
             count = 0;
             while ( paths.hasNext() )

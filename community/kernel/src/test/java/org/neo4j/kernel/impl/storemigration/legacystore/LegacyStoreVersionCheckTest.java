@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
-import org.neo4j.test.EphemeralFileSystemRule;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -42,7 +42,7 @@ public class LegacyStoreVersionCheckTest
     {
         // given
         File missingFile = new File( "/you/will/never/find/me" );
-        LegacyStoreVersionCheck storeVersionCheck = new LegacyStoreVersionCheck( new EphemeralFileSystemAbstraction() );
+        LegacyStoreVersionCheck storeVersionCheck = new LegacyStoreVersionCheck( fs.get() );
 
         // then
         assertFalse( storeVersionCheck.hasVersion( missingFile, "version", false ).outcome.isSuccessful() );
@@ -53,7 +53,7 @@ public class LegacyStoreVersionCheckTest
     {
         // given
         File missingFile = new File( "/you/will/never/find/me" );
-        LegacyStoreVersionCheck storeVersionCheck = new LegacyStoreVersionCheck( new EphemeralFileSystemAbstraction() );
+        LegacyStoreVersionCheck storeVersionCheck = new LegacyStoreVersionCheck( fs.get() );
 
         // then
         assertTrue( storeVersionCheck.hasVersion( missingFile, "version", true ).outcome.isSuccessful() );

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,8 +25,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.kernel.impl.transaction.log.IOCursor;
-import org.neo4j.kernel.impl.transaction.log.ReadableVersionableLogChannel;
+import org.neo4j.cursor.IOCursor;
+import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.IdentifiableLogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
@@ -34,16 +34,16 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 
 class LogEntrySortingCursor implements IOCursor<LogEntry>
 {
-    private final ReadableVersionableLogChannel channel;
-    private final LogEntryReader<ReadableVersionableLogChannel> reader;
+    private final ReadableLogChannel channel;
+    private final LogEntryReader<ReadableLogChannel> reader;
     // identifier -> log entry
     private final Map<Integer, List<LogEntry>> idToEntries = new HashMap<>();
 
     private LogEntry toReturn;
     private int idToFetchFrom = -1;
 
-    LogEntrySortingCursor( LogEntryReader<ReadableVersionableLogChannel> reader,
-                           ReadableVersionableLogChannel channel )
+    LogEntrySortingCursor( LogEntryReader<ReadableLogChannel> reader,
+                           ReadableLogChannel channel )
     {
         this.reader = reader;
         this.channel = channel;

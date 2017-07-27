@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,7 +31,7 @@ import org.neo4j.graphdb.traversal.Paths;
 import org.neo4j.helpers.collection.ArrayIterator;
 import org.neo4j.helpers.collection.ReverseArrayIterator;
 
-import static org.neo4j.helpers.collection.IteratorUtil.iteratorsEqual;
+import static org.neo4j.helpers.collection.Iterators.iteratorsEqual;
 
 public final class PathImpl implements Path
 {
@@ -170,11 +170,11 @@ public final class PathImpl implements Path
     {
         return nodeIterator( start, relationships() );
     }
-    
+
     @Override
     public Iterable<Node> reverseNodes()
     {
-        return nodeIterator( end, reverseRelationships() );
+        return nodeIterator( endNode(), reverseRelationships() );
     }
 
     private Iterable<Node> nodeIterator( final Node start, final Iterable<Relationship> relationships )
@@ -241,7 +241,7 @@ public final class PathImpl implements Path
             }
         };
     }
-    
+
     @Override
     public Iterable<Relationship> reverseRelationships()
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -41,10 +41,12 @@ public class CountingAdversary extends AbstractAdversary
     public void injectFailure( Class<? extends Throwable>... failureTypes )
     {
         int count, newCount;
-        do {
+        do
+        {
             count = countDown.get();
             newCount = count - 1;
-        } while( !countDown.compareAndSet( count, newCount ) );
+        }
+        while ( !countDown.compareAndSet( count, newCount ) );
 
         if ( resetCountDownOnFailure && newCount < 1 )
         {
@@ -76,8 +78,10 @@ public class CountingAdversary extends AbstractAdversary
     {
         // The current count is going to be either zero or negative when we get here.
         int count;
-        do {
+        do
+        {
             count = countDown.get();
-        } while( count < 1 && !countDown.compareAndSet( count, startingCount + count ) );
+        }
+        while ( count < 1 && !countDown.compareAndSet( count, startingCount + count ) );
     }
 }

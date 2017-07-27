@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,6 +20,8 @@
 package org.neo4j.helpers;
 
 import org.junit.Test;
+
+import org.neo4j.function.Predicates;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -42,14 +44,8 @@ public class TestExceptions
                                                 new LevelFourException( "" ) ) ) ) );
 
         // when
-        Throwable peeled = Exceptions.peel( exception, new org.neo4j.function.Predicate<Throwable>()
-        {
-            @Override
-            public boolean test( Throwable item )
-            {
-                return !(item instanceof LevelThreeException) || !item.getMessage().contains( "include" );
-            }
-        } );
+        Throwable peeled = Exceptions.peel( exception,
+                item -> !(item instanceof LevelThreeException) || !item.getMessage().contains( "include" ) );
 
         // then
         assertEquals( expected, peeled );
@@ -68,7 +64,8 @@ public class TestExceptions
                                                 new LevelFourException( "" ) ) ) ) );
 
         // when
-        Throwable peeled = Exceptions.peel( exception, org.neo4j.function.Predicates.<Throwable>instanceOfAny( RuntimeException.class, LevelFourException.class ) );
+        Throwable peeled = Exceptions.peel( exception,
+                Predicates.<Throwable>instanceOfAny( RuntimeException.class, LevelFourException.class ) );
 
         // then
         assertEquals( expected, peeled );
@@ -120,12 +117,12 @@ public class TestExceptions
 
     private static class LevelOneException extends Exception
     {
-        public LevelOneException( String message )
+        LevelOneException( String message )
         {
             super( message );
         }
 
-        public LevelOneException( String message, Throwable cause )
+        LevelOneException( String message, Throwable cause )
         {
             super( message, cause );
         }
@@ -133,12 +130,12 @@ public class TestExceptions
 
     private static class LevelTwoException extends LevelOneException
     {
-        public LevelTwoException( String message )
+        LevelTwoException( String message )
         {
             super( message );
         }
 
-        public LevelTwoException( String message, Throwable cause )
+        LevelTwoException( String message, Throwable cause )
         {
             super( message, cause );
         }
@@ -146,12 +143,12 @@ public class TestExceptions
 
     private static class LevelThreeException extends LevelTwoException
     {
-        public LevelThreeException( String message )
+        LevelThreeException( String message )
         {
             super( message );
         }
 
-        public LevelThreeException( String message, Throwable cause )
+        LevelThreeException( String message, Throwable cause )
         {
             super( message, cause );
         }
@@ -159,12 +156,12 @@ public class TestExceptions
 
     private static class LevelFourException extends LevelThreeException
     {
-        public LevelFourException( String message )
+        LevelFourException( String message )
         {
             super( message );
         }
 
-        public LevelFourException( String message, Throwable cause )
+        LevelFourException( String message, Throwable cause )
         {
             super( message, cause );
         }
@@ -172,7 +169,7 @@ public class TestExceptions
 
     private static class ARuntimeException extends RuntimeException
     {
-        public ARuntimeException( Throwable cause )
+        ARuntimeException( Throwable cause )
         {
             super( cause );
         }
@@ -180,7 +177,7 @@ public class TestExceptions
 
     private static class AnotherRuntimeException extends RuntimeException
     {
-        public AnotherRuntimeException( Throwable cause )
+        AnotherRuntimeException( Throwable cause )
         {
             super( cause );
         }

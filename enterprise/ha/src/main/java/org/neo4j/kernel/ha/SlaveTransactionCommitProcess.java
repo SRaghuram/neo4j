@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,16 +21,19 @@ package org.neo4j.kernel.ha;
 
 import java.io.IOException;
 
+import org.neo4j.com.ComException;
 import org.neo4j.com.RequestContext;
 import org.neo4j.com.Response;
+import org.neo4j.graphdb.TransientTransactionFailureException;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.ha.com.RequestContextFactory;
 import org.neo4j.kernel.ha.com.master.Master;
-import org.neo4j.kernel.impl.api.TransactionApplicationMode;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
-import org.neo4j.kernel.impl.locking.LockGroup;
-import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
+import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
+import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
+import org.neo4j.storageengine.api.TransactionApplicationMode;
 
 /**
  * Commit process on slaves in HA. Transactions aren't committed here, but sent to the master, committed
@@ -48,11 +51,17 @@ public class SlaveTransactionCommitProcess implements TransactionCommitProcess
     }
 
     @Override
-    public long commit( TransactionRepresentation representation, LockGroup locks, CommitEvent commitEvent,
+    public long commit( TransactionToApply batch, CommitEvent commitEvent,
                         TransactionApplicationMode mode ) throws TransactionFailureException
     {
+        if ( batch.next() != null )
+        {
+            throw new IllegalArgumentException( "Only supports single-commit on slave --> master" );
+        }
+
         try
         {
+            TransactionRepresentation representation = batch.transactionRepresentation();
             RequestContext context = requestContextFactory.newRequestContext( representation.getLockSessionId() );
             try ( Response<Long> response = master.commit( context, representation ) )
             {
@@ -61,7 +70,14 @@ public class SlaveTransactionCommitProcess implements TransactionCommitProcess
         }
         catch ( IOException e )
         {
-            throw new RuntimeException( e );
+            throw new TransactionFailureException(
+                    Status.Transaction.TransactionCommitFailed, e, "Could not commit transaction on the master" );
+        }
+        catch ( ComException e )
+        {
+            throw new TransientTransactionFailureException(
+                    "Cannot commit this transaction on the master. " +
+                    "The master is either down, or we have network connectivity problems.", e );
         }
     }
 }

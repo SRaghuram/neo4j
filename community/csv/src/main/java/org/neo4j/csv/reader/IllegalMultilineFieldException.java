@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,8 +23,8 @@ public class IllegalMultilineFieldException extends FormatException
 {
     public IllegalMultilineFieldException( SourceTraceability source )
     {
-        super( source,
-                "Multi-line fields are illegal in this context and so this might suggest that " +
-                "there's a field with a start quote, but a missing end quote." );
+        super( source, "Multi-line fields are illegal in this context and so this might suggest that " +
+                String.format( "there's a field with a start quote, but a missing end quote. See line %d.",
+                        source.lineNumber() ) );
     }
 }

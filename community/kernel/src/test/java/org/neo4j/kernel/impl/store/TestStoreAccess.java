@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,9 +31,9 @@ import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.recovery.RecoveryRequiredChecker;
-import org.neo4j.test.EphemeralFileSystemRule;
-import org.neo4j.test.PageCacheRule;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertTrue;
 
@@ -49,14 +49,16 @@ public class TestStoreAccess
     @Test
     public void openingThroughStoreAccessShouldNotTriggerRecovery() throws Exception
     {
-        EphemeralFileSystemAbstraction snapshot = produceUncleanStore();
-        assertTrue( "Store should be unclean", isUnclean( snapshot ) );
-        File messages = new File( storeDir, "messages.log" );
-        snapshot.deleteFile( messages );
+        try ( EphemeralFileSystemAbstraction snapshot = produceUncleanStore() )
+        {
+            assertTrue( "Store should be unclean", isUnclean( snapshot ) );
+            File messages = new File( storeDir, "debug.log" );
+            snapshot.deleteFile( messages );
 
-        PageCache pageCache = pageCacheRule.getPageCache( snapshot );
-        new StoreAccess( snapshot, pageCache, storeDir ).initialize().close();
-        assertTrue( "Store should be unclean", isUnclean( snapshot ) );
+            PageCache pageCache = pageCacheRule.getPageCache( snapshot );
+            new StoreAccess( snapshot, pageCache, storeDir ).initialize().close();
+            assertTrue( "Store should be unclean", isUnclean( snapshot ) );
+        }
     }
 
     private EphemeralFileSystemAbstraction produceUncleanStore()

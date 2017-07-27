@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,13 +20,13 @@
 package upgrade;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.Set;
 
+import org.neo4j.cursor.Cursor;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -34,25 +34,27 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
-import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.record.NodeRecord;
-import org.neo4j.kernel.impl.transaction.state.NeoStoresSupplier;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.kernel.api.KernelAPI;
+import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.Statement;
+import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
+import org.neo4j.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.api.security.AnonymousContext;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.storageengine.api.NodeItem;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.Unzip;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.graphdb.Direction.OUTGOING;
-import static org.neo4j.graphdb.DynamicLabel.label;
+import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.allow_store_upgrade;
-import static org.neo4j.helpers.collection.IteratorUtil.asSet;
-import static org.neo4j.helpers.collection.IteratorUtil.count;
-import static org.neo4j.helpers.collection.IteratorUtil.single;
 
 public class TestMigrateToDenseNodeSupport
 {
@@ -113,42 +115,13 @@ public class TestMigrateToDenseNodeSupport
     }
 
     @Rule
-    public TargetDirectory.TestDirectory testDir = TargetDirectory.testDirForTest( getClass() );
+    public TestDirectory testDir = TestDirectory.testDirectory();
     private File dir;
 
     @Before
     public void before() throws Exception
     {
-        dir = AbstractNeo4jTestCase.unzip( testDir.graphDbDir(), getClass(), "0.A.1-db.zip" );
-    }
-
-    @Test
-    @Ignore( "Used for creating the dataset, using the previous store version" )
-    public void createDb()
-    {
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( testDir.graphDbDir() );
-        try
-        {
-            try ( Transaction tx = db.beginTx() )
-            {
-                Node refNode = db.createNode( referenceNode );
-                // Create 10 dense nodes
-                for ( int i = 0; i < 10; i++ )
-                {
-                    createDenseNode( db, refNode );
-                }
-                // And 10 sparse nodes
-                for ( int i = 0; i < 10; i++ )
-                {
-                    createSparseNode( db, refNode );
-                }
-                tx.success();
-            }
-        }
-        finally
-        {
-            db.shutdown();
-        }
+        dir = Unzip.unzip( getClass(), "0.A.1-db.zip", testDir.graphDbDir() );
     }
 
     @Test
@@ -166,7 +139,7 @@ public class TestMigrateToDenseNodeSupport
         try ( Transaction tx = db.beginTx() )
         {
             ResourceIterator<Node> allNodesWithLabel = db.findNodes( referenceNode );
-            Node refNode = single( allNodesWithLabel );
+            Node refNode = Iterators.single( allNodesWithLabel );
             int sparseCount = 0;
             for ( Relationship relationship : refNode.getRelationships( Types.SPARSE, OUTGOING ) )
             {
@@ -191,23 +164,23 @@ public class TestMigrateToDenseNodeSupport
 
     private void verifyDenseNode( GraphDatabaseService db, Node node )
     {
-        assertEquals( 102, count( node.getRelationships( OUTGOING ) ) );
-        assertEquals( 100, count( node.getRelationships( Types.OTHER, OUTGOING ) ) );
-        assertEquals( 2, count( node.getRelationships( Types.FOURTH, OUTGOING ) ) );
+        assertEquals( 102, Iterables.count( node.getRelationships( OUTGOING ) ) );
+        assertEquals( 100, Iterables.count( node.getRelationships( Types.OTHER, OUTGOING ) ) );
+        assertEquals( 2, Iterables.count( node.getRelationships( Types.FOURTH, OUTGOING ) ) );
         verifyProperties( node );
         verifyDenseRepresentation( db, node, true );
     }
 
     private void verifySparseNode( GraphDatabaseService db, Node node )
     {
-        assertEquals( 3, count( node.getRelationships( OUTGOING ) ) );
+        assertEquals( 3, Iterables.count( node.getRelationships( OUTGOING ) ) );
         verifyProperties( node );
         verifyDenseRepresentation( db, node, false );
     }
 
     private void verifyProperties( Node node )
     {
-        Set<String> keys = asSet( node.getPropertyKeys() );
+        Set<String> keys = Iterables.asSet( node.getPropertyKeys() );
         for ( Properties property : Properties.values() )
         {
             assertTrue( keys.remove( property.name() ) );
@@ -218,42 +191,17 @@ public class TestMigrateToDenseNodeSupport
 
     private void verifyDenseRepresentation( GraphDatabaseService db, Node node, boolean dense )
     {
-        NeoStores neoStores = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency(
-                NeoStoresSupplier.class ).get();
-        NodeRecord record = neoStores.getNodeStore().getRecord( node.getId() );
-        assertEquals( dense, record.isDense() );
-    }
-
-    private void createSparseNode( GraphDatabaseService db, Node refNode )
-    {
-        Node node = db.createNode();
-        refNode.createRelationshipTo( node, Types.SPARSE );
-        createRelationships( db, node, 3, Types.OTHER );
-        setProperties( node );
-    }
-
-    private void createDenseNode( GraphDatabaseService db, Node refNode )
-    {
-        Node node = db.createNode();
-        refNode.createRelationshipTo( node, Types.DENSE );
-        createRelationships( db, node, 100, Types.OTHER );
-        createRelationships( db, node, 2, Types.FOURTH );
-        setProperties( node );
-    }
-
-    private void createRelationships( GraphDatabaseService db, Node node, int count, RelationshipType type )
-    {
-        for ( int i = 0; i < count; i++ )
+        KernelAPI kernelAPI = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( KernelAPI.class );
+        try ( KernelTransaction tx = kernelAPI.newTransaction( KernelTransaction.Type.implicit, AnonymousContext.read() );
+              Statement statement = tx.acquireStatement() )
         {
-            node.createRelationshipTo( db.createNode(), type );
+            Cursor<NodeItem> nodeCursor = statement.readOperations().nodeCursorById( node.getId() );
+            assertEquals( dense, nodeCursor.get().isDense() );
+        }
+        catch ( TransactionFailureException | IllegalArgumentException | EntityNotFoundException e )
+        {
+            throw new RuntimeException( e );
         }
     }
 
-    private void setProperties( Node node )
-    {
-        for ( Properties properties : Properties.values() )
-        {
-            node.setProperty( properties.name(), properties.getValue() );
-        }
-    }
 }

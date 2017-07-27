@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,16 +25,19 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.neo4j.function.Function;
-import org.neo4j.helpers.Pair;
-import org.neo4j.helpers.collection.Iterables;
-import org.neo4j.helpers.collection.IteratorUtil;
-import org.neo4j.kernel.api.constraints.NodePropertyExistenceConstraint;
-import org.neo4j.kernel.api.constraints.RelationshipPropertyExistenceConstraint;
-import org.neo4j.kernel.api.constraints.UniquenessConstraint;
-import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.helpers.collection.Pair;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.LabelSchemaSupplier;
+import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
+import org.neo4j.kernel.api.schema.constaints.NodeExistenceConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.NodeKeyConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.RelExistenceConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.UniquenessConstraintDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 
 import static java.lang.String.format;
+import static org.neo4j.kernel.api.schema.index.IndexDescriptor.Type.UNIQUE;
 
 public class DbStructureCollector implements DbStructureVisitor
 {
@@ -43,12 +46,13 @@ public class DbStructureCollector implements DbStructureVisitor
     private final TokenMap relationshipTypes = new TokenMap( "relationship types" );
     private final IndexDescriptorMap regularIndices = new IndexDescriptorMap( "regular" );
     private final IndexDescriptorMap uniqueIndices = new IndexDescriptorMap( "unique" );
-    private final Set<UniquenessConstraint> uniquenessConstraints = new HashSet<>();
-    private final Set<NodePropertyExistenceConstraint> nodePropertyExistenceConstraints = new HashSet<>();
-    private final Set<RelationshipPropertyExistenceConstraint> relPropertyExistenceConstraints = new HashSet<>();
+    private final Set<UniquenessConstraintDescriptor> uniquenessConstraints = new HashSet<>();
+    private final Set<NodeExistenceConstraintDescriptor> nodePropertyExistenceConstraints = new HashSet<>();
+    private final Set<RelExistenceConstraintDescriptor> relPropertyExistenceConstraints = new HashSet<>();
+    private final Set<NodeKeyConstraintDescriptor> nodeKeyConstraints = new HashSet<>();
     private final Map<Integer, Long> nodeCounts = new HashMap<>();
     private final Map<RelSpecifier, Long> relCounts = new HashMap<>();
-    private long allNodesCount = -1l;
+    private long allNodesCount = -1L;
 
     public DbStructureLookup lookup()
     {
@@ -73,60 +77,52 @@ public class DbStructureCollector implements DbStructureVisitor
             }
 
             @Override
-            public Iterator<Pair<String, String>> knownIndices()
+            public Iterator<Pair<String,String[]>> knownIndices()
             {
                 return regularIndices.iterator();
             }
 
             @Override
-            public Iterator<Pair<String, String>> knownUniqueIndices()
+            public Iterator<Pair<String,String[]>> knownUniqueIndices()
             {
                 return uniqueIndices.iterator();
             }
 
             @Override
-            public Iterator<Pair<String, String>> knownUniqueConstraints()
+            public Iterator<Pair<String,String[]>> knownUniqueConstraints()
             {
-                return Iterables.map( new Function<UniquenessConstraint,Pair<String,String>>()
-                {
-                    @Override
-                    public Pair<String,String> apply( UniquenessConstraint uniquenessConstraint )
-                            throws RuntimeException
-                    {
-                        String label = labels.byIdOrFail( uniquenessConstraint.label() );
-                        String propertyKey = propertyKeys.byIdOrFail( uniquenessConstraint.propertyKey() );
-                        return Pair.of( label, propertyKey );
-                    }
-                }, uniquenessConstraints.iterator() );
+                return idsToNames( uniquenessConstraints );
             }
 
             @Override
-            public Iterator<Pair<String,String>> knownNodePropertyExistenceConstraints()
+            public Iterator<Pair<String,String[]>> knownNodePropertyExistenceConstraints()
             {
-                return Iterables.map( new Function<NodePropertyExistenceConstraint,Pair<String,String>>()
-                {
-                    @Override
-                    public Pair<String,String> apply( NodePropertyExistenceConstraint uniquenessConstraint )
-                            throws RuntimeException
-                    {
-                        String label = labels.byIdOrFail( uniquenessConstraint.label() );
-                        String propertyKey = propertyKeys.byIdOrFail( uniquenessConstraint.propertyKey() );
-                        return Pair.of( label, propertyKey );
-                    }
-                }, nodePropertyExistenceConstraints.iterator() );
+                return idsToNames( nodePropertyExistenceConstraints );
             }
 
             @Override
-            public Iterator<Pair<String,String>> knownRelationshipPropertyExistenceConstraints()
+            public Iterator<Pair<String,String[]>> knownNodeKeyConstraints()
             {
-                return IteratorUtil.emptyIterator();
+                return idsToNames( nodeKeyConstraints );
+            }
+
+            @Override
+            public Iterator<Pair<String,String[]>> knownRelationshipPropertyExistenceConstraints()
+            {
+                return Iterators.map( relConstraint ->
+                {
+                    String label = labels.byIdOrFail( relConstraint.schema().getRelTypeId() );
+                    String[] propertyKeyNames = propertyKeys
+                            .byIdOrFail( relConstraint.schema().getPropertyIds() );
+                    return Pair.of( label, propertyKeyNames );
+                }, relPropertyExistenceConstraints.iterator() );
             }
 
             @Override
             public long nodesWithLabelCardinality( int labelId )
             {
                 Long result = labelId == -1 ? allNodesCount : nodeCounts.get( labelId );
-                return result == null ? 0l : result;
+                return result == null ? 0L : result;
             }
 
             @Override
@@ -134,23 +130,36 @@ public class DbStructureCollector implements DbStructureVisitor
             {
                 RelSpecifier specifier = new RelSpecifier( fromLabelId, relTypeId, toLabelId );
                 Long result = relCounts.get( specifier );
-                return result == null ? 0l : result;
+                return result == null ? 0L : result;
             }
 
             @Override
-            public double indexSelectivity( int labelId, int propertyKeyId )
+            public double indexSelectivity( int labelId, int... propertyKeyIds )
             {
-                IndexStatistics result1 = regularIndices.getIndex( labelId, propertyKeyId );
-                IndexStatistics result2 = result1 == null ? uniqueIndices.getIndex( labelId, propertyKeyId ) : result1;
+                LabelSchemaDescriptor descriptor = SchemaDescriptorFactory.forLabel( labelId, propertyKeyIds );
+                IndexStatistics result1 = regularIndices.getIndex( descriptor );
+                IndexStatistics result2 = result1 == null ? uniqueIndices.getIndex( descriptor ) : result1;
                 return result2 == null ? Double.NaN : result2.uniqueValuesPercentage;
             }
 
             @Override
-            public double indexPropertyExistsSelectivity( int labelId, int propertyKeyId )
+            public double indexPropertyExistsSelectivity( int labelId, int... propertyKeyIds )
             {
-                IndexStatistics result1 = regularIndices.getIndex( labelId, propertyKeyId );
-                IndexStatistics result2 = result1 == null ? uniqueIndices.getIndex( labelId, propertyKeyId ) : result1;
+                LabelSchemaDescriptor descriptor = SchemaDescriptorFactory.forLabel( labelId, propertyKeyIds );
+                IndexStatistics result1 = regularIndices.getIndex( descriptor );
+                IndexStatistics result2 = result1 == null ? uniqueIndices.getIndex( descriptor ) : result1;
                 return result2 == null ? Double.NaN : result2.size;
+            }
+
+            private Iterator<Pair<String,String[]>> idsToNames( Iterable<? extends LabelSchemaSupplier> nodeConstraints )
+            {
+                return Iterators.map( nodeConstraint ->
+                {
+                    String label = labels.byIdOrFail( nodeConstraint.schema().getLabelId() );
+                    String[] propertyKeyNames = propertyKeys
+                            .byIdOrFail( nodeConstraint.schema().getPropertyIds() );
+                    return Pair.of( label, propertyKeyNames );
+                }, nodeConstraints.iterator() );
             }
         };
     }
@@ -174,19 +183,15 @@ public class DbStructureCollector implements DbStructureVisitor
     }
 
     @Override
-    public void visitIndex( IndexDescriptor descriptor, String userDescription, double uniqueValuesPercentage, long size )
+    public void visitIndex( IndexDescriptor descriptor, String userDescription,
+                            double uniqueValuesPercentage, long size )
     {
-        regularIndices.putIndex( descriptor, userDescription, uniqueValuesPercentage, size );
+        IndexDescriptorMap indices = descriptor.type() == UNIQUE ? uniqueIndices : regularIndices;
+        indices.putIndex( descriptor.schema(), userDescription, uniqueValuesPercentage, size );
     }
 
     @Override
-    public void visitUniqueIndex( IndexDescriptor descriptor, String userDescription, double uniqueValuesPercentage, long size )
-    {
-        uniqueIndices.putIndex( descriptor, userDescription, uniqueValuesPercentage, size );
-    }
-
-    @Override
-    public void visitUniqueConstraint( UniquenessConstraint constraint, String userDescription )
+    public void visitUniqueConstraint( UniquenessConstraintDescriptor constraint, String userDescription )
     {
         if ( !uniquenessConstraints.add( constraint ) )
         {
@@ -197,7 +202,8 @@ public class DbStructureCollector implements DbStructureVisitor
     }
 
     @Override
-    public void visitNodePropertyExistenceConstraint( NodePropertyExistenceConstraint constraint, String userDescription )
+    public void visitNodePropertyExistenceConstraint( NodeExistenceConstraintDescriptor constraint,
+            String userDescription )
     {
         if ( !nodePropertyExistenceConstraints.add( constraint ) )
         {
@@ -208,13 +214,25 @@ public class DbStructureCollector implements DbStructureVisitor
     }
 
     @Override
-    public void visitRelationshipPropertyExistenceConstraint( RelationshipPropertyExistenceConstraint constraint, String userDescription )
+    public void visitRelationshipPropertyExistenceConstraint( RelExistenceConstraintDescriptor constraint,
+            String userDescription )
     {
         if ( !relPropertyExistenceConstraints.add( constraint ) )
         {
             throw new IllegalArgumentException(
                     format( "Duplicated relationship property existence constraint %s for %s",
                             constraint, userDescription )
+            );
+        }
+    }
+
+    @Override
+    public void visitNodeKeyConstraint( NodeKeyConstraintDescriptor constraint, String userDescription )
+    {
+        if ( !nodeKeyConstraints.add( constraint ) )
+        {
+            throw new IllegalArgumentException(
+                    format( "Duplicated node key constraint %s for %s", constraint, userDescription )
             );
         }
     }
@@ -238,7 +256,7 @@ public class DbStructureCollector implements DbStructureVisitor
         if ( nodeCounts.put( labelId, nodeCount ) != null )
         {
             throw new IllegalArgumentException(
-                    format( "Duplicate node count %s for label with id % s", nodeCount, labelName )
+                    format( "Duplicate node count %s for label with id %s", nodeCount, labelName )
             );
         }
     }
@@ -263,7 +281,7 @@ public class DbStructureCollector implements DbStructureVisitor
         public final int relTypeId;
         public final int toLabelId;
 
-        public RelSpecifier( int fromLabelId, int relTypeId, int toLabelId )
+        RelSpecifier( int fromLabelId, int relTypeId, int toLabelId )
         {
             this.fromLabelId = fromLabelId;
             this.relTypeId = relTypeId;
@@ -316,17 +334,17 @@ public class DbStructureCollector implements DbStructureVisitor
         }
     }
 
-    private class IndexDescriptorMap implements Iterable<Pair<String, String>>
+    private class IndexDescriptorMap implements Iterable<Pair<String,String[]>>
     {
         private final String indexType;
-        private final Map<IndexDescriptor, IndexStatistics> indexMap = new HashMap<>();
+        private final Map<LabelSchemaDescriptor, IndexStatistics> indexMap = new HashMap<>();
 
-        public IndexDescriptorMap( String indexType )
+        IndexDescriptorMap( String indexType )
         {
             this.indexType = indexType;
         }
 
-        public void putIndex( IndexDescriptor descriptor, String userDescription, double uniqueValuesPercentage, long size )
+        public void putIndex( LabelSchemaDescriptor descriptor, String userDescription, double uniqueValuesPercentage, long size )
         {
             if ( indexMap.containsKey( descriptor ) )
             {
@@ -339,15 +357,15 @@ public class DbStructureCollector implements DbStructureVisitor
             indexMap.put( descriptor, new IndexStatistics(uniqueValuesPercentage, size) );
         }
 
-        public IndexStatistics getIndex( int labelId, int propertyKeyId )
+        public IndexStatistics getIndex( LabelSchemaDescriptor descriptor )
         {
-            return indexMap.get( new IndexDescriptor( labelId, propertyKeyId ) );
+            return indexMap.get( descriptor );
         }
 
-        public Iterator<Pair<String, String>> iterator()
+        public Iterator<Pair<String,String[]>> iterator()
         {
-            final Iterator<IndexDescriptor> iterator = indexMap.keySet().iterator();
-            return new Iterator<Pair<String, String>>()
+            final Iterator<LabelSchemaDescriptor> iterator = indexMap.keySet().iterator();
+            return new Iterator<Pair<String,String[]>>()
             {
                 @Override
                 public boolean hasNext()
@@ -356,12 +374,13 @@ public class DbStructureCollector implements DbStructureVisitor
                 }
 
                 @Override
-                public Pair<String, String> next()
+                public Pair<String,String[]> next()
                 {
-                    IndexDescriptor next = iterator.next();
+                    //TODO: Add support for composite indexes
+                    LabelSchemaDescriptor next = iterator.next();
                     String label = labels.byIdOrFail( next.getLabelId() );
-                    String propertyKey = propertyKeys.byIdOrFail( next.getPropertyKeyId() );
-                    return Pair.of( label, propertyKey );
+                    String[] propertyKeyNames = propertyKeys.byIdOrFail( next.getPropertyIds() );
+                    return Pair.of( label, propertyKeyNames );
                 }
 
                 @Override
@@ -379,7 +398,7 @@ public class DbStructureCollector implements DbStructureVisitor
         private final Map<Integer, String> forward = new HashMap<>();
         private final Map<String, Integer> backward = new HashMap<>();
 
-        public TokenMap( String tokenType )
+        TokenMap( String tokenType )
         {
             this.tokenType = tokenType;
         }
@@ -394,6 +413,16 @@ public class DbStructureCollector implements DbStructureVisitor
             return result;
         }
 
+        public String[] byIdOrFail( int[] tokens )
+        {
+            String[] results = new String[tokens.length];
+            for ( int i = 0; i < tokens.length; i++ )
+            {
+                results[i] = byIdOrFail( tokens[i] );
+            }
+            return results;
+        }
+
         public void putToken( int token, String name )
         {
             if ( forward.containsKey( token ) )
@@ -402,7 +431,6 @@ public class DbStructureCollector implements DbStructureVisitor
                         format( "Duplicate id %s for name %s in %s token map", token, name, tokenType )
                 );
             }
-
 
             if ( backward.containsKey( name ) )
             {

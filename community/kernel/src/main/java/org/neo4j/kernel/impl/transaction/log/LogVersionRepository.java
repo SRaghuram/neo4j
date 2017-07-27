@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,9 +25,9 @@ public interface LogVersionRepository
 {
     long INITIAL_LOG_VERSION = 0;
 
-	/**
-	 * Returns the current log version. It is non blocking.
-	 */
+    /**
+     * Returns the current log version. It is non blocking.
+     */
     long getCurrentLogVersion();
 
     /**

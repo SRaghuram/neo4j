@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,13 @@
  */
 package org.neo4j.kernel.impl.locking;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -30,15 +33,21 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.kernel.api.index.ParameterizedSuiteRunner;
-import org.neo4j.test.OtherThreadRule;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
+import org.neo4j.storageengine.api.lock.ResourceType;
+import org.neo4j.test.OtherThreadExecutor;
+import org.neo4j.test.OtherThreadExecutor.WaitDetails;
+import org.neo4j.test.OtherThreadExecutor.WorkerCommand;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.concurrent.OtherThreadRule;
+import org.neo4j.test.runner.ParameterizedSuiteRunner;
+import org.neo4j.time.Clocks;
 
 import static junit.framework.TestCase.assertFalse;
 import static junit.framework.TestCase.fail;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.neo4j.test.OtherThreadExecutor.WorkerCommand;
-import static org.neo4j.test.OtherThreadRule.isWaiting;
+import static org.neo4j.test.rule.concurrent.OtherThreadRule.isWaiting;
 
 /** Base for locking tests. */
 @RunWith(ParameterizedSuiteRunner.class)
@@ -48,13 +57,29 @@ import static org.neo4j.test.OtherThreadRule.isWaiting;
         LockReentrancyCompatibility.class,
         RWLockCompatibility.class,
         StopCompatibility.class,
-        CloseCompatibility.class
+        CloseCompatibility.class,
+        AcquisitionTimeoutCompatibility.class,
+        TracerCompatibility.class,
+        ActiveLocksListingCompatibility.class,
 })
 public abstract class LockingCompatibilityTestSuite
 {
-    protected abstract Locks createLockManager();
+    protected abstract Locks createLockManager(Config config, Clock clock);
 
-    public static abstract class Compatibility
+    /**
+     * Implementing this requires intricate knowledge of implementation of the particular locks client.
+     * This is the most efficient way of telling whether or not a thread awaits a lock acquisition or not
+     * so the price we pay for the potential fragility introduced here we gain in much snappier testing
+     * when testing deadlocks and lock acquisitions.
+     *
+     * @param details {@link WaitDetails} gotten at a confirmed thread wait/block or similar,
+     * see {@link OtherThreadExecutor}.
+     * @return {@code true} if the wait details marks a wait on a lock acquisition, otherwise {@code false}
+     * so that a new thread wait/block will be registered and this method called again.
+     */
+    protected abstract boolean isAwaitingLockAcquisition( WaitDetails details );
+
+    public abstract static class Compatibility
     {
         @Rule
         public OtherThreadRule<Void> threadA = new OtherThreadRule<>();
@@ -66,18 +91,26 @@ public abstract class LockingCompatibilityTestSuite
         public OtherThreadRule<Void> threadC = new OtherThreadRule<>();
 
         @Rule
-        public TargetDirectory.TestDirectory testDir = TargetDirectory.testDirForTest( getClass() );
+        public TestDirectory testDir = TestDirectory.testDirectory( getClass() );
 
-        protected final Locks locks;
-        protected final Locks.Client clientA;
-        protected final Locks.Client clientB;
-        protected final Locks.Client clientC;
+        protected final LockingCompatibilityTestSuite suite;
+
+        protected Locks locks;
+        protected Locks.Client clientA;
+        protected Locks.Client clientB;
+        protected Locks.Client clientC;
 
         private final Map<Locks.Client, OtherThreadRule<Void>> clientToThreadMap = new HashMap<>();
 
         public Compatibility( LockingCompatibilityTestSuite suite )
         {
-            this.locks = suite.createLockManager();
+            this.suite = suite;
+        }
+
+        @Before
+        public void before()
+        {
+            this.locks = suite.createLockManager( Config.defaults(), Clocks.systemClock() );
             clientA = this.locks.newClient();
             clientB = this.locks.newClient();
             clientC = this.locks.newClient();
@@ -85,6 +118,16 @@ public abstract class LockingCompatibilityTestSuite
             clientToThreadMap.put( clientA, threadA );
             clientToThreadMap.put( clientB, threadB );
             clientToThreadMap.put( clientC, threadC );
+        }
+
+        @After
+        public void after()
+        {
+            clientA.close();
+            clientB.close();
+            clientC.close();
+            locks.close();
+            clientToThreadMap.clear();
         }
 
         // Utilities
@@ -137,7 +180,8 @@ public abstract class LockingCompatibilityTestSuite
 
         protected LockCommand acquireExclusive(
                 final Locks.Client client,
-                final Locks.ResourceType resourceType,
+                final LockTracer tracer,
+                final ResourceType resourceType,
                 final long key )
         {
             return new LockCommand(clientToThreadMap.get( client ), client)
@@ -145,14 +189,15 @@ public abstract class LockingCompatibilityTestSuite
                 @Override
                 public void doWork( Locks.Client client ) throws AcquireLockTimeoutException
                 {
-                    client.acquireExclusive( resourceType, key );
+                    client.acquireExclusive( tracer, resourceType, key );
                 }
             };
         }
 
         protected LockCommand acquireShared(
                 Locks.Client client,
-                final Locks.ResourceType resourceType,
+                final LockTracer tracer,
+                final ResourceType resourceType,
                 final long key )
         {
             return new LockCommand(clientToThreadMap.get( client ), client)
@@ -160,14 +205,14 @@ public abstract class LockingCompatibilityTestSuite
                 @Override
                 public void doWork( Locks.Client client ) throws AcquireLockTimeoutException
                 {
-                    client.acquireShared( resourceType, key );
+                    client.acquireShared( tracer, resourceType, key );
                 }
             };
         }
 
         protected LockCommand release(
                 final Locks.Client client,
-                final Locks.ResourceType resourceType,
+                final ResourceType resourceType,
                 final long key )
         {
             return new LockCommand(clientToThreadMap.get( client ), client)
@@ -186,7 +231,7 @@ public abstract class LockingCompatibilityTestSuite
             {
                 lock.get( 5, TimeUnit.SECONDS );
             }
-            catch(ExecutionException | TimeoutException | InterruptedException e)
+            catch ( ExecutionException | TimeoutException | InterruptedException e )
             {
                 throw new RuntimeException( "Waiting for lock timed out!" );
             }

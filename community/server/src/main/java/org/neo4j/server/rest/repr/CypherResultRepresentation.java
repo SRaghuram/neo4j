@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,16 +22,16 @@ package org.neo4j.server.rest.repr;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
-import org.neo4j.function.Function;
+import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
-import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.collection.IterableWrapper;
 
-import static org.neo4j.helpers.collection.IteratorUtil.loop;
+import static org.neo4j.helpers.collection.Iterators.loop;
 
 public class CypherResultRepresentation extends MappingRepresentation
 {
@@ -57,25 +57,33 @@ public class CypherResultRepresentation extends MappingRepresentation
         serializer.putList( "columns", columns );
         serializer.putList( "data", resultRepresentation );
 
-        if (statsRepresentation != null)
+        if ( statsRepresentation != null )
+        {
             serializer.putMapping( "stats", statsRepresentation );
-        if (plan != null)
+        }
+        if ( plan != null )
+        {
             serializer.putMapping( "plan", plan );
+        }
     }
 
     private ListRepresentation createResultRepresentation( Result executionResult )
     {
         final List<String> columns = executionResult.columns();
         Iterable<Map<String, Object>> inner = new RepresentationExceptionHandlingIterable<>( loop( executionResult ) );
-        return new ListRepresentation( "data", new IterableWrapper<Representation,Map<String,Object>>(inner) {
+        return new ListRepresentation( "data", new IterableWrapper<Representation,Map<String,Object>>(inner)
+        {
 
             @Override
-            protected Representation underlyingObjectToObject(final Map<String, Object> row) {
+            protected Representation underlyingObjectToObject(final Map<String, Object> row)
+            {
                 return new ListRepresentation("row",
-                 new IterableWrapper<Representation,String>(columns) {
+                 new IterableWrapper<Representation,String>(columns)
+                 {
 
                      @Override
-                     protected Representation underlyingObjectToObject(String column) {
+                     protected Representation underlyingObjectToObject(String column)
+                     {
                          return getRepresentation( row.get( column ) );
                      }
                  });
@@ -85,7 +93,7 @@ public class CypherResultRepresentation extends MappingRepresentation
 
     private Representation getRepresentation( Object r )
     {
-        if( r == null )
+        if ( r == null )
         {
             return ValueRepresentation.string( null );
         }
@@ -95,7 +103,7 @@ public class CypherResultRepresentation extends MappingRepresentation
             return new PathRepresentation<>((Path) r );
         }
 
-        if(r instanceof Iterable)
+        if ( r instanceof Iterable )
         {
             return handleIterable( (Iterable) r );
         }
@@ -113,7 +121,8 @@ public class CypherResultRepresentation extends MappingRepresentation
         return REPRESENTATION_DISPATCHER.dispatch( r, "" );
     }
 
-    private Representation handleIterable( Iterable data ) {
+    private Representation handleIterable( Iterable data )
+    {
         final List<Representation> results = new ArrayList<>();
         for ( final Object value : data )
         {
@@ -128,19 +137,15 @@ public class CypherResultRepresentation extends MappingRepresentation
     private RepresentationType getType( List<Representation> representations )
     {
         if ( representations == null || representations.isEmpty() )
+        {
             return RepresentationType.STRING;
+        }
         return representations.get( 0 ).getRepresentationType();
     }
 
     private Function<Object, ExecutionPlanDescription> planProvider( final Result result )
     {
-        return new Function<Object,ExecutionPlanDescription>(){
-            @Override
-            public ExecutionPlanDescription apply( Object from )
-            {
-                return result.getExecutionPlanDescription();
-            }
-        };
+        return from -> result.getExecutionPlanDescription();
     }
 
 }

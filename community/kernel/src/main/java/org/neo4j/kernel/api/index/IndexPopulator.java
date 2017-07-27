@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,12 +20,13 @@
 package org.neo4j.kernel.api.index;
 
 import java.io.IOException;
+import java.util.Collection;
 
-import org.neo4j.kernel.api.exceptions.index.IndexCapacityExceededException;
-import org.neo4j.kernel.impl.api.index.SwallowingIndexUpdater;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.UpdateMode;
-
-import static org.neo4j.register.Register.DoubleLong;
+import org.neo4j.kernel.impl.api.index.updater.SwallowingIndexUpdater;
+import org.neo4j.storageengine.api.schema.IndexSample;
 
 /**
  * Used for initial population of an index.
@@ -49,17 +50,31 @@ public interface IndexPopulator
      * Implementations may verify constraints at this time, or defer them until the first verification
      * of {@link #verifyDeferredConstraints(PropertyAccessor)}.
      *
-     * @param nodeId node id to index.
-     * @param propertyValue property value for the entry to index.
+     * @param updates batch of node property updates that needs to be inserted. Node ids will be retrieved using
+     * {@link IndexEntryUpdate#getEntityId()} method and property values will be retrieved using
+     * {@link IndexEntryUpdate#values()} method.
      */
-    void add( long nodeId, Object propertyValue )
-            throws IndexEntryConflictException, IOException, IndexCapacityExceededException;
+    void add( Collection<? extends IndexEntryUpdate<?>> updates )
+            throws IndexEntryConflictException, IOException;
 
     /**
-     * Verify constraints for all entries added so far.
+     * Variant of {@link #add(Collection)
+     * @param update to be inserted
      */
-    @Deprecated // TODO we want to remove this in 2.1, and properly prevent value collisions.
-    void verifyDeferredConstraints( PropertyAccessor accessor )  throws IndexEntryConflictException, IOException;
+    void add( IndexEntryUpdate<?> update )
+            throws IndexEntryConflictException, IOException;
+
+    /**
+     * Verifies that each value in this index is unique.
+     * This method is called after the index has been fully populated and is guaranteed to not have
+     * concurrent changes while executing.
+     *
+     * @param propertyAccessor {@link PropertyAccessor} for accessing properties from database storage
+     * in the event of conflicting values.
+     * @throws IndexEntryConflictException for first detected uniqueness conflict, if any.
+     * @throws IOException on error reading from source files.
+     */
+    void verifyDeferredConstraints( PropertyAccessor propertyAccessor ) throws IndexEntryConflictException, IOException;
 
     /**
      * Return an updater for applying a set of changes to this index, generally this will be a set of changes from a
@@ -69,8 +84,8 @@ public interface IndexPopulator
      * Simultaneously as population progresses there might be incoming updates
      * from committing transactions, which needs to be applied as well. This populator will only receive updates
      * for nodes that it already has seen. Updates coming in here must be applied idempotently as the same data
-     * may have been {@link #add(long, Object) added previously}.
-     * Updates can come in two different {@link NodePropertyUpdate#getUpdateMode() modes}.
+     * may have been {@link #add(Collection) added previously}.
+     * Updates can come in two different {@link IndexEntryUpdate#updateMode()} modes}.
      * <ol>
      *   <li>{@link UpdateMode#ADDED} means that there's an added property to a node already seen by this
      *   populator and so needs to be added. Note that this addition needs to be applied idempotently.
@@ -84,18 +99,13 @@ public interface IndexPopulator
      */
     IndexUpdater newPopulatingUpdater( PropertyAccessor accessor ) throws IOException;
 
-    // void update( Iterable<NodePropertyUpdate> updates ) throws IndexEntryConflictException, IOException;
-
-    // TODO instead of this flag, we should store if population fails and mark indexes as failed internally
-    // Rationale: Users should be required to explicitly drop failed indexes
-
     /**
      * Close this populator and releases any resources related to it.
      * If {@code populationCompletedSuccessfully} is {@code true} then it must mark this index
      * as {@link InternalIndexState#ONLINE} so that future invocations of its parent
-     * {@link SchemaIndexProvider#getInitialState(long)} also returns {@link InternalIndexState#ONLINE}.
+     * {@link SchemaIndexProvider#getInitialState(long, IndexDescriptor)} also returns {@link InternalIndexState#ONLINE}.
      */
-    void close( boolean populationCompletedSuccessfully ) throws IOException, IndexCapacityExceededException;
+    void close( boolean populationCompletedSuccessfully ) throws IOException;
 
     /**
      * Called then a population failed. The failure string should be stored for future retrieval by
@@ -107,7 +117,21 @@ public interface IndexPopulator
      */
     void markAsFailed( String failure ) throws IOException;
 
-    long sampleResult( DoubleLong.Out result );
+    /**
+     * Add the given {@link IndexEntryUpdate update} to the sampler for this index.
+     *
+     * @param update update to include in sample
+     */
+    void includeSample( IndexEntryUpdate update );
+
+    /**
+     * Configure specific type of sampling that should be used during index population.
+     * Depends from type of node scan that is used during index population
+     * @param onlineSampling should online (sampling based on index population and updates) be used
+     */
+    void configureSampling( boolean onlineSampling );
+
+    IndexSample sampleResult();
 
     class Adapter implements IndexPopulator
     {
@@ -122,16 +146,16 @@ public interface IndexPopulator
         }
 
         @Override
-        public void add( long nodeId, Object propertyValue ) throws IndexEntryConflictException, IOException
+        public void add( Collection<? extends IndexEntryUpdate<?>> updates ) throws IndexEntryConflictException,
+                IOException
         {
         }
 
         @Override
-        public void verifyDeferredConstraints( PropertyAccessor accessor ) throws IndexEntryConflictException, IOException
+        public void add( IndexEntryUpdate<?> update ) throws IndexEntryConflictException, IOException
         {
         }
 
-        @Override
         public IndexUpdater newPopulatingUpdater( PropertyAccessor accessor )
         {
             return SwallowingIndexUpdater.INSTANCE;
@@ -148,10 +172,25 @@ public interface IndexPopulator
         }
 
         @Override
-        public long sampleResult( DoubleLong.Out result )
+        public void includeSample( IndexEntryUpdate update )
         {
-            result.write( 0l, 0l );
-            return 0;
+        }
+
+        @Override
+        public void configureSampling( boolean onlineSampling )
+        {
+        }
+
+        @Override
+        public IndexSample sampleResult()
+        {
+            return new IndexSample();
+        }
+
+        @Override
+        public void verifyDeferredConstraints( PropertyAccessor propertyAccessor )
+                throws IndexEntryConflictException, IOException
+        {
         }
     }
 }

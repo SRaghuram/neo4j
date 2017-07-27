@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -36,17 +36,12 @@ import org.neo4j.unsafe.impl.batchimport.stats.StepStats;
  *
  * @param <T> the type of batch objects received from upstream.
  */
-public interface Step<T> extends Parallelizable, AutoCloseable
+public interface Step<T> extends Parallelizable, AutoCloseable, Panicable
 {
     /**
      * Whether or not tickets arrive in {@link #receive(long, Object)} ordered by ticket number.
      */
     int ORDER_SEND_DOWNSTREAM = 0x1;
-
-    /**
-     * Whether or not actual processing of batches are ordered by ticket number.
-     */
-    int ORDER_PROCESS = 0x2;
 
     /**
      * Starts the processing in this step, such that calls to {@link #receive(long, Object)} can be accepted.
@@ -92,12 +87,6 @@ public interface Step<T> extends Parallelizable, AutoCloseable
      * @param downstreamStep {@link Step} to send batches to downstream.
      */
     void setDownstream( Step<?> downstreamStep );
-
-    /**
-     * Receives a panic, asking to shut down as soon as possible.
-     * @param cause cause for the panic.
-     */
-    void receivePanic( Throwable cause );
 
     /**
      * Closes any resources kept open by this step. Called after a {@link Stage} is executed, whether successful or not.

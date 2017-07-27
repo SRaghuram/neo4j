@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,21 +23,20 @@ import org.junit.Test;
 
 import java.io.StringReader;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.neo4j.csv.reader.CharReadable;
 import org.neo4j.csv.reader.Readables;
-import org.neo4j.function.Function;
-import org.neo4j.function.Supplier;
 import org.neo4j.unsafe.impl.batchimport.input.InputEntity;
 import org.neo4j.unsafe.impl.batchimport.input.InputNode;
 import org.neo4j.unsafe.impl.batchimport.input.UpdateBehaviour;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration.Overriden;
+import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration.Overridden;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-
 import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.unsafe.impl.batchimport.input.Collectors.silentBadCollector;
 import static org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators.NO_NODE_DECORATOR;
 import static org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories.defaultFormatNodeFileHeader;
 
@@ -55,9 +54,10 @@ public class ExternalPropertiesDecoratorTest
                 "4,dude@yo";
         Configuration config = config();
         IdType idType = IdType.STRING;
-        Function<InputNode,InputNode> externalPropertiesDecorator = new ExternalPropertiesDecorator(
+        Decorator<InputNode> externalPropertiesDecorator = new ExternalPropertiesDecorator(
                 DataFactories.<InputNode>data( NO_NODE_DECORATOR, readable( propertyData ) ),
-                defaultFormatNodeFileHeader(), config, idType, UpdateBehaviour.ADD );
+                defaultFormatNodeFileHeader(), config, idType, UpdateBehaviour.ADD,
+                silentBadCollector( 0 ));
 
         // WHEN
         assertProperties( externalPropertiesDecorator.apply( node( "1", "key", "value1" ) ),
@@ -69,6 +69,7 @@ public class ExternalPropertiesDecoratorTest
                 "key", "value3", "email", "chris@abc" );
         assertProperties( externalPropertiesDecorator.apply( node( "4", "key", "value4" ) ),
                 "key", "value4", "email", "dude@yo" );
+        externalPropertiesDecorator.close();
     }
 
     @Test
@@ -82,9 +83,10 @@ public class ExternalPropertiesDecoratorTest
                 "4,dude@yo";
         Configuration config = config();
         IdType idType = IdType.STRING;
-        Function<InputNode,InputNode> externalPropertiesDecorator = new ExternalPropertiesDecorator(
+        Decorator<InputNode> externalPropertiesDecorator = new ExternalPropertiesDecorator(
                 DataFactories.<InputNode>data( NO_NODE_DECORATOR, readable( propertyData ) ),
-                defaultFormatNodeFileHeader(), config, idType, UpdateBehaviour.ADD );
+                defaultFormatNodeFileHeader(), config, idType, UpdateBehaviour.ADD,
+                silentBadCollector( 0 ));
 
         // WHEN
         assertProperties( externalPropertiesDecorator.apply( node( "1", "key", "value1", "email", "existing" ) ),
@@ -96,6 +98,7 @@ public class ExternalPropertiesDecoratorTest
                 "key", "value3", "email", new String[] {"chris@abc"} );
         assertProperties( externalPropertiesDecorator.apply( node( "4", "key", "value4" ) ),
                 "key", "value4", "email", new String[] {"dude@yo"} );
+        externalPropertiesDecorator.close();
     }
 
     private void assertProperties( InputNode decoratedNode, Object... expectedKeyValuePairs )
@@ -126,19 +129,12 @@ public class ExternalPropertiesDecoratorTest
 
     private Supplier<CharReadable> readable( final String data )
     {
-        return new Supplier<CharReadable>()
-        {
-            @Override
-            public CharReadable get()
-            {
-                return Readables.wrap( new StringReader( data ) );
-            }
-        };
+        return () -> Readables.wrap( new StringReader( data ) );
     }
 
-    private Overriden config()
+    private Overridden config()
     {
-        return new Configuration.Overriden( Configuration.COMMAS )
+        return new Configuration.Overridden( Configuration.COMMAS )
         {
             @Override
             public int bufferSize()

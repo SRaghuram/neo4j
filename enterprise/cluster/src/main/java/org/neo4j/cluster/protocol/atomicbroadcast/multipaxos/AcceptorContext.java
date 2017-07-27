@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,13 @@
  */
 package org.neo4j.cluster.protocol.atomicbroadcast.multipaxos;
 
-import org.neo4j.kernel.impl.logging.LogService;
+import org.neo4j.cluster.protocol.LoggingContext;
 
 /**
  * Context used by AcceptorState
  */
 public interface AcceptorContext
-    extends LogService
+    extends LoggingContext
 {
     AcceptorInstance getAcceptorInstance( InstanceId instanceId );
 

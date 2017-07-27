@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,20 +21,20 @@ package org.neo4j.kernel.ha.com.master;
 
 import java.util.Collections;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.neo4j.com.RequestContext;
-import org.neo4j.function.Consumer;
 import org.neo4j.function.Factory;
-import org.neo4j.helpers.Clock;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.cluster.ConversationSPI;
 import org.neo4j.kernel.impl.util.JobScheduler;
 import org.neo4j.kernel.impl.util.collection.ConcurrentAccessException;
 import org.neo4j.kernel.impl.util.collection.NoSuchEntryException;
 import org.neo4j.kernel.impl.util.collection.TimedRepository;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.time.Clocks;
 
+import static org.neo4j.kernel.ha.HaSettings.lock_read_timeout;
 import static org.neo4j.kernel.impl.util.JobScheduler.Groups.slaveLocksTimeout;
 
 /**
@@ -127,7 +127,7 @@ public class ConversationManager extends LifecycleAdapter
 
     public Set<RequestContext> getActiveContexts()
     {
-        return conversations != null ? conversations.keys() : Collections.<RequestContext>emptySet() ;
+        return conversations != null ? conversations.keys() : Collections.emptySet() ;
     }
 
     /**
@@ -153,19 +153,12 @@ public class ConversationManager extends LifecycleAdapter
     protected TimedRepository<RequestContext,Conversation> createConversationStore()
     {
         return new TimedRepository<>( getConversationFactory(), getConversationReaper(),
-                config.get( HaSettings.lock_read_timeout ) + lockTimeoutAddition, Clock.SYSTEM_CLOCK );
+                config.get( lock_read_timeout ).toMillis() + lockTimeoutAddition, Clocks.systemClock() );
     }
 
     protected Consumer<Conversation> getConversationReaper()
     {
-        return new Consumer<Conversation>()
-        {
-            @Override
-            public void accept( Conversation conversation )
-            {
-                conversation.close();
-            }
-        };
+        return Conversation::close;
     }
 
     protected Factory<Conversation> getConversationFactory()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,10 @@
  */
 package org.neo4j.helpers;
 
+import org.junit.rules.ExternalResource;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import org.junit.rules.ExternalResource;
 
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.configuration.Config;
@@ -35,16 +35,12 @@ public class Configuration extends ExternalResource
 
     public Config config( Class<?>... settingsClasses )
     {
-        return new Config( configuration, settingsClasses );
+        return Config.embeddedDefaults( configuration );
     }
 
     public Configuration with( Setting<?> setting, String value )
     {
-        return with( setting.name(), value );
-    }
-
-    public Configuration with( String key, String value )
-    {
+        String key = setting.name();
         if ( value == null )
         {
             configuration.remove( key );

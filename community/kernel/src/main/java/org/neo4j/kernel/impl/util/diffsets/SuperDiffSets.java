@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,17 +22,18 @@ package org.neo4j.kernel.impl.util.diffsets;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
-import org.neo4j.function.Predicate;
-import org.neo4j.helpers.collection.Iterables;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationKernelException;
+import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.impl.util.VersionedHashMap;
+import org.neo4j.storageengine.api.txstate.DiffSetsVisitor;
+import org.neo4j.storageengine.api.txstate.SuperReadableDiffSets;
 
 import static java.lang.String.format;
 import static java.util.Collections.newSetFromMap;
-import static org.neo4j.helpers.collection.Iterables.concat;
 
 /**
  * Super class of readable diffsets where use of {@link PrimitiveLongIterator} can be parameterized
@@ -45,12 +46,12 @@ abstract class SuperDiffSets<T,LONGITERATOR extends PrimitiveLongIterator>
     private Set<T> removedElements;
     private Predicate<T> filter;
 
-    public SuperDiffSets()
+    SuperDiffSets()
     {
         this( null, null );
     }
 
-    public SuperDiffSets( Set<T> addedElements, Set<T> removedElements )
+    SuperDiffSets( Set<T> addedElements, Set<T> removedElements )
     {
         this.addedElements = addedElements;
         this.removedElements = removedElements;
@@ -58,7 +59,7 @@ abstract class SuperDiffSets<T,LONGITERATOR extends PrimitiveLongIterator>
 
     @Override
     public void accept( DiffSetsVisitor<T> visitor )
-            throws ConstraintValidationKernelException, CreateConstraintFailureException
+            throws ConstraintValidationException, CreateConstraintFailureException
     {
         for ( T element : added( false ) )
         {
@@ -151,11 +152,11 @@ abstract class SuperDiffSets<T,LONGITERATOR extends PrimitiveLongIterator>
              ( addedElements != null && !addedElements.isEmpty() ) )
         {
             ensureFilterHasBeenCreated();
-            result = Iterables.filter( filter, result );
+            result = Iterators.filter( filter, result );
         }
         if ( addedElements != null && !addedElements.isEmpty() )
         {
-            result = concat( result, addedElements.iterator() );
+            result = Iterators.concat( result, addedElements.iterator() );
         }
         return result;
     }
@@ -190,14 +191,7 @@ abstract class SuperDiffSets<T,LONGITERATOR extends PrimitiveLongIterator>
     {
         if ( filter == null )
         {
-            filter = new Predicate<T>()
-            {
-                @Override
-                public boolean test( T item )
-                {
-                    return !removed( false ).contains( item ) && !added( false ).contains( item );
-                }
-            };
+            filter = item -> !removed( false ).contains( item ) && !added( false ).contains( item );
         }
     }
 
@@ -209,7 +203,7 @@ abstract class SuperDiffSets<T,LONGITERATOR extends PrimitiveLongIterator>
 
     private Set<T> newSet()
     {
-        return newSetFromMap( new VersionedHashMap<T, Boolean>() );
+        return newSetFromMap( new VersionedHashMap<>() );
     }
 
     private Set<T> resultSet( Set<T> coll )
@@ -224,11 +218,11 @@ abstract class SuperDiffSets<T,LONGITERATOR extends PrimitiveLongIterator>
 
     public void clear()
     {
-        if(addedElements != null)
+        if ( addedElements != null )
         {
             addedElements.clear();
         }
-        if(removedElements != null)
+        if ( removedElements != null )
         {
             removedElements.clear();
         }

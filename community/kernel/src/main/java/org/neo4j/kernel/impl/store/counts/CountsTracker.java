@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,9 +21,9 @@ package org.neo4j.kernel.impl.store.counts;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
+import java.util.Optional;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.Clock;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
@@ -43,12 +43,13 @@ import org.neo4j.kernel.impl.store.kvstore.RotationMonitor;
 import org.neo4j.kernel.impl.store.kvstore.RotationTimerFactory;
 import org.neo4j.kernel.impl.store.kvstore.UnknownKey;
 import org.neo4j.kernel.impl.store.kvstore.WritableBuffer;
-import org.neo4j.kernel.impl.util.function.Optional;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.register.Register;
+import org.neo4j.time.Clocks;
 
 import static java.lang.String.format;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.counts_store_rotation_timeout;
 import static org.neo4j.kernel.impl.store.counts.keys.CountsKeyFactory.indexSampleKey;
 import static org.neo4j.kernel.impl.store.counts.keys.CountsKeyFactory.indexStatisticsKey;
 import static org.neo4j.kernel.impl.store.counts.keys.CountsKeyFactory.nodeKey;
@@ -76,7 +77,7 @@ public class CountsTracker extends AbstractKeyValueStore<CountsKey>
 {
     /** The format specifier for the current version of the store file format. */
     private static final byte[] FORMAT = {'N', 'e', 'o', 'C', 'o', 'u', 'n', 't',
-                                          'S', 't', 'o', 'r', 'e', /**/0, 0, 'V'};
+                                          'S', 't', 'o', 'r', 'e', /**/0, 2, 'V'};
     @SuppressWarnings("unchecked")
     private static final HeaderField<?>[] HEADER_FIELDS = new HeaderField[]{FileVersion.FILE_VERSION};
     public static final String LEFT = ".a", RIGHT = ".b";
@@ -84,6 +85,12 @@ public class CountsTracker extends AbstractKeyValueStore<CountsKey>
 
     public CountsTracker( final LogProvider logProvider, FileSystemAbstraction fs, PageCache pages, Config config,
             File baseFile )
+    {
+        this( logProvider, fs, pages, config, baseFile, Clocks.systemClock() );
+    }
+
+    public CountsTracker( final LogProvider logProvider, FileSystemAbstraction fs, PageCache pages, Config config,
+            File baseFile, Clock clock )
     {
         super( fs, pages, baseFile, new RotationMonitor()
         {
@@ -115,8 +122,8 @@ public class CountsTracker extends AbstractKeyValueStore<CountsKey>
                 log.error( format( "Failed to rotate counts store at transaction %d to [%s], from [%s].",
                         headers.get( FileVersion.FILE_VERSION ).txId, target, source ), e );
             }
-        }, new RotationTimerFactory( Clock.SYSTEM_CLOCK,
-                config.get( GraphDatabaseSettings.store_interval_log_rotation_wait_time ) ), 16, 16, HEADER_FIELDS );
+        }, new RotationTimerFactory( clock,
+                config.get( counts_store_rotation_timeout ).toMillis() ), 16, 16, HEADER_FIELDS );
     }
 
     public CountsTracker setInitializer( final DataInitializer<Updater> initializer )
@@ -183,21 +190,20 @@ public class CountsTracker extends AbstractKeyValueStore<CountsKey>
     }
 
     @Override
-    public Register.DoubleLongRegister indexUpdatesAndSize( int labelId, int propertyKeyId,
-                                                            Register.DoubleLongRegister target )
+    public Register.DoubleLongRegister indexUpdatesAndSize( long indexId, Register.DoubleLongRegister target )
     {
-        return get( indexStatisticsKey( labelId, propertyKeyId ), target );
+        return get( indexStatisticsKey( indexId ), target );
     }
 
     @Override
-    public Register.DoubleLongRegister indexSample( int labelId, int propertyKeyId, Register.DoubleLongRegister target )
+    public Register.DoubleLongRegister indexSample( long indexId, Register.DoubleLongRegister target )
     {
-        return get( indexSampleKey( labelId, propertyKeyId ), target );
+        return get( indexSampleKey( indexId ), target );
     }
 
     public Optional<CountsAccessor.Updater> apply( long txId )
     {
-        return updater( txId ).<CountsAccessor.Updater>map( CountsUpdater.FACTORY );
+        return updater( txId ).<CountsAccessor.Updater>map( CountsUpdater::new );
     }
 
     public CountsAccessor.IndexStatsUpdater updateIndexCounts()
@@ -223,7 +229,7 @@ public class CountsTracker extends AbstractKeyValueStore<CountsKey>
         }
     }
 
-    void visitFile( File path, CountsVisitor visitor ) throws IOException
+    protected void visitFile( File path, CountsVisitor visitor ) throws IOException
     {
         super.visitFile( path, new DelegatingVisitor( visitor ) );
     }
@@ -290,7 +296,7 @@ public class CountsTracker extends AbstractKeyValueStore<CountsKey>
     {
         private final CountsVisitor visitor;
 
-        public DelegatingVisitor( CountsVisitor visitor )
+        DelegatingVisitor( CountsVisitor visitor )
         {
             this.visitor = visitor;
         }

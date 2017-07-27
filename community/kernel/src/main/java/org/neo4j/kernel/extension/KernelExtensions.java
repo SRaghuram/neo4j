@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,9 +23,9 @@ import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
-import org.neo4j.function.Function;
-import org.neo4j.function.Predicate;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.impl.spi.KernelContext;
@@ -59,7 +59,6 @@ public class KernelExtensions extends DependencyResolver.Adapter implements Life
     @Override
     public void init() throws Throwable
     {
-
         for ( KernelExtensionFactory kernelExtensionFactory : kernelExtensionFactories )
         {
             Object kernelExtensionDependencies = getKernelExtensionDependencies( kernelExtensionFactory );
@@ -134,7 +133,7 @@ public class KernelExtensions extends DependencyResolver.Adapter implements Life
     {
         private final Class<T> type;
 
-        public TypeFilter( Class<T> type )
+        TypeFilter( Class<T> type )
         {
             this.type = type;
         }
@@ -150,7 +149,7 @@ public class KernelExtensions extends DependencyResolver.Adapter implements Life
     {
         private final Class<T> type;
 
-        public CastFunction( Class<T> type )
+        CastFunction( Class<T> type )
         {
             this.type = type;
         }

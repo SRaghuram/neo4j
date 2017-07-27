@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,13 +31,13 @@ public class CountsKeyFactory
         return new RelationshipKey( startLabelId, typeId, endLabelId );
     }
 
-    public static IndexStatisticsKey indexStatisticsKey( int labelId, int propertyKeyId )
+    public static IndexStatisticsKey indexStatisticsKey( long indexId )
     {
-        return new IndexStatisticsKey( labelId, propertyKeyId );
+        return new IndexStatisticsKey( indexId );
     }
 
-    public static IndexSampleKey indexSampleKey( int labelId, int propertyKeyId )
+    public static IndexSampleKey indexSampleKey( long indexId )
     {
-        return new IndexSampleKey( labelId, propertyKeyId );
+        return new IndexSampleKey( indexId );
     }
 }

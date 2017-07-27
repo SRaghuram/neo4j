@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,6 @@
  */
 package org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.context;
 
-import static org.neo4j.cluster.util.Quorums.isQuorum;
-import static org.neo4j.helpers.collection.Iterables.filter;
-import static org.neo4j.helpers.collection.Iterables.map;
-import static org.neo4j.helpers.collection.Iterables.toList;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,21 +28,25 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.cluster.InstanceId;
-import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.BiasedWinnerStrategy;
+import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.DefaultWinnerStrategy;
 import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.Vote;
 import org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.WinnerStrategy;
 import org.neo4j.cluster.protocol.cluster.ClusterContext;
 import org.neo4j.cluster.protocol.cluster.ClusterMessage;
 import org.neo4j.cluster.protocol.election.ElectionContext;
+import org.neo4j.cluster.protocol.election.ElectionCredentials;
 import org.neo4j.cluster.protocol.election.ElectionCredentialsProvider;
 import org.neo4j.cluster.protocol.election.ElectionRole;
 import org.neo4j.cluster.protocol.election.NotElectableElectionCredentials;
 import org.neo4j.cluster.protocol.heartbeat.HeartbeatContext;
 import org.neo4j.cluster.protocol.heartbeat.HeartbeatListener;
 import org.neo4j.cluster.timeout.Timeouts;
-import org.neo4j.function.Function;
-import org.neo4j.function.Predicate;
-import org.neo4j.kernel.impl.logging.LogService;
+import org.neo4j.logging.LogProvider;
+
+import static org.neo4j.cluster.util.Quorums.isQuorum;
+import static org.neo4j.helpers.collection.Iterables.asList;
+import static org.neo4j.helpers.collection.Iterables.filter;
+import static org.neo4j.helpers.collection.Iterables.map;
 
 public class ElectionContextImpl
         extends AbstractContextImpl
@@ -61,13 +60,13 @@ public class ElectionContextImpl
     private final ElectionCredentialsProvider electionCredentialsProvider;
 
     ElectionContextImpl( org.neo4j.cluster.InstanceId me, CommonContextState commonState,
-                         LogService logService,
+                         LogProvider logging,
                          Timeouts timeouts, Iterable<ElectionRole> roles, ClusterContext clusterContext,
                          HeartbeatContext heartbeatContext, ElectionCredentialsProvider electionCredentialsProvider )
     {
-        super( me, commonState, logService, timeouts );
+        super( me, commonState, logging, timeouts );
         this.electionCredentialsProvider = electionCredentialsProvider;
-        this.roles = new ArrayList<>(toList(roles));
+        this.roles = new ArrayList<>( asList(roles));
         this.elections = new HashMap<>();
         this.clusterContext = clusterContext;
         this.heartbeatContext = heartbeatContext;
@@ -75,11 +74,11 @@ public class ElectionContextImpl
         heartbeatContext.addHeartbeatListener( this );
     }
 
-    ElectionContextImpl( InstanceId me, CommonContextState commonState, LogService logService, Timeouts timeouts,
+    ElectionContextImpl( InstanceId me, CommonContextState commonState, LogProvider logging, Timeouts timeouts,
                          ClusterContext clusterContext, HeartbeatContext heartbeatContext, List<ElectionRole> roles,
                          Map<String, Election> elections, ElectionCredentialsProvider electionCredentialsProvider )
     {
-        super( me, commonState, logService, timeouts );
+        super( me, commonState, logging, timeouts );
         this.clusterContext = clusterContext;
         this.heartbeatContext = heartbeatContext;
         this.roles = roles;
@@ -136,68 +135,25 @@ public class ElectionContextImpl
     }
 
     @Override
-    public void unelect( String roleName )
-    {
-        clusterContext.getConfiguration().removeElected( roleName );
-    }
-
-    @Override
     public boolean isElectionProcessInProgress( String role )
     {
         return elections.containsKey( role );
     }
 
     @Override
-    public void startDemotionProcess( String role, final org.neo4j.cluster.InstanceId demoteNode )
-    {
-        elections.put( role, new Election( BiasedWinnerStrategy.demotion( clusterContext, demoteNode ) ) );
-    }
-
-    @Override
     public void startElectionProcess( String role )
     {
-        clusterContext.getInternalLog( getClass() ).info( "Doing elections for role " + role );
+        clusterContext.getLog( getClass() ).info( "Doing elections for role " + role );
         if ( !clusterContext.getMyId().equals( clusterContext.getLastElector() ) )
         {
             clusterContext.setLastElector( clusterContext.getMyId() );
         }
-        elections.put( role, new Election( new WinnerStrategy()
-        {
-            @Override
-            public org.neo4j.cluster.InstanceId pickWinner( Collection<Vote> voteList )
-            {
-                // Remove blank votes
-                List<Vote> filteredVoteList = removeBlankVotes( voteList );
-
-                // Sort based on credentials
-                // The most suited candidate should come out on top
-                Collections.sort( filteredVoteList );
-                Collections.reverse( filteredVoteList );
-
-                clusterContext.getInternalLog( getClass() ).debug( "Election started with " + voteList +
-                        ", ended up with " + filteredVoteList );
-
-                // Elect this highest voted instance
-                for ( Vote vote : filteredVoteList )
-                {
-                    return vote.getSuggestedNode();
-                }
-
-                // No possible winner
-                return null;
-            }
-        } ) );
-    }
-
-    @Override
-    public void startPromotionProcess( String role, final org.neo4j.cluster.InstanceId promoteNode )
-    {
-        elections.put( role, new Election( BiasedWinnerStrategy.promotion( clusterContext, promoteNode )  ) );
+        elections.put( role, new Election( new DefaultWinnerStrategy( clusterContext ) ) );
     }
 
     @Override
     public boolean voted( String role, org.neo4j.cluster.InstanceId suggestedNode,
-                          Comparable<Object> suggestionCredentials, long electionVersion )
+                          ElectionCredentials suggestionCredentials, long electionVersion )
     {
         if ( !isElectionProcessInProgress( role ) ||
                 (electionVersion != -1 && electionVersion < clusterContext.getLastElectorVersion() ) )
@@ -224,7 +180,7 @@ public class ElectionContextImpl
     }
 
     @Override
-    public Comparable<Object> getCredentialsForRole( String role )
+    public ElectionCredentials getCredentialsForRole( String role )
     {
         return electionCredentialsProvider.getCredentials( role );
     }
@@ -266,21 +222,8 @@ public class ElectionContextImpl
     @Override
     public Iterable<String> getRolesRequiringElection()
     {
-        return filter( new Predicate<String>() // Only include roles that are not elected
-        {
-            @Override
-            public boolean test( String role )
-            {
-                return clusterContext.getConfiguration().getElected( role ) == null;
-            }
-        }, map( new Function<ElectionRole, String>() // Convert ElectionRole to String
-        {
-            @Override
-            public String apply( ElectionRole role )
-            {
-                return role.getName();
-            }
-        }, roles ) );
+        return filter( role -> clusterContext.getConfiguration().getElected( role ) == null,
+                map( ElectionRole::getName, roles ) );
     }
 
     @Override
@@ -313,7 +256,7 @@ public class ElectionContextImpl
     public boolean isElector()
     {
         // Only the first alive server should try elections. Everyone else waits
-        List<org.neo4j.cluster.InstanceId> aliveInstances = toList( getAlive() );
+        List<org.neo4j.cluster.InstanceId> aliveInstances = asList( getAlive() );
         Collections.sort( aliveInstances );
         return aliveInstances.indexOf( getMyId() ) == 0;
     }
@@ -342,7 +285,7 @@ public class ElectionContextImpl
         return heartbeatContext.getFailed();
     }
 
-    public ElectionContextImpl snapshot( CommonContextState commonStateSnapshot, LogService logService, Timeouts timeouts,
+    public ElectionContextImpl snapshot( CommonContextState commonStateSnapshot, LogProvider logging, Timeouts timeouts,
                                          ClusterContextImpl snapshotClusterContext,
                                          HeartbeatContextImpl snapshotHeartbeatContext,
                                          ElectionCredentialsProvider credentialsProvider )
@@ -354,7 +297,7 @@ public class ElectionContextImpl
             electionsSnapshot.put( election.getKey(), election.getValue().snapshot() );
         }
 
-        return new ElectionContextImpl( me, commonStateSnapshot, logService, timeouts, snapshotClusterContext,
+        return new ElectionContextImpl( me, commonStateSnapshot, logging, timeouts, snapshotClusterContext,
                 snapshotHeartbeatContext, new ArrayList<>(roles), electionsSnapshot, credentialsProvider );
     }
 
@@ -458,13 +401,7 @@ public class ElectionContextImpl
 
     public static List<Vote> removeBlankVotes( Collection<Vote> voteList )
     {
-        return toList( filter( new Predicate<Vote>()
-        {
-            @Override
-            public boolean test( Vote item )
-            {
-                return !(item.getCredentials() instanceof NotElectableElectionCredentials);
-            }
-        }, voteList ) );
+        return asList( filter( item ->
+                !(item.getCredentials() instanceof NotElectableElectionCredentials), voteList ) );
     }
 }

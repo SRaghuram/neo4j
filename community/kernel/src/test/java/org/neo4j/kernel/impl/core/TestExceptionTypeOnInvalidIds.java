@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.UUID;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -36,7 +37,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static org.junit.Assert.fail;
-import static org.neo4j.helpers.Settings.TRUE;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 
 public class TestExceptionTypeOnInvalidIds
 {
@@ -56,16 +57,16 @@ public class TestExceptionTypeOnInvalidIds
     public static void createDatabase()
     {
         graphdb = new TestGraphDatabaseFactory().newEmbeddedDatabase( getRandomStoreDir() );
-        String storeDir = getRandomStoreDir();
+        File storeDir = getRandomStoreDir();
         new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir ).shutdown();
         graphDbReadOnly = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir ).
             setConfig( GraphDatabaseSettings.read_only, TRUE ).
             newGraphDatabase();
     }
 
-    private static String getRandomStoreDir()
+    private static File getRandomStoreDir()
     {
-        return "target/var/id_test/" + UUID.randomUUID();
+        return new File( "target/var/id_test/" + UUID.randomUUID() );
     }
 
     @AfterClass

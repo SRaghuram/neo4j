@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,22 +21,22 @@ package org.neo4j.kernel.impl.transaction.log;
 
 import java.io.IOException;
 
+import org.neo4j.cursor.IOCursor;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
-import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 
+/**
+ * {@link IOCursor} abstraction on top of a {@link LogEntryReader}
+ */
 public class LogEntryCursor implements IOCursor<LogEntry>
 {
-    private final LogEntryReader<ReadableLogChannel> logEntryReader;
-    private final ReadableLogChannel channel;
+    private final LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader;
+    private final ReadableClosablePositionAwareChannel channel;
+    private final LogPositionMarker position = new LogPositionMarker();
     private LogEntry entry;
 
-    public LogEntryCursor( ReadableLogChannel channel )
-    {
-        this( new VersionAwareLogEntryReader<>(), channel );
-    }
-
-    public LogEntryCursor( LogEntryReader<ReadableLogChannel> logEntryReader, ReadableLogChannel channel )
+    public LogEntryCursor( LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader,
+                           ReadableClosablePositionAwareChannel channel )
     {
         this.logEntryReader = logEntryReader;
         this.channel = channel;
@@ -60,5 +60,17 @@ public class LogEntryCursor implements IOCursor<LogEntry>
     public void close() throws IOException
     {
         channel.close();
+    }
+
+    /**
+     * Reading {@link LogEntry log entries} may have the source move over physically multiple log files.
+     * This accessor returns the log version of the most recent call to {@link #next()}.
+     *
+     * @return the log version of the most recent {@link LogEntry} returned from {@link #next().
+     */
+    public long getCurrentLogVersion() throws IOException
+    {
+        channel.getCurrentPosition( position );
+        return position.getLogVersion();
     }
 }

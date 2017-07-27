@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,13 @@
  */
 package org.neo4j.udc;
 
-import org.neo4j.function.Supplier;
+import java.util.function.Supplier;
 
 import static org.neo4j.function.Suppliers.singleton;
 
 /**
  * A lookup key to publish or retrieve data in {@link UsageData}.
- * @param <Type>
+ * @param <Type> The type of the data
  */
 public class UsageDataKey<Type>
 {

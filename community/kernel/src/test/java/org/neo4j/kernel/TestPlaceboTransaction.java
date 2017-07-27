@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,13 +22,21 @@ package org.neo4j.kernel;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Optional;
+
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.Statement;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.coreapi.PlaceboTransaction;
+import org.neo4j.kernel.impl.locking.ResourceTypes;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -37,25 +45,24 @@ import static org.mockito.Mockito.when;
 
 public class TestPlaceboTransaction
 {
-    private TopLevelTransaction mockTopLevelTx;
     private Transaction placeboTx;
     private Node resource;
+    private KernelTransaction kernelTransaction;
+    private ReadOperations readOps;
 
     @Before
     public void before() throws Exception
     {
-        ThreadToStatementContextBridge bridge = mock (ThreadToStatementContextBridge.class );
+        ThreadToStatementContextBridge bridge = mock( ThreadToStatementContextBridge.class );
         when( bridge.get() ).thenReturn( mock( Statement.class ) );
-        KernelTransaction kernelTransaction = mock( KernelTransaction.class );
+        kernelTransaction = spy( KernelTransaction.class );
         Statement statement = mock( Statement.class );
-        ReadOperations readOperations = mock( ReadOperations.class );
-        when( statement.readOperations() ).thenReturn( readOperations );
+        readOps = mock( ReadOperations.class );
+        when( statement.readOperations() ).thenReturn( readOps );
         when( bridge.get() ).thenReturn( statement );
-        mockTopLevelTx = spy( new TopLevelTransaction( kernelTransaction, bridge ) );
-
-        placeboTx = new PlaceboTransaction( mockTopLevelTx );
+        placeboTx = new PlaceboTransaction( () -> kernelTransaction, bridge );
         resource = mock( Node.class );
-        when( resource.getId() ).thenReturn( 1l );
+        when( resource.getId() ).thenReturn( 1L );
     }
 
     @Test
@@ -65,7 +72,7 @@ public class TestPlaceboTransaction
         placeboTx.close();
 
         // Then
-        verify( mockTopLevelTx ).failure();
+        verify( kernelTransaction ).failure();
     }
 
     @Test
@@ -76,7 +83,7 @@ public class TestPlaceboTransaction
         placeboTx.close();
 
         // Then
-        verify( mockTopLevelTx ).failure();
+        verify( kernelTransaction, times(2) ).failure(); // We accept two calls to failure, since KernelTX#failure is idempotent
     }
 
     @Test
@@ -87,7 +94,7 @@ public class TestPlaceboTransaction
         placeboTx.close();
 
         // Then
-        verify( mockTopLevelTx, times( 0 ) ).failure();
+        verify( kernelTransaction, times( 0 ) ).failure();
     }
 
     @Test
@@ -99,8 +106,8 @@ public class TestPlaceboTransaction
         placeboTx.close();
 
         // Then
-        verify( mockTopLevelTx ).failure();
-        verify( mockTopLevelTx, times( 0 ) ).success();
+        verify( kernelTransaction ).failure();
+        verify( kernelTransaction, times( 0 ) ).success();
     }
 
     @Test
@@ -110,7 +117,7 @@ public class TestPlaceboTransaction
         placeboTx.acquireReadLock( resource );
 
         // then
-        verify( mockTopLevelTx ).acquireReadLock( resource );
+        verify( readOps ).acquireShared( ResourceTypes.NODE, resource.getId() );
     }
 
     @Test
@@ -120,6 +127,23 @@ public class TestPlaceboTransaction
         placeboTx.acquireWriteLock( resource );
 
         // then
-        verify( mockTopLevelTx ).acquireWriteLock( resource );
+        verify( readOps ).acquireExclusive( ResourceTypes.NODE, resource.getId() );
+    }
+
+    @Test
+    public void shouldReturnTerminationReason()
+    {
+        KernelTransaction kernelTransaction = mock( KernelTransaction.class );
+        when( kernelTransaction.getReasonIfTerminated() ).thenReturn( Optional.empty() )
+                .thenReturn( Optional.of( Status.Transaction.Interrupted ) );
+
+        PlaceboTransaction tx = new PlaceboTransaction( () -> kernelTransaction, new ThreadToStatementContextBridge() );
+
+        Optional<Status> terminationReason1 = tx.terminationReason();
+        Optional<Status> terminationReason2 = tx.terminationReason();
+
+        assertFalse( terminationReason1.isPresent() );
+        assertTrue( terminationReason2.isPresent() );
+        assertEquals( Status.Transaction.Interrupted, terminationReason2.get() );
     }
 }

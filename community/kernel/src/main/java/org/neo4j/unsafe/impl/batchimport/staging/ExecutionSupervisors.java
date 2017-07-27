@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,7 @@
  */
 package org.neo4j.unsafe.impl.batchimport.staging;
 
-import org.neo4j.helpers.Clock;
+import org.neo4j.time.Clocks;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
 
 import static java.lang.Math.min;
@@ -32,31 +32,31 @@ public class ExecutionSupervisors
 {
     /**
      * Using an {@link ExecutionMonitors#invisible() invisible} monitor.
-     * @see #superviseDynamicExecution(ExecutionMonitor, Stage...)
+     * @see #superviseDynamicExecution(ExecutionMonitor, Stage)
      */
-    public static void superviseDynamicExecution( Stage... stages )
+    public static void superviseDynamicExecution( Stage stage )
     {
-        superviseDynamicExecution( ExecutionMonitors.invisible(), stages );
+        superviseDynamicExecution( ExecutionMonitors.invisible(), stage );
     }
 
     /**
      * With {@link Configuration#DEFAULT}.
-     * @see #superviseDynamicExecution(ExecutionMonitor, Configuration, Stage...).
+     * @see #superviseDynamicExecution(ExecutionMonitor, Configuration, Stage)
      */
-    public static void superviseDynamicExecution( ExecutionMonitor monitor, Stage... stages )
+    public static void superviseDynamicExecution( ExecutionMonitor monitor, Stage stage )
     {
-        superviseDynamicExecution( monitor, Configuration.DEFAULT, stages );
+        superviseDynamicExecution( monitor, Configuration.DEFAULT, stage );
     }
 
     /**
-     * Supervises an execution with the given monitor AND a {@link DynamicProcessorAssigner} to giv
+     * Supervises an execution with the given monitor AND a {@link DynamicProcessorAssigner} to give
      * the execution a dynamic and optimal nature.
      *
-     * @see #superviseExecution(ExecutionMonitor, Configuration, Stage...)
+     * @see #superviseExecution(ExecutionMonitor, Configuration, Stage)
      */
-    public static void superviseDynamicExecution( ExecutionMonitor monitor, Configuration config, Stage... stages )
+    public static void superviseDynamicExecution( ExecutionMonitor monitor, Configuration config, Stage stage )
     {
-        superviseExecution( withDynamicProcessorAssignment( monitor, config ), config, stages );
+        superviseExecution( withDynamicProcessorAssignment( monitor, config ), config, stage );
     }
 
     /**
@@ -65,25 +65,24 @@ public class ExecutionSupervisors
      *
      * @param monitor {@link ExecutionMonitor} to get insight into the execution.
      * @param config {@link Configuration} for the execution.
-     * @param stages {@link Stage stages} to execute.
+     * @param stage {@link Stage stages} to execute.
      */
-    public static void superviseExecution( ExecutionMonitor monitor, Configuration config, Stage... stages )
+    public static void superviseExecution( ExecutionMonitor monitor, Configuration config, Stage stage )
     {
-        ExecutionSupervisor supervisor = new ExecutionSupervisor( Clock.SYSTEM_CLOCK, monitor );
+
+        ExecutionSupervisor supervisor = new ExecutionSupervisor( Clocks.systemClock(), monitor );
+        StageExecution execution = null;
         try
         {
-            StageExecution[] executions = new StageExecution[stages.length];
-            for ( int i = 0; i < stages.length; i++ )
-            {
-                executions[i] = stages[i].execute();
-            }
-            supervisor.supervise( executions );
+            execution = stage.execute();
+            supervisor.supervise( execution );
         }
         finally
         {
-            for ( Stage stage : stages )
+            stage.close();
+            if ( execution != null )
             {
-                stage.close();
+                execution.assertHealthy();
             }
         }
     }
@@ -99,8 +98,7 @@ public class ExecutionSupervisors
      */
     public static ExecutionMonitor withDynamicProcessorAssignment( ExecutionMonitor monitor, Configuration config )
     {
-        DynamicProcessorAssigner dynamicProcessorAssigner = new DynamicProcessorAssigner( config,
-                min( config.maxNumberOfProcessors(), getRuntime().availableProcessors() ) );
+        DynamicProcessorAssigner dynamicProcessorAssigner = new DynamicProcessorAssigner( config );
         return new MultiExecutionMonitor( monitor, dynamicProcessorAssigner );
     }
 }

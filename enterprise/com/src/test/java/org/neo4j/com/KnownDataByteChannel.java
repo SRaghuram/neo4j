@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,22 +25,22 @@ import java.nio.channels.ReadableByteChannel;
 
 /**
  * This will produce data like (bytes):
- * 
+ *
  * 0,1,2,3,4,5,6,7,8,9,0,1,2,3,4... a.s.o.
- * 
+ *
  * Up until {@code size} number of bytes has been returned.
- * 
+ *
  */
 public class KnownDataByteChannel implements ReadableByteChannel
 {
     protected int position;
     private final int size;
-    
+
     public KnownDataByteChannel( int size )
     {
         this.size = size;
     }
-    
+
     @Override
     public boolean isOpen()
     {
@@ -55,21 +55,21 @@ public class KnownDataByteChannel implements ReadableByteChannel
     @Override
     public int read( ByteBuffer dst ) throws IOException
     {
-        int toRead = Math.min( dst.limit()-dst.position(), left() );
+        int toRead = Math.min( dst.limit() - dst.position(), left() );
         if ( toRead == 0 )
         {
             return -1;
         }
-        
+
         for ( int i = 0; i < toRead; i++ )
         {
-            dst.put( (byte)((position++)%10) );
+            dst.put( (byte) ((position++) % 10) );
         }
         return toRead;
     }
 
     private int left()
     {
-        return size-position;
+        return size - position;
     }
 }

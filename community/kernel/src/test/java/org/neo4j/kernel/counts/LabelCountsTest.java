@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.function.Supplier;
+import java.util.function.Supplier;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -31,22 +32,22 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.test.DatabaseRule;
-import org.neo4j.test.ImpermanentDatabaseRule;
+import org.neo4j.test.rule.DatabaseRule;
+import org.neo4j.test.rule.ImpermanentDatabaseRule;
 
 import static org.junit.Assert.assertEquals;
-
-import static org.neo4j.graphdb.DynamicLabel.label;
+import static org.neo4j.graphdb.Label.label;
 
 public class LabelCountsTest
 {
-    public final @Rule DatabaseRule db = new ImpermanentDatabaseRule();
+    @Rule
+    public final DatabaseRule db = new ImpermanentDatabaseRule();
 
     @Test
     public void shouldGetNumberOfNodesWithLabel() throws Exception
     {
         // given
-        GraphDatabaseService graphDb = db.getGraphDatabaseService();
+        GraphDatabaseService graphDb = db.getGraphDatabaseAPI();
         try ( Transaction tx = graphDb.beginTx() )
         {
             graphDb.createNode( label( "Foo" ) );
@@ -69,7 +70,7 @@ public class LabelCountsTest
     public void shouldAccountForDeletedNodes() throws Exception
     {
         // given
-        GraphDatabaseService graphDb = db.getGraphDatabaseService();
+        GraphDatabaseService graphDb = db.getGraphDatabaseAPI();
         Node node;
         try ( Transaction tx = graphDb.beginTx() )
         {
@@ -93,10 +94,40 @@ public class LabelCountsTest
     }
 
     @Test
+    public void shouldAccountForDeletedNodesWithMultipleLabels() throws Exception
+    {
+        // given
+        GraphDatabaseService graphDb = db.getGraphDatabaseAPI();
+        Node node;
+        try ( Transaction tx = graphDb.beginTx() )
+        {
+            node = graphDb.createNode( label( "Foo" ), label( "Bar" ) );
+            graphDb.createNode( label( "Foo" ) );
+            graphDb.createNode( label( "Bar" ) );
+
+            tx.success();
+        }
+        try ( Transaction tx = graphDb.beginTx() )
+        {
+            node.delete();
+
+            tx.success();
+        }
+
+        // when
+        long fooCount = numberOfNodesWith( label( "Foo" ) );
+        long barCount = numberOfNodesWith( label( "Bar" ) );
+
+        // then
+        assertEquals( 1, fooCount );
+        assertEquals( 1, barCount );
+    }
+
+    @Test
     public void shouldAccountForAddedLabels() throws Exception
     {
         // given
-        GraphDatabaseService graphDb = db.getGraphDatabaseService();
+        GraphDatabaseService graphDb = db.getGraphDatabaseAPI();
         Node n1, n2, n3;
         try ( Transaction tx = graphDb.beginTx() )
         {
@@ -128,7 +159,7 @@ public class LabelCountsTest
     public void shouldAccountForRemovedLabels() throws Exception
     {
         // given
-        GraphDatabaseService graphDb = db.getGraphDatabaseService();
+        GraphDatabaseService graphDb = db.getGraphDatabaseAPI();
         Node n1, n2, n3;
         try ( Transaction tx = graphDb.beginTx() )
         {
@@ -159,7 +190,7 @@ public class LabelCountsTest
     /** Transactional version of {@link #countsForNode(Label)} */
     private long numberOfNodesWith( Label label )
     {
-        try ( Transaction tx = db.getGraphDatabaseService().beginTx() )
+        try ( Transaction tx = db.getGraphDatabaseAPI().beginTx() )
         {
             long nodeCount = countsForNode( label );
             tx.success();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,12 +21,16 @@ package org.neo4j.kernel.impl.event;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.RuleChain;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
-import org.neo4j.graphdb.DynamicLabel;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -34,18 +38,37 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
-import org.neo4j.test.DatabaseRule;
-import org.neo4j.test.ImpermanentDatabaseRule;
-import org.neo4j.test.RandomRule;
+import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.security.AccessMode;
+import org.neo4j.kernel.api.security.AnonymousContext;
+import org.neo4j.kernel.api.security.AuthSubject;
+import org.neo4j.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.test.mockito.matcher.RootCauseMatcher;
+import org.neo4j.test.rule.DatabaseRule;
+import org.neo4j.test.rule.ImpermanentDatabaseRule;
+import org.neo4j.test.rule.RandomRule;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.neo4j.helpers.collection.MapUtil.genericMap;
 
 /**
  * Test for randomly creating data and verifying transaction data seen in transaction event handlers.
  */
 public class TransactionEventsIT
 {
-    public final @Rule DatabaseRule db = new ImpermanentDatabaseRule();
-    public final @Rule RandomRule random = new RandomRule();
+    private final DatabaseRule db = new ImpermanentDatabaseRule();
+    private final RandomRule random = new RandomRule();
+    private final ExpectedException expectedException = ExpectedException.none();
+
+    @Rule
+    public RuleChain ruleChain = RuleChain.outerRule( random ).around( expectedException ).around( db );
 
     @Test
     public void shouldSeeExpectedTransactionData() throws Exception
@@ -86,6 +109,109 @@ public class TransactionEventsIT
         }
 
         // THEN the verifications all happen inside the transaction event handler
+    }
+
+    @Test
+    public void transactionIdAndCommitTimeAccessibleAfterCommit()
+    {
+        TransactionIdCommitTimeTracker commitTimeTracker = new TransactionIdCommitTimeTracker();
+        db.registerTransactionEventHandler( commitTimeTracker );
+
+        runTransaction();
+
+        long firstTransactionId = commitTimeTracker.getTransactionIdAfterCommit();
+        long firstTransactionCommitTime = commitTimeTracker.getCommitTimeAfterCommit();
+        assertTrue("Should be positive tx id.", firstTransactionId > 0 );
+        assertTrue("Should be positive.", firstTransactionCommitTime > 0);
+
+        runTransaction();
+
+        long secondTransactionId = commitTimeTracker.getTransactionIdAfterCommit();
+        long secondTransactionCommitTime = commitTimeTracker.getCommitTimeAfterCommit();
+        assertTrue("Should be positive tx id.", secondTransactionId > 0 );
+        assertTrue("Should be positive commit time value.", secondTransactionCommitTime > 0);
+
+        assertTrue( "Second tx id should be higher then first one.", secondTransactionId > firstTransactionId );
+        assertTrue( "Second commit time should be higher or equals then first one.",
+                secondTransactionCommitTime >= firstTransactionCommitTime );
+    }
+
+    @Test
+    public void transactionIdNotAccessibleBeforeCommit()
+    {
+        db.registerTransactionEventHandler( getBeforeCommitHandler( TransactionData::getTransactionId ) );
+        String message = "Transaction id is not assigned yet. It will be assigned during transaction commit.";
+        expectedException.expectCause( new RootCauseMatcher<>( IllegalStateException.class, message ) );
+        runTransaction();
+    }
+
+    @Test
+    public void commitTimeNotAccessibleBeforeCommit()
+    {
+        db.registerTransactionEventHandler( getBeforeCommitHandler( TransactionData::getCommitTime ) );
+        String message = "Transaction commit time is not assigned yet. It will be assigned during transaction commit.";
+        expectedException.expectCause( new RootCauseMatcher<>( IllegalStateException.class, message ) );
+        runTransaction();
+    }
+
+    @Test
+    public void shouldGetEmptyUsernameOnAuthDisabled()
+    {
+        db.registerTransactionEventHandler( getBeforeCommitHandler( txData ->
+        {
+            assertThat( "Should have no username", txData.username(), equalTo( "" ) );
+            assertThat( "Should have no metadata", txData.metaData(), equalTo( Collections.emptyMap() ) );
+        }) );
+        runTransaction();
+    }
+
+    @Test
+    public void shouldGetSpecifiedUsernameAndMetaDataInTXData()
+    {
+        final AtomicReference<String> usernameRef = new AtomicReference<>();
+        final AtomicReference<Map<String,Object>> metaDataRef = new AtomicReference<>();
+        db.registerTransactionEventHandler( getBeforeCommitHandler( txData ->
+        {
+            usernameRef.set( txData.username() );
+            metaDataRef.set( txData.metaData() );
+        } ) );
+        AuthSubject subject = mock( AuthSubject.class );
+        when( subject.username() ).thenReturn( "Christof" );
+        SecurityContext securityContext = new SecurityContext.Frozen( subject, AccessMode.Static.WRITE );
+        Map<String,Object> metadata = genericMap( "username", "joe" );
+        runTransaction( securityContext, metadata );
+
+        assertThat( "Should have specified username", usernameRef.get(), equalTo( "Christof" ) );
+        assertThat( "Should have metadata with specified username", metaDataRef.get(), equalTo( metadata ) );
+    }
+
+    private TransactionEventHandler.Adapter<Object> getBeforeCommitHandler(Consumer<TransactionData> dataConsumer)
+    {
+        return new TransactionEventHandler.Adapter<Object>()
+        {
+            @Override
+            public Object beforeCommit( TransactionData data ) throws Exception
+            {
+                dataConsumer.accept( data );
+                return super.beforeCommit( data );
+            }
+        };
+    }
+
+    private void runTransaction()
+    {
+        runTransaction( AnonymousContext.write(), Collections.emptyMap() );
+    }
+
+    private void runTransaction( SecurityContext securityContext, Map<String,Object> metaData)
+    {
+        try ( Transaction transaction = db.beginTransaction( KernelTransaction.Type.explicit, securityContext ) )
+        {
+            db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class ).get()
+                    .queryRegistration().setMetaData( metaData );
+            db.createNode();
+            transaction.success();
+        }
     }
 
     enum Operation
@@ -320,12 +446,12 @@ public class TransactionEventsIT
 
         Label randomLabel()
         {
-            return DynamicLabel.label( randomToken() );
+            return Label.label( randomToken() );
         }
 
         RelationshipType randomRelationshipType()
         {
-            return DynamicRelationshipType.withName( randomToken() );
+            return RelationshipType.withName( randomToken() );
         }
 
         String randomPropertyKey()
@@ -350,4 +476,36 @@ public class TransactionEventsIT
             return relationship;
         }
     }
+
+    private static class TransactionIdCommitTimeTracker extends TransactionEventHandler.Adapter<Object>
+    {
+
+        private long transactionIdAfterCommit;
+        private long commitTimeAfterCommit;
+
+        @Override
+        public Object beforeCommit( TransactionData data ) throws Exception
+        {
+            return super.beforeCommit( data );
+        }
+
+        @Override
+        public void afterCommit( TransactionData data, Object state )
+        {
+            commitTimeAfterCommit = data.getCommitTime();
+            transactionIdAfterCommit = data.getTransactionId();
+            super.afterCommit( data, state );
+        }
+
+        public long getTransactionIdAfterCommit()
+        {
+            return transactionIdAfterCommit;
+        }
+
+        public long getCommitTimeAfterCommit()
+        {
+            return commitTimeAfterCommit;
+        }
+    }
+
 }

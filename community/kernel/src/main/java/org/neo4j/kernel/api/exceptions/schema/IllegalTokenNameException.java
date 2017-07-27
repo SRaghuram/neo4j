@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,7 @@ public class IllegalTokenNameException extends SchemaKernelException
 {
     public IllegalTokenNameException( String tokenName )
     {
-        super( Status.Schema.IllegalTokenName,
+        super( Status.Schema.TokenNameError,
                 String.format( "%s is not a valid token name. Only non-null, non-empty strings are allowed.",
                 tokenName != null ? "'" + tokenName + "'" : "Null" ) );
     }

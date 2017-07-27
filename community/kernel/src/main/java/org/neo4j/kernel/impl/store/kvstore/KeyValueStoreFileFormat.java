@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -99,17 +99,18 @@ public abstract class KeyValueStoreFileFormat
         }
         final BigEndianByteArrayBuffer specifier = new BigEndianByteArrayBuffer( format );
         HeaderField<?>[] headerFields = headerFieldsForFormat( formatSpecifier );
-        return new MetadataCollector( pageSize / (keySize + valueSize), headerFields )
+        return new MetadataCollector( pageSize / (keySize + valueSize), headerFields, specifier )
         {
             @Override
             boolean verifyFormatSpecifier( ReadableBuffer value )
             {
                 int size = value.size();
-                if ( size == specifier.size() )
+                ReadableBuffer expectedFormat = expectedFormat();
+                if ( size == expectedFormat.size() )
                 {
                     for ( int i = 0; i < size; i++ )
                     {
-                        if ( value.getByte( i ) != specifier.getByte( i ) )
+                        if ( value.getByte( i ) != expectedFormat.getByte( i ) )
                         {
                             return false;
                         }
@@ -196,17 +197,10 @@ public abstract class KeyValueStoreFileFormat
             value.clear();
 
             // trailer
-            value.putIntegerAtEnd( dataEntries );
+            value.putIntegerAtEnd( dataEntries == 0 ? -1 : dataEntries );
             if ( !writer.writeHeader( key, value ) )
             {
                 throw new IllegalStateException( "The trailing size header should be valid" );
-            }
-
-            // write again the format specifier as trailer
-            writeFormatSpecifier( value );
-            if ( !writer.writeTrailer( key, value ) )
-            {
-                throw new IllegalStateException( "The trailer should be valid" );
             }
 
             return writer.openStoreFile();
@@ -287,7 +281,6 @@ public abstract class KeyValueStoreFileFormat
                 buffer.position( keySize );
                 buffer.limit( keySize + valueSize );
                 value.dataFrom( buffer );
-
 
                 MetadataCollector metadata = metadata( formatSpecifier, pageSize, keySize, valueSize );
                 // scan and catalogue all entries in the file

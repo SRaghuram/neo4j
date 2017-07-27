@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -81,7 +81,7 @@ public interface ProgressListener
         }
     };
 
-    static class SinglePartProgressListener extends Adapter
+    class SinglePartProgressListener extends Adapter
     {
         final Indicator indicator;
         private final long totalCount;
@@ -142,7 +142,7 @@ public interface ProgressListener
         }
     }
 
-    static final class OpenEndedProgressListener extends SinglePartProgressListener
+    final class OpenEndedProgressListener extends SinglePartProgressListener
     {
         private int lastReported = 0;
 
@@ -170,7 +170,7 @@ public interface ProgressListener
         }
     }
 
-    static final class MultiPartProgressListener extends Adapter
+    final class MultiPartProgressListener extends Adapter
     {
         private final Aggregator aggregator;
         final String part;

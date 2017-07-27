@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,79 +19,78 @@
  */
 package org.neo4j.kernel.impl.api.store;
 
-import java.io.IOException;
+import java.util.function.Consumer;
 
 import org.neo4j.cursor.Cursor;
-import org.neo4j.function.Consumer;
-import org.neo4j.graphdb.NotFoundException;
-import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.kernel.api.cursor.PropertyItem;
-import org.neo4j.kernel.impl.store.PropertyStore;
-import org.neo4j.kernel.impl.store.UnderlyingStorageException;
-import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
+import org.neo4j.kernel.api.AssertOpen;
+import org.neo4j.kernel.impl.locking.Lock;
+import org.neo4j.kernel.impl.store.RecordCursor;
+import org.neo4j.kernel.impl.store.RecordCursors;
+import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
+import org.neo4j.storageengine.api.PropertyItem;
+
+import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 
 /**
  * Cursor for all properties on a node or relationship.
  */
 public class StorePropertyCursor implements Cursor<PropertyItem>, PropertyItem
 {
-    private final PropertyStore propertyStore;
     private final Consumer<StorePropertyCursor> instanceCache;
     private final StorePropertyPayloadCursor payload;
+    private final RecordCursor<PropertyRecord> recordCursor;
 
-    private long nextPropertyRecordId;
+    private Lock lock;
+    private AssertOpen assertOpen;
 
-    public StorePropertyCursor( PropertyStore propertyStore, Consumer<StorePropertyCursor> instanceCache )
+    public StorePropertyCursor( RecordCursors cursors, Consumer<StorePropertyCursor> instanceCache )
     {
-        this.propertyStore = propertyStore;
         this.instanceCache = instanceCache;
-        this.payload = new StorePropertyPayloadCursor( propertyStore.getStringStore(), propertyStore.getArrayStore() );
+        this.payload = new StorePropertyPayloadCursor( cursors.propertyString(), cursors.propertyArray() );
+        this.recordCursor = cursors.property();
     }
 
-    public StorePropertyCursor init( long firstPropertyId )
+    public StorePropertyCursor init( long firstPropertyId, Lock readLock, AssertOpen assertOpen )
     {
-        nextPropertyRecordId = firstPropertyId;
+        recordCursor.placeAt( firstPropertyId, FORCE );
+        payload.clear();
+        lock = readLock;
+        this.assertOpen = assertOpen;
         return this;
     }
 
     @Override
     public boolean next()
     {
+        // Are there more properties to return for this current record we're at?
         if ( payload.next() )
         {
             return true;
         }
 
-        if ( nextPropertyRecordId == Record.NO_NEXT_PROPERTY.intValue() )
+        // No, OK continue down the chain and hunt for more...
+        while ( true )
         {
-            return false;
-        }
-
-        long currentPropertyRecordId = nextPropertyRecordId;
-        try ( PageCursor cursor = propertyStore.newReadCursor( currentPropertyRecordId ) )
-        {
-            int offset = cursor.getOffset();
-            do
+            if ( recordCursor.next() )
             {
-                cursor.setOffset( offset );
-                nextPropertyRecordId = readNextPropertyRecordId( cursor );
-
-                payload.clear();
-                payload.init( cursor );
+                // All good, we can get values off of this record
+                PropertyRecord propertyRecord = recordCursor.get();
+                payload.init( propertyRecord.getBlocks(), propertyRecord.getNumberOfBlocks() );
+                if ( payload.next() )
+                {
+                    return true;
+                }
             }
-            while ( cursor.shouldRetry() );
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( e );
-        }
+            else if ( Record.NO_NEXT_PROPERTY.is( recordCursor.get().getNextProp() ) )
+            {
+                // No more records in this chain, i.e. no more properties.
+                return false;
+            }
 
-        if ( !payload.next() )
-        {
-            throw new NotFoundException( "Property record with id " + currentPropertyRecordId + " not in use" );
+            // Sort of alright, this record isn't in use, but could just be due to concurrent delete.
+            // Continue to next record in the chain and try there.
         }
-        return true;
     }
 
     @Override
@@ -103,7 +102,9 @@ public class StorePropertyCursor implements Cursor<PropertyItem>, PropertyItem
     @Override
     public Object value()
     {
-        return payloadValueAsObject( payload );
+        Object value = payload.value();
+        assertOpen.assertOpen();
+        return value;
     }
 
     @Override
@@ -115,56 +116,14 @@ public class StorePropertyCursor implements Cursor<PropertyItem>, PropertyItem
     @Override
     public void close()
     {
-        payload.clear();
-        instanceCache.accept( this );
-    }
-
-    static Object payloadValueAsObject( StorePropertyPayloadCursor payload )
-    {
-        switch ( payload.type() )
+        try
         {
-        case BOOL:
-            return payload.booleanValue();
-        case BYTE:
-            return payload.byteValue();
-        case SHORT:
-            return payload.shortValue();
-        case CHAR:
-            return payload.charValue();
-        case INT:
-            return payload.intValue();
-        case LONG:
-            return payload.longValue();
-        case FLOAT:
-            return payload.floatValue();
-        case DOUBLE:
-            return payload.doubleValue();
-        case SHORT_STRING:
-            return payload.shortStringValue();
-        case STRING:
-            return payload.stringValue();
-        case SHORT_ARRAY:
-            return payload.shortArrayValue();
-        case ARRAY:
-            return payload.arrayValue();
-        default:
-            throw new IllegalStateException( "No such type:" + payload.type() );
+            payload.clear();
+            instanceCache.accept( this );
         }
-    }
-
-    private static long readNextPropertyRecordId( PageCursor cursor )
-    {
-        byte modifiers = cursor.getByte();
-        // We don't care about previous pointer (prevProp)
-        cursor.getUnsignedInt();
-        long nextProp = cursor.getUnsignedInt();
-
-        long nextMod = (modifiers & 0x0FL) << 32;
-        return longFromIntAndMod( nextProp, nextMod );
-    }
-
-    private static long longFromIntAndMod( long base, long modifier )
-    {
-        return modifier == 0 && base == IdGeneratorImpl.INTEGER_MINUS_ONE ? -1 : base | modifier;
+        finally
+        {
+            lock.release();
+        }
     }
 }

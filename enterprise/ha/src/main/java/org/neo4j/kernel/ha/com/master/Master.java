@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,13 +24,13 @@ import java.io.IOException;
 import org.neo4j.com.RequestContext;
 import org.neo4j.com.Response;
 import org.neo4j.com.storecopy.StoreWriter;
-import org.neo4j.kernel.IdType;
+import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.ha.id.IdAllocation;
 import org.neo4j.kernel.ha.lock.LockResult;
-import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
+import org.neo4j.storageengine.api.lock.ResourceType;
 
 /**
  * Represents the master-side of the HA communication between master and slave.
@@ -77,9 +77,8 @@ public interface Master
 
     Response<Void> copyStore( RequestContext context, StoreWriter writer );
 
-    Response<LockResult> acquireExclusiveLock( RequestContext context, Locks.ResourceType type, long... resourceIds );
+    Response<LockResult> acquireExclusiveLock( RequestContext context, ResourceType type, long... resourceIds );
 
-    Response<LockResult> acquireSharedLock( RequestContext context, Locks.ResourceType type, long... resourceIds );
-
+    Response<LockResult> acquireSharedLock( RequestContext context, ResourceType type, long... resourceIds );
 
 }

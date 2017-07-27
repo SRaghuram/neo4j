@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,7 @@
 package org.neo4j.unsafe.impl.batchimport.input;
 
 /**
- * A {@link Listener} which is designed to receive one or more items, to then finally be closed
+ * Listener which is designed to receive one or more items, to then finally be closed
  * when all items have been received.
  */
 public interface Receiver<T,EXCEPTION extends Exception> extends AutoCloseable

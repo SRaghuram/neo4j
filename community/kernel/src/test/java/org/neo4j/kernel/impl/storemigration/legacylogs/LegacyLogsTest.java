@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,10 @@
  */
 package org.neo4j.kernel.impl.storemigration.legacylogs;
 
+import org.junit.Test;
+
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -27,24 +30,33 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.Test;
-
+import org.neo4j.cursor.IOCursor;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.kernel.impl.store.TransactionId;
+import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.storemigration.FileOperation;
-import org.neo4j.kernel.impl.transaction.log.IOCursor;
+import org.neo4j.kernel.impl.transaction.command.Command;
+import org.neo4j.kernel.impl.transaction.log.ArrayIOCursor;
+import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
+import org.neo4j.kernel.impl.transaction.log.MissingLogDataException;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
+import org.neo4j.kernel.impl.transaction.log.entry.OnePhaseCommit;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.kernel.impl.storemigration.legacylogs.LegacyLogFilenames.getLegacyLogFilename;
 import static org.neo4j.kernel.impl.storemigration.legacylogs.LegacyLogFilenames.versionedLegacyLogFilesFilter;
 import static org.neo4j.kernel.impl.transaction.log.PhysicalLogFile.DEFAULT_NAME;
@@ -53,11 +65,26 @@ import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_LO
 
 public class LegacyLogsTest
 {
+    private static final long NO_NEXT_REL = Record.NO_NEXT_RELATIONSHIP.intValue();
+    private static final int NO_LABELS = Record.NO_LABELS_FIELD.intValue();
+
     private final FileSystemAbstraction fs = mock( FileSystemAbstraction.class );
     private final LegacyLogEntryReader reader = mock( LegacyLogEntryReader.class );
     private final LegacyLogEntryWriter writer = mock( LegacyLogEntryWriter.class );
-    private final File storeDir = new File( "/store" );
-    private final File migrationDir = new File( "/migration" );
+    private final File storeDir = getRootFile( "/store" );
+    private final File migrationDir = getRootFile( "/migration" );
+
+    private static File getRootFile( String pathname )
+    {
+        try
+        {
+            return new File( pathname ).getCanonicalFile();
+        }
+        catch ( IOException e )
+        {
+            throw new AssertionError( e );
+        }
+    }
 
     @Test
     public void shouldRewriteLogFiles() throws IOException
@@ -84,100 +111,179 @@ public class LegacyLogsTest
     }
 
     @Test
-    public void shouldMoveFiles() throws IOException
+    public void shouldMoveFiles() throws Exception
     {
         // given
-        final EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
-        fs.mkdirs( storeDir );
-        fs.mkdirs( migrationDir );
-
-        final Set<File> logsInStoreDir = new HashSet<>( Arrays.asList(
-                new File( storeDir, getLegacyLogFilename( 1 ) ),
-                new File( storeDir, getLegacyLogFilename( 2 ) )
-        ) );
-
-        final List<File> logsInMigrationDir = Arrays.asList(
-                new File( migrationDir, getLegacyLogFilename( 1 ) ),
-                new File( migrationDir, getLegacyLogFilename( 2 ) )
-        );
-
-        for ( File file : logsInMigrationDir )
+        try ( EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction() )
         {
-            try ( StoreChannel channel = fs.create( file ) )
+            fs.mkdirs( storeDir );
+            fs.mkdirs( migrationDir );
+
+            final Set<File> logsInStoreDir = new HashSet<>( Arrays.asList( new File( storeDir, getLegacyLogFilename( 1 ) ),
+                    new File( storeDir, getLegacyLogFilename( 2 ) ) ) );
+
+            final List<File> logsInMigrationDir = Arrays.asList( new File( migrationDir, getLegacyLogFilename( 1 ) ),
+                    new File( migrationDir, getLegacyLogFilename( 2 ) ) );
+
+            for ( File file : logsInMigrationDir )
             {
-                ByteBuffer buffer = ByteBuffer.allocate( 8 );
-                buffer.putLong( 42 );
-                buffer.flip();
-                channel.write( buffer );
+                try ( StoreChannel channel = fs.create( file ) )
+                {
+                    ByteBuffer buffer = ByteBuffer.allocate( 8 );
+                    buffer.putLong( 42 );
+                    buffer.flip();
+                    channel.write( buffer );
+                }
             }
-        }
 
-        // should override older files
-        for ( File file : logsInStoreDir )
-        {
-            try ( StoreChannel channel = fs.create( file ) )
+            // should override older files
+            for ( File file : logsInStoreDir )
             {
-                ByteBuffer buffer = ByteBuffer.allocate( 8 );
-                buffer.putLong( 13 );
-                buffer.flip();
-                channel.write( buffer );
+                try ( StoreChannel channel = fs.create( file ) )
+                {
+                    ByteBuffer buffer = ByteBuffer.allocate( 8 );
+                    buffer.putLong( 13 );
+                    buffer.flip();
+                    channel.write( buffer );
+                }
             }
-        }
 
-        // when
-        new LegacyLogs( fs, reader, writer ).operate( FileOperation.MOVE, migrationDir, storeDir );
+            // when
+            new LegacyLogs( fs, reader, writer ).operate( FileOperation.MOVE, migrationDir, storeDir );
 
-        // then
-        assertEquals( logsInStoreDir, new HashSet<>( Arrays.asList( fs.listFiles( storeDir ) ) ) );
-        for ( File file : logsInStoreDir )
-        {
-            try ( StoreChannel channel = fs.open( file, "r" ) )
+            // then
+            assertEquals( logsInStoreDir, new HashSet<>( Arrays.asList( fs.listFiles( storeDir ) ) ) );
+            for ( File file : logsInStoreDir )
             {
-                ByteBuffer buffer = ByteBuffer.allocate( 8 );
-                channel.read( buffer );
-                buffer.flip();
-                assertEquals( 42, buffer.getLong() );
+                try ( StoreChannel channel = fs.open( file, "r" ) )
+                {
+                    ByteBuffer buffer = ByteBuffer.allocate( 8 );
+                    channel.read( buffer );
+                    buffer.flip();
+                    assertEquals( 42, buffer.getLong() );
+                }
             }
         }
     }
 
     @Test
-    public void shouldRenameFiles() throws IOException
+    public void shouldRenameFiles() throws Exception
     {
         // given
-        final EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
-        fs.mkdirs( storeDir );
-        final File unrelated = new File( storeDir, "unrelated" );
-        final List<File> files = Arrays.asList(
-                new File( storeDir, "active_tx_log" ),
-                new File( storeDir, "tm_tx_log.v0" ),
-                new File( storeDir, "tm_tx_log.v1" ),
-                new File( storeDir, "nioneo_logical.log.1" ),
-                new File( storeDir, "nioneo_logical.log.2" ),
-                new File( storeDir, getLegacyLogFilename( 1 ) ),
-                new File( storeDir, getLegacyLogFilename( 2 ) ),
-                unrelated
-        );
-
-        for ( File file : files )
+        try ( EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction() )
         {
-            fs.create( file ).close();
+            fs.mkdirs( storeDir );
+            final File unrelated = new File( storeDir, "unrelated" );
+            final List<File> files =
+                    Arrays.asList( new File( storeDir, "active_tx_log" ), new File( storeDir, "tm_tx_log.v0" ),
+                            new File( storeDir, "tm_tx_log.v1" ), new File( storeDir, "nioneo_logical.log.1" ),
+                            new File( storeDir, "nioneo_logical.log.2" ), new File( storeDir, getLegacyLogFilename( 1 ) ),
+                            new File( storeDir, getLegacyLogFilename( 2 ) ), unrelated );
+
+            for ( File file : files )
+            {
+                fs.create( file ).close();
+            }
+
+            // when
+            new LegacyLogs( fs, reader, writer ).renameLogFiles( storeDir );
+
+            // then
+            final Set<File> expected = new HashSet<>(
+                    Arrays.asList( unrelated, new File( storeDir, getLogFilenameForVersion( 1 ) ),
+                            new File( storeDir, getLogFilenameForVersion( 2 ) ) ) );
+            assertEquals( expected, new HashSet<>( Arrays.asList( fs.listFiles( storeDir ) ) ) );
         }
+    }
 
-        // when
-        new LegacyLogs( fs, reader, writer ).renameLogFiles( storeDir );
+    @Test
+    @SuppressWarnings( "unchecked" )
+    public void transactionInformationRetrievedFromCommitEntries() throws IOException
+    {
+        FileSystemAbstraction fs = mock( FileSystemAbstraction.class );
+        File logFile = new File( LegacyLogFilenames.getLegacyLogFilename( 1 ) );
+        when( fs.listFiles( any( File.class ), any( FilenameFilter.class ) ) )
+                .thenReturn( new File[]{logFile} );
 
-        // then
-        final Set<File> expected = new HashSet<>( Arrays.asList(
-                unrelated,
-                new File( storeDir, getLogFilenameForVersion( 1 ) ),
-                new File( storeDir, getLogFilenameForVersion( 2 ) )
-        ) );
-        assertEquals( expected, new HashSet<>( Arrays.asList( fs.listFiles( storeDir ) ) ) );
+        LegacyLogEntryReader reader = mock( LegacyLogEntryReader.class );
+        LogEntry[] entries = new LogEntry[]{
+                start( 1 ), createNode( 1 ), createNode( 2 ), commit( 1 ),
+                start( 2 ), createNode( 3 ), createNode( 4 ), commit( 2 ),
+                start( 3 ), createNode( 5 ), commit( 3 )
+        };
+        when( reader.openReadableChannel( any( File.class ) ) )
+                .thenReturn( readableChannel( entries ), readableChannel( entries ), readableChannel( entries ) );
+
+        LegacyLogEntryWriter writer = new LegacyLogEntryWriter( fs );
+        LegacyLogs legacyLogs = new LegacyLogs( fs, reader, writer );
+
+        assertEquals( newTransactionId( 1 ), getTransactionInformation( legacyLogs, 1 ) );
+        assertEquals( newTransactionId( 2 ), getTransactionInformation( legacyLogs, 2 ) );
+        assertEquals( newTransactionId( 3 ), getTransactionInformation( legacyLogs, 3 ) );
+    }
+
+    @Test(expected = IOException.class)
+    @SuppressWarnings( "unchecked" )
+    public void ioExceptionsPropagatedWhenFailToReadLegacyLog() throws IOException
+    {
+        File logFile = new File( LegacyLogFilenames.getLegacyLogFilename( 1 ) );
+        when( fs.listFiles( any( File.class ), any( FilenameFilter.class ) ) )
+                .thenReturn( new File[]{logFile} );
+
+        when( reader.openReadableChannel( any( File.class ) ) ).thenThrow( IOException.class );
+
+        LegacyLogs legacyLogs = new LegacyLogs( fs, reader, writer );
+        getTransactionInformation( legacyLogs, 1 );
+    }
+
+    @Test
+    public void noTransactionalInformationWhenLogsNotPresent() throws IOException
+    {
+        when( fs.listFiles( any( File.class ), any( FilenameFilter.class ) ) )
+                .thenReturn( new File[]{} );
+
+        LegacyLogs legacyLogs = new LegacyLogs( fs, reader, writer );
+        assertFalse( "There are not logs. Nothing to return",
+                legacyLogs.getTransactionInformation( storeDir, 1 ).isPresent() );
+    }
+
+    private TransactionId getTransactionInformation( LegacyLogs legacyLogs, int transactionId ) throws IOException
+    {
+        return legacyLogs.getTransactionInformation( storeDir, transactionId ).orElseThrow( MissingLogDataException::new);
     }
 
     private String getLogFilenameForVersion( int version )
     {
         return DEFAULT_NAME + DEFAULT_VERSION_SUFFIX + version;
+    }
+
+    private static TransactionId newTransactionId( int id )
+    {
+        return new TransactionId( id, LogEntryStart.checksum( new byte[]{(byte) id}, id, id ), id );
+    }
+
+    private static LogEntry start( int id )
+    {
+        return new LogEntryStart( id, id, 1, id - 1, new byte[]{(byte) id}, new LogPosition( 1, 1 ) );
+    }
+
+    private static LogEntry createNode( int id )
+    {
+        NodeRecord before = new NodeRecord( id ).initialize( false, NO_NEXT_REL, false, NO_NEXT_REL, NO_LABELS );
+        NodeRecord after = new NodeRecord( id ).initialize( true, NO_NEXT_REL, false, NO_NEXT_REL, NO_LABELS );
+        Command.NodeCommand command = new Command.NodeCommand( before, after );
+        return new LogEntryCommand( command );
+    }
+
+    private static LogEntry commit( int id )
+    {
+        return new OnePhaseCommit( id, id );
+    }
+
+    private Pair<LogHeader,IOCursor<LogEntry>> readableChannel( LogEntry[] entries )
+    {
+        IOCursor<LogEntry> cursor = new ArrayIOCursor<>( entries );
+        LogHeader logHeader = new LogHeader( (byte) 1, 1, 1 );
+        return Pair.of( logHeader, cursor );
     }
 }

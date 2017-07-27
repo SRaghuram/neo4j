@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -58,8 +58,6 @@ public class KeyValueWriterTest
         assertTrue( "format specifier", writer.writeHeader( key, value ) );
         assertTrue( "end-of-header marker", writer.writeHeader( key, value ) );
         assertTrue( "end marker + number of data items", writer.writeHeader( key, value ) );
-        byte[] bytes = {'a', 'l', 'l', ' ', 'o', 'k'};
-        writer.writeTrailer( new BigEndianByteArrayBuffer( 0 ), new BigEndianByteArrayBuffer( bytes ) );
 
         // then
 
@@ -69,7 +67,7 @@ public class KeyValueWriterTest
                                     0x00, 0, 0, 0, 0, 0, 0, 0x00, // zero padding
                                     0x00, 0, 0, 0, 0, 0, 0, 0x00, // end marker
                                     0x00, 0, 0, 0, 0, 0, 0, 0x00, // number of data items
-                                    'a', 'l', 'l', ' ', 'o', 'k'} ); // trailer
+                                    } );
     }
 
     @Test

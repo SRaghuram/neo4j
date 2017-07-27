@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,10 +20,16 @@
 package org.neo4j.kernel.impl.locking;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import org.neo4j.kernel.impl.locking.Locks.Client;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.neo4j.kernel.impl.locking.ResourceTypes.NODE;
 
+@Ignore( "Not a test. This is a compatibility suite, run from LockingCompatibilityTestSuite." )
 public class CloseCompatibility extends LockingCompatibilityTestSuite.Compatibility
 {
     public CloseCompatibility( LockingCompatibilityTestSuite suite )
@@ -32,15 +38,39 @@ public class CloseCompatibility extends LockingCompatibilityTestSuite.Compatibil
     }
 
     @Test
+    public void shouldNotBeAbleToHandOutClientsIfClosed() throws Throwable
+    {
+        // GIVEN a lock manager and working clients
+        try ( Client client = locks.newClient() )
+        {
+            client.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0 );
+        }
+
+        // WHEN
+        locks.close();
+
+        // THEN
+        try
+        {
+            locks.newClient();
+            fail( "Should fail" );
+        }
+        catch ( IllegalStateException e )
+        {
+            // Good
+        }
+    }
+
+    @Test
     public void closeShouldWaitAllOperationToFinish()
     {
         // given
-        clientA.acquireShared( NODE, 1L );
-        clientA.acquireShared( NODE, 3L );
-        clientB.acquireShared( NODE, 1L );
-        acquireShared( clientC, NODE, 2L );
-        acquireExclusive( clientB, NODE, 1L ).callAndAssertWaiting();
-        acquireExclusive( clientC, NODE, 1L ).callAndAssertWaiting();
+        clientA.acquireShared( LockTracer.NONE, NODE, 1L );
+        clientA.acquireShared( LockTracer.NONE, NODE, 3L );
+        clientB.acquireShared( LockTracer.NONE, NODE, 1L );
+        acquireShared( clientC, LockTracer.NONE, NODE, 2L );
+        acquireExclusive( clientB, LockTracer.NONE, NODE, 1L ).callAndAssertWaiting();
+        acquireExclusive( clientC, LockTracer.NONE, NODE, 1L ).callAndAssertWaiting();
 
         // when
         clientB.close();
@@ -57,25 +87,45 @@ public class CloseCompatibility extends LockingCompatibilityTestSuite.Compatibil
 
     }
 
-    @Test( expected = LockClientAlreadyClosedException.class )
+    @Test( expected = LockClientStoppedException.class )
     public void shouldNotBeAbleToAcquireSharedLockFromClosedClient()
     {
         clientA.close();
-        clientA.acquireShared( NODE, 1l );
+        clientA.acquireShared( LockTracer.NONE, NODE, 1L );
     }
 
-    @Test( expected = LockClientAlreadyClosedException.class )
+    @Test( expected = LockClientStoppedException.class )
     public void shouldNotBeAbleToAcquireExclusiveLockFromClosedClient()
     {
         clientA.close();
-        clientA.acquireExclusive( NODE, 1l );
+        clientA.acquireExclusive( LockTracer.NONE, NODE, 1L );
+    }
+
+    @Test( expected = LockClientStoppedException.class )
+    public void shouldNotBeAbleToTryAcquireSharedLockFromClosedClient()
+    {
+        clientA.close();
+        clientA.trySharedLock( NODE, 1L );
+    }
+
+    @Test( expected = LockClientStoppedException.class )
+    public void shouldNotBeAbleToTryAcquireExclusiveLockFromClosedClient()
+    {
+        clientA.close();
+        clientA.tryExclusiveLock( NODE, 1L );
     }
 
     @Test
-    public void shouldNotBeAbleToAcquireLocksUsingTryFromClosedClient()
+    public void releaseTryLocksOnClose()
     {
+        assertTrue( clientA.trySharedLock( ResourceTypes.NODE, 1L ) );
+        assertTrue( clientB.tryExclusiveLock( ResourceTypes.NODE, 2L ) );
+
         clientA.close();
-        Assert.assertFalse( clientA.trySharedLock( NODE, 1l ) );
-        Assert.assertFalse( clientA.tryExclusiveLock( NODE, 1l ) );
+        clientB.close();
+
+        LockCountVisitor lockCountVisitor = new LockCountVisitor();
+        locks.accept( lockCountVisitor );
+        Assert.assertEquals( 0, lockCountVisitor.getLockCount() );
     }
 }

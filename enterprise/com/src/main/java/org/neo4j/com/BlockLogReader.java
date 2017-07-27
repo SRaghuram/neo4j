@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,11 @@
  */
 package org.neo4j.com;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
-
-import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
  * The counterpart of {@link BlockLogBuffer}, sits on the receiving end and
@@ -120,7 +120,7 @@ public class BlockLogReader implements ReadableByteChannel
 
         int bytesToRead = Math.min( maxBytesWanted, byteBuffer.remaining() );
         dst.put( byteArray, byteBuffer.position(), bytesToRead );
-        byteBuffer.position( byteBuffer.position()+bytesToRead );
+        byteBuffer.position( byteBuffer.position() + bytesToRead );
         return bytesToRead;
     }
 

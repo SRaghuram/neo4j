@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,10 +20,12 @@
 package org.neo4j.kernel.api.txstate;
 
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationKernelException;
+import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
+import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
-import org.neo4j.kernel.impl.api.store.StoreReadLayer;
-import org.neo4j.kernel.impl.util.diffsets.DiffSetsVisitor;
+import org.neo4j.storageengine.api.StoreReadLayer;
+import org.neo4j.storageengine.api.txstate.DiffSetsVisitor;
+import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 
 import static java.util.Objects.requireNonNull;
 
@@ -31,7 +33,7 @@ import static java.util.Objects.requireNonNull;
  * A visitor implementation that makes visiting changed relationships of a transaction easier by facilitating accessing
  * the details of the visited relationships.
  *
- * By invoking a constructor that takes a {@linkplain ReadableTxState transaction state} parameter, the default
+ * By invoking a constructor that takes a {@linkplain ReadableTransactionState transaction state} parameter, the default
  * implementation of {@link #visitAddedRelationship(long)} will retrieve the details of the visited relationship and
  * supply that information to the {@link #visitAddedRelationship(long, int, long, long)}-method. If no details can be
  * found, the transaction state is inconsistent with itself, and an exception will be thrown. If no such details are
@@ -52,13 +54,13 @@ public abstract class RelationshipChangeVisitorAdapter implements DiffSetsVisito
     /**
      * Causes {@link #visitAddedRelationship(long, int, long, long)} to be invoked for added relationships.
      */
-    public RelationshipChangeVisitorAdapter( ReadableTxState txState )
+    public RelationshipChangeVisitorAdapter( ReadableTransactionState txState )
     {
         this.added = added( requireNonNull( txState, "ReadableTxState" ) );
         this.removed = null;
     }
 
-    protected void visitAddedRelationship( long relationshipId ) throws ConstraintValidationKernelException
+    protected void visitAddedRelationship( long relationshipId ) throws ConstraintValidationException
     {
         if ( added != null )
         {
@@ -66,7 +68,7 @@ public abstract class RelationshipChangeVisitorAdapter implements DiffSetsVisito
         }
     }
 
-    protected void visitRemovedRelationship( long relationshipId ) throws ConstraintValidationKernelException
+    protected void visitRemovedRelationship( long relationshipId ) throws ConstraintValidationException
     {
         if ( removed != null )
         {
@@ -75,7 +77,7 @@ public abstract class RelationshipChangeVisitorAdapter implements DiffSetsVisito
     }
 
     protected void visitAddedRelationship( long relationshipId, int type, long startNode, long endNode )
-            throws ConstraintValidationKernelException
+            throws ConstraintValidationException
     {
     }
 
@@ -84,32 +86,33 @@ public abstract class RelationshipChangeVisitorAdapter implements DiffSetsVisito
     }
 
     @Override
-    public final void visitAdded( Long relationshipId ) throws ConstraintValidationKernelException
+    public final void visitAdded( Long relationshipId )
+            throws ConstraintValidationException, CreateConstraintFailureException
     {
         visitAddedRelationship( relationshipId );
     }
 
     @Override
-    public final void visitRemoved( Long relationshipId ) throws ConstraintValidationKernelException
+    public final void visitRemoved( Long relationshipId ) throws ConstraintValidationException
     {
         visitRemovedRelationship( relationshipId );
     }
 
-    private static abstract class DetailVisitor implements RelationshipVisitor<ConstraintValidationKernelException>
+    private abstract static class DetailVisitor implements RelationshipVisitor<ConstraintValidationException>
     {
-        abstract void visit( long relationshipId ) throws ConstraintValidationKernelException;
+        abstract void visit( long relationshipId ) throws ConstraintValidationException;
 
         @Override
         public abstract void visit( long relId, int type, long startNode, long endNode )
-                throws ConstraintValidationKernelException;
+                throws ConstraintValidationException;
     }
 
-    DetailVisitor added( final ReadableTxState txState )
+    DetailVisitor added( final ReadableTransactionState txState )
     {
         return new DetailVisitor()
         {
             @Override
-            void visit( long relationshipId ) throws ConstraintValidationKernelException
+            void visit( long relationshipId ) throws ConstraintValidationException
             {
                 if ( !txState.relationshipVisit( relationshipId, this ) )
                 {
@@ -119,7 +122,7 @@ public abstract class RelationshipChangeVisitorAdapter implements DiffSetsVisito
 
             @Override
             public void visit( long relId, int type, long startNode, long endNode )
-                    throws ConstraintValidationKernelException
+                    throws ConstraintValidationException
             {
                 visitAddedRelationship( relId, type, startNode, endNode );
             }
@@ -131,7 +134,7 @@ public abstract class RelationshipChangeVisitorAdapter implements DiffSetsVisito
         return new DetailVisitor()
         {
             @Override
-            void visit( long relationshipId ) throws ConstraintValidationKernelException
+            void visit( long relationshipId ) throws ConstraintValidationException
             {
                 try
                 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,15 +21,11 @@ package org.neo4j.server;
 
 import javax.ws.rs.ext.Provider;
 
+import com.sun.jersey.api.core.HttpContext;
+
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.database.InjectableProvider;
 
-import com.sun.jersey.api.core.HttpContext;
-
-/**
- * @deprecated This class is for internal use only and will be moved to an internal package in a future release.
- */
-@Deprecated
 @Provider
 public class LoggingProvider extends InjectableProvider<LogProvider>
 {

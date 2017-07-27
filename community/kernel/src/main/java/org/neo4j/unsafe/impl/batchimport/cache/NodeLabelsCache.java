@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,14 +23,13 @@ import org.neo4j.kernel.impl.util.Bits;
 
 import static java.lang.Integer.numberOfLeadingZeros;
 import static java.lang.Math.max;
-
 import static org.neo4j.kernel.impl.util.Bits.bitsFromLongs;
 
 /**
  * Caches labels for each node. Tries to keep memory as 8b (a long) per node. If a particular node has many labels
  * it will spill over into two or more longs in a separate array.
  */
-public class NodeLabelsCache implements MemoryStatsVisitor.Home
+public class NodeLabelsCache implements MemoryStatsVisitor.Visitable
 {
     public static class Client
     {
@@ -62,8 +61,8 @@ public class NodeLabelsCache implements MemoryStatsVisitor.Home
     {
         this.cache = cacheFactory.newDynamicLongArray( chunkSize, 0 );
         this.spillOver = cacheFactory.newDynamicLongArray( chunkSize / 5, 0 ); // expect way less of these
-        this.bitsPerLabel = max( Integer.SIZE-numberOfLeadingZeros( highLabelId ), 1 );
-        this.worstCaseLongsNeeded = ((bitsPerLabel * (highLabelId+1 /*length slot*/)) - 1) / Long.SIZE + 1;
+        this.bitsPerLabel = max( Integer.SIZE - numberOfLeadingZeros( highLabelId ), 1 );
+        this.worstCaseLongsNeeded = ((bitsPerLabel * (highLabelId + 1 /*length slot*/)) - 1) / Long.SIZE + 1;
         this.putClient = new Client( worstCaseLongsNeeded );
     }
 
@@ -140,7 +139,7 @@ public class NodeLabelsCache implements MemoryStatsVisitor.Home
         }
 
         int length = client.fieldBits.getInt( bitsPerLabel );
-        int longsInUse = ((bitsPerLabel * (length+1))-1) / Long.SIZE + 1;
+        int longsInUse = ((bitsPerLabel * (length + 1)) - 1) / Long.SIZE + 1;
         target = ensureCapacity( target, length );
         if ( longsInUse == 1 )
         {

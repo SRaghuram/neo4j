@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.backup;
 
 import java.io.File;
 import java.net.URI;
+import java.util.function.Supplier;
 
 import org.neo4j.cluster.BindingListener;
 import org.neo4j.cluster.InstanceId;
@@ -32,9 +33,8 @@ import org.neo4j.cluster.member.ClusterMemberListener;
 import org.neo4j.com.ServerUtil;
 import org.neo4j.com.monitor.RequestMonitor;
 import org.neo4j.com.storecopy.StoreCopyServer;
-import org.neo4j.function.Supplier;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.StoreId;
@@ -42,6 +42,9 @@ import org.neo4j.kernel.impl.transaction.log.LogFileInformation;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
+import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.monitoring.ByteCounterMonitor;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -51,7 +54,6 @@ import static org.neo4j.backup.OnlineBackupSettings.online_backup_server;
 
 public class OnlineBackupKernelExtension implements Lifecycle
 {
-
     private Object startBindingListener;
     private Object bindingListener;
 
@@ -79,29 +81,20 @@ public class OnlineBackupKernelExtension implements Lifecycle
                                         final Supplier<TransactionIdStore> transactionIdStoreSupplier,
                                         final Supplier<LogicalTransactionStore> logicalTransactionStoreSupplier,
                                         final Supplier<LogFileInformation> logFileInformationSupplier,
-                                        final FileSystemAbstraction fileSystemAbstraction)
+                                        final FileSystemAbstraction fileSystemAbstraction,
+                                        final PageCache pageCache,
+                                        final StoreCopyCheckPointMutex storeCopyCheckPointMutex )
     {
-        this( config, graphDatabaseAPI, new BackupProvider()
+        this( config, graphDatabaseAPI, () ->
         {
-            @Override
-            public TheBackupInterface newBackup()
-            {
-                TransactionIdStore transactionIdStore = transactionIdStoreSupplier.get();
-                StoreCopyServer copier = new StoreCopyServer( neoStoreDataSource, checkPointerSupplier.get(),
-                        fileSystemAbstraction, new File( graphDatabaseAPI.getStoreDir() ),
-                        monitors.newMonitor( StoreCopyServer.Monitor.class ) );
-                LogicalTransactionStore logicalTransactionStore = logicalTransactionStoreSupplier.get();
-                LogFileInformation logFileInformation = logFileInformationSupplier.get();
-                return new BackupImpl( copier, monitors,
-                        logicalTransactionStore, transactionIdStore, logFileInformation, new Supplier<StoreId>()
-                        {
-                            @Override
-                            public StoreId get()
-                            {
-                                return graphDatabaseAPI.storeId();
-                            }
-                        } );
-            }
+            TransactionIdStore transactionIdStore = transactionIdStoreSupplier.get();
+            StoreCopyServer copier = new StoreCopyServer( neoStoreDataSource, checkPointerSupplier.get(),
+                    fileSystemAbstraction, new File( graphDatabaseAPI.getStoreDir() ),
+                    monitors.newMonitor( StoreCopyServer.Monitor.class ), pageCache, storeCopyCheckPointMutex );
+            LogicalTransactionStore logicalTransactionStore = logicalTransactionStoreSupplier.get();
+            LogFileInformation logFileInformation = logFileInformationSupplier.get();
+            return new BackupImpl( copier, logicalTransactionStore, transactionIdStore, logFileInformation,
+                    graphDatabaseAPI::storeId, logProvider );
         }, monitors, logProvider );
     }
 
@@ -139,18 +132,11 @@ public class OnlineBackupKernelExtension implements Lifecycle
                     graphDatabaseAPI.getDependencyResolver().resolveDependency( ClusterMemberEvents.class).addClusterMemberListener(
                             (ClusterMemberListener) startBindingListener );
 
-                    bindingListener = new BindingListener()
-                    {
-                        @Override
-                        public void listeningAt( URI myUri )
-                        {
-                            me = myUri;
-                        }
-                    };
+                    bindingListener = (BindingListener) myUri -> me = myUri;
                     graphDatabaseAPI.getDependencyResolver().resolveDependency( BindingNotifier.class ).addBindingListener(
                             (BindingListener) bindingListener );
                 }
-                catch ( NoClassDefFoundError | IllegalArgumentException e )
+                catch ( NoClassDefFoundError | UnsatisfiedDependencyException e )
                 {
                     // Not running HA
                 }
@@ -181,7 +167,7 @@ public class OnlineBackupKernelExtension implements Lifecycle
                 ClusterMemberAvailability client = getClusterMemberAvailability();
                 client.memberIsUnavailable( BACKUP );
             }
-            catch ( NoClassDefFoundError | IllegalArgumentException e )
+            catch ( NoClassDefFoundError | UnsatisfiedDependencyException e )
             {
                 // Not running HA
             }
@@ -240,11 +226,13 @@ public class OnlineBackupKernelExtension implements Lifecycle
         }
     }
 
-    private ClusterMemberAvailability getClusterMemberAvailability() {
+    private ClusterMemberAvailability getClusterMemberAvailability()
+    {
         return graphDatabaseAPI.getDependencyResolver().resolveDependency( ClusterMemberAvailability.class );
     }
 
-    private URI createBackupURI() {
+    private URI createBackupURI()
+    {
         String hostString = ServerUtil.getHostString( server.getSocketAddress() );
         String host = hostString.contains( INADDR_ANY ) ? me.getHost() : hostString;
         int port = server.getSocketAddress().getPort();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import org.neo4j.server.rest.domain.JsonHelper;
  * Because the batch operation API operates on the HTTP abstraction
  * level, we do not use our normal serialization system for serializing
  * its' results.
- * 
+ *
  * Doing so would require us to de-serialize each JSON response we get from
  * each operation, and we would have to extend our current type safe serialization
  * system to incorporate arbitrary responses.
@@ -46,17 +46,22 @@ public class BatchOperationResults
     private boolean firstResult = true;
     private Map<Integer, String> locations = new HashMap<Integer, String>();
 
-    public BatchOperationResults() {
+    public BatchOperationResults()
+    {
         results.append( OPENING_BRACKET );
     }
 
     public void addOperationResult( String from, Integer id, String body, String location )
     {
-        if(firstResult)
+        if ( firstResult )
+        {
             firstResult = false;
+        }
         else
-            results.append(',');
-        
+        {
+            results.append( ',' );
+        }
+
         results.append( OPENING_CURLY );
 
         if ( id != null )

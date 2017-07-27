@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,26 +19,32 @@
  */
 package org.neo4j.server.enterprise;
 
-import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.Description;
+import java.time.Duration;
 
-import static org.neo4j.helpers.Settings.BOOLEAN;
-import static org.neo4j.helpers.Settings.DURATION;
-import static org.neo4j.helpers.Settings.STRING;
-import static org.neo4j.helpers.Settings.TRUE;
-import static org.neo4j.helpers.Settings.setting;
+import org.neo4j.configuration.Description;
+import org.neo4j.configuration.LoadableConfig;
+import org.neo4j.graphdb.config.Setting;
+
+import static org.neo4j.kernel.configuration.Settings.BOOLEAN;
+import static org.neo4j.kernel.configuration.Settings.DURATION;
+import static org.neo4j.kernel.configuration.Settings.STRING;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
+import static org.neo4j.kernel.configuration.Settings.setting;
 
 @Description("Settings available in the Enterprise server")
-public interface EnterpriseServerSettings
+public class EnterpriseServerSettings implements LoadableConfig
 {
+    @SuppressWarnings("unused") // accessed from the browser
     @Description( "Configure the Neo4j Browser to time out logged in users after this idle period. " +
                   "Setting this to 0 indicates no limit." )
-    Setting<Long> browser_credentialTimeout = setting("dbms.browser.credential_timeout", DURATION, "0");
+    public static final Setting<Duration> browser_credentialTimeout = setting( "browser.credential_timeout", DURATION,
+            "0" );
 
+    @SuppressWarnings("unused") // accessed from the browser
     @Description( "Configure the Neo4j Browser to store or not store user credentials." )
-    Setting<Boolean> browser_storeCredentials = setting("dbms.browser.store_credentials", BOOLEAN, TRUE);
+    public static final Setting<Boolean> browser_retainConnectionCredentials = setting( "browser.retain_connection_credentials", BOOLEAN, TRUE );
 
-    @Description( "Configure the operating mode of the database - 'SINGLE' for stand-alone operation or 'HA'" +
-                  "for operating as a member in a cluster." )
-    Setting<String> mode = setting( "org.neo4j.server.database.mode", STRING, "SINGLE" );
+    @SuppressWarnings("unused") // accessed from the browser
+    @Description( "Configure the policy for outgoing Neo4j Browser connections." )
+    public static final Setting<Boolean> browser_allowOutgoingBrowserConnections = setting( "browser.allow_outgoing_connections", BOOLEAN, TRUE );
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,7 @@ import org.neo4j.consistency.checking.full.RecordProcessor;
 import org.neo4j.consistency.report.ConsistencyReporter;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
 
-public class IndexEntryProcessor implements RecordProcessor<Long>
+public class IndexEntryProcessor extends RecordProcessor.Adapter<Long>
 {
     private final ConsistencyReporter reporter;
     private final IndexCheck indexCheck;
@@ -39,10 +39,5 @@ public class IndexEntryProcessor implements RecordProcessor<Long>
     public void process( Long nodeId )
     {
         reporter.forIndexEntry( new IndexEntry( nodeId ), indexCheck );
-    }
-
-    @Override
-    public void close()
-    {
     }
 }

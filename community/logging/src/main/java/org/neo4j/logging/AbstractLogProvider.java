@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,9 @@
  */
 package org.neo4j.logging;
 
-import org.neo4j.function.Supplier;
-
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 /**
  * An abstract {@link LogProvider} implementation, which ensures {@link Log}s are cached and reused.
@@ -34,27 +33,13 @@ public abstract class AbstractLogProvider<T extends Log> implements LogProvider
     @Override
     public T getLog( final Class loggingClass )
     {
-        return getLog( loggingClass.getName(), new Supplier<T>()
-        {
-            @Override
-            public T get()
-            {
-                return buildLog( loggingClass );
-            }
-        } );
+        return getLog( loggingClass.getName(), () -> buildLog( loggingClass ) );
     }
 
     @Override
     public T getLog( final String name )
     {
-        return getLog( name, new Supplier<T>()
-        {
-            @Override
-            public T get()
-            {
-                return buildLog( name );
-            }
-        } );
+        return getLog( name, () -> buildLog( name ) );
     }
 
     private T getLog( String name, Supplier<T> logSupplier )

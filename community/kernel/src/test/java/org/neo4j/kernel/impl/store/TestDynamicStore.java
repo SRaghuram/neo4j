@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,25 +33,23 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.collection.IteratorUtil;
+import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.EphemeralFileSystemRule;
-import org.neo4j.test.PageCacheRule;
+import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.neo4j.helpers.collection.IteratorUtil.first;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
 public class TestDynamicStore
 {
     @Rule
-    public PageCacheRule pageCacheRule = new PageCacheRule();
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
     @Rule
     public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
 
@@ -78,28 +76,15 @@ public class TestDynamicStore
         }
     }
 
-    @Test( expected = InvalidSettingException.class )
-    public void stringStoreCannotHaveZeroBlockSize()
-    {
-        config.setProperty( StoreFactory.Configuration.string_block_size.name(), "0" );
-        fail( "Illegal blocksize should throw exception" );
-    }
-
-    @Test( expected = InvalidSettingException.class )
-    public void arrayStoreCannotHaveZeroBlockSize() throws Exception
-    {
-        config.setProperty( StoreFactory.Configuration.array_block_size.name(), "0" );
-    }
-
     private DynamicArrayStore createDynamicArrayStore()
     {
-        neoStores = storeFactory.openNeoStores( true );
+        neoStores = storeFactory.openAllNeoStores( true );
         return neoStores.getPropertyStore().getArrayStore();
     }
 
     private Config config()
     {
-        return new Config( MapUtil.stringMap(), GraphDatabaseSettings.class );
+        return Config.embeddedDefaults( MapUtil.stringMap() );
     }
 
     @Test
@@ -108,7 +93,7 @@ public class TestDynamicStore
         DynamicArrayStore store = createDynamicArrayStore();
         Collection<DynamicRecord> records = new ArrayList<>();
         store.allocateRecordsFromBytes( records, new byte[10] );
-        long blockId = first( records ).getId();
+        long blockId = Iterables.first( records ).getId();
         for ( DynamicRecord record : records )
         {
             store.updateRecord( record );
@@ -117,7 +102,7 @@ public class TestDynamicStore
         neoStores = null;
         try
         {
-            store.getArrayFor( store.getRecords( blockId ) );
+            store.getArrayFor( store.getRecords( blockId, NORMAL ) );
             fail( "Closed store should throw exception" );
         }
         catch ( RuntimeException e )
@@ -125,7 +110,7 @@ public class TestDynamicStore
         }
         try
         {
-            store.getLightRecords( 0 );
+            store.getRecords( 0, NORMAL );
             fail( "Closed store should throw exception" );
         }
         catch ( RuntimeException e )
@@ -141,7 +126,7 @@ public class TestDynamicStore
         char[] chars = new char[STR.length()];
         STR.getChars( 0, STR.length(), chars, 0 );
         Collection<DynamicRecord> records = new ArrayList<>();
-        store.allocateRecords( records, chars, IteratorUtil.<DynamicRecord>emptyIterator() );
+        store.allocateRecords( records, chars );
         for ( DynamicRecord record : records )
         {
             store.updateRecord( record );
@@ -168,11 +153,10 @@ public class TestDynamicStore
             {
                 long blockId = idsTaken.remove(
                         random.nextInt( currentCount ) );
-                store.getLightRecords( blockId );
-                byte[] bytes = (byte[]) store.getArrayFor( store.getRecords( blockId ) );
+                store.getRecords( blockId, NORMAL );
+                byte[] bytes = (byte[]) store.getArrayFor( store.getRecords( blockId, NORMAL ) );
                 validateData( bytes, byteData.remove( blockId ) );
-                Collection<DynamicRecord> records = store
-                        .getLightRecords( blockId );
+                Collection<DynamicRecord> records = store.getRecords( blockId, NORMAL );
                 for ( DynamicRecord record : records )
                 {
                     record.setInUse( false );
@@ -183,16 +167,16 @@ public class TestDynamicStore
             }
             else
             {
-                byte bytes[] = createRandomBytes( random );
+                byte[] bytes = createRandomBytes( random );
                 Collection<DynamicRecord> records = new ArrayList<>();
-                store.allocateRecords( records, bytes, IteratorUtil.<DynamicRecord>emptyIterator() );
+                store.allocateRecords( records, bytes );
                 for ( DynamicRecord record : records )
                 {
                     assert !set.contains( record.getId() );
                     store.updateRecord( record );
                     set.add( record.getId() );
                 }
-                long blockId = first( records ).getId();
+                long blockId = Iterables.first( records ).getId();
                 idsTaken.add( blockId );
                 byteData.put( blockId, bytes );
                 currentCount++;
@@ -215,7 +199,7 @@ public class TestDynamicStore
         return new byte[r.nextInt( 1024 )];
     }
 
-    private void validateData( byte data1[], byte data2[] )
+    private void validateData( byte[] data1, byte[] data2 )
     {
         assertEquals( data1.length, data2.length );
         for ( int i = 0; i < data1.length; i++ )
@@ -227,12 +211,12 @@ public class TestDynamicStore
     private long create( DynamicArrayStore store, Object arrayToStore )
     {
         Collection<DynamicRecord> records = new ArrayList<>();
-        store.allocateRecords( records, arrayToStore, IteratorUtil.<DynamicRecord>emptyIterator() );
+        store.allocateRecords( records, arrayToStore );
         for ( DynamicRecord record : records )
         {
             store.updateRecord( record );
         }
-        return first( records ).getId();
+        return Iterables.first( records ).getId();
     }
 
     @Test
@@ -241,11 +225,11 @@ public class TestDynamicStore
         DynamicArrayStore store = createDynamicArrayStore();
         byte[] emptyToWrite = createBytes( 0 );
         long blockId = create( store, emptyToWrite );
-        store.getLightRecords( blockId );
-        byte[] bytes = (byte[]) store.getArrayFor( store.getRecords( blockId ) );
+        store.getRecords( blockId, NORMAL );
+        byte[] bytes = (byte[]) store.getArrayFor( store.getRecords( blockId, NORMAL ) );
         assertEquals( 0, bytes.length );
 
-        Collection<DynamicRecord> records = store.getLightRecords( blockId );
+        Collection<DynamicRecord> records = store.getRecords( blockId, NORMAL );
         for ( DynamicRecord record : records )
         {
             record.setInUse( false );
@@ -258,11 +242,11 @@ public class TestDynamicStore
     {
         DynamicArrayStore store = createDynamicArrayStore();
         long blockId = create( store, new String[0] );
-        store.getLightRecords( blockId );
-        String[] readBack = (String[]) store.getArrayFor( store.getRecords( blockId ) );
+        store.getRecords( blockId, NORMAL );
+        String[] readBack = (String[]) store.getArrayFor( store.getRecords( blockId, NORMAL ) );
         assertEquals( 0, readBack.length );
 
-        Collection<DynamicRecord> records = store.getLightRecords( blockId );
+        Collection<DynamicRecord> records = store.getRecords( blockId, NORMAL );
         for ( DynamicRecord record : records )
         {
             record.setInUse( false );

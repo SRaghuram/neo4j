@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,9 @@
  */
 package org.neo4j.test;
 
-import org.neo4j.function.Function;
+import org.neo4j.function.ThrowingFunction;
 
-public abstract class NamedFunction<FROM, TO> implements Function<FROM, TO>
+public abstract class NamedFunction<FROM, TO> implements ThrowingFunction<FROM, TO, RuntimeException>
 {
     private final String name;
 

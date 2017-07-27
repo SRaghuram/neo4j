@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,17 @@
  */
 package org.neo4j.helpers;
 
+/**
+ * @deprecated please use {@link java.time.Clock} instead
+ * @see org.neo4j.time.Clocks
+ */
+@Deprecated
 public interface Clock
 {
+    /**
+     * @deprecated please use {@link java.time.Clock#systemUTC()} instead
+     */
+    @Deprecated
     Clock SYSTEM_CLOCK = new Clock()
     {
         @Override
@@ -28,7 +37,15 @@ public interface Clock
         {
             return System.currentTimeMillis();
         }
+
+        @Override
+        public long nanoTime()
+        {
+            return System.nanoTime();
+        }
     };
 
     long currentTimeMillis();
+
+    long nanoTime();
 }

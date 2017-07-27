@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,20 +19,22 @@
  */
 package org.neo4j.server.rest.transactional.integration;
 
+import org.junit.Rule;
+import org.junit.Test;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.neo4j.graphdb.DynamicLabel;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.server.rest.AbstractRestFunctionalTestBase;
 import org.neo4j.test.OtherThreadExecutor;
-import org.neo4j.test.OtherThreadRule;
+import org.neo4j.test.rule.concurrent.OtherThreadRule;
 import org.neo4j.test.server.HTTP;
 
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.DeadlockDetected;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
@@ -49,10 +51,10 @@ public class DeadlockIT extends AbstractRestFunctionalTestBase
     public void shouldReturnCorrectStatusCodeOnDeadlock() throws Exception
     {
         // Given
-        try( Transaction tx = graphdb().beginTx() )
+        try ( Transaction tx = graphdb().beginTx() )
         {
-            graphdb().createNode( DynamicLabel.label( "First" ));
-            graphdb().createNode( DynamicLabel.label( "Second" ));
+            graphdb().createNode( Label.label( "First" ) );
+            graphdb().createNode( Label.label( "Second" ) );
             tx.success();
         }
 
@@ -60,18 +62,16 @@ public class DeadlockIT extends AbstractRestFunctionalTestBase
         HTTP.Response begin = http.POST( "/db/data/transaction",
                 quotedJson( "{ 'statements': [ { 'statement': 'MATCH (n:First) SET n.prop=1' } ] }" ));
 
-
         // and I lock node:Second, and wait for a lock on node:First in another transaction
         otherThread.execute( writeToFirstAndSecond() );
 
         // and I wait for those locks to be pending
-        secondNodeLocked.await(10, TimeUnit.SECONDS);
+        assertTrue( secondNodeLocked.await( 10, TimeUnit.SECONDS ) );
         Thread.sleep( 1000 );
 
         // and I then try and lock node:Second in the first transaction
         HTTP.Response deadlock = http.POST( begin.location(),
                 quotedJson( "{ 'statements': [ { 'statement': 'MATCH (n:Second) SET n.prop=1' } ] }" ));
-
 
         // Then
         assertThat( deadlock.get( "errors" ).get( 0 ).get( "code" ).getTextValue(),

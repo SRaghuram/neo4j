@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,7 +32,7 @@ public abstract class Indicator
         }
     };
 
-    public static abstract class OpenEnded extends Indicator
+    public abstract static class OpenEnded extends Indicator
     {
         public OpenEnded( int reportResolution )
         {
@@ -79,7 +79,7 @@ public abstract class Indicator
         // default: do nothing
     }
 
-    public static abstract class Decorator extends Indicator.OpenEnded
+    public abstract static class Decorator extends Indicator.OpenEnded
     {
         private final Indicator indicator;
 

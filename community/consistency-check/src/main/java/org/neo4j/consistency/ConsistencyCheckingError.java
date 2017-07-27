@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,9 +32,9 @@ public class ConsistencyCheckingError extends DataInconsistencyError
                                      ConsistencySummaryStatistics summary )
     {
         super( String.format( "Inconsistencies in transaction:\n\t%s\n\t%s\n\t%s",
-                              (startEntry == null ? "NO START ENTRY" : startEntry.toString()),
-                              (commitEntry == null ? "NO COMMIT ENTRY" : commitEntry.toString()),
-                              summary ) );
+                               startEntry == null ? "NO START ENTRY" : startEntry.toString(),
+                               commitEntry == null ? "NO COMMIT ENTRY" : commitEntry.toString(),
+                               summary ) );
         this.summary = summary;
     }
 

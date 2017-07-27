@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import java.util.concurrent.Future;
 
 import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.logging.Logger;
+import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
 import org.neo4j.test.OtherThreadExecutor;
 
 import static org.neo4j.kernel.impl.locking.ResourceTypes.NODE;
@@ -33,17 +34,21 @@ public class LockWorker extends OtherThreadExecutor<LockWorkerState>
     {
         super( name, new LockWorkerState( locks ) );
     }
-    
+
     private Future<Void> perform( AcquireLockCommand acquireLockCommand, boolean wait ) throws Exception
     {
         Future<Void> future = executeDontWait( acquireLockCommand );
         if ( wait )
+        {
             awaitFuture( future );
+        }
         else
+        {
             waitUntilWaiting();
+        }
         return future;
     }
-    
+
     public Future<Void> getReadLock( final long resource, final boolean wait ) throws Exception
     {
         return perform( new AcquireLockCommand()
@@ -52,7 +57,7 @@ public class LockWorker extends OtherThreadExecutor<LockWorkerState>
             protected void acquireLock( LockWorkerState state ) throws AcquireLockTimeoutException
             {
                 state.doing( "+R " + resource + ", wait:" + wait );
-                state.client.acquireShared( NODE, resource );
+                state.client.acquireShared( LockTracer.NONE, NODE, resource );
                 state.done();
             }
         }, wait );
@@ -66,12 +71,12 @@ public class LockWorker extends OtherThreadExecutor<LockWorkerState>
             protected void acquireLock( LockWorkerState state ) throws AcquireLockTimeoutException
             {
                 state.doing( "+W " + resource + ", wait:" + wait );
-                state.client.acquireExclusive( NODE, resource );
+                state.client.acquireExclusive( LockTracer.NONE, NODE, resource );
                 state.done();
             }
         }, wait );
     }
-    
+
     public void releaseReadLock( final long resource ) throws Exception
     {
         perform( new AcquireLockCommand()
@@ -85,7 +90,7 @@ public class LockWorker extends OtherThreadExecutor<LockWorkerState>
             }
         }, true );
     }
-    
+
     public void releaseWriteLock( final long resource ) throws Exception
     {
         perform( new AcquireLockCommand()
@@ -104,39 +109,20 @@ public class LockWorker extends OtherThreadExecutor<LockWorkerState>
     {
         return state.deadlockOnLastWait;
     }
-    
+
     @Override
     public void dump( Logger logger )
     {
         super.dump( logger );
         logger.log( "What have I done up until now?" );
         for ( String op : state.completedOperations )
+        {
             logger.log( op );
+        }
         logger.log( "Doing right now:" );
-        logger.log( state.doing );
-    }
-    
-    public static ResourceObject newResourceObject( String name )
-    {
-        return new ResourceObject( name );
+        logger.log( state.doing == null ? "???" : state.doing );
     }
 
-    public static class ResourceObject
-    {
-        private final String name;
-
-        ResourceObject( String name )
-        {
-            this.name = name;
-        }
-
-        @Override
-        public String toString()
-        {
-            return this.name;
-        }
-    }
-    
     private abstract static class AcquireLockCommand implements WorkerCommand<LockWorkerState, Void>
     {
         @Override

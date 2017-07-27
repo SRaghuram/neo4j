@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -61,7 +61,7 @@ public class UpdatePullerSchedulerTest
     @Test
     public void scheduleUpdatePulling() throws Throwable
     {
-        OnDemandJobScheduler jobScheduler = new OnDemandJobScheduler();
+        OnDemandJobScheduler jobScheduler = new OnDemandJobScheduler( false );
         UpdatePullerScheduler pullerScheduler =
                 new UpdatePullerScheduler( jobScheduler, NullLogProvider.getInstance(), updatePuller, 10 );
 

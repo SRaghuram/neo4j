@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -100,7 +100,7 @@ public class BackupToolCmdArgumentsAcceptanceTest
                 eq( HOST ),
                 eq( PORT ),
                 eq( PATH ),
-                eq( expectedVerifyStoreValue ),
+                expectedVerifyStoreValue ? eq( ConsistencyCheck.FULL ) : eq( ConsistencyCheck.NONE ),
                 any( Config.class ),
                 eq( BackupClient.BIG_READ_TIMEOUT ),
                 eq( false )

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -202,18 +202,18 @@ enum RelationshipConnection
             return rel.isFirstInSecondChain();
         }
     };
-    
+
     abstract long get( RelationshipRecord rel );
-    
+
     abstract boolean isFirstInChain( RelationshipRecord rel );
 
     abstract void set( RelationshipRecord rel, long id, boolean isFirst );
-    
+
     abstract long compareNode( RelationshipRecord rel );
-    
+
     abstract RelationshipConnection otherSide();
-    
+
     abstract RelationshipConnection start();
-    
+
     abstract RelationshipConnection end();
 }

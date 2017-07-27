@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,15 +26,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.index.IndexAccessor;
-import org.neo4j.kernel.api.index.IndexConfiguration;
-import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.IndexPopulator;
-import org.neo4j.kernel.api.index.IndexReader;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
+import org.neo4j.kernel.impl.api.scan.LabelScanStoreProvider;
 import org.neo4j.kernel.impl.storemigration.StoreMigrationParticipant;
-import org.neo4j.register.Register;
+import org.neo4j.storageengine.api.schema.IndexReader;
+import org.neo4j.storageengine.api.schema.IndexSample;
 import org.neo4j.test.DoubleLatch;
 
 import static org.mockito.Mockito.mock;
@@ -48,8 +48,8 @@ public class ControlledPopulationSchemaIndexProvider extends SchemaIndexProvider
     private final IndexAccessor mockedWriter = mock( IndexAccessor.class );
     private final CountDownLatch writerLatch = new CountDownLatch( 1 );
     private InternalIndexState initialIndexState = POPULATING;
-    public final AtomicInteger populatorCallCount = new AtomicInteger();
-    public final AtomicInteger writerCallCount = new AtomicInteger();
+    final AtomicInteger populatorCallCount = new AtomicInteger();
+    final AtomicInteger writerCallCount = new AtomicInteger();
 
     public static final SchemaIndexProvider.Descriptor PROVIDER_DESCRIPTOR = new SchemaIndexProvider.Descriptor(
             "controlled-population", "1.0" );
@@ -69,15 +69,14 @@ public class ControlledPopulationSchemaIndexProvider extends SchemaIndexProvider
             @Override
             public void create() throws IOException
             {
-                populationCompletionLatch.startAndAwaitFinish();
+                populationCompletionLatch.startAndWaitForAllToStartAndFinish();
                 super.create();
             }
 
             @Override
-            public long sampleResult( Register.DoubleLong.Out result )
+            public IndexSample sampleResult()
             {
-                result.write( 0l, 0l );
-                return 0;
+                return new IndexSample();
             }
         };
         return populationCompletionLatch;
@@ -89,15 +88,14 @@ public class ControlledPopulationSchemaIndexProvider extends SchemaIndexProvider
     }
 
     @Override
-    public IndexPopulator getPopulator( long indexId, IndexDescriptor descriptor, IndexConfiguration indexConfig,
-                                        IndexSamplingConfig samplingConfig )
+    public IndexPopulator getPopulator( long indexId, IndexDescriptor descriptor, IndexSamplingConfig samplingConfig )
     {
         populatorCallCount.incrementAndGet();
         return mockedPopulator;
     }
 
     @Override
-    public IndexAccessor getOnlineAccessor( long indexId, IndexConfiguration indexConfig,
+    public IndexAccessor getOnlineAccessor( long indexId, IndexDescriptor indexConfig,
                                             IndexSamplingConfig samplingConfig )
     {
         writerCallCount.incrementAndGet();
@@ -106,7 +104,7 @@ public class ControlledPopulationSchemaIndexProvider extends SchemaIndexProvider
     }
 
     @Override
-    public InternalIndexState getInitialState( long indexId )
+    public InternalIndexState getInitialState( long indexId, IndexDescriptor descriptor )
     {
         return initialIndexState;
     }
@@ -129,7 +127,8 @@ public class ControlledPopulationSchemaIndexProvider extends SchemaIndexProvider
     }
 
     @Override
-    public StoreMigrationParticipant storeMigrationParticipant( FileSystemAbstraction fs, PageCache pageCache )
+    public StoreMigrationParticipant storeMigrationParticipant( FileSystemAbstraction fs, PageCache pageCache,
+            LabelScanStoreProvider labelScanStoreProvider )
     {
         return StoreMigrationParticipant.NOT_PARTICIPATING;
     }

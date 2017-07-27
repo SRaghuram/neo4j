@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,6 +30,8 @@ public class BatchingPropertyRecordAccess extends BatchingRecordAccess<Long,Prop
     @Override
     protected PropertyRecord createRecord( Long key, PrimitiveRecord additionalData )
     {
-        return new PropertyRecord( key.longValue(), additionalData );
+        return additionalData != null
+                ? new PropertyRecord( key.longValue(), additionalData )
+                : new PropertyRecord( key.longValue() );
     }
 }

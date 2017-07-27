@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,7 +31,9 @@ public abstract class ListWriter
     ListWriter newList( RepresentationType type )
     {
         if ( type.listName == null )
+        {
             throw new IllegalStateException( "Invalid list type: " + type );
+        }
         return newList( type.listName );
     }
 

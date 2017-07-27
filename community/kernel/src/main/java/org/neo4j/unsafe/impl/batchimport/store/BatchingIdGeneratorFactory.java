@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,10 +24,10 @@ import java.util.EnumMap;
 import java.util.Map;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.IdGeneratorFactory;
-import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdRange;
+import org.neo4j.kernel.impl.store.id.IdType;
 
 import static org.neo4j.kernel.impl.store.id.IdGeneratorImpl.createGenerator;
 
@@ -46,14 +46,15 @@ public class BatchingIdGeneratorFactory implements IdGeneratorFactory
     }
 
     @Override
-    public IdGenerator open( File fileName, int grabSize, IdType idType, long highId )
+    public IdGenerator open( File filename, IdType idType, long highId, long maxId )
     {
-        IdGenerator generator = idGenerators.get( idType );
-        if ( generator == null )
-        {
-            idGenerators.put( idType, generator = new BatchingIdGenerator( fs, fileName, highId ) );
-        }
-        return generator;
+        return open( filename, 0, idType, highId, maxId );
+    }
+
+    @Override
+    public IdGenerator open( File fileName, int grabSize, IdType idType, long highId, long maxId )
+    {
+        return idGenerators.computeIfAbsent( idType, k -> new BatchingIdGenerator( fs, fileName, highId ) );
     }
 
     @Override
@@ -69,46 +70,40 @@ public class BatchingIdGeneratorFactory implements IdGeneratorFactory
 
     private static class BatchingIdGenerator implements IdGenerator
     {
-        private long highId;
+        private final BatchingIdSequence idSequence;
         private final FileSystemAbstraction fs;
         private final File fileName;
 
-        public BatchingIdGenerator( FileSystemAbstraction fs, File fileName, long highId )
+        BatchingIdGenerator( FileSystemAbstraction fs, File fileName, long highId )
         {
             this.fs = fs;
             this.fileName = fileName;
-            this.highId = highId;
+            this.idSequence = new BatchingIdSequence();
+            this.idSequence.set( highId );
         }
 
         @Override
         public long nextId()
         {
-            try
-            {
-                return highId;
-            }
-            finally
-            {
-                highId++;
-            }
+            return idSequence.nextId();
         }
 
         @Override
         public IdRange nextIdBatch( int size )
         {
-            throw new UnsupportedOperationException();
+            return idSequence.nextIdBatch( size );
         }
 
         @Override
         public void setHighId( long id )
         {
-            highId = id;
+            idSequence.set( id );
         }
 
         @Override
         public long getHighId()
         {
-            return highId;
+            return idSequence.peek();
         }
 
         @Override
@@ -119,13 +114,13 @@ public class BatchingIdGeneratorFactory implements IdGeneratorFactory
         @Override
         public void close()
         {
-            createGenerator( fs, fileName, highId, false );
+            createGenerator( fs, fileName, idSequence.peek(), false );
         }
 
         @Override
         public long getNumberOfIdsInUse()
         {
-            return highId;
+            return idSequence.peek();
         }
 
         @Override
@@ -137,13 +132,13 @@ public class BatchingIdGeneratorFactory implements IdGeneratorFactory
         @Override
         public void delete()
         {
-            throw new UnsupportedOperationException();
+            // This would be equivalent of not doing anything because close() will create the file
         }
 
         @Override
         public long getHighestPossibleIdInUse()
         {
-            return getHighId()-1;
+            return getHighId() - 1;
         }
     }
 }

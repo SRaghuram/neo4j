@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,6 +20,8 @@
 package org.neo4j.kernel.impl.core;
 
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.storageengine.api.Token;
+import org.neo4j.storageengine.api.TokenFactory;
 
 /**
  * Special sub-class of {@link Token} that implements the public-facing

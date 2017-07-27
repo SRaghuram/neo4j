@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,9 @@ package org.neo4j.backup;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
 import org.neo4j.com.Client;
 import org.neo4j.com.ObjectSerializer;
 import org.neo4j.com.Protocol;
@@ -35,30 +38,31 @@ import org.neo4j.com.storecopy.ResponseUnpacker;
 import org.neo4j.com.storecopy.StoreWriter;
 import org.neo4j.com.storecopy.ToNetworkStoreWriter;
 import org.neo4j.kernel.impl.store.StoreId;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.monitoring.ByteCounterMonitor;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.logging.LogProvider;
 
+import static org.neo4j.backup.BackupServer.BACKUP_PROTOCOL_VERSION;
 import static org.neo4j.backup.BackupServer.FRAME_LENGTH;
-import static org.neo4j.backup.BackupServer.PROTOCOL_VERSION;
-
-import java.io.IOException;
-
 
 class BackupClient extends Client<TheBackupInterface> implements TheBackupInterface
 {
 
-    static final long BIG_READ_TIMEOUT = 40 * 1000;
+    static final long BIG_READ_TIMEOUT = TimeUnit.MINUTES.toMillis( 20 );
 
-    public BackupClient( String hostNameOrIp, int port, LogProvider logProvider, StoreId storeId, long timeout,
-                         ResponseUnpacker unpacker, ByteCounterMonitor byteCounterMonitor, RequestMonitor requestMonitor )
+    BackupClient( String destinationHostNameOrIp, int destinationPort, String originHostNameOrIp,
+            LogProvider logProvider, StoreId storeId, long timeout,
+            ResponseUnpacker unpacker, ByteCounterMonitor byteCounterMonitor, RequestMonitor requestMonitor,
+            LogEntryReader<ReadableClosablePositionAwareChannel> reader )
     {
-        super( hostNameOrIp, port, logProvider, storeId, FRAME_LENGTH,
-                new ProtocolVersion( PROTOCOL_VERSION, ProtocolVersion.INTERNAL_PROTOCOL_VERSION ), timeout,
-                Client.DEFAULT_MAX_NUMBER_OF_CONCURRENT_CHANNELS_PER_CLIENT, FRAME_LENGTH, unpacker,
-                byteCounterMonitor, requestMonitor );
+        super( destinationHostNameOrIp, destinationPort, originHostNameOrIp, logProvider, storeId, FRAME_LENGTH,
+                timeout, Client.DEFAULT_MAX_NUMBER_OF_CONCURRENT_CHANNELS_PER_CLIENT, FRAME_LENGTH, unpacker,
+                byteCounterMonitor, requestMonitor, reader );
     }
 
+    @Override
     public Response<Void> fullBackup( StoreWriter storeWriter, final boolean forensics )
     {
         return sendRequest( BackupRequestType.FULL_BACKUP, RequestContext.EMPTY, new Serializer()
@@ -68,7 +72,7 @@ class BackupClient extends Client<TheBackupInterface> implements TheBackupInterf
             {
                 buffer.writeByte( forensics ? (byte) 1 : (byte) 0 );
             }
-        }, new Protocol.FileStreamsDeserializer( storeWriter ) );
+        }, new Protocol.FileStreamsDeserializer310( storeWriter ) );
     }
 
     @Override
@@ -79,66 +83,54 @@ class BackupClient extends Client<TheBackupInterface> implements TheBackupInterf
     }
 
     @Override
+    public ProtocolVersion getProtocolVersion()
+    {
+        return BACKUP_PROTOCOL_VERSION;
+    }
+
+    @Override
     protected boolean shouldCheckStoreId( RequestType<TheBackupInterface> type )
     {
         return type != BackupRequestType.FULL_BACKUP;
     }
 
-    public static enum BackupRequestType implements RequestType<TheBackupInterface>
+    public enum BackupRequestType implements RequestType<TheBackupInterface>
     {
-        FULL_BACKUP( new TargetCaller<TheBackupInterface, Void>()
+        FULL_BACKUP( (TargetCaller<TheBackupInterface, Void>) ( master, context, input, target ) ->
         {
-            @Override
-            public Response<Void> call( TheBackupInterface master, RequestContext context,
-                    ChannelBuffer input, ChannelBuffer target )
-            {
-                boolean forensics = input.readable() ? booleanOf( input.readByte() ) : false;
-                return master.fullBackup( new ToNetworkStoreWriter( target, new Monitors() ), forensics );
-            }
-
-            private boolean booleanOf( byte value )
-            {
-                switch ( value )
-                {
-                case 0: return false;
-                case 1: return true;
-                default: throw new IllegalArgumentException( "Invalid 'boolean' byte value " + value );
-                }
-            }
+            boolean forensics = input.readable() && booleanOf( input.readByte() );
+            return master.fullBackup( new ToNetworkStoreWriter( target, new Monitors() ), forensics );
         }, Protocol.VOID_SERIALIZER ),
-        INCREMENTAL_BACKUP( new TargetCaller<TheBackupInterface, Void>()
-        {
-            @Override
-            public Response<Void> call( TheBackupInterface master, RequestContext context,
-                    ChannelBuffer input, ChannelBuffer target )
-            {
-                return master.incrementalBackup( context );
-            }
-        }, Protocol.VOID_SERIALIZER )
+        INCREMENTAL_BACKUP( (TargetCaller<TheBackupInterface, Void>) ( master, context, input, target ) ->
+                master.incrementalBackup( context ), Protocol.VOID_SERIALIZER );
 
-        ;
-        @SuppressWarnings( "rawtypes" )
-        private final TargetCaller masterCaller;
-        @SuppressWarnings( "rawtypes" )
-        private final ObjectSerializer serializer;
+        private final TargetCaller<?,?> masterCaller;
+        private final ObjectSerializer<?> serializer;
 
-        @SuppressWarnings( "rawtypes" )
-        private BackupRequestType( TargetCaller masterCaller, ObjectSerializer serializer )
+        BackupRequestType( TargetCaller<?,?> masterCaller, ObjectSerializer<?> serializer )
         {
             this.masterCaller = masterCaller;
             this.serializer = serializer;
         }
 
+        private static boolean booleanOf( byte value )
+        {
+            switch ( value )
+            {
+            case 0: return false;
+            case 1: return true;
+            default: throw new IllegalArgumentException( "Invalid 'boolean' byte value " + value );
+            }
+        }
+
         @Override
-        @SuppressWarnings( "rawtypes" )
-        public TargetCaller getTargetCaller()
+        public TargetCaller<?,?> getTargetCaller()
         {
             return masterCaller;
         }
 
         @Override
-        @SuppressWarnings( "rawtypes" )
-        public ObjectSerializer getObjectSerializer()
+        public ObjectSerializer<?> getObjectSerializer()
         {
             return serializer;
         }

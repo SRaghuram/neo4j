@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,7 +31,7 @@ public class DynamicLongArray extends DynamicNumberArray<LongArray> implements L
 
     public DynamicLongArray( NumberArrayFactory factory, long chunkSize, long defaultValue )
     {
-        super( factory, chunkSize );
+        super( factory, chunkSize, new LongArray[0] );
         this.defaultValue = defaultValue;
     }
 
@@ -39,36 +39,18 @@ public class DynamicLongArray extends DynamicNumberArray<LongArray> implements L
     public long get( long index )
     {
         LongArray chunk = chunkOrNullAt( index );
-        return chunk != null ? chunk.get( index( index ) ) : defaultValue;
+        return chunk != null ? chunk.get( index ) : defaultValue;
     }
 
     @Override
     public void set( long index, long value )
     {
-        ensureChunkAt( index ).set( index( index ), value );
+        at( index ).set( index, value );
     }
 
     @Override
-    public void swap( long fromIndex, long toIndex, int numberOfEntries )
+    protected LongArray addChunk( long chunkSize, long base )
     {
-        // Let's just do this the stupid way. There's room for optimization here
-        for ( int i = 0; i < numberOfEntries; i++ )
-        {
-            long intermediary = get( fromIndex+i );
-            set( fromIndex+i, get( toIndex+i ) );
-            set( toIndex+i, intermediary );
-        }
-    }
-
-    @Override
-    protected LongArray addChunk( long chunkSize )
-    {
-        return factory.newLongArray( chunkSize, defaultValue );
-    }
-
-    @Override
-    public LongArray fixate()
-    {
-        return new FixedLongArray( chunks, chunkSize, defaultValue );
+        return factory.newLongArray( chunkSize, defaultValue, base );
     }
 }

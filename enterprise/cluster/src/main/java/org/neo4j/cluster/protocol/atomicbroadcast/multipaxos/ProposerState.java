@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -44,12 +44,9 @@ public enum ProposerState
                 )
                         throws Throwable
                 {
-                    switch ( message.getMessageType() )
+                    if ( message.getMessageType() == ProposerMessage.join )
                     {
-                        case join:
-                        {
-                            return proposer;
-                        }
+                        return proposer;
                     }
 
                     return this;
@@ -79,7 +76,7 @@ public enum ProposerState
                             ProposerMessage.RejectPrepare rejectPropose = message.getPayload();
                             org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId instanceId = new org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId( message );
                             PaxosInstance instance = context.getPaxosInstance( instanceId );
-                            context.getInternalLog( ProposerState.class ).debug( "Propose for instance " + instance
+                            context.getLog( ProposerState.class ).debug( "Propose for instance " + instance
                                     + " rejected from " + message.getHeader( Message.FROM ) + " with ballot "
                                     + rejectPropose.getBallot() );
 
@@ -93,7 +90,7 @@ public enum ProposerState
                                 }
 
                                 instance.phase1Timeout( ballot );
-                                context.getInternalLog( ProposerState.class ).debug(
+                                context.getLog( ProposerState.class ).debug(
                                         "Reproposing instance " + instance + " at ballot " + instance.ballot
                                                 + " after rejectPrepare" );
                                 for ( URI acceptor : instance.getAcceptors() )
@@ -102,7 +99,7 @@ public enum ProposerState
                                             acceptor, new AcceptorMessage.PrepareState( ballot ) ),
                                             org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId.INSTANCE ) );
                                 }
-                                
+
                                 assert instance.value_1 == null : "value_1 should have been null at this point";
                                 Object payload = context.getBookedInstance( instanceId ).getPayload();
                                 assert payload != null : "Should have a booked instance payload for " + instanceId;
@@ -122,7 +119,7 @@ public enum ProposerState
                             {
                                 if ( instance.ballot > 10000 )
                                 {
-                                    context.getInternalLog( ProposerState.class ).warn( "Propose failed due to phase 1 " +
+                                    context.getLog( ProposerState.class ).warn( "Propose failed due to phase 1 " +
                                             "timeout" );
 
                                     // Fail this propose
@@ -155,7 +152,7 @@ public enum ProposerState
                             {
                                 // Retry
                                 Message oldMessage = context.unbookInstance( instance.id );
-                                context.getInternalLog( getClass() ).debug( "Retrying instance " + instance.id +
+                                context.getLog( getClass() ).debug( "Retrying instance " + instance.id +
                                         " with message " + message.getPayload() +
                                         ". Previous instance was " + oldMessage );
                                 outgoing.offer( Message.internal( ProposerMessage.propose, message.getPayload() ) );
@@ -257,7 +254,7 @@ public enum ProposerState
                                 {
                                     context.cancelTimeout( instanceId );
 
-                                    context.getInternalLog( ProposerState.class ).warn( "Accept rejected:" +
+                                    context.getLog( ProposerState.class ).warn( "Accept rejected:" +
                                             instance.state );
 
                                     if ( instance.clientValue )
@@ -375,15 +372,17 @@ public enum ProposerState
                                     if ( context.hasPendingValues() && context.canBookInstance() )
                                     {
                                         Message proposeMessage = context.popPendingValue();
-                                        context.getInternalLog( ProposerState.class ).debug( "Restarting "
+                                        context.getLog( ProposerState.class ).debug( "Restarting "
                                                 + proposeMessage + " booked:"
                                                 + context.nrOfBookedInstances() );
                                         outgoing.offer( proposeMessage );
                                     }
                                 }
-                            } else
+                            }
+                            else
                             {
-                                context.getInternalLog( ProposerState.class ).debug( "Instance receiving an accepted is in the wrong state:"+instance );
+                                context.getLog( ProposerState.class ).debug( "Instance receiving an accepted is in " +
+                                        "the wrong state:" + instance );
                             }
                             break;
                         }
@@ -393,6 +392,9 @@ public enum ProposerState
                             context.leave();
                             return start;
                         }
+
+                        default:
+                            break;
                     }
 
                     return this;

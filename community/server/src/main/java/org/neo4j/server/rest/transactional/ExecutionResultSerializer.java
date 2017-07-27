@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,9 @@
  */
 package org.neo4j.server.rest.transactional;
 
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerator;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -26,9 +29,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.InputPosition;
@@ -58,10 +58,12 @@ import static org.neo4j.server.rest.domain.JsonHelper.writeValue;
  */
 public class ExecutionResultSerializer
 {
-    public ExecutionResultSerializer( OutputStream output, URI baseUri, LogProvider logProvider )
+    public ExecutionResultSerializer( OutputStream output, URI baseUri, LogProvider logProvider, TransitionalPeriodTransactionMessContainer container )
     {
         this.baseUri = baseUri;
         this.log = logProvider.getLog( getClass() );
+        this.container = container;
+        JSON_FACTORY.setCodec( new Neo4jJsonCodec( container ) );
         JsonGenerator generator = null;
         try
         {
@@ -131,7 +133,10 @@ public class ExecutionResultSerializer
     public void notifications( Iterable<Notification> notifications ) throws IOException
     {
         //don't add anything if notifications are empty
-        if ( !notifications.iterator().hasNext() ) return;
+        if ( !notifications.iterator().hasNext() )
+        {
+            return;
+        }
 
         try
         {
@@ -173,7 +178,10 @@ public class ExecutionResultSerializer
     private void writePosition( InputPosition position ) throws IOException
     {
         //do not add position if empty
-        if ( position == InputPosition.empty ) return;
+        if ( position == InputPosition.empty )
+        {
+            return;
+        }
 
         out.writeObjectFieldStart( "position" );
         try
@@ -187,7 +195,6 @@ public class ExecutionResultSerializer
             out.writeEndObject();
         }
     }
-
 
     private void writeStats( QueryStatistics stats ) throws IOException
     {
@@ -393,10 +400,11 @@ public class ExecutionResultSerializer
 
     private State currentState = State.EMPTY;
 
-    private static final JsonFactory JSON_FACTORY = new JsonFactory( new Neo4jJsonCodec() ).disable( JsonGenerator.Feature.FLUSH_PASSED_TO_STREAM );
+    private static final JsonFactory JSON_FACTORY = new JsonFactory().disable( JsonGenerator.Feature.FLUSH_PASSED_TO_STREAM );
     private final JsonGenerator out;
     private final URI baseUri;
     private final Log log;
+    private final TransitionalPeriodTransactionMessContainer container;
 
     private void ensureDocumentOpen() throws IOException
     {
@@ -433,22 +441,18 @@ public class ExecutionResultSerializer
         out.writeArrayFieldStart( "data" );
         try
         {
-            data.accept( new Result.ResultVisitor<IOException>()
+            data.accept( row ->
             {
-                @Override
-                public boolean visit( Result.ResultRow row ) throws IOException
+                out.writeStartObject();
+                try
                 {
-                    out.writeStartObject();
-                    try
-                    {
-                        writer.write( out, columns, row );
-                    }
-                    finally
-                    {
-                        out.writeEndObject();
-                    }
-                    return true;
+                    writer.write( out, columns, row, TransactionStateChecker.create( container ) );
                 }
+                finally
+                {
+                    out.writeEndObject();
+                }
+                return true;
             } );
         }
         finally
@@ -475,7 +479,7 @@ public class ExecutionResultSerializer
 
     private IOException loggedIOException( IOException exception )
     {
-        if(Exceptions.contains(exception, "Broken pipe", IOException.class ))
+        if ( Exceptions.contains( exception, "Broken pipe", IOException.class ) )
         {
             log.error( "Unable to reply to request, because the client has closed the connection (Broken pipe)." );
         }

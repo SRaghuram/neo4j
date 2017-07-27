@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,18 +19,16 @@
  */
 package org.neo4j.index;
 
-import java.io.IOException;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Executors;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.neo4j.graphdb.DynamicLabel;
+import java.io.IOException;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Executors;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -43,13 +41,12 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-
-import static org.neo4j.helpers.collection.Iterables.first;
+import static org.neo4j.helpers.collection.Iterables.firstOrNull;
 import static org.neo4j.helpers.collection.Iterables.single;
 
 public class IndexConstraintsTest
 {
-    private static final Label LABEL = DynamicLabel.label( "Label" );
+    private static final Label LABEL = Label.label( "Label" );
     private static final String PROPERTY_KEY = "x";
 
     private GraphDatabaseService graphDb;
@@ -57,13 +54,13 @@ public class IndexConstraintsTest
     @Before
     public void setup() throws IOException
     {
-        this.graphDb = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        graphDb = new TestGraphDatabaseFactory().newImpermanentDatabase();
     }
 
     @After
     public void shutdown() throws IOException
     {
-        this.graphDb.shutdown();
+        graphDb.shutdown();
     }
 
     @Test
@@ -73,7 +70,7 @@ public class IndexConstraintsTest
         final String uuid = UUID.randomUUID().toString();
 
         final Node commonNode;
-        try(Transaction tx = graphDb.beginTx())
+        try ( Transaction tx = graphDb.beginTx() )
         {
             commonNode = graphDb.createNode();
             tx.success();
@@ -83,26 +80,23 @@ public class IndexConstraintsTest
                 Executors.newFixedThreadPool( numThreads ) );
         for ( int i = 0; i < numThreads; i++ )
         {
-            ecs.submit( new Callable<Node>()
+            ecs.submit( () ->
             {
-                public Node call() throws Exception
+                try ( Transaction tx = graphDb.beginTx() )
                 {
-                    try ( Transaction tx = graphDb.beginTx() )
+                    final Node node = graphDb.createNode();
+                    // Acquire lock
+                    tx.acquireWriteLock( commonNode );
+                    Index<Node> index = graphDb.index().forNodes( "uuids" );
+                    final Node existing = index.get( "uuid", uuid ).getSingle();
+                    if ( existing != null )
                     {
-                        final Node node = graphDb.createNode();
-                        // Acquire lock
-                        tx.acquireWriteLock( commonNode );
-                        Index<Node> index = graphDb.index().forNodes( "uuids" );
-                        final Node existing = index.get( "uuid", uuid ).getSingle();
-                        if ( existing != null )
-                        {
-                            throw new RuntimeException( "Node already exists" );
-                        }
-                        node.setProperty( "uuid", uuid );
-                        index.add( node, "uuid", uuid );
-                        tx.success();
-                        return node;
+                        throw new RuntimeException( "Node already exists" );
                     }
+                    node.setProperty( "uuid", uuid );
+                    index.add( node, "uuid", uuid );
+                    tx.success();
+                    return node;
                 }
             } );
         }
@@ -114,7 +108,7 @@ public class IndexConstraintsTest
                 ecs.take().get();
                 ++numSucceeded;
             }
-            catch ( ExecutionException e )
+            catch ( ExecutionException ignored )
             {
             }
         }
@@ -126,15 +120,15 @@ public class IndexConstraintsTest
     @Test
     public void convertIndexToConstraint()
     {
-        try( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = graphDb.beginTx() )
         {
             graphDb.schema().indexFor( LABEL ).on( PROPERTY_KEY ).create();
             tx.success();
         }
 
-        try( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = graphDb.beginTx() )
         {
-            IndexDefinition index = first( graphDb.schema().getIndexes( LABEL ) );
+            IndexDefinition index = firstOrNull( graphDb.schema().getIndexes( LABEL ) );
             index.drop();
 
             graphDb.schema().constraintFor( LABEL ).assertPropertyIsUnique( PROPERTY_KEY ).create();
@@ -146,9 +140,9 @@ public class IndexConstraintsTest
     @Test
     public void convertIndexToConstraintWithExistingData()
     {
-        try( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = graphDb.beginTx() )
         {
-            for ( int i = 0; i < 2000; i++)
+            for ( int i = 0; i < 2000; i++ )
             {
                 Node node = graphDb.createNode( LABEL );
                 node.setProperty( PROPERTY_KEY, i );
@@ -156,15 +150,15 @@ public class IndexConstraintsTest
             tx.success();
         }
 
-        try( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = graphDb.beginTx() )
         {
             graphDb.schema().indexFor( LABEL ).on( PROPERTY_KEY ).create();
             tx.success();
         }
 
-        try( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = graphDb.beginTx() )
         {
-            IndexDefinition index = first( graphDb.schema().getIndexes( LABEL ) );
+            IndexDefinition index = firstOrNull( graphDb.schema().getIndexes( LABEL ) );
             index.drop();
 
             graphDb.schema().constraintFor( LABEL ).assertPropertyIsUnique( PROPERTY_KEY ).create();
@@ -176,15 +170,15 @@ public class IndexConstraintsTest
     @Test
     public void convertConstraintToIndex()
     {
-        try( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = graphDb.beginTx() )
         {
             graphDb.schema().constraintFor( LABEL ).assertPropertyIsUnique( PROPERTY_KEY ).create();
             tx.success();
         }
 
-        try( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = graphDb.beginTx() )
         {
-            ConstraintDefinition constraint = first( graphDb.schema().getConstraints( LABEL ) );
+            ConstraintDefinition constraint = firstOrNull( graphDb.schema().getConstraints( LABEL ) );
             constraint.drop();
 
             graphDb.schema().indexFor( LABEL ).on( PROPERTY_KEY ).create();

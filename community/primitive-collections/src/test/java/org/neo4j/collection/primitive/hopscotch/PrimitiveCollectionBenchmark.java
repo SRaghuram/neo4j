@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,14 @@
  */
 package org.neo4j.collection.primitive.hopscotch;
 
+import org.junit.Ignore;
+import org.junit.Test;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-
-import org.junit.Ignore;
-import org.junit.Test;
 
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveLongIntMap;
@@ -204,7 +204,7 @@ public class PrimitiveCollectionBenchmark
         for ( int r = 0; r < RUNS; r++ )
         {
             // GIVEN
-            try ( final MapInterface target = factory.newInstance() )
+            try ( MapInterface target = factory.newInstance() )
             {
                 // WHEN
                 long time = currentTimeMillis();
@@ -231,23 +231,6 @@ public class PrimitiveCollectionBenchmark
 
         void get( long key );
     }
-
-//    private static class ColtMap implements MapInterface
-//    {
-//        private final OpenLongIntHashMap map = new OpenLongIntHashMap();
-//
-//        @Override
-//        public void put( long key, int value )
-//        {
-//            map.put( key, value );
-//        }
-//
-//        @Override
-//        public void get( long key )
-//        {
-//            map.get( key );
-//        }
-//    }
 
     private static class JucSet implements MapInterface
     {

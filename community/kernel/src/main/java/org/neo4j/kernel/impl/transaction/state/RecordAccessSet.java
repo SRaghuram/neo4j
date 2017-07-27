@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,6 @@
  */
 package org.neo4j.kernel.impl.transaction.state;
 
-import java.util.Collection;
-
-import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
@@ -30,7 +27,8 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
-import org.neo4j.kernel.impl.store.record.SchemaRule;
+import org.neo4j.kernel.impl.store.record.SchemaRecord;
+import org.neo4j.storageengine.api.schema.SchemaRule;
 
 public interface RecordAccessSet
 {
@@ -42,7 +40,7 @@ public interface RecordAccessSet
 
     RecordAccess<Long, RelationshipGroupRecord, Integer> getRelGroupRecords();
 
-    RecordAccess<Long, Collection<DynamicRecord>, SchemaRule> getSchemaRuleChanges();
+    RecordAccess<Long, SchemaRecord, SchemaRule> getSchemaRuleChanges();
 
     RecordAccess<Integer, PropertyKeyTokenRecord, Void> getPropertyKeyTokenChanges();
 
@@ -51,6 +49,8 @@ public interface RecordAccessSet
     RecordAccess<Integer, RelationshipTypeTokenRecord, Void> getRelationshipTypeTokenChanges();
 
     boolean hasChanges();
+
+    int changeSize();
 
     void close();
 }

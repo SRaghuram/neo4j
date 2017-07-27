@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -36,28 +36,34 @@ import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
  */
 public interface InternalSchemaActions
 {
-    IndexDefinition createIndexDefinition( Label label, String propertyKey );
+    IndexDefinition createIndexDefinition( Label label, String... propertyKey );
 
-    void dropIndexDefinitions( Label label, String propertyKey );
+    void dropIndexDefinitions( IndexDefinition indexDefinition );
 
-    ConstraintDefinition createPropertyUniquenessConstraint( Label label, String propertyKey )
+    ConstraintDefinition createPropertyUniquenessConstraint( IndexDefinition indexDefinition )
             throws IllegalTokenNameException, TooManyLabelsException, CreateConstraintFailureException,
-                   AlreadyConstrainedException, AlreadyIndexedException;
+            AlreadyConstrainedException, AlreadyIndexedException;
 
-    ConstraintDefinition createPropertyExistenceConstraint( Label label, String propertyKey )
+    ConstraintDefinition createNodeKeyConstraint( IndexDefinition indexDefinition )
+            throws IllegalTokenNameException, TooManyLabelsException, CreateConstraintFailureException,
+            AlreadyConstrainedException, AlreadyIndexedException;
+
+    ConstraintDefinition createPropertyExistenceConstraint( Label label, String... propertyKey )
             throws IllegalTokenNameException, TooManyLabelsException, CreateConstraintFailureException,
             AlreadyConstrainedException;
 
     ConstraintDefinition createPropertyExistenceConstraint( RelationshipType type, String propertyKey )
             throws CreateConstraintFailureException, AlreadyConstrainedException;
 
-    void dropPropertyUniquenessConstraint( Label label, String propertyKey );
+    void dropPropertyUniquenessConstraint( Label label, String[] properties );
 
-    void dropNodePropertyExistenceConstraint( Label label, String propertyKey );
+    void dropNodeKeyConstraint( Label label, String[] properties );
+
+    void dropNodePropertyExistenceConstraint( Label label, String[] properties );
 
     void dropRelationshipPropertyExistenceConstraint( RelationshipType type, String propertyKey );
 
     String getUserMessage( KernelException e );
 
-    void assertInUnterminatedTransaction();
+    void assertInOpenTransaction();
 }

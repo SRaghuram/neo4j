@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,9 +29,9 @@ public interface MaxCostEvaluator<T>
 {
     /**
      * Evaluates whether the maximum cost has been exceeded.
-     * 
+     *
      * @param currentCost the cost to be checked
      * @return true if the maximum Cost is less that currentCost
      */
-    public boolean maxCostExceeded( T currentCost );
+    boolean maxCostExceeded( T currentCost );
 }

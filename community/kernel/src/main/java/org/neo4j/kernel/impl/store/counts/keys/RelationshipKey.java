@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,6 +35,21 @@ public final class RelationshipKey implements CountsKey
         this.startLabelId = startLabelId;
         this.typeId = typeId;
         this.endLabelId = endLabelId;
+    }
+
+    public int getStartLabelId()
+    {
+        return startLabelId;
+    }
+
+    public int getTypeId()
+    {
+        return typeId;
+    }
+
+    public int getEndLabelId()
+    {
+        return endLabelId;
     }
 
     @Override
@@ -73,7 +88,7 @@ public final class RelationshipKey implements CountsKey
         {
             return true;
         }
-        if ( (o instanceof RelationshipKey) )
+        if ( o instanceof RelationshipKey )
         {
             RelationshipKey that = (RelationshipKey) o;
             return endLabelId == that.endLabelId && startLabelId == that.startLabelId && typeId == that.typeId;

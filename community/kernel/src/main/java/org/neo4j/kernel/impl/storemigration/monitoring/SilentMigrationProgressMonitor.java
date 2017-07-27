@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,15 +21,37 @@ package org.neo4j.kernel.impl.storemigration.monitoring;
 
 public class SilentMigrationProgressMonitor implements MigrationProgressMonitor
 {
+    public static final Section NO_OP_SECTION = new Section()
+    {
+        @Override
+        public void progress( long add )
+        {
+        }
+
+        @Override
+        public void start( long max )
+        {
+        }
+
+        @Override
+        public void completed()
+        {
+        }
+    };
+
+    @Override
     public void started()
     {
     }
 
-    public void percentComplete( int percent )
+    @Override
+    public Section startSection( String name )
     {
+        return NO_OP_SECTION;
     }
 
-    public void finished()
+    @Override
+    public void completed()
     {
     }
 }

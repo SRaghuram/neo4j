@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,16 +21,13 @@ package org.neo4j.kernel.impl.store.kvstore;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
-import org.neo4j.function.Consumer;
-import org.neo4j.function.Function;
-import org.neo4j.helpers.Pair;
-import org.neo4j.kernel.impl.util.function.Optional;
-
-import static org.neo4j.kernel.impl.util.function.Optionals.none;
-import static org.neo4j.kernel.impl.util.function.Optionals.some;
+import org.neo4j.helpers.collection.Pair;
 
 abstract class DeadState<Key> extends ProgressiveState<Key>
 {
@@ -77,7 +74,7 @@ abstract class DeadState<Key> extends ProgressiveState<Key>
     }
 
     @Override
-    void close() throws IOException
+    public void close() throws IOException
     {
         throw new IllegalStateException( "Cannot close() in state: " + stateName() );
     }
@@ -204,7 +201,7 @@ abstract class DeadState<Key> extends ProgressiveState<Key>
         @Override
         protected Optional<EntryUpdater<Key>> optionalUpdater( long version, Lock lock )
         {
-            return none();
+            return Optional.empty();
         }
 
         /** for rotating recovered state (none) */
@@ -222,7 +219,7 @@ abstract class DeadState<Key> extends ProgressiveState<Key>
                 }
 
                 @Override
-                void close() throws IOException
+                public void close() throws IOException
                 {
                 }
 
@@ -230,6 +227,12 @@ abstract class DeadState<Key> extends ProgressiveState<Key>
                 long rotationVersion()
                 {
                     return state.version();
+                }
+
+                @Override
+                ProgressiveState<Key> markAsFailed()
+                {
+                    return this;
                 }
             };
         }
@@ -263,11 +266,11 @@ abstract class DeadState<Key> extends ProgressiveState<Key>
         {
             if ( version <= state.version() )
             {
-                return none();
+                return Optional.empty();
             }
             else
             {
-                return some( state.updater( version, lock ) );
+                return Optional.of( state.updater( version, lock ) );
             }
         }
 
@@ -285,7 +288,7 @@ abstract class DeadState<Key> extends ProgressiveState<Key>
                 }
 
                 @Override
-                void close() throws IOException
+                public void close() throws IOException
                 {
                     state.close();
                 }
@@ -294,6 +297,12 @@ abstract class DeadState<Key> extends ProgressiveState<Key>
                 long rotationVersion()
                 {
                     return state.rotationVersion();
+                }
+
+                @Override
+                ProgressiveState<Key> markAsFailed()
+                {
+                    return state;
                 }
             };
         }
@@ -323,7 +332,7 @@ abstract class DeadState<Key> extends ProgressiveState<Key>
         }
     }
 
-    private static abstract class Rotation<Key, State extends ProgressiveState<Key>> extends RotationState<Key>
+    private abstract static class Rotation<Key, State extends ProgressiveState<Key>> extends RotationState<Key>
     {
         final State state;
 

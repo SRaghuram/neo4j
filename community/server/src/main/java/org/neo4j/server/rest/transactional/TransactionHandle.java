@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,30 +23,30 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.LinkedList;
 import java.util.List;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.neo4j.cypher.CypherException;
 import org.neo4j.cypher.InvalidSemanticsException;
-import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.security.AuthorizationViolationException;
+import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.kernel.DeadlockDetectedException;
+import org.neo4j.kernel.GraphDatabaseQueryService;
+import org.neo4j.kernel.api.KernelTransaction.Type;
 import org.neo4j.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
+import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.rest.transactional.error.InternalBeginTransactionError;
 import org.neo4j.server.rest.transactional.error.Neo4jError;
-import org.neo4j.server.rest.web.QuerySessionProvider;
 import org.neo4j.server.rest.web.TransactionUriScheme;
 
-import static org.neo4j.helpers.collection.IteratorUtil.addToCollection;
-import static org.neo4j.server.rest.transactional.TransactionHandle.StatementExecutionStrategy.EXECUTE_STATEMENT;
-import static org.neo4j.server.rest.transactional.TransactionHandle.StatementExecutionStrategy.EXECUTE_STATEMENT_USING_PERIODIC_COMMIT;
-import static org.neo4j.server.rest.transactional.TransactionHandle.StatementExecutionStrategy.SKIP_EXECUTE_STATEMENT;
+import static org.neo4j.helpers.collection.Iterators.addToCollection;
 
 /**
  * Encapsulates executing statements in a transaction, committing the transaction, or rolling it back.
@@ -62,8 +62,10 @@ import static org.neo4j.server.rest.transactional.TransactionHandle.StatementExe
  * the same instance. Therefore the implementation assumes that a single instance will only be accessed from
  * a single thread.
  *
- * All of the public methods on this class are "single-shot"; once you have called one method, the handle returns itself
- * to the registry. If you want to use it again, you'll need to acquire it back from the registry to ensure exclusive use.
+ * All of the public methods on this class are "single-shot"; once you have called one method, the handle returns
+ * itself
+ * to the registry. If you want to use it again, you'll need to acquire it back from the registry to ensure exclusive
+ * use.
  */
 public class TransactionHandle implements TransactionTerminationHandle
 {
@@ -71,22 +73,29 @@ public class TransactionHandle implements TransactionTerminationHandle
     private final QueryExecutionEngine engine;
     private final TransactionRegistry registry;
     private final TransactionUriScheme uriScheme;
+    private final Type type;
+    private final SecurityContext securityContext;
+    private long customTransactionTimeout;
     private final Log log;
     private final long id;
-    private final QuerySessionProvider sessionFactory;
     private TransitionalTxManagementKernelTransaction context;
+    private GraphDatabaseQueryService queryService;
 
-    public TransactionHandle( TransitionalPeriodTransactionMessContainer txManagerFacade, QueryExecutionEngine engine,
-                              TransactionRegistry registry, TransactionUriScheme uriScheme, LogProvider logProvider,
-                              QuerySessionProvider sessionFactory )
+    TransactionHandle( TransitionalPeriodTransactionMessContainer txManagerFacade, QueryExecutionEngine engine,
+            GraphDatabaseQueryService queryService, TransactionRegistry registry, TransactionUriScheme uriScheme,
+            boolean implicitTransaction, SecurityContext securityContext, long customTransactionTimeout,
+            LogProvider logProvider )
     {
         this.txManagerFacade = txManagerFacade;
         this.engine = engine;
+        this.queryService = queryService;
         this.registry = registry;
         this.uriScheme = uriScheme;
+        this.type = implicitTransaction ? Type.implicit : Type.explicit;
+        this.securityContext = securityContext;
+        this.customTransactionTimeout = customTransactionTimeout;
         this.log = logProvider.getLog( getClass() );
         this.id = registry.begin( this );
-        this.sessionFactory = sessionFactory;
     }
 
     public URI uri()
@@ -94,7 +103,13 @@ public class TransactionHandle implements TransactionTerminationHandle
         return uriScheme.txUri( id );
     }
 
-    public void execute( StatementDeserializer statements, ExecutionResultSerializer output, HttpServletRequest request )
+    public boolean isImplicit()
+    {
+        return type == Type.implicit;
+    }
+
+    public void execute( StatementDeserializer statements, ExecutionResultSerializer output,
+            HttpServletRequest request )
     {
         List<Neo4jError> errors = new LinkedList<>();
         try
@@ -124,33 +139,23 @@ public class TransactionHandle implements TransactionTerminationHandle
         return true;
     }
 
-    public void commit( StatementDeserializer statements, ExecutionResultSerializer output, boolean pristine, HttpServletRequest request )
+    public void commit( StatementDeserializer statements, ExecutionResultSerializer output, HttpServletRequest request )
     {
         List<Neo4jError> errors = new LinkedList<>();
         try
         {
             try
             {
-                StatementExecutionStrategy executionStrategy = selectExecutionStrategy( statements, pristine, errors );
-
-                switch ( executionStrategy ) {
-                    case EXECUTE_STATEMENT_USING_PERIODIC_COMMIT:
-                        // If there is an open transaction at this point this will cause an immediate error
-                        // as soon as Cypher tries to execute the initial PERIODIC COMMIT statement
-                        executePeriodicCommitStatement(statements, output, errors, request);
-                        break;
-
-                    case EXECUTE_STATEMENT:
-                        ensureActiveTransaction();
-                        // If any later statement is an PERIODIC COMMIT query, executeStatements will fail
-                        // as Cypher does refuse to execute PERIODIC COMMIT queries in an open transaction
-                        executeStatements( statements, output, errors, request );
-                        closeContextAndCollectErrors( errors );
-                        break;
-
-                    case SKIP_EXECUTE_STATEMENT:
-                        addToCollection( statements.errors(), errors );
-                        break;
+                Statement peek = statements.peek();
+                if ( isImplicit() && peek == null ) /* JSON parse error */
+                {
+                    addToCollection( statements.errors(), errors );
+                }
+                else
+                {
+                    ensureActiveTransaction();
+                    executeStatements( statements, output, errors, request );
+                    closeContextAndCollectErrors( errors );
                 }
             }
             finally
@@ -162,49 +167,15 @@ public class TransactionHandle implements TransactionTerminationHandle
         {
             errors.add( e.toNeo4jError() );
         }
-        finally
-        {
-            output.errors( errors );
-            output.finish();
-        }
-    }
-
-    private StatementExecutionStrategy selectExecutionStrategy( StatementDeserializer statements, boolean pristine, List<Neo4jError> errors )
-    {
-        // PERIODIC COMMIT queries may only be used when directly committing a pristine (newly created)
-        // transaction and when the first statement is an PERIODIC COMMIT statement.
-        //
-        // In that case we refrain from opening a transaction and leave management of
-        // transactions to Cypher. If there are any further statements they will all be
-        // executed in a separate transaction (Once you PERIODIC COMMIT all bets are off).
-        //
-        try
-        {
-            if ( pristine )
-            {
-                Statement peek = statements.peek();
-                if ( peek == null ) /* JSON parse error */
-                {
-                    return SKIP_EXECUTE_STATEMENT;
-                }
-                else if ( engine.isPeriodicCommit( peek.statement() ) )
-                {
-                    return EXECUTE_STATEMENT_USING_PERIODIC_COMMIT;
-                }
-                else
-                {
-                    return EXECUTE_STATEMENT;
-                }
-            }
-            else
-            {
-                return EXECUTE_STATEMENT;
-            }
-        }
         catch ( CypherException e )
         {
             errors.add( new Neo4jError( e.status(), e ) );
             throw e;
+        }
+        finally
+        {
+            output.errors( errors );
+            output.finish();
         }
     }
 
@@ -227,7 +198,7 @@ public class TransactionHandle implements TransactionTerminationHandle
         }
     }
 
-    public void forceRollback() throws TransactionFailureException
+    void forceRollback() throws TransactionFailureException
     {
         context.resumeSinceTransactionsAreStillThreadBound();
         context.rollback();
@@ -239,7 +210,7 @@ public class TransactionHandle implements TransactionTerminationHandle
         {
             try
             {
-                context = txManagerFacade.newTransaction();
+                context = txManagerFacade.newTransaction( type, securityContext, customTransactionTimeout );
             }
             catch ( RuntimeException e )
             {
@@ -254,7 +225,7 @@ public class TransactionHandle implements TransactionTerminationHandle
     }
 
     private void execute( StatementDeserializer statements, ExecutionResultSerializer output,
-                          List<Neo4jError> errors, HttpServletRequest request )
+            List<Neo4jError> errors, HttpServletRequest request )
     {
         executeStatements( statements, output, errors, request );
 
@@ -280,8 +251,15 @@ public class TransactionHandle implements TransactionTerminationHandle
             }
             catch ( Exception e )
             {
-                log.error( "Failed to commit transaction.", e );
-                errors.add( new Neo4jError( Status.Transaction.CouldNotCommit, e ) );
+                if ( e.getCause() instanceof Status.HasStatus )
+                {
+                    errors.add( new Neo4jError( ((Status.HasStatus) e.getCause()).status(), e ) );
+                }
+                else
+                {
+                    log.error( "Failed to commit transaction.", e );
+                    errors.add( new Neo4jError( Status.Transaction.TransactionCommitFailed, e ) );
+                }
             }
         }
         else
@@ -293,7 +271,7 @@ public class TransactionHandle implements TransactionTerminationHandle
             catch ( Exception e )
             {
                 log.error( "Failed to rollback transaction.", e );
-                errors.add( new Neo4jError( Status.Transaction.CouldNotRollback, e ) );
+                errors.add( new Neo4jError( Status.Transaction.TransactionRollbackFailed, e ) );
             }
         }
     }
@@ -307,7 +285,7 @@ public class TransactionHandle implements TransactionTerminationHandle
         catch ( Exception e )
         {
             log.error( "Failed to rollback transaction.", e );
-            errors.add( new Neo4jError( Status.Transaction.CouldNotRollback, e ) );
+            errors.add( new Neo4jError( Status.Transaction.TransactionRollbackFailed, e ) );
         }
         finally
         {
@@ -316,49 +294,63 @@ public class TransactionHandle implements TransactionTerminationHandle
     }
 
     private void executeStatements( StatementDeserializer statements, ExecutionResultSerializer output,
-                                    List<Neo4jError> errors, HttpServletRequest request )
+            List<Neo4jError> errors, HttpServletRequest request )
     {
         try
         {
+            boolean hasPrevious = false;
             while ( statements.hasNext() )
             {
                 Statement statement = statements.next();
                 try
                 {
-                    Result result = engine.executeQuery( statement.statement(), statement.parameters(),
-                            sessionFactory.create( request ) );
+                    boolean hasPeriodicCommit = engine.isPeriodicCommit( statement.statement() );
+                    if ( (statements.hasNext() || hasPrevious) && hasPeriodicCommit )
+                    {
+                        throw new QueryExecutionKernelException(
+                                new InvalidSemanticsException( "Cannot execute another statement after executing " +
+                                                               "PERIODIC COMMIT statement in the same transaction" ) );
+                    }
+
+                    if ( !hasPrevious && hasPeriodicCommit )
+                    {
+                        context.closeTransactionForPeriodicCommit();
+                    }
+
+                    hasPrevious = true;
+                    TransactionalContext tc = txManagerFacade.create( request, queryService, type, securityContext,
+                            statement.statement(), statement.parameters() );
+                    Result result = safelyExecute( statement, hasPeriodicCommit, tc );
                     output.statementResult( result, statement.includeStats(), statement.resultDataContents() );
                     output.notifications( result.getNotifications() );
                 }
-                catch ( KernelException | CypherException e )
+                catch ( KernelException | CypherException | AuthorizationViolationException |
+                        WriteOperationsNotAllowedException e )
                 {
                     errors.add( new Neo4jError( e.status(), e ) );
                     break;
                 }
-                catch ( QueryExecutionException e )
+                catch ( DeadlockDetectedException e )
                 {
-                    if ( e.getCause() instanceof Status.HasStatus )
-                    {
-                        errors.add( new Neo4jError( ((Status.HasStatus) e.getCause()).status(), e ) );
-                    }
-                    else
-                    {
-                        errors.add( new Neo4jError( Status.Statement.ExecutionFailure, e ) );
-                    }
-                    break;
-                }
-                catch( DeadlockDetectedException e )
-                {
-                    errors.add( new Neo4jError( Status.Transaction.DeadlockDetected, e ));
+                    errors.add( new Neo4jError( Status.Transaction.DeadlockDetected, e ) );
                 }
                 catch ( IOException e )
                 {
-                    errors.add( new Neo4jError( Status.Network.UnknownFailure, e ) );
+                    errors.add( new Neo4jError( Status.Network.CommunicationError, e ) );
                     break;
                 }
                 catch ( Exception e )
                 {
-                    errors.add( new Neo4jError( Status.Statement.ExecutionFailure, e ) );
+                    Throwable cause = e.getCause();
+                    if ( cause instanceof Status.HasStatus )
+                    {
+                        errors.add( new Neo4jError( ((Status.HasStatus) cause).status(), cause ) );
+                    }
+                    else
+                    {
+                        errors.add( new Neo4jError( Status.Statement.ExecutionFailed, e ) );
+                    }
+
                     break;
                 }
             }
@@ -367,62 +359,23 @@ public class TransactionHandle implements TransactionTerminationHandle
         }
         catch ( Throwable e )
         {
-            errors.add( new Neo4jError( Status.General.UnknownFailure, e ) );
+            errors.add( new Neo4jError( Status.General.UnknownError, e ) );
         }
     }
 
-
-    private void executePeriodicCommitStatement(
-           StatementDeserializer statements, ExecutionResultSerializer output, List<Neo4jError> errors, HttpServletRequest request )
+    private Result safelyExecute( Statement statement, boolean hasPeriodicCommit, TransactionalContext tc )
+            throws QueryExecutionKernelException
     {
         try
         {
-            try
-            {
-                Statement statement = statements.next();
-                if ( statements.hasNext() )
-                {
-                    throw new QueryExecutionKernelException(
-                            new InvalidSemanticsException( "Cannot execute another statement after executing " +
-                                                           "PERIODIC COMMIT statement in the same transaction" ) );
-                }
-
-                Result result = engine.executeQuery( statement.statement(), statement.parameters(), sessionFactory
-                        .create(request) );
-                ensureActiveTransaction();
-                output.statementResult( result, statement.includeStats(), statement.resultDataContents() );
-                output.notifications( result.getNotifications() );
-                closeContextAndCollectErrors(errors);
-            }
-            catch ( KernelException | CypherException e )
-            {
-                errors.add( new Neo4jError( e.status(), e ) );
-            }
-            catch( DeadlockDetectedException e )
-            {
-                errors.add( new Neo4jError( Status.Transaction.DeadlockDetected, e ));
-            }
-            catch ( IOException e )
-            {
-                errors.add( new Neo4jError( Status.Network.UnknownFailure, e ) );
-            }
-            catch ( Exception e )
-            {
-                errors.add( new Neo4jError( Status.Statement.ExecutionFailure, e ) );
-            }
-
-            addToCollection( statements.errors(), errors );
+            return engine.executeQuery( statement.statement(), statement.parameters(), tc );
         }
-        catch ( Throwable e )
+        finally
         {
-            errors.add( new Neo4jError( Status.General.UnknownFailure, e ) );
+            if ( hasPeriodicCommit )
+            {
+                context.reopenAfterPeriodicCommit();
+            }
         }
-    }
-
-    enum StatementExecutionStrategy
-    {
-        EXECUTE_STATEMENT_USING_PERIODIC_COMMIT,
-        EXECUTE_STATEMENT,
-        SKIP_EXECUTE_STATEMENT
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,15 @@
  */
 package org.neo4j.kernel.impl.query;
 
+import java.util.Comparator;
+import java.util.List;
+
 import org.neo4j.helpers.Service;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.impl.util.Dependencies;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+
+import static org.neo4j.helpers.collection.Iterables.asList;
 
 public abstract class QueryEngineProvider extends Service
 {
@@ -29,44 +36,27 @@ public abstract class QueryEngineProvider extends Service
         super( name );
     }
 
-    protected abstract QueryExecutionEngine createEngine( GraphDatabaseAPI graphAPI );
+    protected abstract QueryExecutionEngine createEngine( Dependencies deps, GraphDatabaseAPI graphAPI );
 
-    public static QueryExecutionEngine initialize( GraphDatabaseAPI graphAPI, Iterable<QueryEngineProvider> providers )
+    protected abstract int enginePriority();
+
+    public static QueryExecutionEngine initialize( Dependencies deps, GraphDatabaseAPI graphAPI,
+            Iterable<QueryEngineProvider> providers )
     {
-        QueryEngineProvider provider = null;
-        for ( QueryEngineProvider candidate : providers )
-        {
-            if ( provider == null )
-            {
-                provider = candidate;
-            }
-            else
-            {
-                throw new IllegalStateException( "Too many query engines." );
-            }
-        }
+        List<QueryEngineProvider> engineProviders = asList( providers );
+        engineProviders.sort( Comparator.comparingInt( QueryEngineProvider::enginePriority ) );
+        QueryEngineProvider provider = Iterables.firstOrNull( engineProviders );
+
         if ( provider == null )
         {
-            return NoQueryEngine.INSTANCE;
+            return noEngine();
         }
-        return provider.createEngine( graphAPI );
+        QueryExecutionEngine engine = provider.createEngine( deps, graphAPI );
+        return deps.satisfyDependency( engine );
     }
 
     public static QueryExecutionEngine noEngine()
     {
         return NoQueryEngine.INSTANCE;
-    }
-
-    public static QuerySession embeddedSession()
-    {
-        final Thread thread = Thread.currentThread();
-        return new QuerySession()
-        {
-            @Override
-            public String toString()
-            {
-                return String.format( "EmbeddedSession{thread=%s}", thread.getName() );
-            }
-        };
     }
 }

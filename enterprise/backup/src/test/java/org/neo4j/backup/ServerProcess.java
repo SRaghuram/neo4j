@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,28 +19,30 @@
  */
 package org.neo4j.backup;
 
+import java.io.File;
+
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
+import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.subprocess.SubProcess;
 
-public class ServerProcess extends SubProcess<ServerInterface, Pair<String, String>> implements ServerInterface
+public class ServerProcess extends SubProcess<ServerInterface, Pair<File, String>> implements ServerInterface
 {
-    private volatile transient GraphDatabaseService db;
+    private transient volatile GraphDatabaseService db;
 
     @Override
-    public void startup( Pair<String, String> config ) throws Throwable
+    public void startup( Pair<File, String> config ) throws Throwable
     {
-        String storeDir = config.first();
+        File storeDir = config.first();
         String backupConfigValue = config.other();
         if ( backupConfigValue == null )
         {
-            this.db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
+            this.db = new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
         }
         else
         {
             // TODO This is using the old config style - is this class even used anywhere!?
-            this.db = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir ).setConfig( "enable_online_backup", backupConfigValue ).newGraphDatabase();
+            this.db = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir ).setConfig( "enable_online_backup", backupConfigValue ).newGraphDatabase();
         }
     }
 

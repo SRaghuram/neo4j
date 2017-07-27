@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,89 +19,107 @@
  */
 package org.neo4j.cypher
 
+import java.time.Clock
+
 import org.mockito.Matchers._
 import org.mockito.Mockito.{verify, _}
-import org.neo4j.cypher.internal.compatibility.{StringInfoLogger2_3, WrappedMonitors2_3}
-import org.neo4j.cypher.internal.compiler.v2_3._
-import org.neo4j.cypher.internal.frontend.v2_3.notification.CartesianProductNotification
-import org.neo4j.cypher.internal.frontend.v2_3.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.compiler.v2_3.tracing.rewriters.RewriterStepSequencer
-import org.neo4j.cypher.internal.frontend.v2_3.InputPosition
-import org.neo4j.cypher.internal.spi.v2_3.GeneratedQueryStructure
-import org.neo4j.helpers.Clock
+import org.neo4j.cypher.internal.compatibility.v3_2.{StringInfoLogger, WrappedMonitors}
+import org.neo4j.cypher.internal.compiler.v3_2._
+import org.neo4j.cypher.internal.compiler.v3_2.helpers.IdentityTypeConverter
+import org.neo4j.cypher.internal.compiler.v3_2.phases.CompilerContext
+import org.neo4j.cypher.internal.frontend.v3_2.InputPosition
+import org.neo4j.cypher.internal.frontend.v3_2.helpers.rewriting.RewriterStepSequencer
+import org.neo4j.cypher.internal.frontend.v3_2.notification.CartesianProductNotification
+import org.neo4j.cypher.internal.frontend.v3_2.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.frontend.v3_2.test_helpers.CypherFunSuite
 import org.neo4j.logging.NullLog
 
 class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with GraphDatabaseTestSupport {
+  var logger: InternalNotificationLogger = _
+  var compiler: CypherCompiler[CompilerContext] = _
+
+  override protected def beforeEach(): Unit = {
+    super.beforeEach()
+    logger = mock[InternalNotificationLogger]
+    compiler = createCompiler()
+  }
 
   test("should warn when disconnected patterns") {
-    //given
-    val logger = mock[InternalNotificationLogger]
-    val compiler = createCompiler()
-
     //when
-    graph.inTx {
-      compiler.planQuery("MATCH (a)-->(b), (c)-->(d) RETURN *", planContext, logger)
-    }
+    runQuery("MATCH (a)-->(b), (c)-->(d) RETURN *")
 
     //then
-    verify(logger, times(1)) += CartesianProductNotification(InputPosition(0, 1, 1), Set("c", "d"))
+    verify(logger, times(1)).log(CartesianProductNotification(InputPosition(0, 1, 1), Set("c", "d")))
   }
 
   test("should not warn when connected patterns") {
     //given
-    val logger = mock[InternalNotificationLogger]
-    val compiler = createCompiler()
-
-    //when
-    graph.inTx(compiler.planQuery("MATCH (a)-->(b), (a)-->(c) RETURN *", planContext, logger))
+    runQuery("MATCH (a)-->(b), (a)-->(c) RETURN *")
 
     //then
-    verify(logger, never) += any()
+    verify(logger, never).log(any())
   }
 
   test("should warn when one disconnected pattern in otherwise connected pattern") {
     //given
-    val logger = mock[InternalNotificationLogger]
-    val compiler = createCompiler()
-
-    //when
-    graph.inTx {
-      compiler.planQuery("MATCH (a)-->(b), (b)-->(c), (x)-->(y), (c)-->(d), (d)-->(e) RETURN *", planContext, logger)
-    }
+    runQuery("MATCH (a)-->(b), (b)-->(c), (x)-->(y), (c)-->(d), (d)-->(e) RETURN *")
 
     //then
-    verify(logger, times(1)) += CartesianProductNotification(InputPosition(0, 1, 1), Set("x", "y"))
+    verify(logger, times(1)).log(CartesianProductNotification(InputPosition(0, 1, 1), Set("x", "y")))
   }
 
   test("should not warn when disconnected patterns in multiple match clauses") {
     //given
-    val logger = mock[InternalNotificationLogger]
-    val compiler = createCompiler()
-    val executionMode = NormalMode
-
-    //when
-    graph.inTx(compiler.planQuery("MATCH (a)-->(b) MATCH (c)-->(d) RETURN *", planContext, logger))
+    runQuery("MATCH (a)-->(b) MATCH (c)-->(d) RETURN *")
 
     //then
-    verify(logger, never) += any()
+    verify(logger, never).log(any())
   }
 
-  private def createCompiler() =
-    CypherCompilerFactory.costBasedCompiler(
-      graph,
+  test("this query does not contain a cartesian product") {
+    //given
+    val logger = mock[InternalNotificationLogger]
+
+    //when
+    runQuery(
+      """MATCH (p)-[r1]-(m),
+        |(m)-[r2]-(d), (d)-[r3]-(m2)
+        |RETURN DISTINCT d""".stripMargin)
+
+    //then
+    verify(logger, never).log(any())
+  }
+
+  private def runQuery(query: String) = {
+    graph.inTx {
+      compiler.planQuery(query, planContext, logger, IDPPlannerName.name)
+    }
+  }
+
+  private def createCompiler(): CypherCompiler[CompilerContext] = {
+    new CypherCompilerFactory().costBasedCompiler(
       CypherCompilerConfiguration(
         queryCacheSize = 128,
         statsDivergenceThreshold = 0.5,
         queryPlanTTL = 1000L,
         useErrorsOverWarnings = false,
+        idpMaxTableSize = 128,
+        idpIterationDuration = 1000,
+        errorIfShortestPathFallbackUsedAtRuntime = false,
+        errorIfShortestPathHasCommonNodesAtRuntime = true,
+        legacyCsvQuoteEscaping = false,
         nonIndexedLabelWarningThreshold = 10000L
       ),
-      Clock.SYSTEM_CLOCK,
-      GeneratedQueryStructure,
-      new WrappedMonitors2_3(kernelMonitors),
-      new StringInfoLogger2_3(NullLog.getInstance),
-      plannerName = Some(GreedyPlannerName),
-      runtimeName = Some(CompiledRuntimeName),
-      rewriterSequencer = RewriterStepSequencer.newValidating
+      Clock.systemUTC(),
+      WrappedMonitors(kernelMonitors),
+      new StringInfoLogger(NullLog.getInstance),
+      plannerName = None,
+      runtimeName = None,
+      updateStrategy = None,
+      rewriterSequencer = RewriterStepSequencer.newValidating,
+      runtimeBuilder = CommunityRuntimeBuilder,
+      typeConverter = IdentityTypeConverter,
+      contextCreator = CommunityContextCreator
     )
+  }
 }

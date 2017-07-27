@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,22 +19,36 @@
  */
 package org.neo4j.kernel.impl.transaction.log.checkpoint;
 
-import java.io.IOException;
+import java.util.Arrays;
+import java.util.function.BooleanSupplier;
 
 import org.neo4j.function.Predicates;
-import org.neo4j.function.Supplier;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.impl.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.util.JobScheduler;
+import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.unsafe.impl.internal.dragons.FeatureToggles;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.kernel.impl.util.JobScheduler.Groups.checkPoint;
 
 public class CheckPointScheduler extends LifecycleAdapter
 {
+    /**
+     * The max number of consecutive check point failures that can be tolerated before treating
+     * check point failures more seriously, with a panic.
+     */
+    static final int MAX_CONSECUTIVE_FAILURES_TOLERANCE =
+            FeatureToggles.getInteger( CheckPointScheduler.class, "failure_tolerance", 10 );
+
     private final CheckPointer checkPointer;
+    private final IOLimiter ioLimiter;
     private final JobScheduler scheduler;
     private final long recurringPeriodMillis;
+    private final DatabaseHealth health;
+    private final Throwable[] failures = new Throwable[MAX_CONSECUTIVE_FAILURES_TOLERANCE];
+    private volatile int consecutiveFailures;
     private final Runnable job = new Runnable()
     {
         @Override
@@ -47,12 +61,27 @@ public class CheckPointScheduler extends LifecycleAdapter
                 {
                     return;
                 }
-                checkPointer.checkPointIfNeeded();
+                checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "scheduler" ) );
+
+                // There were previous unsuccessful attempts, but this attempt was a success
+                // so let's clear those previous errors.
+                if ( consecutiveFailures > 0 )
+                {
+                    Arrays.fill( failures, null );
+                    consecutiveFailures = 0;
+                }
             }
-            catch ( IOException e )
+            catch ( Throwable t )
             {
-                // no need to reschedule since the check pointer has raised a kernel panic and a shutdown is expected
-                throw new UnderlyingStorageException( e );
+                failures[consecutiveFailures++] = t;
+
+                // We're counting check pointer to log about the failure itself
+                if ( consecutiveFailures >= MAX_CONSECUTIVE_FAILURES_TOLERANCE )
+                {
+                    UnderlyingStorageException combinedFailure = constructCombinedFailure();
+                    health.panic( combinedFailure );
+                    throw combinedFailure;
+                }
             }
             finally
             {
@@ -65,25 +94,38 @@ public class CheckPointScheduler extends LifecycleAdapter
                 handle = scheduler.schedule( checkPoint, job, recurringPeriodMillis, MILLISECONDS );
             }
         }
+
+        private UnderlyingStorageException constructCombinedFailure()
+        {
+            UnderlyingStorageException combined = new UnderlyingStorageException( "Error performing check point" );
+            for ( int i = 0; i < consecutiveFailures; i++ )
+            {
+                combined.addSuppressed( failures[i] );
+            }
+            return combined;
+        }
     };
 
     private volatile JobScheduler.JobHandle handle;
     private volatile boolean stopped;
     private volatile boolean checkPointing;
-    private final Supplier<Boolean> checkPointingCondition = new Supplier<Boolean>()
+    private final BooleanSupplier checkPointingCondition = new BooleanSupplier()
     {
         @Override
-        public Boolean get()
+        public boolean getAsBoolean()
         {
             return !checkPointing;
         }
     };
 
-    public CheckPointScheduler( CheckPointer checkPointer, JobScheduler scheduler, long recurringPeriodMillis )
+    public CheckPointScheduler( CheckPointer checkPointer, IOLimiter ioLimiter, JobScheduler scheduler, long recurringPeriodMillis,
+            DatabaseHealth health )
     {
         this.checkPointer = checkPointer;
+        this.ioLimiter = ioLimiter;
         this.scheduler = scheduler;
         this.recurringPeriodMillis = recurringPeriodMillis;
+        this.health = health;
     }
 
     @Override
@@ -100,6 +142,19 @@ public class CheckPointScheduler extends LifecycleAdapter
         {
             handle.cancel( false );
         }
-        Predicates.awaitForever( checkPointingCondition, 100, MILLISECONDS );
+        waitOngoingCheckpointCompletion();
+    }
+
+    private void waitOngoingCheckpointCompletion()
+    {
+        ioLimiter.disableLimit();
+        try
+        {
+            Predicates.awaitForever( checkPointingCondition, 100, MILLISECONDS );
+        }
+        finally
+        {
+            ioLimiter.enableLimit();
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,57 +29,57 @@ import java.io.Serializable;
 public interface ShellClient
 {
     Serializable getId();
-    
-	/**
-	 * Grabs the console prompt.
-	 */
-	void grabPrompt();
-	
-	/**
-	 * Evaluates a line and reacts to it.
-	 * @param line the line to evaluate.
+
+    /**
+     * Grabs the console prompt.
+     */
+    void grabPrompt();
+
+    /**
+     * Evaluates a line and reacts to it.
+     * @param line the line to evaluate.
      * @throws ShellException if something went wrong.
-	 */
-	void evaluate( String line ) throws ShellException;
-	
+     */
+    void evaluate( String line ) throws ShellException;
+
     /**
      * Evaluates a line and reacts to it.
      * @param line the line to evaluate.
      * @param out output just for this evaluation.
      * @throws ShellException if something went wrong.
      */
-	void evaluate( String line, Output out ) throws ShellException;
-	
-	/**
-	 * Tells the client session to end, i.e. exit the {@link #grabPrompt()}.
-	 */
-	void end();
-	
-	/**
-	 * @return the server to communicate with.
-	 */
-	ShellServer getServer();
-	
-	/**
-	 * @return the output instance where output will be passed to.
-	 */
-	Output getOutput();
-	
-	/**
-	 * @return the current prompt.
-	 */
-	String getPrompt();
-	
-	/**
-	 * @return the time (millis) when the most recent connection was made
-	 * to the master.
-	 */
-	long timeForMostRecentConnection();
-	
-	/**
-	 * Shuts down any resource needing to shut down.
-	 */
-	void shutdown();
-	
-	void setSessionVariable( String key, Serializable value ) throws ShellException;
+    void evaluate( String line, Output out ) throws ShellException;
+
+    /**
+     * Tells the client session to end, i.e. exit the {@link #grabPrompt()}.
+     */
+    void end();
+
+    /**
+     * @return the server to communicate with.
+     */
+    ShellServer getServer();
+
+    /**
+     * @return the output instance where output will be passed to.
+     */
+    Output getOutput();
+
+    /**
+     * @return the current prompt.
+     */
+    String getPrompt();
+
+    /**
+     * @return the time (millis) when the most recent connection was made
+     * to the master.
+     */
+    long timeForMostRecentConnection();
+
+    /**
+     * Shuts down any resource needing to shut down.
+     */
+    void shutdown();
+
+    void setSessionVariable( String key, Serializable value ) throws ShellException;
 }

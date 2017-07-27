@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,7 +31,9 @@ public interface Collector extends AutoCloseable
 
     void collectDuplicateNode( Object id, long actualId, String group, String firstSource, String otherSource );
 
-    int badEntries();
+    void collectExtraColumns( String source, long row, String value );
+
+    long badEntries();
 
     /**
      * @return iterator of node ids that were found to be duplicates of already imported nodes.

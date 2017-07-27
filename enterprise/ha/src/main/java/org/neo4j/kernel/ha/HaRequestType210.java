@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,50 +21,59 @@ package org.neo4j.kernel.ha;
 
 import java.io.IOException;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-
+import org.neo4j.com.Deserializer;
 import org.neo4j.com.ObjectSerializer;
 import org.neo4j.com.Protocol;
 import org.neo4j.com.RequestContext;
-import org.neo4j.com.RequestType;
 import org.neo4j.com.Response;
 import org.neo4j.com.TargetCaller;
 import org.neo4j.com.storecopy.ToNetworkStoreWriter;
-import org.neo4j.kernel.IdType;
-import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.ha.com.master.HandshakeResult;
 import org.neo4j.kernel.ha.com.master.Master;
 import org.neo4j.kernel.ha.id.IdAllocation;
 import org.neo4j.kernel.ha.lock.LockResult;
-import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.kernel.impl.store.id.IdRange;
+import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
+import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.storageengine.api.lock.ResourceType;
 
 import static org.neo4j.com.Protocol.INTEGER_SERIALIZER;
 import static org.neo4j.com.Protocol.LONG_SERIALIZER;
 import static org.neo4j.com.Protocol.VOID_SERIALIZER;
 import static org.neo4j.com.Protocol.readBoolean;
 import static org.neo4j.com.Protocol.readString;
-import static org.neo4j.kernel.ha.com.slave.MasterClient.LOCK_SERIALIZER;
 
-public enum HaRequestType210 implements RequestType<Master>
+public class HaRequestType210 extends AbstractHaRequestTypes
 {
-    // ====
-    ALLOCATE_IDS( new TargetCaller<Master, IdAllocation>()
+    public HaRequestType210(
+            LogEntryReader<ReadableClosablePositionAwareChannel> entryReader,
+            ObjectSerializer<LockResult> lockResultObjectSerializer )
     {
-        @Override
-        public Response<IdAllocation> call( Master master, RequestContext context, ChannelBuffer input,
-                ChannelBuffer target )
+        registerAllocateIds();
+        registerCreateRelationshipType();
+        registerAcquireExclusiveLock( lockResultObjectSerializer );
+        registerAcquireSharedLock( lockResultObjectSerializer );
+        registerCommit( entryReader );
+        registerPullUpdates();
+        registerEndLockSession();
+        registerHandshake();
+        registerCopyStore();
+        registerNewLockSession();
+        registerCreatePropertyKey();
+        registerCreateLabel();
+    }
+
+    private void registerAllocateIds()
+    {
+        TargetCaller<Master,IdAllocation> allocateIdTarget = ( master, context, input, target ) ->
         {
             IdType idType = IdType.values()[input.readByte()];
             return master.allocateIds( context, idType );
-        }
-    }, new ObjectSerializer<IdAllocation>()
-    {
-        @Override
-        public void write( IdAllocation idAllocation, ChannelBuffer result ) throws IOException
+        };
+        ObjectSerializer<IdAllocation> allocateIdSerializer = ( idAllocation, result ) ->
         {
             IdRange idRange = idAllocation.getIdRange();
             result.writeInt( idRange.getDefragIds().length );
@@ -76,73 +85,55 @@ public enum HaRequestType210 implements RequestType<Master>
             result.writeInt( idRange.getRangeLength() );
             result.writeLong( idAllocation.getHighestIdInUse() );
             result.writeLong( idAllocation.getDefragCount() );
-        }
+        };
+        register( Type.ALLOCATE_IDS, allocateIdTarget, allocateIdSerializer );
     }
-    ),
 
-    // ====
-    CREATE_RELATIONSHIP_TYPE( new TargetCaller<Master, Integer>()
+    private void registerCreateRelationshipType()
     {
-        @Override
-        public Response<Integer> call( Master master, RequestContext context, ChannelBuffer input,
-                ChannelBuffer target )
+        TargetCaller<Master,Integer> createRelationshipTypeTarget =
+                ( master, context, input, target ) -> master.createRelationshipType( context, readString( input ) );
+        register( Type.CREATE_RELATIONSHIP_TYPE, createRelationshipTypeTarget, INTEGER_SERIALIZER );
+    }
+
+    private void registerAcquireExclusiveLock( ObjectSerializer<LockResult> lockResultObjectSerializer )
+    {
+        register( Type.ACQUIRE_EXCLUSIVE_LOCK, new AquireLockCall()
         {
-            return master.createRelationshipType( context, readString( input ) );
-        }
-    }, INTEGER_SERIALIZER ),
+            @Override
+            protected Response<LockResult> lock( Master master, RequestContext context, ResourceType type,
+                                                 long... ids )
+            {
+                return master.acquireExclusiveLock( context, type, ids );
+            }
+        }, lockResultObjectSerializer, true );
+    }
 
-    // ====
-
-
-    // ====
-    ACQUIRE_EXCLUSIVE_LOCK( new AquireLockCall()
+    private void registerAcquireSharedLock( ObjectSerializer<LockResult> lockResultObjectSerializer )
     {
-        @Override
-        protected Response<LockResult> lock( Master master, RequestContext context, Locks.ResourceType type, long...
-                ids )
+        register( Type.ACQUIRE_SHARED_LOCK, new AquireLockCall()
         {
-            return master.acquireExclusiveLock( context, type, ids );
-        }
-    }, LOCK_SERIALIZER )
-    {
-        @Override
-        public boolean isLock()
-        {
-            return true;
-        }
-    },
+            @Override
+            protected Response<LockResult> lock( Master master, RequestContext context, ResourceType type,
+                                                 long... ids )
+            {
+                return master.acquireSharedLock( context, type, ids );
+            }
+        }, lockResultObjectSerializer, true );
+    }
 
-    // ====
-    ACQUIRE_SHARED_LOCK( new AquireLockCall()
+    private void registerCommit( LogEntryReader<ReadableClosablePositionAwareChannel> entryReader )
     {
-        @Override
-        protected Response<LockResult> lock( Master master, RequestContext context, Locks.ResourceType type, long...
-                ids )
-        {
-            return master.acquireSharedLock( context, type, ids );
-        }
-    }, LOCK_SERIALIZER )
-    {
-        @Override
-        public boolean isLock()
-        {
-            return true;
-        }
-    },
-
-    // ====
-    COMMIT( new TargetCaller<Master, Long>()
-    {
-        @Override
-        public Response<Long> call( Master master, RequestContext context, ChannelBuffer input,
-                                    ChannelBuffer target ) throws IOException, TransactionFailureException
+        TargetCaller<Master,Long> commitTarget = ( master, context, input, target ) ->
         {
             readString( input ); // Always neostorexadatasource
 
-            TransactionRepresentation tx = null;
+            TransactionRepresentation tx;
             try
             {
-                tx = Protocol.TRANSACTION_REPRESENTATION_DESERIALIZER.read( input, null );
+                Deserializer<TransactionRepresentation> deserializer =
+                        new Protocol.TransactionRepresentationDeserializer( entryReader );
+                tx = deserializer.read( input, null );
             }
             catch ( IOException e )
             {
@@ -150,184 +141,71 @@ public enum HaRequestType210 implements RequestType<Master>
             }
 
             return master.commit( context, tx );
-        }
-    }, LONG_SERIALIZER ),
+        };
+        register( Type.COMMIT, commitTarget, LONG_SERIALIZER );
+    }
 
-    // ====
-    PULL_UPDATES( new TargetCaller<Master, Void>()
+    private void registerPullUpdates()
     {
-        @Override
-        public Response<Void> call( Master master, RequestContext context, ChannelBuffer input,
-                ChannelBuffer target )
-        {
-            return master.pullUpdates( context );
-        }
-    }, VOID_SERIALIZER ),
+        TargetCaller<Master,Void> pullUpdatesTarget =
+                ( master, context, input, target ) -> master.pullUpdates( context );
+        register( Type.PULL_UPDATES, pullUpdatesTarget, VOID_SERIALIZER );
+    }
 
-    // ====
-    END_LOCK_SESSION( new TargetCaller<Master, Void>()
+    private void registerEndLockSession()
     {
-        @Override
-        public Response<Void> call( Master master, RequestContext context, ChannelBuffer input,
-                ChannelBuffer target )
-        {
-            return master.endLockSession( context, readBoolean( input ) );
-        }
-    }, VOID_SERIALIZER ),
+        // NOTE <1>: A 'false' argument for 'unpack' means we won't unpack the response.
+        // We do this because END_LOCK_SESSION request can be send in 3 cases:
+        //  1) transaction committed successfully
+        //  2) transaction rolled back successfully
+        //  3) transaction was terminated
+        // Master's response for this call is an obligation to pull up to a specified txId.
+        // Processing/unpacking of this response is not needed in all 3 cases:
+        //  1) committed transaction pulls transaction stream as part of COMMIT call
+        //  2) rolled back transaction does not care about reading any more
+        //  3) terminated transaction does not care about reading any more
+        TargetCaller<Master,Void> endLockSessionTarget =
+                ( master, context, input, target ) -> master.endLockSession( context, readBoolean( input ) );
+        register( Type.END_LOCK_SESSION, endLockSessionTarget, VOID_SERIALIZER, false /* <1> */);
+    }
 
-    // ====
-    HANDSHAKE( new TargetCaller<Master, HandshakeResult>()
+    private void registerHandshake()
     {
-        @Override
-        public Response<HandshakeResult> call( Master master, RequestContext context, ChannelBuffer input,
-                ChannelBuffer target )
-        {
-            return master.handshake( input.readLong(), null );
-        }
-    }, new ObjectSerializer<HandshakeResult>()
-    {
-        @Override
-        public void write( HandshakeResult responseObject, ChannelBuffer result ) throws IOException
+        TargetCaller<Master,HandshakeResult> handshakeTarget =
+                ( master, context, input, target ) -> master.handshake( input.readLong(), null );
+        ObjectSerializer<HandshakeResult> handshakeResultObjectSerializer = ( responseObject, result ) ->
         {
             result.writeLong( responseObject.txChecksum() );
             result.writeLong( responseObject.epoch() );
-        }
-    } ),
-
-    // ====
-    COPY_STORE( new TargetCaller<Master, Void>()
-    {
-        @Override
-        public Response<Void> call( Master master, RequestContext context, ChannelBuffer input,
-                final ChannelBuffer target )
-        {
-            return master.copyStore( context, new ToNetworkStoreWriter( target, new Monitors() ) );
-        }
-
-    }, VOID_SERIALIZER )
-            {
-                @Override
-                public boolean responseShouldBeUnpacked()
-                {
-                    return false;
-                }
-            },
-
-    // ====
-    PLACEHOLDER_FOR_COPY_TRANSACTIONS( new TargetCaller<Master, Void>()
-    {
-        @Override
-        public Response<Void> call( Master master, RequestContext context, ChannelBuffer input,
-                final ChannelBuffer target )
-        {
-            throw new UnsupportedOperationException( "Not used anymore, merely here to keep the ordinal ids of the others" );
-        }
-
-    }, VOID_SERIALIZER ),
-
-    // ====
-    NEW_LOCK_SESSION( new TargetCaller<Master, Void>()
-    {
-        @Override
-        public Response<Void> call( Master master, RequestContext context, ChannelBuffer input,
-                ChannelBuffer target ) throws TransactionFailureException
-        {
-            return master.newLockSession( context );
-        }
-    }, VOID_SERIALIZER ),
-
-    // ====
-    PLACEHOLDER_FOR_PUSH_TRANSACTION( new TargetCaller<Master, Void>()
-    {
-        @Override
-        public Response<Void> call( Master master, RequestContext context, ChannelBuffer input,
-                ChannelBuffer target )
-        {
-            throw new UnsupportedOperationException( "Not used anymore, merely here to keep the ordinal ids of the others" );
-        }
-    }, VOID_SERIALIZER ),
-
-    // ====
-    CREATE_PROPERTY_KEY( new TargetCaller<Master, Integer>()
-    {
-        @Override
-        public Response<Integer> call( Master master, RequestContext context, ChannelBuffer input,
-                ChannelBuffer target )
-        {
-            return master.createPropertyKey( context, readString( input ) );
-        }
-    }, INTEGER_SERIALIZER ),
-
-    // ====
-    CREATE_LABEL( new TargetCaller<Master, Integer>()
-    {
-        @Override
-        public Response<Integer> call( Master master, RequestContext context, ChannelBuffer input,
-                                       ChannelBuffer target )
-        {
-            return master.createLabel( context, readString( input ) );
-        }
-    }, INTEGER_SERIALIZER ),
-
-    ;
-
-
-    @SuppressWarnings( "rawtypes" )
-    final TargetCaller caller;
-    @SuppressWarnings( "rawtypes" )
-    final ObjectSerializer serializer;
-
-    private <T> HaRequestType210( TargetCaller caller, ObjectSerializer<T> serializer )
-    {
-        this.caller = caller;
-        this.serializer = serializer;
+        };
+        register( Type.HANDSHAKE, handshakeTarget, handshakeResultObjectSerializer );
     }
 
-    @Override
-    public ObjectSerializer getObjectSerializer()
+    private void registerCopyStore()
     {
-        return serializer;
+        TargetCaller<Master,Void> copyStoreTarget = ( master, context, input, target ) ->
+                master.copyStore( context, new ToNetworkStoreWriter( target, new Monitors() ) );
+        register( Type.COPY_STORE, copyStoreTarget, VOID_SERIALIZER, false );
     }
 
-    @Override
-    public TargetCaller getTargetCaller()
+    private void registerNewLockSession()
     {
-        return caller;
+        TargetCaller<Master,Void> newLockSessionTarget =
+                ( master, context, input, target ) -> master.newLockSession( context );
+        register( Type.NEW_LOCK_SESSION, newLockSessionTarget, VOID_SERIALIZER );
     }
 
-    @Override
-    public byte id()
+    private void registerCreatePropertyKey()
     {
-        return (byte) ordinal();
+        TargetCaller<Master,Integer> createPropertyKeyTarget =
+                ( master, context, input, target ) -> master.createPropertyKey( context, readString( input ) );
+        register( Type.CREATE_PROPERTY_KEY, createPropertyKeyTarget, INTEGER_SERIALIZER );
     }
 
-    @Override
-    public boolean responseShouldBeUnpacked()
+    private void registerCreateLabel()
     {
-        return true;
-    }
-
-    public boolean isLock()
-    {
-        return false;
-    }
-
-    private static abstract class AquireLockCall implements TargetCaller<Master, LockResult>
-    {
-        @Override
-        public Response<LockResult> call( Master master, RequestContext context,
-                                          ChannelBuffer input, ChannelBuffer target )
-        {
-            Locks.ResourceType type = ResourceTypes.fromId( input.readInt() );
-            long[] ids = new long[input.readInt()];
-            for ( int i = 0; i < ids.length; i++ )
-            {
-                ids[i] = input.readLong();
-            }
-            return lock( master, context, type, ids );
-        }
-
-        protected abstract Response<LockResult> lock( Master master, RequestContext context, Locks.ResourceType type,
-                                                      long... ids );
+        TargetCaller<Master,Integer> createLabelTarget =
+                ( master, context, input, target ) -> master.createLabel( context, readString( input ) );
+        register( Type.CREATE_LABEL, createLabelTarget, INTEGER_SERIALIZER );
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,25 +22,29 @@ package org.neo4j.unsafe.impl.batchimport.input;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongSet;
+import org.neo4j.io.NullOutputStream;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.test.EphemeralFileSystemRule;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
+import static org.neo4j.unsafe.impl.batchimport.input.BadCollector.COLLECT_ALL;
+import static org.neo4j.unsafe.impl.batchimport.input.BadCollector.UNLIMITED_TOLERANCE;
 import static org.neo4j.unsafe.impl.batchimport.input.BadCollectorTest.InputRelationshipBuilder.inputRelationship;
 
 public class BadCollectorTest
 {
-    public final @Rule EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+    @Rule
+    public final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
 
     @Test
     public void shouldCollectBadRelationshipsEvenIfThresholdNeverReached() throws IOException
@@ -118,7 +122,6 @@ public class BadCollectorTest
             // then expect to end up here
         }
     }
-
 
     @Test
     public void shouldNotCollectBadRelationshipsIfWeShouldOnlyBeCollectingNodes() throws IOException
@@ -202,6 +205,37 @@ public class BadCollectorTest
         assertArrayEquals( new long[] {8, 10, 12}, nodeIds );
     }
 
+    @Test
+    public void shouldCollectUnlimitedNumberOfBadEntriesIfToldTo() throws Exception
+    {
+        // GIVEN
+        BadCollector collector = new BadCollector( NullOutputStream.NULL_OUTPUT_STREAM, UNLIMITED_TOLERANCE, COLLECT_ALL );
+
+        // WHEN
+        int count = 10_000;
+        for ( int i = 0; i < count; i++ )
+        {
+            collector.collectDuplicateNode( i, i, "group", "first", "other" );
+        }
+
+        // THEN
+        assertEquals( count, collector.badEntries() );
+    }
+
+    @Test
+    public void skipBadEntriesLogging()
+    {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        BadCollector badCollector = new BadCollector( outputStream, 100, COLLECT_ALL, true );
+        for ( int i = 0; i < 2; i++ )
+        {
+            badCollector.collectDuplicateNode( i, i, "group", "source" + i, "otherSource" + i );
+        }
+        badCollector.collectBadRelationship( inputRelationship().build(), 2 );
+        badCollector.collectExtraColumns( "a,b,c", 1, "a" );
+        assertEquals( "Output stream should not have any reported entries", 0, outputStream.size() );
+    }
+
     private OutputStream badOutputFile() throws IOException
     {
         File badDataPath = new File( "/tmp/foo2" ).getAbsoluteFile();
@@ -216,7 +250,7 @@ public class BadCollectorTest
         private final int lineNumber = 1;
         private final int position = 1;
         private final Object[] properties = new Object[]{};
-        private final long firstPropertyId = -1l;
+        private final long firstPropertyId = -1L;
         private final Object startNode = null;
         private final Object endNode = null;
         private final String friend = "FRIEND";

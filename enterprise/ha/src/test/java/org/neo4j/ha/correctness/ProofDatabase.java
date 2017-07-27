@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,21 +19,21 @@
  */
 package org.neo4j.ha.correctness;
 
-import static org.neo4j.graphdb.DynamicLabel.label;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.test.TestGraphDatabaseFactory;
+
+import static org.neo4j.graphdb.Label.label;
 
 public class ProofDatabase
 {
@@ -44,12 +44,12 @@ public class ProofDatabase
     {
         File dbDir = new File( location );
         cleanDbDir( dbDir );
-        this.gds = new GraphDatabaseFactory().newEmbeddedDatabase( dbDir.getPath() );
+        this.gds = new TestGraphDatabaseFactory().newEmbeddedDatabase( dbDir );
     }
 
     public Node newState( ClusterState state )
     {
-        try( Transaction tx = gds.beginTx() )
+        try ( Transaction tx = gds.beginTx() )
         {
             Node node = gds.createNode( label( "State" ) );
             node.setProperty( "description", state.toString() );
@@ -63,14 +63,13 @@ public class ProofDatabase
     public void newStateTransition( ClusterState originalState,
                             Pair<ClusterAction, ClusterState> transition )
     {
-        try( Transaction tx = gds.beginTx() )
+        try ( Transaction tx = gds.beginTx() )
         {
             Node stateNode = stateNodes.get( originalState );
 
             Node subStateNode = newState( transition.other() );
 
-            Relationship msg = stateNode.createRelationshipTo( subStateNode, DynamicRelationshipType
-                    .withName( "MESSAGE" ) );
+            Relationship msg = stateNode.createRelationshipTo( subStateNode, RelationshipType.withName( "MESSAGE" ) );
             msg.setProperty( "description", transition.first().toString() );
             tx.success();
         }
@@ -78,7 +77,7 @@ public class ProofDatabase
 
     private void cleanDbDir( File dbDir )
     {
-        if( dbDir.exists())
+        if ( dbDir.exists() )
         {
             try
             {
@@ -88,7 +87,8 @@ public class ProofDatabase
             {
                 throw new RuntimeException( e );
             }
-        } else
+        }
+        else
         {
             dbDir.getParentFile().mkdirs();
         }

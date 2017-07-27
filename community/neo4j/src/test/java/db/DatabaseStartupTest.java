@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,25 +28,24 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.impl.pagecache.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationException;
 import org.neo4j.kernel.lifecycle.LifecycleException;
-import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class DatabaseStartupTest
 {
     @Rule
-    public final TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
+    public final TestDirectory testDirectory = TestDirectory.testDirectory();
 
     @Test
     public void startTheDatabaseWithWrongVersionShouldFailWithUpgradeNotAllowed() throws Throwable
@@ -63,7 +62,8 @@ public class DatabaseStartupTest
         db.shutdown();
 
         // mess up the version in the metadatastore
-        try ( PageCache pageCache = StandalonePageCacheFactory.createPageCache( new DefaultFileSystemAbstraction() ))
+        try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
+                PageCache pageCache = StandalonePageCacheFactory.createPageCache( fileSystem ) )
         {
             MetaDataStore.setRecord( pageCache, new File(storeDir, MetaDataStore.DEFAULT_NAME ),
                     MetaDataStore.Position.STORE_VERSION, MetaDataStore.versionStringToLong( "bad" ));
@@ -81,7 +81,7 @@ public class DatabaseStartupTest
             assertTrue( ex.getCause() instanceof LifecycleException );
             assertTrue( ex.getCause().getCause() instanceof UpgradeNotAllowedByConfigurationException );
             assertEquals( "Failed to start Neo4j with an older data store version. To enable automatic upgrade, " +
-                          "please set configuration parameter \"allow_store_upgrade=true\"",
+                          "please set configuration parameter \"dbms.allow_format_migration=true\"",
                     ex.getCause().getCause().getMessage());
         }
     }
@@ -101,10 +101,12 @@ public class DatabaseStartupTest
         db.shutdown();
 
         // mess up the version in the metadatastore
-        try ( PageCache pageCache = StandalonePageCacheFactory.createPageCache( new DefaultFileSystemAbstraction() ))
+        String badStoreVersion = "bad";
+        try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
+              PageCache pageCache = StandalonePageCacheFactory.createPageCache( fileSystem ) )
         {
             MetaDataStore.setRecord( pageCache, new File(storeDir, MetaDataStore.DEFAULT_NAME ),
-                    MetaDataStore.Position.STORE_VERSION, MetaDataStore.versionStringToLong( "bad" ));
+                    MetaDataStore.Position.STORE_VERSION, MetaDataStore.versionStringToLong( badStoreVersion ) );
         }
 
         // when
@@ -119,8 +121,6 @@ public class DatabaseStartupTest
             // then
             assertTrue( ex.getCause() instanceof LifecycleException );
             assertTrue( ex.getCause().getCause() instanceof StoreUpgrader.UnexpectedUpgradingStoreVersionException );
-            assertThat( ex.getCause().getCause().getMessage(),
-                    containsString( "has a store version number that we cannot upgrade from." ) );
         }
     }
 }

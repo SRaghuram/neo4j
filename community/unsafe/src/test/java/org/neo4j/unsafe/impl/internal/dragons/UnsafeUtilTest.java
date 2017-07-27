@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,15 +22,19 @@ package org.neo4j.unsafe.impl.internal.dragons;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isOneOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static java.lang.System.currentTimeMillis;
+
 import static org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil.*;
 
 public class UnsafeUtilTest
@@ -50,17 +54,30 @@ public class UnsafeUtilTest
         @Override
         public boolean equals( Object o )
         {
+            if ( this == o )
+            {
+                return true;
+            }
             if ( o == null || getClass() != o.getClass() )
             {
                 return false;
             }
-
             Obj obj = (Obj) o;
-
-            return aByte == obj.aByte && aShort == obj.aShort && Float.compare( obj.aFloat, aFloat ) == 0 &&
-                   aChar == obj.aChar && anInt == obj.anInt && aLong == obj.aLong &&
+            return aBoolean == obj.aBoolean &&
+                   aByte == obj.aByte &&
+                   aShort == obj.aShort &&
+                   Float.compare( obj.aFloat, aFloat ) == 0 &&
+                   aChar == obj.aChar &&
+                   anInt == obj.anInt &&
+                   aLong == obj.aLong &&
                    Double.compare( obj.aDouble, aDouble ) == 0 &&
-                   !(object != null ? !object.equals( obj.object ) : obj.object != null);
+                   Objects.equals( object, obj.object );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( aBoolean, aByte, aShort, aFloat, aChar, anInt, aLong, aDouble, object );
         }
     }
 
@@ -230,12 +247,12 @@ public class UnsafeUtilTest
             setMemory( address, 8, (byte) 0 );
             assertThat( getShortVolatile( address ), is( (short) 0 ) );
 
-            putFloat( address, (float) 1 );
+            putFloat( address, 1 );
             assertThat( getFloat( address ), is( (float) 1 ) );
             setMemory( address, 8, (byte) 0 );
             assertThat( getFloat( address ), is( (float) 0 ) );
 
-            putFloatVolatile( address, (float) 1 );
+            putFloatVolatile( address, 1 );
             assertThat( getFloatVolatile( address ), is( (float) 1 ) );
             setMemory( address, 8, (byte) 0 );
             assertThat( getFloatVolatile( address ), is( (float) 0 ) );
@@ -457,5 +474,72 @@ public class UnsafeUtilTest
         {
             free( address );
         }
+    }
+
+    @Test
+    public void shouldAlignMemoryTo4ByteBoundary() throws Exception
+    {
+        // GIVEN
+        long allocatedMemory = currentTimeMillis();
+        int alignBy = 4;
+
+        // WHEN
+        for ( int i = 0; i < 10; i++ )
+        {
+            // THEN
+            long alignedMemory = UnsafeUtil.alignedMemory( allocatedMemory, alignBy );
+            assertTrue( alignedMemory >= allocatedMemory );
+            assertEquals( 0, alignedMemory % Integer.BYTES );
+            assertTrue( alignedMemory - allocatedMemory <= 3 );
+            allocatedMemory++;
+        }
+    }
+
+    @Test
+    public void shouldPutAndGetByteWiseLittleEndianShort() throws Exception
+    {
+        // GIVEN
+        long p = UnsafeUtil.allocateMemory( 2 );
+        short value = (short) 0b11001100_10101010;
+
+        // WHEN
+        UnsafeUtil.putShortByteWiseLittleEndian( p, value );
+        short readValue = UnsafeUtil.getShortByteWiseLittleEndian( p );
+
+        // THEN
+        UnsafeUtil.free( p );
+        assertEquals( value, readValue );
+    }
+
+    @Test
+    public void shouldPutAndGetByteWiseLittleEndianInt() throws Exception
+    {
+        // GIVEN
+        long p = UnsafeUtil.allocateMemory( 4 );
+        int value = 0b11001100_10101010_10011001_01100110;
+
+        // WHEN
+        UnsafeUtil.putIntByteWiseLittleEndian( p, value );
+        int readValue = UnsafeUtil.getIntByteWiseLittleEndian( p );
+
+        // THEN
+        UnsafeUtil.free( p );
+        assertEquals( value, readValue );
+    }
+
+    @Test
+    public void shouldPutAndGetByteWiseLittleEndianLong() throws Exception
+    {
+        // GIVEN
+        long p = UnsafeUtil.allocateMemory( 8 );
+        long value = 0b11001100_10101010_10011001_01100110__10001000_01000100_00100010_00010001L;
+
+        // WHEN
+        UnsafeUtil.putLongByteWiseLittleEndian( p, value );
+        long readValue = UnsafeUtil.getLongByteWiseLittleEndian( p );
+
+        // THEN
+        UnsafeUtil.free( p );
+        assertEquals( value, readValue );
     }
 }

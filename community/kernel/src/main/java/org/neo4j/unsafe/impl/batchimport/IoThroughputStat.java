@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -51,9 +51,9 @@ public class IoThroughputStat implements Stat
     public long asLong()
     {
         long endTime = this.endTime != 0 ? this.endTime : currentTimeMillis();
-        long totalTime = endTime-startTime;
-        int seconds = (int) (totalTime/1000);
-        return seconds > 0 ? position/seconds : -1;
+        long totalTime = endTime - startTime;
+        int seconds = (int) (totalTime / 1000);
+        return seconds > 0 ? position / seconds : -1;
     }
 
     @Override

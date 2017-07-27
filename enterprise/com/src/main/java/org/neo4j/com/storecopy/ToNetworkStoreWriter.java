@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -45,7 +45,7 @@ public class ToNetworkStoreWriter implements StoreWriter
 
     @Override
     public long write( String path, ReadableByteChannel data, ByteBuffer temporaryBuffer,
-            boolean hasData ) throws IOException
+            boolean hasData, int requiredElementAlignment ) throws IOException
     {
         char[] chars = path.toCharArray();
         targetBuffer.writeShort( chars.length );
@@ -53,12 +53,13 @@ public class ToNetworkStoreWriter implements StoreWriter
         targetBuffer.writeByte( hasData ? 1 : 0 );
         // TODO Make use of temporaryBuffer?
         BlockLogBuffer buffer = new BlockLogBuffer( targetBuffer, bufferMonitor );
-        long totalWritten = 2 + chars.length*2 + 1;
+        long totalWritten = Short.BYTES + chars.length * Character.BYTES + Byte.BYTES;
         if ( hasData )
         {
+            targetBuffer.writeInt( requiredElementAlignment );
+            totalWritten += Integer.BYTES;
             totalWritten += buffer.write( data );
             buffer.close();
-
         }
         return totalWritten;
     }

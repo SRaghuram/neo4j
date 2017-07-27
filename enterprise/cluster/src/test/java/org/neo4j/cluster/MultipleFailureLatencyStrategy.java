@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,12 +37,14 @@ public class MultipleFailureLatencyStrategy
 
     public <T extends NetworkLatencyStrategy> T getStrategy(Class<T> strategyClass)
     {
-        for( NetworkLatencyStrategy strategy : strategies )
+        for ( NetworkLatencyStrategy strategy : strategies )
         {
-            if (strategyClass.isInstance( strategy ))
+            if ( strategyClass.isInstance( strategy ) )
+            {
                 return (T) strategy;
+            }
         }
-        throw new IllegalArgumentException( " No strategy of type "+strategyClass.getName()+" found" );
+        throw new IllegalArgumentException( " No strategy of type " + strategyClass.getName() + " found" );
     }
 
     @Override
@@ -52,8 +54,10 @@ public class MultipleFailureLatencyStrategy
         for (NetworkLatencyStrategy strategy : strategies)
         {
             long delay = strategy.messageDelay(message, serverIdTo);
-            if (delay == LOST )
+            if ( delay == LOST )
+            {
                 return delay;
+            }
             totalDelay += delay;
         }
 

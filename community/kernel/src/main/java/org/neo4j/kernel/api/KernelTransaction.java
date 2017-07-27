@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,12 @@
  */
 package org.neo4j.kernel.api;
 
+import java.util.Optional;
+
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.impl.api.Kernel;
 
 /**
  * Represents a transaction of changes to the underlying graph.
@@ -73,10 +78,23 @@ import org.neo4j.kernel.api.exceptions.TransactionFailureException;
  */
 public interface KernelTransaction extends AutoCloseable
 {
+    enum Type
+    {
+        implicit,
+        explicit
+    }
+
     interface CloseListener
     {
-        void notify( boolean success );
+        /**
+         * @param txId On success, the actual id of the current transaction if writes have been performed, 0 otherwise.
+         * On rollback, always -1.
+         */
+        void notify( long txId );
     }
+
+    long ROLLBACK = -1;
+    long READ_ONLY = 0;
 
     /**
      * Acquires a new {@link Statement} for this transaction which allows for reading and writing data from and
@@ -100,11 +118,25 @@ public interface KernelTransaction extends AutoCloseable
     void failure();
 
     /**
-     * Closes this transaction, committing its changes iff {@link #success()} has been called and
-     * {@link #failure()} has NOT been called. Otherwise its changes will be rolled back.
+     * Closes this transaction, committing its changes if {@link #success()} has been called and neither
+     * {@link #failure()} nor {@link #markForTermination(Status)} has been called.
+     * Otherwise its changes will be rolled back.
+     *
+     * @return id of the committed transaction or {@link #ROLLBACK} if transaction was rolled back or
+     * {@link #READ_ONLY} if transaction was read-only.
+     */
+    long closeTransaction() throws TransactionFailureException;
+
+    /**
+     * Closes this transaction, committing its changes if {@link #success()} has been called and neither
+     * {@link #failure()} nor {@link #markForTermination(Status)} has been called.
+     * Otherwise its changes will be rolled back.
      */
     @Override
-    void close() throws TransactionFailureException;
+    default void close() throws TransactionFailureException
+    {
+        closeTransaction();
+    }
 
     /**
      * @return {@code true} if the transaction is still open, i.e. if {@link #close()} hasn't been called yet.
@@ -112,16 +144,43 @@ public interface KernelTransaction extends AutoCloseable
     boolean isOpen();
 
     /**
-     * @return {@code true} if {@link #markForTermination()} has been invoked, otherwise {@code false}.
+     * @return the security context this transaction is currently executing in.
      */
-    boolean shouldBeTerminated();
+    SecurityContext securityContext();
+
+    /**
+     * @return {@link Status} if {@link #markForTermination(Status)} has been invoked, otherwise empty optional.
+     */
+    Optional<Status> getReasonIfTerminated();
 
     /**
      * Marks this transaction for termination, such that it cannot commit successfully and will try to be
      * terminated by having other methods throw a specific termination exception, as to sooner reach the assumed
      * point where {@link #close()} will be invoked.
      */
-    void markForTermination();
+    void markForTermination( Status reason );
+
+    /**
+     * @return The timestamp of the last transaction that was committed to the store when this transaction started.
+     */
+    long lastTransactionTimestampWhenStarted();
+
+    /**
+     * @return The id of the last transaction that was committed to the store when this transaction started.
+     */
+    long lastTransactionIdWhenStarted();
+
+    /**
+     * @return start time of this transaction, i.e. basically {@link System#currentTimeMillis()} when user called
+     * {@link Kernel#newTransaction(Type, SecurityContext)}.
+     */
+    long startTime();
+
+    /**
+     * Timeout for transaction in milliseconds.
+     * @return transaction timeout in milliseconds.
+     */
+    long timeout();
 
     /**
      * Register a {@link CloseListener} to be invoked after commit, but before transaction events "after" hooks
@@ -129,4 +188,39 @@ public interface KernelTransaction extends AutoCloseable
      * @param listener {@link CloseListener} to get these notifications.
      */
     void registerCloseListener( CloseListener listener );
+
+    /**
+     * Kernel transaction type
+     *
+     * Implicit if created internally in the database
+     * Explicit if created by the end user
+     *
+     * @return the transaction type: implicit or explicit
+     */
+    Type transactionType();
+
+    /**
+     * Return transaction id that assigned during transaction commit process.
+     * @see org.neo4j.kernel.impl.api.TransactionCommitProcess
+     * @return transaction id.
+     * @throws IllegalStateException if transaction id is not assigned yet
+     */
+    long getTransactionId();
+
+    /**
+     * Return transaction commit time (in millis) that assigned during transaction commit process.
+     * @see org.neo4j.kernel.impl.api.TransactionCommitProcess
+     * @return transaction commit time
+     * @throws IllegalStateException if commit time is not assigned yet
+     */
+    long getCommitTime();
+
+    Revertable overrideWith( SecurityContext context );
+
+    @FunctionalInterface
+    interface Revertable extends AutoCloseable
+    {
+        @Override
+        void close();
+    }
 }

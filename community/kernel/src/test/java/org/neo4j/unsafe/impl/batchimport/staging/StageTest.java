@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,11 +24,12 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.stats.Keys;
 
 import static org.junit.Assert.assertEquals;
 
-import static org.neo4j.unsafe.impl.batchimport.staging.Configuration.DEFAULT;
+import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
 import static org.neo4j.unsafe.impl.batchimport.staging.Step.ORDER_SEND_DOWNSTREAM;
 
 public class StageTest
@@ -44,17 +45,11 @@ public class StageTest
             {
                 return 10;
             }
-
-            @Override
-            public int workAheadSize()
-            {
-                return 20;
-            }
         };
         Stage stage = new Stage( "Test stage", config, ORDER_SEND_DOWNSTREAM );
         long batches = 1000;
-        final long items = batches*config.batchSize();
-        stage.add( new ProducerStep( stage.control(), "Producer", config )
+        final long items = batches * config.batchSize();
+        stage.add( new PullingProducerStep( stage.control(), config )
         {
             private final Object theObject = new Object();
             private long i;
@@ -72,6 +67,12 @@ public class StageTest
                 i += batchSize;
                 return batch;
             }
+
+            @Override
+            protected long position()
+            {
+                return 0;
+            }
         } );
 
         for ( int i = 0; i < 3; i++ )
@@ -85,7 +86,7 @@ public class StageTest
         for ( Step<?> step : execution.steps() )
         {
             // we start off with two in each step
-            step.incrementNumberOfProcessors();
+            step.processors( 1 );
         }
         new ExecutionSupervisor( ExecutionMonitors.invisible() ).supervise( execution );
 

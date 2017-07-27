@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,7 @@ package org.neo4j.shell.kernel.apps;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.helpers.Service;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.shell.App;
 import org.neo4j.shell.AppCommandParser;
 import org.neo4j.shell.Continuation;
@@ -43,22 +43,25 @@ public class Mknode extends TransactionProvidingApp
         addOptionDefinition( "l", new OptionDefinition( OptionValueType.MUST,
                 "Labels to attach to the created node, either a single label or a JSON array" ) );
     }
-    
+
     @Override
     public String getDescription()
     {
         return "Creates a new node, f.ex:\n" +
-        		"mknode --cd --np \"{'name':'Neo'}\" -l PERSON";
+                "mknode --cd --np \"{'name':'Neo'}\" -l PERSON";
     }
-    
+
     @Override
     protected Continuation exec( AppCommandParser parser, Session session, Output out ) throws Exception
     {
         GraphDatabaseAPI db = getServer().getDb();
         Node node = db.createNode( parseLabels( parser ) );
-        
+
         setProperties( node, parser.option( "np", null ) );
-        if ( parser.options().containsKey( "cd" ) ) cdTo( session, node );
+        if ( parser.options().containsKey( "cd" ) )
+        {
+            cdTo( session, node );
+        }
         if ( parser.options().containsKey( "v" ) )
         {
             out.println( "Node " + getDisplayName( getServer(), session, node, false ) + " created" );

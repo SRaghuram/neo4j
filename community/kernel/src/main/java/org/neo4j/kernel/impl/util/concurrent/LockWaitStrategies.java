@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,10 @@
  */
 package org.neo4j.kernel.impl.util.concurrent;
 
-import org.neo4j.kernel.impl.locking.AcquireLockTimeoutException;
+import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
+import org.neo4j.storageengine.api.lock.WaitStrategy;
+
+import static org.neo4j.kernel.api.exceptions.Status.Transaction.Interrupted;
 
 public enum LockWaitStrategies implements WaitStrategy<AcquireLockTimeoutException>
 {
@@ -52,7 +55,7 @@ public enum LockWaitStrategies implements WaitStrategy<AcquireLockTimeoutExcepti
         @Override
         public void apply( long iteration ) throws AcquireLockTimeoutException
         {
-            if(iteration < spinIterations)
+            if ( iteration < spinIterations )
             {
                 SPIN.apply( iteration );
                 return;
@@ -60,7 +63,7 @@ public enum LockWaitStrategies implements WaitStrategy<AcquireLockTimeoutExcepti
 
             try
             {
-                if(iteration < multiplyUntilIteration )
+                if ( iteration < multiplyUntilIteration )
                 {
                     Thread.sleep( 0, 1 << (iteration - spinIterations) );
                 }
@@ -69,10 +72,10 @@ public enum LockWaitStrategies implements WaitStrategy<AcquireLockTimeoutExcepti
                     Thread.sleep( 0, 500 );
                 }
             }
-            catch(InterruptedException e)
+            catch ( InterruptedException e )
             {
                 Thread.interrupted();
-                throw new AcquireLockTimeoutException( e , "Interrupted while waiting.");
+                throw new AcquireLockTimeoutException( e, "Interrupted while waiting.", Interrupted );
             }
         }
     };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,25 +19,28 @@
  */
 package org.neo4j.server.rest.repr;
 
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import org.junit.Test;
 
 import java.net.URI;
 
-import org.junit.Test;
-
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
 
 public class SerializerTest
 {
-    
-    @Test 
-    public void shouldPrependBaseUriToRelativePaths() {
+
+    @Test
+    public void shouldPrependBaseUriToRelativePaths()
+    {
         String baseUrl = "http://baseurl/";
-        Serializer serializer = new Serializer(URI.create( baseUrl ), null){};
-        
+        Serializer serializer = new Serializer( URI.create( baseUrl ), null )
+        {
+            // empty
+        };
+
         String aRelativeUrl = "/path/path/path";
-        assertThat(serializer.relativeUri( aRelativeUrl ), is( baseUrl + aRelativeUrl.substring( 1 ) ));
-        assertThat(serializer.relativeTemplate( aRelativeUrl ), is( baseUrl + aRelativeUrl.substring( 1 ) ));
+        assertThat( serializer.relativeUri( aRelativeUrl ), is( baseUrl + aRelativeUrl.substring( 1 ) ) );
+        assertThat( serializer.relativeTemplate( aRelativeUrl ), is( baseUrl + aRelativeUrl.substring( 1 ) ) );
     }
-    
+
 }

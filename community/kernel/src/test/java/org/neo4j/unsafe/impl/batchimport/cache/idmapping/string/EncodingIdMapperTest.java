@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,14 +34,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.helpers.progress.ProgressListener;
-import org.neo4j.test.RandomRule;
-import org.neo4j.test.RepeatRule;
+import org.neo4j.test.rule.RandomRule;
+import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.unsafe.impl.batchimport.InputIterable;
 import org.neo4j.unsafe.impl.batchimport.InputIterator;
 import org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory;
@@ -51,6 +53,7 @@ import org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.ParallelSort.Com
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
 import org.neo4j.unsafe.impl.batchimport.input.Groups;
+import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 import org.neo4j.unsafe.impl.batchimport.input.SimpleInputIterator;
 import org.neo4j.unsafe.impl.batchimport.input.SimpleInputIteratorWrapper;
 
@@ -66,8 +69,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
 import static org.neo4j.helpers.progress.ProgressListener.NONE;
+import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper.ID_NOT_FOUND;
 import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.EncodingIdMapper.NO_MONITOR;
 import static org.neo4j.unsafe.impl.batchimport.input.Collectors.badCollector;
 import static org.neo4j.unsafe.impl.batchimport.input.Group.GLOBAL;
@@ -80,12 +83,12 @@ public class EncodingIdMapperTest
     public static Collection<Object[]> data()
     {
         Collection<Object[]> data = new ArrayList<>();
-        data.add( new Object[] {1} );
-        data.add( new Object[] {2} );
-        int bySystem = Runtime.getRuntime().availableProcessors()-1;
+        data.add( new Object[]{1} );
+        data.add( new Object[]{2} );
+        int bySystem = Runtime.getRuntime().availableProcessors() - 1;
         if ( bySystem > 2 )
         {
-            data.add( new Object[] {bySystem} );
+            data.add( new Object[]{bySystem} );
         }
         return data;
     }
@@ -112,15 +115,9 @@ public class EncodingIdMapperTest
                     private int i;
 
                     @Override
-                    public boolean hasNext()
+                    protected Object fetchNextOrNull()
                     {
-                        return i < 300_000;
-                    }
-
-                    @Override
-                    public Object next()
-                    {
-                        return "" + (i++);
+                        return i < 300_000 ? "" + (i++) : null;
                     }
                 };
             }
@@ -144,7 +141,7 @@ public class EncodingIdMapperTest
         for ( Object id : ids )
         {
             // the UUIDs here will be generated in the same sequence as above because we reset the random
-            if ( idMapper.get( id, GLOBAL ) == -1 )
+            if ( idMapper.get( id, GLOBAL ) == ID_NOT_FOUND )
             {
                 fail( "Couldn't find " + id + " even though I added it just previously" );
             }
@@ -162,7 +159,7 @@ public class EncodingIdMapperTest
         long id = idMapper.get( "123", GLOBAL );
 
         // THEN
-        assertEquals( -1L, id );
+        assertEquals( ID_NOT_FOUND, id );
     }
 
     @Test
@@ -177,7 +174,7 @@ public class EncodingIdMapperTest
         long id = idMapper.get( "123", GLOBAL );
 
         // THEN
-        assertEquals( -1L, id );
+        assertEquals( ID_NOT_FOUND, id );
         verify( progress, times( 3 ) ).started( anyString() );
         verify( progress, times( 3 ) ).done();
     }
@@ -414,15 +411,15 @@ public class EncodingIdMapperTest
 
         // WHEN/THEN
         assertEquals( 0L, mapper.get( "8", firstGroup ) );
-        assertEquals( -1L, mapper.get( "8", secondGroup ) );
-        assertEquals( -1L, mapper.get( "8", thirdGroup ) );
+        assertEquals( ID_NOT_FOUND, mapper.get( "8", secondGroup ) );
+        assertEquals( ID_NOT_FOUND, mapper.get( "8", thirdGroup ) );
 
-        assertEquals( -1L, mapper.get( "9", firstGroup ) );
+        assertEquals( ID_NOT_FOUND, mapper.get( "9", firstGroup ) );
         assertEquals( 1L, mapper.get( "9", secondGroup ) );
-        assertEquals( -1L, mapper.get( "9", thirdGroup ) );
+        assertEquals( ID_NOT_FOUND, mapper.get( "9", thirdGroup ) );
 
-        assertEquals( -1L, mapper.get( "10", firstGroup ) );
-        assertEquals( -1L, mapper.get( "10", secondGroup ) );
+        assertEquals( ID_NOT_FOUND, mapper.get( "10", firstGroup ) );
+        assertEquals( ID_NOT_FOUND, mapper.get( "10", secondGroup ) );
         assertEquals( 2L, mapper.get( "10", thirdGroup ) );
     }
 
@@ -490,7 +487,7 @@ public class EncodingIdMapperTest
                             }
 
                             // The other 90% will be accidental collisions for something else
-                            encoder.useThisIdToEncodeNoMatterWhatComesIn( Long.valueOf( 123456-group.get().id() ) );
+                            encoder.useThisIdToEncodeNoMatterWhatComesIn( Long.valueOf( 123456 - group.get().id() ) );
                             return Long.valueOf( i );
                         }
                         finally
@@ -561,9 +558,9 @@ public class EncodingIdMapperTest
         List<Object> ids = new ArrayList<>();
         for ( int run = 0; run < 2; run++ )
         {
-            for ( long i = 0; i < high/2; i++ )
+            for ( long i = 0; i < high / 2; i++ )
             {
-                ids.add( (high-(i+1) ) );
+                ids.add( high - (i + 1) );
                 ids.add( i );
             }
         }
@@ -582,9 +579,36 @@ public class EncodingIdMapperTest
                 any( Object.class ), anyLong(), anyString(), anyString(), anyString() );
     }
 
-    private List<Object> ids( Object... ids )
+    @Test
+    public void shouldDetectLargeAmountsOfCollisions() throws Exception
     {
-        return Arrays.asList( ids );
+        // GIVEN
+        IdMapper mapper = mapper( new StringEncoder(), Radix.STRING, NO_MONITOR );
+        int count = EncodingIdMapper.COUNTING_BATCH_SIZE * 2;
+        List<Object> ids = new ArrayList<>();
+        long id = 0;
+
+        // Generate and add all input ids
+        while ( id < count )
+        {
+            String inputId = UUID.randomUUID().toString();
+            ids.add( inputId );
+            mapper.put( inputId, id++, GLOBAL );
+        }
+
+        // And add them one more time
+        for ( Object inputId : ids )
+        {
+            mapper.put( inputId, id++, GLOBAL );
+        }
+        ids.addAll( ids );
+
+        // WHEN
+        CountingCollector collector = new CountingCollector();
+        mapper.prepare( SimpleInputIteratorWrapper.wrap( "source", ids ), collector, NONE );
+
+        // THEN
+        assertEquals( count, collector.count );
     }
 
     private IdMapper mapper( Encoder encoder, Factory<Radix> radix, Monitor monitor )
@@ -594,8 +618,20 @@ public class EncodingIdMapperTest
 
     private IdMapper mapper( Encoder encoder, Factory<Radix> radix, Monitor monitor, Comparator comparator )
     {
-        return new EncodingIdMapper( NumberArrayFactory.HEAP, encoder, radix, monitor, 1_000, processors, comparator );
+        return new EncodingIdMapper( NumberArrayFactory.HEAP, encoder, radix, monitor, RANDOM_TRACKER_FACTORY,
+                1_000, processors, comparator );
     }
+
+    private static final TrackerFactory RANDOM_TRACKER_FACTORY = new TrackerFactory()
+    {
+        @Override
+        public Tracker create( NumberArrayFactory arrayFactory, long size )
+        {
+            return System.currentTimeMillis() % 2 == 0
+                    ? new IntTracker( arrayFactory.newIntArray( size, IntTracker.DEFAULT_VALUE ) )
+                    : new BigIdTracker( arrayFactory.newByteArray( size, BigIdTracker.DEFAULT_VALUE ) );
+        }
+    };
 
     private class ValueGenerator implements InputIterable<Object>
     {
@@ -649,7 +685,7 @@ public class EncodingIdMapperTest
         }
     }
 
-    private static enum ValueType
+    private enum ValueType
     {
         LONGS
         {
@@ -777,6 +813,49 @@ public class EncodingIdMapperTest
         abstract Factory<Object> data( Random random );
     }
 
-    public final @Rule RandomRule random = new RandomRule().withSeed( 1436724681847L );
-    public final @Rule RepeatRule repeater = new RepeatRule();
+    @Rule
+    public final RandomRule random = new RandomRule();
+    @Rule
+    public final RepeatRule repeater = new RepeatRule();
+
+    private static class CountingCollector implements Collector
+    {
+        private int count;
+
+        @Override
+        public void collectBadRelationship( InputRelationship relationship, Object specificValue )
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void collectDuplicateNode( Object id, long actualId, String group, String firstSource,
+                String otherSource )
+        {
+            count++;
+        }
+
+        @Override
+        public void collectExtraColumns( String source, long row, String value )
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long badEntries()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public PrimitiveLongIterator leftOverDuplicateNodesIds()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void close()
+        {   // Nothing to close
+        }
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,16 +26,20 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.Future;
 
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
-import org.neo4j.test.ProcessStreamHandler;
-import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.test.ProcessTestUtil.startSubProcess;
 
 public class TestBrokenStoreRecovery
 {
+    @Rule
+    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+
     /**
      * Creates a store with a truncated property store file that remains like
      * that during recovery by truncating the logical log as well. Id
@@ -48,30 +52,21 @@ public class TestBrokenStoreRecovery
     public void testTruncatedPropertyStore() throws Exception
     {
         File storeDir = testDirectory.directory( "propertyStore" );
-        Process process = Runtime.getRuntime().exec(
-                new String[]{
-                        "java", "-cp",
-                        System.getProperty( "java.class.path" ),
-                        ProduceUncleanStore.class.getName(),
-                        storeDir.getAbsolutePath()
-                } );
-
-        assertEquals( 0, new ProcessStreamHandler( process, true ).waitForResult() );
+        Future<Integer> subProcess = startSubProcess( ProduceUncleanStore.class, storeDir.getAbsolutePath() );
+        assertEquals( 0, subProcess.get().intValue() );
         trimFileToSize( new File( storeDir, "neostore.propertystore.db" ), 42 );
         File log = new File( storeDir, PhysicalLogFile.DEFAULT_NAME + PhysicalLogFile.DEFAULT_VERSION_SUFFIX + "0" );
         trimFileToSize( log, 78 );
-        new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir.getAbsolutePath() ).shutdown();
+        new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir.getAbsoluteFile() ).shutdown();
     }
-
-    @Rule
-    public final TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
 
     private void trimFileToSize( File theFile, int toSize )
             throws IOException
     {
-        FileChannel theChannel = new RandomAccessFile( theFile, "rw" ).getChannel();
-        theChannel.truncate( toSize );
-        theChannel.force( false );
-        theChannel.close();
+        try ( FileChannel theChannel = new RandomAccessFile( theFile, "rw" ).getChannel() )
+        {
+            theChannel.truncate( toSize );
+            theChannel.force( false );
+        }
     }
 }

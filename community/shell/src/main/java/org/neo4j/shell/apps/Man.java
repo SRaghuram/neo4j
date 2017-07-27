@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -171,6 +171,7 @@ public class Man extends AbstractApp
             out.println( header + " " + availableCommandsAsString( server ) );
         }
         out.println( "Use " + getShortUsageString() + " for info about each command." );
+        out.println( "Please note that neo4j-shell is deprecated and to be replaced by cypher-shell." );
     }
 
     /**
@@ -188,8 +189,7 @@ public class Man extends AbstractApp
         {
             Collection<String> list = new ArrayList<>();
             // TODO Shouldn't trust the server to be an AbstractAppServer
-            for ( String name : ( ( AbstractAppServer ) server )
-                .getAllAvailableCommands() )
+            for ( String name : ((AbstractAppServer) server).getAllAvailableCommands() )
             {
                 list.add( name );
             }

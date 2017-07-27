@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -107,7 +107,7 @@ public class JsonFormatTest
             @Override
             protected void serialize( MappingSerializer serializer )
             {
-                serializer.putUri( "URL", "subpath" );
+                serializer.putRelativeUri( "URL", "subpath" );
             }
         } );
 
@@ -137,7 +137,7 @@ public class JsonFormatTest
                 JsonHelper.createJsonFrom( Collections.singletonMap( "nested",
                         Collections.singletonMap( "data", "expected data" ) ) ), entity );
     }
-    
+
     @Test
     public void canFormatNestedMapsAndLists() throws Exception
     {

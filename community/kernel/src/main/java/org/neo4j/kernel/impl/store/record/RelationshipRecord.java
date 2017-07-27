@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,18 +19,24 @@
  */
 package org.neo4j.kernel.impl.store.record;
 
+import java.util.Objects;
+
+import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
+import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_RELATIONSHIP;
+
 public class RelationshipRecord extends PrimitiveRecord
 {
     private long firstNode;
     private long secondNode;
     private int type;
-    private long firstPrevRel = 1;
-    private long firstNextRel = Record.NO_NEXT_RELATIONSHIP.intValue();
-    private long secondPrevRel = 1;
-    private long secondNextRel = Record.NO_NEXT_RELATIONSHIP.intValue();
-    private boolean firstInFirstChain = true;
-    private boolean firstInSecondChain = true;
+    private long firstPrevRel;
+    private long firstNextRel;
+    private long secondPrevRel;
+    private long secondNextRel;
+    private boolean firstInFirstChain;
+    private boolean firstInSecondChain;
 
+    @Deprecated
     public RelationshipRecord( long id, long firstNode, long secondNode, int type )
     {
         this( id );
@@ -39,17 +45,32 @@ public class RelationshipRecord extends PrimitiveRecord
         this.type = type;
     }
 
-    public RelationshipRecord( long id )
-    {
-        super( id, Record.NO_NEXT_PROPERTY.intValue() );
-    }
-
+    @Deprecated
     public RelationshipRecord( long id, boolean inUse, long firstNode, long secondNode, int type,
                                long firstPrevRel, long firstNextRel, long secondPrevRel, long secondNextRel,
                                boolean firstInFirstChain, boolean firstInSecondChain )
     {
-        this( id );
+        this( id, firstNode, secondNode, type );
         setInUse( inUse );
+        this.firstPrevRel = firstPrevRel;
+        this.firstNextRel = firstNextRel;
+        this.secondPrevRel = secondPrevRel;
+        this.secondNextRel = secondNextRel;
+        this.firstInFirstChain = firstInFirstChain;
+        this.firstInSecondChain = firstInSecondChain;
+
+    }
+
+    public RelationshipRecord( long id )
+    {
+        super( id );
+    }
+
+    public RelationshipRecord initialize( boolean inUse, long nextProp, long firstNode, long secondNode,
+            int type, long firstPrevRel, long firstNextRel, long secondPrevRel, long secondNextRel,
+            boolean firstInFirstChain, boolean firstInSecondChain )
+    {
+        super.initialize( inUse, nextProp );
         this.firstNode = firstNode;
         this.secondNode = secondNode;
         this.type = type;
@@ -59,7 +80,15 @@ public class RelationshipRecord extends PrimitiveRecord
         this.secondNextRel = secondNextRel;
         this.firstInFirstChain = firstInFirstChain;
         this.firstInSecondChain = firstInSecondChain;
+        return this;
+    }
 
+    @Override
+    public void clear()
+    {
+        initialize( false, NO_NEXT_PROPERTY.intValue(), -1, -1, -1,
+                1, NO_NEXT_RELATIONSHIP.intValue(),
+                1, NO_NEXT_RELATIONSHIP.intValue(), true, true );
     }
 
     public void setLinks( long firstNode, long secondNode, int type )
@@ -162,24 +191,62 @@ public class RelationshipRecord extends PrimitiveRecord
     @Override
     public String toString()
     {
-        return new StringBuilder( "Relationship[" )
-                .append( getId() ).append( ",used=" ).append( inUse() )
-                .append( ",source=" ).append( firstNode )
-                .append( ",target=" ).append( secondNode )
-                .append( ",type=" ).append( type )
-                .append( firstInFirstChain ? ",sCount=" : ",sPrev=" ).append( firstPrevRel )
-                .append( ",sNext=" ).append( firstNextRel )
-                .append( firstInSecondChain ? ",tCount=" : ",tPrev=" ).append( secondPrevRel )
-                .append( ",tNext=" ).append( secondNextRel )
-                .append( ",prop=" ).append( getNextProp() )
-                .append( firstInFirstChain ? ", sFirst" : ",!sFirst" )
-                .append( firstInSecondChain ? ", tFirst" : ",!tFirst" )
-                .append( "]" ).toString();
+        return "Relationship[" + getId() +
+               ",used=" + inUse() +
+               ",source=" + firstNode +
+               ",target=" + secondNode +
+               ",type=" + type +
+               (firstInFirstChain ? ",sCount=" : ",sPrev=") + firstPrevRel +
+               ",sNext=" + firstNextRel +
+               (firstInSecondChain ? ",tCount=" : ",tPrev=") + secondPrevRel +
+               ",tNext=" + secondNextRel +
+               ",prop=" + getNextProp() +
+               ",secondaryUnitId=" + getSecondaryUnitId() +
+               (firstInFirstChain ? ", sFirst" : ",!sFirst") +
+               (firstInSecondChain ? ", tFirst" : ",!tFirst") + "]";
+    }
+
+    @Override
+    public RelationshipRecord clone()
+    {
+        RelationshipRecord record = new RelationshipRecord( getId() ).initialize( inUse(), nextProp, firstNode,
+                secondNode, type, firstPrevRel, firstNextRel, secondPrevRel, secondNextRel, firstInFirstChain,
+                firstInSecondChain );
+        record.setSecondaryUnitId( getSecondaryUnitId() );
+        return record;
     }
 
     @Override
     public void setIdTo( PropertyRecord property )
     {
         property.setRelId( getId() );
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        { return true; }
+        if ( o == null || getClass() != o.getClass() )
+        { return false; }
+        if ( !super.equals( o ) )
+        { return false; }
+        RelationshipRecord that = (RelationshipRecord) o;
+        return firstNode == that.firstNode &&
+               secondNode == that.secondNode &&
+               type == that.type &&
+               firstPrevRel == that.firstPrevRel &&
+               firstNextRel == that.firstNextRel &&
+               secondPrevRel == that.secondPrevRel &&
+               secondNextRel == that.secondNextRel &&
+               firstInFirstChain == that.firstInFirstChain &&
+               firstInSecondChain == that.firstInSecondChain;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( super.hashCode(), firstNode, secondNode, type, firstPrevRel, firstNextRel, secondPrevRel,
+                secondNextRel, firstInFirstChain, firstInSecondChain );
     }
 }

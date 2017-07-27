@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -177,17 +177,22 @@ public final class Bits implements Cloneable
         return builder.toString();
     }
 
+    public static String numberToString( long value, int numberOfBytes )
+    {
+        return numberToString( new StringBuilder(), value, numberOfBytes ).toString();
+    }
+
     public static StringBuilder numberToString( StringBuilder builder, long value, int numberOfBytes )
     {
         builder.append( "[" );
         for ( int i = 8 * numberOfBytes - 1; i >= 0; i-- )
         {
+            boolean isSet = (value & (1L << i)) != 0;
+            builder.append( isSet ? "1" : "0" );
             if ( i > 0 && i % 8 == 0 )
             {
                 builder.append( "," );
             }
-            boolean isSet = (value & (1L << i)) != 0;
-            builder.append( isSet ? "1" : "0" );
         }
         builder.append( "]" );
         return builder;
@@ -280,11 +285,11 @@ public final class Bits implements Cloneable
         int lowBitInLong = writePosition % 64;
         int lowBitsAvailable = 64 - lowBitInLong;
         long lowValueMask = rightOverflowMask( Math.min( lowBitsAvailable, steps ) );
-        longs[lowLongIndex] |= (((value) & lowValueMask) << lowBitInLong);
+        longs[lowLongIndex] |= (value & lowValueMask) << lowBitInLong;
         if ( steps > lowBitsAvailable )
         {   // High bits
             long highValueMask = rightOverflowMask( steps - lowBitsAvailable );
-            longs[lowLongIndex + 1] |= ((value) >>> lowBitsAvailable) & highValueMask;
+            longs[lowLongIndex + 1] |= (value >>> lowBitsAvailable) & highValueMask;
         }
         writePosition += steps;
         return this;
@@ -355,7 +360,7 @@ public final class Bits implements Cloneable
         if ( steps > lowBitsAvailable )
         {   // High bits
             long highLongMask = rightOverflowMask( steps - lowBitsAvailable );
-            result |= ((longs[lowLongIndex + 1] & highLongMask) << lowBitsAvailable);
+            result |= (longs[lowLongIndex + 1] & highLongMask) << lowBitsAvailable;
         }
         readPosition += steps;
         return result;

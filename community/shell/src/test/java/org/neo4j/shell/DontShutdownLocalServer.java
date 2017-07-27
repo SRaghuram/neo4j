@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,16 +23,15 @@ import java.io.File;
 
 import org.neo4j.shell.kernel.GraphDatabaseShellServer;
 
-import static org.neo4j.shell.TestRmiPublication.createDefaultPropertiesFile;
+import static org.neo4j.shell.RmiPublicationIT.createDefaultConfigFile;
 
 public class DontShutdownLocalServer
 {
     public static void main( String[] args ) throws Exception
     {
-        String path = args[0];
-        File propsFile = createDefaultPropertiesFile( path );
-        GraphDatabaseShellServer server = new GraphDatabaseShellServer(
-                path, false, propsFile.getAbsolutePath() );
+        File path = new File( args[0] );
+        File configFile = createDefaultConfigFile( path );
+        new GraphDatabaseShellServer( path, false, configFile.getAbsolutePath() );
         // Intentionally don't shutdown the server
     }
 }

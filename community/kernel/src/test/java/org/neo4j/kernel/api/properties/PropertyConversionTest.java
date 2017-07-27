@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,11 @@
  */
 package org.neo4j.kernel.api.properties;
 
-import java.lang.reflect.Array;
-import java.util.Random;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.lang.reflect.Array;
+import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -51,7 +51,7 @@ public class PropertyConversionTest
     @Test
     public void shouldConvertBigLongProperty() throws Exception
     {
-        assertConverts( (1l + random.nextInt( 1024 )) << 32 );
+        assertConverts( (1L + random.nextInt( 1024 )) << 32 );
     }
 
     @Test

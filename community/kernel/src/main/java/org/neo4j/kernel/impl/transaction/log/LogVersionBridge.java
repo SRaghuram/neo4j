@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,16 +35,9 @@ public interface LogVersionBridge
      * @param channel {@link StoreChannel} to advance from.
      * @return the next {@link StoreChannel} having advanced on from the given channel, or {@code channel}
      * if no bridging needed or end was reached.
-     * @throws IOException
+     * @throws IOException on error opening next version channel.
      */
     LogVersionedStoreChannel next( LogVersionedStoreChannel channel ) throws IOException;
 
-    LogVersionBridge NO_MORE_CHANNELS = new LogVersionBridge()
-    {
-        @Override
-        public LogVersionedStoreChannel next( LogVersionedStoreChannel channel ) throws IOException
-        {
-            return channel;
-        }
-    };
+    LogVersionBridge NO_MORE_CHANNELS = channel -> channel;
 }

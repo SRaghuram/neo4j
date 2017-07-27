@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,11 +24,10 @@ import java.io.IOException;
 import org.neo4j.csv.reader.CharSeeker;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.csv.reader.Mark;
-import org.neo4j.function.Function;
 import org.neo4j.helpers.Exceptions;
-import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.impl.util.Validator;
 import org.neo4j.unsafe.impl.batchimport.InputIterator;
+import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.InputEntity;
 import org.neo4j.unsafe.impl.batchimport.input.InputException;
 import org.neo4j.unsafe.impl.batchimport.input.UnexpectedEndOfInputException;
@@ -39,20 +38,21 @@ import static java.lang.String.format;
  * Converts a line of csv data into an {@link InputEntity} (either a node or relationship).
  * Does so by seeking values, using {@link CharSeeker}, interpreting the values using a {@link Header}.
  */
-public class InputEntityDeserializer<ENTITY extends InputEntity>
-        extends PrefetchingIterator<ENTITY> implements InputIterator<ENTITY>
+public class InputEntityDeserializer<ENTITY extends InputEntity> extends InputIterator.Adapter<ENTITY>
 {
     private final Header header;
     private final CharSeeker data;
     private final Mark mark = new Mark();
     private final int delimiter;
-    private final Function<ENTITY,ENTITY> decorator;
+    private final Decorator<ENTITY> decorator;
     private final Deserialization<ENTITY> deserialization;
     private final Validator<ENTITY> validator;
+    private final Extractors.StringExtractor stringExtractor = new Extractors.StringExtractor( false, false );
+    private final Collector badCollector;
 
     InputEntityDeserializer( Header header, CharSeeker data, int delimiter,
-            Deserialization<ENTITY> deserialization, Function<ENTITY,ENTITY> decorator,
-            Validator<ENTITY> validator )
+            Deserialization<ENTITY> deserialization, Decorator<ENTITY> decorator,
+            Validator<ENTITY> validator, Collector badCollector )
     {
         this.header = header;
         this.data = data;
@@ -60,6 +60,7 @@ public class InputEntityDeserializer<ENTITY extends InputEntity>
         this.deserialization = deserialization;
         this.decorator = decorator;
         this.validator = validator;
+        this.badCollector = badCollector;
     }
 
     public void initialize()
@@ -81,15 +82,20 @@ public class InputEntityDeserializer<ENTITY extends InputEntity>
             // When we have everything, create an input entity out of it
             ENTITY entity = deserialization.materialize();
 
-            // If there are more values on this line, ignore them
-            // TODO perhaps log about them?
+            // Ignore additional values on this, but log it in case user doesn't realise that the header specifies
+            // less columns than the data. Prints in close() so it only happens once per file.
             while ( !mark.isEndOfLine() )
             {
+                long lineNumber = data.lineNumber();
                 data.seek( mark, delimiter );
+                data.tryExtract( mark, stringExtractor );
+                badCollector.collectExtraColumns(
+                        data.sourceDescription(), lineNumber, stringExtractor.value() );
             }
 
             entity = decorator.apply( entity );
             validator.validate( entity );
+
             return entity;
         }
         catch ( IOException e )
@@ -162,7 +168,7 @@ public class InputEntityDeserializer<ENTITY extends InputEntity>
                     "%n  for header: %s" +
                     "%n  raw field value: %s" +
                     "%n  original error: %s",
-                    data, entries[fieldIndex] + ":" + (fieldIndex+1), header,
+                    data, entries[fieldIndex] + ":" + (fieldIndex + 1), header,
                     stringValue != null ? stringValue : "??",
                     e.getMessage() );
             if ( e instanceof InputException )
@@ -178,6 +184,7 @@ public class InputEntityDeserializer<ENTITY extends InputEntity>
     {
         try
         {
+            decorator.close();
             data.close();
         }
         catch ( IOException e )

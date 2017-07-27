@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,11 @@
  */
 package org.neo4j.shell.impl;
 
-import java.rmi.RemoteException;
-import java.util.List;
-
 import jline.console.completer.Completer;
 import jline.console.completer.StringsCompleter;
+
+import java.rmi.RemoteException;
+import java.util.List;
 
 import org.neo4j.shell.ShellClient;
 import org.neo4j.shell.ShellException;
@@ -34,7 +34,7 @@ import org.neo4j.shell.TabCompletion;
  * This class is instantiated by reflection (in {@link JLineConsole#newConsoleOrNullIfNotFound}) in order to ensure
  * that there is no hard dependency on jLine and the console can run in degraded form without it.
  */
-class ShellTabCompleter implements Completer
+public class ShellTabCompleter implements Completer
 {
     private final ShellClient client;
 

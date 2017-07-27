@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,14 +28,14 @@ public interface Page
 {
     /**
      * Get the size of the cache page in bytes.
-     *
+     * <p>
      * Don't access memory beyond address() + size().
      */
     int size();
 
     /**
      * Get the memory address of the beginning of the page.
-     *
+     * <p>
      * Don't access memory beyond address() + size().
      */
     long address();

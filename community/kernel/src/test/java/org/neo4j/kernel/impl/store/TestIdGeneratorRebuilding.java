@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,14 +32,15 @@ import java.util.List;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.kernel.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
+import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
+import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.EphemeralFileSystemRule;
-import org.neo4j.test.PageCacheRule;
+import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
@@ -49,7 +50,7 @@ import static org.mockito.Mockito.mock;
 public class TestIdGeneratorRebuilding
 {
     @ClassRule
-    public static PageCacheRule pageCacheRule = new PageCacheRule();
+    public static final PageCacheRule pageCacheRule = new PageCacheRule();
     @Rule
     public EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
     private EphemeralFileSystemAbstraction fs;
@@ -72,13 +73,14 @@ public class TestIdGeneratorRebuilding
     public void verifyFixedSizeStoresCanRebuildIdGeneratorSlowly() throws IOException
     {
         // Given we have a store ...
-        Config config = new Config( MapUtil.stringMap(
+        Config config = Config.embeddedDefaults( MapUtil.stringMap(
                 GraphDatabaseSettings.rebuild_idgenerators_fast.name(), "false" ) );
         File storeFile = file( "nodes" );
 
         DynamicArrayStore labelStore = mock( DynamicArrayStore.class );
         NodeStore store = new NodeStore( storeFile, config, new DefaultIdGeneratorFactory( fs ),
-                pageCacheRule.getPageCache( fs ), NullLogProvider.getInstance(), labelStore );
+                pageCacheRule.getPageCache( fs ), NullLogProvider.getInstance(), labelStore,
+                RecordFormatSelector.defaultFormat() );
         store.initialise( true );
         store.makeStoreOk();
 
@@ -123,12 +125,12 @@ public class TestIdGeneratorRebuilding
     public void verifyDynamicSizedStoresCanRebuildIdGeneratorSlowly() throws Exception
     {
         // Given we have a store ...
-        Config config = new Config( MapUtil.stringMap(
+        Config config = Config.embeddedDefaults( MapUtil.stringMap(
                 GraphDatabaseSettings.rebuild_idgenerators_fast.name(), "false" ) );
 
         StoreFactory storeFactory = new StoreFactory( storeDir, config, new DefaultIdGeneratorFactory( fs ),
                 pageCacheRule.getPageCache( fs ), fs, NullLogProvider.getInstance() );
-        NeoStores neoStores = storeFactory.openNeoStores( true );
+        NeoStores neoStores = storeFactory.openAllNeoStores( true );
         DynamicStringStore store = neoStores.getPropertyStore().getStringStore();
 
         // ... that contain a number of records ...
@@ -176,13 +178,14 @@ public class TestIdGeneratorRebuilding
     public void rebuildingIdGeneratorMustNotMissOutOnFreeRecordsAtEndOfFilePage() throws IOException
     {
         // Given we have a store ...
-        Config config = new Config( MapUtil.stringMap(
+        Config config = Config.embeddedDefaults( MapUtil.stringMap(
                 GraphDatabaseSettings.rebuild_idgenerators_fast.name(), "false" ) );
         File storeFile = file( "nodes" );
 
         DynamicArrayStore labelStore = mock( DynamicArrayStore.class );
         NodeStore store = new NodeStore( storeFile, config, new DefaultIdGeneratorFactory( fs ),
-                pageCacheRule.getPageCache( fs ), NullLogProvider.getInstance(), labelStore );
+                pageCacheRule.getPageCache( fs ), NullLogProvider.getInstance(), labelStore,
+                RecordFormatSelector.defaultFormat() );
         store.initialise( true );
         store.makeStoreOk();
 

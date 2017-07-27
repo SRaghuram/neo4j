@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,14 +23,19 @@ sealed trait PreParserOption
 sealed abstract class ExecutionModePreParserOption(val name: String) extends PreParserOption
 sealed abstract class PlannerPreParserOption(val name: String) extends PreParserOption
 sealed abstract class RuntimePreParserOption(val name: String) extends PreParserOption
+sealed abstract class UpdateStrategyOption(val name: String) extends PreParserOption
 
 case class VersionOption(version: String) extends PreParserOption
 case object ProfileOption extends ExecutionModePreParserOption("profile")
 case object ExplainOption extends ExecutionModePreParserOption("explain")
-case object GreedyPlannerOption extends PlannerPreParserOption("greedy")
+case object CostPlannerOption extends PlannerPreParserOption("cost")
 case object RulePlannerOption extends PlannerPreParserOption("rule")
+case object GreedyPlannerOption extends PlannerPreParserOption("greedy")
 case object IDPPlannerOption extends PlannerPreParserOption("idp")
 case object DPPlannerOption extends PlannerPreParserOption("dp")
 case object InterpretedRuntimeOption extends RuntimePreParserOption("interpreted")
 case object CompiledRuntimeOption extends RuntimePreParserOption("compiled")
+case object EagerOption extends UpdateStrategyOption("eager")
+case class DebugOption(key: String) extends PreParserOption
+
 case class ConfigurationOptions(version: Option[VersionOption], options: Seq[PreParserOption]) extends PreParserOption

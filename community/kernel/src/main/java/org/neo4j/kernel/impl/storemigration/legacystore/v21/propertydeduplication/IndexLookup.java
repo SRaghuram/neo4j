@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,14 +29,14 @@ import java.util.Map;
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntObjectMap;
 import org.neo4j.kernel.api.index.IndexAccessor;
-import org.neo4j.kernel.api.index.IndexConfiguration;
-import org.neo4j.kernel.api.index.IndexReader;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.schema.SchemaDescriptorPredicates;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.store.SchemaStore;
 import org.neo4j.kernel.impl.store.record.IndexRule;
-import org.neo4j.kernel.impl.store.record.SchemaRule;
+import org.neo4j.storageengine.api.schema.IndexReader;
+import org.neo4j.storageengine.api.schema.SchemaRule;
 
 class IndexLookup implements AutoCloseable
 {
@@ -44,15 +44,15 @@ class IndexLookup implements AutoCloseable
     private final Map<IndexRule,IndexReader> readerCache;
     private final SchemaIndexProvider schemaIndexProvider;
     private final PrimitiveIntObjectMap<List<IndexRule>> indexRuleIndex;
-    private IndexSamplingConfig samplingConfig;
+    private final IndexSamplingConfig samplingConfig;
 
-    public IndexLookup( SchemaStore store, SchemaIndexProvider schemaIndexProvider )
+    IndexLookup( SchemaStore store, SchemaIndexProvider schemaIndexProvider )
     {
         this.schemaIndexProvider = schemaIndexProvider;
         indexAccessors = new ArrayList<>();
         readerCache = new HashMap<>();
         indexRuleIndex = buildIndexRuleIndex( store );
-        samplingConfig = new IndexSamplingConfig( new Config() );
+        samplingConfig = new IndexSamplingConfig( Config.defaults() );
     }
 
     private PrimitiveIntObjectMap<List<IndexRule>> buildIndexRuleIndex( SchemaStore schemaStore )
@@ -60,14 +60,15 @@ class IndexLookup implements AutoCloseable
         final PrimitiveIntObjectMap<List<IndexRule>> indexRuleIndex = Primitive.intObjectMap();
         for ( SchemaRule schemaRule : schemaStore )
         {
-            if ( schemaRule.getKind() == SchemaRule.Kind.INDEX_RULE )
+            if ( schemaRule instanceof IndexRule )
             {
                 IndexRule rule = (IndexRule) schemaRule;
-                List<IndexRule> ruleList = indexRuleIndex.get( rule.getPropertyKey() );
+                int propertyId = rule.schema().getPropertyId(); // assuming 1 property always
+                List<IndexRule> ruleList = indexRuleIndex.get( propertyId );
                 if ( ruleList == null )
                 {
                     ruleList = new LinkedList<>();
-                    indexRuleIndex.put( rule.getPropertyKey(), ruleList );
+                    indexRuleIndex.put( propertyId, ruleList );
                 }
                 ruleList.add( rule );
             }
@@ -88,13 +89,13 @@ class IndexLookup implements AutoCloseable
         }
     }
 
-    private IndexRule findRelevantIndexRule( List<IndexRule> indexRules, int propertyKeyId, long[] labelIds )
+    private IndexRule findIndexRuleWithOneOfLabels( List<IndexRule> indexRules, long[] labelIds )
     {
         for ( long labelId : labelIds )
         {
             for ( IndexRule indexRule : indexRules )
             {
-                if ( indexRule.getPropertyKey() == propertyKeyId && indexRule.getLabel() == labelId  )
+                if ( SchemaDescriptorPredicates.hasLabel( indexRule, (int)labelId ) )
                 {
                     return indexRule;
                 }
@@ -108,9 +109,8 @@ class IndexLookup implements AutoCloseable
         IndexReader reader = readerCache.get( rule );
         if ( reader == null )
         {
-            IndexConfiguration indexConfig = new IndexConfiguration( rule.isConstraintIndex() );
             IndexAccessor accessor = schemaIndexProvider.getOnlineAccessor(
-                    rule.getId(), indexConfig, samplingConfig );
+                    rule.getId(), rule.getIndexDescriptor(), samplingConfig );
             indexAccessors.add( accessor );
             reader = accessor.newReader();
             readerCache.put( rule, reader );
@@ -118,27 +118,21 @@ class IndexLookup implements AutoCloseable
         return reader;
     }
 
-    public Index getAnyIndexOrNull( final long[] labelIds, final int propertyKeyId ) throws IOException {
+    public Index getAnyIndexOrNull( final long[] labelIds, final int propertyKeyId ) throws IOException
+    {
         List<IndexRule> indexRules = indexRuleIndex.get( propertyKeyId );
-        if( indexRules == null )
+        if ( indexRules == null )
         {
             return null;
         }
-        IndexRule rule = findRelevantIndexRule( indexRules, propertyKeyId, labelIds );
+        IndexRule rule = findIndexRuleWithOneOfLabels( indexRules, labelIds );
         if (rule == null)
         {
             return null;
         }
         final IndexReader reader = getIndexReader( rule );
 
-        return new Index()
-        {
-            @Override
-            public boolean contains( long nodeId, Object propertyValue )
-            {
-                return reader.countIndexedNodes( nodeId, propertyValue ) > 0;
-            }
-        };
+        return ( nodeId, propertyValue ) -> reader.countIndexedNodes( nodeId, propertyValue ) > 0;
     }
 
     public boolean hasAnyIndexes()
@@ -146,7 +140,7 @@ class IndexLookup implements AutoCloseable
         return !indexRuleIndex.isEmpty();
     }
 
-    static interface Index
+    interface Index
     {
         boolean contains( long nodeId, Object propertyValue ) throws IOException;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,113 +20,129 @@
 package org.neo4j.kernel.impl.enterprise;
 
 import java.util.Iterator;
+import java.util.function.BiPredicate;
 
 import org.neo4j.cursor.Cursor;
-import org.neo4j.graphdb.schema.ConstraintType;
-import org.neo4j.kernel.api.constraints.NodePropertyExistenceConstraint;
-import org.neo4j.kernel.api.constraints.PropertyConstraint;
-import org.neo4j.kernel.api.constraints.RelationshipPropertyExistenceConstraint;
-import org.neo4j.kernel.api.cursor.NodeItem;
-import org.neo4j.kernel.api.cursor.RelationshipItem;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintVerificationFailedKernelException;
+import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.api.exceptions.schema.CreateConstraintFailureException;
-import org.neo4j.kernel.api.exceptions.schema.NodePropertyExistenceConstraintVerificationFailedKernelException;
-import org.neo4j.kernel.api.exceptions.schema.RelationshipPropertyExistenceConstraintVerificationFailedKernelException;
-import org.neo4j.kernel.api.txstate.TxStateHolder;
-import org.neo4j.kernel.api.txstate.TxStateVisitor;
-import org.neo4j.kernel.impl.api.StatementOperationParts;
-import org.neo4j.kernel.impl.api.store.StoreReadLayer;
-import org.neo4j.kernel.impl.api.store.StoreStatement;
+import org.neo4j.kernel.api.exceptions.schema.NodePropertyExistenceException;
+import org.neo4j.kernel.api.exceptions.schema.RelationshipPropertyExistenceException;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.RelationTypeSchemaDescriptor;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
+import org.neo4j.kernel.api.schema.constaints.NodeKeyConstraintDescriptor;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
-import org.neo4j.kernel.impl.store.record.NodePropertyExistenceConstraintRule;
-import org.neo4j.kernel.impl.store.record.PropertyConstraintRule;
-import org.neo4j.kernel.impl.store.record.RelationshipPropertyExistenceConstraintRule;
+import org.neo4j.kernel.impl.store.record.ConstraintRule;
+import org.neo4j.storageengine.api.NodeItem;
+import org.neo4j.storageengine.api.RelationshipItem;
+import org.neo4j.storageengine.api.StoreReadLayer;
+import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
+import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 
-import static org.neo4j.kernel.impl.store.record.NodePropertyExistenceConstraintRule.nodePropertyExistenceConstraintRule;
-import static org.neo4j.kernel.impl.store.record.RelationshipPropertyExistenceConstraintRule.relPropertyExistenceConstraintRule;
+import static org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException.Phase.VERIFICATION;
+import static org.neo4j.kernel.impl.enterprise.PropertyExistenceEnforcer.getOrCreatePropertyExistenceEnforcerFrom;
 
 public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
 {
     @Override
-    protected PropertyConstraint readNonStandardConstraint( PropertyConstraintRule rule )
+    protected ConstraintDescriptor readNonStandardConstraint( ConstraintRule rule, String errorMessage )
     {
-        if ( rule instanceof NodePropertyExistenceConstraintRule )
+        if ( !rule.getConstraintDescriptor().enforcesPropertyExistence() )
         {
-            return ((NodePropertyExistenceConstraintRule) rule).toConstraint();
+            throw new IllegalStateException( "Unsupported constraint type: " + rule );
         }
-        if ( rule instanceof RelationshipPropertyExistenceConstraintRule )
-        {
-            return ((RelationshipPropertyExistenceConstraintRule) rule).toConstraint();
-        }
-        throw new IllegalStateException( "Unsupported constraint type: " + rule );
+        return rule.getConstraintDescriptor();
     }
 
     @Override
-    public PropertyConstraintRule writeNodePropertyExistenceConstraint( long ruleId, int type, int propertyKey )
+    public ConstraintRule createNodeKeyConstraintRule(
+            long ruleId, NodeKeyConstraintDescriptor descriptor, long indexId )
     {
-        return nodePropertyExistenceConstraintRule( ruleId, type, propertyKey );
+        return ConstraintRule.constraintRule( ruleId, descriptor, indexId );
     }
 
     @Override
-    public PropertyConstraintRule writeRelationshipPropertyExistenceConstraint( long ruleId, int type, int propertyKey )
+    public ConstraintRule createExistenceConstraint( long ruleId, ConstraintDescriptor descriptor )
     {
-        return relPropertyExistenceConstraintRule( ruleId, type, propertyKey );
+        return ConstraintRule.constraintRule( ruleId, descriptor );
     }
 
     @Override
-    public void validateNodePropertyExistenceConstraint( Cursor<NodeItem> allNodes, int label, int propertyKey )
+    public void validateNodePropertyExistenceConstraint( Iterator<Cursor<NodeItem>> allNodes,
+            LabelSchemaDescriptor descriptor, BiPredicate<NodeItem,Integer> hasPropertyCheck )
             throws CreateConstraintFailureException
     {
-        while ( allNodes.next() )
+        while ( allNodes.hasNext() )
         {
-            NodeItem node = allNodes.get();
-            if ( !node.hasProperty( propertyKey ) )
+            try ( Cursor<NodeItem> cursor = allNodes.next() )
             {
-                throw createConstraintFailure(
-                        new NodePropertyExistenceConstraintVerificationFailedKernelException(
-                                new NodePropertyExistenceConstraint( label,propertyKey ), node.id() ) );
+                NodeItem node = cursor.get();
+                for ( int propertyKey : descriptor.getPropertyIds() )
+                {
+                    validateNodePropertyExistenceConstraint( node, propertyKey, descriptor, hasPropertyCheck );
+                }
             }
         }
     }
 
     @Override
-    public void validateRelationshipPropertyExistenceConstraint(
-            Cursor<RelationshipItem> allRels, int type, int propertyKey )
+    public void validateNodeKeyConstraint( Iterator<Cursor<NodeItem>> allNodes,
+            LabelSchemaDescriptor descriptor, BiPredicate<NodeItem,Integer> hasPropertyCheck )
             throws CreateConstraintFailureException
     {
-        while ( allRels.next() )
-        {
-            RelationshipItem relationship = allRels.get();
-            if ( relationship.type() == type && !relationship.hasProperty( propertyKey ) )
-            {
-                throw createConstraintFailure(
-                        new RelationshipPropertyExistenceConstraintVerificationFailedKernelException(
-                                new RelationshipPropertyExistenceConstraint( type, propertyKey ), relationship.id() ) );
-            }
+        validateNodePropertyExistenceConstraint( allNodes, descriptor, hasPropertyCheck );
+    }
 
+    private void validateNodePropertyExistenceConstraint( NodeItem node, int propertyKey,
+        LabelSchemaDescriptor descriptor, BiPredicate<NodeItem, Integer> hasPropertyCheck ) throws
+            CreateConstraintFailureException
+    {
+        if ( !hasPropertyCheck.test( node, propertyKey ) )
+        {
+            throw createConstraintFailure(
+                new NodePropertyExistenceException( descriptor, VERIFICATION, node.id() ) );
         }
     }
 
-    private CreateConstraintFailureException createConstraintFailure( ConstraintVerificationFailedKernelException it )
+    @Override
+    public void validateRelationshipPropertyExistenceConstraint( Cursor<RelationshipItem> allRelationships,
+            RelationTypeSchemaDescriptor descriptor, BiPredicate<RelationshipItem,Integer> hasPropertyCheck )
+            throws CreateConstraintFailureException
+    {
+        while ( allRelationships.next() )
+        {
+            RelationshipItem relationship = allRelationships.get();
+            for ( int propertyId : descriptor.getPropertyIds() )
+            {
+                if ( relationship.type() == descriptor.getRelTypeId() &&
+                        !hasPropertyCheck.test( relationship, propertyId ) )
+                {
+                    throw createConstraintFailure(
+                            new RelationshipPropertyExistenceException( descriptor, VERIFICATION, relationship.id() ) );
+                }
+            }
+        }
+    }
+
+    private CreateConstraintFailureException createConstraintFailure( ConstraintValidationException it )
     {
         return new CreateConstraintFailureException( it.constraint(), it );
     }
 
     @Override
-    public TxStateVisitor decorateTxStateVisitor( StatementOperationParts operations, StoreStatement storeStatement,
-            StoreReadLayer storeLayer, TxStateHolder holder, TxStateVisitor visitor )
+    public TxStateVisitor decorateTxStateVisitor( StoreReadLayer storeLayer, ReadableTransactionState txState,
+            TxStateVisitor visitor )
     {
-        Iterator<PropertyConstraint> constraints = storeLayer.constraintsGetAll();
-        while ( constraints.hasNext() )
+        if ( !txState.hasDataChanges() )
         {
-            PropertyConstraint constraint = constraints.next();
-            if ( constraint.type() == ConstraintType.NODE_PROPERTY_EXISTENCE ||
-                 constraint.type() == ConstraintType.RELATIONSHIP_PROPERTY_EXISTENCE )
-            {
-                return new PropertyExistenceEnforcer( operations.entityReadOperations(), visitor,
-                        holder, storeLayer, storeStatement );
-            }
+            // If there are no data changes, there is no need to enforce constraints. Since there is no need to
+            // enforce constraints, there is no need to build up the state required to be able to enforce constraints.
+            // In fact, it might even be counter productive to build up that state, since if there are no data changes
+            // there would be schema changes instead, and in that case we would throw away the schema-dependant state
+            // we just built when the schema changing transaction commits.
+            return visitor;
         }
-        return visitor;
+        return getOrCreatePropertyExistenceEnforcerFrom( storeLayer )
+                .decorate( visitor, txState, storeLayer );
     }
 }

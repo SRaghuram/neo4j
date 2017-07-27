@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,11 @@
  */
 package org.neo4j.backup;
 
-import org.neo4j.backup.BackupService.BackupOutcome;
-import org.neo4j.consistency.ConsistencyCheckSettings;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.configuration.Config;
-
 import java.io.File;
 
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import org.neo4j.backup.BackupService.BackupOutcome;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 /**
  * This class encapsulates the information needed to perform an online backup against a running Neo4j instance
@@ -77,9 +73,9 @@ public class OnlineBackup
     }
 
     /**
-     * @deprecated use {@link #backup(File)} instead
      * @param targetDirectory A directory holding a complete database previously obtained from the backup server.
      * @return The same OnlineBackup instance, possible to use for a new backup operation
+     * @deprecated use {@link #backup(File)} instead
      */
     @Deprecated
     public OnlineBackup backup( String targetDirectory )
@@ -97,22 +93,21 @@ public class OnlineBackup
      *
      * If the backup has become too far out of date for an incremental backup to succeed, a full backup is performed.
      *
-     *
      * @param targetDirectory A directory holding a complete database previously obtained from the backup server.
      * @return The same OnlineBackup instance, possible to use for a new backup operation
      */
     public OnlineBackup backup( File targetDirectory )
     {
-        outcome = new BackupService().doIncrementalBackupOrFallbackToFull( hostNameOrIp, port, targetDirectory, true,
-                defaultConfig(), timeoutMillis, forensics );
+        outcome = new BackupService().doIncrementalBackupOrFallbackToFull( hostNameOrIp, port, targetDirectory,
+                getConsistencyCheck( true ), defaultConfig(), timeoutMillis, forensics );
         return this;
     }
 
     /**
-     * @deprecated use {@link #backup(File, boolean)} instead
      * @param targetDirectory A directory holding a complete database previously obtained from the backup server.
      * @param verification If true, the verification phase will be run.
      * @return The same OnlineBackup instance, possible to use for a new backup operation
+     * @deprecated use {@link #backup(File, boolean)} instead
      */
     @Deprecated
     public OnlineBackup backup( String targetDirectory, boolean verification )
@@ -131,7 +126,6 @@ public class OnlineBackup
      *
      * If the backup has become too far out of date for an incremental backup to succeed, a full backup is performed.
      *
-     *
      * @param targetDirectory A directory holding a complete database previously obtained from the backup server.
      * @param verification If true, the verification phase will be run.
      * @return The same OnlineBackup instance, possible to use for a new backup operation
@@ -139,15 +133,15 @@ public class OnlineBackup
     public OnlineBackup backup( File targetDirectory, boolean verification )
     {
         outcome = new BackupService().doIncrementalBackupOrFallbackToFull( hostNameOrIp, port, targetDirectory,
-                verification, defaultConfig(), timeoutMillis, forensics );
+                getConsistencyCheck( verification ), defaultConfig(), timeoutMillis, forensics );
         return this;
     }
 
     /**
-     * @deprecated use {@link #backup(File, Config)} instead
      * @param targetDirectory A directory holding a complete database previously obtained from the backup server.
      * @param tuningConfiguration The {@link Config} to use when running the consistency check
      * @return The same OnlineBackup instance, possible to use for a new backup operation
+     * @deprecated use {@link #backup(File, Config)} instead
      */
     @Deprecated
     public OnlineBackup backup( String targetDirectory, Config tuningConfiguration )
@@ -171,21 +165,20 @@ public class OnlineBackup
      */
     public OnlineBackup backup( File targetDirectory, Config tuningConfiguration )
     {
-        outcome = new BackupService().doIncrementalBackupOrFallbackToFull( hostNameOrIp, port, targetDirectory, true,
-                tuningConfiguration, timeoutMillis, forensics );
+        outcome = new BackupService().doIncrementalBackupOrFallbackToFull( hostNameOrIp, port, targetDirectory,
+                getConsistencyCheck( true ), tuningConfiguration, timeoutMillis, forensics );
         return this;
     }
 
     /**
-     * @deprecated use {@link #backup(File, Config, boolean)} instead
      * @param targetDirectory A directory holding a complete database previously obtained from the backup server.
      * @param tuningConfiguration The {@link Config} to use when running the consistency check
      * @param verification If true, the verification phase will be run.
      * @return The same OnlineBackup instance, possible to use for a new backup operation.
+     * @deprecated use {@link #backup(File, Config, boolean)} instead
      */
     @Deprecated
-    public OnlineBackup backup( String targetDirectory, Config tuningConfiguration,
-                                boolean verification )
+    public OnlineBackup backup( String targetDirectory, Config tuningConfiguration, boolean verification )
     {
         return backup( new File( targetDirectory ), tuningConfiguration, verification );
     }
@@ -206,11 +199,10 @@ public class OnlineBackup
      * @param verification If true, the verification phase will be run.
      * @return The same OnlineBackup instance, possible to use for a new backup operation.
      */
-    public OnlineBackup backup( File targetDirectory, Config tuningConfiguration,
-                                boolean verification )
+    public OnlineBackup backup( File targetDirectory, Config tuningConfiguration, boolean verification )
     {
         outcome = new BackupService().doIncrementalBackupOrFallbackToFull( hostNameOrIp, port, targetDirectory,
-                verification, tuningConfiguration, timeoutMillis, forensics );
+                getConsistencyCheck( verification ), tuningConfiguration, timeoutMillis, forensics );
         return this;
     }
 
@@ -219,7 +211,8 @@ public class OnlineBackup
      * doing online backup. Once the value is changed, then every time when doing online backup, the timeout will be
      * reused until this method is called again and a new value is assigned.
      *
-     * @param timeoutMillis The time duration in millisecond that keeps the client waiting for each reply from the server.
+     * @param timeoutMillis The time duration in millisecond that keeps the client waiting for each reply from the
+     * server.
      * @return The same OnlineBackup instance, possible to use for a new backup operation.
      */
     public OnlineBackup withTimeout( long timeoutMillis )
@@ -243,8 +236,8 @@ public class OnlineBackup
     @Deprecated
     public OnlineBackup full( String targetDirectory )
     {
-        outcome = new BackupService().doFullBackup( hostNameOrIp, port, new File( targetDirectory ), true, defaultConfig(),
-                timeoutMillis, forensics );
+        outcome = new BackupService().doFullBackup( hostNameOrIp, port, new File( targetDirectory ),
+                getConsistencyCheck( true ), defaultConfig(), timeoutMillis, forensics );
         return this;
     }
 
@@ -264,8 +257,8 @@ public class OnlineBackup
     @Deprecated
     public OnlineBackup full( String targetDirectory, boolean verification )
     {
-        outcome = new BackupService().doFullBackup( hostNameOrIp, port, new File( targetDirectory ), verification,
-                defaultConfig(), timeoutMillis, forensics );
+        outcome = new BackupService().doFullBackup( hostNameOrIp, port, new File( targetDirectory ),
+                getConsistencyCheck( verification ), defaultConfig(), timeoutMillis, forensics );
         return this;
     }
 
@@ -287,8 +280,8 @@ public class OnlineBackup
     @Deprecated
     public OnlineBackup full( String targetDirectory, boolean verification, Config tuningConfiguration )
     {
-        outcome = new BackupService().doFullBackup( hostNameOrIp, port, new File( targetDirectory ), verification,
-                tuningConfiguration, timeoutMillis, forensics );
+        outcome = new BackupService().doFullBackup( hostNameOrIp, port, new File( targetDirectory ),
+                getConsistencyCheck( verification ), tuningConfiguration, timeoutMillis, forensics );
         return this;
     }
 
@@ -308,8 +301,8 @@ public class OnlineBackup
     @Deprecated
     public OnlineBackup incremental( String targetDirectory )
     {
-        outcome = new BackupService().doIncrementalBackup( hostNameOrIp, port, new File( targetDirectory ), true,
-                timeoutMillis, defaultConfig() );
+        outcome = new BackupService().doIncrementalBackup( hostNameOrIp, port, new File( targetDirectory ),
+                getConsistencyCheck( false ), timeoutMillis, defaultConfig() );
         return this;
     }
 
@@ -330,8 +323,8 @@ public class OnlineBackup
     @Deprecated
     public OnlineBackup incremental( String targetDirectory, boolean verification )
     {
-        outcome = new BackupService().doIncrementalBackup( hostNameOrIp, port, new File( targetDirectory ), verification,
-                timeoutMillis, defaultConfig() );
+        outcome = new BackupService().doIncrementalBackup( hostNameOrIp, port, new File( targetDirectory ),
+                getConsistencyCheck( verification ), timeoutMillis, defaultConfig() );
         return this;
     }
 
@@ -360,6 +353,7 @@ public class OnlineBackup
      * operation performed by this OnlineBackup.
      * In particular, it returns a map where the keys are the names of the data sources and the values the longs that
      * are the last committed transaction id for that data source.
+     *
      * @return A map from data source name to last committed transaction id.
      */
     public long getLastCommittedTx()
@@ -386,7 +380,7 @@ public class OnlineBackup
 
     private Config defaultConfig()
     {
-        return new Config( stringMap(), GraphDatabaseSettings.class, ConsistencyCheckSettings.class );
+        return Config.embeddedDefaults();
     }
 
     /**
@@ -397,5 +391,10 @@ public class OnlineBackup
     {
         this.forensics = forensics;
         return this;
+    }
+
+    private static ConsistencyCheck getConsistencyCheck( boolean verification )
+    {
+        return verification ? ConsistencyCheck.FULL : ConsistencyCheck.NONE;
     }
 }

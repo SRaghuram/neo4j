@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,42 +19,54 @@
  */
 package org.neo4j.kernel.impl.locking;
 
+import java.util.stream.Stream;
+
+import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
+import org.neo4j.storageengine.api.lock.ResourceType;
+
 public class NoOpClient implements Locks.Client
 {
     @Override
-    public void acquireShared( Locks.ResourceType resourceType, long resourceId ) throws AcquireLockTimeoutException
+    public void acquireShared( LockTracer tracer, ResourceType resourceType, long... resourceIds ) throws AcquireLockTimeoutException
     {
     }
 
     @Override
-    public void acquireExclusive( Locks.ResourceType resourceType, long resourceId ) throws AcquireLockTimeoutException
+    public void acquireExclusive( LockTracer tracer, ResourceType resourceType, long... resourceIds ) throws AcquireLockTimeoutException
     {
     }
 
     @Override
-    public boolean tryExclusiveLock( Locks.ResourceType resourceType, long resourceId )
-    {
-        return false;
-    }
-
-    @Override
-    public boolean trySharedLock( Locks.ResourceType resourceType, long resourceId )
+    public boolean tryExclusiveLock( ResourceType resourceType, long resourceId )
     {
         return false;
     }
 
     @Override
-    public void releaseShared( Locks.ResourceType resourceType, long resourceId )
+    public boolean trySharedLock( ResourceType resourceType, long resourceId )
+    {
+        return false;
+    }
+
+    @Override
+    public boolean reEnterShared( ResourceType resourceType, long resourceId )
+    {
+        return false;
+    }
+
+    @Override
+    public boolean reEnterExclusive( ResourceType resourceType, long resourceId )
+    {
+        return false;
+    }
+
+    @Override
+    public void releaseShared( ResourceType resourceType, long resourceId )
     {
     }
 
     @Override
-    public void releaseExclusive( Locks.ResourceType resourceType, long resourceId )
-    {
-    }
-
-    @Override
-    public void releaseAll()
+    public void releaseExclusive( ResourceType resourceType, long resourceId )
     {
     }
 
@@ -72,5 +84,17 @@ public class NoOpClient implements Locks.Client
     public int getLockSessionId()
     {
         return -1;
+    }
+
+    @Override
+    public Stream<? extends ActiveLock> activeLocks()
+    {
+        return Stream.empty();
+    }
+
+    @Override
+    public long activeLockCount()
+    {
+        return 0;
     }
 }

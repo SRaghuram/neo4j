@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,14 +25,17 @@ import org.neo4j.graphdb.Path;
  * @author mh
  * @since 27.01.11
  */
-public class FullPath {
+public class FullPath
+{
     private final Path path;
 
-    public FullPath(Path path) {
+    public FullPath( Path path )
+    {
         this.path = path;
     }
 
-    public Path getPath() {
+    public Path getPath()
+    {
         return path;
     }
 }

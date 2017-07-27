@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,9 @@ package org.neo4j.cluster.protocol.atomicbroadcast.multipaxos;
 
 import java.util.Collection;
 
+/**
+ * Strategy to be used to select a winner in a cluster coordinator election.
+ */
 public interface WinnerStrategy
 {
     org.neo4j.cluster.InstanceId pickWinner( Collection<Vote> votes );

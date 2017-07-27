@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,6 @@ import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.neo4j.function.Predicate;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
@@ -52,7 +51,7 @@ class BidirectionalTraverserIterator extends AbstractTraverserIterator
     {
         private final MonoDirectionalTraversalDescription description;
 
-        public Side( MonoDirectionalTraversalDescription description )
+        Side( MonoDirectionalTraversalDescription description )
         {
             this.description = description;
         }
@@ -82,15 +81,7 @@ class BidirectionalTraverserIterator extends AbstractTraverserIterator
                 new AsOneStartBranch( this, endNodes, end.initialState, start.uniqueness ), end.expander );
 
         this.selector = sideSelector.create( startSelector, endSelector, maxDepth );
-        this.collisionDetector = collisionPolicy.create( collisionEvaluator,
-                new Predicate<Path>()
-                {
-                    @Override
-                    public boolean test( Path path )
-                    {
-                        return uniqueness.checkFull( path );
-                    }
-                } );
+        this.collisionDetector = collisionPolicy.create( collisionEvaluator, uniqueness::checkFull );
     }
 
     private BidirectionalUniquenessFilter makeSureStartAndEndHasSameUniqueness( MonoDirectionalTraversalDescription
@@ -122,7 +113,8 @@ class BidirectionalTraverserIterator extends AbstractTraverserIterator
         return (BidirectionalUniquenessFilter) uniqueness;
     }
 
-    private SideSelector fixedSide( final Direction direction )    {
+    private SideSelector fixedSide( final Direction direction )
+    {
         return new SideSelector()
         {
             @Override

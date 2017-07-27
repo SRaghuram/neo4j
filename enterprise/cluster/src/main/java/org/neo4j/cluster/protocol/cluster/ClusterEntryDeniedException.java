@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,7 +31,7 @@ public class ClusterEntryDeniedException extends IllegalStateException
         super( "I was denied entry. I am " + me + ", configuration response:" + configurationResponseState );
         this.configurationResponseState = configurationResponseState;
     }
-    
+
     public ConfigurationResponseState getConfigurationResponseState()
     {
         return configurationResponseState;

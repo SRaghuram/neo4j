@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,7 +35,9 @@ public class NoSuchTransactionException extends MissingLogDataException
     {
         String result = "Unable to find transaction " + missingTxId + " in any of my logical logs";
         if ( additionalInformation != null )
+        {
             result += ": " + additionalInformation;
+        }
         return result;
     }
 }

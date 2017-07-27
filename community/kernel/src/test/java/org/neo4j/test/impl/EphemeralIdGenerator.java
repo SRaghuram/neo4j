@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,24 +27,36 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.kernel.IdGeneratorFactory;
-import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdRange;
+import org.neo4j.kernel.impl.store.id.IdType;
+import org.neo4j.kernel.impl.store.id.configuration.CommunityIdTypeConfigurationProvider;
+import org.neo4j.kernel.impl.store.id.configuration.IdTypeConfiguration;
+import org.neo4j.kernel.impl.store.id.configuration.IdTypeConfigurationProvider;
 
 public class EphemeralIdGenerator implements IdGenerator
 {
     public static class Factory implements IdGeneratorFactory
     {
         protected final Map<IdType, IdGenerator> generators = new EnumMap<>( IdType.class );
+        private IdTypeConfigurationProvider
+                idTypeConfigurationProvider = new CommunityIdTypeConfigurationProvider();
 
         @Override
-        public IdGenerator open( File fileName, int grabSize, IdType idType, long highId )
+        public IdGenerator open( File filename, IdType idType, long highId, long maxId )
+        {
+            return open( filename, 0, idType, highId, maxId );
+        }
+
+        @Override
+        public IdGenerator open( File fileName, int grabSize, IdType idType, long highId, long maxId )
         {
             IdGenerator generator = generators.get( idType );
             if ( generator == null )
             {
-                generator = new EphemeralIdGenerator( idType );
+                IdTypeConfiguration idTypeConfiguration = idTypeConfigurationProvider.getIdTypeConfiguration( idType );
+                generator = new EphemeralIdGenerator( idType, idTypeConfiguration );
                 generators.put( idType, generator );
             }
             return generator;
@@ -67,10 +79,10 @@ public class EphemeralIdGenerator implements IdGenerator
     private final Queue<Long> freeList;
     private final AtomicInteger freedButNotReturnableIdCount = new AtomicInteger();
 
-    public EphemeralIdGenerator( IdType idType )
+    public EphemeralIdGenerator( IdType idType, IdTypeConfiguration idTypeConfiguration )
     {
         this.idType = idType;
-        this.freeList = idType != null && idType.allowAggressiveReuse() ? new ConcurrentLinkedQueue<Long>() : null;
+        this.freeList = idType != null && idTypeConfiguration.allowAggressiveReuse() ? new ConcurrentLinkedQueue<>() : null;
     }
 
     @Override
@@ -133,7 +145,7 @@ public class EphemeralIdGenerator implements IdGenerator
     public long getNumberOfIdsInUse()
     {
         long result = freeList == null ? nextId.get() : nextId.get() - freeList.size();
-        return result-freedButNotReturnableIdCount.get();
+        return result - freedButNotReturnableIdCount.get();
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -84,7 +84,8 @@ public class PortRangeSocketBinderTest
         }
     }
 
-    private int suppressedExceptions( Throwable throwable ) {
+    private int suppressedExceptions( Throwable throwable )
+    {
         int suppressed = 0;
         for ( Throwable ignored : throwable.getSuppressed() )
         {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,28 +19,32 @@
  */
 package org.neo4j.server.modules;
 
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import javax.servlet.Filter;
+
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.server.configuration.ServerSettings;
-import org.neo4j.server.rest.dbms.AuthorizationFilter;
-import org.neo4j.server.security.auth.AuthManager;
+import org.neo4j.server.rest.dbms.AuthorizationDisabledFilter;
+import org.neo4j.server.rest.dbms.AuthorizationEnabledFilter;
 import org.neo4j.server.web.WebServer;
 
 public class AuthorizationModule implements ServerModule
 {
     private final WebServer webServer;
     private final Config config;
-    private final AuthManager authManager;
+    private final Supplier<AuthManager> authManagerSupplier;
     private final LogProvider logProvider;
     private final Pattern[] uriWhitelist;
 
-    public AuthorizationModule( WebServer webServer, AuthManager authManager, LogProvider logProvider, Config config, Pattern[] uriWhitelist )
+    public AuthorizationModule( WebServer webServer, Supplier<AuthManager> authManager, LogProvider logProvider, Config config, Pattern[] uriWhitelist )
     {
         this.webServer = webServer;
         this.config = config;
-        this.authManager = authManager;
+        this.authManagerSupplier = authManager;
         this.logProvider = logProvider;
         this.uriWhitelist = uriWhitelist;
     }
@@ -48,15 +52,27 @@ public class AuthorizationModule implements ServerModule
     @Override
     public void start()
     {
-        if ( config.get( ServerSettings.auth_enabled ) )
+        final Filter authorizationFilter;
+
+        if ( config.get( GraphDatabaseSettings.auth_enabled ) )
         {
-            final AuthorizationFilter authorizationFilter = new AuthorizationFilter( authManager, logProvider, uriWhitelist );
-            webServer.addFilter( authorizationFilter, "/*" );
+            authorizationFilter = new AuthorizationEnabledFilter( authManagerSupplier, logProvider, uriWhitelist );
         }
+        else
+        {
+            authorizationFilter = createAuthorizationDisabledFilter();
+        }
+
+        webServer.addFilter( authorizationFilter, "/*" );
     }
 
     @Override
     public void stop()
     {
+    }
+
+    protected AuthorizationDisabledFilter createAuthorizationDisabledFilter()
+    {
+        return new AuthorizationDisabledFilter();
     }
 }

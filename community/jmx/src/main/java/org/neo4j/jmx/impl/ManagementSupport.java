@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,24 +19,21 @@
  */
 package org.neo4j.jmx.impl;
 
-import static java.lang.management.ManagementFactory.getPlatformMBeanServer;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Hashtable;
-
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-import javax.management.remote.JMXServiceURL;
 
 import org.neo4j.helpers.Service;
 import org.neo4j.jmx.ManagementInterface;
-import org.neo4j.kernel.KernelData;
+
+import static java.lang.management.ManagementFactory.getPlatformMBeanServer;
 
 public class ManagementSupport
 {
-    final static ManagementSupport load()
+    public static final ManagementSupport load()
     {
         ManagementSupport support = new ManagementSupport();
         for ( ManagementSupport candidate : Service.load( ManagementSupport.class ) )
@@ -67,7 +64,7 @@ public class ManagementSupport
 
     final <T> Collection<T> getProxiesFor( Class<T> beanInterface, KernelBean kernel )
     {
-        Collection<T> result = new ArrayList<T>();
+        Collection<T> result = new ArrayList<>();
         ObjectName query = createObjectNameQuery( kernel.getInstanceId(), beanInterface );
         for ( ObjectName name : getMBeanServer().queryNames( query, null ) )
         {
@@ -81,25 +78,12 @@ public class ManagementSupport
         return false;
     }
 
-    /**
-     * Get the URI to which connections can be made to the {@link MBeanServer}
-     * of this JVM.
-     *
-     * @param kernel the kernel that wishes to access the URI.
-     * @return a URI that can be used for connecting to the {@link MBeanServer}
-     *         of this JVM.
-     */
-    protected JMXServiceURL getJMXServiceURL( KernelData kernel )
-    {
-        return null;
-    }
-
     public final ObjectName createObjectName( String instanceId, Class<?> beanInterface, String... extraNaming )
     {
         return createObjectName( instanceId, getBeanName( beanInterface ), false, extraNaming );
     }
 
-    private final ObjectName createObjectNameQuery( String instanceId, Class<?> beanInterface )
+    private ObjectName createObjectNameQuery( String instanceId, Class<?> beanInterface )
     {
         return createObjectName( instanceId, getBeanName( beanInterface ), true );
     }
@@ -116,7 +100,7 @@ public class ManagementSupport
 
     protected ObjectName createObjectName( String instanceId, String beanName, boolean query, String... extraNaming )
     {
-        Hashtable<String, String> properties = new Hashtable<String, String>();
+        Hashtable<String, String> properties = new Hashtable<>();
         properties.put( "instance", "kernel#" + instanceId );
         properties.put( "name", beanName );
         for ( int i = 0; i < extraNaming.length; i++ )

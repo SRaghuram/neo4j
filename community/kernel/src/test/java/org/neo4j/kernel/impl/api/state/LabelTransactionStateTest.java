@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,32 +26,38 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import org.neo4j.cursor.Cursor;
-import org.neo4j.kernel.api.cursor.NodeItem;
+import org.neo4j.collection.primitive.PrimitiveIntCollections;
+import org.neo4j.collection.primitive.PrimitiveLongCollections;
+import org.neo4j.kernel.api.AssertOpen;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.KernelStatement;
-import org.neo4j.kernel.impl.api.LegacyPropertyTrackers;
 import org.neo4j.kernel.impl.api.StateHandlingStatementOperations;
 import org.neo4j.kernel.impl.api.StatementOperationsTestHelper;
-import org.neo4j.kernel.impl.api.store.StoreReadLayer;
+import org.neo4j.kernel.impl.api.legacyindex.InternalAutoIndexing;
 import org.neo4j.kernel.impl.api.store.StoreStatement;
 import org.neo4j.kernel.impl.index.LegacyIndexStore;
+import org.neo4j.storageengine.api.NodeItem;
+import org.neo4j.storageengine.api.StoreReadLayer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.graphdb.Neo4jMockitoHelpers.answerAsIteratorFrom;
-import static org.neo4j.graphdb.Neo4jMockitoHelpers.answerAsPrimitiveLongIteratorFrom;
-import static org.neo4j.helpers.collection.IteratorUtil.asSet;
-import static org.neo4j.kernel.impl.api.state.StubCursors.asLabelCursor;
+import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.kernel.impl.api.state.StubCursors.asNodeCursor;
 import static org.neo4j.kernel.impl.api.state.StubCursors.asPropertyCursor;
+import static org.neo4j.test.mockito.answer.Neo4jMockitoAnswers.answerAsIteratorFrom;
+import static org.neo4j.test.mockito.answer.Neo4jMockitoAnswers.answerAsPrimitiveLongIteratorFrom;
 
 public class LabelTransactionStateTest
 {
@@ -59,15 +65,12 @@ public class LabelTransactionStateTest
     public void before() throws Exception
     {
         store = mock( StoreReadLayer.class );
-        when( store.indexesGetForLabel( labelId1 ) ).then( answerAsIteratorFrom( Collections
-                .<IndexDescriptor>emptyList() ) );
-        when( store.indexesGetForLabel( labelId2 ) ).then( answerAsIteratorFrom( Collections
-                .<IndexDescriptor>emptyList() ) );
-        when( store.indexesGetAll() ).then( answerAsIteratorFrom( Collections.<IndexDescriptor>emptyList() ) );
+        when( store.indexesGetForLabel( anyInt() ) ).then( answerAsIteratorFrom( Collections.emptyList() ) );
+        when( store.indexesGetAll() ).then( answerAsIteratorFrom( Collections.emptyList() ) );
 
         txState = new TxState();
         state = StatementOperationsTestHelper.mockedState( txState );
-        txContext = new StateHandlingStatementOperations( store, mock( LegacyPropertyTrackers.class ),
+        txContext = new StateHandlingStatementOperations( store, mock( InternalAutoIndexing.class ),
                 mock( ConstraintIndexCreator.class ), mock( LegacyIndexStore.class ) );
 
         storeStatement = mock( StoreStatement.class );
@@ -164,10 +167,12 @@ public class LabelTransactionStateTest
                 labels( 2, 1, 3 ) );
 
         // WHEN
+        List<IndexDescriptor> indexes = Collections.singletonList( IndexDescriptorFactory.forLabel( 2, 2 ) );
+        when( store.indexesGetForLabel( 2 ) ).thenReturn( indexes.iterator() );
         txContext.nodeAddLabel( state, 2, 2 );
 
         // THEN
-        assertEquals( asSet( 0L, 1L, 2L ), asSet( txContext.nodesGetForLabel( state, 2 ) ) );
+        assertEquals( asSet( 0L, 1L, 2L ), PrimitiveLongCollections.toSet( txContext.nodesGetForLabel( state, 2 ) ) );
     }
 
     @Test
@@ -183,7 +188,7 @@ public class LabelTransactionStateTest
         txContext.nodeRemoveLabel( state, 1, 2 );
 
         // THEN
-        assertEquals( asSet( 0L ), asSet( txContext.nodesGetForLabel( state, 2 ) ) );
+        assertEquals( asSet( 0L ), PrimitiveLongCollections.toSet( txContext.nodesGetForLabel( state, 2 ) ) );
     }
 
     @Test
@@ -243,6 +248,8 @@ public class LabelTransactionStateTest
     {
         // GIVEN
         when( storeStatement.acquireSingleNodeCursor( 1337 ) ).thenReturn( asNodeCursor( 1337 ) );
+        when( store.nodeGetProperties( eq( storeStatement ), any( NodeItem.class ), any( AssertOpen.class ) ) )
+                .thenReturn( asPropertyCursor() );
 
         // WHEN
         boolean added = txContext.nodeAddLabel( state, 1337, 12 );
@@ -255,8 +262,10 @@ public class LabelTransactionStateTest
     public void should_return_false_when_adding_existing_label() throws Exception
     {
         // GIVEN
-        when( storeStatement.acquireSingleNodeCursor( 1337 ) ).thenReturn( asNodeCursor( 1337, asPropertyCursor(),
-                asLabelCursor( 12 ) ) );
+        when( storeStatement.acquireSingleNodeCursor( 1337 ) ).thenReturn( asNodeCursor( 1337,
+                StubCursors.labels( 12 ) ) );
+        when( store.nodeGetProperties( eq( storeStatement ), any( NodeItem.class ), any( AssertOpen.class ) ) )
+                .thenReturn( asPropertyCursor() );
 
         // WHEN
         boolean added = txContext.nodeAddLabel( state, 1337, 12 );
@@ -269,8 +278,10 @@ public class LabelTransactionStateTest
     public void should_return_true_when_removing_existing_label() throws Exception
     {
         // GIVEN
-        when( storeStatement.acquireSingleNodeCursor( 1337 ) ).thenReturn( asNodeCursor( 1337, asPropertyCursor(),
-                asLabelCursor( 12 ) ) );
+        when( storeStatement.acquireSingleNodeCursor( 1337 ) ).thenReturn( asNodeCursor( 1337,
+                StubCursors.labels( 12 ) ) );
+        when( store.nodeGetProperties( eq( storeStatement ), any( NodeItem.class ), any( AssertOpen.class ) ) )
+                .thenReturn( asPropertyCursor() );
 
         // WHEN
         boolean added = txContext.nodeRemoveLabel( state, 1337, 12 );
@@ -307,16 +318,16 @@ public class LabelTransactionStateTest
     private static class Labels
     {
         private final long nodeId;
-        private final Integer[] labelIds;
+        private final int[] labelIds;
 
-        Labels( long nodeId, Integer... labelIds )
+        Labels( long nodeId, int... labelIds )
         {
             this.nodeId = nodeId;
             this.labelIds = labelIds;
         }
     }
 
-    private static Labels labels( long nodeId, Integer... labelIds )
+    private static Labels labels( long nodeId, int... labelIds )
     {
         return new Labels( nodeId, labelIds );
     }
@@ -326,57 +337,46 @@ public class LabelTransactionStateTest
         Map<Integer,Collection<Long>> allLabels = new HashMap<>();
         for ( Labels nodeLabels : labels )
         {
-            when( storeStatement.acquireSingleNodeCursor( nodeLabels.nodeId ) ).thenReturn( StubCursors.asNodeCursor(
-                    nodeLabels.nodeId, asPropertyCursor(), asLabelCursor( nodeLabels.labelIds ) ) );
+            when( storeStatement.acquireSingleNodeCursor( nodeLabels.nodeId ) )
+                    .thenReturn( asNodeCursor( nodeLabels.nodeId, StubCursors.labels( nodeLabels.labelIds ) ) );
+            when( store.nodeGetProperties( eq( storeStatement ), any( NodeItem.class ), any( AssertOpen.class ) ) )
+                    .thenReturn( asPropertyCursor() );
 
             for ( int label : nodeLabels.labelIds )
             {
-                Collection<Long> nodes = allLabels.get( label );
-                if ( nodes == null )
-                {
-                    nodes = new ArrayList<>();
-                    allLabels.put( label, nodes );
-                }
+                Collection<Long> nodes = allLabels.computeIfAbsent( label, k -> new ArrayList<>() );
                 nodes.add( nodeLabels.nodeId );
             }
         }
 
         for ( Map.Entry<Integer,Collection<Long>> entry : allLabels.entrySet() )
         {
-            when( store.nodesGetForLabel( state, entry.getKey() ) ).then( answerAsPrimitiveLongIteratorFrom( entry
-                    .getValue() ) );
+            when( store.nodesGetForLabel( state.getStoreStatement(), entry.getKey() ) )
+                    .then( answerAsPrimitiveLongIteratorFrom( entry.getValue() ) );
         }
     }
 
     private void commitNoLabels() throws Exception
     {
-        commitLabels( new Integer[0] );
+        commitLabels( new int[0] );
     }
 
-    private void commitLabels( Integer... labels ) throws Exception
+    private void commitLabels( int... labels ) throws Exception
     {
         commitLabels( labels( nodeId, labels ) );
     }
 
-    private void assertLabels( Integer... labels ) throws EntityNotFoundException
+    private void assertLabels( int... labels ) throws EntityNotFoundException
     {
-        try ( Cursor<NodeItem> cursor = txContext.nodeCursor( state, nodeId ) )
-        {
-            if ( cursor.next() )
-            {
-                assertEquals( asSet( labels ), asSet( cursor.get().getLabels() ) );
-            }
-        }
+        txContext.nodeCursorById( state, nodeId )
+                .forAll( node -> assertEquals( PrimitiveIntCollections.asSet( labels ), node.labels() ) );
 
-        for ( int label : labels )
+        txContext.nodeCursorById( state, nodeId ).forAll( node ->
         {
-            try ( Cursor<NodeItem> cursor = txContext.nodeCursor( state, nodeId ) )
+            for ( int label : labels )
             {
-                if ( cursor.next() )
-                {
-                    assertTrue( "Expected labels not found on node", cursor.get().hasLabel( label ) );
-                }
+                assertTrue( "Expected labels not found on node", node.hasLabel( label ) );
             }
-        }
+        } );
     }
 }

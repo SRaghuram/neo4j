@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,20 +19,19 @@
  */
 package org.neo4j.server.web;
 
-import java.util.concurrent.CountDownLatch;
-
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.concurrent.CountDownLatch;
+
+import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.SuppressOutput;
+import org.neo4j.test.rule.SuppressOutput;
 
 import static org.junit.Assert.assertEquals;
-
-import static org.neo4j.test.SuppressOutput.suppressAll;
-
-import org.neo4j.kernel.configuration.Config;
+import static org.neo4j.test.rule.SuppressOutput.suppressAll;
 
 public class JettyThreadLimitTest
 {
@@ -42,14 +41,14 @@ public class JettyThreadLimitTest
     @Test
     public void shouldHaveConfigurableJettyThreadPoolSize() throws Exception
     {
-        Jetty9WebServer server = new Jetty9WebServer( NullLogProvider.getInstance(), new Config() );
+        Jetty9WebServer server = new Jetty9WebServer( NullLogProvider.getInstance(), Config.empty() );
         int numCores = 1;
         int configuredMaxThreads = 12; // 12 is the new min max Threads value, for one core
         int acceptorThreads = 1; // In this configuration, 1 thread will become an acceptor...
         int selectorThreads = 1; // ... and 1 thread will become a selector...
         int jobThreads = configuredMaxThreads - acceptorThreads - selectorThreads; // ... and the rest are job threads
         server.setMaxThreads( numCores );
-        server.setPort( 7480 );
+        server.setAddress( new ListenSocketAddress( "localhost", 7480 ) );
         try
         {
             server.start();
@@ -68,28 +67,23 @@ public class JettyThreadLimitTest
         }
     }
 
-    private CountDownLatch loadThreadPool(
-            QueuedThreadPool threadPool,
-            int tasksToSubmit,
-            final CountDownLatch startLatch )
+    private CountDownLatch loadThreadPool( QueuedThreadPool threadPool,
+                                           int tasksToSubmit,
+                                           final CountDownLatch startLatch )
     {
-        final CountDownLatch endLatch = new CountDownLatch( 1 );
+        CountDownLatch endLatch = new CountDownLatch( 1 );
         for ( int i = 0; i < tasksToSubmit; i++ )
         {
-            threadPool.execute( new Runnable()
+            threadPool.execute( () ->
             {
-                @Override
-                public void run()
+                startLatch.countDown();
+                try
                 {
-                    startLatch.countDown();
-                    try
-                    {
-                        endLatch.await();
-                    }
-                    catch ( InterruptedException e )
-                    {
-                        e.printStackTrace();
-                    }
+                    endLatch.await();
+                }
+                catch ( InterruptedException e )
+                {
+                    e.printStackTrace();
                 }
             } );
         }

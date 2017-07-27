@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,18 +31,20 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.kernel.api.exceptions.index.ExceptionDuringFlipKernelException;
 import org.neo4j.kernel.api.exceptions.index.FlipFailedKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexActivationFailedKernelException;
-import org.neo4j.kernel.api.exceptions.index.IndexCapacityExceededException;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexProxyAlreadyClosedKernelException;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintVerificationFailedKernelException;
-import org.neo4j.kernel.api.index.IndexConfiguration;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.index.IndexEntryConflictException;
-import org.neo4j.kernel.api.index.IndexReader;
+import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.InternalIndexState;
+import org.neo4j.kernel.api.index.PropertyAccessor;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.impl.api.index.updater.DelegatingIndexUpdater;
+import org.neo4j.storageengine.api.schema.IndexReader;
+import org.neo4j.storageengine.api.schema.PopulationProgress;
 
 public class FlippableIndexProxy implements IndexProxy
 {
@@ -136,20 +138,6 @@ public class FlippableIndexProxy implements IndexProxy
         }
     }
 
-    @Override
-    public void flush() throws IOException
-    {
-        barge( lock.readLock() ); // see javadoc of this method (above) for rationale on why we use barge(...) here
-        try
-        {
-            delegate.flush();
-        }
-        finally
-        {
-            lock.readLock().unlock();
-        }
-    }
-
     /**
      * Acquire the {@code ReadLock} in an <i>unfair</i> way, without waiting for queued up writers.
      * <p/>
@@ -215,6 +203,20 @@ public class FlippableIndexProxy implements IndexProxy
         try
         {
             return delegate.getDescriptor();
+        }
+        finally
+        {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public LabelSchemaDescriptor schema()
+    {
+        lock.readLock().lock();
+        try
+        {
+            return delegate.schema();
         }
         finally
         {
@@ -308,7 +310,7 @@ public class FlippableIndexProxy implements IndexProxy
     }
 
     @Override
-    public void validate() throws IndexPopulationFailedKernelException, ConstraintVerificationFailedKernelException
+    public void validate() throws IndexPopulationFailedKernelException, UniquePropertyValueValidationException
     {
         lock.readLock().lock();
         try
@@ -349,6 +351,20 @@ public class FlippableIndexProxy implements IndexProxy
         }
     }
 
+    @Override
+    public PopulationProgress getIndexPopulationProgress()
+    {
+        lock.readLock().lock();
+        try
+        {
+            return delegate.getIndexPopulationProgress();
+        }
+        finally
+        {
+            lock.readLock().unlock();
+        }
+    }
+
     public void setFlipTarget( IndexProxyFactory flipTarget )
     {
         lock.writeLock().lock();
@@ -381,7 +397,7 @@ public class FlippableIndexProxy implements IndexProxy
         lock.writeLock().lock();
         try
         {
-            assertStillOpenForBusiness();
+            assertOpen();
             try
             {
                 actionDuringFlip.call();
@@ -400,30 +416,30 @@ public class FlippableIndexProxy implements IndexProxy
     }
 
     @Override
-    public IndexConfiguration config()
-    {
-        lock.readLock().lock();
-        try
-        {
-            return delegate.config();
-        }
-        finally
-        {
-            lock.readLock().unlock();
-        }
-    }
-
-    @Override
     public String toString()
     {
         return getClass().getSimpleName() + " -> " + delegate + "[target:" + flipTarget + "]";
     }
 
-    private void assertStillOpenForBusiness() throws IndexProxyAlreadyClosedKernelException
+    private void assertOpen() throws IndexProxyAlreadyClosedKernelException
     {
         if ( closed )
         {
             throw new IndexProxyAlreadyClosedKernelException( this.getClass() );
+        }
+    }
+
+    @Override
+    public void verifyDeferredConstraints( PropertyAccessor accessor ) throws IndexEntryConflictException, IOException
+    {
+        lock.readLock().lock();
+        try
+        {
+            delegate.verifyDeferredConstraints( accessor );
+        }
+        finally
+        {
+            lock.readLock().unlock();
         }
     }
 
@@ -436,7 +452,7 @@ public class FlippableIndexProxy implements IndexProxy
         }
 
         @Override
-        public void close() throws IOException, IndexEntryConflictException, IndexCapacityExceededException
+        public void close() throws IOException, IndexEntryConflictException
         {
             try
             {

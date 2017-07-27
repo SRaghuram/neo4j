@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,7 +25,8 @@ import javax.servlet.http.HttpServletRequest;
  * A variant of SecurityRule which adds the ability to forbid access, even if the request is authenticated,
  * which results in an HTTP 403.
  */
-public interface ForbiddingSecurityRule extends SecurityRule {
+public interface ForbiddingSecurityRule extends SecurityRule
+{
 
     /**
      * @param request The HTTP request currently under consideration.

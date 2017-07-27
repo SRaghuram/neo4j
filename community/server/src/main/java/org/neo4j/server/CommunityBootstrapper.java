@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,34 +19,18 @@
  */
 package org.neo4j.server;
 
+import java.util.Collection;
+import java.util.Collections;
+import javax.annotation.Nonnull;
+
 import org.neo4j.kernel.GraphDatabaseDependencies;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.ConfigurationValidator;
+import org.neo4j.kernel.configuration.ServerConfigurationValidator;
 import org.neo4j.logging.LogProvider;
 
-/**
- * @deprecated This class is for internal use only and will be moved to an internal package in a future release.
- * Please use Neo4j Server and plugins or un-managed extensions for bespoke solutions.
- */
-@Deprecated
-public class CommunityBootstrapper extends Bootstrapper
+public class CommunityBootstrapper extends ServerBootstrapper
 {
-    public static void main( String[] args )
-    {
-        int exit = start( new CommunityBootstrapper(), args );
-        if ( exit != 0 )
-        {
-            System.exit( exit );
-        }
-    }
-
-    /**
-     * Start a bootstrapper with the specified command-line arguments, returns a status code indicating success or failure outcomes.
-     */
-    public static int start( Bootstrapper boot, String[] argv )
-    {
-        ServerCommandLineArgs args = ServerCommandLineArgs.parse( argv );
-        return boot.start( args.configFile(), args.configOverrides() );
-    }
 
     @Override
     protected NeoServer createNeoServer( Config config, GraphDatabaseDependencies dependencies,
@@ -54,4 +38,12 @@ public class CommunityBootstrapper extends Bootstrapper
     {
         return new CommunityNeoServer( config, dependencies, logProvider );
     }
+
+    @Override
+    @Nonnull
+    protected Collection<ConfigurationValidator> configurationValidators()
+    {
+        return Collections.singletonList( new ServerConfigurationValidator() );
+    }
+
 }

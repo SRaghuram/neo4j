@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,66 +25,68 @@ import org.mockito.InOrder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
-import org.neo4j.function.Consumer;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.helpers.collection.Visitor;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.api.RecoveryLegacyIndexApplierLookup;
-import org.neo4j.kernel.impl.api.index.RecoveryIndexingUpdatesValidator;
+import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.DeadSimpleLogVersionRepository;
 import org.neo4j.kernel.impl.transaction.DeadSimpleTransactionIdStore;
-import org.neo4j.kernel.impl.transaction.command.CommandHandler;
+import org.neo4j.kernel.impl.transaction.log.LogFile;
+import org.neo4j.kernel.impl.transaction.log.LogHeaderCache;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.LogVersionRepository;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
+import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
-import org.neo4j.kernel.impl.transaction.log.PhysicalWritableLogChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadableVersionableLogChannel;
+import org.neo4j.kernel.impl.transaction.log.PhysicalLogicalTransactionStore;
+import org.neo4j.kernel.impl.transaction.log.PositionAwarePhysicalFlushableChannel;
+import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionMetadataCache;
 import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryVersion;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
-import org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.OnePhaseCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
-import org.neo4j.kernel.impl.transaction.log.rotation.StoreFlusher;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.DefaultRecoverySPI;
 import org.neo4j.kernel.recovery.LatestCheckPointFinder;
 import org.neo4j.kernel.recovery.Recovery;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.storageengine.api.StorageEngine;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
-
-import static org.neo4j.kernel.impl.transaction.log.LogVersionBridge.NO_MORE_CHANNELS;
-import static org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel.DEFAULT_READ_AHEAD_SIZE;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
+import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_LOG_VERSION;
+import static org.neo4j.kernel.recovery.PositionToRecoverFrom.NO_MONITOR;
 
 public class RecoveryTest
 {
-    private final FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
 
     @Rule
-    public final TargetDirectory.TestDirectory directory = TargetDirectory.testDirForTest( getClass() );
+    public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Rule
+    public final TestDirectory directory = TestDirectory.testDirectory();
     private final LogVersionRepository logVersionRepository = new DeadSimpleLogVersionRepository( 1L );
-    private final TransactionIdStore transactionIdStore = new DeadSimpleTransactionIdStore( 5L, 0, 0, 0 );
-    private final int logVersion = 1;
+    private final TransactionIdStore transactionIdStore = new DeadSimpleTransactionIdStore( 5L, 0,
+            BASE_TX_COMMIT_TIMESTAMP, 0, 0 );
+    private final int logVersion = 0;
 
     private LogEntry lastCommittedTxStartEntry;
     private LogEntry lastCommittedTxCommitEntry;
@@ -95,7 +97,7 @@ public class RecoveryTest
     @Test
     public void shouldRecoverExistingData() throws Exception
     {
-        final PhysicalLogFiles logFiles = new PhysicalLogFiles( directory.directory(), "log", fs );
+        final PhysicalLogFiles logFiles = new PhysicalLogFiles( directory.directory(), "log", fileSystemRule.get() );
         File file = logFiles.getLogFileForVersion( logVersion );
 
         writeSomeData( file, new Visitor<Pair<LogEntryWriter, Consumer<LogPositionMarker>>,IOException>()
@@ -110,22 +112,113 @@ public class RecoveryTest
                 // last committed tx
                 consumer.accept( marker );
                 LogPosition lastCommittedTxPosition = marker.newPosition();
-                writer.writeStartEntry( 0, 1, 2l, 3l, new byte[0] );
-                lastCommittedTxStartEntry = new LogEntryStart( 0, 1, 2l, 3l, new byte[0], lastCommittedTxPosition );
-                writer.writeCommitEntry( 4l, 5l );
-                lastCommittedTxCommitEntry = new OnePhaseCommit( 4l, 5l );
+                writer.writeStartEntry( 0, 1, 2L, 3L, new byte[0] );
+                lastCommittedTxStartEntry = new LogEntryStart( 0, 1, 2L, 3L, new byte[0], lastCommittedTxPosition );
+                writer.writeCommitEntry( 4L, 5L );
+                lastCommittedTxCommitEntry = new OnePhaseCommit( 4L, 5L );
 
-                // check point
+                // check point pointing to the previously committed transaction
                 writer.writeCheckPointEntry( lastCommittedTxPosition );
                 expectedCheckPointEntry = new CheckPoint( lastCommittedTxPosition );
 
                 // tx committed after checkpoint
                 consumer.accept( marker );
-                writer.writeStartEntry( 0, 1, 6l, 4l, new byte[0] );
-                expectedStartEntry = new LogEntryStart( 0, 1, 6l, 4l, new byte[0], marker.newPosition() );
+                writer.writeStartEntry( 0, 1, 6L, 4L, new byte[0] );
+                expectedStartEntry = new LogEntryStart( 0, 1, 6L, 4L, new byte[0], marker.newPosition() );
 
-                writer.writeCommitEntry( 5l, 7l );
-                expectedCommitEntry = new OnePhaseCommit( 5l, 7l );
+                writer.writeCommitEntry( 5L, 7L );
+                expectedCommitEntry = new OnePhaseCommit( 5L, 7L );
+
+                return true;
+            }
+        } );
+
+        LifeSupport life = new LifeSupport();
+        Recovery.Monitor monitor = mock( Recovery.Monitor.class );
+        final AtomicBoolean recoveryRequired = new AtomicBoolean();
+        try
+        {
+            StorageEngine storageEngine = mock( StorageEngine.class );
+            final LogEntryReader<ReadableClosablePositionAwareChannel> reader = new VersionAwareLogEntryReader<>();
+            LatestCheckPointFinder finder = new LatestCheckPointFinder( logFiles, fileSystemRule.get(), reader );
+
+            LogHeaderCache logHeaderCache = new LogHeaderCache( 10 );
+            TransactionMetadataCache metadataCache = new TransactionMetadataCache( 100 );
+            LogFile logFile = life.add( new PhysicalLogFile( fileSystemRule.get(), logFiles, 50,
+                    () -> transactionIdStore.getLastCommittedTransactionId(), logVersionRepository,
+                    mock( PhysicalLogFile.Monitor.class ), logHeaderCache ) );
+            LogicalTransactionStore txStore = new PhysicalLogicalTransactionStore( logFile, metadataCache, reader );
+
+            life.add( new Recovery( new DefaultRecoverySPI( storageEngine, logFiles, fileSystemRule.get(),
+                    logVersionRepository, finder, transactionIdStore, txStore, NO_MONITOR )
+            {
+                private int nr = 0;
+
+                @Override
+                public Visitor<CommittedTransactionRepresentation,Exception> startRecovery()
+                {
+                    recoveryRequired.set( true );
+                    final Visitor<CommittedTransactionRepresentation,Exception> actual = super.startRecovery();
+                    return new Visitor<CommittedTransactionRepresentation,Exception>()
+                    {
+                        @Override
+                        public boolean visit( CommittedTransactionRepresentation tx ) throws Exception
+                        {
+                            actual.visit( tx );
+                            switch ( nr++ )
+                            {
+                            case 0:
+                                assertEquals( lastCommittedTxStartEntry, tx.getStartEntry() );
+                                assertEquals( lastCommittedTxCommitEntry, tx.getCommitEntry() );
+                                break;
+                            case 1:
+                                assertEquals( expectedStartEntry, tx.getStartEntry() );
+                                assertEquals( expectedCommitEntry, tx.getCommitEntry() );
+                                break;
+                            default: fail( "Too many recovered transactions" );
+                            }
+                            return false;
+                        }
+                    };
+                }
+            }, monitor ) );
+
+            life.start();
+
+            InOrder order = inOrder( monitor );
+            order.verify( monitor, times( 1 ) ).recoveryRequired( any( LogPosition.class ) );
+            order.verify( monitor, times( 1 ) ).recoveryCompleted( 2 );
+            assertTrue( recoveryRequired.get() );
+        }
+        finally
+        {
+            life.shutdown();
+        }
+    }
+
+    @Test
+    public void shouldSeeThatACleanDatabaseShouldNotRequireRecovery() throws Exception
+    {
+        final PhysicalLogFiles logFiles = new PhysicalLogFiles( directory.directory(), "log", fileSystemRule.get() );
+        File file = logFiles.getLogFileForVersion( logVersion );
+
+        writeSomeData( file, new Visitor<Pair<LogEntryWriter, Consumer<LogPositionMarker>>,IOException>()
+        {
+            @Override
+            public boolean visit( Pair<LogEntryWriter,Consumer<LogPositionMarker>> pair ) throws IOException
+            {
+                LogEntryWriter writer = pair.first();
+                Consumer<LogPositionMarker> consumer = pair.other();
+                LogPositionMarker marker = new LogPositionMarker();
+
+                // last committed tx
+                consumer.accept( marker );
+                writer.writeStartEntry( 0, 1, 2L, 3L, new byte[0] );
+                writer.writeCommitEntry( 4L, 5L );
+
+                // check point
+                consumer.accept( marker );
+                writer.writeCheckPointEntry( marker.newPosition() );
 
                 return true;
             }
@@ -135,54 +228,31 @@ public class RecoveryTest
         Recovery.Monitor monitor = mock( Recovery.Monitor.class );
         try
         {
-            RecoveryLabelScanWriterProvider provider = mock( RecoveryLabelScanWriterProvider.class );
-            RecoveryLegacyIndexApplierLookup lookup = mock( RecoveryLegacyIndexApplierLookup.class );
-            RecoveryIndexingUpdatesValidator validator = mock( RecoveryIndexingUpdatesValidator.class );
+            StorageEngine storageEngine = mock( StorageEngine.class );
+            final LogEntryReader<ReadableClosablePositionAwareChannel> reader = new VersionAwareLogEntryReader<>();
+            LatestCheckPointFinder finder = new LatestCheckPointFinder( logFiles, fileSystemRule.get(), reader );
 
-            StoreFlusher flusher = mock( StoreFlusher.class );
-            final LogEntryReader<ReadableLogChannel> reader = new VersionAwareLogEntryReader<>(
-                    LogEntryVersion.CURRENT.byteCode() );
-            LatestCheckPointFinder finder = new LatestCheckPointFinder( logFiles, fs, reader );
+            TransactionMetadataCache metadataCache = new TransactionMetadataCache( 100 );
+            LogHeaderCache logHeaderCache = new LogHeaderCache( 10 );
+            LogFile logFile = life.add( new PhysicalLogFile( fileSystemRule.get(), logFiles, 50,
+                    () -> transactionIdStore.getLastCommittedTransactionId(), logVersionRepository,
+                    mock( PhysicalLogFile.Monitor.class ), logHeaderCache ) );
+            LogicalTransactionStore txStore = new PhysicalLogicalTransactionStore( logFile, metadataCache, reader );
 
-            life.add( new Recovery( new DefaultRecoverySPI( provider, lookup, flusher, null, logFiles, fs,
-                    logVersionRepository, finder, validator )
+            life.add( new Recovery( new DefaultRecoverySPI( storageEngine, logFiles, fileSystemRule.get(),
+                    logVersionRepository, finder, transactionIdStore, txStore, NO_MONITOR )
             {
                 @Override
-                public Visitor<LogVersionedStoreChannel,IOException> getRecoverer()
+                public Visitor<CommittedTransactionRepresentation,Exception> startRecovery()
                 {
-                    return new Visitor<LogVersionedStoreChannel,IOException>()
-                    {
-                        @Override
-                        public boolean visit( LogVersionedStoreChannel element ) throws IOException
-                        {
-                            try ( ReadableVersionableLogChannel channel =
-                                          new ReadAheadLogChannel( element, NO_MORE_CHANNELS, DEFAULT_READ_AHEAD_SIZE ) )
-                            {
-                                assertEquals( lastCommittedTxStartEntry, reader.readLogEntry( channel ) );
-                                assertEquals( lastCommittedTxCommitEntry, reader.readLogEntry( channel ) );
-                                assertEquals( expectedCheckPointEntry, reader.readLogEntry( channel ) );
-                                assertEquals( expectedStartEntry, reader.readLogEntry( channel ) );
-                                assertEquals( expectedCommitEntry, reader.readLogEntry( channel ) );
-
-                                assertNull( reader.readLogEntry( channel ) );
-
-                                return true;
-                            }
-                        }
-                    };
+                    fail( "Recovery should not be required" );
+                    return null; // <-- to satisfy the compiler
                 }
-
-            }, monitor ) );
-
-            life.add( new PhysicalLogFile( fs, logFiles, 50, transactionIdStore, logVersionRepository,
-                    mock( PhysicalLogFile.Monitor.class ), new TransactionMetadataCache( 10, 100 ) ) );
+            }, monitor ));
 
             life.start();
 
-            InOrder order = inOrder( monitor );
-            order.verify( monitor, times( 1 ) ).recoveryRequired( any( LogPosition.class ) );
-            order.verify( monitor, times( 1 ) ).logRecovered( any( LogPosition.class ) );
-            order.verify( monitor, times( 1 ) ).recoveryCompleted();
+            verifyZeroInteractions( monitor );
         }
         finally
         {
@@ -190,31 +260,177 @@ public class RecoveryTest
         }
     }
 
+    @Test
+    public void shouldTruncateLogAfterSinglePartialTransaction() throws Exception
+    {
+        // GIVEN
+        final PhysicalLogFiles logFiles = new PhysicalLogFiles( directory.directory(), "log", fileSystemRule.get() );
+        File file = logFiles.getLogFileForVersion( logVersion );
+        final LogPositionMarker marker = new LogPositionMarker();
+
+        writeSomeData( file, new Visitor<Pair<LogEntryWriter, Consumer<LogPositionMarker>>,IOException>()
+        {
+            @Override
+            public boolean visit( Pair<LogEntryWriter,Consumer<LogPositionMarker>> pair ) throws IOException
+            {
+                LogEntryWriter writer = pair.first();
+                Consumer<LogPositionMarker> consumer = pair.other();
+
+                // incomplete tx
+                consumer.accept( marker ); // <-- marker has the last good position
+                writer.writeStartEntry( 0, 1, 5L, 4L, new byte[0] );
+
+                return true;
+            }
+        } );
+
+        // WHEN
+        boolean recoveryRequired = recover( logFiles );
+
+        // THEN
+        assertTrue( recoveryRequired );
+        assertEquals( marker.getByteOffset(), file.length() );
+    }
+
+    @Test
+    public void shouldTruncateLogAfterLastCompleteTransactionAfterSuccessfullRecovery() throws Exception
+    {
+        // GIVEN
+        final PhysicalLogFiles logFiles = new PhysicalLogFiles( directory.directory(), "log", fileSystemRule.get() );
+        File file = logFiles.getLogFileForVersion( logVersion );
+        final LogPositionMarker marker = new LogPositionMarker();
+
+        writeSomeData( file, new Visitor<Pair<LogEntryWriter, Consumer<LogPositionMarker>>,IOException>()
+        {
+            @Override
+            public boolean visit( Pair<LogEntryWriter,Consumer<LogPositionMarker>> pair ) throws IOException
+            {
+                LogEntryWriter writer = pair.first();
+                Consumer<LogPositionMarker> consumer = pair.other();
+
+                // last committed tx
+                writer.writeStartEntry( 0, 1, 2L, 3L, new byte[0] );
+                writer.writeCommitEntry( 4L, 5L );
+
+                // incomplete tx
+                consumer.accept( marker ); // <-- marker has the last good position
+                writer.writeStartEntry( 0, 1, 5L, 4L, new byte[0] );
+
+                return true;
+            }
+        } );
+
+        // WHEN
+        boolean recoveryRequired = recover( logFiles );
+
+        // THEN
+        assertTrue( recoveryRequired );
+        assertEquals( marker.getByteOffset(), file.length() );
+    }
+
+    @Test
+    public void shouldTellTransactionIdStoreAfterSuccessfullRecovery() throws Exception
+    {
+        // GIVEN
+        final PhysicalLogFiles logFiles = new PhysicalLogFiles( directory.directory(), "log", fileSystemRule.get() );
+        File file = logFiles.getLogFileForVersion( logVersion );
+        final LogPositionMarker marker = new LogPositionMarker();
+
+        final byte[] additionalHeaderData = new byte[0];
+        final int masterId = 0;
+        final int authorId = 1;
+        final long transactionId = 4;
+        final long commitTimestamp = 5;
+        writeSomeData( file, new Visitor<Pair<LogEntryWriter, Consumer<LogPositionMarker>>,IOException>()
+        {
+            @Override
+            public boolean visit( Pair<LogEntryWriter,Consumer<LogPositionMarker>> pair ) throws IOException
+            {
+                LogEntryWriter writer = pair.first();
+                Consumer<LogPositionMarker> consumer = pair.other();
+
+                // last committed tx
+                writer.writeStartEntry( masterId, authorId, 2L, 3L, additionalHeaderData );
+                writer.writeCommitEntry( transactionId, commitTimestamp );
+                consumer.accept( marker );
+
+                return true;
+            }
+        } );
+
+        // WHEN
+        boolean recoveryRequired = recover( logFiles );
+
+        // THEN
+        assertTrue( recoveryRequired );
+        long[] lastClosedTransaction = transactionIdStore.getLastClosedTransaction();
+        assertEquals( transactionId, lastClosedTransaction[0] );
+        assertEquals( LogEntryStart.checksum( additionalHeaderData, masterId, authorId ),
+                transactionIdStore.getLastCommittedTransaction().checksum() );
+        assertEquals( commitTimestamp, transactionIdStore.getLastCommittedTransaction().commitTimestamp() );
+        assertEquals( logVersion, lastClosedTransaction[1] );
+        assertEquals( marker.getByteOffset(), lastClosedTransaction[2] );
+    }
+
+    private boolean recover( PhysicalLogFiles logFiles )
+    {
+        LifeSupport life = new LifeSupport();
+        Recovery.Monitor monitor = mock( Recovery.Monitor.class );
+        final AtomicBoolean recoveryRequired = new AtomicBoolean();
+        try
+        {
+            StorageEngine storageEngine = mock( StorageEngine.class );
+            final LogEntryReader<ReadableClosablePositionAwareChannel> reader = new VersionAwareLogEntryReader<>();
+            LatestCheckPointFinder finder = new LatestCheckPointFinder( logFiles, fileSystemRule.get(), reader );
+
+            TransactionMetadataCache metadataCache = new TransactionMetadataCache( 100 );
+            LogHeaderCache logHeaderCache = new LogHeaderCache( 10 );
+            LogFile logFile = life.add( new PhysicalLogFile( fileSystemRule.get(), logFiles, 50,
+                    () -> transactionIdStore.getLastCommittedTransactionId(), logVersionRepository,
+                    mock( PhysicalLogFile.Monitor.class ), logHeaderCache ) );
+            LogicalTransactionStore txStore = new PhysicalLogicalTransactionStore( logFile, metadataCache, reader );
+
+            life.add( new Recovery( new DefaultRecoverySPI( storageEngine, logFiles, fileSystemRule.get(),
+                    logVersionRepository, finder, transactionIdStore, txStore, NO_MONITOR )
+            {
+                @Override
+                public Visitor<CommittedTransactionRepresentation,Exception> startRecovery()
+                {
+                    recoveryRequired.set( true );
+                    return super.startRecovery();
+                }
+            }, monitor ) );
+
+            life.start();
+        }
+        finally
+        {
+            life.shutdown();
+        }
+        return recoveryRequired.get();
+    }
+
     private void writeSomeData( File file, Visitor<Pair<LogEntryWriter,Consumer<LogPositionMarker>>,IOException> visitor ) throws IOException
     {
 
         try (  LogVersionedStoreChannel versionedStoreChannel =
-                       new PhysicalLogVersionedStoreChannel( fs.open( file, "rw" ), logVersion, CURRENT_LOG_VERSION );
-              final PhysicalWritableLogChannel writableLogChannel = new PhysicalWritableLogChannel( versionedStoreChannel ) )
+                       new PhysicalLogVersionedStoreChannel( fileSystemRule.get().open( file, "rw" ), logVersion, CURRENT_LOG_VERSION );
+              PositionAwarePhysicalFlushableChannel writableLogChannel = new PositionAwarePhysicalFlushableChannel( versionedStoreChannel ) )
         {
-            LogHeaderWriter.writeLogHeader( writableLogChannel, logVersion, 2l );
+            writeLogHeader( writableLogChannel, logVersion, 2L );
 
-            Consumer<LogPositionMarker> consumer = new Consumer<LogPositionMarker>()
+            Consumer<LogPositionMarker> consumer = marker ->
             {
-                @Override
-                public void accept( LogPositionMarker marker )
+                try
                 {
-                    try
-                    {
-                        writableLogChannel.getCurrentPosition( marker );
-                    }
-                    catch ( IOException e )
-                    {
-                        throw new RuntimeException( e );
-                    }
+                    writableLogChannel.getCurrentPosition( marker );
+                }
+                catch ( IOException e )
+                {
+                    throw new RuntimeException( e );
                 }
             };
-            LogEntryWriter first = new LogEntryWriter( writableLogChannel, CommandHandler.EMPTY );
+            LogEntryWriter first = new LogEntryWriter( writableLogChannel );
             visitor.visit( Pair.of( first, consumer ) );
         }
     }

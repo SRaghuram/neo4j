@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,8 @@ import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
+import org.neo4j.test.rule.TestDirectory;
+
 public abstract class ManagedResource<R> implements TestRule
 {
     private R resource;
@@ -37,14 +39,14 @@ public abstract class ManagedResource<R> implements TestRule
         return result;
     }
 
-    protected abstract R createResource( TargetDirectory.TestDirectory dir ) throws Exception;
+    protected abstract R createResource( TestDirectory dir ) throws Exception;
 
     protected abstract void disposeResource( R resource );
 
     @Override
     public final Statement apply( final Statement base, Description description )
     {
-        final TargetDirectory.TestDirectory dir = TargetDirectory.testDirForTest( description.getTestClass() );
+        final TestDirectory dir = TestDirectory.testDirectory( description.getTestClass() );
         return dir.apply( new Statement()
         {
             @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -68,7 +68,7 @@ public class StringEncoderTest
         char[] chars = new char[length];
         for ( int i = 0; i < length; i++ )
         {
-            int ch = 'a' + (i%20);
+            int ch = 'a' + (i % 20);
             chars[i] = (char) ch;
         }
         return new String( chars );

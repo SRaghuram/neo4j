@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,8 +24,10 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
-import org.neo4j.helpers.collection.Visitor;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.locking.LockTracer;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
+import org.neo4j.time.Clocks;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -40,15 +42,15 @@ public class LockManagerImplTest
     public void shouldAllowGetReadWriteLocks()
     {
         // given
-        LockResource node1 = new LockResource( ResourceTypes.NODE, 1l );
-        LockResource node2 = new LockResource( ResourceTypes.NODE, 2l );
+        LockResource node1 = new LockResource( ResourceTypes.NODE, 1L );
+        LockResource node2 = new LockResource( ResourceTypes.NODE, 2L );
         LockTransaction lockTransaction = new LockTransaction();
-        LockManagerImpl lockManager = new LockManagerImpl( new RagManager() );
+        LockManagerImpl lockManager = createLockManager();
 
         // expect
-        assertTrue( lockManager.getReadLock( node1, lockTransaction ) );
-        assertTrue( lockManager.getReadLock( node2, lockTransaction ) );
-        assertTrue( lockManager.getWriteLock( node2, lockTransaction ) );
+        assertTrue( lockManager.getReadLock( LockTracer.NONE, node1, lockTransaction ) );
+        assertTrue( lockManager.getReadLock( LockTracer.NONE, node2, lockTransaction ) );
+        assertTrue( lockManager.getWriteLock( LockTracer.NONE, node2, lockTransaction ) );
 
         lockManager.releaseReadLock( node1, lockTransaction );
         lockManager.releaseReadLock( node2, lockTransaction );
@@ -62,9 +64,9 @@ public class LockManagerImplTest
     public void shouldNotBePossibleReleaseNotExistingLock()
     {
         // given
-        LockResource node1 = new LockResource( ResourceTypes.NODE, 1l );
+        LockResource node1 = new LockResource( ResourceTypes.NODE, 1L );
         LockTransaction lockTransaction = new LockTransaction();
-        LockManagerImpl lockManager = new LockManagerImpl( new RagManager() );
+        LockManagerImpl lockManager = createLockManager();
 
         // expect
         expectedException.expect( LockNotFoundException.class );
@@ -78,10 +80,10 @@ public class LockManagerImplTest
     public void shouldCleanupNotUsedLocks()
     {
         // given
-        LockResource node = new LockResource( ResourceTypes.NODE, 1l );
+        LockResource node = new LockResource( ResourceTypes.NODE, 1L );
         LockTransaction lockTransaction = new LockTransaction();
-        LockManagerImpl lockManager = new LockManagerImpl( new RagManager() );
-        lockManager.getWriteLock( node, lockTransaction );
+        LockManagerImpl lockManager = createLockManager();
+        lockManager.getWriteLock( LockTracer.NONE, node, lockTransaction );
 
         // expect
         assertTrue( lockManager.tryReadLock( node, lockTransaction ) );
@@ -101,10 +103,11 @@ public class LockManagerImplTest
     }
 
     @Test
-    public void shouldReleaseNotAcquiredLocks() {
+    public void shouldReleaseNotAcquiredLocks()
+    {
 
         // given
-        LockResource node = new LockResource( ResourceTypes.NODE, 1l );
+        LockResource node = new LockResource( ResourceTypes.NODE, 1L );
         LockTransaction lockTransaction = new LockTransaction();
         RWLock rwLock = Mockito.mock( RWLock.class );
         LockManagerImpl lockManager = new MockedLockLockManager( new RagManager(), rwLock );
@@ -118,36 +121,18 @@ public class LockManagerImplTest
         assertEquals( 0, countLocks( lockManager ) );
     }
 
-    private RWLock getLockByResource( LockManagerImpl lockManager, final LockResource resource )
+    private LockManagerImpl createLockManager()
     {
-        final RWLock[] locks = new RWLock[1];
-        lockManager.accept( new Visitor<RWLock,RuntimeException>()
-        {
-            @Override
-            public boolean visit( RWLock lock ) throws RuntimeException
-            {
-                if ( resource.equals( lock.resource() ) )
-                {
-                    locks[0] = lock;
-                }
-                return false;
-            }
-        } );
-        return locks[0];
+        return new LockManagerImpl( new RagManager(), Config.defaults(), Clocks.systemClock() );
     }
-
 
     private int countLocks( LockManagerImpl lockManager )
     {
         final int[] counter = new int[1];
-        lockManager.accept( new Visitor<RWLock,RuntimeException>()
+        lockManager.accept( element ->
         {
-            @Override
-            public boolean visit( RWLock element ) throws RuntimeException
-            {
-                counter[0]++;
-                return false;
-            }
+            counter[0]++;
+            return false;
         } );
         return counter[0];
     }
@@ -157,14 +142,14 @@ public class LockManagerImplTest
 
         private RWLock lock;
 
-        public MockedLockLockManager( RagManager ragManager, RWLock lock )
+        MockedLockLockManager( RagManager ragManager, RWLock lock )
         {
-            super( ragManager );
+            super( ragManager, Config.defaults(), Clocks.systemClock() );
             this.lock = lock;
         }
 
         @Override
-        protected RWLock createLock( Object resource )
+        protected RWLock createLock( LockResource resource )
         {
             return lock;
         }

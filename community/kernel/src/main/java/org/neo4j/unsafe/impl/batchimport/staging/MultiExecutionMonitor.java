@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,9 @@
  */
 package org.neo4j.unsafe.impl.batchimport.staging;
 
-import org.neo4j.helpers.Clock;
+import java.time.Clock;
+
+import org.neo4j.time.Clocks;
 
 /**
  * {@link ExecutionMonitor} that wraps several other monitors. Each wrapper monitor can still specify
@@ -33,7 +35,7 @@ public class MultiExecutionMonitor implements ExecutionMonitor
 
     public MultiExecutionMonitor( ExecutionMonitor... monitors )
     {
-        this( Clock.SYSTEM_CLOCK, monitors );
+        this( Clocks.systemClock(), monitors );
     }
 
     public MultiExecutionMonitor( Clock clock, ExecutionMonitor... monitors )
@@ -45,20 +47,20 @@ public class MultiExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void start( StageExecution[] executions )
+    public void start( StageExecution execution )
     {
         for ( ExecutionMonitor monitor : monitors )
         {
-            monitor.start( executions );
+            monitor.start( execution );
         }
     }
 
     @Override
-    public void end( StageExecution[] executions, long totalTimeMillis )
+    public void end( StageExecution execution, long totalTimeMillis )
     {
         for ( ExecutionMonitor monitor : monitors )
         {
-            monitor.end( executions, totalTimeMillis );
+            monitor.end( execution, totalTimeMillis );
         }
     }
 
@@ -96,14 +98,14 @@ public class MultiExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void check( StageExecution[] executions )
+    public void check( StageExecution execution )
     {
-        long currentTimeMillis = clock.currentTimeMillis();
+        long currentTimeMillis = clock.millis();
         for ( int i = 0; i < monitors.length; i++ )
         {
             if ( currentTimeMillis >= endTimes[i] )
             {
-                monitors[i].check( executions );
+                monitors[i].check( execution );
                 endTimes[i] = monitors[i].nextCheckTime();
             }
         }

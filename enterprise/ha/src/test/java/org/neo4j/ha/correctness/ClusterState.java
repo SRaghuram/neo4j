@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,14 +26,13 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
-import org.neo4j.function.Predicate;
-import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 
 import static org.neo4j.helpers.collection.Iterables.filter;
-import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
 
 /**
  * A picture of the state of the cluster, including all messages waiting to get delivered.
@@ -42,18 +41,11 @@ import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
  */
 class ClusterState
 {
-    public static final Predicate<ClusterInstance> HAS_TIMEOUTS = new Predicate<ClusterInstance>()
-    {
-        @Override
-        public boolean test( ClusterInstance item )
-        {
-            return item.hasPendingTimeouts();
-        }
-    };
+    public static final Predicate<ClusterInstance> HAS_TIMEOUTS = ClusterInstance::hasPendingTimeouts;
     private final Set<ClusterAction> pendingActions;
     private final List<ClusterInstance> instances = new ArrayList<>();
 
-    public ClusterState( List<ClusterInstance> instances, Set<ClusterAction> pendingActions )
+    ClusterState( List<ClusterInstance> instances, Set<ClusterAction> pendingActions )
     {
         this.pendingActions = pendingActions instanceof LinkedHashSet ? pendingActions
                 : new LinkedHashSet<>( pendingActions );
@@ -83,12 +75,12 @@ class ClusterState
             {
                 try
                 {
-                    if(actions.hasNext())
+                    if (actions.hasNext())
                     {
                         ClusterAction action = actions.next();
                         return Pair.of( action, performAction( action ) );
                     }
-                    else if(instancesWithTimeouts.hasNext())
+                    else if (instancesWithTimeouts.hasNext())
                     {
                         ClusterInstance instance = instancesWithTimeouts.next();
                         return performNextTimeoutFrom(instance);
@@ -98,7 +90,7 @@ class ClusterState
                         return null;
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     throw new RuntimeException( e );
                 }
@@ -131,7 +123,7 @@ class ClusterState
         Iterable<ClusterAction> newActions = action.perform( newState );
 
         // Include any outcome actions into the new state snapshot
-        newState.pendingActions.addAll( asCollection(newActions) );
+        newState.pendingActions.addAll( Iterables.asCollection(newActions) );
 
         return newState;
     }
@@ -156,7 +148,7 @@ class ClusterState
         for ( ClusterInstance clusterInstance : instances )
         {
             URI instanceUri = clusterInstance.uri();
-            if( instanceUri.getHost().equals( uri.getHost() ) && instanceUri.getPort() == uri.getPort())
+            if ( instanceUri.getHost().equals( uri.getHost() ) && instanceUri.getPort() == uri.getPort() )
             {
                 return clusterInstance;
             }
@@ -202,19 +194,19 @@ class ClusterState
     @Override
     public String toString()
     {
-        return "Cluster["+ Iterables.toString( instances, ", " )+"]";
+        return "Cluster[" + Iterables.toString( instances, ", " ) + "]";
     }
 
     public boolean isDeadEnd()
     {
-        if(pendingActions.size() > 0)
+        if ( pendingActions.size() > 0 )
         {
             return false;
         }
 
         for ( ClusterInstance instance : instances )
         {
-            if(instance.hasPendingTimeouts())
+            if ( instance.hasPendingTimeouts() )
             {
                 return false;
             }

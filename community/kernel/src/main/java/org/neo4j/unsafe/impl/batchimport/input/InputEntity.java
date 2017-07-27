@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.neo4j.csv.reader.SourceTraceability;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 
 import static java.lang.String.format;
 
@@ -37,10 +37,10 @@ public abstract class InputEntity implements SourceTraceability
     public static final String[] NO_LABELS = new String[0];
 
     private Object[] properties;
-    private final Long firstPropertyId;
+    private Long firstPropertyId;
     private final String sourceDescription;
-    private final long lineNumber;
-    private final long position;
+    private long lineNumber;
+    private long position;
 
     public InputEntity( String sourceDescription, long sourceLineNumber, long sourcePosition,
             Object[] properties, Long firstPropertyId )
@@ -55,6 +55,10 @@ public abstract class InputEntity implements SourceTraceability
         this.firstPropertyId = firstPropertyId;
     }
 
+    /**
+     * @return properties on this entity. Properties sits in one array with alternating keys (even indexes)
+     * and values (odd indexes).
+     */
     public Object[] properties()
     {
         return properties;
@@ -103,7 +107,7 @@ public abstract class InputEntity implements SourceTraceability
                 }
             }
         }
-        return properties.length/2 + otherProperties.length/2 - collidingKeys;
+        return properties.length / 2 + otherProperties.length / 2 - collidingKeys;
     }
 
     private void updateProperty( Object key, Object value, UpdateBehaviour behaviour )
@@ -114,7 +118,7 @@ public abstract class InputEntity implements SourceTraceability
             Object existingKey = properties[i++];
             if ( existingKey == null )
             {
-                free = i-1;
+                free = i - 1;
                 break;
             }
             if ( existingKey.equals( key ) )
@@ -132,6 +136,7 @@ public abstract class InputEntity implements SourceTraceability
     public void setProperties( Object... keyValuePairs )
     {
         properties = keyValuePairs;
+        firstPropertyId = null;
     }
 
     public boolean hasFirstPropertyId()
@@ -162,6 +167,12 @@ public abstract class InputEntity implements SourceTraceability
         return position;
     }
 
+    public void rebase( long baseLineNumber, long basePosition )
+    {
+        lineNumber += baseLineNumber;
+        position += basePosition;
+    }
+
     @Override
     public String toString()
     {
@@ -169,7 +180,7 @@ public abstract class InputEntity implements SourceTraceability
         toStringFields( fields );
 
         StringBuilder builder = new StringBuilder( "%s:" );
-        Object[] arguments = new Object[fields.size()+1];
+        Object[] arguments = new Object[fields.size() + 1];
         int cursor = 0;
         arguments[cursor++] = getClass().getSimpleName();
         for ( Pair<String, ?> item : fields )

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,10 @@
  */
 package org.neo4j.unsafe.impl.batchimport;
 
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -42,25 +44,27 @@ import java.util.UUID;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.ConsistencyCheckService.Result;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
+import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.register.Register;
-import org.neo4j.register.Registers;
-import org.neo4j.test.RandomRule;
 import org.neo4j.test.Randoms;
-import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.tooling.GlobalGraphOperations;
+import org.neo4j.test.rule.RandomRule;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdGenerator;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
@@ -71,39 +75,52 @@ import org.neo4j.unsafe.impl.batchimport.input.Inputs;
 import org.neo4j.unsafe.impl.batchimport.input.SimpleInputIterator;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
+import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
-import static org.neo4j.helpers.collection.IteratorUtil.asSet;
+import static org.neo4j.helpers.collection.Iterables.count;
+import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.io.ByteUnit.mebiBytes;
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
-import static org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory.AUTO;
+import static org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory.AUTO_WITHOUT_PAGECACHE;
 import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdGenerators.fromInput;
 import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdGenerators.startingFromTheBeginning;
 import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMappers.longs;
 import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMappers.strings;
+import static org.neo4j.unsafe.impl.batchimport.input.Collectors.silentBadCollector;
 import static org.neo4j.unsafe.impl.batchimport.staging.ProcessorAssignmentStrategies.eagerRandomSaturation;
 
 @RunWith( Parameterized.class )
 public class ParallelBatchImporterTest
 {
+    private final TestDirectory directory = TestDirectory.testDirectory();
+    private final RandomRule random = new RandomRule();
+    private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+
+    @Rule
+    public RuleChain ruleChain = RuleChain.outerRule( directory ).around( random ).around( fileSystemRule );
+
     private static final int NODE_COUNT = 10_000;
-    private static final int RELATIONSHIP_COUNT = NODE_COUNT*5;
-    public final @Rule TargetDirectory.TestDirectory directory = TargetDirectory.testDirForTest( getClass() );
-    private final Configuration config = new Configuration.Default()
+    private static final int RELATIONSHIPS_PER_NODE = 5;
+    private static final int RELATIONSHIP_COUNT = NODE_COUNT * RELATIONSHIPS_PER_NODE;
+    private static final int RELATIONSHIP_TYPES = 3;
+    protected final Configuration config = new Configuration()
     {
         @Override
         public int batchSize()
         {
-            // Set to extra low to exercise the internals and IoQueue a bit more.
+            // Set to extra low to exercise the internals a bit more.
             return 100;
         }
 
         @Override
         public int denseNodeThreshold()
         {
-            return 30;
+            // This will have statistically half the nodes be considered dense
+            return RELATIONSHIPS_PER_NODE * 2;
         }
 
         @Override
@@ -112,6 +129,17 @@ public class ParallelBatchImporterTest
             // Let's really crank up the number of threads to try and flush out all and any parallelization issues.
             int cores = Runtime.getRuntime().availableProcessors();
             return random.intBetween( cores, cores + 100 );
+        }
+
+        @Override
+        public long maxMemoryUsage()
+        {
+            // This calculation is just to try and hit some sort of memory limit so that relationship import
+            // is split up into multiple rounds. Also to see that relationship group defragmentation works
+            // well when doing multiple rounds.
+            double ratio = NODE_COUNT / 1_000D;
+            long mebi = mebiBytes( 1 );
+            return random.nextInt( (int) (ratio * mebi / 2), (int) (ratio * mebi) );
         }
     };
     private final InputIdGenerator inputIdGenerator;
@@ -125,13 +153,13 @@ public class ParallelBatchImporterTest
         return Arrays.<Object[]>asList(
 
                 // synchronous I/O, actual node id input
-                new Object[]{new LongInputIdGenerator(), longs( AUTO ), fromInput(), true},
+                new Object[]{new LongInputIdGenerator(), longs( AUTO_WITHOUT_PAGECACHE ), fromInput(), true},
                 // synchronous I/O, string id input
-                new Object[]{new StringInputIdGenerator(), strings( AUTO ), startingFromTheBeginning(), true},
+                new Object[]{new StringInputIdGenerator(), strings( AUTO_WITHOUT_PAGECACHE ), startingFromTheBeginning(), true},
                 // synchronous I/O, string id input
-                new Object[]{new StringInputIdGenerator(), strings( AUTO ), startingFromTheBeginning(), false},
+                new Object[]{new StringInputIdGenerator(), strings( AUTO_WITHOUT_PAGECACHE ), startingFromTheBeginning(), false},
                 // extra slow parallel I/O, actual node id input
-                new Object[]{new LongInputIdGenerator(), longs( AUTO ), fromInput(), false}
+                new Object[]{new LongInputIdGenerator(), longs( AUTO_WITHOUT_PAGECACHE ), fromInput(), false}
         );
     }
 
@@ -150,8 +178,8 @@ public class ParallelBatchImporterTest
         // GIVEN
         ExecutionMonitor processorAssigner = eagerRandomSaturation( config.maxNumberOfProcessors() );
         final BatchImporter inserter = new ParallelBatchImporter( directory.graphDbDir(),
-                new DefaultFileSystemAbstraction(), config, NullLogService.getInstance(),
-                processorAssigner, EMPTY );
+                fileSystemRule.get(), config, NullLogService.getInstance(),
+                processorAssigner, EMPTY, Config.empty(), getFormat() );
 
         boolean successful = false;
         IdGroupDistribution groups = new IdGroupDistribution( NODE_COUNT, 5, random.random() );
@@ -162,11 +190,14 @@ public class ParallelBatchImporterTest
             inserter.doImport( Inputs.input(
                     nodes( nodeRandomSeed, NODE_COUNT, inputIdGenerator, groups ),
                     relationships( relationshipRandomSeed, RELATIONSHIP_COUNT, inputIdGenerator, groups ),
-                    idMapper, idGenerator, false,
-                    RELATIONSHIP_COUNT/*insanely high bad tolerance, but it will actually never be that many*/ ) );
+                    idMapper, idGenerator,
+                    /*insanely high bad tolerance, but it will actually never be that many*/
+                    silentBadCollector( RELATIONSHIP_COUNT ) ) );
 
             // THEN
-            GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( directory.graphDbDir() );
+            GraphDatabaseService db = new TestGraphDatabaseFactory()
+                    .newEmbeddedDatabaseBuilder( directory.graphDbDir() )
+                    .newGraphDatabase();
             try ( Transaction tx = db.beginTx() )
             {
                 inputIdGenerator.reset();
@@ -213,20 +244,25 @@ public class ParallelBatchImporterTest
     {
         ConsistencyCheckService consistencyChecker = new ConsistencyCheckService();
         Result result = consistencyChecker.runFullConsistencyCheck( storeDir,
-                new Config( stringMap( GraphDatabaseSettings.pagecache_memory.name(), "8m" ) ),
+                Config.embeddedDefaults( stringMap( GraphDatabaseSettings.pagecache_memory.name(), "8m" ) ),
                 ProgressMonitorFactory.NONE,
                 NullLogProvider.getInstance(), false );
         assertTrue( "Database contains inconsistencies, there should be a report in " + storeDir,
                 result.isSuccessful() );
     }
 
-    private static abstract class InputIdGenerator
+    protected RecordFormats getFormat()
+    {
+        return Standard.LATEST_RECORD_FORMATS;
+    }
+
+    public abstract static class InputIdGenerator
     {
         abstract void reset();
 
         abstract Object nextNodeId( Random random );
 
-        abstract Object randomExisting( Random random, Register.Long.Out nodeIndex );
+        abstract Object randomExisting( Random random, MutableLong nodeIndex );
 
         abstract Object miss( Random random, Object id, float chance );
 
@@ -234,7 +270,7 @@ public class ParallelBatchImporterTest
 
         String randomType( Random random )
         {
-            return "TYPE" + random.nextInt( 3 );
+            return "TYPE" + random.nextInt( RELATIONSHIP_TYPES );
         }
 
         @Override
@@ -261,10 +297,10 @@ public class ParallelBatchImporterTest
         }
 
         @Override
-        Object randomExisting( Random random, Register.Long.Out nodeIndex )
+        Object randomExisting( Random random, MutableLong nodeIndex )
         {
             long index = random.nextInt( NODE_COUNT );
-            nodeIndex.write( index );
+            nodeIndex.setValue( index );
             return index;
         }
 
@@ -302,10 +338,10 @@ public class ParallelBatchImporterTest
         }
 
         @Override
-        Object randomExisting( Random random, Register.Long.Out nodeIndex )
+        Object randomExisting( Random random, MutableLong nodeIndex )
         {
             int index = random.nextInt( strings.size() );
-            nodeIndex.write( index );
+            nodeIndex.setValue( index );
             return strings.get( index );
         }
 
@@ -322,11 +358,9 @@ public class ParallelBatchImporterTest
         }
     }
 
-    protected void verifyData( int nodeCount, int relationshipCount, GraphDatabaseService db, IdGroupDistribution groups,
+    private void verifyData( int nodeCount, int relationshipCount, GraphDatabaseService db, IdGroupDistribution groups,
             long nodeRandomSeed, long relationshipRandomSeed )
     {
-        GlobalGraphOperations globalOps = GlobalGraphOperations.at( db );
-
         // Read all nodes, relationships and properties ad verify against the input data.
         try ( InputIterator<InputNode> nodes = nodes( nodeRandomSeed, nodeCount, inputIdGenerator, groups ).iterator();
               InputIterator<InputRelationship> relationships = relationships( relationshipRandomSeed, relationshipCount,
@@ -334,8 +368,9 @@ public class ParallelBatchImporterTest
         {
             // Nodes
             Map<String,Node> nodeByInputId = new HashMap<>( nodeCount );
-            Iterator<Node> dbNodes = globalOps.getAllNodes().iterator();
+            Iterator<Node> dbNodes = db.getAllNodes().iterator();
             int verifiedNodes = 0;
+            long allNodesScanLabelCount = 0;
             while ( nodes.hasNext() )
             {
                 InputNode input = nodes.next();
@@ -344,12 +379,24 @@ public class ParallelBatchImporterTest
                 String inputId = uniqueId( input.group(), node );
                 assertNull( nodeByInputId.put( inputId, node ) );
                 verifiedNodes++;
+                assertDegrees( node );
+                allNodesScanLabelCount += Iterables.count( node.getLabels() );
             }
             assertEquals( nodeCount, verifiedNodes );
 
+            // Labels
+            long labelScanStoreEntryCount = db.getAllLabels().stream()
+                    .flatMap( l -> db.findNodes( l ).stream() )
+                    .count();
+
+            assertEquals( format( "Expected label scan store and node store to have same number labels. But %n" +
+                            "#labelsInNodeStore=%d%n" +
+                            "#labelsInLabelScanStore=%d%n", allNodesScanLabelCount, labelScanStoreEntryCount ),
+                    allNodesScanLabelCount, labelScanStoreEntryCount );
+
             // Relationships
             Map<String,Relationship> relationshipByName = new HashMap<>();
-            for ( Relationship relationship : globalOps.getAllRelationships() )
+            for ( Relationship relationship : db.getAllRelationships() )
             {
                 relationshipByName.put( (String) relationship.getProperty( "id" ), relationship );
             }
@@ -360,10 +407,11 @@ public class ParallelBatchImporterTest
                 if ( !inputIdGenerator.isMiss( input.startNode() ) &&
                      !inputIdGenerator.isMiss( input.endNode() ) )
                 {
-                    // A relationship refering to missing nodes. The InputIdGenerator is expected to generate
+                    // A relationship referring to missing nodes. The InputIdGenerator is expected to generate
                     // some (very few) of those. Skip it.
                     String name = (String) propertyOf( input, "id" );
                     Relationship relationship = relationshipByName.get( name );
+                    assertNotNull( "Expected there to be a relationship with name '" + name + "'", relationship );
                     assertEquals( nodeByInputId.get( uniqueId( input.startNodeGroup(), input.startNode() ) ),
                             relationship.getStartNode() );
                     assertEquals( nodeByInputId.get( uniqueId( input.endNodeGroup(), input.endNode() ) ),
@@ -373,6 +421,19 @@ public class ParallelBatchImporterTest
                 verifiedRelationships++;
             }
             assertEquals( relationshipCount, verifiedRelationships );
+        }
+    }
+
+    private void assertDegrees( Node node )
+    {
+        for ( RelationshipType type : node.getRelationshipTypes() )
+        {
+            for ( Direction direction : Direction.values() )
+            {
+                long degree = node.getDegree( type, direction );
+                long actualDegree = count( node.getRelationships( type, direction ) );
+                assertEquals( actualDegree, degree );
+            }
         }
     }
 
@@ -472,7 +533,7 @@ public class ParallelBatchImporterTest
                     private final Random random = new Random( randomSeed );
                     private final Randoms randoms = new Randoms( random, Randoms.DEFAULT );
                     private int cursor;
-                    private final Register.LongRegister nodeIndex = Registers.newLongRegister();
+                    private final MutableLong nodeIndex = new MutableLong( -1 );
 
                     @Override
                     protected InputRelationship fetchNextOrNull()
@@ -483,19 +544,26 @@ public class ParallelBatchImporterTest
                             try
                             {
                                 Object startNode = idGenerator.randomExisting( random, nodeIndex );
-                                Group startNodeGroup = groups.groupOf( nodeIndex.read() );
+                                Group startNodeGroup = groups.groupOf( nodeIndex.longValue() );
                                 Object endNode = idGenerator.randomExisting( random, nodeIndex );
-                                Group endNodeGroup = groups.groupOf( nodeIndex.read() );
+                                Group endNodeGroup = groups.groupOf( nodeIndex.longValue() );
 
                                 // miss some
                                 startNode = idGenerator.miss( random, startNode, 0.001f );
                                 endNode = idGenerator.miss( random, endNode, 0.001f );
 
+                                String type = idGenerator.randomType( random );
+                                if ( random.nextFloat() < 0.00005 )
+                                {
+                                    // Let there be a small chance of introducing a one-off relationship
+                                    // with a type that no, or at least very few, other relationships have.
+                                    type += "_odd";
+                                }
                                 return new InputRelationship(
                                         sourceDescription, itemNumber, itemNumber,
                                         properties, null,
                                         startNodeGroup, startNode, endNodeGroup, endNode,
-                                        idGenerator.randomType( random ), null );
+                                        type, null );
                             }
                             finally
                             {
@@ -572,16 +640,14 @@ public class ParallelBatchImporterTest
     private Object[] randomProperties( Randoms randoms, Object id )
     {
         String[] keys = randoms.selection( TOKENS, 0, TOKENS.length, false );
-        Object[] properties = new Object[(keys.length+1)*2];
+        Object[] properties = new Object[(keys.length + 1) * 2];
         for ( int i = 0; i < keys.length; i++ )
         {
-            properties[i*2] = keys[i];
-            properties[i*2 + 1] = randoms.propertyValue();
+            properties[i * 2] = keys[i];
+            properties[i * 2 + 1] = randoms.propertyValue();
         }
-        properties[properties.length-2] = "id";
-        properties[properties.length-1] = id;
+        properties[properties.length - 2] = "id";
+        properties[properties.length - 1] = id;
         return properties;
     }
-
-    public final @Rule RandomRule random = new RandomRule();
 }

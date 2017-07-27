@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -37,10 +37,11 @@ public class SchemaStoreProcessorTask<R extends AbstractBaseRecord> extends Stor
             SchemaRecordCheck schemaRecordCheck,
             ProgressMonitorFactory.MultiPartBuilder builder,
             CacheAccess cacheAccess,
-            StoreProcessor processor )
+            StoreProcessor processor,
+            QueueDistribution distribution )
     {
         super( name, statistics, threads, store, storeAccess, builderPrefix,
-                builder, cacheAccess, processor );
+                builder, cacheAccess, processor, distribution );
         this.schemaRecordCheck = schemaRecordCheck;
     }
 

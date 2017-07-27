@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -53,9 +53,15 @@ public class ServiceDefinitionRepresentation extends MappingRepresentation
     {
         if ( basePath.endsWith( "/" ) )
         {
-            if ( subPath.startsWith( "/" ) ) return basePath + subPath.substring( 1 );
+            if ( subPath.startsWith( "/" ) )
+            {
+                return basePath + subPath.substring( 1 );
+            }
         }
-        else if ( !subPath.startsWith( "/" ) ) return basePath + "/" + subPath;
+        else if ( !subPath.startsWith( "/" ) )
+        {
+            return basePath + "/" + subPath;
+        }
         return basePath + subPath;
     }
 
@@ -69,12 +75,12 @@ public class ServiceDefinitionRepresentation extends MappingRepresentation
             {
                 for ( Map.Entry<String, String> entry : uris.entrySet() )
                 {
-                    resourceSerializer.putUri( entry.getKey(), entry.getValue() );
+                    resourceSerializer.putRelativeUri( entry.getKey(), entry.getValue() );
                 }
 
                 for ( Map.Entry<String, String> entry : templates.entrySet() )
                 {
-                    resourceSerializer.putUriTemplate( entry.getKey(), entry.getValue() );
+                    resourceSerializer.putRelativeUriTemplate( entry.getKey(), entry.getValue() );
                 }
             }
         } );

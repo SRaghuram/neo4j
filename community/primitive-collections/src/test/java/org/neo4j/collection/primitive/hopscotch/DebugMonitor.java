@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,7 +32,7 @@ class DebugMonitor extends Monitor.Adapter
     private final Set<Integer> indexes = new HashSet<>();
     private final Set<Long> values = new HashSet<>();
 
-    public DebugMonitor( int[] relevantIndexes, long[] relevantValues )
+    DebugMonitor( int[] relevantIndexes, long[] relevantValues )
     {
         for ( int index : relevantIndexes )
         {
@@ -50,8 +50,8 @@ class DebugMonitor extends Monitor.Adapter
         while ( hopBits > 0 )
         {
             int indexDistance = Long.numberOfTrailingZeros( hopBits );
-            hopBits &= hopBits-1;
-            builder.append( builder.length() > 1 ? "," : "" ).append( indexDistance+1 );
+            hopBits &= hopBits - 1;
+            builder.append( builder.length() > 1 ? "," : "" ).append( indexDistance + 1 );
         }
         return builder.append( "]" ).toString();
     }

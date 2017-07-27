@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -123,7 +123,7 @@ public class EvaluatorFactory
         }
     }
 
-    private static abstract class ScriptedEvaluator
+    private abstract static class ScriptedEvaluator
     {
         private final ScriptExecutor executor;
         private final Map<String, Object> scriptContext = new HashMap<>(1);
@@ -139,9 +139,9 @@ public class EvaluatorFactory
 
             Object out = executor.execute( scriptContext );
 
-            if(out instanceof Boolean)
+            if ( out instanceof Boolean )
             {
-                return (Boolean)out;
+                return (Boolean) out;
             }
 
             throw new EvaluationException("Provided script did not return a boolean value.");
@@ -154,7 +154,7 @@ public class EvaluatorFactory
         {
             super( executor );
         }
-        
+
         @Override
         public Evaluation evaluate( Path path )
         {

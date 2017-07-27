@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -64,15 +64,30 @@ public class DijkstraPriorityQueueImpl<CostType> implements
         @Override
         public boolean equals( Object obj )
         {
-            if ( this == obj ) return true;
-            if ( obj == null ) return false;
-            if ( getClass() != obj.getClass() ) return false;
+            if ( this == obj )
+            {
+                return true;
+            }
+            if ( obj == null )
+            {
+                return false;
+            }
+            if ( getClass() != obj.getClass() )
+            {
+                return false;
+            }
             final pathObject other = (pathObject) obj;
             if ( node == null )
             {
-                if ( other.node != null ) return false;
+                if ( other.node != null )
+                {
+                    return false;
+                }
             }
-            else if ( !node.equals( other.node ) ) return false;
+            else if ( !node.equals( other.node ) )
+            {
+                return false;
+            }
             return true;
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,7 @@ package org.neo4j.desktop.config.portable;
 
 import org.junit.Test;
 
-import org.neo4j.helpers.Function;
+import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
 
@@ -44,14 +44,12 @@ public class VariableSubstitutorTest
         assertEquals( "", substitutor.substitute( "", null ) );
     }
 
-
     @Test
     public void shouldAcceptInputWithoutVariables()
     {
         String expected = "Hello/Kitty/{TEST}";
         assertEquals( expected, substitutor.substitute( expected, null ) );
     }
-
 
     @Test
     public void shouldSubstituteVariable()

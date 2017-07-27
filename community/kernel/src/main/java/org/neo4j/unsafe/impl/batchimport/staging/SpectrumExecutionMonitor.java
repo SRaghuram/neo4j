@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,16 +22,15 @@ package org.neo4j.unsafe.impl.batchimport.staging;
 import java.io.PrintStream;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.unsafe.impl.batchimport.stats.DetailLevel;
 import org.neo4j.unsafe.impl.batchimport.stats.Keys;
 import org.neo4j.unsafe.impl.batchimport.stats.StatsProvider;
 import org.neo4j.unsafe.impl.batchimport.stats.StepStats;
 
 import static java.lang.Math.pow;
-import static java.lang.Math.round;
-import static java.lang.String.format;
 
+import static org.neo4j.helpers.Format.date;
 import static org.neo4j.helpers.Format.duration;
 
 /**
@@ -53,10 +52,13 @@ import static org.neo4j.helpers.Format.duration;
 public class SpectrumExecutionMonitor extends ExecutionMonitor.Adapter
 {
     public static final int DEFAULT_WIDTH = 100;
-    private static final char[] WEIGHTS = new char[] {' ', 'k', 'M', 'B', 'T'};
+    private static final int PROGRESS_WIDTH = 5;
+    private static final char[] WEIGHTS = new char[] {' ', 'K', 'M', 'B', 'T'};
 
     private final PrintStream out;
     private final int width;
+    // For tracking delta
+    private long lastProgress;
 
     public SpectrumExecutionMonitor( long interval, TimeUnit unit, PrintStream out, int width )
     {
@@ -66,23 +68,16 @@ public class SpectrumExecutionMonitor extends ExecutionMonitor.Adapter
     }
 
     @Override
-    public void start( StageExecution[] executions )
+    public void start( StageExecution execution )
     {
-        for ( int i = 0; i < executions.length; i++ )
-        {
-            if ( i > 0 )
-            {
-                out.print( ", " );
-            }
-            out.print( executions[i].getStageName() );
-        }
-        out.println();
+        out.println( execution.getStageName() + ", started " + date() );
+        lastProgress = 0;
     }
 
     @Override
-    public void end( StageExecution[] executions, long totalTimeMillis )
+    public void end( StageExecution execution, long totalTimeMillis )
     {
-        check( executions );
+        check( execution );
         out.println();
         out.println( "Done in " + duration( totalTimeMillis ) );
     }
@@ -95,28 +90,20 @@ public class SpectrumExecutionMonitor extends ExecutionMonitor.Adapter
     }
 
     @Override
-    public void check( StageExecution[] executions )
+    public void check( StageExecution execution )
     {
-        float partWidth = (float) width / executions.length;
         StringBuilder builder = new StringBuilder();
-        boolean allPrinted = true;
-        for ( StageExecution execution : executions )
-        {
-            allPrinted &= printSpectrum( builder, execution, round( partWidth ) );
-        }
-        if ( allPrinted )
-        {
-            out.print( "\r" + builder );
-        }
+        printSpectrum( builder, execution, width );
+        out.print( "\r" + builder );
     }
 
-    private boolean printSpectrum( StringBuilder builder, StageExecution execution, int width )
+    private void printSpectrum( StringBuilder builder, StageExecution execution, int width )
     {
         long[] values = values( execution );
         long total = total( values );
 
         // reduce the width with the known extra characters we know we'll print in and around the spectrum
-        width -= 2/*'[]' chars*/ + 4/*progress chars*/;
+        width -= 2/*'[]' chars*/ + PROGRESS_WIDTH/*progress chars*/;
 
         Pair<Step<?>,Float> bottleNeck = execution.stepsOrderedBy( Keys.avg_processing_time, false ).iterator().next();
         QuantizedProjection projection = new QuantizedProjection( total, width );
@@ -127,7 +114,7 @@ public class SpectrumExecutionMonitor extends ExecutionMonitor.Adapter
         for ( Step<?> step : execution.steps() )
         {
             StepStats stats = step.stats();
-            if ( !projection.next( avg( stats ) ) )
+            if ( !projection.next( values[stepIndex] ) )
             {
                 break; // odd though
             }
@@ -142,11 +129,11 @@ public class SpectrumExecutionMonitor extends ExecutionMonitor.Adapter
                 boolean isBottleNeck = bottleNeck.first() == step;
                 String name =
                         (isBottleNeck ? "*" : "") +
-                        stats.toString( DetailLevel.IMPORTANT ) + (step.numberOfProcessors() > 1
-                        ? "(" + step.numberOfProcessors() + ")"
+                        stats.toString( DetailLevel.IMPORTANT ) + (step.processors( 0 ) > 1
+                        ? "(" + step.processors( 0 ) + ")"
                         : "");
                 int charIndex = 0; // negative value "delays" the text, i.e. pushes it to the right
-                char backgroundChar = step.numberOfProcessors() > 1 ? '=' : '-';
+                char backgroundChar = step.processors( 0 ) > 1 ? '=' : '-';
                 for ( int i = 0; i < stepWidth; i++, charIndex++ )
                 {
                     char ch = backgroundChar;
@@ -163,18 +150,38 @@ public class SpectrumExecutionMonitor extends ExecutionMonitor.Adapter
         }
 
         long progress = lastDoneBatches * execution.getConfig().batchSize();
-        builder.append( "]" ).append( fitInFour( progress ) );
-        return true;
+        builder.append( "]" ).append( fitInProgress( progress ) );
+
+        long currentDelta = progress - lastProgress;
+        builder.append( " ∆" + fitInProgress( currentDelta ) );
+        lastProgress = progress;
     }
 
-    private static String fitInFour( long value )
+    private static String fitInProgress( long value )
     {
         int weight = weight( value );
 
-        String result = weight == 0
-                ? String.valueOf( value )
-                : format( "%d%s", (long)(value / pow( 1000, weight )), WEIGHTS[weight] );
-        return pad( result, 4, ' ' );
+        String progress;
+        if ( weight == 0 )
+        {
+            progress = String.valueOf( value );
+        }
+        else
+        {
+            double floatValue = value / pow( 1000, weight );
+            progress = String.valueOf( floatValue );
+            if ( progress.length() > PROGRESS_WIDTH - 1 )
+            {
+                progress = progress.substring( 0, PROGRESS_WIDTH - 1 );
+            }
+            if ( progress.endsWith( "." ) )
+            {
+                progress = progress.substring( 0, progress.length() - 1 );
+            }
+            progress += WEIGHTS[weight];
+        }
+
+        return pad( progress, PROGRESS_WIDTH, ' ' );
     }
 
     private static String pad( String result, int length, char padChar )

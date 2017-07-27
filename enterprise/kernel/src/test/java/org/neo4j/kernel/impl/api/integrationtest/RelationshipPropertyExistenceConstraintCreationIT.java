@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,26 +24,29 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.kernel.api.SchemaWriteOperations;
-import org.neo4j.kernel.api.constraints.RelationshipPropertyExistenceConstraint;
+import org.neo4j.kernel.api.TokenWriteOperations;
 import org.neo4j.kernel.api.exceptions.KernelException;
-import org.neo4j.tooling.GlobalGraphOperations;
+import org.neo4j.kernel.api.schema.RelationTypeSchemaDescriptor;
+import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory;
+import org.neo4j.kernel.api.schema.constaints.RelExistenceConstraintDescriptor;
 
-import static org.neo4j.graphdb.DynamicRelationshipType.withName;
+import static org.neo4j.graphdb.RelationshipType.withName;
 
 public class RelationshipPropertyExistenceConstraintCreationIT
-        extends AbstractConstraintCreationIT<RelationshipPropertyExistenceConstraint>
+        extends AbstractConstraintCreationIT<RelExistenceConstraintDescriptor,RelationTypeSchemaDescriptor>
 {
     @Override
-    int initializeLabelOrRelType( SchemaWriteOperations writeOps, String name ) throws KernelException
+    int initializeLabelOrRelType( TokenWriteOperations tokenWriteOperations, String name ) throws KernelException
     {
-        return writeOps.relationshipTypeGetOrCreateForName( name );
+        return tokenWriteOperations.relationshipTypeGetOrCreateForName( name );
     }
 
     @Override
-    RelationshipPropertyExistenceConstraint createConstraint( SchemaWriteOperations writeOps, int type,
-            int property ) throws Exception
+    RelExistenceConstraintDescriptor createConstraint( SchemaWriteOperations writeOps,
+            RelationTypeSchemaDescriptor descriptor ) throws Exception
     {
-        return writeOps.relationshipPropertyExistenceConstraintCreate( type, property );
+        return writeOps.relationshipPropertyExistenceConstraintCreate( descriptor );
     }
 
     @Override
@@ -53,13 +56,13 @@ public class RelationshipPropertyExistenceConstraintCreationIT
     }
 
     @Override
-    RelationshipPropertyExistenceConstraint newConstraintObject( int type, int property )
+    RelExistenceConstraintDescriptor newConstraintObject( RelationTypeSchemaDescriptor descriptor )
     {
-        return new RelationshipPropertyExistenceConstraint( type, property );
+        return ConstraintDescriptorFactory.existsForSchema( descriptor );
     }
 
     @Override
-    void dropConstraint( SchemaWriteOperations writeOps, RelationshipPropertyExistenceConstraint constraint )
+    void dropConstraint( SchemaWriteOperations writeOps, RelExistenceConstraintDescriptor constraint )
             throws Exception
     {
         writeOps.constraintDrop( constraint );
@@ -76,10 +79,16 @@ public class RelationshipPropertyExistenceConstraintCreationIT
     @Override
     void removeOffendingDataInRunningTx( GraphDatabaseService db )
     {
-        Iterable<Relationship> relationships = GlobalGraphOperations.at( db ).getAllRelationships();
+        Iterable<Relationship> relationships = db.getAllRelationships();
         for ( Relationship relationship : relationships )
         {
             relationship.delete();
         }
+    }
+
+    @Override
+    RelationTypeSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
+    {
+        return SchemaDescriptorFactory.forRelType( typeId, propertyKeyId );
     }
 }

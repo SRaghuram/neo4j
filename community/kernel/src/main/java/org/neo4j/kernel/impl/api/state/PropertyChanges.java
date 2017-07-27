@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,9 +21,9 @@ package org.neo4j.kernel.impl.api.state;
 
 import java.util.Map;
 
-import org.neo4j.kernel.impl.util.diffsets.DiffSets;
 import org.neo4j.kernel.impl.util.VersionedHashMap;
-import org.neo4j.kernel.impl.util.diffsets.ReadableDiffSets;
+import org.neo4j.kernel.impl.util.diffsets.DiffSets;
+import org.neo4j.storageengine.api.txstate.ReadableDiffSets;
 
 /**
  * Indexes entities by what property and value has been modified on them.
@@ -68,28 +68,16 @@ public class PropertyChanges
 
     private Map<Object, DiffSets<Long>> keyChanges( int propertyKeyId )
     {
-        if(changes == null)
+        if ( changes == null )
         {
             changes = new VersionedHashMap<>();
         }
 
-        Map<Object, DiffSets<Long>> keyChanges = changes.get( propertyKeyId );
-        if(keyChanges == null)
-        {
-            keyChanges = new VersionedHashMap<>();
-            changes.put( propertyKeyId, keyChanges );
-        }
-        return keyChanges;
+        return changes.computeIfAbsent( propertyKeyId, k -> new VersionedHashMap<>() );
     }
 
     private DiffSets<Long> valueChanges( Object newValue, Map<Object, DiffSets<Long>> keyChanges )
     {
-        DiffSets<Long> changes = keyChanges.get( newValue );
-        if(changes == null)
-        {
-            changes = new DiffSets<>();
-            keyChanges.put( newValue, changes );
-        }
-        return changes;
+        return keyChanges.computeIfAbsent( newValue, k -> new DiffSets<>() );
     }
 }

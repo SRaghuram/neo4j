@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -84,7 +84,7 @@ public class MarshlandPool<T> implements Pool<T>
         LocalSlot<T> localSlot = puddle.get();
 
         T object = localSlot.object;
-        if(object != null)
+        if ( object != null )
         {
             localSlot.set( null );
             return object;
@@ -92,7 +92,7 @@ public class MarshlandPool<T> implements Pool<T>
 
         // Try the reference queue, containing objects from dead threads
         LocalSlotReference<T> slotReference = (LocalSlotReference) objectsFromDeadThreads.poll();
-        if( slotReference != null && slotReference.object != null )
+        if ( slotReference != null && slotReference.object != null )
         {
             slotReferences.remove( slotReference );
             return slotReference.object;
@@ -108,9 +108,9 @@ public class MarshlandPool<T> implements Pool<T>
         // Return it locally if possible
         LocalSlot<T> localSlot = puddle.get();
 
-        if(localSlot.object == null)
+        if ( localSlot.object == null )
         {
-            localSlot.set(obj);
+            localSlot.set( obj );
         }
 
         // Fall back to the delegate pool
@@ -128,10 +128,10 @@ public class MarshlandPool<T> implements Pool<T>
         for ( LocalSlotReference slotReference : slotReferences )
         {
             LocalSlot<T> slot = (LocalSlot) slotReference.get();
-            if(slot != null)
+            if ( slot != null )
             {
                 T obj = slot.object;
-                if(obj != null)
+                if ( obj != null )
                 {
                     slot.set( null );
                     pool.release( obj );
@@ -139,13 +139,15 @@ public class MarshlandPool<T> implements Pool<T>
             }
         }
 
-        for(LocalSlotReference<T> reference = (LocalSlotReference) objectsFromDeadThreads.poll();
+        for ( LocalSlotReference<T> reference = (LocalSlotReference) objectsFromDeadThreads.poll();
             reference != null;
             reference = (LocalSlotReference) objectsFromDeadThreads.poll() )
         {
             T instance = reference.object;
-            if (instance != null)
+            if ( instance != null )
+            {
                 pool.release( instance );
+            }
         }
     }
 
@@ -175,7 +177,7 @@ public class MarshlandPool<T> implements Pool<T>
         private T object;
         private final LocalSlotReference phantomReference;
 
-        public LocalSlot( ReferenceQueue<LocalSlot<T>> referenceQueue )
+        LocalSlot( ReferenceQueue<LocalSlot<T>> referenceQueue )
         {
             phantomReference = new LocalSlotReference( this, referenceQueue );
         }

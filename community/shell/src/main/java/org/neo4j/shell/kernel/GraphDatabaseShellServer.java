@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.shell.kernel;
 
+import java.io.File;
 import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.util.Map;
@@ -27,10 +28,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.TopLevelTransaction;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.shell.Output;
 import org.neo4j.shell.Response;
 import org.neo4j.shell.Session;
@@ -52,7 +54,7 @@ public class GraphDatabaseShellServer extends AbstractAppServer
 {
     private final GraphDatabaseAPI graphDb;
     private boolean graphDbCreatedHere;
-    protected final Map<Serializable, TopLevelTransaction> clients = new ConcurrentHashMap<>();
+    protected final Map<Serializable, KernelTransaction> clients = new ConcurrentHashMap<>();
 
     /**
      * @param path the path to the directory where the database should be created
@@ -60,10 +62,17 @@ public class GraphDatabaseShellServer extends AbstractAppServer
      * @param configFileOrNull path to a configuration file or <code>null</code>
      * @throws RemoteException if an RMI error occurs.
      */
-    public GraphDatabaseShellServer( String path, boolean readOnly, String configFileOrNull )
+    public GraphDatabaseShellServer( File path, boolean readOnly, String configFileOrNull )
             throws RemoteException
     {
-        this( instantiateGraphDb( path, readOnly, configFileOrNull ), readOnly );
+        this( instantiateGraphDb( new GraphDatabaseFactory(), path, readOnly, configFileOrNull ), readOnly );
+        this.graphDbCreatedHere = true;
+    }
+
+    public GraphDatabaseShellServer( GraphDatabaseFactory factory, File path, boolean readOnly, String configFileOrNull )
+            throws RemoteException
+    {
+        this( instantiateGraphDb(  factory, path, readOnly, configFileOrNull ), readOnly );
         this.graphDbCreatedHere = true;
     }
 
@@ -104,10 +113,10 @@ public class GraphDatabaseShellServer extends AbstractAppServer
     @Override
     public void terminate( Serializable clientId )
     {
-        TopLevelTransaction tx = clients.get( clientId );
+        KernelTransaction tx = clients.get( clientId );
         if ( tx != null )
         {
-            tx.terminate();
+            tx.markForTermination( Status.Transaction.Terminated );
         }
     }
 
@@ -116,7 +125,7 @@ public class GraphDatabaseShellServer extends AbstractAppServer
         if ( !clients.containsKey( clientId ) )
         {
             ThreadToStatementContextBridge threadToStatementContextBridge = getThreadToStatementContextBridge();
-            TopLevelTransaction tx = threadToStatementContextBridge.getTopLevelTransactionBoundToThisThread( false );
+            KernelTransaction tx = threadToStatementContextBridge.getTopLevelTransactionBoundToThisThread( false );
             clients.put( clientId, tx );
         }
     }
@@ -136,7 +145,7 @@ public class GraphDatabaseShellServer extends AbstractAppServer
         try
         {
             ThreadToStatementContextBridge threadToStatementContextBridge = getThreadToStatementContextBridge();
-            TopLevelTransaction tx = threadToStatementContextBridge.getTopLevelTransactionBoundToThisThread( false );
+            KernelTransaction tx = threadToStatementContextBridge.getTopLevelTransactionBoundToThisThread( false );
             threadToStatementContextBridge.unbindTransactionFromCurrentThread();
             if ( tx == null )
             {
@@ -155,7 +164,7 @@ public class GraphDatabaseShellServer extends AbstractAppServer
 
     public void bindTransaction( Serializable clientId ) throws ShellException
     {
-        TopLevelTransaction tx = clients.get( clientId );
+        KernelTransaction tx = clients.get( clientId );
         if ( tx != null )
         {
             try
@@ -190,11 +199,12 @@ public class GraphDatabaseShellServer extends AbstractAppServer
         }
     }
 
-    private static GraphDatabaseAPI instantiateGraphDb( String path, boolean readOnly,
-                                                        String configFileOrNull )
+    private static GraphDatabaseAPI instantiateGraphDb( GraphDatabaseFactory factory, File path, boolean readOnly,
+            String configFileOrNull )
     {
-        GraphDatabaseBuilder builder = new GraphDatabaseFactory().
+        GraphDatabaseBuilder builder = factory.
                 newEmbeddedDatabaseBuilder( path ).
+                setConfig( GraphDatabaseSettings.disconnected, Boolean.toString( true ) ).
                 setConfig( GraphDatabaseSettings.read_only, Boolean.toString( readOnly ) );
         if ( configFileOrNull != null )
         {
@@ -218,7 +228,8 @@ public class GraphDatabaseShellServer extends AbstractAppServer
     @Override
     protected String getWelcomeMessage()
     {
-        return "Welcome to the Neo4j Shell! Enter 'help' for a list of commands";
+        return "Welcome to the Neo4j Shell! Enter 'help' for a list of commands. " +
+                "Please note that neo4j-shell is deprecated and to be replaced by cypher-shell.";
     }
 
     /**
@@ -273,6 +284,10 @@ public class GraphDatabaseShellServer extends AbstractAppServer
             Welcome welcome = super.welcome( initialSession );
             transaction.success();
             return welcome;
+        }
+        catch ( RuntimeException e )
+        {
+            throw new RemoteException( e.getMessage(), e );
         }
     }
 }

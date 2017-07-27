@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.codegen;
 
 public interface ExpressionVisitor
@@ -26,7 +25,7 @@ public interface ExpressionVisitor
 
     void invoke( MethodReference method, Expression[] arguments );
 
-    void load( TypeReference type, String name );
+    void load( LocalVariable variable );
 
     void getField( Expression target, FieldReference field );
 
@@ -42,13 +41,41 @@ public interface ExpressionVisitor
 
     void ternary( Expression test, Expression onTrue, Expression onFalse );
 
-    void eq( Expression lhs, Expression rhs );
+    void equal( Expression lhs, Expression rhs);
 
-    void or( Expression lhs, Expression rhs );
+    void notEqual( Expression lhs, Expression rhs );
+
+    void isNull( Expression expression );
+
+    void notNull( Expression expression );
+
+    void or( Expression... expressions );
+
+    void and( Expression... expressions );
 
     void add( Expression lhs, Expression rhs );
 
     void gt( Expression lhs, Expression rhs );
 
-    void sub( Expression lhs, Expression rhs );
+    void gte( Expression lhs, Expression rhs );
+
+    void lt( Expression lhs, Expression rhs );
+
+    void lte( Expression lhs, Expression rhs );
+
+    void subtract( Expression lhs, Expression rhs );
+
+    void multiply( Expression lhs, Expression rhs );
+
+    void cast( TypeReference type, Expression expression );
+
+    void newArray( TypeReference type, Expression... constants );
+
+    void longToDouble( Expression expression );
+
+    void pop( Expression expression );
+
+    void box( Expression expression );
+
+    void unbox( Expression expression );
 }

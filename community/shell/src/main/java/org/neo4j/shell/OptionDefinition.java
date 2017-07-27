@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,7 +26,7 @@ public class OptionDefinition
 {
     private OptionValueType type;
     private String description;
-    
+
     /**
      * @param type the type for the option.
      * @param description the description of the option.
@@ -36,7 +36,7 @@ public class OptionDefinition
         this.type = type;
         this.description = description;
     }
-    
+
     /**
      * @return the option value type.
      */
@@ -44,7 +44,7 @@ public class OptionDefinition
     {
         return this.type;
     }
-    
+
     /**
      * @return the description.
      */

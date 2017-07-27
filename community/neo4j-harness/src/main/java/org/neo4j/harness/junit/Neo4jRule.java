@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,16 @@
  */
 package org.neo4j.harness.junit;
 
-import java.io.File;
-import java.net.URI;
-
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-import org.neo4j.function.Function;
+import java.io.File;
+import java.net.URI;
+import java.util.function.Function;
+
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.config.Configuration;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.harness.ServerControls;
 import org.neo4j.harness.TestServerBuilder;
@@ -43,17 +44,22 @@ import org.neo4j.harness.TestServerBuilders;
  */
 public class Neo4jRule implements TestRule, TestServerBuilder
 {
-    private ServerControls controls;
     private TestServerBuilder builder;
+    private ServerControls controls;
+
+    Neo4jRule( TestServerBuilder builder )
+    {
+        this.builder = builder;
+    }
 
     public Neo4jRule()
     {
-        builder = TestServerBuilders.newInProcessBuilder();
+        this( TestServerBuilders.newInProcessBuilder() );
     }
 
-    public Neo4jRule(File workingDirectory)
+    public Neo4jRule( File workingDirectory )
     {
-        builder = TestServerBuilders.newInProcessBuilder( workingDirectory );
+        this( TestServerBuilders.newInProcessBuilder( workingDirectory ) );
     }
 
     @Override
@@ -134,9 +140,39 @@ public class Neo4jRule implements TestRule, TestServerBuilder
         return this;
     }
 
+    @Override
+    public Neo4jRule withProcedure( Class<?> procedureClass )
+    {
+        builder = builder.withProcedure( procedureClass );
+        return this;
+    }
+
+    @Override
+    public Neo4jRule withFunction( Class<?> functionClass )
+    {
+        builder = builder.withFunction( functionClass );
+        return this;
+    }
+
+    @Override
+    public Neo4jRule withAggregationFunction( Class<?> functionClass )
+    {
+        builder = builder.withAggregationFunction( functionClass );
+        return this;
+    }
+
+    public URI boltURI()
+    {
+        if ( controls == null )
+        {
+            throw new IllegalStateException( "Cannot access instance URI before or after the test runs." );
+        }
+        return controls.boltURI();
+    }
+
     public URI httpURI()
     {
-        if(controls == null)
+        if ( controls == null )
         {
             throw new IllegalStateException( "Cannot access instance URI before or after the test runs." );
         }
@@ -145,14 +181,20 @@ public class Neo4jRule implements TestRule, TestServerBuilder
 
     public URI httpsURI()
     {
-        if(controls == null)
+        if ( controls == null )
         {
             throw new IllegalStateException( "Cannot access instance URI before or after the test runs." );
         }
         return controls.httpURI();
     }
 
-    public GraphDatabaseService getGraphDatabaseService() {
+    public GraphDatabaseService getGraphDatabaseService()
+    {
         return controls.graph();
+    }
+
+    public Configuration getConfig()
+    {
+        return controls.config();
     }
 }

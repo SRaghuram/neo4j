@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,16 +19,13 @@
  */
 package org.neo4j.unsafe.impl.batchimport.input.csv;
 
-import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.neo4j.csv.reader.CharSeeker;
-import org.neo4j.function.Function;
-import org.neo4j.kernel.impl.util.Validator;
 import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.unsafe.impl.batchimport.InputIterable;
 import org.neo4j.unsafe.impl.batchimport.InputIterator;
+import org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdGenerator;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
@@ -36,7 +33,10 @@ import org.neo4j.unsafe.impl.batchimport.input.Groups;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.input.InputNode;
 import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
-import org.neo4j.unsafe.impl.batchimport.input.MissingRelationshipDataException;
+import org.neo4j.unsafe.impl.batchimport.input.csv.InputGroupsDeserializer.DeserializerFactory;
+
+import static org.neo4j.unsafe.impl.batchimport.input.csv.DeserializerFactories.defaultNodeDeserializer;
+import static org.neo4j.unsafe.impl.batchimport.input.csv.DeserializerFactories.defaultRelationshipDeserializer;
 
 /**
  * Provides {@link Input} from data contained in tabular/csv form. Expects factories for instantiating
@@ -52,7 +52,8 @@ public class CsvInput implements Input
     private final IdType idType;
     private final Configuration config;
     private final Groups groups = new Groups();
-    private final Function<OutputStream,Collector> collectorFactory;
+    private final Collector badCollector;
+    private final int maxProcessors;
 
     /**
      * @param nodeDataFactory multiple {@link DataFactory} instances providing data, each {@link DataFactory}
@@ -65,12 +66,15 @@ public class CsvInput implements Input
      * @param relationshipHeaderFactory factory for reading relationship headers.
      * @param idType {@link IdType} to expect in id fields of node and relationship input.
      * @param config CSV configuration.
+     * @param badCollector Collector getting calls about bad input data.
+     * @param maxProcessors maximum number of processors in scenarios where multiple threads may parse CSV data.
      */
     public CsvInput(
             Iterable<DataFactory<InputNode>> nodeDataFactory, Header.Factory nodeHeaderFactory,
             Iterable<DataFactory<InputRelationship>> relationshipDataFactory, Header.Factory relationshipHeaderFactory,
-            IdType idType, Configuration config, Function<OutputStream,Collector> collectorFactory )
+            IdType idType, Configuration config, Collector badCollector, int maxProcessors )
     {
+        this.maxProcessors = maxProcessors;
         assertSaneConfiguration( config );
 
         this.nodeDataFactory = nodeDataFactory;
@@ -79,7 +83,7 @@ public class CsvInput implements Input
         this.relationshipHeaderFactory = relationshipHeaderFactory;
         this.idType = idType;
         this.config = config;
-        this.collectorFactory = collectorFactory;
+        this.badCollector = badCollector;
     }
 
     private void assertSaneConfiguration( Configuration config )
@@ -108,18 +112,9 @@ public class CsvInput implements Input
             @Override
             public InputIterator<InputNode> iterator()
             {
-                return new InputGroupsDeserializer<InputNode>( nodeDataFactory.iterator(),
-                        nodeHeaderFactory, config, idType )
-                {
-                    @Override
-                    protected InputEntityDeserializer<InputNode> entityDeserializer( CharSeeker dataStream,
-                            Header dataHeader, Function<InputNode,InputNode> decorator )
-                    {
-                        return new InputEntityDeserializer<>( dataHeader, dataStream, config.delimiter(),
-                                new InputNodeDeserialization( dataStream, dataHeader, groups, idType.idsAreExternal() ),
-                                decorator, Validators.<InputNode>emptyValidator() );
-                    }
-                };
+                DeserializerFactory<InputNode> factory = defaultNodeDeserializer( groups, config, idType, badCollector );
+                return new InputGroupsDeserializer<>( nodeDataFactory.iterator(), nodeHeaderFactory, config,
+                        idType, maxProcessors, 1, factory, Validators.<InputNode>emptyValidator(), InputNode.class );
             }
 
             @Override
@@ -138,39 +133,11 @@ public class CsvInput implements Input
             @Override
             public InputIterator<InputRelationship> iterator()
             {
-                return new InputGroupsDeserializer<InputRelationship>( relationshipDataFactory.iterator(),
-                        relationshipHeaderFactory, config, idType )
-                {
-                    @Override
-                    protected InputEntityDeserializer<InputRelationship> entityDeserializer( CharSeeker dataStream,
-                              Header dataHeader, Function<InputRelationship,InputRelationship> decorator )
-                    {
-                        return new InputEntityDeserializer<>( dataHeader, dataStream, config.delimiter(),
-                                new InputRelationshipDeserialization( dataStream, dataHeader, groups ),
-                                decorator, new Validator<InputRelationship>()
-                                {
-                                    @Override
-                                    public void validate( InputRelationship entity )
-                                    {
-                                        if ( entity.startNode() == null )
-                                        {
-                                            throw new MissingRelationshipDataException(Type.START_ID,
-                                                                entity + " is missing " + Type.START_ID + " field" );
-                                        }
-                                        if ( entity.endNode() == null )
-                                        {
-                                            throw new MissingRelationshipDataException(Type.END_ID,
-                                                                entity + " is missing " + Type.END_ID + " field" );
-                                        }
-                                        if ( !entity.hasTypeId() && entity.type() == null )
-                                        {
-                                            throw new MissingRelationshipDataException(Type.TYPE,
-                                                                entity + " is missing " + Type.TYPE + " field" );
-                                        }
-                                    }
-                                } );
-                    }
-                };
+                DeserializerFactory<InputRelationship> factory =
+                        defaultRelationshipDeserializer( groups, config, idType, badCollector );
+                return new InputGroupsDeserializer<>( relationshipDataFactory.iterator(), relationshipHeaderFactory,
+                        config, idType, maxProcessors, 1, factory, new InputRelationshipValidator(),
+                        InputRelationship.class );
             }
 
             @Override
@@ -182,9 +149,9 @@ public class CsvInput implements Input
     }
 
     @Override
-    public IdMapper idMapper()
+    public IdMapper idMapper( NumberArrayFactory numberArrayFactory )
     {
-        return idType.idMapper();
+        return idType.idMapper( numberArrayFactory );
     }
 
     @Override
@@ -194,14 +161,8 @@ public class CsvInput implements Input
     }
 
     @Override
-    public boolean specificRelationshipIds()
+    public Collector badCollector()
     {
-        return false;
-    }
-
-    @Override
-    public Collector badCollector( OutputStream out )
-    {
-        return collectorFactory.apply( out );
+        return badCollector;
     }
 }

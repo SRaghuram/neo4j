@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,8 @@ import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
-import org.neo4j.test.ImpermanentDatabaseRule;
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.test.rule.ImpermanentDatabaseRule;
 
 import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -39,16 +40,16 @@ import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.neo4j.graphdb.Neo4jMatchers.contains;
-import static org.neo4j.graphdb.Neo4jMatchers.containsOnly;
-import static org.neo4j.graphdb.Neo4jMatchers.createIndex;
-import static org.neo4j.graphdb.Neo4jMatchers.findNodesByLabelAndProperty;
-import static org.neo4j.graphdb.Neo4jMatchers.getConstraints;
-import static org.neo4j.graphdb.Neo4jMatchers.getIndexes;
-import static org.neo4j.graphdb.Neo4jMatchers.isEmpty;
-import static org.neo4j.graphdb.Neo4jMatchers.waitForIndex;
 import static org.neo4j.helpers.collection.Iterables.count;
-import static org.neo4j.helpers.collection.IteratorUtil.asSet;
+import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.contains;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.containsOnly;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.createIndex;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.findNodesByLabelAndProperty;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.getConstraints;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.getIndexes;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.isEmpty;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.waitForIndex;
 
 public class SchemaAcceptanceTest
 {
@@ -58,6 +59,7 @@ public class SchemaAcceptanceTest
     private GraphDatabaseService db;
     private Label label = Labels.MY_LABEL;
     private String propertyKey = "my_property_key";
+    private String secondPropertyKey = "my_second_property_key";
 
     private enum Labels implements Label
     {
@@ -65,10 +67,10 @@ public class SchemaAcceptanceTest
         MY_OTHER_LABEL
     }
 
-    private enum Types implements RelationshipType
+    @Before
+    public void init()
     {
-        MY_TYPE,
-        MY_OTHER_TYPE
+        db = dbRule.getGraphDatabaseAPI();
     }
 
     @Test
@@ -76,6 +78,16 @@ public class SchemaAcceptanceTest
     {
         // WHEN
         IndexDefinition index = createIndex( db, label, propertyKey );
+
+        // THEN
+        assertThat( getIndexes( db, label ), containsOnly( index ) );
+    }
+
+    @Test
+    public void addingACompositeIndexingRuleShouldSucceed() throws Exception
+    {
+        // WHEN
+        IndexDefinition index = createIndex( db, label, propertyKey, secondPropertyKey );
 
         // THEN
         assertThat( getIndexes( db, label ), containsOnly( index ) );
@@ -156,25 +168,6 @@ public class SchemaAcceptanceTest
     }
 
     @Test
-    public void shouldThrowConstraintViolationIfAskedToCreateCompoundIndex() throws Exception
-    {
-        // WHEN
-        try ( Transaction tx = db.beginTx() )
-        {
-            Schema schema = db.schema();
-            schema.indexFor( label )
-                    .on( "my_property_key" )
-                    .on( "other_property" ).create();
-            tx.success();
-            fail( "Should not be able to create index on multiple propertyKey keys" );
-        }
-        catch ( UnsupportedOperationException e )
-        {
-            assertThat( e.getMessage(), containsString( "Compound indexes" ) );
-        }
-    }
-
-    @Test
     public void shouldThrowConstraintViolationIfAskedToCreateCompoundConstraint() throws Exception
     {
         // WHEN
@@ -223,8 +216,7 @@ public class SchemaAcceptanceTest
             }
             catch ( ConstraintViolationException e )
             {
-                assertThat( e.getMessage(), containsString( "Index for label 'MY_LABEL' and property " +
-                                                            "'my_property_key' not found." ) );
+                assertThat( e.getMessage(), containsString( "No index was found for :MY_LABEL(my_property_key)." ) );
             }
             tx.success();
         }
@@ -248,8 +240,7 @@ public class SchemaAcceptanceTest
         }
         catch ( ConstraintViolationException e )
         {
-            assertThat( e.getMessage(), containsString( "Index for label 'MY_LABEL' and property " +
-                                                        "'my_property_key' not found." ) );
+            assertThat( e.getMessage(), containsString( "No index was found for :MY_LABEL(my_property_key)." ) );
         }
 
         // THEN
@@ -295,6 +286,20 @@ public class SchemaAcceptanceTest
     }
 
     @Test
+    public void shouldPopulateIndex() throws Exception
+    {
+        // GIVEN
+        Node node = createNode( db, propertyKey, "Neo", label );
+
+        // create an index
+        IndexDefinition index = createIndex( db, label, propertyKey );
+        waitForIndex( db, index );
+
+        // THEN
+        assertThat( findNodesByLabelAndProperty( label, propertyKey, "Neo", db ), containsOnly( node ) );
+    }
+
+    @Test
     public void shouldRecreateDroppedIndex() throws Exception
     {
         // GIVEN
@@ -328,7 +333,7 @@ public class SchemaAcceptanceTest
             assertEquals( ConstraintType.UNIQUENESS, constraint.getConstraintType() );
 
             assertEquals( label.name(), constraint.getLabel().name() );
-            assertEquals( asSet( propertyKey ), asSet( constraint.getPropertyKeys() ) );
+            assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
             tx.success();
         }
     }
@@ -406,12 +411,8 @@ public class SchemaAcceptanceTest
         }
         catch ( ConstraintViolationException e )
         {
-            assertEquals(
-                    format( "Unable to create CONSTRAINT ON ( my_label:MY_LABEL ) ASSERT my_label.my_property_key " +
-                            "IS UNIQUE:%nMultiple nodes with label `MY_LABEL` have property `my_property_key` = " +
-                            "'value1':%n" +
-                            "  node(0)%n" +
-                            "  node(1)" ), e.getMessage() );
+            assertThat( e.getMessage(), containsString(
+                    "Unable to create CONSTRAINT ON ( my_label:MY_LABEL ) ASSERT my_label.my_property_key IS UNIQUE" ) );
         }
     }
 
@@ -452,8 +453,7 @@ public class SchemaAcceptanceTest
         {
             assertEquals(
                     "Label 'MY_LABEL' and property 'my_property_key' have a unique constraint defined on them, so an " +
-                    "index is " +
-                    "already created that matches this.", e.getMessage() );
+                    "index is already created that matches this.", e.getMessage() );
         }
     }
 
@@ -493,12 +493,6 @@ public class SchemaAcceptanceTest
             assertThat( db.schema().getIndexState( indexA ), is( Schema.IndexState.ONLINE ) );
             assertThat( db.schema().getIndexState( indexC ), is( Schema.IndexState.POPULATING ) );
         }
-    }
-
-    @Before
-    public void init()
-    {
-        db = dbRule.getGraphDatabaseService();
     }
 
     private void dropConstraint( GraphDatabaseService db, ConstraintDefinition constraint )

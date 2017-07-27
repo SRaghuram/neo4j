@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,7 +28,7 @@ public enum RelationshipDirection
     out( Direction.OUTGOING );
     final Direction internal;
 
-    private RelationshipDirection( Direction internal )
+    RelationshipDirection( Direction internal )
     {
         this.internal = internal;
     }

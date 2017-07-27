@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,36 +19,53 @@
  */
 package org.neo4j.kernel.impl.locking.community;
 
-import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import java.time.Clock;
 
-public class CommunityLockManger extends LifecycleAdapter implements Locks
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.locking.Locks;
+
+public class CommunityLockManger implements Locks
 {
-    private final LockManagerImpl manager = new LockManagerImpl( new RagManager() );
+    private final LockManagerImpl manager;
+    private volatile boolean closed;
+
+    public CommunityLockManger( Config config, Clock clock )
+    {
+        manager = new LockManagerImpl( new RagManager(), config, clock );
+    }
 
     @Override
     public Client newClient()
     {
+        // We check this volatile closed flag here, which may seem like a contention overhead, but as the time
+        // of writing we apply pooling of transactions and in extension pooling of lock clients,
+        // so this method is called very rarely.
+        if ( closed )
+        {
+            throw new IllegalStateException( this + " already closed" );
+        }
         return new CommunityLockClient( manager );
     }
 
     @Override
     public void accept( final Visitor visitor )
     {
-        manager.accept( new org.neo4j.helpers.collection.Visitor<RWLock, RuntimeException>()
+        manager.accept( element ->
         {
-            @Override
-            public boolean visit( RWLock element ) throws RuntimeException
+            Object resource = element.resource();
+            if ( resource instanceof LockResource )
             {
-                Object resource = element.resource();
-                if(resource instanceof LockResource)
-                {
-                    LockResource lockResource = (LockResource)resource;
-                    visitor.visit( lockResource.type(), lockResource.resourceId(),
-                            element.describe(), element.maxWaitTime(), System.identityHashCode( lockResource ) );
-                }
-                return false;
+                LockResource lockResource = (LockResource) resource;
+                visitor.visit( lockResource.type(), lockResource.resourceId(),
+                        element.describe(), element.maxWaitTime(), System.identityHashCode( lockResource ) );
             }
+            return false;
         } );
+    }
+
+    @Override
+    public void close()
+    {
+        closed = true;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,7 +30,7 @@ final class FreePage
     int count;
     FreePage next;
 
-    public FreePage( MuninnPage page )
+    FreePage( MuninnPage page )
     {
         this.page = page;
     }
@@ -38,6 +38,6 @@ final class FreePage
     void setNext( FreePage next )
     {
         this.next = next;
-        this.count = next == null? 1 : 1 + next.count;
+        this.count = next == null ? 1 : 1 + next.count;
     }
 }

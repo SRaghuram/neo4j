@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,8 @@ package org.neo4j.test.server;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.config.ClientConfig;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
 import org.codehaus.jackson.JsonNode;
 
 import java.net.URI;
@@ -31,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import javax.ws.rs.core.MediaType;
 
+import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.server.rest.domain.JsonHelper;
 import org.neo4j.server.rest.domain.JsonParseException;
 
@@ -40,7 +43,6 @@ import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.helpers.collection.IteratorUtil.singleOrNull;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.rest.domain.JsonHelper.createJsonFrom;
 
@@ -51,11 +53,12 @@ public class HTTP
 {
 
     private static final Builder BUILDER = new Builder().withHeaders( "Accept", "application/json" );
-    private static final Client CLIENT = new Client();
-
-    public static Builder withHeaders( Map<String, String> headers )
+    private static final Client CLIENT;
+    static
     {
-        return BUILDER.withHeaders( headers );
+        DefaultClientConfig defaultClientConfig = new DefaultClientConfig();
+        defaultClientConfig.getProperties().put( ClientConfig.PROPERTY_FOLLOW_REDIRECTS, Boolean.FALSE );
+        CLIENT = Client.create( defaultClientConfig );
     }
 
     public static Builder withHeaders( String... kvPairs )
@@ -83,34 +86,9 @@ public class HTTP
         return BUILDER.POST( uri, payload );
     }
 
-    public static Response PUT( String uri )
-    {
-        return BUILDER.PUT( uri );
-    }
-
-    public static Response PUT( String uri, Object payload )
-    {
-        return BUILDER.PUT( uri, payload );
-    }
-
-    public static Response PUT( String uri, RawPayload payload )
-    {
-        return BUILDER.PUT( uri, payload );
-    }
-
-    public static Response DELETE( String uri )
-    {
-        return BUILDER.DELETE( uri );
-    }
-
     public static Response GET( String uri )
     {
         return BUILDER.GET( uri );
-    }
-
-    public static Response request( String method, String uri )
-    {
-        return BUILDER.request( method, uri );
     }
 
     public static Response request( String method, String uri, Object payload )
@@ -142,8 +120,8 @@ public class HTTP
         public Builder withHeaders( Map<String, String> newHeaders )
         {
             HashMap<String, String> combined = new HashMap<>();
-            combined.putAll( newHeaders );
             combined.putAll( headers );
+            combined.putAll( newHeaders );
             return new Builder( combined, baseUri );
         }
 
@@ -167,21 +145,6 @@ public class HTTP
             return request( "POST", uri, payload );
         }
 
-        public Response PUT( String uri )
-        {
-            return request( "PUT", uri );
-        }
-
-        public Response PUT( String uri, Object payload )
-        {
-            return request( "PUT", uri, payload );
-        }
-
-        public Response PUT( String uri, RawPayload payload )
-        {
-            return request( "PUT", uri, payload );
-        }
-
         public Response DELETE( String uri )
         {
             return request( "DELETE", uri );
@@ -199,9 +162,9 @@ public class HTTP
 
         public Response request( String method, String uri, Object payload )
         {
-            if(payload == null)
+            if ( payload == null )
             {
-                return request(method, uri);
+                return request( method, uri );
             }
             String jsonPayload = payload instanceof RawPayload ? ((RawPayload) payload).get() : createJsonFrom(
                     payload );
@@ -242,7 +205,7 @@ public class HTTP
     {
         List<String> contentEncodings = response.getHeaders().get( "Content-Encoding" );
         String contentEncoding;
-        if ( contentEncodings != null && (contentEncoding = singleOrNull( contentEncodings )) != null )
+        if ( contentEncodings != null && (contentEncoding = Iterables.singleOrNull( contentEncodings )) != null )
         {
             // Specifically, this is never used for character encoding.
             contentEncoding = contentEncoding.toLowerCase();

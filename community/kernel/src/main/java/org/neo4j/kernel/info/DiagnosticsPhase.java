@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,7 +35,7 @@ public enum DiagnosticsPhase
     private final boolean requested;
     private final boolean initial;
 
-    private DiagnosticsPhase( boolean requested, boolean initial )
+    DiagnosticsPhase( boolean requested, boolean initial )
     {
         this.requested = requested;
         this.initial = initial;

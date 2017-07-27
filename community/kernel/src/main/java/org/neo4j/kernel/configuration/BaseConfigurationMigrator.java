@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -42,7 +42,14 @@ public class BaseConfigurationMigrator implements ConfigurationMigrator
         String getDeprecationMessage();
     }
 
-    public static abstract class SpecificPropertyMigration implements Migration
+    /**
+     * Base class for implementing a migration that applies to a specific config property key.
+     *
+     * By default, this class will print a  deprecation message and run {@link #setValueWithOldSetting(String, Map)}
+     * if the specified property key has been set by the user. Override {@link #appliesTo(Map)} if you want to
+     * trigger on more specific reasons than that.
+     */
+    public abstract static class SpecificPropertyMigration implements Migration
     {
         private final String propertyKey;
         private final String deprecationMessage;
@@ -94,6 +101,10 @@ public class BaseConfigurationMigrator implements ConfigurationMigrator
         }
     }
 
+    /**
+     * A simple migration where a config value (usually an enum) has been renamed.
+     * Eg. it used to be `dbms.thing=doit` and now it's `dbm.thing=gogogo`.
+     */
     public static class ConfigValueChanged implements Migration
     {
         private final String propertyKey;
@@ -128,6 +139,11 @@ public class BaseConfigurationMigrator implements ConfigurationMigrator
         {
             return message;
         }
+    }
+
+    public static Migration valueChanged( String key, String oldValue, String newValue, String deprecationMessage )
+    {
+        return new ConfigValueChanged( key, oldValue, newValue, deprecationMessage );
     }
 
     public static Migration propertyRenamed( String oldKey, String newKey, String deprecationMessage )

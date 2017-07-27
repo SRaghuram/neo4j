@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,7 @@ package org.neo4j.shell.kernel.apps;
 import java.rmi.RemoteException;
 
 import org.neo4j.helpers.Service;
-import org.neo4j.kernel.TopLevelTransaction;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.shell.App;
 import org.neo4j.shell.AppCommandParser;
@@ -35,6 +35,8 @@ import org.neo4j.shell.kernel.GraphDatabaseShellServer;
 @Service.Implementation(App.class)
 public class Begin extends NonTransactionProvidingApp
 {
+    private static final String TRANSACTION = "TRANSACTION";
+
     @Override
     public String getDescription()
     {
@@ -52,7 +54,7 @@ public class Begin extends NonTransactionProvidingApp
             return Continuation.INPUT_COMPLETE;
         }
 
-        TopLevelTransaction tx = currentTransaction( getServer() );
+        KernelTransaction tx = currentTransaction( getServer() );
 
         // This is a "begin" app so it will leave a transaction open. Don't close it in here
         getServer().getDb().beginTx();
@@ -82,8 +84,6 @@ public class Begin extends NonTransactionProvidingApp
         return Continuation.INPUT_COMPLETE;
     }
 
-    private static String TRANSACTION = "TRANSACTION";
-
     private boolean acceptableText( String line )
     {
         if ( line == null || line.length() > TRANSACTION.length() )
@@ -91,11 +91,10 @@ public class Begin extends NonTransactionProvidingApp
             return false;
         }
 
-        String substring = TRANSACTION.substring( 0, line.length() );
-        return substring.equals( line.toUpperCase() );
+        return TRANSACTION.startsWith( line.toUpperCase() );
     }
 
-    public static TopLevelTransaction currentTransaction( GraphDatabaseShellServer server )
+    public static KernelTransaction currentTransaction( GraphDatabaseShellServer server )
     {
         return server.getDb().getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class )
                 .getTopLevelTransactionBoundToThisThread( false );

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,24 +21,35 @@ package org.neo4j.unsafe.impl.batchimport.cache;
 
 import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
 
-/**
- * Base class for common functionality for any {@link NumberArray} where the data lives off-heap.
- */
-abstract class OffHeapNumberArray implements NumberArray
+public abstract class OffHeapNumberArray<N extends NumberArray<N>> extends BaseNumberArray<N>
 {
+    private final long allocatedAddress;
     protected final long address;
     protected final long length;
-    protected final int shift;
-    protected final int stride;
     private boolean closed;
 
-    protected OffHeapNumberArray( long length, int shift )
+    protected OffHeapNumberArray( long length, int itemSize, long base )
     {
+        super( itemSize, base );
         UnsafeUtil.assertHasUnsafe();
         this.length = length;
-        this.shift = shift;
-        this.stride = 1 << shift;
-        this.address = UnsafeUtil.allocateMemory( length << shift );
+
+        long dataSize = length * itemSize;
+        boolean itemSizeIsPowerOfTwo = Integer.bitCount( itemSize ) == 1;
+        if ( UnsafeUtil.allowUnalignedMemoryAccess || !itemSizeIsPowerOfTwo )
+        {
+            // we can end up here even if we require aligned memory access. Reason is that item size
+            // isn't power of two anyway and so we have to fallback to safer means of accessing the memory,
+            // i.e. byte for byte.
+            this.allocatedAddress = this.address = UnsafeUtil.allocateMemory( dataSize );
+        }
+        else
+        {
+            // the item size is a power of two and we're required to access memory aligned
+            // so we can allocate a bit more to ensure we can get an aligned memory address to start from.
+            this.allocatedAddress = UnsafeUtil.allocateMemory( dataSize + itemSize - 1 );
+            this.address = UnsafeUtil.alignedMemory( allocatedAddress, itemSize );
+        }
     }
 
     @Override
@@ -47,37 +58,10 @@ abstract class OffHeapNumberArray implements NumberArray
         return length;
     }
 
-    protected long addressOf( long index )
-    {
-        if ( index < 0 || index >= length )
-        {
-            throw new ArrayIndexOutOfBoundsException( "Requested index " + index + ", but length is " + length );
-        }
-        return address + (index << shift);
-    }
-
-    protected boolean isByteUniform( long value )
-    {
-        byte any = 0; // assignment not really needed
-        for ( int i = 0; i < stride; i++ )
-        {
-            byte test = (byte)(value >>> 8*i);
-            if ( i == 0 )
-            {
-                any = test;
-            }
-            else if ( test != any )
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
     @Override
     public void acceptMemoryStatsVisitor( MemoryStatsVisitor visitor )
     {
-        visitor.offHeapUsage( length * stride );
+        visitor.offHeapUsage( length * itemSize );
     }
 
     @Override
@@ -85,7 +69,11 @@ abstract class OffHeapNumberArray implements NumberArray
     {
         if ( !closed )
         {
-            UnsafeUtil.free( address );
+            if ( length > 0 )
+            {
+                // Allocating 0 bytes actually returns address 0
+                UnsafeUtil.free( allocatedAddress );
+            }
             closed = true;
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -42,7 +42,5 @@ import java.lang.annotation.Target;
 @Target( { ElementType.TYPE, ElementType.FIELD, ElementType.METHOD } )
 public @interface Documented
 {
-    static String DEFAULT_VALUE = "";
-
-    String value() default DEFAULT_VALUE;
+    String value();
 }

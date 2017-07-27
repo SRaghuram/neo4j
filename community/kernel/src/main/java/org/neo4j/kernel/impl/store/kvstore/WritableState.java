@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,8 @@
  */
 package org.neo4j.kernel.impl.store.kvstore;
 
+import java.util.Optional;
 import java.util.concurrent.locks.Lock;
-
-import org.neo4j.kernel.impl.util.function.Optional;
 
 abstract class WritableState<Key> extends ReadableState<Key>
 {

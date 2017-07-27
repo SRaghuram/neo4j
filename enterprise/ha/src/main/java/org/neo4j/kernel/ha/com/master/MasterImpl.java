@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,21 +32,23 @@ import org.neo4j.com.Response;
 import org.neo4j.com.TransactionNotPresentOnMasterException;
 import org.neo4j.com.storecopy.StoreWriter;
 import org.neo4j.kernel.DeadlockDetectedException;
-import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.id.IdAllocation;
 import org.neo4j.kernel.ha.lock.LockResult;
 import org.neo4j.kernel.ha.lock.LockStatus;
+import org.neo4j.kernel.impl.locking.LockTracer;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.kernel.impl.store.StoreId;
+import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.transaction.IllegalResourceException;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.util.collection.ConcurrentAccessException;
 import org.neo4j.kernel.impl.util.collection.NoSuchEntryException;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.storageengine.api.lock.ResourceType;
 
 /**
  * This is the real master code that executes on a master. The actual
@@ -98,7 +100,7 @@ public class MasterImpl extends LifecycleAdapter implements Master
     private final Monitor monitor;
     private final long epoch;
 
-    private ConversationManager conversationManager;
+    private final ConversationManager conversationManager;
 
     public MasterImpl( SPI spi, ConversationManager conversationManager, Monitor monitor, Config config )
     {
@@ -167,10 +169,10 @@ public class MasterImpl extends LifecycleAdapter implements Master
         // not, we use a one-off lock client. The way the client signals this is via the 'eventIdentifier' in the
         // request. -1 means no locks are held, any other number means there should be a matching lock session.
 
-        if(context.getEventIdentifier() == -1)
+        if ( context.getEventIdentifier() == Locks.Client.NO_LOCK_SESSION_ID )
         {
             // Client is not holding locks, use a temporary lock client
-            try(Conversation conversation = conversationManager.acquire())
+            try ( Conversation conversation = conversationManager.acquire() )
             {
                 return commit0( context, preparedTransaction, conversation.getLocks() );
             }
@@ -191,7 +193,7 @@ public class MasterImpl extends LifecycleAdapter implements Master
                     conversationManager.release(context);
                 }
             }
-            catch(NoSuchEntryException | ConcurrentAccessException e)
+            catch (NoSuchEntryException | ConcurrentAccessException e)
             {
                 throw new TransactionNotPresentOnMasterException(context);
             }
@@ -208,7 +210,7 @@ public class MasterImpl extends LifecycleAdapter implements Master
         }
         else
         {
-            throw new TransactionFailureException( Status.Schema.ModifiedConcurrently, "Failed to commit, because another transaction is making " +
+            throw new TransactionFailureException( Status.Schema.SchemaModifiedConcurrently, "Failed to commit, because another transaction is making " +
                     "schema changes. Slave commits are disallowed while schema changes are being committed. " +
                     "Retrying the transaction should yield a successful result." );
         }
@@ -284,7 +286,7 @@ public class MasterImpl extends LifecycleAdapter implements Master
         }
         catch ( ConcurrentAccessException e )
         {
-            throw new TransactionFailureException( Status.Transaction.ConcurrentRequest, e,
+            throw new TransactionFailureException( Status.Transaction.TransactionAccessedConcurrently, e,
                     "The lock session requested to start is already in use. " +
                     "Please retry your request in a few seconds." );
         }
@@ -296,11 +298,15 @@ public class MasterImpl extends LifecycleAdapter implements Master
     {
         assertCorrectEpoch( context );
         conversationManager.end( context );
+        if ( !success )
+        {
+            conversationManager.stop( context );
+        }
         return spi.packTransactionObligationResponse( context, null );
     }
 
     @Override
-    public Response<LockResult> acquireExclusiveLock( RequestContext context, Locks.ResourceType type,
+    public Response<LockResult> acquireExclusiveLock( RequestContext context, ResourceType type,
                                                       long... resourceIds )
     {
         assertCorrectEpoch( context );
@@ -311,23 +317,29 @@ public class MasterImpl extends LifecycleAdapter implements Master
         }
         catch ( NoSuchEntryException | ConcurrentAccessException e)
         {
-            return spi.packTransactionObligationResponse( context, new LockResult( "Unable to acquire exclusive lock: " + e.getMessage() ) );
+            return spi.packTransactionObligationResponse( context, new LockResult(
+                    LockStatus.NOT_LOCKED,
+                    "Unable to acquire exclusive lock: " + e.getMessage() ) );
         }
         try
         {
             for ( long resourceId : resourceIds )
             {
-                session.acquireExclusive( type, resourceId );
+                session.acquireExclusive( LockTracer.NONE, type, resourceId );
             }
             return spi.packTransactionObligationResponse( context, new LockResult( LockStatus.OK_LOCKED ) );
         }
         catch ( DeadlockDetectedException e )
         {
-            return spi.packTransactionObligationResponse( context, new LockResult( "Can't acquire exclusive lock, because it would have caused a deadlock: " + e.getMessage() ) );
+            return spi.packTransactionObligationResponse( context, new LockResult(
+                    LockStatus.DEAD_LOCKED,
+                    "Can't acquire exclusive lock, because it would have caused a deadlock: " + e.getMessage() ) );
         }
         catch ( IllegalResourceException e )
         {
-            return spi.packTransactionObligationResponse( context, new LockResult( LockStatus.NOT_LOCKED ) );
+            return spi.packTransactionObligationResponse( context, new LockResult(
+                    LockStatus.NOT_LOCKED,
+                    "Attempted to lock illegal resource: " + e.getMessage() ) );
         }
         finally
         {
@@ -336,7 +348,7 @@ public class MasterImpl extends LifecycleAdapter implements Master
     }
 
     @Override
-    public Response<LockResult> acquireSharedLock( RequestContext context, Locks.ResourceType type,
+    public Response<LockResult> acquireSharedLock( RequestContext context, ResourceType type,
                                                    long... resourceIds )
     {
         assertCorrectEpoch( context );
@@ -347,24 +359,28 @@ public class MasterImpl extends LifecycleAdapter implements Master
         }
         catch ( NoSuchEntryException | ConcurrentAccessException e)
         {
-            return spi.packTransactionObligationResponse( context, new LockResult( "Unable to acquire shared lock: " + e.getMessage() ) );
+            return spi.packTransactionObligationResponse( context, new LockResult(
+                    LockStatus.NOT_LOCKED,
+                    "Unable to acquire shared lock: " + e.getMessage() ) );
         }
         try
         {
             for ( long resourceId : resourceIds )
             {
-                session.acquireShared( type, resourceId );
+                session.acquireShared( LockTracer.NONE, type, resourceId );
             }
 
             return spi.packTransactionObligationResponse( context, new LockResult( LockStatus.OK_LOCKED ) );
         }
         catch ( DeadlockDetectedException e )
         {
-            return spi.packTransactionObligationResponse( context, new LockResult( e.getMessage() ) );
+            return spi.packTransactionObligationResponse( context, new LockResult( LockStatus.DEAD_LOCKED, e.getMessage() ) );
         }
         catch ( IllegalResourceException e )
         {
-            return spi.packTransactionObligationResponse( context, new LockResult( LockStatus.NOT_LOCKED ) );
+            return spi.packTransactionObligationResponse( context, new LockResult(
+                    LockStatus.NOT_LOCKED,
+                    "Attempted to lock illegal resource: " + e.getMessage() ) );
         }
         finally
         {
@@ -383,12 +399,7 @@ public class MasterImpl extends LifecycleAdapter implements Master
         Set<RequestContext> contexts = conversationManager.getActiveContexts();
         for ( RequestContext context : contexts.toArray( new RequestContext[contexts.size()] ) )
         {
-            Collection<RequestContext> txs = result.get( context.machineId() );
-            if ( txs == null )
-            {
-                txs = new ArrayList<>();
-                result.put( context.machineId(), txs );
-            }
+            Collection<RequestContext> txs = result.computeIfAbsent( context.machineId(), k -> new ArrayList<>() );
             txs.add( context );
         }
         return result;

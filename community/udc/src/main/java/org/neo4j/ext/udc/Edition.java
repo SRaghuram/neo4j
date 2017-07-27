@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,8 @@ package org.neo4j.ext.udc;
  * @author mh
  * @since 11.06.12
  */
-public enum Edition {
-   community, advanced, enterprise;
+public enum Edition
+{
+   community,
+   enterprise
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,8 +21,13 @@ package org.neo4j.kernel.monitoring.tracing;
 
 import org.neo4j.helpers.Service;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.kernel.impl.locking.LockTracer;
 import org.neo4j.kernel.impl.transaction.tracing.CheckPointTracer;
 import org.neo4j.kernel.impl.transaction.tracing.TransactionTracer;
+import org.neo4j.kernel.impl.util.JobScheduler;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 
 /**
@@ -43,11 +48,11 @@ import org.neo4j.logging.Log;
  *     components to distribute throughout the database instance.
  * </p>
  * <p>
- *     The tracing implementation is determined by the {@code dbms.tracer} setting. Two built-in implementations
+ *     The tracing implementation is determined by the {@code unsupported.dbms.tracer} setting. Two built-in implementations
  *     exist: {@code default} and {@code null}. Alternative implementations can be loaded from the
  *     classpath by referencing their {@link org.neo4j.kernel.monitoring.tracing.TracerFactory} in a
  *     {@code META-INF/services/org.neo4j.kernel.monitoring.tracing.TracerFactory}, and setting
- *     {@code dbms.tracer} to the appropriate value.
+ *     {@code unsupported.dbms.tracer} to the appropriate value.
  * </p>
  * <h2>Designing and implementing tracers</h2>
  * <p>
@@ -95,8 +100,10 @@ import org.neo4j.logging.Log;
 public class Tracers
 {
     public final PageCacheTracer pageCacheTracer;
+    public final PageCursorTracerSupplier pageCursorTracerSupplier;
     public final TransactionTracer transactionTracer;
     public final CheckPointTracer checkPointTracer;
+    public final LockTracer lockTracer;
 
     /**
      * Create a Tracers subsystem with the desired implementation, if it can be found and created.
@@ -105,14 +112,18 @@ public class Tracers
      * @param desiredImplementationName The name of the desired {@link org.neo4j.kernel.monitoring.tracing
      * .TracerFactory} implementation, as given by its {@link TracerFactory#getImplementationName()} method.
      * @param msgLog A {@link Log} for logging when the desired implementation cannot be created.
+     * @param monitors the monitoring manager
+     * @param jobScheduler a scheduler for async jobs
      */
-    public Tracers( String desiredImplementationName, Log msgLog )
+    public Tracers( String desiredImplementationName, Log msgLog, Monitors monitors, JobScheduler jobScheduler )
     {
         if ( "null".equalsIgnoreCase( desiredImplementationName ) )
         {
+            pageCursorTracerSupplier = DefaultPageCursorTracerSupplier.NULL;
             pageCacheTracer = PageCacheTracer.NULL;
             transactionTracer = TransactionTracer.NULL;
             checkPointTracer = CheckPointTracer.NULL;
+            lockTracer = LockTracer.NONE;
         }
         else
         {
@@ -141,9 +152,11 @@ public class Tracers
                 msgLog.warn( "Using default tracer implementations instead of '%s'", desiredImplementationName );
             }
 
-            pageCacheTracer = foundFactory.createPageCacheTracer();
-            transactionTracer = foundFactory.createTransactionTracer();
-            checkPointTracer = foundFactory.createCheckPointTracer();
+            pageCursorTracerSupplier = foundFactory.createPageCursorTracerSupplier( monitors, jobScheduler );
+            pageCacheTracer = foundFactory.createPageCacheTracer( monitors, jobScheduler );
+            transactionTracer = foundFactory.createTransactionTracer( monitors, jobScheduler );
+            checkPointTracer = foundFactory.createCheckPointTracer( monitors, jobScheduler );
+            lockTracer = foundFactory.createLockTracer( monitors, jobScheduler );
         }
     }
 }

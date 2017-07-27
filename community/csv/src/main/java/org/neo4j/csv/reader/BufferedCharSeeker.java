@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,8 +23,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 
-import static java.lang.String.format;
+import org.neo4j.csv.reader.Source.Chunk;
 
+import static java.lang.String.format;
 import static org.neo4j.csv.reader.Mark.END_OF_LINE_CHARACTER;
 
 /**
@@ -37,12 +38,9 @@ public class BufferedCharSeeker implements CharSeeker
     private static final char EOF_CHAR = (char) -1;
     private static final char BACK_SLASH = '\\';
 
-    private final CharReadable reader;
     private char[] buffer;
-
-    // Wraps the char[] buffer and is only used during reading more data, using f.ex. compact()
-    // so that we don't have to duplicate that functionality.
-    private SectionedCharBuffer charBuffer;
+    private int dataLength;
+    private int dataCapacity;
 
     // index into the buffer character array to read the next time nextChar() is called
     private int bufferPos;
@@ -62,17 +60,17 @@ public class BufferedCharSeeker implements CharSeeker
     private long absoluteBufferStartPosition;
     private String sourceDescription;
     private final boolean multilineFields;
+    private final boolean legacyStyleQuoting;
+    private final Source source;
+    private Chunk currentChunk;
 
-    public BufferedCharSeeker( CharReadable reader, Configuration config )
+    public BufferedCharSeeker( Source source, Configuration config )
     {
-        this.reader = reader;
-        this.charBuffer = new SectionedCharBuffer( config.bufferSize() );
-        this.buffer = charBuffer.array();
-        this.bufferPos = this.bufferEnd = charBuffer.pivot();
+        this.source = source;
         this.quoteChar = config.quotationCharacter();
         this.lineStartPos = this.bufferPos;
-        this.sourceDescription = reader.sourceDescription();
         this.multilineFields = config.multilineFields();
+        this.legacyStyleQuoting = config.legacyStyleQuoting();
     }
 
     @Override
@@ -90,6 +88,7 @@ public class BufferedCharSeeker implements CharSeeker
         int endOffset = 1;
         int skippedChars = 0;
         int quoteDepth = 0;
+        int quoteStartLine = 0;
         boolean isQuoted = false;
 
         while ( !eof )
@@ -101,11 +100,12 @@ public class BufferedCharSeeker implements CharSeeker
                 {   // We found a quote, which was the first of the value, skip it and switch mode
                     quoteDepth++;
                     seekStartPos++;
+                    quoteStartLine = lineNumber;
                     continue;
                 }
                 else if ( isNewLine( ch ) )
                 {   // Encountered newline, done for now
-                    if ( bufferPos-1 == lineStartPos )
+                    if ( bufferPos - 1 == lineStartPos )
                     {   // We're at the start of this read so just skip it
                         seekStartPos++;
                         lineStartPos++;
@@ -135,7 +135,7 @@ public class BufferedCharSeeker implements CharSeeker
                         // so it looks like there's data characters after this end quote. We don't really support that.
                         // So circle this back to the user saying there's something wrong with the field.
                         throw new DataAfterQuoteException( this,
-                                new String( buffer, seekStartPos, bufferPos-seekStartPos ) );
+                                new String( buffer, seekStartPos, bufferPos - seekStartPos ) );
                     }
                     else
                     {   // Found an ending quote, skip it and switch mode
@@ -155,13 +155,18 @@ public class BufferedCharSeeker implements CharSeeker
                         lineNumber++;
                     }
                 }
-                else if ( ch == BACK_SLASH )
+                else if ( ch == BACK_SLASH && legacyStyleQuoting )
                 {   // Legacy concern, support java style quote encoding
                     int nextCh = peekChar( skippedChars );
                     if ( nextCh == quoteChar || nextCh == BACK_SLASH )
                     {   // Found a slash encoded quote
                         repositionChar( bufferPos++, ++skippedChars );
                     }
+                }
+                else if ( eof )
+                {
+                    // We have an open quote but have reached the end of the file, this is a formatting error
+                    throw new MissingEndQuoteException( this, quoteStartLine, quoteChar );
                 }
             }
         }
@@ -231,7 +236,7 @@ public class BufferedCharSeeker implements CharSeeker
     {
         long from = mark.startPosition();
         long to = mark.position();
-        return extractor.extract( buffer, (int)(from), (int)(to-from), mark.isQuoted() );
+        return extractor.extract( buffer, (int) from, (int) (to - from), mark.isQuoted() );
     }
 
     private int nextChar( int skippedChars ) throws IOException
@@ -262,29 +267,52 @@ public class BufferedCharSeeker implements CharSeeker
     {
         if ( bufferPos >= bufferEnd )
         {
-            if ( bufferPos - seekStartPos >= charBuffer.pivot() )
+            boolean first = currentChunk == null;
+
+            if ( !first )
             {
-                throw new IllegalStateException( "Tried to read in a value larger than effective buffer size " +
-                        charBuffer.pivot() );
+                currentChunk.close();
+                if ( bufferPos - seekStartPos >= dataCapacity )
+                {
+                    throw new IllegalStateException( "Tried to read a field larger than buffer size " +
+                            dataLength + ". A common cause of this is that a field has an unterminated " +
+                            "quote and so will try to seek until the next quote, which ever line it may be on." +
+                            " This should not happen if multi-line fields are disabled, given that the fields contains " +
+                            "no new-line characters. This field started at " + sourceDescription() + ":" + lineNumber() );
+                }
             }
 
-            absoluteBufferStartPosition += charBuffer.available();
+            absoluteBufferStartPosition += dataLength;
 
             // Fill the buffer with new characters
-            charBuffer = reader.read( charBuffer, seekStartPos );
-            buffer = charBuffer.array();
-            bufferPos = charBuffer.pivot();
-            bufferEnd = charBuffer.front();
-            int shift = seekStartPos-charBuffer.back();
-            seekStartPos = charBuffer.back();
-            lineStartPos -= shift;
-            String sourceDescriptionAfterRead = reader.sourceDescription();
-            if ( !sourceDescription.equals( sourceDescriptionAfterRead ) )
+            Chunk nextChunk = source.nextChunk( first ? -1 : seekStartPos );
+            if ( nextChunk.backPosition() == nextChunk.startPosition() + nextChunk.length() )
+            {
+                return false;
+            }
+            buffer = nextChunk.data();
+            dataLength = nextChunk.length();
+            dataCapacity = nextChunk.maxFieldSize();
+            bufferPos = nextChunk.startPosition();
+            bufferEnd = bufferPos + dataLength;
+            int shift = seekStartPos - nextChunk.backPosition();
+            seekStartPos = nextChunk.backPosition();
+            if ( first )
+            {
+                lineStartPos = seekStartPos;
+            }
+            else
+            {
+                lineStartPos -= shift;
+            }
+            String sourceDescriptionAfterRead = nextChunk.sourceDescription();
+            if ( !sourceDescriptionAfterRead.equals( sourceDescription ) )
             {   // We moved over to a new source, reset line number
                 lineNumber = 0;
                 sourceDescription = sourceDescriptionAfterRead;
             }
-            return charBuffer.hasAvailable();
+            currentChunk = nextChunk;
+            return dataLength > 0;
         }
         return true;
     }
@@ -292,7 +320,7 @@ public class BufferedCharSeeker implements CharSeeker
     @Override
     public void close() throws IOException
     {
-        reader.close();
+        source.close();
     }
 
     @Override

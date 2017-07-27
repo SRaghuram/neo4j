@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,7 @@ class ValueRegister extends AbstractKeyValueStore.Reader<Register.DoubleLongRegi
 {
     private final Register.DoubleLongRegister target;
 
-    public ValueRegister( Register.DoubleLongRegister target )
+    ValueRegister( Register.DoubleLongRegister target )
     {
         this.target = target;
     }

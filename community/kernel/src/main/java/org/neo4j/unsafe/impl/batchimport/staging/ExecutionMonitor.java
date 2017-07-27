@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,10 @@
  */
 package org.neo4j.unsafe.impl.batchimport.staging;
 
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.helpers.Clock;
+import org.neo4j.time.Clocks;
 
 /**
  * Gets notified now and then about {@link StageExecution}, where statistics can be read and displayed,
@@ -30,17 +31,17 @@ import org.neo4j.helpers.Clock;
 public interface ExecutionMonitor
 {
     /**
-     * Signals the start of one or more stages,
+     * Signals the start of a {@link StageExecution}.
      */
-    void start( StageExecution[] executions );
+    void start( StageExecution execution );
 
     /**
-     * Signals the end of the executions previously {@link #start(StageExecution[]) stated}
+     * Signals the end of the execution previously {@link #start(StageExecution) started}.
      */
-    void end( StageExecution[] executions, long totalTimeMillis );
+    void end( StageExecution execution, long totalTimeMillis );
 
     /**
-     * Signals the end of the import as a whole
+     * Called after all {@link StageExecution stage executions} have run.
      */
     void done( long totalTimeMillis, String additionalInformation );
 
@@ -50,14 +51,14 @@ public interface ExecutionMonitor
     long nextCheckTime();
 
     /**
-     * Called with currently executing {@link StageExecution} instances so that data from them can be gathered.
+     * Called periodically while executing a {@link StageExecution}.
      */
-    void check( StageExecution[] executions );
+    void check( StageExecution execution );
 
     /**
      * Base implementation with most methods defaulting to not doing anything.
      */
-    public abstract class Adapter implements ExecutionMonitor
+    abstract class Adapter implements ExecutionMonitor
     {
         private final Clock clock;
         private final long intervalMillis;
@@ -70,22 +71,22 @@ public interface ExecutionMonitor
 
         public Adapter( long time, TimeUnit unit )
         {
-            this( Clock.SYSTEM_CLOCK, time, unit );
+            this( Clocks.systemClock(), time, unit );
         }
 
         @Override
         public long nextCheckTime()
         {
-            return clock.currentTimeMillis() + intervalMillis;
+            return clock.millis() + intervalMillis;
         }
 
         @Override
-        public void start( StageExecution[] executions )
+        public void start( StageExecution execution )
         {   // Do nothing by default
         }
 
         @Override
-        public void end( StageExecution[] executions, long totalTimeMillis )
+        public void end( StageExecution execution, long totalTimeMillis )
         {   // Do nothing by default
         }
 

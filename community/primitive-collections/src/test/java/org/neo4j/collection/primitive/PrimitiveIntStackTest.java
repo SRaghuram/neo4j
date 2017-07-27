@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -70,5 +70,27 @@ public class PrimitiveIntStackTest
         }
         assertTrue( stack.isEmpty() );
         assertEquals( -1, stack.poll() );
+    }
+
+    @Test
+    public void shouldIterate() throws Exception
+    {
+        // GIVEN
+        PrimitiveIntStack stack = new PrimitiveIntStack();
+
+        // WHEN
+        for ( int i = 0; i < 7; i++ )
+        {
+            stack.push( i );
+        }
+
+        // THEN
+        PrimitiveIntIterator iterator = stack.iterator();
+        int i = 0;
+        while ( iterator.hasNext() )
+        {
+            assertEquals( i++, iterator.next() );
+        }
+        assertEquals( 7, i );
     }
 }

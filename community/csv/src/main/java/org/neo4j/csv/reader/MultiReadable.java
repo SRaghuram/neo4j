@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -66,8 +66,7 @@ public class MultiReadable extends CharReadable.Adapter implements Closeable
             if ( buffer.hasAvailable() )
             {
                 position += buffer.available();
-                char lastReadChar = buffer.array()[buffer.front()-1];
-                requiresNewLine = lastReadChar != '\n' && lastReadChar != '\r';
+                checkNewLineRequirement( buffer.array(), buffer.front() - 1);
                 return buffer;
             }
 
@@ -88,6 +87,36 @@ public class MultiReadable extends CharReadable.Adapter implements Closeable
             }
         }
         return buffer;
+    }
+
+    private void checkNewLineRequirement( char[] array, int lastIndex )
+    {
+        char lastChar = array[lastIndex];
+        requiresNewLine = lastChar != '\n' && lastChar != '\r';
+    }
+
+    @Override
+    public int read( char[] into, int offset, int length ) throws IOException
+    {
+        int totalRead = 0;
+        while ( totalRead < length && current != null )
+        {
+            int read = current.read( into, offset + totalRead, length - totalRead );
+            if ( read == -1 )
+            {
+                if ( !goToNextSource() )
+                {
+                    break;
+                }
+            }
+            else
+            {
+                totalRead += read;
+                checkNewLineRequirement( into, offset + totalRead - 1 );
+                return totalRead;
+            }
+        }
+        return totalRead;
     }
 
     private void closeCurrent() throws IOException

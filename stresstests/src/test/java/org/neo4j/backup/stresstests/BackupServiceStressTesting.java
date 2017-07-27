@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,29 +22,52 @@ package org.neo4j.backup.stresstests;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.concurrent.Callable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 
-import org.neo4j.backup.BackupServiceStressTestingBuilder;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.test.ThreadTestUtils;
 
+import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
+import static java.lang.String.format;
+import static java.lang.System.currentTimeMillis;
 import static java.lang.System.getProperty;
-import static java.lang.System.getenv;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.backup.BackupServiceStressTestingBuilder.untilTimeExpired;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+import static org.neo4j.function.Suppliers.untilTimeExpired;
+import static org.neo4j.helper.DatabaseConfiguration.configureBackup;
+import static org.neo4j.helper.DatabaseConfiguration.configureTxLogRotationAndPruning;
+import static org.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
+import static org.neo4j.helper.StressTestingHelper.fromEnv;
 
 /**
  * Notice the class name: this is _not_ going to be run as part of the main build.
  */
 public class BackupServiceStressTesting
 {
-    private static final String DEFAULT_DURATION_IN_MINUTES = "1";
+    private static final String DEFAULT_DURATION_IN_MINUTES = "30";
     private static final String DEFAULT_WORKING_DIR = new File( getProperty( "java.io.tmpdir" ) ).getPath();
     private static final String DEFAULT_HOSTNAME = "localhost";
     private static final String DEFAULT_PORT = "8200";
+    private static final String DEFAULT_ENABLE_INDEXES = "false";
+    private static final String DEFAULT_TX_PRUNE = "50 files";
 
     @Test
     public void shouldBehaveCorrectlyUnderStress() throws Exception
@@ -53,32 +76,86 @@ public class BackupServiceStressTesting
         String directory = fromEnv( "BACKUP_SERVICE_STRESS_WORKING_DIRECTORY", DEFAULT_WORKING_DIR );
         String backupHostname = fromEnv( "BACKUP_SERVICE_STRESS_BACKUP_HOSTNAME", DEFAULT_HOSTNAME );
         int backupPort = parseInt( fromEnv( "BACKUP_SERVICE_STRESS_BACKUP_PORT", DEFAULT_PORT ) );
+        String txPrune = fromEnv( "BACKUP_SERVICE_STRESS_TX_PRUNE", DEFAULT_TX_PRUNE );
+        boolean enableIndexes =
+                parseBoolean( fromEnv( "BACKUP_SERVICE_STRESS_ENABLE_INDEXES", DEFAULT_ENABLE_INDEXES ) );
 
-        Callable<Integer> callable = new BackupServiceStressTestingBuilder()
-                .until( untilTimeExpired( durationInMinutes, MINUTES ) )
-                .withStore( ensureExists( new File( directory, "store" ) ) )
-                .withBackupDirectory( ensureExists( new File( directory, "work" ) ) )
-                .withBackupAddress( backupHostname, backupPort )
-                .build();
+        File store = new File( directory, "store" );
+        File work = new File( directory, "work" );
+        FileUtils.deleteRecursively( store );
+        FileUtils.deleteRecursively( work );
+        File storeDirectory = ensureExistsAndEmpty( store );
+        File workDirectory = ensureExistsAndEmpty( work );
 
-        int brokenStores = callable.call();
+        final Map<String,String> config =
+                configureBackup( configureTxLogRotationAndPruning( new HashMap<>(), txPrune ), backupHostname,
+                        backupPort );
+        GraphDatabaseBuilder graphDatabaseBuilder =
+                new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDirectory.getAbsoluteFile() )
+                        .setConfig( config );
 
-        assertEquals( 0, brokenStores );
-    }
+        final AtomicBoolean stopTheWorld = new AtomicBoolean();
+        BooleanSupplier notExpired = untilTimeExpired( durationInMinutes, MINUTES );
+        Runnable onFailure = () -> stopTheWorld.set( true );
+        BooleanSupplier keepGoingSupplier = () -> !stopTheWorld.get() && notExpired.getAsBoolean();
 
-    private static File ensureExists( File directory ) throws IOException
-    {
-        FileUtils.deleteRecursively( directory );
-        if ( !directory.mkdirs() )
+        AtomicReference<GraphDatabaseService> dbRef = new AtomicReference<>();
+        ExecutorService service = Executors.newFixedThreadPool( 3 );
+        try
         {
-            throw new IOException( "Unable to create directory: '" + directory.getAbsolutePath() + "'" );
+            dbRef.set( graphDatabaseBuilder.newGraphDatabase() );
+            if ( enableIndexes )
+            {
+                WorkLoad.setupIndexes( dbRef.get() );
+            }
+            Future<Throwable> workload = service.submit( new WorkLoad( keepGoingSupplier, onFailure, dbRef::get ) );
+            Future<Throwable> backupWorker = service.submit(
+                    new BackupLoad( keepGoingSupplier, onFailure, backupHostname, backupPort, workDirectory ) );
+            Future<Throwable> startStopWorker = service.submit(
+                    new StartStop( keepGoingSupplier, onFailure, graphDatabaseBuilder::newGraphDatabase, dbRef ) );
+
+            long expirationTime = currentTimeMillis() + TimeUnit.MINUTES.toMillis( durationInMinutes + 5 );
+            assertSuccessfulExecution( workload, maxWaitTime( expirationTime ), expirationTime  );
+            assertSuccessfulExecution( backupWorker, maxWaitTime( expirationTime ), expirationTime );
+            assertSuccessfulExecution( startStopWorker, maxWaitTime( expirationTime ), expirationTime );
+
+            service.shutdown();
+            if ( !service.awaitTermination( 30, TimeUnit.SECONDS ) )
+            {
+                ThreadTestUtils.dumpAllStackTraces();
+                fail( "Didn't manage to shut down the workers correctly, dumped threads for forensic purposes" );
+            }
         }
-        return directory;
+        finally
+        {
+            dbRef.get().shutdown();
+            service.shutdown();
+        }
+
+        // let's cleanup disk space when everything went well
+        FileUtils.deleteRecursively( storeDirectory );
+        FileUtils.deleteRecursively( workDirectory );
     }
 
-    private static String fromEnv( String environmentVariableName, String defaultValue )
+    private long maxWaitTime( long expirationTime )
     {
-        String environmentVariableValue = getenv( environmentVariableName );
-        return environmentVariableValue == null ? defaultValue : environmentVariableValue;
+        return Math.max( 0, expirationTime - currentTimeMillis() );
+    }
+
+    private void assertSuccessfulExecution( Future<Throwable> future, long timeoutMillis, long expirationTime )
+            throws InterruptedException, ExecutionException, TimeoutException
+    {
+        try
+        {
+            Throwable executionResults = future.get( timeoutMillis, MILLISECONDS );
+            assertNull( Exceptions.stringify( executionResults ), executionResults );
+        }
+        catch ( TimeoutException t )
+        {
+            System.err.println( format( "Timeout waiting task completion. Overtime %d ms. Dumping all threads.",
+                    currentTimeMillis() - expirationTime ) );
+            ThreadTestUtils.dumpAllStackTraces();
+            throw t;
+        }
     }
 }

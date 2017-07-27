@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,15 @@
  */
 package org.neo4j.kernel.impl.locking;
 
+import java.time.Clock;
+import java.util.stream.Stream;
+
 import org.neo4j.helpers.Service;
-import org.neo4j.kernel.impl.util.concurrent.WaitStrategy;
-import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
+import org.neo4j.storageengine.api.lock.ResourceLocker;
+import org.neo4j.storageengine.api.lock.ResourceType;
+import org.neo4j.storageengine.api.lock.WaitStrategy;
 
 /**
  * API for managing locks.
@@ -42,7 +48,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
  * Each call to acquire a lock must be accompanied by a call to release that same lock. A user can call acquire on the
  * same lock multiple times, thus requiring an equal number of calls to release those locks.
  */
-public interface Locks extends Lifecycle
+public interface Locks
 {
     abstract class Factory extends Service
     {
@@ -51,7 +57,7 @@ public interface Locks extends Lifecycle
             super( key, altKeys );
         }
 
-        public abstract Locks newInstance( ResourceType[] resourceTypes );
+        public abstract Locks newInstance( Config config, Clock clocks, ResourceType[] resourceTypes );
     }
 
     /** For introspection and debugging. */
@@ -62,30 +68,25 @@ public interface Locks extends Lifecycle
                 long lockIdentityHashCode );
     }
 
-    /** Locks are split by resource types. It is up to the implementation to define the contract for these. */
-    interface ResourceType
+    interface Client extends ResourceLocker, AutoCloseable
     {
-        /** Must be unique among all existing resource types, should preferably be a sequence starting at 0. */
-        int typeId();
+        /**
+         * Represents the fact that no lock session is used because no locks are taken.
+         */
+        int NO_LOCK_SESSION_ID = -1;
 
-        /** What to do if the lock cannot immediately be acquired. */
-        WaitStrategy waitStrategy();
-    }
-
-    interface Client extends AutoCloseable
-    {
         /**
          * Can be grabbed when there are no locks or only share locks on a resource. If the lock cannot be acquired,
          * behavior is specified by the {@link WaitStrategy} for the given {@link ResourceType}.
+         *
+         * @param tracer a tracer for listening on lock events.
+         * @param resourceType type or resource(s) to lock.
+         * @param resourceIds id(s) of resources to lock. Multiple ids should be ordered consistently by all callers
          */
-        void acquireShared( ResourceType resourceType, long resourceId ) throws AcquireLockTimeoutException;
+        void acquireShared( LockTracer tracer, ResourceType resourceType, long... resourceIds ) throws AcquireLockTimeoutException;
 
-        /**
-         * Can be grabbed when no other client holds locks on the relevant resources. No other clients can hold locks
-         * while one client holds an exclusive lock. If the lock cannot be acquired,
-         * behavior is specified by the {@link WaitStrategy} for the given {@link ResourceType}.
-         */
-        void acquireExclusive( ResourceType resourceType, long resourceId ) throws AcquireLockTimeoutException;
+        @Override
+        void acquireExclusive( LockTracer tracer, ResourceType resourceType, long... resourceIds ) throws AcquireLockTimeoutException;
 
         /** Try grabbing exclusive lock, not waiting and returning a boolean indicating if we got the lock. */
         boolean tryExclusiveLock( ResourceType resourceType, long resourceId );
@@ -93,18 +94,20 @@ public interface Locks extends Lifecycle
         /** Try grabbing shared lock, not waiting and returning a boolean indicating if we got the lock. */
         boolean trySharedLock( ResourceType resourceType, long resourceId );
 
+        boolean reEnterShared( ResourceType resourceType, long resourceId );
+
+        boolean reEnterExclusive( ResourceType resourceType, long resourceId );
+
         /** Release a set of shared locks */
         void releaseShared( ResourceType resourceType, long resourceId );
 
         /** Release a set of exclusive locks */
         void releaseExclusive( ResourceType resourceType, long resourceId );
 
-        /** Release all locks. */
-        void releaseAll();
-
         /**
          * Stop all active lock waiters and release them. All already held locks remains.
          * All new attempts to acquire any locks will cause exceptions.
+         * This client can and should only be {@link #close() closed} afterwards.
          */
         void stop();
 
@@ -114,14 +117,22 @@ public interface Locks extends Lifecycle
 
         /** For slave transactions, this tracks an identifier for the lock session running on the master */
         int getLockSessionId();
+
+        Stream<? extends ActiveLock> activeLocks();
+
+        long activeLockCount();
     }
 
     /**
      * A client is able to grab and release locks, and compete with other clients for them. This can be re-used until
      * you call {@link Locks.Client#close()}.
+     *
+     * @throws IllegalStateException if this instance has been closed, i.e has had {@link #close()} called.
      */
     Client newClient();
 
     /** Visit all held locks. */
     void accept(Visitor visitor);
+
+    void close();
 }

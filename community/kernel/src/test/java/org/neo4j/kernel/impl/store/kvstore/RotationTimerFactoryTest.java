@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,18 +22,24 @@ package org.neo4j.kernel.impl.store.kvstore;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.helpers.FakeClock;
-import org.neo4j.helpers.FrozenClock;
+import org.neo4j.time.Clocks;
+import org.neo4j.time.FakeClock;
 
 public class RotationTimerFactoryTest
 {
     @Test
     public void testTimer() throws Exception
     {
+        // GIVEN
+        Clock fixedClock = Clock.fixed( Instant.ofEpochMilli( 10000 ), ZoneOffset.UTC );
+
         // WHEN
-        RotationTimerFactory timerFactory = new RotationTimerFactory( new FrozenClock(10000), 1000);
+        RotationTimerFactory timerFactory = new RotationTimerFactory( fixedClock, 1000);
         RotationTimerFactory.RotationTimer timer = timerFactory.createTimer();
         RotationTimerFactory.RotationTimer anotherTimer = timerFactory.createTimer();
 
@@ -43,7 +49,7 @@ public class RotationTimerFactoryTest
         Assert.assertNotSame( "Factory should construct different timers", timer, anotherTimer );
 
         // WHEN
-        FakeClock fakeClock = new FakeClock();
+        FakeClock fakeClock = Clocks.fakeClock();
         RotationTimerFactory fakeTimerFactory = new RotationTimerFactory( fakeClock, 1000);
         RotationTimerFactory.RotationTimer fakeTimer = fakeTimerFactory.createTimer();
         fakeClock.forward( 1001, TimeUnit.MILLISECONDS );

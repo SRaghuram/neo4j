@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -76,12 +76,12 @@ public class HopScotchHashingAlgorithm
         long hopBits = table.hopBits( index );
         while ( hopBits > 0 )
         {
-            int hopIndex = nextIndex( index, numberOfTrailingZeros( hopBits )+1, tableMask );
+            int hopIndex = nextIndex( index, numberOfTrailingZeros( hopBits ) + 1, tableMask );
             if ( table.key( hopIndex ) == key )
             {   // There it is
                 return table.value( hopIndex );
             }
-            hopBits &= hopBits-1;
+            hopBits &= hopBits - 1;
         }
 
         return null;
@@ -104,14 +104,14 @@ public class HopScotchHashingAlgorithm
         while ( hopBits > 0 )
         {
             int hd = numberOfTrailingZeros( hopBits );
-            int hopIndex = nextIndex( index, hd+1, tableMask );
+            int hopIndex = nextIndex( index, hd + 1, tableMask );
             if ( table.key( hopIndex ) == key )
             {   // there it is
                 freedIndex = hopIndex;
                 result = table.remove( hopIndex );
                 table.removeHopBit( index, hd );
             }
-            hopBits &= hopBits-1;
+            hopBits &= hopBits - 1;
         }
 
         // reversed hop-scotching, i.e. pull in the most distant neighbor, iteratively as long as the
@@ -121,8 +121,8 @@ public class HopScotchHashingAlgorithm
             long freedHopBits = table.hopBits( freedIndex );
             if ( freedHopBits > 0 )
             {   // It's got a neighbor, go ahead and move it here
-                int hd = 63-numberOfLeadingZeros( freedHopBits );
-                int candidateIndex = nextIndex( freedIndex, hd+1, tableMask );
+                int hd = 63 - numberOfLeadingZeros( freedHopBits );
+                int candidateIndex = nextIndex( freedIndex, hd + 1, tableMask );
                 // move key/value
                 long candidateKey = table.move( candidateIndex, freedIndex );
                 // remove that hop bit, since that one is no longer a neighbor, it's "the one" at the index
@@ -163,12 +163,12 @@ public class HopScotchHashingAlgorithm
             long hopBits = table.hopBits( index );
             while ( hopBits > 0 )
             {
-                int hopIndex = nextIndex( index, numberOfTrailingZeros( hopBits )+1, tableMask );
+                int hopIndex = nextIndex( index, numberOfTrailingZeros( hopBits ) + 1, tableMask );
                 if ( table.key( hopIndex ) == key )
                 {
                     return table.putValue( hopIndex, value );
                 }
-                hopBits &= hopBits-1;
+                hopBits &= hopBits - 1;
             }
         }
 
@@ -179,7 +179,8 @@ public class HopScotchHashingAlgorithm
         }
 
         // we couldn't add this value, even in the H-1 neighborhood, so grow table...
-        Table<VALUE> resizedTable = growTable( table, monitor, hashFunction, resizeMonitor );
+        growTable( table, monitor, hashFunction, resizeMonitor );
+        Table<VALUE> resizedTable = resizeMonitor.getLastTable();
 
         // ...and try again
         return put( resizedTable, monitor, hashFunction, key, value, resizeMonitor );
@@ -216,7 +217,7 @@ public class HopScotchHashingAlgorithm
         {   // grab a closer index and see which of its neighbors is OK to move further away,
             // so that there will be a free space to place the new value. I.e. move the free space closer
             // and some close neighbors a bit further away (although never outside its neighborhood)
-            int neighborIndex = nextIndex( freeIndex, -(h-1), tableMask ); // hopscotch hashing says to try h-1 entries closer
+            int neighborIndex = nextIndex( freeIndex, -(h - 1), tableMask ); // hopscotch hashing says to try h-1 entries closer
 
             boolean swapped = false;
             for ( int d = 0; d < (h >> 1) && !swapped; d++ )
@@ -226,16 +227,16 @@ public class HopScotchHashingAlgorithm
                 while ( neighborHopBits > 0 && !swapped )
                 {
                     int hd = numberOfTrailingZeros( neighborHopBits );
-                    if ( hd+d >= h-1 )
+                    if ( hd + d >= h - 1 )
                     {   // that would be too far
                         break;
                     }
-                    neighborHopBits &= neighborHopBits-1;
-                    int candidateIndex = nextIndex( neighborIndex, hd+1, tableMask );
+                    neighborHopBits &= neighborHopBits - 1;
+                    int candidateIndex = nextIndex( neighborIndex, hd + 1, tableMask );
 
                     // OK, here's a neighbor, let's examine it's neighbors (candidates to move)
                     //  - move the candidate entry (incl. updating its hop bits) to the free index
-                    int distance = (freeIndex-candidateIndex)&tableMask;
+                    int distance = (freeIndex - candidateIndex) & tableMask;
                     long candidateKey = table.move( candidateIndex, freeIndex );
                     //  - update the neighbor entry with the move of the candidate entry
                     table.moveHopBit( neighborIndex, hd, distance );
@@ -268,7 +269,7 @@ public class HopScotchHashingAlgorithm
 
     private static int nextIndex( int index, int delta, int mask )
     {
-        return (index+delta)&mask;
+        return (index + delta) & mask;
     }
 
     private static int indexOf( HashFunction hashFunction, long key, int tableMask )
@@ -276,11 +277,14 @@ public class HopScotchHashingAlgorithm
         return hashFunction.hash( key ) & tableMask;
     }
 
-    private static <VALUE> Table<VALUE> growTable( Table<VALUE> oldTable, Monitor monitor,
+    private static <VALUE> void growTable( Table<VALUE> oldTable, Monitor monitor,
             HashFunction hashFunction, ResizeMonitor<VALUE> resizeMonitor )
     {
         assert monitor.tableGrowing( oldTable.capacity(), oldTable.size() );
         Table<VALUE> newTable = oldTable.grow();
+        // Install the new table before populating it with the old data, in case we find it needs to grow even more
+        // while we are populating it. If that happens, we want to end up with the table installed by the final grow.
+        resizeMonitor.tableGrew( newTable );
         long nullKey = oldTable.nullKey();
 
         // place all entries in the new table
@@ -290,17 +294,20 @@ public class HopScotchHashingAlgorithm
             long key = oldTable.key( i );
             if ( key != nullKey )
             {
-                VALUE putResult = put( newTable, monitor, hashFunction, key, oldTable.value( i ), resizeMonitor );
+                // Always use the table from the resize monitor, because any put can cause a grow.
+                Table<VALUE> table = resizeMonitor.getLastTable();
+                VALUE putResult = put( table, monitor, hashFunction, key, oldTable.value( i ), resizeMonitor );
                 if ( putResult != null )
                 {
+                    // If we somehow fail to populate the new table, reinstall the old one.
+                    resizeMonitor.tableGrew( oldTable );
+                    newTable.close();
                     throw new IllegalStateException( "Couldn't add " + key + " when growing table" );
                 }
             }
         }
         assert monitor.tableGrew( oldTable.capacity(), newTable.capacity(), newTable.size() );
-        resizeMonitor.tableGrew( newTable );
         oldTable.close();
-        return newTable;
     }
 
     /**
@@ -321,7 +328,7 @@ public class HopScotchHashingAlgorithm
 
         boolean pulledToFreeIndex( int intendedIndex, long newHopBits, long key, int fromIndex, int toIndex );
 
-        public abstract static class Adapter implements Monitor
+        abstract class Adapter implements Monitor
         {
             @Override
             public boolean placedAtFreedIndex( int intendedIndex, long newHopBits, long key, int actualIndex )
@@ -363,7 +370,10 @@ public class HopScotchHashingAlgorithm
         }
     }
 
-    public static final Monitor NO_MONITOR = new Monitor.Adapter() { /*No additional logic*/ };
+    public static final Monitor NO_MONITOR = new Monitor.Adapter()
+    {
+        /*No additional logic*/
+    };
 
     public interface HashFunction
     {
@@ -400,9 +410,9 @@ public class HopScotchHashingAlgorithm
         @Override
         public int hash( long value )
         {
-            value ^= (value << 21);
-            value ^= (value >>> 35);
-            value ^= (value << 4);
+            value ^= value << 21;
+            value ^= value >>> 35;
+            value ^= value << 4;
 
             return (int) ((value >>> 32) ^ value);
         }
@@ -411,5 +421,7 @@ public class HopScotchHashingAlgorithm
     public interface ResizeMonitor<VALUE>
     {
         void tableGrew( Table<VALUE> newTable );
+
+        Table<VALUE> getLastTable();
     }
 }

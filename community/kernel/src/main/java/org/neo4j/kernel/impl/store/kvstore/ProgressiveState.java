@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -67,7 +67,7 @@ abstract class ProgressiveState<Key> extends WritableState<Key>
     }
 
     @Override
-    void close() throws IOException
+    public void close() throws IOException
     {
         throw new IllegalStateException( "Cannot close() in state: " + stateName() );
     }

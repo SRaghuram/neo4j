@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,6 +26,7 @@ import java.lang.reflect.Proxy;
 
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientDatabaseFailureException;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.util.LazySingleReference;
 
 /**
@@ -65,12 +66,16 @@ public class DelegateInvocationHandler<T> implements InvocationHandler
      * such that future calls to {@link #harden()} cannot affect any reference received
      * from {@link #cement()} prior to this call.
      * @param delegate the new delegate to set.
+     *
+     * @return the old delegate
      */
-    public void setDelegate( T delegate )
+    public T setDelegate( T delegate )
     {
+        T oldDelegate = this.delegate;
         this.delegate = delegate;
         harden();
         concrete.invalidate();
+        return oldDelegate;
     }
 
     /**
@@ -79,9 +84,9 @@ public class DelegateInvocationHandler<T> implements InvocationHandler
      * will see the current delegate.
      */
     @SuppressWarnings( "unchecked" )
-    public void harden()
+    void harden()
     {
-        ((Concrete<T>)Proxy.getInvocationHandler( concrete.get() )).set( delegate );
+        ((Concrete<T>) Proxy.getInvocationHandler( concrete.get() )).set( delegate );
     }
 
     @Override
@@ -89,7 +94,13 @@ public class DelegateInvocationHandler<T> implements InvocationHandler
     {
         if ( delegate == null )
         {
-            throw new TransactionFailureException( "Instance state changed after this transaction started." );
+            throw new StateChangedTransactionFailureException(
+                    "This transaction made assumptions about the instance it is executing " +
+                    "on that no longer hold true. This normally happens when a transaction " +
+                    "expects the instance it is executing on to be in some specific cluster role" +
+                    "(such as 'master' or 'slave') and the instance " +
+                    "changing state while the transaction is executing. Simply retry your " +
+                    "transaction and you should see a successful outcome." );
         }
         return proxyInvoke( delegate, method, args );
     }
@@ -137,8 +148,9 @@ public class DelegateInvocationHandler<T> implements InvocationHandler
             if ( delegate == null )
             {
                 throw new TransientDatabaseFailureException(
-                        "Transaction state is not valid. Perhaps a state change of" +
-                        "the database has happened while this transaction was running?" );
+                        "Instance state is not valid. There is no master currently available. Possible causes " +
+                                "include unavailability of a majority of the cluster members or network failure " +
+                                "that caused this instance to be partitioned away from the cluster" );
             }
 
             return proxyInvoke( delegate, method, args );
@@ -148,6 +160,25 @@ public class DelegateInvocationHandler<T> implements InvocationHandler
         public String toString()
         {
             return "Concrete[" + delegate + "]";
+        }
+    }
+
+    /**
+     * Because we don't want the public API to implement `HasStatus`, and because
+     * we don't want to change the API from throwing `TransactionFailureException` for
+     * backwards compat reasons, we throw this sub-class that adds a status code.
+     */
+    static class StateChangedTransactionFailureException extends TransactionFailureException implements Status.HasStatus
+    {
+        StateChangedTransactionFailureException( String msg )
+        {
+            super( msg );
+        }
+
+        @Override
+        public Status status()
+        {
+            return Status.Transaction.InstanceStateChanged;
         }
     }
 }

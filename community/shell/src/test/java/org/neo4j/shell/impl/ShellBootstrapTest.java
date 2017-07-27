@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -38,16 +38,16 @@ public class ShellBootstrapTest
         String host = "test";
         int port = 1234;
         String name = "my shell";
-        Config config = new Config( stringMap(
+        Config config = Config.embeddedDefaults( stringMap(
                 ShellSettings.remote_shell_host.name(), host,
                 ShellSettings.remote_shell_port.name(), valueOf( port ),
                 ShellSettings.remote_shell_name.name(), name,
                 ShellSettings.remote_shell_enabled.name(), TRUE.toString() ) );
         GraphDatabaseShellServer server = mock( GraphDatabaseShellServer.class );
-        
+
         // WHEN
         server = new ShellBootstrap( config ).enable( server );
-        
+
         // THEN
         verify( server ).makeRemotelyAvailable( host, port, name );
     }

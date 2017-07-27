@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,9 +21,7 @@ package org.neo4j.server.rest.repr;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
-
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -35,13 +33,13 @@ import javax.ws.rs.core.StreamingOutput;
 import org.neo4j.server.rest.web.NodeNotFoundException;
 import org.neo4j.server.rest.web.RelationshipNotFoundException;
 import org.neo4j.server.web.HttpHeaderUtils;
+import org.neo4j.string.UTF8;
 
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
 import static javax.ws.rs.core.Response.Status.UNAUTHORIZED;
 
 public class OutputFormat
 {
-    private static final String UTF8 = "UTF-8";
     private final RepresentationFormat format;
     private final ExtensionInjector extensions;
     private final URI baseUri;
@@ -55,12 +53,13 @@ public class OutputFormat
         this.extensions = extensions;
     }
 
-    public void setRepresentationWriteHandler( RepresentationWriteHandler representationWriteHandler ) {
-
+    public void setRepresentationWriteHandler( RepresentationWriteHandler representationWriteHandler )
+    {
         this.representationWriteHandler = representationWriteHandler;
     }
 
-    public RepresentationWriteHandler getRepresentationWriteHandler() {
+    public RepresentationWriteHandler getRepresentationWriteHandler()
+    {
         return this.representationWriteHandler;
     }
 
@@ -189,7 +188,10 @@ public class OutputFormat
                 {
                     representation.serialize( outputStreamFormat, baseUri, extensions );
 
-                    if ( !mustFail ) representationWriteHandler.onRepresentationWritten();
+                    if ( !mustFail )
+                    {
+                        representationWriteHandler.onRepresentationWritten();
+                    }
                 }
                 catch ( Exception e )
                 {
@@ -218,20 +220,12 @@ public class OutputFormat
 
     private byte[] toBytes( String entity, boolean mustFail )
     {
-        byte[] entityAsBytes;
-        try
+        byte[] entityAsBytes = UTF8.encode( entity );
+        if ( !mustFail )
         {
-            entityAsBytes = entity.getBytes( UTF8 );
-            if (! mustFail) representationWriteHandler.onRepresentationWritten();
+            representationWriteHandler.onRepresentationWritten();
         }
-        catch ( UnsupportedEncodingException e )
-        {
-            throw new RuntimeException( "Could not encode string as UTF-8", e );
-        }
-        finally
-        {
-            representationWriteHandler.onRepresentationFinal();
-        }
+        representationWriteHandler.onRepresentationFinal();
         return entityAsBytes;
     }
 

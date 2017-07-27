@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,12 +23,12 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.transaction.log.CommandWriter;
+import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
-import org.neo4j.kernel.impl.transaction.log.PhysicalWritableLogChannel;
+import org.neo4j.kernel.impl.transaction.log.PositionAwarePhysicalFlushableChannel;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 
@@ -47,32 +47,35 @@ public class StoreMigratorCheckPointer
 
     /**
      * Write a check point in the log file with the given version
-     *
+     * <p>
      * It will create the file with header containing the log version and lastCommittedTx given as arguments
      *
-     * @param logVersion the log version to open
+     * @param lastClosedTransactionLogPosition last closed transaction log position
      * @param lastCommittedTx the last committed tx id
      */
-    public void checkPoint( long logVersion, long lastCommittedTx) throws IOException
+    public void checkPoint( LogPosition lastClosedTransactionLogPosition, long lastCommittedTx ) throws IOException
     {
         PhysicalLogFiles logFiles = new PhysicalLogFiles( storeDir, fileSystem );
+        long logVersion = lastClosedTransactionLogPosition.getLogVersion();
         File logFileForVersion = logFiles.getLogFileForVersion( logVersion );
         if ( !fileSystem.fileExists( logFileForVersion ) )
         {
-            fileSystem.create( logFileForVersion );
-            writeLogHeader( fileSystem, logFileForVersion, logVersion, lastCommittedTx );
+            try ( StoreChannel channel = fileSystem.create( logFileForVersion ) )
+            {
+                writeLogHeader( channel, logVersion, lastCommittedTx );
+            }
         }
 
         try ( LogVersionedStoreChannel storeChannel =
-                      PhysicalLogFile.openForVersion( logFiles, fileSystem, logVersion ) )
+                      PhysicalLogFile.openForVersion( logFiles, fileSystem, logVersion, true ) )
         {
             long offset = storeChannel.size();
             storeChannel.position( offset );
-            try ( PhysicalWritableLogChannel channel = new PhysicalWritableLogChannel( storeChannel ) )
+            try ( PositionAwarePhysicalFlushableChannel channel =
+                          new PositionAwarePhysicalFlushableChannel( storeChannel ) )
             {
-                final TransactionLogWriter writer =
-                        new TransactionLogWriter( new LogEntryWriter( channel, new CommandWriter( channel ) ) );
-                writer.checkPoint( new LogPosition( logVersion, offset ) );
+                TransactionLogWriter writer = new TransactionLogWriter( new LogEntryWriter( channel ) );
+                writer.checkPoint( lastClosedTransactionLogPosition );
             }
         }
     }

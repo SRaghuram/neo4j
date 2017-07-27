@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -43,7 +43,7 @@ import static org.neo4j.codegen.source.ClasspathHelper.fullClasspathStringFor;
 public enum SourceCode implements CodeGeneratorOption
 {
     SIMPLIFY_TRY_WITH_RESOURCE;
-    public static final CodeGeneratorOption SOURCECODE = new CodeGenerationStrategy<Configuration>()
+    public static final CodeGenerationStrategy<?> SOURCECODE = new CodeGenerationStrategy<Configuration>()
     {
         @Override
         protected Configuration createConfigurator( ClassLoader loader )
@@ -69,7 +69,7 @@ public enum SourceCode implements CodeGeneratorOption
         @Override
         protected void visitSource( TypeReference reference, CharSequence sourceCode )
         {
-            System.out.println( "=== Generated class " + reference.name() + " ===\n" + sourceCode );
+            System.out.println( "=== Generated class " + reference.fullName() + " ===\n" + sourceCode );
         }
 
         @Override
@@ -174,7 +174,7 @@ public enum SourceCode implements CodeGeneratorOption
 
         private Path path( TypeReference reference )
         {
-            return path.resolve( reference.packageName().replace( '.', '/' ) + "/" + reference.simpleName() + ".java" );
+            return path.resolve( reference.packageName().replace( '.', '/' ) + "/" + reference.name() + ".java" );
         }
     }
 

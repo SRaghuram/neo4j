@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,58 +19,60 @@
  */
 package org.neo4j.ext.udc;
 
-import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.Description;
-import org.neo4j.helpers.Function;
-import org.neo4j.helpers.HostnamePort;
-import org.neo4j.helpers.Settings;
-import org.neo4j.kernel.configuration.Internal;
+import java.util.function.Function;
 
-import static org.neo4j.helpers.Settings.ANY;
-import static org.neo4j.helpers.Settings.FALSE;
-import static org.neo4j.helpers.Settings.HOSTNAME_PORT;
-import static org.neo4j.helpers.Settings.INTEGER;
-import static org.neo4j.helpers.Settings.STRING;
-import static org.neo4j.helpers.Settings.TRUE;
-import static org.neo4j.helpers.Settings.illegalValueMessage;
-import static org.neo4j.helpers.Settings.matches;
-import static org.neo4j.helpers.Settings.min;
-import static org.neo4j.helpers.Settings.setting;
+import org.neo4j.configuration.Description;
+import org.neo4j.configuration.LoadableConfig;
+import org.neo4j.graphdb.config.Setting;
+import org.neo4j.helpers.HostnamePort;
+import org.neo4j.configuration.Internal;
+import org.neo4j.kernel.configuration.Settings;
+
+import static org.neo4j.kernel.configuration.Settings.ANY;
+import static org.neo4j.kernel.configuration.Settings.FALSE;
+import static org.neo4j.kernel.configuration.Settings.HOSTNAME_PORT;
+import static org.neo4j.kernel.configuration.Settings.INTEGER;
+import static org.neo4j.kernel.configuration.Settings.STRING;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
+import static org.neo4j.kernel.configuration.Settings.illegalValueMessage;
+import static org.neo4j.kernel.configuration.Settings.matches;
+import static org.neo4j.kernel.configuration.Settings.min;
+import static org.neo4j.kernel.configuration.Settings.setting;
 
 @Description( "Usage Data Collector configuration settings" )
-public class UdcSettings
+public class UdcSettings implements LoadableConfig
 {
     /** Configuration key for enabling the UDC extension. */
     @Description( "Enable the UDC extension." )
     public static final Setting<Boolean> udc_enabled = setting(
-            "neo4j.ext.udc.enabled", Enabled.UNLESS_EXPLICITLY_DISABLED, Enabled.AS_DEFAULT_VALUE );
+            "dbms.udc.enabled", Enabled.UNLESS_EXPLICITLY_DISABLED, Enabled.AS_DEFAULT_VALUE );
 
     /** Configuration key for the first delay, expressed in milliseconds. */
     @Internal
     public static final Setting<Integer> first_delay =
-            setting( "neo4j.ext.udc.first_delay", INTEGER, Integer.toString( 10 * 1000 * 60 ), min( 1 ) );
+            setting( "unsupported.dbms.udc.first_delay", INTEGER, Integer.toString( 10 * 1000 * 60 ), min( 1 ) );
 
     /** Configuration key for the interval for regular updates, expressed in milliseconds. */
     @Internal
-    public static final Setting<Integer> interval = setting( "neo4j.ext.udc.interval", INTEGER, Integer.toString(
+    public static final Setting<Integer> interval = setting( "unsupported.dbms.udc.interval", INTEGER, Integer.toString(
             1000 * 60 * 60 * 24 ), min( 1 ) );
 
     /** The host address to which UDC updates will be sent. Should be of the form hostname[:port]. */
     @Internal
-    public static final Setting<HostnamePort> udc_host = setting( "neo4j.ext.udc.host", HOSTNAME_PORT,
+    public static final Setting<HostnamePort> udc_host = setting( "unsupported.dbms.udc.host", HOSTNAME_PORT,
             "udc.neo4j.org" );
 
     /** Configuration key for overriding the source parameter in UDC */
     @Internal
-    public static final Setting<String> udc_source = setting( "neo4j.ext.udc.source", STRING, Settings.NO_DEFAULT,
+    public static final Setting<String> udc_source = setting( "unsupported.dbms.udc.source", STRING, Settings.NO_DEFAULT,
             illegalValueMessage( "Must be a valid source", matches( ANY ) ) );
 
     /** Unique registration id */
     @Internal
-    public static final Setting<String> udc_registration_key = setting( "neo4j.ext.udc.reg", STRING, "unreg",
+    public static final Setting<String> udc_registration_key = setting( "unsupported.dbms.udc.reg", STRING, "unreg",
             illegalValueMessage( "Must be a valid registration id", matches( ANY ) ) );
 
-    private enum Enabled implements Function<String, Boolean>
+    private enum Enabled implements Function<String,Boolean>
     {
         /** Only explicitly configuring this as 'false' disables UDC, all other values leaves UDC enabled. */
         UNLESS_EXPLICITLY_DISABLED;

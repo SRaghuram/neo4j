@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,8 +22,8 @@ package org.neo4j.kernel.impl.store;
 import java.util.Collections;
 import java.util.Set;
 
-import org.neo4j.helpers.Pair;
-import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.helpers.collection.Pair;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 
 import static java.lang.String.format;
 

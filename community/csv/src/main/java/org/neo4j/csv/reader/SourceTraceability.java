@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -49,7 +49,7 @@ public interface SourceTraceability
      */
     long position();
 
-    public static abstract class Adapter implements SourceTraceability
+    abstract class Adapter implements SourceTraceability
     {
         @Override
         public long lineNumber()
@@ -63,4 +63,13 @@ public interface SourceTraceability
             return 0;
         }
     }
+
+    SourceTraceability EMPTY = new Adapter()
+    {
+        @Override
+        public String sourceDescription()
+        {
+            return "EMPTY";
+        }
+    };
 }

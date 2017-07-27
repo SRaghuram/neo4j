@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,8 +23,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import org.neo4j.kernel.api.constraints.UniquenessConstraint;
-import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory;
+import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 
 import static org.junit.Assert.assertEquals;
 
@@ -47,9 +47,9 @@ public class DbStructureArgumentFormatterTest
     @Test
     public void shouldFormatLongs()
     {
-        assertEquals( "0l", formatArgument( 0l ) );
-        assertEquals( "-1l", formatArgument( -1l ) );
-        assertEquals( "1l", formatArgument( 1l ) );
+        assertEquals( "0L", formatArgument( 0L ) );
+        assertEquals( "-1L", formatArgument( -1L ) );
+        assertEquals( "1L", formatArgument( 1L ) );
     }
 
     @Test
@@ -64,13 +64,30 @@ public class DbStructureArgumentFormatterTest
     @Test
     public void shouldFormatIndexDescriptors()
     {
-        assertEquals( "new IndexDescriptor( 23, 42 )", formatArgument( new IndexDescriptor( 23, 42 ) ) );
+        assertEquals( "IndexDescriptorFactory.forLabel( 23, 42 )",
+                formatArgument( IndexDescriptorFactory.forLabel( 23, 42 ) ) );
     }
 
     @Test
     public void shouldFormatUniquenessConstraints()
     {
-        assertEquals( "new UniquenessConstraint( 23, 42 )", formatArgument( new UniquenessConstraint( 23, 42 ) ) );
+        assertEquals( "ConstraintDescriptorFactory.uniqueForLabel( 23, 42 )",
+                formatArgument(
+                        ConstraintDescriptorFactory.uniqueForLabel( 23, 42 ) ) );
+    }
+
+    @Test
+    public void shouldFormatCompositeUniquenessConstraints()
+    {
+        assertEquals( "ConstraintDescriptorFactory.uniqueForLabel( 23, 42, 43 )",
+                formatArgument( ConstraintDescriptorFactory.uniqueForLabel( 23, 42, 43 ) ) );
+    }
+
+    @Test
+    public void shouldFormatNodeKeyConstraints()
+    {
+        assertEquals( "ConstraintDescriptorFactory.nodeKeyForLabel( 23, 42, 43 )",
+                formatArgument( ConstraintDescriptorFactory.nodeKeyForLabel( 23, 42, 43 ) ) );
     }
 
     private String formatArgument( Object arg )

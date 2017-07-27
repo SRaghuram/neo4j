@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,7 +35,6 @@ import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 import static java.util.Arrays.sort;
-
 import static org.neo4j.helpers.ArrayUtil.union;
 
 public class NodeRecordCheck extends PrimitiveRecordCheck<NodeRecord, ConsistencyReport.NodeConsistencyReport>
@@ -68,7 +67,7 @@ public class NodeRecordCheck extends PrimitiveRecordCheck<NodeRecord, Consistenc
     }
 
     @SafeVarargs
-	NodeRecordCheck( RecordField<NodeRecord, ConsistencyReport.NodeConsistencyReport>... fields )
+    NodeRecordCheck( RecordField<NodeRecord, ConsistencyReport.NodeConsistencyReport>... fields )
     {
         super( fields );
     }
@@ -219,9 +218,9 @@ public class NodeRecordCheck extends PrimitiveRecordCheck<NodeRecord, Consistenc
                 boolean outOfOrder = false;
                 for ( int i = 1; i < labelIds.length; i++ )
                 {
-                    if ( labelIds[i -1] > labelIds[i])
+                    if ( labelIds[i - 1] > labelIds[i] )
                     {
-                        engine.report().labelsOutOfOrder( labelIds[i-1], labelIds[i] );
+                        engine.report().labelsOutOfOrder( labelIds[i - 1], labelIds[i] );
                         outOfOrder = true;
                     }
                 }

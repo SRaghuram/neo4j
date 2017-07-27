@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -69,7 +69,6 @@ public class StreamingJsonFormatTest
         }
         assertTrue( stream.toString().contains( "\"self\" : \"http://localhost/node/0\"," ) );
     }
-
     @Test
     public void canFormatString() throws Exception
     {
@@ -127,7 +126,7 @@ public class StreamingJsonFormatTest
             @Override
             protected void serialize( MappingSerializer serializer )
             {
-                serializer.putUri( "URL", "subpath" );
+                serializer.putRelativeUri( "URL", "subpath" );
             }
         } );
 

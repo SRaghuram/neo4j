@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,12 +26,5 @@ public interface IoTracer
 {
     long countBytesWritten();
 
-    IoTracer NONE = new IoTracer()
-    {
-        @Override
-        public long countBytesWritten()
-        {
-            return 0;
-        }
-    };
+    IoTracer NONE = () -> 0;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.ha;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -26,15 +27,15 @@ import java.util.Map;
 
 import org.neo4j.graphdb.factory.TestHighlyAvailableGraphDatabaseFactory;
 import org.neo4j.helpers.Args;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 public class StartInstanceInAnotherJvm
 {
     public static void main( String[] args )
     {
-        String dir = args[0];
+        File dir = new File( args[0] );
         GraphDatabaseAPI newSlave = (GraphDatabaseAPI) new TestHighlyAvailableGraphDatabaseFactory()
-                .newHighlyAvailableDatabaseBuilder( dir )
+                .newEmbeddedDatabaseBuilder( dir )
                 .setConfig( Args.parse( args ).asMap() )
                 .newGraphDatabase();
     }
@@ -44,8 +45,10 @@ public class StartInstanceInAnotherJvm
         List<String> args = new ArrayList<String>();
         args.addAll( Arrays.asList( "java", "-cp", System.getProperty( "java.class.path" ),
                 StartInstanceInAnotherJvm.class.getName(), dir ) );
-        for ( Map.Entry<String, String> property : config.entrySet() )
+        for ( Map.Entry<String,String> property : config.entrySet() )
+        {
             args.add( "-" + property.getKey() + "=" + property.getValue() );
+        }
         return Runtime.getRuntime().exec( args.toArray( new String[ args.size() ] ) );
     }
 }

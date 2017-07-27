@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,21 @@
  */
 package org.neo4j.server.rest.discovery;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashMap;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
-import org.neo4j.server.web.ServerInternalSettings;
 import org.neo4j.test.server.EntityOutputFormat;
 
 import static org.hamcrest.Matchers.containsString;
@@ -41,31 +47,85 @@ import static org.mockito.Mockito.when;
 
 public class DiscoveryServiceTest
 {
-    @Test
-    public void shouldReturnValidJSONWithDataAndManagementUris() throws Exception
+    private String baseUri;
+    private AdvertisedSocketAddress boltAddress;
+    private URI dataUri;
+    private URI managementUri;
+
+    @Before
+    public void setUp() throws URISyntaxException
     {
-        Config mockConfig = mock( Config.class );
-        URI managementUri = new URI( "/management" );
-        when( mockConfig.get( ServerInternalSettings.management_api_path ) ).thenReturn( managementUri );
-        URI dataUri = new URI( "/data" );
-        when( mockConfig.get( ServerInternalSettings.rest_api_path ) ).thenReturn( dataUri );
-        when(mockConfig.get( ServerSettings.auth_enabled )).thenReturn( false );
+        baseUri = "http://www.example.com";
+        boltAddress = new AdvertisedSocketAddress( "www.example.com", 7687 );
+        dataUri = new URI( "/data" );
+        managementUri = new URI( "/management" );
+    }
 
-        String baseUri = "http://www.example.com";
-        DiscoveryService ds = new DiscoveryService( mockConfig, new EntityOutputFormat( new JsonFormat(), new URI(
-                baseUri ), null ) );
-        Response response = ds.getDiscoveryDocument();
+    private Config mockConfig() throws URISyntaxException
+    {
+        Config config = Config.defaults();
 
+        HashMap<String,String> settings = new HashMap<>();
+        settings.put( GraphDatabaseSettings.auth_enabled.name(), "false" );
+        settings.put( new BoltConnector( "bolt" ).type.name(), "BOLT" );
+        settings.put( new BoltConnector( "bolt" ).enabled.name(), "true" );
+        settings.put( new BoltConnector( "bolt" ).advertised_address.name(),
+                boltAddress.toString() );
+        settings.put( ServerSettings.management_api_path.name(), managementUri.toString() );
+        settings.put( ServerSettings.rest_api_path.name(), dataUri.toString() );
+
+        config.augment( settings );
+        return config;
+    }
+
+    private DiscoveryService testDiscoveryService() throws URISyntaxException
+    {
+        Config mockConfig = mockConfig();
+        return new DiscoveryService( mockConfig, new EntityOutputFormat( new JsonFormat(), new URI( baseUri ), null ) );
+    }
+
+    @Test
+    public void shouldReturnValidJSON() throws Exception
+    {
+        Response response = testDiscoveryService().getDiscoveryDocument( uriInfo( "localhost" ) );
         String json = new String( (byte[]) response.getEntity() );
 
         assertNotNull( json );
         assertThat( json.length(), is( greaterThan( 0 ) ) );
         assertThat( json, is( not( "\"\"" ) ) );
         assertThat( json, is( not( "null" ) ) );
+    }
 
-        assertThat( json, containsString( "\"management\" : \"" + baseUri + managementUri + "/\"" ) );
+    private UriInfo uriInfo( String host )
+    {
+        URI uri = URI.create( host );
+        UriInfo uriInfo = mock( UriInfo.class );
+        when( uriInfo.getBaseUri() ).thenReturn( uri );
+        return uriInfo;
+    }
+
+    @Test
+    public void shouldReturnBoltURI() throws Exception
+    {
+        Response response = testDiscoveryService().getDiscoveryDocument( uriInfo( "localhost" ) );
+        String json = new String( (byte[]) response.getEntity() );
+        assertThat( json, containsString( "\"bolt\" : \"bolt://" + boltAddress ) );
+    }
+
+    @Test
+    public void shouldReturnDataURI() throws Exception
+    {
+        Response response = testDiscoveryService().getDiscoveryDocument( uriInfo( "localhost" ) );
+        String json = new String( (byte[]) response.getEntity() );
         assertThat( json, containsString( "\"data\" : \"" + baseUri + dataUri + "/\"" ) );
+    }
 
+    @Test
+    public void shouldReturnManagementURI() throws Exception
+    {
+        Response response = testDiscoveryService().getDiscoveryDocument( uriInfo( "localhost" ) );
+        String json = new String( (byte[]) response.getEntity() );
+        assertThat( json, containsString( "\"management\" : \"" + baseUri + managementUri + "/\"" ) );
     }
 
     @Test
@@ -73,16 +133,15 @@ public class DiscoveryServiceTest
     {
         Config mockConfig = mock( Config.class );
         URI browserUri = new URI( "/browser/" );
-        when( mockConfig.get( ServerInternalSettings.browser_path ) ).thenReturn(
-                browserUri );
+        when( mockConfig.get( ServerSettings.browser_path ) ).thenReturn( browserUri );
 
         String baseUri = "http://www.example.com:5435";
-        DiscoveryService ds = new DiscoveryService( mockConfig, new EntityOutputFormat( new JsonFormat(), new URI(
-                baseUri ), null ) );
+        DiscoveryService ds = new DiscoveryService( mockConfig,
+                new EntityOutputFormat( new JsonFormat(), new URI( baseUri ), null ) );
 
         Response response = ds.redirectToBrowser();
 
-        assertThat( response.getMetadata().getFirst( "Location" ), is( (Object) new URI( "http://www.example" +
-                ".com:5435/browser/" ) ) );
+        assertThat( response.getMetadata().getFirst( "Location" ),
+                is( new URI( "http://www.example" + ".com:5435/browser/" ) ) );
     }
 }

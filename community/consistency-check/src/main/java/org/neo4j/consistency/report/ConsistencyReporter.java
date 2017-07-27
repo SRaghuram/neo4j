@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -51,8 +51,8 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 
 import static java.util.Arrays.asList;
-
 import static org.neo4j.helpers.Exceptions.launderedException;
+import static org.neo4j.helpers.Exceptions.stringify;
 import static org.neo4j.helpers.Exceptions.withCause;
 
 public class ConsistencyReporter implements ConsistencyReport.Reporter
@@ -61,8 +61,6 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
             ProxyFactory.create( ConsistencyReport.SchemaConsistencyReport.class );
     private static final ProxyFactory<ConsistencyReport.NodeConsistencyReport> NODE_REPORT =
             ProxyFactory.create( ConsistencyReport.NodeConsistencyReport.class );
-    private static final ProxyFactory<ConsistencyReport.LabelsMatchReport> LABEL_MATCH_REPORT =
-            ProxyFactory.create( ConsistencyReport.LabelsMatchReport.class );
     private static final ProxyFactory<ConsistencyReport.RelationshipConsistencyReport> RELATIONSHIP_REPORT =
             ProxyFactory.create( ConsistencyReport.RelationshipConsistencyReport.class );
     private static final ProxyFactory<ConsistencyReport.PropertyConsistencyReport> PROPERTY_REPORT =
@@ -95,12 +93,8 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
         void reported( Class<?> report, String method, String message );
     }
 
-    public static final Monitor NO_MONITOR = new Monitor()
+    public static final Monitor NO_MONITOR = ( report, method, message ) ->
     {
-        @Override
-        public void reported( Class<?> report, String method, String message )
-        {
-        }
     };
 
     public ConsistencyReporter( RecordAccess records, InconsistencyReport report )
@@ -126,7 +120,10 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
         }
         catch ( Exception e )
         {
-            handler.report.error( type, record, "Failed to check record: " + e.getMessage(), new Object[0] );
+            // This is a rare event and exposing the stack trace is a good idea, otherwise we
+            // can only see that something went wrong, not at all what.
+            handler.report.error( type, record, "Failed to check record: " + stringify( e ),
+                    new Object[0] );
         }
         handler.updateSummary();
     }
@@ -175,7 +172,7 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
         return handler.report();
     }
 
-    public static abstract class ReportInvocationHandler
+    public abstract static class ReportInvocationHandler
             <RECORD extends AbstractBaseRecord, REPORT extends ConsistencyReport>
             implements CheckerEngine<RECORD, REPORT>, InvocationHandler
     {
@@ -236,7 +233,7 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
                 RecordReference<REFERRED> reference, ComparativeRecordChecker<RECORD, ? super REFERRED, REPORT> checker )
         {
             references++;
-            reference.dispatch( new PendingReferenceCheck<REFERRED>( this, checker ) );
+            reference.dispatch( new PendingReferenceCheck<>( this, checker ) );
         }
 
         @Override
@@ -341,7 +338,7 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
         @Override
         long recordId()
         {
-            return record.getLongId();
+            return record.getId();
         }
 
         @Override
@@ -371,59 +368,6 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
                                  RecordAccess records )
         {
             checker.checkReference( record, newReferenced, this, records );
-        }
-    }
-
-    private static class DiffReportHandler
-            <RECORD extends AbstractBaseRecord, REPORT extends ConsistencyReport>
-            extends ReportInvocationHandler<RECORD,REPORT>
-    {
-        private final AbstractBaseRecord oldRecord;
-        private final AbstractBaseRecord newRecord;
-
-        private DiffReportHandler( InconsistencyReport report, ProxyFactory<REPORT> factory,
-                                   RecordType type,
-                                   RecordAccess records,
-                                   AbstractBaseRecord oldRecord, AbstractBaseRecord newRecord, Monitor monitor )
-        {
-            super( report, factory, type, records, monitor );
-            this.oldRecord = oldRecord;
-            this.newRecord = newRecord;
-        }
-
-        @Override
-        long recordId()
-        {
-            return newRecord.getLongId();
-        }
-
-        @Override
-        protected void logError( String message, Object[] args )
-        {
-            report.error( type, oldRecord, newRecord, message, args );
-        }
-
-        @Override
-        protected void logWarning( String message, Object[] args )
-        {
-            report.warning( type, oldRecord, newRecord, message, args );
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        void checkReference( CheckerEngine engine, ComparativeRecordChecker checker, AbstractBaseRecord referenced,
-                             RecordAccess records )
-        {
-            checker.checkReference( newRecord, referenced, this, records );
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        void checkDiffReference( CheckerEngine engine, ComparativeRecordChecker checker,
-                                 AbstractBaseRecord oldReferenced, AbstractBaseRecord newReferenced,
-                                 RecordAccess records )
-        {
-            checker.checkReference( newRecord, newReferenced, this, records );
         }
     }
 
@@ -482,12 +426,6 @@ public class ConsistencyReporter implements ConsistencyReport.Reporter
                                RecordCheck<IndexEntry, ConsistencyReport.IndexConsistencyReport> checker )
     {
         dispatch( RecordType.INDEX, INDEX, entry, checker );
-    }
-
-    @Override
-    public void forNodeLabelMatch( NodeRecord nodeRecord, RecordCheck<NodeRecord, ConsistencyReport.LabelsMatchReport> nodeLabelCheck )
-    {
-        dispatch( RecordType.NODE, LABEL_MATCH_REPORT, nodeRecord, nodeLabelCheck );
     }
 
     @Override

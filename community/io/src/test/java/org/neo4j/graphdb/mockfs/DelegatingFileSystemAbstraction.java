@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,10 +26,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.Charset;
+import java.nio.file.CopyOption;
+import java.util.function.Function;
 
-import org.neo4j.function.Function;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.fs.watcher.FileWatcher;
 
 public class DelegatingFileSystemAbstraction implements FileSystemAbstraction
 {
@@ -38,6 +41,12 @@ public class DelegatingFileSystemAbstraction implements FileSystemAbstraction
     public DelegatingFileSystemAbstraction( FileSystemAbstraction delegate )
     {
         this.delegate = delegate;
+    }
+
+    @Override
+    public FileWatcher fileWatcher() throws IOException
+    {
+        return delegate.fileWatcher();
     }
 
     @Override
@@ -66,7 +75,7 @@ public class DelegatingFileSystemAbstraction implements FileSystemAbstraction
 
     @Override
     public <K extends FileSystemAbstraction.ThirdPartyFileSystem> K getOrCreateThirdPartyFileSystem( Class<K> clazz,
-                                                                                                     Function<Class<K>, K> creator )
+            Function<Class<K>,K> creator )
     {
         return delegate.getOrCreateThirdPartyFileSystem( clazz, creator );
     }
@@ -78,9 +87,21 @@ public class DelegatingFileSystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public boolean renameFile( File from, File to ) throws IOException
+    public long lastModifiedTime( File file ) throws IOException
     {
-        return delegate.renameFile( from, to );
+        return delegate.lastModifiedTime( file );
+    }
+
+    @Override
+    public void deleteFileOrThrow( File file ) throws IOException
+    {
+        delegate.deleteFileOrThrow( file );
+    }
+
+    @Override
+    public void renameFile( File from, File to, CopyOption... copyOptions ) throws IOException
+    {
+        delegate.renameFile( from, to, copyOptions );
     }
 
     @Override
@@ -132,9 +153,9 @@ public class DelegatingFileSystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException
+    public Writer openAsWriter( File fileName, Charset charset, boolean append ) throws IOException
     {
-        return delegate.openAsWriter( fileName, encoding, append );
+        return delegate.openAsWriter( fileName, charset, append );
     }
 
     @Override
@@ -156,14 +177,20 @@ public class DelegatingFileSystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public Reader openAsReader( File fileName, String encoding ) throws IOException
+    public Reader openAsReader( File fileName, Charset charset ) throws IOException
     {
-        return delegate.openAsReader( fileName, encoding );
+        return delegate.openAsReader( fileName, charset );
     }
 
     @Override
     public void copyRecursively( File fromDirectory, File toDirectory ) throws IOException
     {
         delegate.copyRecursively( fromDirectory, toDirectory );
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+        delegate.close();
     }
 }

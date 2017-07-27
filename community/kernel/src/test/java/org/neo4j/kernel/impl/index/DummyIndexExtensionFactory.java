@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,13 @@
  */
 package org.neo4j.kernel.impl.index;
 
-import org.neo4j.graphdb.index.IndexProviders;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
+import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.kernel.spi.legacyindex.IndexProviders;
 
-public class DummyIndexExtensionFactory extends
-        KernelExtensionFactory<DummyIndexExtensionFactory.Dependencies>
+public class DummyIndexExtensionFactory extends KernelExtensionFactory<DummyIndexExtensionFactory.Dependencies>
 {
     public static final String IDENTIFIER = "test-dummy-neo-index";
     public static final String KEY_FAIL_ON_MUTATE = "fail_on_mutate";
@@ -41,7 +41,7 @@ public class DummyIndexExtensionFactory extends
     }
 
     @Override
-    public Lifecycle newKernelExtension( Dependencies dependencies ) throws Throwable
+    public Lifecycle newInstance( KernelContext context, Dependencies dependencies ) throws Throwable
     {
         IndexProviders indexProviders = dependencies.getIndexProviders();
         return new Extension( indexProviders );
@@ -51,7 +51,7 @@ public class DummyIndexExtensionFactory extends
     {
         private final IndexProviders indexProviders;
 
-        public Extension( IndexProviders indexProviders )
+        Extension( IndexProviders indexProviders )
         {
             this.indexProviders = indexProviders;
         }

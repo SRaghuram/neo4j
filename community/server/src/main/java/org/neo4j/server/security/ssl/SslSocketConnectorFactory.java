@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,12 +21,20 @@ package org.neo4j.server.security.ssl;
 
 import org.eclipse.jetty.http.HttpScheme;
 import org.eclipse.jetty.http.HttpVersion;
-import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
+import java.util.List;
+import java.util.UUID;
+
+import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.server.web.HttpConnectorFactory;
 import org.neo4j.server.web.JettyThreadCalculator;
+import org.neo4j.ssl.SslPolicy;
 
 
 public class SslSocketConnectorFactory extends HttpConnectorFactory
@@ -40,32 +48,54 @@ public class SslSocketConnectorFactory extends HttpConnectorFactory
     protected HttpConfiguration createHttpConfig()
     {
         HttpConfiguration httpConfig = super.createHttpConfig();
-        httpConfig.addCustomizer( new HttpConfiguration.Customizer()
-        {
-            @Override
-            public void customize( Connector connector, HttpConfiguration channelConfig, Request request )
-            {
-                request.setScheme( HttpScheme.HTTPS.asString() );
-            }
-        } );
+        httpConfig.addCustomizer(
+                ( connector, channelConfig, request ) -> request.setScheme( HttpScheme.HTTPS.asString() ) );
         return httpConfig;
     }
 
-    public ServerConnector createConnector( Server server, KeyStoreInformation config, String host, int port, JettyThreadCalculator jettyThreadCalculator )
+    public ServerConnector createConnector( Server server, SslPolicy sslPolicy, ListenSocketAddress address, JettyThreadCalculator jettyThreadCalculator )
     {
-        SslConnectionFactory sslConnectionFactory = createSslConnectionFactory( config );
-        return super.createConnector( server, host, port, jettyThreadCalculator, sslConnectionFactory, createHttpConnectionFactory() );
+        SslConnectionFactory sslConnectionFactory = createSslConnectionFactory( sslPolicy );
+        return super.createConnector( server, address, jettyThreadCalculator, sslConnectionFactory, createHttpConnectionFactory() );
     }
 
-    private SslConnectionFactory createSslConnectionFactory( KeyStoreInformation ksInfo )
+    private SslConnectionFactory createSslConnectionFactory( SslPolicy sslPolicy )
     {
         SslContextFactory sslContextFactory = new SslContextFactory();
 
-        sslContextFactory.setKeyStore( ksInfo.getKeyStore() );
-        sslContextFactory.setKeyStorePassword( String.valueOf( ksInfo.getKeyStorePassword() ) );
-        sslContextFactory.setKeyManagerPassword( String.valueOf( ksInfo.getKeyPassword() ) );
+        String password = UUID.randomUUID().toString();
+        sslContextFactory.setKeyStore( sslPolicy.getKeyStore( password.toCharArray(), password.toCharArray() ) );
+        sslContextFactory.setKeyStorePassword( password );
+        sslContextFactory.setKeyManagerPassword( password );
+
+        List<String> ciphers = sslPolicy.getCipherSuites();
+        if ( ciphers != null )
+        {
+            sslContextFactory.setIncludeCipherSuites( ciphers.toArray( new String[ciphers.size()] ) );
+        }
+
+        List<String> protocols = sslPolicy.getTlsVersions();
+        if ( protocols != null )
+        {
+            sslContextFactory.setIncludeProtocols( protocols.toArray( new String[protocols.size()] ) );
+        }
+
+        switch ( sslPolicy.getClientAuth() )
+        {
+        case REQUIRE:
+            sslContextFactory.setNeedClientAuth( true );
+            break;
+        case OPTIONAL:
+            sslContextFactory.setWantClientAuth( true );
+            break;
+        case NONE:
+            sslContextFactory.setWantClientAuth( false );
+            sslContextFactory.setNeedClientAuth( false );
+            break;
+        default:
+            throw new IllegalArgumentException( "Not supported: " + sslPolicy.getClientAuth() );
+        }
 
         return new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.asString());
     }
-
 }

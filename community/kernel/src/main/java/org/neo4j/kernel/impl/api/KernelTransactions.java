@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,40 +19,41 @@
  */
 package org.neo4j.kernel.impl.api;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.Clock;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.pool.LinkedQueuePool;
 import org.neo4j.collection.pool.MarshlandPool;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.DatabaseShutdownException;
-import org.neo4j.helpers.Clock;
+import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.kernel.AvailabilityGuard;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.labelscan.LabelScanStore;
+import org.neo4j.kernel.api.KernelTransactionHandle;
+import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.txstate.LegacyIndexTransactionState;
-import org.neo4j.kernel.impl.api.index.IndexingService;
-import org.neo4j.kernel.impl.api.index.SchemaIndexProviderMap;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.api.state.LegacyIndexTransactionStateImpl;
-import org.neo4j.kernel.impl.api.store.ProcedureCache;
-import org.neo4j.kernel.impl.api.store.StoreReadLayer;
-import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
+import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
-import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.locking.StatementLocks;
+import org.neo4j.kernel.impl.locking.StatementLocksFactory;
+import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.store.TransactionId;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.TransactionMonitor;
-import org.neo4j.kernel.impl.transaction.state.IntegrityValidator;
-import org.neo4j.kernel.impl.transaction.state.NeoStoreTransactionContext;
-import org.neo4j.kernel.impl.transaction.state.NeoStoreTransactionContextFactory;
-import org.neo4j.kernel.impl.transaction.state.TransactionRecordState;
-import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
+import org.neo4j.storageengine.api.StorageEngine;
 
 import static java.util.Collections.newSetFromMap;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Central source of transactions in the database.
@@ -62,34 +63,25 @@ import static java.util.Collections.newSetFromMap;
  * for enumerating all running transactions. During normal operation, acquiring new transactions and enumerating live
  * ones requires no synchronization (although the live list is not guaranteed to be exact).
  */
-public class KernelTransactions extends LifecycleAdapter implements Factory<KernelTransaction>
+public class KernelTransactions extends LifecycleAdapter implements Supplier<KernelTransactionsSnapshot>
 {
-    // Transaction dependencies
-
-    private final NeoStoreTransactionContextFactory neoStoreTransactionContextFactory;
-    private final NeoStores neoStores;
-    private final Locks locks;
-    private final IntegrityValidator integrityValidator;
+    private final StatementLocksFactory statementLocksFactory;
     private final ConstraintIndexCreator constraintIndexCreator;
-    private final IndexingService indexingService;
-    private final LabelScanStore labelScanStore;
-    private final StatementOperationParts statementOperations;
-    private final UpdateableSchemaState updateableSchemaState;
+    private final StatementOperationContainer statementOperations;
     private final SchemaWriteGuard schemaWriteGuard;
-    private final SchemaIndexProviderMap providerMap;
     private final TransactionHeaderInformationFactory transactionHeaderInformationFactory;
-    private final StoreReadLayer storeLayer;
     private final TransactionCommitProcess transactionCommitProcess;
-    private final IndexConfigStore indexConfigStore;
-    private final LegacyIndexProviderLookup legacyIndexProviderLookup;
     private final TransactionHooks hooks;
-    private final ConstraintSemantics constraintSemantics;
     private final TransactionMonitor transactionMonitor;
-    private final LifeSupport dataSourceLife;
-    private final ProcedureCache procedureCache;
+    private final AvailabilityGuard availabilityGuard;
     private final Tracers tracers;
-
-    // End Tx Dependencies
+    private final StorageEngine storageEngine;
+    private final Procedures procedures;
+    private final TransactionIdStore transactionIdStore;
+    private final AccessCapability accessCapability;
+    private final Supplier<LegacyIndexTransactionState> legacyIndexTxStateSupplier;
+    private final Clock clock;
+    private final ReentrantReadWriteLock newTransactionsLock = new ReentrantReadWriteLock();
 
     /**
      * Used to enumerate all transactions in the system, active and idle ones.
@@ -102,121 +94,105 @@ public class KernelTransactions extends LifecycleAdapter implements Factory<Kern
      * As such, it provides a good mechanism for listing all transactions without requiring synchronization when
      * starting and committing transactions.
      */
-    private final Set<KernelTransactionImplementation> allTransactions = newSetFromMap(
-            new ConcurrentHashMap<KernelTransactionImplementation,Boolean>() );
+    private final Set<KernelTransactionImplementation> allTransactions = newSetFromMap( new ConcurrentHashMap<>() );
 
-    public KernelTransactions( NeoStoreTransactionContextFactory neoStoreTransactionContextFactory,
-                               NeoStores neoStores, Locks locks, IntegrityValidator integrityValidator,
+    // This is the factory that actually builds brand-new instances.
+    private final Factory<KernelTransactionImplementation> factory = new KernelTransactionImplementationFactory( allTransactions );
+    // Global pool of transactions, wrapped by the thread-local marshland pool and so is not used directly.
+    private final LinkedQueuePool<KernelTransactionImplementation> globalTxPool = new GlobalKernelTransactionPool( allTransactions, factory );
+    // Pool of unused transactions.
+    private final MarshlandPool<KernelTransactionImplementation> localTxPool = new MarshlandPool<>( globalTxPool );
+
+    /**
+     * Kernel transactions component status. True when stopped, false when started.
+     * Will not allow to start new transaction by stopped instance of kernel transactions.
+     * Should simplify tracking of stopped component usage by up the stack components.
+     */
+    private volatile boolean stopped = true;
+
+    public KernelTransactions( StatementLocksFactory statementLocksFactory,
                                ConstraintIndexCreator constraintIndexCreator,
-                               IndexingService indexingService, LabelScanStore labelScanStore,
-                               StatementOperationParts statementOperations,
-                               UpdateableSchemaState updateableSchemaState, SchemaWriteGuard schemaWriteGuard,
-                               SchemaIndexProviderMap providerMap, TransactionHeaderInformationFactory txHeaderFactory,
-                               StoreReadLayer storeLayer,
+                               StatementOperationContainer statementOperationContainer,
+                               SchemaWriteGuard schemaWriteGuard,
+                               TransactionHeaderInformationFactory txHeaderFactory,
                                TransactionCommitProcess transactionCommitProcess,
                                IndexConfigStore indexConfigStore,
                                LegacyIndexProviderLookup legacyIndexProviderLookup,
                                TransactionHooks hooks,
-                               ConstraintSemantics constraintSemantics,
                                TransactionMonitor transactionMonitor,
-                               LifeSupport dataSourceLife, ProcedureCache procedureCache,
-                               Tracers tracers )
+                               AvailabilityGuard availabilityGuard,
+                               Tracers tracers,
+                               StorageEngine storageEngine,
+                               Procedures procedures,
+                               TransactionIdStore transactionIdStore,
+                               Clock clock, AccessCapability accessCapability )
     {
-        this.neoStoreTransactionContextFactory = neoStoreTransactionContextFactory;
-        this.neoStores = neoStores;
-        this.locks = locks;
-        this.integrityValidator = integrityValidator;
+        this.statementLocksFactory = statementLocksFactory;
         this.constraintIndexCreator = constraintIndexCreator;
-        this.indexingService = indexingService;
-        this.labelScanStore = labelScanStore;
-        this.statementOperations = statementOperations;
-        this.updateableSchemaState = updateableSchemaState;
+        this.statementOperations = statementOperationContainer;
         this.schemaWriteGuard = schemaWriteGuard;
-        this.providerMap = providerMap;
         this.transactionHeaderInformationFactory = txHeaderFactory;
-        this.storeLayer = storeLayer;
         this.transactionCommitProcess = transactionCommitProcess;
-        this.indexConfigStore = indexConfigStore;
-        this.legacyIndexProviderLookup = legacyIndexProviderLookup;
         this.hooks = hooks;
-        this.constraintSemantics = constraintSemantics;
         this.transactionMonitor = transactionMonitor;
-        this.dataSourceLife = dataSourceLife;
-        this.procedureCache = procedureCache;
+        this.availabilityGuard = availabilityGuard;
         this.tracers = tracers;
+        this.storageEngine = storageEngine;
+        this.procedures = procedures;
+        this.transactionIdStore = transactionIdStore;
+        this.accessCapability = accessCapability;
+        this.legacyIndexTxStateSupplier = () -> new CachingLegacyIndexTransactionState(
+                new LegacyIndexTransactionStateImpl( indexConfigStore, legacyIndexProviderLookup ) );
+        this.clock = clock;
+        blockNewTransactions();
     }
 
-    /**
-     * This is the factory that actually builds brand-new instances.
-     */
-    private final Factory<KernelTransactionImplementation> factory = new Factory<KernelTransactionImplementation>()
+    public KernelTransaction newInstance( KernelTransaction.Type type, SecurityContext securityContext, long timeout )
     {
-        @Override
-        public KernelTransactionImplementation newInstance()
+        assertCurrentThreadIsNotBlockingNewTransactions();
+        SecurityContext frozenSecurityContext = securityContext.freeze();
+        try
         {
-            Locks.Client locksClient = locks.newClient();
-            NeoStoreTransactionContext context = neoStoreTransactionContextFactory.newInstance( locksClient );
-            TransactionRecordState recordState = new TransactionRecordState(
-                    neoStores, integrityValidator, context );
-            LegacyIndexTransactionState legacyIndexTransactionState =
-                    new LegacyIndexTransactionStateImpl( indexConfigStore, legacyIndexProviderLookup );
-            KernelTransactionImplementation tx = new KernelTransactionImplementation(
-                    statementOperations, schemaWriteGuard,
-                    labelScanStore, indexingService, updateableSchemaState, recordState, providerMap,
-                    neoStores, locksClient, hooks, constraintIndexCreator, transactionHeaderInformationFactory,
-                    transactionCommitProcess, transactionMonitor, storeLayer, legacyIndexTransactionState,
-                    localTxPool, constraintSemantics, Clock.SYSTEM_CLOCK, tracers.transactionTracer, procedureCache );
-
-            allTransactions.add( tx );
-
-            return tx;
-        }
-    };
-
-    @Override
-    public KernelTransaction newInstance()
-    {
-        assertDatabaseIsRunning();
-        return localTxPool.acquire().initialize( neoStores.getMetaDataStore().getLastCommittedTransactionId() );
-    }
-
-    /**
-     * Global pool of transactions, wrapped by the thread-local marshland pool and so is not used directly.
-     */
-    private final LinkedQueuePool<KernelTransactionImplementation> globalTxPool
-            = new LinkedQueuePool<KernelTransactionImplementation>( 8, factory )
-    {
-        @Override
-        protected void dispose( KernelTransactionImplementation tx )
-        {
-            allTransactions.remove( tx );
-            tx.dispose();
-            super.dispose( tx );
-        }
-    };
-
-    /**
-     * Give an approximate list of all transactions currently running. This is not guaranteed to be exact, as
-     * transactions may stop and start while this list is gathered.
-     */
-    public List<KernelTransaction> activeTransactions()
-    {
-        List<KernelTransaction> output = new ArrayList<>();
-        for ( KernelTransactionImplementation tx : allTransactions )
-        {
-            if ( tx.isOpen() )
+            while ( !newTransactionsLock.readLock().tryLock( 1, TimeUnit.SECONDS ) )
             {
-                output.add( tx );
+                assertRunning();
+            }
+            try
+            {
+                assertRunning();
+                TransactionId lastCommittedTransaction = transactionIdStore.getLastCommittedTransaction();
+                KernelTransactionImplementation tx = localTxPool.acquire();
+                StatementLocks statementLocks = statementLocksFactory.newInstance();
+                tx.initialize( lastCommittedTransaction.transactionId(), lastCommittedTransaction.commitTimestamp(),
+                        statementLocks, type, frozenSecurityContext, timeout );
+                return tx;
+            }
+            finally
+            {
+                newTransactionsLock.readLock().unlock();
             }
         }
-
-        return output;
+        catch ( InterruptedException ie )
+        {
+            Thread.interrupted();
+            throw new TransactionFailureException( "Fail to start new transaction.", ie );
+        }
     }
 
     /**
-     * Pool of unused transactions.
+     * Give an approximate set of all transactions currently running.
+     * This is not guaranteed to be exact, as transactions may stop and start while this set is gathered.
+     *
+     * @return the (approximate) set of open transactions.
      */
-    private final MarshlandPool<KernelTransactionImplementation> localTxPool = new MarshlandPool<>( globalTxPool );
+    public Set<KernelTransactionHandle> activeTransactions()
+    {
+        return allTransactions
+            .stream()
+            .map( this::createHandle )
+            .filter( KernelTransactionHandle::isOpen )
+            .collect( toSet() );
+    }
 
     /**
      * Dispose of all pooled transactions. This is done on shutdown or on internal events (like an HA mode switch) that
@@ -224,15 +200,41 @@ public class KernelTransactions extends LifecycleAdapter implements Factory<Kern
      */
     public void disposeAll()
     {
-        for ( KernelTransactionImplementation tx : allTransactions )
-        {
-            if ( tx.isOpen() )
-            {
-                tx.markForTermination();
-            }
-        }
+        terminateTransactions();
         localTxPool.disposeAll();
         globalTxPool.disposeAll();
+    }
+
+    public void terminateTransactions()
+    {
+        markAllTransactionsAsTerminated();
+    }
+
+    private void markAllTransactionsAsTerminated()
+    {
+        // we mark all transactions for termination since we want to make sure these transactions
+        // won't be reused, ever. Each transaction has, among other things, a Locks.Client and we
+        // certainly want to keep that from being reused from this point.
+        allTransactions.forEach( tx -> tx.markForTermination( Status.General.DatabaseUnavailable ) );
+    }
+
+    public boolean haveClosingTransaction()
+    {
+        return allTransactions.stream().anyMatch( KernelTransactionImplementation::isClosing );
+    }
+
+    @Override
+    public void start() throws Throwable
+    {
+        stopped = false;
+        unblockNewTransactions();
+    }
+
+    @Override
+    public void stop() throws Throwable
+    {
+        blockNewTransactions();
+        stopped = true;
     }
 
     @Override
@@ -241,17 +243,123 @@ public class KernelTransactions extends LifecycleAdapter implements Factory<Kern
         disposeAll();
     }
 
-    private void assertDatabaseIsRunning()
+    @Override
+    public KernelTransactionsSnapshot get()
     {
-        // TODO: Copied over from original source in NeoXADS - this should probably use DBAvailability,
-        // rather than this.
-        // Note, if you change this, you need a separate mechanism to stop transactions from being started during
-        // Kernel#stop().
-        if ( !dataSourceLife.isRunning() )
+        return new KernelTransactionsSnapshot( activeTransactions(), clock.millis() );
+    }
+
+    /**
+     * Do not allow new transactions to start until {@link #unblockNewTransactions()} is called. Current thread have
+     * responsibility of doing so.
+     * <p>
+     * Blocking call.
+     */
+    public void blockNewTransactions()
+    {
+        newTransactionsLock.writeLock().lock();
+    }
+
+    /**
+     * Allow new transactions to be started again if current thread is the one who called
+     * {@link #blockNewTransactions()}.
+     *
+     * @throws IllegalStateException if current thread is not the one that called {@link #blockNewTransactions()}.
+     */
+    public void unblockNewTransactions()
+    {
+        if ( !newTransactionsLock.writeLock().isHeldByCurrentThread() )
+        {
+            throw new IllegalStateException( "This thread did not block transactions previously" );
+        }
+        newTransactionsLock.writeLock().unlock();
+    }
+
+    /**
+     * Create new handle for the given transaction.
+     * <p>
+     * <b>Note:</b> this method is package-private for testing <b>only</b>.
+     *
+     * @param tx transaction to wrap.
+     * @return transaction handle.
+     */
+    KernelTransactionHandle createHandle( KernelTransactionImplementation tx )
+    {
+        return new KernelTransactionImplementationHandle( tx );
+    }
+
+    /**
+     * Get all transactions
+     * * <p>
+     * <b>Note:</b> this method is package-private for testing <b>only</b>.
+     * @return set of all kernel transaction
+     */
+    Set<KernelTransactionImplementation> getAllTransactions()
+    {
+        return allTransactions;
+    }
+
+    private void assertRunning()
+    {
+        if ( availabilityGuard.isShutdown() )
         {
             throw new DatabaseShutdownException();
         }
+        if ( stopped )
+        {
+            throw new IllegalStateException( "Can't start new transaction with stopped " + getClass() );
+        }
     }
 
+    private void assertCurrentThreadIsNotBlockingNewTransactions()
+    {
+        if ( newTransactionsLock.isWriteLockedByCurrentThread() )
+        {
+            throw new IllegalStateException(
+                    "Thread that is blocking new transactions from starting can't start new transaction" );
+        }
+    }
 
+    private class KernelTransactionImplementationFactory implements Factory<KernelTransactionImplementation>
+    {
+        private Set<KernelTransactionImplementation> transactions;
+
+        KernelTransactionImplementationFactory( Set<KernelTransactionImplementation> transactions )
+        {
+            this.transactions = transactions;
+        }
+
+        @Override
+        public KernelTransactionImplementation newInstance()
+        {
+            KernelTransactionImplementation tx =
+                    new KernelTransactionImplementation( statementOperations, schemaWriteGuard, hooks,
+                            constraintIndexCreator, procedures, transactionHeaderInformationFactory,
+                            transactionCommitProcess, transactionMonitor, legacyIndexTxStateSupplier, localTxPool,
+                            clock, tracers.transactionTracer, tracers.lockTracer, tracers.pageCursorTracerSupplier,
+                            storageEngine, accessCapability );
+            this.transactions.add( tx );
+            return tx;
+        }
+    }
+
+    private class GlobalKernelTransactionPool extends LinkedQueuePool<KernelTransactionImplementation>
+    {
+        private Set<KernelTransactionImplementation> transactions;
+
+        GlobalKernelTransactionPool( Set<KernelTransactionImplementation> transactions,
+                Factory<KernelTransactionImplementation> factory )
+        {
+            super( 8, factory );
+            this.transactions = transactions;
+        }
+
+        @Override
+        protected void dispose( KernelTransactionImplementation tx )
+        {
+            transactions.remove( tx );
+            tx.dispose();
+            super.dispose( tx );
+        }
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,16 +25,16 @@ package org.neo4j.shell;
  */
 public interface Console
 {
-	/**
-	 * Prints a formatted string to the console (System.out).
-	 * @param format the string/format to print.
-	 * @param args values used in conjunction with {@code format}.
-	 */
-	void format( String format, Object... args );
-	
-	/**
-	 * @param prompt the prompt to display.
-	 * @return the next line read from the console (user input).
-	 */
-	String readLine( String prompt );
+    /**
+     * Prints a formatted string to the console (System.out).
+     * @param format the string/format to print.
+     * @param args values used in conjunction with {@code format}.
+     */
+    void format( String format, Object... args );
+
+    /**
+     * @param prompt the prompt to display.
+     * @return the next line read from the console (user input).
+     */
+    String readLine( String prompt );
 }

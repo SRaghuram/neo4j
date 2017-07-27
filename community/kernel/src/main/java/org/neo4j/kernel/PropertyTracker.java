@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,14 +20,13 @@
 package org.neo4j.kernel;
 
 import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.kernel.api.DataWriteOperations;
 
-/**
- * @deprecated This will be moved to internal packages in the next major release.
- */
-@Deprecated
 public interface PropertyTracker<T extends PropertyContainer>
 {
-    void propertyAdded( T primitive, String propertyName, Object propertyValue );
+    void setEnabled( boolean enabled );
+
+    void propertyAdded( DataWriteOperations ops, T primitive, String propertyName, Object propertyValue );
 
     void propertyRemoved( T primitive, String propertyName, Object propertyValue );
 

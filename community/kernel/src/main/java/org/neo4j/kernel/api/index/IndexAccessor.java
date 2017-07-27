@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,11 +25,13 @@ import java.io.IOException;
 import java.util.Iterator;
 
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.kernel.api.direct.BoundedIterable;
+import org.neo4j.helpers.collection.BoundedIterable;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
-import org.neo4j.kernel.impl.api.index.SwallowingIndexUpdater;
+import org.neo4j.kernel.impl.api.index.updater.SwallowingIndexUpdater;
+import org.neo4j.storageengine.api.schema.IndexReader;
 
-import static org.neo4j.helpers.collection.IteratorUtil.emptyIterator;
+import static org.neo4j.helpers.collection.Iterators.emptyIterator;
 
 /**
  * Used for online operation of an index.
@@ -89,6 +91,17 @@ public interface IndexAccessor extends Closeable
      */
     ResourceIterator<File> snapshotFiles() throws IOException;
 
+    /**
+     * Verifies that each value in this index is unique.
+     * Index is guaranteed to not change while this call executes.
+     *
+     * @param propertyAccessor {@link PropertyAccessor} for accessing properties from database storage
+     * in the event of conflicting values.
+     * @throws IndexEntryConflictException for first detected uniqueness conflict, if any.
+     * @throws IOException on error reading from source files.
+     */
+    void verifyDeferredConstraints( PropertyAccessor propertyAccessor ) throws IndexEntryConflictException, IOException;
+
     class Adapter implements IndexAccessor
     {
         @Override
@@ -134,11 +147,13 @@ public interface IndexAccessor extends Closeable
                     return 0;
                 }
 
-                @Override public void close() throws IOException
+                @Override
+                public void close() throws IOException
                 {
                 }
 
-                @Override public Iterator<Long> iterator()
+                @Override
+                public Iterator<Long> iterator()
                 {
                     return emptyIterator();
                 }
@@ -149,6 +164,12 @@ public interface IndexAccessor extends Closeable
         public ResourceIterator<File> snapshotFiles()
         {
             return emptyIterator();
+        }
+
+        @Override
+        public void verifyDeferredConstraints( PropertyAccessor propertyAccessor )
+                throws IndexEntryConflictException, IOException
+        {
         }
     }
 
@@ -213,6 +234,13 @@ public interface IndexAccessor extends Closeable
         public String toString()
         {
             return delegate.toString();
+        }
+
+        @Override
+        public void verifyDeferredConstraints( PropertyAccessor propertyAccessor )
+                throws IndexEntryConflictException, IOException
+        {
+            delegate.verifyDeferredConstraints( propertyAccessor );
         }
     }
 }

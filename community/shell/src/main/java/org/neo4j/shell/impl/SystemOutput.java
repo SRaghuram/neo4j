@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,11 @@
  */
 package org.neo4j.shell.impl;
 
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.neo4j.shell.Output;
 
@@ -33,49 +33,55 @@ import org.neo4j.shell.Output;
  */
 public class SystemOutput implements Output
 {
-	private PrintWriter out;
+    private PrintWriter out;
 
-    public SystemOutput() {
-        try {
-            out = new PrintWriter(new OutputStreamWriter(System.out,"UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            System.err.println("Unsupported encoding UTF-8, using "+Charset.defaultCharset()+", error: "+e.getMessage());
-            out = new PrintWriter(new OutputStreamWriter(System.out, Charset.defaultCharset()));
-        }
+    public SystemOutput()
+    {
+        this( System.out );
+    }
+
+    public SystemOutput( PrintWriter out )
+    {
+        this.out = out;
+    }
+
+    public SystemOutput( OutputStream out )
+    {
+        this( new PrintWriter( new OutputStreamWriter( out, StandardCharsets.UTF_8 ) ) );
     }
 
     public void print( Serializable object )
-	{
-		out.print(object);
-	}
-	
-	public void println()
-	{
-		out.println();
+    {
+        out.print(object);
+    }
+
+    public void println()
+    {
+        out.println();
         out.flush();
-	}
+    }
 
-	public void println( Serializable object )
-	{
-		out.println( object );
+    public void println( Serializable object )
+    {
+        out.println( object );
         out.flush();
-	}
+    }
 
-	public Appendable append( char ch )
-	{
-		this.print( ch );
-		return this;
-	}
+    public Appendable append( char ch )
+    {
+        this.print( ch );
+        return this;
+    }
 
-	public Appendable append( CharSequence sequence )
-	{
-		this.println( RemoteOutput.asString( sequence ) );
-		return this;
-	}
+    public Appendable append( CharSequence sequence )
+    {
+        this.println( RemoteOutput.asString( sequence ) );
+        return this;
+    }
 
-	public Appendable append( CharSequence sequence, int start, int end )
-	{
-		this.print( RemoteOutput.asString( sequence ).substring( start, end ) );
-		return this;
-	}
+    public Appendable append( CharSequence sequence, int start, int end )
+    {
+        this.print( RemoteOutput.asString( sequence ).substring( start, end ) );
+        return this;
+    }
 }

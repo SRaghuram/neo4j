@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -42,9 +42,9 @@ public class DelegatingPageCacheTracer implements PageCacheTracer
         delegate.mappedFile( file );
     }
 
-    public long countBytesRead()
+    public long bytesRead()
     {
-        return delegate.countBytesRead();
+        return delegate.bytesRead();
     }
 
     public MajorFlushEvent beginFileFlush( PageSwapper swapper )
@@ -57,9 +57,15 @@ public class DelegatingPageCacheTracer implements PageCacheTracer
         return delegate.beginPageEvictions( pageCountToEvict );
     }
 
-    public long countUnpins()
+    public long unpins()
     {
-        return delegate.countUnpins();
+        return delegate.unpins();
+    }
+
+    @Override
+    public long hits()
+    {
+        return delegate.hits();
     }
 
     public MajorFlushEvent beginCacheFlush()
@@ -67,24 +73,19 @@ public class DelegatingPageCacheTracer implements PageCacheTracer
         return delegate.beginCacheFlush();
     }
 
-    public long countBytesWritten()
+    public long bytesWritten()
     {
-        return delegate.countBytesWritten();
+        return delegate.bytesWritten();
     }
 
-    public long countPins()
+    public long pins()
     {
-        return delegate.countPins();
+        return delegate.pins();
     }
 
-    public long countFilesUnmapped()
+    public long filesUnmapped()
     {
-        return delegate.countFilesUnmapped();
-    }
-
-    public PinEvent beginPin( boolean exclusiveLock, long filePageId, PageSwapper swapper )
-    {
-        return delegate.beginPin( exclusiveLock, filePageId, swapper );
+        return delegate.filesUnmapped();
     }
 
     public void unmappedFile( File file )
@@ -92,28 +93,82 @@ public class DelegatingPageCacheTracer implements PageCacheTracer
         delegate.unmappedFile( file );
     }
 
-    public long countEvictionExceptions()
+    public long evictionExceptions()
     {
-        return delegate.countEvictionExceptions();
+        return delegate.evictionExceptions();
     }
 
-    public long countFilesMapped()
+    @Override
+    public void pins( long pins )
     {
-        return delegate.countFilesMapped();
+        delegate.pins( pins );
     }
 
-    public long countFlushes()
+    @Override
+    public void unpins( long unpins )
     {
-        return delegate.countFlushes();
+        delegate.unpins( unpins );
     }
 
-    public long countFaults()
+    @Override
+    public void hits( long hits )
     {
-        return delegate.countFaults();
+        delegate.hits( hits );
     }
 
-    public long countEvictions()
+    @Override
+    public void faults( long faults )
     {
-        return delegate.countEvictions();
+        delegate.faults( faults );
+    }
+
+    @Override
+    public void bytesRead( long bytesRead )
+    {
+        delegate.bytesRead( bytesRead );
+    }
+
+    @Override
+    public void evictions( long evictions )
+    {
+        delegate.evictions( evictions );
+    }
+
+    @Override
+    public void evictionExceptions( long evictionExceptions )
+    {
+        delegate.evictionExceptions( evictionExceptions );
+    }
+
+    @Override
+    public void bytesWritten( long bytesWritten )
+    {
+        delegate.bytesWritten( bytesWritten );
+    }
+
+    @Override
+    public void flushes( long flushes )
+    {
+        delegate.flushes( flushes );
+    }
+
+    public long filesMapped()
+    {
+        return delegate.filesMapped();
+    }
+
+    public long flushes()
+    {
+        return delegate.flushes();
+    }
+
+    public long faults()
+    {
+        return delegate.faults();
+    }
+
+    public long evictions()
+    {
+        return delegate.evictions();
     }
 }

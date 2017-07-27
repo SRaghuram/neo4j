@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.neo4j.unsafe.impl.batchimport;
-
-import java.util.Arrays;
 
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
@@ -47,15 +45,13 @@ public class RelationshipPreparationStep extends ProcessorStep<Batch<InputRelati
     protected void process( Batch<InputRelationship,RelationshipRecord> batch, BatchSender sender )
     {
         InputRelationship[] input = batch.input;
-        long[] ids = batch.ids = new long[input.length*2];
+        long[] ids = batch.ids = new long[input.length * 2];
         for ( int i = 0; i < input.length; i++ )
         {
             InputRelationship batchRelationship = input[i];
-            ids[i*2] = idMapper.get( batchRelationship.startNode(), batchRelationship.startNodeGroup() );
-            ids[i*2+1] = idMapper.get( batchRelationship.endNode(), batchRelationship.endNodeGroup() );
+            ids[i * 2] = idMapper.get( batchRelationship.startNode(), batchRelationship.startNodeGroup() );
+            ids[i * 2 + 1] = idMapper.get( batchRelationship.endNode(), batchRelationship.endNodeGroup() );
         }
-        batch.sortedIds = ids.clone();
-        Arrays.sort( batch.sortedIds );
         sender.send( batch );
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,13 +21,12 @@ package org.neo4j.server.database;
 
 import java.io.File;
 
-import org.neo4j.graphdb.QueryExecutionException;
+import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.graphdb.Result;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
 import org.neo4j.logging.Log;
-import org.neo4j.server.web.ServerInternalSettings;
 
 /**
  * Wraps a neo4j database in lifecycle management. This is intermediate, and will go away once we have an internal
@@ -35,21 +34,17 @@ import org.neo4j.server.web.ServerInternalSettings;
  */
 public class LifecycleManagingDatabase implements Database
 {
+    static final String CYPHER_WARMUP_QUERY =
+            "MATCH (a:` Arbitrary label name that really doesn't matter `) RETURN a LIMIT 0";
+
     public interface GraphFactory
     {
-        GraphDatabaseAPI newGraphDatabase( Config config, GraphDatabaseFacadeFactory.Dependencies dependencies );
+        GraphDatabaseFacade newGraphDatabase( Config config, GraphDatabaseFacadeFactory.Dependencies dependencies );
     }
 
     public static Database.Factory lifecycleManagingDatabase( final GraphFactory graphDbFactory )
     {
-        return new Factory()
-        {
-            @Override
-            public Database newDatabase( Config config, GraphDatabaseFacadeFactory.Dependencies dependencies )
-            {
-                return new LifecycleManagingDatabase( config, graphDbFactory, dependencies );
-            }
-        };
+        return ( config, dependencies ) -> new LifecycleManagingDatabase( config, graphDbFactory, dependencies );
     }
 
     private final Config config;
@@ -58,7 +53,7 @@ public class LifecycleManagingDatabase implements Database
     private final Log log;
 
     private boolean isRunning = false;
-    private GraphDatabaseAPI graph;
+    private GraphDatabaseFacade graph;
 
     public LifecycleManagingDatabase( Config config, GraphFactory dbFactory,
             GraphDatabaseFacadeFactory.Dependencies dependencies )
@@ -72,12 +67,12 @@ public class LifecycleManagingDatabase implements Database
     @Override
     public String getLocation()
     {
-        File file = config.get( ServerInternalSettings.legacy_db_location );
+        File file = config.get( DatabaseManagementSystemSettings.database_path );
         return file.getAbsolutePath();
     }
 
     @Override
-    public GraphDatabaseAPI getGraph()
+    public GraphDatabaseFacade getGraph()
     {
         return graph;
     }
@@ -90,15 +85,16 @@ public class LifecycleManagingDatabase implements Database
     @Override
     public void start() throws Throwable
     {
+        log.info( "Starting..." );
         this.graph = dbFactory.newGraphDatabase( config, dependencies );
-        // in order to speed up testing, they should not run the prelod, but in production it pays to do it.
-        if ( !testing() )
+        // in order to speed up testing, they should not run the preload, but in production it pays to do it.
+        if ( !isInTestMode() )
         {
             preLoadCypherCompiler();
         }
 
         isRunning = true;
-        log.info( "Successfully started database" );
+        log.info( "Started." );
     }
 
     @Override
@@ -106,10 +102,11 @@ public class LifecycleManagingDatabase implements Database
     {
         if ( graph != null )
         {
+            log.info( "Stopping..." );
             graph.shutdown();
             isRunning = false;
             graph = null;
-            log.info( "Successfully stopped database" );
+            log.info( "Stopped." );
         }
     }
 
@@ -127,20 +124,24 @@ public class LifecycleManagingDatabase implements Database
     private void preLoadCypherCompiler()
     {
         // Execute a single Cypher query to pre-load the compiler to make the first user-query snappy
-        //noinspection EmptyTryBlock
-        try ( Result ignored = this.graph.execute(
-                "MATCH (a:` Arbitrary label name that really doesn't matter `) RETURN a LIMIT 0" ) )
+        try
         {
-            // empty by design
+            //noinspection EmptyTryBlock
+            try ( Result ignore = this.graph.execute( CYPHER_WARMUP_QUERY ) )
+            {
+                // empty by design
+            }
         }
-        catch ( QueryExecutionException e )
+        catch ( Exception ignore )
         {
-            // Might not be a real problem, let's ignore it.
+            // This is only an attempt at warming up the database.
+            // It's not a critical failure.
         }
     }
 
-    private static boolean testing()
+    protected boolean isInTestMode()
     {
+        // The assumption here is that assertions are only enabled during testing.
         boolean testing = false;
         assert testing = true : "yes, this should be an assignment!";
         return testing;

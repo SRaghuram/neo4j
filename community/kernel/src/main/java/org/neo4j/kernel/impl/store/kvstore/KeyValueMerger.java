@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,7 +32,7 @@ class KeyValueMerger implements DataProvider
     private final BigEndianByteArrayBuffer firstKey, firstValue, otherKey, otherValue;
     private boolean firstAvail, otherAvail;
 
-    public KeyValueMerger( DataProvider first, DataProvider other, int keySize, int valueSize ) throws IOException
+    KeyValueMerger( DataProvider first, DataProvider other, int keySize, int valueSize ) throws IOException
     {
         this.firstAvail = (this.first = first).visit( firstKey = buffer( keySize ), firstValue = buffer( valueSize ) );
         this.otherAvail = (this.other = other).visit( otherKey = buffer( keySize ), otherValue = buffer( valueSize ) );

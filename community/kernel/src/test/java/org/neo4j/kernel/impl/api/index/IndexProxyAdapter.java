@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,15 +23,17 @@ import java.io.File;
 import java.util.concurrent.Future;
 
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.kernel.api.index.IndexConfiguration;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.index.IndexReader;
 import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.kernel.impl.api.index.updater.SwallowingIndexUpdater;
+import org.neo4j.storageengine.api.schema.IndexReader;
+import org.neo4j.storageengine.api.schema.PopulationProgress;
 
 import static org.neo4j.helpers.FutureAdapter.VOID;
-import static org.neo4j.helpers.collection.IteratorUtil.emptyIterator;
+import static org.neo4j.helpers.collection.Iterators.emptyIterator;
 
 public class IndexProxyAdapter implements IndexProxy
 {
@@ -64,11 +66,6 @@ public class IndexProxyAdapter implements IndexProxy
     }
 
     @Override
-    public void flush()
-    {
-    }
-
-    @Override
     public Future<Void> close()
     {
         return VOID;
@@ -76,6 +73,12 @@ public class IndexProxyAdapter implements IndexProxy
 
     @Override
     public IndexDescriptor getDescriptor()
+    {
+        return null;
+    }
+
+    @Override
+    public LabelSchemaDescriptor schema()
     {
         return null;
     }
@@ -115,14 +118,14 @@ public class IndexProxyAdapter implements IndexProxy
     }
 
     @Override
-    public IndexConfiguration config()
-    {
-        return null;
-    }
-
-    @Override
     public IndexPopulationFailure getPopulationFailure() throws IllegalStateException
     {
         throw new IllegalStateException( "This index isn't failed" );
+    }
+
+    @Override
+    public PopulationProgress getIndexPopulationProgress()
+    {
+        return PopulationProgress.NONE;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -112,7 +112,7 @@ public class ValueRepresentation extends Representation
             @Override
             void putTo( MappingSerializer serializer, String key )
             {
-                serializer.putUri( key, path );
+                serializer.putRelativeUri( key, path );
             }
         };
     }
@@ -136,7 +136,7 @@ public class ValueRepresentation extends Representation
             @Override
             void putTo( MappingSerializer serializer, String key )
             {
-                serializer.putUriTemplate( key, path );
+                serializer.putRelativeUriTemplate( key, path );
             }
         };
     }
@@ -237,7 +237,8 @@ public class ValueRepresentation extends Representation
             return toListRepresentation(RepresentationType.SHORT, array);
         }
 
-        private ListRepresentation toListRepresentation(RepresentationType type, PropertyArray<?, ?> array) {
+        private ListRepresentation toListRepresentation(RepresentationType type, PropertyArray<?, ?> array)
+        {
             return new ListRepresentation(type, dispatch(array) );
         }
 

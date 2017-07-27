@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,37 +28,41 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.graphdb.ConstraintViolationException;
-import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.helpers.collection.Iterables;
-import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.api.index.IndexingService;
-import org.neo4j.kernel.impl.transaction.state.NeoStoresSupplier;
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.test.EphemeralFileSystemRule;
 import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.tooling.GlobalGraphOperations;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import static org.neo4j.helpers.collection.Iterables.single;
+
 public class ConstraintRecoveryIT
 {
-    private static final Label LABEL = DynamicLabel.label( "label1" );
+    private static final String KEY = "prop";
+    private static final Label LABEL = Label.label( "label1" );
+
     @Rule
     public EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
+
     private GraphDatabaseAPI db;
 
     @Test
-    public void shouldNotHaveAnIndexIfUniqueConstraintCreationOnRecoveryFails() throws IOException
+    public void shouldHaveAvailableOrphanedConstraintIndexIfUniqueConstraintCreationFails() throws IOException
     {
         // given
         final EphemeralFileSystemAbstraction fs = fileSystemRule.get();
-        fs.mkdir( new File("/tmp") );
+        fs.mkdir( new File( "/tmp" ) );
         File pathToDb = new File( "/tmp/bar2" );
 
         TestGraphDatabaseFactory dbFactory = new TestGraphDatabaseFactory();
@@ -71,15 +75,15 @@ public class ConstraintRecoveryIT
         monitors.addMonitorListener( new IndexingService.MonitorAdapter()
         {
             @Override
-            public void verifyDeferredConstraints()
+            public void indexPopulationScanComplete()
             {
                 monitorCalled.set( true );
-                db.getDependencyResolver().resolveDependency( NeoStoresSupplier.class ).get().getSchemaStore().flush();
+                db.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).testAccessNeoStores()
+                        .getSchemaStore().flush();
                 storeInNeedOfRecovery[0] = fs.snapshot();
             }
         } );
         dbFactory.setMonitors( monitors );
-
 
         db = (GraphDatabaseAPI) dbFactory.newImpermanentDatabase( pathToDb );
 
@@ -88,7 +92,7 @@ public class ConstraintRecoveryIT
             for ( int i = 0; i < 2; i++ )
             {
                 Node node1 = db.createNode( LABEL );
-                node1.setProperty( "prop", true );
+                node1.setProperty( KEY, true );
             }
 
             tx.success();
@@ -96,11 +100,13 @@ public class ConstraintRecoveryIT
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().constraintFor( LABEL ).assertPropertyIsUnique( "prop" ).create();
+            db.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).create();
             fail("Should have failed with ConstraintViolationException");
             tx.success();
         }
-        catch ( ConstraintViolationException ignored )  { }
+        catch ( ConstraintViolationException ignored )
+        {
+        }
 
         db.shutdown();
 
@@ -112,24 +118,26 @@ public class ConstraintRecoveryIT
         db = (GraphDatabaseAPI) dbFactory.newImpermanentDatabase( pathToDb );
 
         // then
-        try(Transaction tx = db.beginTx())
+        try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 5000, TimeUnit.MILLISECONDS );
         }
 
-        try(Transaction tx = db.beginTx())
+        try ( Transaction tx = db.beginTx() )
         {
-            assertEquals(2, Iterables.count( GlobalGraphOperations.at( db ).getAllNodes() ) );
+            assertEquals( 2, Iterables.count( db.getAllNodes() ) );
         }
 
-        try(Transaction tx = db.beginTx())
+        try ( Transaction tx = db.beginTx() )
         {
-            assertEquals(0, Iterables.count(Iterables.toList( db.schema().getConstraints() )));
+            assertEquals( 0, Iterables.count( Iterables.asList( db.schema().getConstraints() ) ) );
         }
 
-        try(Transaction tx = db.beginTx())
+        try ( Transaction tx = db.beginTx() )
         {
-            assertEquals(0, Iterables.count(Iterables.toList( db.schema().getIndexes() )));
+            IndexDefinition orphanedConstraintIndex = single( db.schema().getIndexes() );
+            assertEquals( LABEL.name(), orphanedConstraintIndex.getLabel().name() );
+            assertEquals( KEY, single( orphanedConstraintIndex.getPropertyKeys() ) );
         }
 
         db.shutdown();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,7 +21,6 @@ package org.neo4j.server.rest.web;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -33,6 +32,7 @@ import org.neo4j.cypher.CypherException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
+import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.server.database.CypherExecutor;
 import org.neo4j.server.rest.repr.BadInputException;
 import org.neo4j.server.rest.repr.CypherResultRepresentation;
@@ -40,6 +40,10 @@ import org.neo4j.server.rest.repr.InputFormat;
 import org.neo4j.server.rest.repr.InvalidArgumentsException;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.transactional.CommitOnSuccessfulStatusCodeRepresentationWriteHandler;
+import org.neo4j.udc.UsageData;
+
+import static org.neo4j.udc.UsageDataKeys.Features.http_cypher_endpoint;
+import static org.neo4j.udc.UsageDataKeys.features;
 
 @Path("/cypher")
 public class CypherService
@@ -51,19 +55,21 @@ public class CypherService
     private static final String INCLUDE_STATS_PARAM = "includeStats";
     private static final String INCLUDE_PLAN_PARAM = "includePlan";
     private static final String PROFILE_PARAM = "profile";
-    private final GraphDatabaseService database;
 
+    private final GraphDatabaseService database;
     private final CypherExecutor cypherExecutor;
+    private final UsageData usage;
     private final OutputFormat output;
     private final InputFormat input;
 
-    public CypherService( @Context CypherExecutor cypherExecutor, @Context InputFormat input,
-                          @Context OutputFormat output, @Context GraphDatabaseService database )
+    public CypherService( @Context GraphDatabaseService database, @Context CypherExecutor cypherExecutor,
+            @Context InputFormat input, @Context OutputFormat output, @Context UsageData usage )
     {
+        this.database = database;
         this.cypherExecutor = cypherExecutor;
         this.input = input;
         this.output = output;
-        this.database = database;
+        this.usage = usage;
     }
 
     public OutputFormat getOutputFormat()
@@ -77,11 +83,14 @@ public class CypherService
                            @Context HttpServletRequest request,
                            @QueryParam( INCLUDE_STATS_PARAM ) boolean includeStats,
                            @QueryParam( INCLUDE_PLAN_PARAM ) boolean includePlan,
-                           @QueryParam( PROFILE_PARAM ) boolean profile) throws BadInputException {
+                           @QueryParam( PROFILE_PARAM ) boolean profile) throws BadInputException
+    {
 
+        usage.get( features ).flag( http_cypher_endpoint );
         Map<String,Object> command = input.readMap( body );
 
-        if( !command.containsKey(QUERY_KEY) ) {
+        if ( !command.containsKey( QUERY_KEY ) )
+        {
             return output.badRequest( new InvalidArgumentsException( "You have to provide the 'query' parameter." ) );
         }
 
@@ -97,25 +106,29 @@ public class CypherService
         {
             return output.badRequest( new IllegalArgumentException("Parameters must be a JSON map") );
         }
+
         try
         {
             QueryExecutionEngine executionEngine = cypherExecutor.getExecutionEngine();
             boolean periodicCommitQuery = executionEngine.isPeriodicCommit( query );
-            CommitOnSuccessfulStatusCodeRepresentationWriteHandler handler = (CommitOnSuccessfulStatusCodeRepresentationWriteHandler) this.output.getRepresentationWriteHandler();
+            CommitOnSuccessfulStatusCodeRepresentationWriteHandler handler =
+                    (CommitOnSuccessfulStatusCodeRepresentationWriteHandler) output.getRepresentationWriteHandler();
             if ( periodicCommitQuery )
             {
                 handler.closeTransaction();
             }
 
+            TransactionalContext tc = cypherExecutor.createTransactionContext( query, params, request );
+
             Result result;
             if ( profile )
             {
-                result = executionEngine.profileQuery( query, params, new ServerQuerySession( request ) );
+                result = executionEngine.profileQuery( query, params, tc );
                 includePlan = true;
             }
             else
             {
-                result = executionEngine.executeQuery( query, params, new ServerQuerySession( request ) );
+                result = executionEngine.executeQuery( query, params, tc );
                 includePlan = result.getQueryExecutionType().requestedExecutionPlanDescription();
             }
 
@@ -131,7 +144,8 @@ public class CypherService
             if (e.getCause() instanceof CypherException)
             {
                 return output.badRequest( e.getCause() );
-            } else
+            }
+            else
             {
                 return output.badRequest( e );
             }

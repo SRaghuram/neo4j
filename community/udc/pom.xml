@@ -3,14 +3,14 @@
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>parent</artifactId>
-    <version>2.3-SNAPSHOT</version>
+    <version>3.2.3-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.neo4j</groupId>
   <artifactId>neo4j-udc</artifactId>
   <name>Neo4j - Usage Data Collection</name>
-  <version>2.3-SNAPSHOT</version>
+  <version>3.2.3-SNAPSHOT</version>
 
   <description>Collects simple statistics about server deployment.</description>
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
@@ -26,7 +26,9 @@
   <packaging>jar</packaging>
 
   <scm>
-	  <url>https://github.com/neo4j/neo4j/tree/master/community/udc</url>
+    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+    <url>https://github.com/neo4j/neo4j</url>
   </scm>
 
   <licenses>
@@ -116,60 +118,15 @@
           </execution>
         </executions>
       </plugin>
-
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>generate-source-based-documentation</id>
-            <phase>${generate-config-docs-phase}</phase>
-            <configuration>
-              <target>
-                <java classname="org.neo4j.tooling.GenerateConfigDocumentation"
-                      classpathref="maven.compile.classpath" failonerror="true">
-                  <arg value="org.neo4j.ext.udc.UdcSettings" />
-                  <arg value="${project.build.directory}/docs/ops/configuration-attributes.asciidoc" />
-                </java>
-              </target>
-            </configuration>
-            <goals><goal>run</goal></goals>
-          </execution>
-        </executions>
-      </plugin>
       <plugin>
         <groupId>org.neo4j.build.plugins</groupId>
         <artifactId>clirr-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>default</id>
-            <phase>${clirr-check-phase}</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
         <configuration>
-          <failOnError>true</failOnError>
-          <logResults>true</logResults>
-          <!-- This is temporarily hard-coded, because the versionsBack attribute seems to not work on OS X, we'll
-           need to fix that.
-           OBS: Set this to one version ahead, i.e. if you'd like it to compare against 1.9.3 then set it to 1.9.4
-            -->
-          <comparisonVersion>1.9.M05</comparisonVersion>
-          <ignoreMaintenenceVersions>false</ignoreMaintenenceVersions>
           <includes>
             <include>org/neo4j/ext/udc</include>
           </includes>
 
-          <!-- Allowed breaking changes in Neo4j 2.0 -->
-          <!-- These rules should be looked over and modified appropriately in 2.1 -->
-          <excludeMessageCodes>
-            <param>6006</param><!-- Field was made final. -->
-            <param>7012</param><!-- Method added to interface -->
-          </excludeMessageCodes>
           <excludes>
-            <!-- Ignore known breaking changes introduced in 2.0 and 2.1 -->
-
             <!-- Some constants (not terribly public) were made irrelevant and removed in 2.1 -->
             <exclude>org/neo4j/ext/udc/UdcConstants</exclude>
           </excludes>
@@ -196,11 +153,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpcore</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
       <scope>test</scope>
@@ -216,7 +168,6 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-
     <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-io</artifactId>

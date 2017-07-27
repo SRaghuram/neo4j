@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,58 +20,57 @@
 package org.neo4j.kernel.impl.transaction.log.checkpoint;
 
 import java.io.IOException;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.neo4j.kernel.KernelHealth;
+import org.neo4j.graphdb.Resource;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.pruning.LogPruning;
-import org.neo4j.kernel.impl.transaction.log.rotation.StoreFlusher;
 import org.neo4j.kernel.impl.transaction.tracing.CheckPointTracer;
 import org.neo4j.kernel.impl.transaction.tracing.LogCheckPointEvent;
+import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-
-import static org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer.PrintFormat.prefix;
+import org.neo4j.storageengine.api.StorageEngine;
 
 public class CheckPointerImpl extends LifecycleAdapter implements CheckPointer
 {
     private final TransactionAppender appender;
     private final TransactionIdStore transactionIdStore;
     private final CheckPointThreshold threshold;
-    private final StoreFlusher storeFlusher;
+    private final StorageEngine storageEngine;
     private final LogPruning logPruning;
-    private final KernelHealth kernelHealth;
+    private final DatabaseHealth databaseHealth;
+    private final IOLimiter ioLimiter;
     private final Log msgLog;
     private final CheckPointTracer tracer;
-    private final Lock lock;
+    private final StoreCopyCheckPointMutex mutex;
 
     private long lastCheckPointedTx;
 
-    public CheckPointerImpl( TransactionIdStore transactionIdStore, CheckPointThreshold threshold,
-            StoreFlusher storeFlusher, LogPruning logPruning, TransactionAppender appender, KernelHealth kernelHealth,
-            LogProvider logProvider, CheckPointTracer tracer )
-    {
-        this( transactionIdStore, threshold, storeFlusher, logPruning, appender, kernelHealth, logProvider, tracer,
-                new ReentrantLock() );
-    }
-
-    public CheckPointerImpl( TransactionIdStore transactionIdStore, CheckPointThreshold threshold,
-            StoreFlusher storeFlusher, LogPruning logPruning, TransactionAppender appender, KernelHealth kernelHealth,
-            LogProvider logProvider, CheckPointTracer tracer, Lock lock )
+    public CheckPointerImpl(
+            TransactionIdStore transactionIdStore,
+            CheckPointThreshold threshold,
+            StorageEngine storageEngine,
+            LogPruning logPruning,
+            TransactionAppender appender,
+            DatabaseHealth databaseHealth,
+            LogProvider logProvider,
+            CheckPointTracer tracer,
+            IOLimiter ioLimiter,
+            StoreCopyCheckPointMutex mutex )
     {
         this.appender = appender;
         this.transactionIdStore = transactionIdStore;
         this.threshold = threshold;
-        this.storeFlusher = storeFlusher;
+        this.storageEngine = storageEngine;
         this.logPruning = logPruning;
-        this.kernelHealth = kernelHealth;
+        this.databaseHealth = databaseHealth;
+        this.ioLimiter = ioLimiter;
         this.msgLog = logProvider.getLog( CheckPointerImpl.class );
         this.tracer = tracer;
-        this.lock = lock;
+        this.mutex = mutex;
     }
 
     @Override
@@ -81,106 +80,117 @@ public class CheckPointerImpl extends LifecycleAdapter implements CheckPointer
     }
 
     @Override
-    public long forceCheckPoint() throws IOException
+    public long forceCheckPoint( TriggerInfo info ) throws IOException
     {
-        lock.lock();
-        try
+        ioLimiter.disableLimit();
+        try ( Resource lock = mutex.checkPoint() )
         {
-            return doCheckPoint( LogCheckPointEvent.NULL );
+            return doCheckPoint( info, LogCheckPointEvent.NULL );
         }
         finally
         {
-            lock.unlock();
+            ioLimiter.enableLimit();
         }
     }
 
     @Override
-    public long tryCheckPoint() throws IOException
+    public long tryCheckPoint( TriggerInfo info ) throws IOException
     {
-        if ( lock.tryLock() )
-        {
-            try
-            {
-                return doCheckPoint( LogCheckPointEvent.NULL );
-            }
-            finally
-            {
-                lock.unlock();
-            }
-        }
-        else
-        {
-            lock.lock();
-            try
-            {
-                return lastCheckPointedTx;
-            }
-            finally
-            {
-                lock.unlock();
-            }
-        }
-    }
-
-    @Override
-    public long checkPointIfNeeded() throws IOException
-    {
-        lock.lock();
+        ioLimiter.disableLimit();
         try
         {
-            if ( threshold.isCheckPointingNeeded( transactionIdStore.getLastClosedTransactionId() ) )
+            Resource lockAttempt = mutex.tryCheckPoint();
+            if ( lockAttempt != null )
             {
-                try ( LogCheckPointEvent event = tracer.beginCheckPoint() )
+                try ( Resource lock = lockAttempt )
                 {
-                    return doCheckPoint( event );
+                    return doCheckPoint( info, LogCheckPointEvent.NULL );
                 }
             }
-            return -1;
+            else
+            {
+                try ( Resource lock = mutex.checkPoint() )
+                {
+                    msgLog.info( info.describe( lastCheckPointedTx ) +
+                                 " Check pointing was already running, completed now" );
+                    return lastCheckPointedTx;
+                }
+            }
         }
         finally
         {
-            lock.unlock();
+            ioLimiter.enableLimit();
         }
     }
 
-    private long doCheckPoint( LogCheckPointEvent logCheckPointEvent ) throws IOException
+    @Override
+    public long checkPointIfNeeded( TriggerInfo info ) throws IOException
     {
-        long[] lastClosedTransaction = transactionIdStore.getLastClosedTransaction();
-        long lastClosedTransactionId = lastClosedTransaction[0];
-        LogPosition logPosition = new LogPosition( lastClosedTransaction[1], lastClosedTransaction[2] );
-        msgLog.info( prefix( lastClosedTransactionId ) + "Starting check pointing..." );
+        if ( threshold.isCheckPointingNeeded( transactionIdStore.getLastClosedTransactionId(), info ) )
+        {
+            try ( LogCheckPointEvent event = tracer.beginCheckPoint();
+                    Resource lock = mutex.checkPoint() )
+            {
+                return doCheckPoint( info, event );
+            }
+        }
+        return -1;
+    }
 
-        /*
-         * Check kernel health before going into waiting for transactions to be closed, to avoid
-         * getting into a scenario where we would await a condition that would potentially never
-         * happen.
-         */
-        kernelHealth.assertHealthy( IOException.class );
+    private long doCheckPoint( TriggerInfo triggerInfo, LogCheckPointEvent logCheckPointEvent ) throws IOException
+    {
+        try
+        {
+            long[] lastClosedTransaction = transactionIdStore.getLastClosedTransaction();
+            long lastClosedTransactionId = lastClosedTransaction[0];
+            LogPosition logPosition = new LogPosition( lastClosedTransaction[1], lastClosedTransaction[2] );
+            String prefix = triggerInfo.describe( lastClosedTransactionId );
+            msgLog.info( prefix + " Starting check pointing..." );
+            /*
+             * Check kernel health before going into waiting for transactions to be closed, to avoid
+             * getting into a scenario where we would await a condition that would potentially never
+             * happen.
+             */
+            databaseHealth.assertHealthy( IOException.class );
+            /*
+             * First we flush the store. If we fail now or during the flush, on recovery we'll find the
+             * earlier check point and replay from there all the log entries. Everything will be ok.
+             */
+            msgLog.info( prefix + " Starting store flush..." );
+            storageEngine.flushAndForce( ioLimiter );
+            msgLog.info( prefix + " Store flush completed" );
+            /*
+             * Check kernel health before going to write the next check point.  In case of a panic this check point
+             * will be aborted, which is the safest alternative so that the next recovery will have a chance to
+             * repair the damages.
+             */
+            databaseHealth.assertHealthy( IOException.class );
+            msgLog.info( prefix + " Starting appending check point entry into the tx log..." );
+            appender.checkPoint( logPosition, logCheckPointEvent );
+            threshold.checkPointHappened( lastClosedTransactionId );
+            msgLog.info( prefix + " Appending check point entry into the tx log completed" );
+            msgLog.info( prefix + " Check pointing completed" );
+            /*
+             * Prune up to the version pointed from the latest check point,
+             * since it might be an earlier version than the current log version.
+             */
+            logPruning.pruneLogs( logPosition.getLogVersion() );
+            lastCheckPointedTx = lastClosedTransactionId;
+            return lastClosedTransactionId;
+        }
+        catch ( Throwable t )
+        {
+            // Why only log failure here? It's because check point can potentially be made from various
+            // points of execution e.g. background thread triggering check point if needed and during
+            // shutdown where it's better to have more control over failure handling.
+            msgLog.error( "Error performing check point", t );
+            throw t;
+        }
+    }
 
-        /*
-         * First we flush the store. If we fail now or during the flush, on recovery we'll find the
-         * earlier check point and replay from there all the log entries. Everything will be ok.
-         */
-        msgLog.info( prefix( lastClosedTransactionId ) + " Starting store flush..." );
-        storeFlusher.forceEverything();
-
-        /*
-         * Check kernel health before going to write the next check point.  In case of a panic this check point
-         * will be aborted, which is the safest alternative so that the next recovery will have a chance to
-         * repair the damages.
-         */
-        kernelHealth.assertHealthy( IOException.class );
-        appender.checkPoint( logPosition, logCheckPointEvent );
-        threshold.checkPointHappened( lastClosedTransactionId );
-        msgLog.info( prefix( lastClosedTransactionId ) + "Check pointing completed" );
-
-        /*
-         * Prune up to the version pointed from the latest check point,
-         * since it might be an earlier version than the current log version.
-         */
-        logPruning.pruneLogs( logPosition.getLogVersion() );
-
-        lastCheckPointedTx = lastClosedTransactionId;
-        return lastClosedTransactionId;
+    @Override
+    public long lastCheckPointedTransactionId()
+    {
+        return lastCheckPointedTx;
     }
 }

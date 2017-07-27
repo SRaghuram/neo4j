@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,15 @@
  */
 package org.neo4j.kernel.impl.transaction.log.pruning;
 
-import java.util.concurrent.TimeUnit;
-
-import org.neo4j.helpers.Clock;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.transaction.log.IllegalLogFormatException;
 import org.neo4j.kernel.impl.transaction.log.LogFileInformation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
+import org.neo4j.kernel.impl.transaction.log.pruning.ThresholdConfigParser.ThresholdConfigValue;
+import org.neo4j.time.Clocks;
 
-import static org.neo4j.kernel.configuration.Config.parseLongWithUnit;
+import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.HOURS;
+import static org.neo4j.kernel.impl.transaction.log.pruning.ThresholdConfigParser.parse;
 
 public class LogPruneStrategyFactory
 {
@@ -45,18 +45,6 @@ public class LogPruneStrategyFactory
             return "NO_PRUNING";
         }
     };
-
-    static boolean decidePruneForIllegalLogFormat( IllegalLogFormatException e )
-    {
-        if ( e.wasNewerLogVersion() )
-        {
-            throw new RuntimeException( "Unable to read database logs, because it contains" +
-                    " logs from a newer version of Neo4j.", e );
-        }
-
-        // Hit an old version log, consider this out of date.
-        return true;
-    }
 
     /**
      * Parses a configuration value for log specifying log pruning. It has one of these forms:
@@ -77,63 +65,39 @@ public class LogPruneStrategyFactory
                                                     PhysicalLogFiles files,
                                                     String configValue )
     {
-        String[] tokens = configValue.split( " " );
-        if ( tokens.length == 0 )
+        ThresholdConfigValue value = parse( configValue );
+
+        if ( value == ThresholdConfigValue.NO_PRUNING )
         {
-            throw new IllegalArgumentException( "Invalid log pruning configuration value '" + configValue + "'" );
+            return NO_PRUNING;
         }
 
-        final String boolOrNumber = tokens[0];
-
-        if ( tokens.length == 1 )
-        {
-            switch ( boolOrNumber )
-            {
-                case "true":
-                    return NO_PRUNING;
-                case "false":
-                    final TransactionCountThreshold thresholdToUse = new TransactionCountThreshold( 1 );
-                    return new ThresholdBasedPruneStrategy( fileSystem, logFileInformation, files, thresholdToUse );
-                default:
-                    throw new IllegalArgumentException( "Invalid log pruning configuration value '" + configValue +
-                            "'. The form is 'all' or '<number><unit> <type>' for example '100k txs' " +
-                            "for the latest 100 000 transactions" );
-            }
-        }
-
-        Threshold thresholdToUse = getThresholdByType( fileSystem, tokens[1], boolOrNumber, configValue );
+        Threshold thresholdToUse = getThresholdByType( fileSystem, value, configValue );
         return new ThresholdBasedPruneStrategy( fileSystem, logFileInformation, files, thresholdToUse );
     }
 
     // visible for testing
-    static Threshold getThresholdByType( FileSystemAbstraction fileSystem, String type, String thresholdValueString,
+    static Threshold getThresholdByType( FileSystemAbstraction fileSystem, ThresholdConfigValue value,
             String originalConfigValue )
     {
-        long thresholdValue = parseLongWithUnit( thresholdValueString );
+        long thresholdValue = value.value;
 
-        Threshold thresholdToUse;
-        switch ( type )
+        switch ( value.type )
         {
             case "files":
-                thresholdToUse = new FileCountThreshold( thresholdValue );
-                break;
+                return new FileCountThreshold( thresholdValue );
             case "size":
-                thresholdToUse = new FileSizeThreshold( fileSystem, thresholdValue );
-                break;
+                return new FileSizeThreshold( fileSystem, thresholdValue );
             case "txs":
-                thresholdToUse = new TransactionCountThreshold( thresholdValue );
-                break;
+            case "entries": // txs and entries are synonyms
+                return new EntryCountThreshold( thresholdValue );
             case "hours":
-                thresholdToUse = new TransactionTimespanThreshold( Clock.SYSTEM_CLOCK, TimeUnit.HOURS, thresholdValue );
-                break;
+                return new EntryTimespanThreshold( Clocks.systemClock(), HOURS, thresholdValue );
             case "days":
-                thresholdToUse = new TransactionTimespanThreshold( Clock.SYSTEM_CLOCK, TimeUnit.DAYS, thresholdValue );
-                break;
+                return new EntryTimespanThreshold( Clocks.systemClock(), DAYS, thresholdValue );
             default:
                 throw new IllegalArgumentException( "Invalid log pruning configuration value '" + originalConfigValue +
-                        "'. Invalid type '" + type + "', valid are files, size, txs, hours, days." );
+                        "'. Invalid type '" + value.type + "', valid are files, size, txs, entries, hours, days." );
         }
-        return thresholdToUse;
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,12 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.kernel.GraphDatabaseAPI
-import org.neo4j.kernel.impl.query.QuerySession
+import org.neo4j.cypher.internal.spi.v3_2.TransactionalContextWrapper
 
 case class PreparedPlanExecution(plan: ExecutionPlan, executionMode: CypherExecutionMode, extractedParams: Map[String, Any]) {
-  def execute(graph: GraphDatabaseAPI, txInfo: TransactionInfo, params: Map[String, Any], session: QuerySession) =
-    plan.run(graph, txInfo, executionMode, params ++ extractedParams, session)
+  def execute(transactionalContext: TransactionalContextWrapper, params: Map[String, Any]): ExecutionResult =
+    plan.run(transactionalContext, executionMode, params ++ extractedParams)
 
-  def profile(graph: GraphDatabaseAPI, txInfo: TransactionInfo, params: Map[String, Any], session: QuerySession) =
-    plan.run(graph, txInfo, CypherExecutionMode.profile, params ++ extractedParams, session)
+  def profile(transactionalContext: TransactionalContextWrapper, params: Map[String, Any]): ExecutionResult =
+    plan.run(transactionalContext, CypherExecutionMode.profile, params ++ extractedParams)
 }

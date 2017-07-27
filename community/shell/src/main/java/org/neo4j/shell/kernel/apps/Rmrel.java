@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -56,8 +56,8 @@ public class Rmrel extends TransactionProvidingApp
     public String getDescription()
     {
         return "Deletes a relationship, also ensuring the connectedness of the graph. That check can be ignored with -f\n" +
-        		"Usage: rmrel <relationship id>\n" +
-        		"   or  rmrel -f <relationship id>";
+                "Usage: rmrel <relationship id>\n" +
+                "   or  rmrel -f <relationship id>";
     }
 
     @Override
@@ -76,7 +76,7 @@ public class Rmrel extends TransactionProvidingApp
         Relationship rel = findRel( currentNode, Long.parseLong(
             parser.arguments().get( 0 ) ) );
         rel.delete();
-        
+
         Node otherNode = rel.getOtherNode( currentNode );
 
         boolean deleteOtherNodeIfEmpty = parser.options().containsKey( "d" );

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,30 +21,9 @@ package org.neo4j.test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-
-import sun.reflect.FieldAccessor;
-import sun.reflect.ReflectionFactory;
 
 public class ReflectionUtil
 {
-    private static final ReflectionFactory reflectionFactory = ReflectionFactory.getReflectionFactory();
-
-    public static void setStaticFinalField( Field field, Object value )
-            throws NoSuchFieldException, IllegalAccessException
-    {
-        field.setAccessible( true );
-        final Field modifiersField = Field.class.getDeclaredField( "modifiers" );
-        modifiersField.setAccessible( true );
-
-        int modifiers = modifiersField.getInt( field );
-        modifiers &= ~Modifier.FINAL;
-        modifiersField.setInt( field, modifiers );
-
-        final FieldAccessor fieldAccessor = reflectionFactory.newFieldAccessor( field, false );
-        fieldAccessor.set( null, value );
-    }
-
     public static <T> T getPrivateField( Object target, String fieldName, Class<T> fieldType ) throws Exception
     {
         Class<?> type = target.getClass();
@@ -52,7 +31,7 @@ public class ReflectionUtil
         if ( !fieldType.isAssignableFrom( field.getType() ) )
         {
             throw new IllegalArgumentException( "Field type does not match " + field.getType() + " is no subclass of " +
-                    "" + fieldType );
+                                                "" + fieldType );
         }
         field.setAccessible( true );
         return fieldType.cast( field.get( target ) );
@@ -70,6 +49,20 @@ public class ReflectionUtil
         throw new IllegalArgumentException( "Method '" + methodName + "' does not exist in class " + owner );
     }
 
+    public static <T> void replaceValueInPrivateField( Object target, String fieldName, Class<T> fieldType, T value )
+            throws Exception
+    {
+        Class<?> type = target.getClass();
+        Field field = getField( fieldName, type );
+        if ( !fieldType.isAssignableFrom( field.getType() ) )
+        {
+            throw new IllegalArgumentException( "Field type does not match " + field.getType() + " is no subclass of " +
+                    "" + fieldType );
+        }
+        field.setAccessible( true );
+        field.set( target, value );
+    }
+
     private static Field getField( String fieldName, Class<? extends Object> type ) throws NoSuchFieldException
     {
         if ( type == null )
@@ -84,11 +77,7 @@ public class ReflectionUtil
                 return field;
             }
         }
-        catch ( NoSuchFieldError e )
-        {
-            // Ignore - it might be in the super type
-        }
-        catch ( NoSuchFieldException e )
+        catch ( NoSuchFieldError | NoSuchFieldException e )
         {
             // Ignore - it might be in the super type
         }

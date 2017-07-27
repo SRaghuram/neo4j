@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,33 +19,43 @@
  */
 package org.neo4j.io.pagecache;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.file.OpenOption;
 
 /**
- * The representation of a file that has been mapped into the associated page
- * cache.
+ * The representation of a file that has been mapped into the associated page cache.
  */
 public interface PagedFile extends AutoCloseable
 {
     /**
      * Pin the pages with a shared lock.
-     *
+     * <p>
      * This implies {@link org.neo4j.io.pagecache.PagedFile#PF_NO_GROW}, since
-     * pages under shared locks cannot be safely written to anyway, so there's
+     * pages under read locks cannot be safely written to anyway, so there's
      * no point in trying to go beyond the end of the file.
-     *
-     * This cannot be combined with PF_EXCLUSIVE_LOCK.
+     * <p>
+     * This cannot be combined with {@link #PF_SHARED_WRITE_LOCK}.
      */
-    int PF_SHARED_LOCK = 1;
+    int PF_SHARED_READ_LOCK = 1;
     /**
-     * Pin the pages with an exclusive lock.
-     *
-     * This will mark the pages as dirty, and caused them to be flushed, if
-     * they are evicted.
-     *
-     * This cannot be combined with PF_SHARED_LOCK.
+     * Pin the pages with a shared write lock.
+     * <p>
+     * This will mark the pages as dirty, and caused them to be flushed, if they are evicted.
+     * <p>
+     * Note that write locks are <em>not</em> exclusive. You must use other means to coordinate access to the data on
+     * the pages. The write lock only means that the page will not be concurrently evicted.
+     * <p>
+     * Note also that write locks exclude eviction. So since we can assume that write locks never make conflicting
+     * modifications (higher level locks should ensure this), it is safe to perform page writes without a
+     * {@link PageCursor#shouldRetry() shouldRetry} loop. The {@code shouldRetry} method on write locking cursors
+     * always returns {@code false}.
+     * <p>
+     * This cannot be combined with {@link #PF_SHARED_READ_LOCK}.
      */
-    int PF_EXCLUSIVE_LOCK = 1 << 1;
+    int PF_SHARED_WRITE_LOCK = 1 << 1;
     /**
      * Disallow pinning and navigating to pages outside the range of the
      * underlying file.
@@ -67,9 +77,8 @@ public interface PagedFile extends AutoCloseable
 
     /**
      * Initiate an IO interaction with the contents of the paged file.
-     *
-     * <p>The basic structure of an interaction looks like this:
-     *
+     * <p>
+     * The basic structure of an interaction looks like this:
      * <pre><code>
      *     try ( PageCursor cursor = pagedFile.io( startingPageId, intentFlags ) )
      *     {
@@ -83,50 +92,38 @@ public interface PagedFile extends AutoCloseable
      *         }
      *     }
      * </code></pre>
-     *
-     * {@link org.neo4j.io.pagecache.PageCursor PageCursors} are
-     * <code>AutoCloseable</code>, so interacting with them using
-     * <code>try-with-resources</code> is recommended.
-     *
-     * <p>The returned PageCursor is initially not bound, so
-     * {@link PageCursor#next() next} must be called on it before it can be
-     * used.
-     *
-     * <p>The first <code>next</code> call will advance the cursor to the
-     * initial page, as given by the <code>pageId</code> parameter.
-     * Until then, the cursor won't be bound to any page, the
-     * {@link PageCursor#getCurrentPageId()} method will return the
-     * {@link org.neo4j.io.pagecache.PageCursor#UNBOUND_PAGE_ID} constant, and
-     * attempts at reading from or writing to the cursor will throw a
-     * NullPointerException.
-     *
-     * <p>After the <code>next</code> call, if it returns <code>true</code>,
-     * the cursor will be bound to a page, and the get and put methods will
-     * access that page.
-     *
-     * <p>After a call to {@link PageCursor#rewind()}, the cursor will return
-     * to its initial state.
-     *
-     * <p>The <code>pf_flags</code> argument expresses the intent of the IO
-     * operation.
-     * It is a bitmap that combines various <code>PF_*</code> constants.
-     * You must always specify your desired locking behaviour, with either
-     * {@link org.neo4j.io.pagecache.PagedFile#PF_EXCLUSIVE_LOCK} or
-     * {@link org.neo4j.io.pagecache.PagedFile#PF_SHARED_LOCK}.
-     * The two locking modes cannot be combined, but other intents can be
-     * combined with them.
-     * For instance, if you want to write to a page, but also make sure that
-     * you don't write beyond the end of the file, then you can express your
-     * intent with <code>PF_EXCLUSIVE_LOCK | PF_NO_GROW</code> – note how the
-     * flags are combined with a bitwise-OR operator.
-     *
-     *
+     * {@link org.neo4j.io.pagecache.PageCursor PageCursors} are {@link AutoCloseable}, so interacting with them
+     * using <em>try-with-resources</em> is recommended.
+     * <p>
+     * The returned PageCursor is initially not bound, so {@link PageCursor#next() next} must be called on it before it
+     * can be used.
+     * <p>
+     * The first {@code next} call will advance the cursor to the initial page, as given by the {@code pageId}
+     * parameter. Until then, the cursor won't be bound to any page, the {@link PageCursor#getCurrentPageId()} method
+     * will return the {@link org.neo4j.io.pagecache.PageCursor#UNBOUND_PAGE_ID} constant, and attempts at reading from
+     * or writing to the cursor will throw a {@link NullPointerException}.
+     * <p>
+     * After the {@code next} call, if it returns {@code true}, the cursor will be bound to a page, and the get and put
+     * methods will access that page.
+     * <p>
+     * After a call to {@link PageCursor#rewind()}, the cursor will return to its initial state.
+     * <p>
+     * The {@code pf_flags} argument expresses the intent of the IO operation. It is a bitmap that combines various
+     * {@code PF_*} constants. You must always specify your desired locking behaviour, with either
+     * {@link org.neo4j.io.pagecache.PagedFile#PF_SHARED_WRITE_LOCK} or
+     * {@link org.neo4j.io.pagecache.PagedFile#PF_SHARED_READ_LOCK}.
+     * <p>
+     * The two locking modes cannot be combined, but other intents can be combined with them. For instance, if you want
+     * to write to a page, but also make sure that you don't write beyond the end of the file, then you can express
+     * your intent with {@code PF_SHARED_WRITE_LOCK | PF_NO_GROW} – note how the flags are combined with a bitwise-OR
+     * operator.
+     * Arithmetic addition can also be used, but might not make it as clear that we are dealing with a bit-set.
      *
      * @param pageId The initial file-page-id, that the cursor will be bound to
-     *               after the first call to <code>next</code>.
+     * after the first call to <code>next</code>.
      * @param pf_flags A bitmap of <code>PF_*</code> constants composed with
-     *                 the bitwise-OR operator, that expresses the desired
-     *                 locking behaviour, and other hints.
+     * the bitwise-OR operator, that expresses the desired
+     * locking behaviour, and other hints.
      * @return A PageCursor in its initial unbound state.
      * Never <code>null</code>.
      * @throws IOException if there was an error accessing the underlying file.
@@ -139,27 +136,73 @@ public interface PagedFile extends AutoCloseable
     int pageSize();
 
     /**
+     * Size of file, in bytes.
+     */
+    long fileSize() throws IOException;
+
+    /**
      * Flush all dirty pages into the file channel, and force the file channel to disk.
-     *
-     * Note: Flushing has to take locks on pages, so you cannot call flush
-     * while you have pages pinned.
      */
     void flushAndForce() throws IOException;
 
     /**
-     * Get the file-page-id of the last page in the file.
+     * Flush all dirty pages into the file channel, and force the file channel to disk, but limit the rate of IO as
+     * advised by the given IOPSLimiter.
      *
-     * This will return -1 if the file is completely empty.
+     * @param limiter The {@link IOLimiter} that determines if pauses or sleeps should be injected into the flushing
+     * process to keep the IO rate down.
+     */
+    void flushAndForce( IOLimiter limiter ) throws IOException;
+
+    /**
+     * Get the file-page-id of the last page in the file.
+     * <p>
+     * This will return <em>a negative number</em> (not necessarily -1) if the file is completely empty.
+     *
+     * @throws IllegalStateException if this file has been unmapped
      */
     long getLastPageId() throws IOException;
 
     /**
      * Release a handle to a paged file.
-     *
+     * <p>
      * If this is the last handle to the file, it will be flushed and closed.
+     * <p>
+     * Note that this operation assumes that there are no write page cursors open on the paged file. If there are, then
+     * their writes may be lost, as they might miss the last flush that can happen on their data.
      *
-     * @see AutoCloseable#close()
      * @throws IOException instead of the Exception superclass as defined in AutoCloseable, if .
+     * @see AutoCloseable#close()
      */
     void close() throws IOException;
+
+    /**
+     * Open a {@link ReadableByteChannel} view of this PagedFile.
+     * <p>
+     * The channel will read the file sequentially from the beginning till the end.
+     * Seeking is not supported.
+     * <p>
+     * The channel is not thread-safe.
+     *
+     * @return A channel for reading the paged file.
+     */
+    ReadableByteChannel openReadableByteChannel() throws IOException;
+
+    /**
+     * Open a {@link WritableByteChannel} view of this PagedFile.
+     * <p>
+     * The channel will write to the file sequentially from the beginning of the file, overwriting whatever is there
+     * already. If the amount of new data is less than the amount of existing data, then the old data will still be
+     * present at the far end of the file. Thus, this function works neither like opening a file for writing, nor like
+     * appending to a file.
+     * <p>
+     * If this is undesired, then the file can be mapped with {@link java.nio.file.StandardOpenOption#TRUNCATE_EXISTING}
+     * to remove the existing data before writing to the file.
+     * <p>
+     * The channel is not thread-safe.
+     *
+     * @return A channel for writing to the paged file.
+     * @see PageCache#map(File, int, OpenOption...)
+     */
+    WritableByteChannel openWritableByteChannel() throws IOException;
 }

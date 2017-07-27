@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,8 +23,8 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
+import java.util.function.Supplier;
 
-import org.neo4j.function.Supplier;
 import org.neo4j.graphdb.DependencyResolver;
 
 /**
@@ -50,13 +50,12 @@ public class DependenciesProxy
                 new ProxyHandler(dependencyResolver) );
     }
 
-
     private static class ProxyHandler
             implements InvocationHandler
     {
         private DependencyResolver dependencyResolver;
 
-        public ProxyHandler( DependencyResolver dependencyResolver )
+        ProxyHandler( DependencyResolver dependencyResolver )
         {
             this.dependencyResolver = dependencyResolver;
         }
@@ -69,7 +68,8 @@ public class DependenciesProxy
                 if (method.getReturnType().equals( Supplier.class ))
                 {
                     return dependencyResolver.provideDependency( (Class)((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0] );
-                } else
+                }
+                else
                 {
                     return dependencyResolver.resolveDependency( method.getReturnType() );
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.ws.rs.core.MediaType;
 
 import org.neo4j.server.rest.repr.formats.ListWrappingWriter;
@@ -87,15 +86,17 @@ public class RepresentationTestAccess
         repr.serialize( new ListSerializer( new ListWrappingWriter( result ), baseUri, null ) );
         return result;
     }
-    
+
     public static long nodeUriToId( String nodeUri )
     {
         int lastSlash = nodeUri.lastIndexOf( '/' );
         if ( lastSlash == -1 )
+        {
             throw new IllegalArgumentException( "'" + nodeUri + "' isn't a node URI" );
-        return Long.parseLong( nodeUri.substring( lastSlash+1 ) );
+        }
+        return Long.parseLong( nodeUri.substring( lastSlash + 1 ) );
     }
-    
+
     private static class StringFormat extends RepresentationFormat
     {
         StringFormat()

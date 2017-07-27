@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,12 +22,20 @@ package org.neo4j.kernel.impl.util;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+
+import org.neo4j.test.rule.concurrent.OtherThreadRule;
+
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertThat;
 
 public class DebugUtilTest
 {
-    public final @Rule TestName testName = new TestName();
+    private static final String THE_OTHER_THREAD_NAME = "TheOtherThread";
+
+    @Rule
+    public final TestName testName = new TestName();
+    @Rule
+    public final OtherThreadRule<Void> t2 = new OtherThreadRule<>( THE_OTHER_THREAD_NAME );
 
     @Test
     public void shouldFigureOutThatThisIsATest()

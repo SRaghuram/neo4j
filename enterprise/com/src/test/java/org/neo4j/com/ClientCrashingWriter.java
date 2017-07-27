@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -45,8 +45,14 @@ public class ClientCrashingWriter implements MadeUpWriter
             try
             {
                 int size = data.read( buffer );
-                if ( size == -1 ) break;
-                if ( (totalSize += size) >= crashAtSize ) client.stop();
+                if ( size == -1 )
+                {
+                    break;
+                }
+                if ( (totalSize += size) >= crashAtSize )
+                {
+                    client.stop();
+                }
             }
             catch ( IOException e )
             {
@@ -54,7 +60,7 @@ public class ClientCrashingWriter implements MadeUpWriter
             }
         }
     }
-    
+
     public int getSizeRead()
     {
         return totalSize;

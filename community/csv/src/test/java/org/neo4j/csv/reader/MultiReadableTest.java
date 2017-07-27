@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -98,9 +98,9 @@ public class MultiReadableTest
 
         // we will transition to the new reader in the call below
         reader.read( buffer, buffer.front() );
-        assertEquals( 23+15, reader.position() );
+        assertEquals( 23 + 15, reader.position() );
         reader.read( buffer, buffer.front() );
-        assertEquals( 23+30, reader.position() );
+        assertEquals( 23 + 30, reader.position() );
         reader.read( buffer, buffer.front() );
         assertFalse( buffer.hasAvailable() );
     }

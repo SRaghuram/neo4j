@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel.impl.transaction;
 
-import java.util.concurrent.ExecutionException;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -28,17 +26,18 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 
+import java.util.concurrent.ExecutionException;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.DatabaseRule;
-import org.neo4j.test.GraphTransactionRule;
-import org.neo4j.test.ImpermanentDatabaseRule;
 import org.neo4j.test.OtherThreadExecutor;
+import org.neo4j.test.rule.DatabaseRule;
+import org.neo4j.test.rule.GraphTransactionRule;
+import org.neo4j.test.rule.ImpermanentDatabaseRule;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
 import static org.junit.Assert.fail;
 
 public class ManualAcquireLockTest
@@ -46,7 +45,8 @@ public class ManualAcquireLockTest
     public DatabaseRule db = new ImpermanentDatabaseRule(  );
     public GraphTransactionRule tx = new GraphTransactionRule( db );
 
-    @Rule public TestRule chain = RuleChain.outerRule( db ).around( tx );
+    @Rule
+    public TestRule chain = RuleChain.outerRule( db ).around( tx );
 
     private Worker worker;
 
@@ -77,7 +77,7 @@ public class ManualAcquireLockTest
             worker.setProperty( node, key, "ksjd" );
             fail( "Shouldn't be able to grab it" );
         }
-        catch ( Exception e )
+        catch ( Exception ignored )
         {
         }
         nodeLock.release();
@@ -87,7 +87,7 @@ public class ManualAcquireLockTest
         {
             worker.finishTx();
         }
-        catch(ExecutionException e)
+        catch ( ExecutionException e )
         {
             // Ok, interrupting the thread while it's waiting for a lock will lead to tx failure.
         }
@@ -141,7 +141,7 @@ public class ManualAcquireLockTest
         {
             worker.finishTx();
         }
-        catch(ExecutionException e)
+        catch ( ExecutionException e )
         {
             // Ok, interrupting the thread while it's waiting for a lock will lead to tx failure.
         }
@@ -149,7 +149,7 @@ public class ManualAcquireLockTest
 
     private GraphDatabaseService getGraphDb()
     {
-        return db.getGraphDatabaseService();
+        return db.getGraphDatabaseAPI();
     }
 
     private class State
@@ -157,7 +157,7 @@ public class ManualAcquireLockTest
         private final GraphDatabaseService graphDb;
         private Transaction tx;
 
-        public State( GraphDatabaseService graphDb )
+        State( GraphDatabaseService graphDb )
         {
             this.graphDb = graphDb;
         }
@@ -165,7 +165,7 @@ public class ManualAcquireLockTest
 
     private class Worker extends OtherThreadExecutor<State>
     {
-        public Worker()
+        Worker()
         {
             super( "other thread", new State( getGraphDb() ) );
         }

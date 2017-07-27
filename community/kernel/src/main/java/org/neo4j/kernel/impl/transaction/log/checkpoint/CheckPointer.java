@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,8 @@ package org.neo4j.kernel.impl.transaction.log.checkpoint;
 
 import java.io.IOException;
 
+import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
+
 /**
  * This interface represent a check pointer which is responsible to write check points in the transaction log.
  */
@@ -32,10 +34,12 @@ public interface CheckPointer
      *
      * This method does NOT handle concurrency since there should be only one check point thread running.
      *
+     * @param triggerInfo the info describing why check pointing has been triggered
+     * pending approval of the threshold check
      * @return the transaction id used for the check pointing or -1 if check pointing wasn't needed
      * @throws IOException if writing the check point fails
      */
-    long checkPointIfNeeded() throws IOException;
+    long checkPointIfNeeded( TriggerInfo triggerInfo ) throws IOException;
 
     /**
      * This method tries the write of a check point in the transaction log. If there is no running check pointing it
@@ -43,26 +47,26 @@ public interface CheckPointer
      *
      * It is mostly used for testing purpose and to force a check point when shutting down the database.
      *
+     * @param triggerInfo the info describing why check pointing has been triggered
      * @return the transaction id used for the check pointing
      * @throws IOException if writing the check point fails
      */
-    long tryCheckPoint() throws IOException;
+    long tryCheckPoint( TriggerInfo triggerInfo ) throws IOException;
 
     /**
      * This method forces the write of a check point in the transaction log.
      *
      * It is mostly used for testing purpose and to force a check point when shutting down the database.
      *
+     * @param triggerInfo the info describing why check pointing has been triggered
      * @return the transaction id used for the check pointing
      * @throws IOException if writing the check point fails
      */
-    long forceCheckPoint() throws IOException;
+    long forceCheckPoint( TriggerInfo triggerInfo ) throws IOException;
 
-    class PrintFormat
-    {
-        public static String prefix( long transactionId )
-        {
-            return "Check Pointing [" + transactionId + "]: ";
-        }
-    }
+    /**
+     * @return the transaction id which the last checkpoint was made it. If there's no checkpoint then
+     * {@link TransactionIdStore#BASE_TX_ID} is returned.
+     */
+    long lastCheckPointedTransactionId();
 }

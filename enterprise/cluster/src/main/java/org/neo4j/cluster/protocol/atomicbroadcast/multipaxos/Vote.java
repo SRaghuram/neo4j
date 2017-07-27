@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,14 +20,22 @@
 package org.neo4j.cluster.protocol.atomicbroadcast.multipaxos;
 
 import org.neo4j.cluster.InstanceId;
+import org.neo4j.cluster.protocol.election.ElectionCredentials;
+import org.neo4j.cluster.protocol.election.ElectionCredentialsProvider;
 
+/**
+ * A cluster coordinator election vote. Each vote contains the id of the server and any credentials (see {@link
+ * ElectionCredentialsProvider} implementations for details).
+ * <p/>
+ * Votes are comparable so that they can be ordered to find winner. Credentials implement the comparison rules.
+ */
 public class Vote
         implements Comparable<Vote>
 {
     private final InstanceId suggestedNode;
-    private final Comparable<Object> voteCredentials;
+    private final ElectionCredentials voteCredentials;
 
-    public Vote( InstanceId suggestedNode, Comparable<Object> voteCredentials )
+    public Vote( InstanceId suggestedNode, ElectionCredentials voteCredentials )
     {
         this.suggestedNode = suggestedNode;
         this.voteCredentials = voteCredentials;
@@ -38,7 +46,7 @@ public class Vote
         return suggestedNode;
     }
 
-    public Comparable<Object> getCredentials()
+    public Comparable<ElectionCredentials> getCredentials()
     {
         return voteCredentials;
     }

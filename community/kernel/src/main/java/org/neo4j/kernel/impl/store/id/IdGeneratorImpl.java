@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,18 +21,12 @@ package org.neo4j.kernel.impl.store.id;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.LinkedList;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.kernel.impl.store.InvalidIdGeneratorException;
 import org.neo4j.kernel.impl.store.UnderlyingStorageException;
+import org.neo4j.kernel.impl.store.id.validation.IdValidator;
 
 import static java.lang.Math.max;
-
-import static org.neo4j.io.fs.FileUtils.truncateFile;
 
 /**
  * This class generates unique ids for a resource type. For example, nodes in a
@@ -66,36 +60,15 @@ import static org.neo4j.io.fs.FileUtils.truncateFile;
  */
 public class IdGeneratorImpl implements IdGenerator
 {
-    // sticky(byte), nextFreeId(long)
-    private static final int HEADER_SIZE = 9;
-
-    // if sticky the id generator wasn't closed properly so it has to be
-    // rebuilt (go through the node, relationship, property, rel type etc files)
-    private static final byte CLEAN_GENERATOR = (byte) 0;
-    private static final byte STICKY_GENERATOR = (byte) 1;
-
+    /**
+     * Invalid and reserved id value. Represents special values, f.ex. the end of a relationships/property chain.
+     * Please use {@link IdValidator} to validate generated ids.
+     */
     public static final long INTEGER_MINUS_ONE = 0xFFFFFFFFL;  // 4294967295L;
 
-    // number of defragged ids to grab from file in batch (also used for write)
-    private int grabSize = -1;
-    private final AtomicLong highId = new AtomicLong( -1 );
-    // total bytes read from file, used in writeIdBatch() and close()
-    private long readPosition;
-    // marks how much this session is allowed to read from previously released id batches.
-    private long maxReadPosition = HEADER_SIZE;
-    // used to calculate number of ids actually in use
-    private long defraggedIdCount = -1;
-
-    private final File file;
-    private final FileSystemAbstraction fs;
-    private StoreChannel fileChannel = null;
-    // defragged ids read from file (freed in a previous session).
-    private final LinkedList<Long> idsReadFromFile = new LinkedList<>();
-    // ids freed in this session that haven't been flushed to disk yet
-    private final LinkedList<Long> releasedIdList = new LinkedList<>();
-
     private final long max;
-    private final boolean aggressiveReuse;
+    private final IdContainer idContainer;
+    private long highId;
 
     /**
      * Opens the id generator represented by <CODE>fileName</CODE>. The
@@ -126,17 +99,10 @@ public class IdGeneratorImpl implements IdGenerator
     public IdGeneratorImpl( FileSystemAbstraction fs, File file, int grabSize, long max, boolean aggressiveReuse,
             long highId )
     {
-        this.fs = fs;
-        this.aggressiveReuse = aggressiveReuse;
-        if ( grabSize < 1 )
-        {
-            throw new IllegalArgumentException( "Illegal grabSize: " + grabSize );
-        }
         this.max = max;
-        this.file = file;
-        this.grabSize = grabSize;
-        initGenerator();
-        this.highId.set( max( this.highId.get(), highId ) );
+        this.idContainer = new IdContainer( fs, file, grabSize, aggressiveReuse );
+        this.idContainer.init();
+        this.highId = max( idContainer.getInitialHighId(), highId );
     }
 
     /**
@@ -154,69 +120,18 @@ public class IdGeneratorImpl implements IdGenerator
     public synchronized long nextId()
     {
         assertStillOpen();
-        long nextDefragId = nextIdFromDefragList();
-        if ( nextDefragId != -1 )
+        long nextDefragId = idContainer.getReusableId();
+        if ( nextDefragId != IdContainer.NO_RESULT )
         {
             return nextDefragId;
         }
 
-        long id = highId.get();
-        if ( id == INTEGER_MINUS_ONE )
+        if ( IdValidator.isReservedId( highId ) )
         {
-            // Skip the integer -1 (0xFFFFFFFF) because it represents
-            // special values, f.ex. the end of a relationships/property chain.
-            id = highId.incrementAndGet();
+            highId++;
         }
-        assertIdWithinCapacity( id );
-        highId.incrementAndGet();
-        return id;
-    }
-
-    private void assertIdWithinCapacity( long id )
-    {
-        if ( id > max || id < 0  )
-        {
-            throw new UnderlyingStorageException(
-                    "Id capacity exceeded: " + id + " is not within bounds [0; " + max + "] for " + file );
-        }
-    }
-
-    private boolean canReadMoreIdBatches()
-    {
-        return readPosition < maxReadPosition;
-    }
-
-    private long nextIdFromDefragList()
-    {
-        if ( aggressiveReuse )
-        {
-            Long id = releasedIdList.poll();
-            if ( id != null )
-            {
-                defraggedIdCount--;
-                return id;
-            }
-        }
-
-        if ( !idsReadFromFile.isEmpty() || canReadMoreIdBatches() )
-        {
-            if ( idsReadFromFile.isEmpty() )
-            {
-                readIdBatch();
-            }
-            long id = idsReadFromFile.removeFirst();
-            defraggedIdCount--;
-            return id;
-        }
-        return -1;
-    }
-
-    private void assertStillOpen()
-    {
-        if ( fileChannel == null )
-        {
-            throw new IllegalStateException( "Closed id generator " + file );
-        }
+        IdValidator.assertValidId( highId, max );
+        return highId++;
     }
 
     @Override
@@ -229,7 +144,7 @@ public class IdGeneratorImpl implements IdGenerator
         long[] defragIds = new long[size];
         while ( count < size )
         {
-            long id = nextIdFromDefragList();
+            long id = idContainer.getReusableId();
             if ( id == -1 )
             {
                 break;
@@ -243,7 +158,7 @@ public class IdGeneratorImpl implements IdGenerator
         System.arraycopy( tmpArray, 0, defragIds, 0, count );
 
         int sizeLeftForRange = size - count;
-        long start = highId.get();
+        long start = highId;
         setHighId( start + sizeLeftForRange );
         return new IdRange( defragIds, start, sizeLeftForRange );
     }
@@ -255,10 +170,10 @@ public class IdGeneratorImpl implements IdGenerator
      * @param id The next free id returned from {@link #nextId()} if there are no existing free ids.
      */
     @Override
-    public void setHighId( long id )
+    public synchronized void setHighId( long id )
     {
-        assertIdWithinCapacity( id );
-        highId.set( id );
+        IdValidator.assertIdWithinCapacity( id, max );
+        highId = id;
     }
 
     /**
@@ -268,15 +183,15 @@ public class IdGeneratorImpl implements IdGenerator
      * @return The next free "high" id
      */
     @Override
-    public long getHighId()
+    public synchronized long getHighId()
     {
-        return highId.get();
+        return highId;
     }
 
     @Override
-    public long getHighestPossibleIdInUse()
+    public synchronized long getHighestPossibleIdInUse()
     {
-        return getHighId()-1;
+        return highId - 1;
     }
 
     /**
@@ -295,25 +210,18 @@ public class IdGeneratorImpl implements IdGenerator
     @Override
     public synchronized void freeId( long id )
     {
-        if ( id == INTEGER_MINUS_ONE )
+        idContainer.assertStillOpen();
+
+        if ( IdValidator.isReservedId( id ) )
         {
             return;
         }
 
-        if ( fileChannel == null )
+        if ( id < 0 || id >= highId )
         {
-            throw new IllegalStateException( "Generator closed " + file );
+            throw new IllegalArgumentException( "Illegal id[" + id + "], highId is " + highId );
         }
-        if ( id < 0 || id >= highId.get() )
-        {
-            throw new IllegalArgumentException( "Illegal id[" + id + "], highId is " + highId.get() );
-        }
-        releasedIdList.add( id );
-        defraggedIdCount++;
-        if ( releasedIdList.size() >= grabSize )
-        {
-            writeIdBatch( ByteBuffer.allocate( grabSize*8 ) );
-        }
+        idContainer.freeId( id );
     }
 
     /**
@@ -328,350 +236,53 @@ public class IdGeneratorImpl implements IdGenerator
     @Override
     public synchronized void close()
     {
-        if ( highId.get() == -1 )
-        {
-            return;
-        }
-
-        // write out lists
-        ByteBuffer writeBuffer = ByteBuffer.allocate( grabSize*8 );
-        if ( !releasedIdList.isEmpty() )
-        {
-            writeIdBatch( writeBuffer );
-        }
-        if ( !idsReadFromFile.isEmpty() )
-        {
-            while ( !idsReadFromFile.isEmpty() )
-            {
-                releasedIdList.add( idsReadFromFile.removeFirst() );
-            }
-            writeIdBatch( writeBuffer );
-        }
-
-        try
-        {
-            ByteBuffer buffer = ByteBuffer.allocate( HEADER_SIZE );
-            writeHeader( buffer );
-            defragReusableIdsInFile( writeBuffer );
-
-            fileChannel.force( false );
-
-            markAsCleanlyClosed( buffer );
-
-            // flush and close
-            fileChannel.force( false );
-            fileChannel.close();
-            fileChannel = null;
-            // make this generator unusable
-            highId.set( -1 );
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException(
-                    "Unable to close id generator " + file, e );
-        }
-    }
-
-    private void markAsCleanlyClosed( ByteBuffer buffer ) throws IOException
-    {
-        // remove sticky
-        buffer.clear();
-        buffer.put( CLEAN_GENERATOR );
-        buffer.limit( 1 );
-        buffer.flip();
-        fileChannel.position( 0 );
-        fileChannel.write( buffer );
-    }
-
-    private void defragReusableIdsInFile( ByteBuffer writeBuffer ) throws IOException
-    {
-        if ( readPosition > HEADER_SIZE )
-        {
-            long writePosition = HEADER_SIZE;
-            long position = Math.min( readPosition, maxReadPosition );
-            int bytesRead;
-            do
-            {
-                writeBuffer.clear();
-                fileChannel.position( position );
-                bytesRead = fileChannel.read( writeBuffer );
-                position += bytesRead;
-                writeBuffer.flip();
-                fileChannel.position( writePosition );
-                writePosition += fileChannel.write( writeBuffer );
-            }
-            while ( bytesRead > 0 );
-            // truncate
-            fileChannel.truncate( writePosition );
-        }
-    }
-
-    private void writeHeader( ByteBuffer buffer ) throws IOException
-    {
-        fileChannel.position( 0 );
-        buffer.put( STICKY_GENERATOR ).putLong( highId.get() );
-        buffer.flip();
-        fileChannel.write( buffer );
+        idContainer.close( highId );
     }
 
     /**
      * Creates a new id generator.
      *
-     * @param fileName
-     *            The name of the id generator
-     * @param throwIfFileExists
+     * @param fileName The name of the id generator
+     * @param throwIfFileExists if {@code true} will cause an {@link UnderlyingStorageException} to be thrown if
+     * the file already exists. if {@code false} will truncate the file writing the header in it.
      */
     public static void createGenerator( FileSystemAbstraction fs, File fileName, long highId,
                                         boolean throwIfFileExists )
     {
-        // sanity checks
-        if ( fs == null )
-        {
-            throw new IllegalArgumentException( "Null filesystem" );
-        }
-        if ( fileName == null )
-        {
-            throw new IllegalArgumentException( "Null filename" );
-        }
-        if ( throwIfFileExists && fs.fileExists( fileName ) )
-        {
-            throw new IllegalStateException( "Can't create IdGeneratorFile["
-                + fileName + "], file already exists" );
-        }
-        try
-        {
-            StoreChannel channel = fs.create( fileName );
-            // write the header
-            ByteBuffer buffer = ByteBuffer.allocate( HEADER_SIZE );
-            buffer.put( CLEAN_GENERATOR ).putLong( highId ).flip();
-            channel.write( buffer );
-            channel.force( false );
-            channel.close();
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException(
-                "Unable to create id generator" + fileName, e );
-        }
-    }
-
-    // initialize the id generator and performs a simple validation
-    private synchronized void initGenerator()
-    {
-        try
-        {
-            fileChannel = fs.open( file, "rw" );
-            ByteBuffer buffer = readHeader();
-            markAsSticky( buffer );
-
-            fileChannel.position( HEADER_SIZE );
-            maxReadPosition = fileChannel.size();
-            defraggedIdCount = (int) (maxReadPosition - HEADER_SIZE) / 8;
-            readIdBatch();
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException(
-                    "Unable to init id generator " + file, e );
-        }
-    }
-
-    private void markAsSticky( ByteBuffer buffer ) throws IOException
-    {
-        buffer.clear();
-        buffer.put( STICKY_GENERATOR ).limit( 1 ).flip();
-        fileChannel.position( 0 );
-        fileChannel.write( buffer );
-    }
-
-    private ByteBuffer readHeader() throws IOException
-    {
-        try
-        {
-            ByteBuffer buffer = readHighIdFromHeader( fileChannel, file );
-            readPosition = HEADER_SIZE;
-            this.highId.set( buffer.getLong() );
-            return buffer;
-        }
-        catch ( InvalidIdGeneratorException e )
-        {
-            fileChannel.close();
-            throw e;
-        }
-    }
-
-    private static ByteBuffer readHighIdFromHeader( StoreChannel channel, File fileName ) throws IOException
-    {
-        ByteBuffer buffer = ByteBuffer.allocate( HEADER_SIZE );
-        int read = channel.read( buffer );
-        if ( read != HEADER_SIZE )
-        {
-            throw new InvalidIdGeneratorException(
-                "Unable to read header, bytes read: " + read );
-        }
-        buffer.flip();
-        byte storageStatus = buffer.get();
-        if ( storageStatus != CLEAN_GENERATOR )
-        {
-            throw new InvalidIdGeneratorException( "Sticky generator[ " +
-                fileName + "] delete this id file and build a new one" );
-        }
-        return buffer;
+        IdContainer.createEmptyIdFile( fs, fileName, highId, throwIfFileExists );
     }
 
     public static long readHighId( FileSystemAbstraction fileSystem, File file ) throws IOException
     {
-        try ( StoreChannel channel = fileSystem.open( file, "r" ) )
-        {
-            return readHighIdFromHeader( channel, file ).getLong();
-        }
-    }
-
-    private void readIdBatch()
-    {
-        if ( !canReadMoreIdBatches() )
-        {
-            return;
-        }
-
-        try
-        {
-            int howMuchToRead = (int) Math.min( grabSize*8, maxReadPosition-readPosition );
-            ByteBuffer readBuffer = ByteBuffer.allocate( howMuchToRead );
-
-            fileChannel.position( readPosition );
-            int bytesRead = fileChannel.read( readBuffer );
-            assert fileChannel.position() <= maxReadPosition;
-            readPosition += bytesRead;
-            readBuffer.flip();
-            assert (bytesRead % 8) == 0;
-            int idsRead = bytesRead / 8;
-            for ( int i = 0; i < idsRead; i++ )
-            {
-                long id = readBuffer.getLong();
-                if ( id != INTEGER_MINUS_ONE )
-                {
-                    idsReadFromFile.add( id );
-                }
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException(
-                "Failed reading defragged id batch", e );
-        }
-    }
-
-    // writes a batch of defragged ids to file
-    private void writeIdBatch( ByteBuffer writeBuffer )
-    {
-        // position at end
-        try
-        {
-            fileChannel.position( fileChannel.size() );
-            writeBuffer.clear();
-            while ( !releasedIdList.isEmpty() )
-            {
-                long id = releasedIdList.removeFirst();
-                if ( id == INTEGER_MINUS_ONE )
-                {
-                    continue;
-                }
-                writeBuffer.putLong( id );
-                if ( writeBuffer.position() == writeBuffer.capacity() )
-                {
-                    writeBuffer.flip();
-                    while ( writeBuffer.hasRemaining() )
-                    {
-                        fileChannel.write( writeBuffer );
-                    }
-                    writeBuffer.clear();
-                }
-            }
-            writeBuffer.flip();
-            while ( writeBuffer.hasRemaining() )
-            {
-                fileChannel.write( writeBuffer );
-            }
-            // position for next readIdBatch
-            fileChannel.position( readPosition );
-            if ( aggressiveReuse )
-            {
-                maxReadPosition = fileChannel.size();
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException(
-                "Unable to write defragged id " + " batch", e );
-        }
-    }
-
-    /**
-     * Utility method that will dump all defragged id's and the "high id" to
-     * console. Do not call while running store using this id generator since it
-     * could corrupt the id generator (not thread safe). This method will close
-     * the id generator after being invoked.
-     */
-    // TODO make this a nice, cosy, reusable visitor instead?
-    public synchronized void dumpFreeIds()
-    {
-        while ( canReadMoreIdBatches() )
-        {
-            readIdBatch();
-        }
-        for ( Long id : idsReadFromFile )
-        {
-            System.out.print( " " + id );
-        }
-        System.out.println( "\nNext free id: " + highId );
-        close();
+        return IdContainer.readHighId( fileSystem, file );
     }
 
     @Override
     public synchronized long getNumberOfIdsInUse()
     {
-        return highId.get() - defraggedIdCount;
+        return highId - getDefragCount();
     }
 
     @Override
-    public long getDefragCount()
+    public synchronized long getDefragCount()
     {
-        return defraggedIdCount;
-    }
-
-    public void clearFreeIds()
-    {
-        releasedIdList.clear();
-        idsReadFromFile.clear();
-        defraggedIdCount = -1;
-        try
-        {
-            truncateFile( fileChannel, HEADER_SIZE );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
-        }
+        return idContainer.getFreeIdCount();
     }
 
     @Override
-    public void delete()
+    public synchronized void delete()
     {
-        if ( highId.get() != -1 )
-        {
-            throw new RuntimeException( "Must be closed to delete" );
-        }
-        if ( !fs.deleteFile( file ) )
-        {
-            throw new UnderlyingStorageException( "Unable to delete id generator " + file );
-        }
+        idContainer.delete();
+    }
+
+    private void assertStillOpen()
+    {
+        idContainer.assertStillOpen();
     }
 
     @Override
     public String toString()
     {
-        return "IdGeneratorImpl " + hashCode() + " [highId=" + highId + ", defragged=" + defraggedIdCount + ", fileName="
-               + file + ", max=" + max + ", aggressive=" + aggressiveReuse + "]";
+        return "IdGeneratorImpl " + hashCode() + " [max=" + max + ", idContainer=" + idContainer + "]";
     }
 }

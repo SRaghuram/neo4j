@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,13 +21,11 @@ package org.neo4j.kernel.impl.store;
 
 import java.io.File;
 
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.DefaultIdGeneratorFactory;
-import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.CountsAccessor;
+import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
@@ -67,37 +65,21 @@ public class StoreAccess
     private boolean closeable;
     private final NeoStores neoStores;
 
-    public StoreAccess( GraphDatabaseAPI graphdb )
-    {
-        this( getNeoStoresFrom( graphdb ) );
-    }
-
-    @SuppressWarnings( "deprecation" )
-    private static NeoStores getNeoStoresFrom( GraphDatabaseAPI graphdb )
-    {
-        return graphdb.getDependencyResolver().resolveDependency( NeoStores.class );
-    }
-
     public StoreAccess( NeoStores store )
     {
         this.neoStores = store;
         this.counts = store.getCounts();
     }
 
-    public StoreAccess( PageCache pageCache, File storeDir )
-    {
-        this( new DefaultFileSystemAbstraction(), pageCache, storeDir );
-    }
-
     public StoreAccess( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir )
     {
-        this( fileSystem, pageCache, storeDir, new Config() );
+        this( fileSystem, pageCache, storeDir, Config.defaults() );
     }
 
-    private StoreAccess( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir, Config config )
+    public StoreAccess( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir, Config config )
     {
         this( new StoreFactory( storeDir, config, new DefaultIdGeneratorFactory( fileSystem ), pageCache,
-                fileSystem, NullLogProvider.getInstance() ).openNeoStores( false ) );
+                fileSystem, NullLogProvider.getInstance() ).openAllNeoStores() );
         this.closeable = true;
     }
 
@@ -227,10 +209,12 @@ public class StoreAccess
         };
     }
 
-    private static RecordStore<DynamicRecord> wrapNodeDynamicLabelStore( RecordStore<DynamicRecord> store ) {
-        return new DelegatingRecordStore<DynamicRecord>( store ) {
+    private static RecordStore<DynamicRecord> wrapNodeDynamicLabelStore( RecordStore<DynamicRecord> store )
+    {
+        return new RecordStore.Delegator<DynamicRecord>( store )
+        {
             @Override
-            public <FAILURE extends Exception> void accept( Processor<FAILURE> processor, DynamicRecord record)
+            public <FAILURE extends Exception> void accept( Processor<FAILURE> processor, DynamicRecord record )
                     throws FAILURE
             {
                 processor.processLabelArrayWithOwner( this, record );
@@ -247,7 +231,7 @@ public class StoreAccess
     protected <FAILURE extends Exception> void apply( RecordStore.Processor<FAILURE> processor, RecordStore<?> store )
             throws FAILURE
     {
-        processor.applyFiltered( store, RecordStore.IN_USE );
+        processor.applyFiltered( store );
     }
 
     public synchronized void close()

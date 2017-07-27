@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,13 +20,15 @@
 package org.neo4j.kernel.impl.api.index.sampling;
 
 import org.junit.Test;
-import org.neo4j.function.Predicate;
+
+import java.util.function.Predicate;
+
 import org.neo4j.function.Predicates;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.neo4j.helpers.collection.Iterables.toArray;
+import static org.neo4j.helpers.collection.Iterables.asArray;
 
 public class IndexSamplingJobQueueTest
 {
@@ -109,7 +111,7 @@ public class IndexSamplingJobQueueTest
         // then
         assertArrayEquals(
                 new Object[]{something, somethingElse},
-                toArray( Object.class, objects )
+                asArray( Object.class, objects )
         );
         assertNull( jobQueue.poll() );
     }

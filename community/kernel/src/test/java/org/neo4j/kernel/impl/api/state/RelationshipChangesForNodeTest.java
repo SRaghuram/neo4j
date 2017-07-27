@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,14 +21,16 @@ package org.neo4j.kernel.impl.api.state;
 
 import org.junit.Test;
 
-import org.neo4j.graphdb.Direction;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.kernel.impl.api.store.RelationshipIterator;
+import org.neo4j.storageengine.api.Direction;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
-
 import static org.neo4j.kernel.impl.api.store.RelationshipIterator.EMPTY;
+import static org.neo4j.storageengine.api.Direction.INCOMING;
+import static org.neo4j.storageengine.api.Direction.OUTGOING;
+
 public class RelationshipChangesForNodeTest
 {
     private static final int REL_0 = 0;
@@ -42,10 +44,9 @@ public class RelationshipChangesForNodeTest
         RelationshipChangesForNode changes = new RelationshipChangesForNode(
                 RelationshipChangesForNode.DiffStrategy.ADD, mock( RelationshipVisitor.Home.class ) );
         changes.addRelationship( REL_0, TYPE_SELF, Direction.BOTH );
-        changes.addRelationship( REL_1, TYPE_DIR, Direction.OUTGOING );
+        changes.addRelationship( REL_1, TYPE_DIR, OUTGOING );
 
-        RelationshipIterator iterator = changes.augmentRelationships(
-                Direction.OUTGOING, new int[]{TYPE_DIR}, EMPTY );
+        RelationshipIterator iterator = changes.augmentRelationships( OUTGOING, new int[]{TYPE_DIR}, EMPTY );
         assertEquals( true, iterator.hasNext() );
         assertEquals( REL_1, iterator.next() );
         assertEquals( "should have no next relationships but has ", false, iterator.hasNext() );
@@ -56,10 +57,9 @@ public class RelationshipChangesForNodeTest
         RelationshipChangesForNode changes = new RelationshipChangesForNode(
                 RelationshipChangesForNode.DiffStrategy.ADD, mock( RelationshipVisitor.Home.class ) );
         changes.addRelationship( REL_0, TYPE_SELF, Direction.BOTH );
-        changes.addRelationship( REL_1, TYPE_DIR, Direction.INCOMING );
+        changes.addRelationship( REL_1, TYPE_DIR, INCOMING );
 
-        RelationshipIterator iterator = changes.augmentRelationships(
-                Direction.INCOMING, new int[]{TYPE_DIR}, EMPTY );
+        RelationshipIterator iterator = changes.augmentRelationships( INCOMING, new int[]{TYPE_DIR}, EMPTY );
         assertEquals( true, iterator.hasNext() );
         assertEquals( REL_1, iterator.next() );
         assertEquals( "should have no next relationships but has ", false, iterator.hasNext() );

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -52,7 +52,8 @@ public class StoreProcessorTaskTest
         StoreProcessorTask<NodeRecord> task = new StoreProcessorTask<>( "nodes", Statistics.NONE, 1,
                 store, null, "nodes", ProgressMonitorFactory.NONE.multipleParts( "check" ),
                 CacheAccess.EMPTY,
-                singlePassProcessor );
+                singlePassProcessor,
+                QueueDistribution.ROUND_ROBIN );
 
         // when
         task.run();

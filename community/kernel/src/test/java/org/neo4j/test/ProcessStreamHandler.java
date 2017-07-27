@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -42,7 +42,7 @@ public class ProcessStreamHandler
 
     /**
      * Convenience constructor assuming the local output streams are
-     * {@link System.out} and {@link System.err} for the process's OutputStream
+     * {@link System#out} and {@link System#err} for the process's OutputStream
      * and ErrorStream respectively.
      *
      * Set quiet to true if you just want to consume the output to avoid locking up the process.
@@ -53,13 +53,13 @@ public class ProcessStreamHandler
     {
         this( process, quiet, "", quiet ? IGNORE_FAILURES : PRINT_FAILURES );
     }
-    
+
     public ProcessStreamHandler( Process process, boolean quiet, String prefix,
             StreamExceptionHandler failureHandler )
     {
         this( process, quiet, prefix, failureHandler, System.out, System.err );
     }
-    
+
     public ProcessStreamHandler( Process process, boolean quiet, String prefix,
             StreamExceptionHandler failureHandler, PrintStream out, PrintStream err )
     {
@@ -87,7 +87,7 @@ public class ProcessStreamHandler
         {
             out.join();
         }
-        catch( InterruptedException e )
+        catch ( InterruptedException e )
         {
             Thread.interrupted();
             e.printStackTrace();
@@ -96,7 +96,7 @@ public class ProcessStreamHandler
         {
             err.join();
         }
-        catch( InterruptedException e )
+        catch ( InterruptedException e )
         {
             Thread.interrupted();
             e.printStackTrace();
@@ -119,7 +119,7 @@ public class ProcessStreamHandler
             {
                 return process.waitFor();
             }
-            catch( InterruptedException e )
+            catch ( InterruptedException e )
             {
                 Thread.interrupted();
                 return 0;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -95,11 +95,6 @@ public class NullReporter implements ConsistencyReport.Reporter
     @Override
     public void forIndexEntry( IndexEntry entry, RecordCheck<IndexEntry, ConsistencyReport.IndexConsistencyReport>
             checker )
-    {
-    }
-
-    @Override
-    public void forNodeLabelMatch( NodeRecord nodeRecord, RecordCheck<NodeRecord, ConsistencyReport.LabelsMatchReport> nodeLabelCheck )
     {
     }
 

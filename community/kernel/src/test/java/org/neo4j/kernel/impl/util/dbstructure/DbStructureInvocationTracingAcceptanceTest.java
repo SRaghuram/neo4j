@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.FileObject;
@@ -43,16 +44,14 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
 
-import org.neo4j.function.Function;
 import org.neo4j.helpers.collection.Visitable;
-import org.neo4j.kernel.api.constraints.UniquenessConstraint;
-import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptorFactory;
+import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.neo4j.function.Functions.constant;
 
 public class DbStructureInvocationTracingAcceptanceTest
 {
@@ -70,7 +69,7 @@ public class DbStructureInvocationTracingAcceptanceTest
         DbStructureVisitor visitor = tracer.newProxy();
 
         // WHEN
-        exerciseVisitor( constant( visitor ) );
+        exerciseVisitor( from -> visitor );
         tracer.close();
 
         // THEN
@@ -84,7 +83,7 @@ public class DbStructureInvocationTracingAcceptanceTest
         StringBuilder output = new StringBuilder();
         InvocationTracer<DbStructureVisitor> tracer =
             new InvocationTracer<>( "Test", packageName, className, DbStructureVisitor.class, DbStructureArgumentFormatter.INSTANCE, output );
-        exerciseVisitor( constant ( tracer.newProxy() ) );
+        exerciseVisitor( from -> tracer.newProxy() );
         tracer.close();
         final Visitable<DbStructureVisitor> visitable = compileVisitable( classNameWithPackage, output.toString() );
         final DbStructureVisitor visitor = mock( DbStructureVisitor.class );
@@ -93,14 +92,7 @@ public class DbStructureInvocationTracingAcceptanceTest
         visitable.accept( visitor );
 
         // THEN
-        exerciseVisitor( new Function<Object, DbStructureVisitor>()
-        {
-            @Override
-            public DbStructureVisitor apply( Object o ) throws RuntimeException
-            {
-                return verify( visitor );
-            }
-        } );
+        exerciseVisitor( o -> verify( visitor ) );
         verifyNoMoreInteractions( visitor );
     }
 
@@ -112,7 +104,7 @@ public class DbStructureInvocationTracingAcceptanceTest
         InvocationTracer<DbStructureVisitor> tracer1 =
                 new InvocationTracer<>( "Test", packageName, className, DbStructureVisitor.class, DbStructureArgumentFormatter.INSTANCE, output1 );
         DbStructureVisitor visitor1 = tracer1.newProxy();
-        exerciseVisitor( constant( visitor1 ) );
+        exerciseVisitor( from -> visitor1 );
         tracer1.close();
         String source1 = output1.toString();
         Visitable<DbStructureVisitor> visitable = compileVisitable( classNameWithPackage, source1 );
@@ -135,12 +127,16 @@ public class DbStructureInvocationTracingAcceptanceTest
         visitor.apply( null ).visitLabel( 0, "Person" );
         visitor.apply( null ).visitLabel( 1, "Party" );
         visitor.apply( null ).visitPropertyKey( 0, "name" );
+        visitor.apply( null ).visitPropertyKey( 2, "lastName" );
         visitor.apply( null ).visitPropertyKey( 1, "age" );
         visitor.apply( null ).visitRelationshipType( 0, "ACCEPTS" );
         visitor.apply( null ).visitRelationshipType( 1, "REJECTS" );
-        visitor.apply( null ).visitIndex( new IndexDescriptor( 0, 1 ), ":Person(age)", 0.5d, 1l );
-        visitor.apply( null ).visitUniqueIndex( new IndexDescriptor( 0, 0 ), ":Person(name)", 0.5d, 1l );
-        visitor.apply( null ).visitUniqueConstraint( new UniquenessConstraint( 1, 0 ), ":Party(name)" );
+        visitor.apply( null ).visitIndex( IndexDescriptorFactory.forLabel( 0, 1 ), ":Person(age)", 0.5d, 1L );
+        visitor.apply( null )
+                .visitIndex( IndexDescriptorFactory.uniqueForLabel( 0, 0, 2 ), ":Person(name, lastName)", 0.5d, 1L );
+        visitor.apply( null )
+                .visitUniqueConstraint( ConstraintDescriptorFactory.uniqueForLabel( 1, 0 ), ":Party(name)" );visitor.apply( null ).visitNodeKeyConstraint(
+                        ConstraintDescriptorFactory.nodeKeyForLabel( 0, 1, 2 ), ":Person(name, lastName)" );
         visitor.apply( null ).visitAllNodesCount( 55 );
         visitor.apply( null ).visitNodeCount( 0, "Person", 50 );
         visitor.apply( null ).visitNodeCount( 0, "Party", 5 );
@@ -150,16 +146,10 @@ public class DbStructureInvocationTracingAcceptanceTest
     private void assertCompiles( final String className, String source )
     {
         compile( className, source,
-                new CompilationListener<Boolean>()
+                ( success, manager, diagnostics ) ->
                 {
-                    @Override
-                    public Boolean compiled( Boolean success,
-                                             JavaFileManager manager,
-                                             List<Diagnostic<? extends JavaFileObject>> diagnostics )
-                    {
-                        assertSuccessfullyCompiled( success, diagnostics, className );
-                        return true;
-                    }
+                    assertSuccessfullyCompiled( success, diagnostics, className );
+                    return true;
                 }
         );
     }
@@ -167,26 +157,21 @@ public class DbStructureInvocationTracingAcceptanceTest
     private Visitable<DbStructureVisitor> compileVisitable( final String className, String inputSource )
     {
         return compile( className, inputSource,
-                new CompilationListener<Visitable<DbStructureVisitor>>()
+                ( success, manager, diagnostics ) ->
                 {
-                    @Override
-                    public Visitable<DbStructureVisitor> compiled( Boolean success, JavaFileManager manager,
-                                                                   List<Diagnostic<? extends JavaFileObject>> diagnostics )
+                    assertSuccessfullyCompiled( success, diagnostics, className );
+                    Object instance;
+                    try
                     {
-                        assertSuccessfullyCompiled( success, diagnostics, className );
-                        Object instance;
-                        try
-                        {
-                            ClassLoader classLoader = manager.getClassLoader( null );
-                            Class<?> clazz = classLoader.loadClass( className );
-                            instance = clazz.getDeclaredField( "INSTANCE" ).get( null );
-                        }
-                        catch ( IllegalAccessException | ClassNotFoundException | NoSuchFieldException e )
-                        {
-                            throw new AssertionError( "Failed to instantiate compiled class", e );
-                        }
-                        return (Visitable<DbStructureVisitor>) instance;
+                        ClassLoader classLoader = manager.getClassLoader( null );
+                        Class<?> clazz = classLoader.loadClass( className );
+                        instance = clazz.getDeclaredField( "INSTANCE" ).get( null );
                     }
+                    catch ( IllegalAccessException | ClassNotFoundException | NoSuchFieldException e )
+                    {
+                        throw new AssertionError( "Failed to instantiate compiled class", e );
+                    }
+                    return (Visitable<DbStructureVisitor>) instance;
                 }
         );
     }
@@ -221,7 +206,7 @@ public class DbStructureInvocationTracingAcceptanceTest
         return listener.compiled( success, manager, diagnosticsCollector.getDiagnostics() );
     }
 
-    private static interface CompilationListener<T>
+    private interface CompilationListener<T>
     {
         T compiled( Boolean success, JavaFileManager manager, List<Diagnostic<? extends JavaFileObject>> diagnostics );
     }
@@ -252,7 +237,8 @@ public class DbStructureInvocationTracingAcceptanceTest
             super( URI.create( "mem:///" + className + Kind.CLASS.extension ), Kind.CLASS );
         }
 
-        public byte[] getBytes() {
+        public byte[] getBytes()
+        {
             return byteCodeStream.toByteArray();
         }
 

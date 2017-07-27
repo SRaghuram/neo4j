@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -44,7 +44,7 @@ public class CommitPusher extends LifecycleAdapter
         private final Slave slave;
         private final long txId;
 
-        public PullUpdateFuture( Slave slave, long txId )
+        PullUpdateFuture( Slave slave, long txId )
         {
             super( new Callable<Object>()
             {
@@ -118,7 +118,7 @@ public class CommitPusher extends LifecycleAdapter
         {
             if ( e.getCause() instanceof RuntimeException )
             {
-                throw ((RuntimeException) e.getCause());
+                throw (RuntimeException) e.getCause();
             }
             else
             {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,6 +27,9 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+/**
+ * Adapter which send Netty logging messages to our internal log.
+ */
 public class NettyLoggerFactory
     extends InternalLoggerFactory
 {
@@ -40,23 +43,13 @@ public class NettyLoggerFactory
     @Override
     public InternalLogger newInstance( String name )
     {
-        Class<?> clazz;
-        try
-        {
-            clazz = getClass().getClassLoader().loadClass( name );
-        }
-        catch ( ClassNotFoundException e )
-        {
-            clazz = getClass();
-        }
-
-        final Log log = logProvider.getLog( clazz );
+        final Log log = logProvider.getLog( name );
         return new AbstractInternalLogger()
         {
             @Override
             public boolean isDebugEnabled()
             {
-                return false;
+                return log.isDebugEnabled();
             }
 
             @Override
@@ -80,7 +73,7 @@ public class NettyLoggerFactory
             @Override
             public boolean isEnabled( InternalLogLevel level )
             {
-                return true;
+                return level != InternalLogLevel.DEBUG || isDebugEnabled();
             }
 
             @Override

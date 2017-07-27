@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,104 +19,198 @@
  */
 package org.neo4j.test.ha;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.function.IntFunction;
+import java.util.function.Predicate;
+import org.neo4j.cluster.FreePorts;
+
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.rules.ExternalResource;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.neo4j.function.Predicate;
+import org.neo4j.cluster.client.Cluster;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.HighlyAvailableGraphDatabaseFactory;
-import org.neo4j.graphdb.factory.TestHighlyAvailableGraphDatabaseFactory;
+import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.impl.ha.ClusterManager;
 import org.neo4j.kernel.impl.ha.ClusterManager.Builder;
+import org.neo4j.kernel.impl.ha.ClusterManager.ClusterBuilder;
 import org.neo4j.kernel.impl.ha.ClusterManager.ManagedCluster;
-import org.neo4j.test.TargetDirectory;
-
-import static java.util.Arrays.asList;
+import org.neo4j.kernel.impl.ha.ClusterManager.StoreDirInitializer;
+import org.neo4j.kernel.impl.util.Listener;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.cluster.ClusterSettings.default_timeout;
+import static org.neo4j.cluster.ClusterSettings.join_timeout;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.store_internal_log_level;
 import static org.neo4j.kernel.ha.HaSettings.tx_push_factor;
 import static org.neo4j.kernel.impl.ha.ClusterManager.allSeesAllAsAvailable;
-import static org.neo4j.kernel.impl.ha.ClusterManager.clusterOfSize;
 
-public class ClusterRule extends ExternalResource
+/**
+ * Starts, manages and in the end shuts down an HA cluster as a JUnit {@code Rule} or {@link ClassRule}.
+ * Basically this is {@link ClusterManager} in a JUnit {@link Rule} packaging.
+ */
+public class ClusterRule extends ExternalResource implements ClusterBuilder<ClusterRule>
 {
+    private static final StoreDirInitializer defaultStoreDirInitializer =
+            new ClusterManager.StoreDirInitializer()
+            {
+                @Override
+                public void initializeStoreDir( int serverId, File storeDir ) throws IOException
+                {
+                    File[] files = storeDir.listFiles();
+                    if ( files != null )
+                    {
+                        for ( File file : files )
+                        {
+                            FileUtils.deleteRecursively( file );
+                        }
+                    }
+                }
+            };
+
+    private ClusterManager.Builder clusterManagerBuilder;
     private ClusterManager clusterManager;
     private File storeDirectory;
 
-    private ClusterManager.Provider provider = clusterOfSize( 3 );
-    private final Map<String,String> config = new HashMap<>();
-    private HighlyAvailableGraphDatabaseFactory factory = new TestHighlyAvailableGraphDatabaseFactory();
-    private List<Predicate<ManagedCluster>> availabilityChecks = asList( allSeesAllAsAvailable() );
-    private final TargetDirectory.TestDirectory testDirectory;
+    private final TestDirectory testDirectory;
+    private ManagedCluster cluster;
 
     public ClusterRule( Class<?> testClass )
     {
-        this.testDirectory = TargetDirectory.testDirForTest( testClass );
-        config.putAll( stringMap(
-                GraphDatabaseSettings.store_internal_log_level.name(), "DEBUG",
-                default_timeout.name(), "1s",
-                tx_push_factor.name(), "0",
-                pagecache_memory.name(), "8m" ) );
+        this.testDirectory = TestDirectory.testDirectory( testClass );
+        this.clusterManagerBuilder = new ClusterManager.Builder()
+                .withSharedSetting( store_internal_log_level, "DEBUG" )
+                .withSharedSetting( default_timeout, "1s" )
+                .withSharedSetting( tx_push_factor, "0" )
+                .withSharedSetting( pagecache_memory, "8m" )
+                .withSharedSetting( join_timeout, "60s" )
+                .withAvailabilityChecks( allSeesAllAsAvailable() )
+                .withStoreDirInitializer( defaultStoreDirInitializer );
     }
 
-    public ClusterRule config( Setting<?> setting, String value )
+    @Override
+    public ClusterRule withRootDirectory( File root )
     {
-        config.put( setting.name(), value );
-        return this;
+        throw new UnsupportedOperationException();
     }
 
-    public ClusterRule provider( ClusterManager.Provider provider )
+    @Override
+    public ClusterRule withSeedDir( final File seedDir )
     {
-        this.provider = provider;
-        return this;
+        return set( clusterManagerBuilder.withSeedDir( seedDir ) );
     }
 
-    public ClusterRule factory( HighlyAvailableGraphDatabaseFactory factory )
+    @Override
+    public ClusterRule withStoreDirInitializer( StoreDirInitializer initializer )
     {
-        this.factory = factory;
-        return this;
+        return set( clusterManagerBuilder.withStoreDirInitializer( initializer ) );
+    }
+
+    @Override
+    public ClusterRule withDbFactory( HighlyAvailableGraphDatabaseFactory dbFactory )
+    {
+        return set( clusterManagerBuilder.withDbFactory( dbFactory ) );
+    }
+
+    @Override
+    public ClusterRule withCluster( Function<FreePorts.Session,Cluster> provider )
+    {
+        return set( clusterManagerBuilder.withCluster( provider ) );
+    }
+
+    @Override
+    public ClusterRule withInstanceConfig( Map<String,IntFunction<String>> commonConfig )
+    {
+        return set( clusterManagerBuilder.withInstanceConfig( commonConfig ) );
+    }
+
+    @Override
+    public ClusterRule withBolt( int port )
+    {
+        return set( clusterManagerBuilder.withBolt( port ) );
+    }
+
+    @Override
+    public ClusterRule withInstanceSetting( Setting<?> setting, IntFunction<String> valueFunction )
+    {
+        return set( clusterManagerBuilder.withInstanceSetting( setting, valueFunction ) );
+    }
+
+    @Override
+    public ClusterRule withSharedConfig( Map<String,String> commonConfig )
+    {
+        return set( clusterManagerBuilder.withSharedConfig( commonConfig ) );
+    }
+
+    @Override
+    public ClusterRule withSharedSetting( Setting<?> setting, String value )
+    {
+        return set( clusterManagerBuilder.withSharedSetting( setting, value ) );
+    }
+
+    @Override
+    public ClusterRule withInitialDataset( Listener<GraphDatabaseService> transactor )
+    {
+        return set( clusterManagerBuilder.withInitialDataset( transactor ) );
     }
 
     @SafeVarargs
-    public final ClusterRule availabilityChecks( Predicate<ManagedCluster>... checks )
+    @Override
+    public final ClusterRule withAvailabilityChecks( Predicate<ManagedCluster>... checks )
     {
-        return availabilityChecks( Arrays.asList( checks ) );
+        return set( clusterManagerBuilder.withAvailabilityChecks( checks ) );
     }
 
-    public ClusterRule availabilityChecks( List<Predicate<ManagedCluster>> checks )
+    @Override
+    public final ClusterRule withConsistencyCheckAfterwards()
     {
-        availabilityChecks = new ArrayList<>( checks );
+        return set( clusterManagerBuilder.withConsistencyCheckAfterwards() );
+    }
+
+    @Override
+    public ClusterRule withFirstInstanceId( int firstInstanceId )
+    {
+        return set( clusterManagerBuilder.withFirstInstanceId( firstInstanceId ) );
+    }
+
+    private ClusterRule set( Builder builder )
+    {
+        clusterManagerBuilder = builder;
         return this;
     }
 
+    /**
+     * Starts cluster with the configuration provided at instantiation time. This method will not return until the
+     * cluster is up and all members report each other as available.
+     */
     public ClusterManager.ManagedCluster startCluster() throws Exception
     {
-        clusterManager = new Builder( storeDirectory )
-                .withCommonConfig( config ).withProvider( provider ).withDbFactory( factory ).build();
-        try
+        if ( cluster == null )
         {
-            clusterManager.start();
+            if ( clusterManager == null )
+            {
+                clusterManager = clusterManagerBuilder.withRootDirectory( storeDirectory ).build();
+            }
+
+            try
+            {
+                clusterManager.start();
+            }
+            catch ( Throwable throwable )
+            {
+                throw new RuntimeException( throwable );
+            }
+            cluster = clusterManager.getCluster();
         }
-        catch ( Throwable throwable )
-        {
-            throw new RuntimeException( throwable );
-        }
-        ClusterManager.ManagedCluster cluster = clusterManager.getDefaultCluster();
-        for ( Predicate<ManagedCluster> availabilityCheck : availabilityChecks )
-        {
-            cluster.await( availabilityCheck );
-        }
+        cluster.await( allSeesAllAsAvailable() );
         return cluster;
     }
 
@@ -128,7 +222,11 @@ public class ClusterRule extends ExternalResource
             @Override
             public void evaluate() throws Throwable
             {
-                storeDirectory = testDirectory.directory( description.getMethodName() );
+                // If this is used as class rule then getMethodName() returns null, so use
+                // getClassName() instead.
+                String name = description.getMethodName() != null ?
+                        description.getMethodName() : description.getClassName();
+                storeDirectory = testDirectory.directory( name );
                 base.evaluate();
             }
         };
@@ -141,16 +239,67 @@ public class ClusterRule extends ExternalResource
     @Override
     protected void after()
     {
-        try
+        shutdownCluster();
+    }
+
+    public void shutdownCluster()
+    {
+        if ( clusterManager != null )
         {
-            if ( clusterManager != null )
-            {
-                clusterManager.shutdown();
-            }
+            clusterManager.safeShutdown();
+            cluster = null;
         }
-        catch ( Throwable throwable )
-        {
-            throwable.printStackTrace();
-        }
+    }
+
+    public File directory( String name )
+    {
+        return testDirectory.directory( name );
+    }
+
+    public File cleanDirectory( String name ) throws IOException
+    {
+        return testDirectory.cleanDirectory( name );
+    }
+
+    /**
+     * Adapter for providing a static config value into a setting where per-instances dynamic config values
+     * are supplied.
+     *
+     * @param value static config value.
+     * @return this {@link ClusterRule} instance, for builder convenience.
+     */
+    public static IntFunction<String> constant( String value )
+    {
+        return ClusterManager.constant( value );
+    }
+
+    /**
+     * Dynamic configuration value, of sorts. Can be used as input to {@link #withInstanceConfig(Map)}.
+     * Some configuration values are a function of server id of the cluster member and this is a utility
+     * for creating such dynamic configuration values.
+     *
+     * @param oneBasedServerId value onto which one-based server id is added. So for example
+     * a value of 10 would have cluster member with server id 2 that config value set to 12.
+     */
+    public static IntFunction<String> intBase( final int oneBasedServerId )
+    {
+        return serverId -> String.valueOf( oneBasedServerId + serverId );
+    }
+
+    /**
+     * Dynamic configuration value, of sorts. Can be used as input to {@link #withInstanceConfig(Map)}.
+     * Some configuration values are a function of server id of the cluster member and this is a utility
+     * for creating such dynamic configuration values.
+     *
+     * @param prefix string prefix for these config values.
+     * @param oneBasedServerId value onto which one-based server id is added. So for example
+     * a value of 10 would have cluster member with server id 2 that config value set to 12.
+     * @return a string which has a prefix and an integer part, where the integer part is a function of
+     * server id of the cluster member. Can be used to set config values like a host, where arguments could look
+     * something like: {@code prefix: "localhost:" oneBasedServerId: 5000}.
+     */
+    public static IntFunction<String> stringWithIntBase( final String prefix, final int oneBasedServerId )
+    {
+        return serverId -> prefix + (oneBasedServerId + serverId);
     }
 }

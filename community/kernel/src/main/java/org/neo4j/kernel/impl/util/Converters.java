@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,149 +20,113 @@
 package org.neo4j.kernel.impl.util;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Function;
 
-import org.neo4j.function.Function;
+import org.neo4j.helpers.HostnamePort;
 
 public class Converters
 {
     public static <T> Function<String,T> mandatory()
     {
-        return new Function<String,T>()
+        return key ->
         {
-            @Override
-            public T apply( String key )
-            {
-                throw new IllegalArgumentException( "Missing argument '" + key + "'" );
-            }
+            throw new IllegalArgumentException( "Missing argument '" + key + "'" );
         };
     }
 
     public static <T> Function<String,T> optional()
     {
-        return new Function<String,T>()
-        {
-            @Override
-            public T apply( String from )
-            {
-                return null;
-            }
-        };
+        return from -> null;
     }
 
     public static <T> Function<String,T> withDefault( final T defaultValue )
     {
-        return new Function<String,T>()
-        {
-            @Override
-            public T apply( String from )
-            {
-                return defaultValue;
-            }
-        };
+        return from -> defaultValue;
     }
 
     public static Function<String,File> toFile()
     {
-        return new Function<String,File>()
-        {
-            @Override
-            public File apply( String from )
-            {
-                return new File( from );
-            }
-        };
+        return File::new;
     }
 
-    public static final Comparator<File> BY_FILE_NAME = new Comparator<File>()
+    public static Function<String, Path> toPath()
     {
-        @Override
-        public int compare( File o1, File o2 )
-        {
-            return o1.getName().compareTo( o2.getName() );
-        }
-    };
+        return Paths::get;
+    }
 
-    public static final Comparator<File> BY_FILE_NAME_WITH_CLEVER_NUMBERS = new Comparator<File>()
+    public static Function<String, String> identity()
     {
-        @Override
-        public int compare( File o1, File o2 )
-        {
-            return NumberAwareStringComparator.INSTANCE.compare( o1.getAbsolutePath(), o2.getAbsolutePath() );
-        }
-    };
+        return s -> s;
+    }
+
+    public static final Comparator<File> BY_FILE_NAME = Comparator.comparing( File::getName );
+
+    public static final Comparator<File> BY_FILE_NAME_WITH_CLEVER_NUMBERS =
+            ( o1, o2 ) -> NumberAwareStringComparator.INSTANCE.compare( o1.getAbsolutePath(), o2.getAbsolutePath() );
 
     public static Function<String,File[]> regexFiles( final boolean cleverNumberRegexSort )
     {
-        return new Function<String,File[]>()
+        return name ->
         {
-            @Override
-            public File[] apply( String name ) throws RuntimeException
-            {
-                Comparator<File> sorting = cleverNumberRegexSort ? BY_FILE_NAME_WITH_CLEVER_NUMBERS : BY_FILE_NAME;
-                List<File> files = Validators.matchingFiles( new File( name ) );
-                Collections.sort( files, sorting );
-                return files.toArray( new File[files.size()] );
-            }
+            Comparator<File> sorting = cleverNumberRegexSort ? BY_FILE_NAME_WITH_CLEVER_NUMBERS : BY_FILE_NAME;
+            List<File> files = Validators.matchingFiles( new File( name ) );
+            Collections.sort( files, sorting );
+            return files.toArray( new File[files.size()] );
         };
     }
 
     public static Function<String,File[]> toFiles( final String delimiter,
             final Function<String,File[]> eachFileConverter )
     {
-        return new Function<String,File[]>()
+        return from ->
         {
-            @Override
-            public File[] apply( String from )
+            if ( from == null )
             {
-                if ( from == null )
-                {
-                    return new File[0];
-                }
-
-                String[] names = from.split( delimiter );
-                List<File> files = new ArrayList<>();
-                for ( String name : names )
-                {
-                    for ( File file : eachFileConverter.apply( name ) )
-                    {
-                        files.add( file );
-                    }
-                }
-                return files.toArray( new File[files.size()] );
+                return new File[0];
             }
-        };
-    }
 
-    public static Function<String,Character> toCharacter()
-    {
-        return new Function<String,Character>()
-        {
-            @Override
-            public Character apply( String value )
+            String[] names = from.split( delimiter );
+            List<File> files = new ArrayList<>();
+            for ( String name : names )
             {
-                if ( value.length() > 1 )
+                for ( File file : eachFileConverter.apply( name ) )
                 {
-                    throw new IllegalArgumentException( "Invalid delimiter '" +
-                            value + "', expected one character" );
+                    files.add( file );
                 }
-                return value.charAt( 0 );
             }
+            return files.toArray( new File[files.size()] );
         };
     }
 
     public static Function<String,Integer> toInt()
     {
-        return new Function<String,Integer>()
+        return Integer::new;
+    }
+
+    public static Function<String, HostnamePort> toHostnamePort( HostnamePort defaultAddress )
+    {
+        return from ->
         {
-            @Override
-            public Integer apply( String from )
+            if ( !from.contains( ":" ) )
             {
-                return new Integer( from );
+                from = from + ":" + defaultAddress.getPort();
             }
+            if ( from.endsWith( ":" ) )
+            {
+                from = from + defaultAddress.getPort();
+            }
+            if ( from.startsWith( ":" ) )
+            {
+                from = defaultAddress.getHost() + from;
+            }
+            String[] parts = from.split( ":" );
+            return new HostnamePort( parts[0], Integer.parseInt( parts[1] ) );
         };
     }
 }

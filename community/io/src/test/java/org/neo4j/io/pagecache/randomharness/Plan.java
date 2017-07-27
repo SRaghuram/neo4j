@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -41,7 +41,7 @@ class Plan
     private final AtomicInteger actionCounter;
     private final CountDownLatch startLatch;
 
-    public Plan( Action[] plan, Map<File,PagedFile> fileMap, List<File> mappedFiles, Set<File> filesTouched )
+    Plan( Action[] plan, Map<File,PagedFile> fileMap, List<File> mappedFiles, Set<File> filesTouched )
     {
         this.plan = plan;
         this.fileMap = fileMap;

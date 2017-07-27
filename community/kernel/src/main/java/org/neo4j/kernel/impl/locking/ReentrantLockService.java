@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -56,7 +56,7 @@ public final class ReentrantLockService extends AbstractLockService<ReentrantLoc
     protected OwnerQueueElement<Thread> acquire( LockedEntity key )
     {
         OwnerQueueElement<Thread> suggestion = new OwnerQueueElement<>( currentThread() );
-        for(;;)
+        for ( ; ; )
         {
             OwnerQueueElement<Thread> owner = locks.putIfAbsent( key, suggestion );
             if ( owner == null )
@@ -171,7 +171,7 @@ public final class ReentrantLockService extends AbstractLockService<ReentrantLoc
             }
             try
             {
-                return (this.owner = first.owner);
+                return this.owner = first.owner;
             }
             finally
             {

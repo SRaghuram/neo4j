@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,7 +35,7 @@ public abstract class InputEntityDeserialization<ENTITY extends InputEntity> imp
 {
     protected final SourceTraceability source;
 
-    private Object[] properties = new Object[10*2];
+    private Object[] properties = new Object[10 * 2];
     private int propertiesCursor;
 
     public InputEntityDeserialization( SourceTraceability source )
@@ -47,7 +47,7 @@ public abstract class InputEntityDeserialization<ENTITY extends InputEntity> imp
     {
         if ( value != null )
         {
-            ensurePropertiesArrayCapacity( propertiesCursor+2 );
+            ensurePropertiesArrayCapacity( propertiesCursor + 2 );
             properties[propertiesCursor++] = name;
             properties[propertiesCursor++] = value;
         }

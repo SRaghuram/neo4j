@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,14 +20,12 @@
 package org.neo4j.kernel.impl.api;
 
 import org.mockito.Matchers;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.kernel.api.ReadOperations;
+import org.neo4j.kernel.api.exceptions.index.IndexNotApplicableKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
-import org.neo4j.kernel.api.index.IndexReader;
+import org.neo4j.kernel.api.schema.IndexQuery;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.operations.CountsOperations;
 import org.neo4j.kernel.impl.api.operations.EntityReadOperations;
@@ -37,10 +35,14 @@ import org.neo4j.kernel.impl.api.operations.KeyWriteOperations;
 import org.neo4j.kernel.impl.api.operations.LegacyIndexReadOperations;
 import org.neo4j.kernel.impl.api.operations.LegacyIndexWriteOperations;
 import org.neo4j.kernel.impl.api.operations.LockOperations;
+import org.neo4j.kernel.impl.api.operations.QueryRegistrationOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaReadOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaStateOperations;
 import org.neo4j.kernel.impl.api.operations.SchemaWriteOperations;
 import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.kernel.impl.locking.SimpleStatementLocks;
+import org.neo4j.storageengine.api.StorageStatement;
+import org.neo4j.storageengine.api.schema.IndexReader;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -60,7 +62,8 @@ public abstract class StatementOperationsTestHelper
             mock( LockOperations.class ),
             mock( CountsOperations.class ),
             mock( LegacyIndexReadOperations.class ),
-            mock( LegacyIndexWriteOperations.class ) );
+            mock( LegacyIndexWriteOperations.class ),
+            mock( QueryRegistrationOperations.class ) );
     }
 
     public static KernelStatement mockedState()
@@ -71,26 +74,22 @@ public abstract class StatementOperationsTestHelper
     public static KernelStatement mockedState( final TransactionState txState )
     {
         KernelStatement state = mock( KernelStatement.class );
-        Locks.Client lockHolder = mock( Locks.Client.class );
+        Locks.Client locks = mock( Locks.Client.class );
         try
         {
             IndexReader indexReader = mock( IndexReader.class );
-            when( indexReader.seek( Matchers.any() ) ).thenReturn( PrimitiveLongCollections.emptyIterator() );
-            when( state.getIndexReader( Matchers.<IndexDescriptor>any() ) ).thenReturn( indexReader );
+            when( indexReader.query( Matchers.isA( IndexQuery.ExactPredicate.class ) ) ).thenReturn( PrimitiveLongCollections.emptyIterator() );
+            StorageStatement storageStatement = mock( StorageStatement.class );
+            when( storageStatement.getIndexReader( Matchers.any() ) ).thenReturn( indexReader );
+            when( state.getStoreStatement() ).thenReturn( storageStatement );
         }
-        catch ( IndexNotFoundKernelException e )
+        catch ( IndexNotFoundKernelException | IndexNotApplicableKernelException e )
         {
             throw new Error( e );
         }
         when( state.txState() ).thenReturn( txState );
-        when( state.hasTxStateWithChanges() ).thenAnswer( new Answer<Boolean>() {
-            @Override
-            public Boolean answer( InvocationOnMock invocation ) throws Throwable
-            {
-                return txState.hasChanges();
-            }
-        } );
-        when( state.locks() ).thenReturn( lockHolder );
+        when( state.hasTxStateWithChanges() ).thenAnswer( invocation -> txState.hasChanges() );
+        when( state.locks() ).thenReturn( new SimpleStatementLocks( locks ) );
         when( state.readOperations() ).thenReturn( mock( ReadOperations.class ) );
         return state;
     }

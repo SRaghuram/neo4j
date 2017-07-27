@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,9 @@
  */
 package org.neo4j.unsafe.impl.batchimport.cache.idmapping;
 
+import org.neo4j.kernel.impl.store.id.IdSequence;
 import org.neo4j.unsafe.impl.batchimport.input.InputNode;
+import org.neo4j.unsafe.impl.batchimport.store.BatchingIdSequence;
 
 /**
  * Common {@link IdGenerator} implementations.
@@ -71,12 +73,12 @@ public class IdGenerators
     {
         return new IdGenerator()
         {
-            private long id = startingId;
+            private final IdSequence ids = new BatchingIdSequence( startingId );
 
             @Override
             public long generate( Object inputId )
             {
-                return id++;
+                return ids.nextId();
             }
 
             @Override

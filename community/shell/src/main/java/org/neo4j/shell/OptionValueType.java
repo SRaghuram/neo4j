@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,35 +24,35 @@ package org.neo4j.shell;
  */
 public enum OptionValueType
 {
-	/**
-	 * No value is to be specified.
-	 */
-	NONE( "" ),
-	
-	/**
-	 * There may be a value supplied.
-	 */
-	MAY( "(may have value)" ),
-	
-	/**
-	 * There must be a supplied value.
-	 */
-	MUST( "(must have value" ),
-	
-	;
-	
-	private String description;
-	
-	private OptionValueType( String description )
-	{
-	    this.description = description;
-	}
-	
-	/**
-	 * @return the description for this option.
-	 */
-	public String getDescription()
-	{
-	    return this.description;
-	}
+    /**
+     * No value is to be specified.
+     */
+    NONE( "" ),
+
+    /**
+     * There may be a value supplied.
+     */
+    MAY( "(may have value)" ),
+
+    /**
+     * There must be a supplied value.
+     */
+    MUST( "(must have value" ),
+
+    ;
+
+    private String description;
+
+    OptionValueType( String description )
+    {
+        this.description = description;
+    }
+
+    /**
+     * @return the description for this option.
+     */
+    public String getDescription()
+    {
+        return this.description;
+    }
 }

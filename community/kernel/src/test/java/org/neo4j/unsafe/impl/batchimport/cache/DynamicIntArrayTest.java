@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,6 @@ package org.neo4j.unsafe.impl.batchimport.cache;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class DynamicIntArrayTest
 {
@@ -31,7 +30,7 @@ public class DynamicIntArrayTest
     {
         // GIVEN
         int defaultValue = 0;
-        IntArray array = NumberArrayFactory.AUTO.newDynamicIntArray( 10, defaultValue );
+        IntArray array = NumberArrayFactory.AUTO_WITHOUT_PAGECACHE.newDynamicIntArray( 10, defaultValue );
         array.set( 4, 5 );
 
         // WHEN
@@ -45,7 +44,7 @@ public class DynamicIntArrayTest
     public void shouldChunksAsNeeded() throws Exception
     {
         // GIVEN
-        IntArray array = NumberArrayFactory.AUTO.newDynamicIntArray( 10, 0 );
+        IntArray array = NumberArrayFactory.AUTO_WITHOUT_PAGECACHE.newDynamicIntArray( 10, 0 );
 
         // WHEN
         long index = 243;
@@ -54,32 +53,5 @@ public class DynamicIntArrayTest
 
         // THEN
         assertEquals( value, array.get( index ) );
-    }
-
-
-    @Test
-    public void shouldFixate() throws Exception
-    {
-        // GIVEN
-        IntArray array = NumberArrayFactory.AUTO.newDynamicIntArray( 100, 0 );
-        array.set( 50, 1 );
-        array.set( 500, 1 );
-
-        // WHEN
-        array = array.fixate();
-        assertEquals( 1, array.get( 50 ) );
-        assertEquals( 1, array.get( 500 ) );
-        array.set( 499, 10 );
-        assertEquals( 10, array.get( 499 ) );
-        assertEquals( 0, array.get( 50_000 ) );
-        try
-        {
-            array.set( 650, 9 );
-            fail( "Should have been fixated at this point" );
-        }
-        catch ( ArrayIndexOutOfBoundsException e )
-        {
-            // THEN good
-        }
     }
 }

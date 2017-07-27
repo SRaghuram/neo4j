@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,9 +21,11 @@ package org.neo4j.kernel.impl.storemigration;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
+import org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat;
 
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 import static org.neo4j.kernel.impl.storemigration.StoreVersionCheck.Result.Outcome;
@@ -37,32 +39,36 @@ public class StoreVersionCheck
         this.pageCache = pageCache;
     }
 
+    public Optional<String> getVersion( File neostoreFile ) throws IOException
+    {
+        long record = MetaDataStore.getRecord( pageCache, neostoreFile, STORE_VERSION );
+        if ( record == MetaDataRecordFormat.FIELD_NOT_PRESENT )
+        {
+            return Optional.empty();
+        }
+        return Optional.of( MetaDataStore.versionLongToString( record ) );
+    }
+
     public Result hasVersion( File neostoreFile, String expectedVersion )
     {
-        long record;
+        Optional<String> storeVersion;
 
         try
         {
-            record = MetaDataStore.getRecord( pageCache, neostoreFile, STORE_VERSION );
+            storeVersion = getVersion( neostoreFile );
         }
-        catch ( IOException ex )
+        catch ( IOException e )
         {
             // since we cannot read let's assume the file is not there
             return new Result( Outcome.missingStoreFile, null, neostoreFile.getName() );
         }
 
-        if ( record == MetaDataStore.FIELD_NOT_PRESENT )
-        {
-            return new Result( Outcome.storeVersionNotFound, null, neostoreFile.getName() );
-        }
-
-        String storeVersion = MetaDataStore.versionLongToString( record );
-        if ( !expectedVersion.equals( storeVersion ) )
-        {
-            return new Result( Outcome.unexpectedUpgradingStoreVersion, storeVersion, expectedVersion );
-        }
-
-        return new Result( Outcome.ok, null, neostoreFile.getName() );
+        return storeVersion
+                .map( v ->
+                        expectedVersion.equals( v ) ?
+                        new Result( Outcome.ok, null, neostoreFile.getName() ) :
+                        new Result( Outcome.unexpectedStoreVersion, v, neostoreFile.getName() ) )
+                .orElse( new Result( Outcome.storeVersionNotFound, null, neostoreFile.getName() ) );
     }
 
     public static class Result
@@ -83,7 +89,9 @@ public class StoreVersionCheck
             ok( true ),
             missingStoreFile( false ),
             storeVersionNotFound( false ),
-            unexpectedUpgradingStoreVersion( false );
+            unexpectedStoreVersion( false ),
+            attemptedStoreDowngrade( false ),
+            storeNotCleanlyShutDown( false );
 
             private final boolean success;
 

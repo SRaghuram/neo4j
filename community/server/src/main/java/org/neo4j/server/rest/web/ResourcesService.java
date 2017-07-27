@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-
+import java.nio.charset.StandardCharsets;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
@@ -33,7 +33,7 @@ import javax.ws.rs.core.UriInfo;
 @Path( "/resource" )
 public class ResourcesService
 {
-    final static String JAVASCRIPT_BODY;
+    static final String JAVASCRIPT_BODY;
     static
     {
         // FIXME This is so very ugly, it's because when running it with maven
@@ -85,7 +85,7 @@ public class ResourcesService
         Reader reader = null;
         try
         {
-            reader = new InputStreamReader( input, "UTF-8" );
+            reader = new InputStreamReader( input, StandardCharsets.UTF_8 );
             int read;
             do
             {

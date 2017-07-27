@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,29 +19,68 @@
  */
 package org.neo4j.unsafe.impl.batchimport.store;
 
-import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
+import org.neo4j.kernel.impl.store.id.IdRange;
 import org.neo4j.kernel.impl.store.id.IdSequence;
+import org.neo4j.kernel.impl.store.id.validation.IdValidator;
+
+import static org.neo4j.collection.primitive.PrimitiveLongCollections.EMPTY_LONG_ARRAY;
 
 /**
  * {@link IdSequence} w/o any synchronization, purely a long incrementing.
  */
 public class BatchingIdSequence implements IdSequence
 {
+    private final long startId;
     private long nextId = 0;
+
+    public BatchingIdSequence()
+    {
+        this( 0 );
+    }
+
+    public BatchingIdSequence( long startId )
+    {
+        this.startId = startId;
+        this.nextId = startId;
+    }
 
     @Override
     public long nextId()
     {
-        long result = nextId++;
-        if ( result == IdGeneratorImpl.INTEGER_MINUS_ONE )
-        {
-            result = nextId++;
-        }
+        long result = peek();
+        nextId++;
         return result;
+    }
+
+    @Override
+    public IdRange nextIdBatch( int size )
+    {
+        while ( IdValidator.hasReservedIdInRange( nextId, nextId + size ) )
+        {
+            nextId += size;
+        }
+
+        long startId = nextId;
+        nextId += size;
+        return new IdRange( EMPTY_LONG_ARRAY, startId, size );
     }
 
     public void reset()
     {
-        nextId = 0;
+        nextId = startId;
+    }
+
+    public void set( long nextId )
+    {
+        this.nextId = nextId;
+    }
+
+    public long peek()
+    {
+        if ( IdValidator.isReservedId( nextId ) )
+        {
+            nextId++;
+        }
+        return nextId;
     }
 }

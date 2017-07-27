@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,23 +31,26 @@ import java.util.concurrent.CountDownLatch;
 import org.neo4j.adversaries.ClassGuardedAdversary;
 import org.neo4j.adversaries.CountingAdversary;
 import org.neo4j.adversaries.fs.AdversarialFileSystemAbstraction;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.index.inmemory.InMemoryIndexProviderFactory;
-import org.neo4j.kernel.impl.api.scan.InMemoryLabelScanStoreExtension;
-import org.neo4j.kernel.impl.factory.CommunityFacadeFactory;
+import org.neo4j.kernel.impl.factory.CommunityEditionModule;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
 import org.neo4j.kernel.impl.factory.PlatformModule;
+import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.kernel.internal.EmbeddedGraphDatabase;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -61,8 +64,7 @@ import static org.neo4j.helpers.collection.MapUtil.stringMap;
 public class PartialTransactionFailureIT
 {
     @Rule
-    public TargetDirectory.TestDirectory dir =
-            TargetDirectory.testDirForTest( PartialTransactionFailureIT.class );
+    public TestDirectory dir = TestDirectory.testDirectory();
 
     @Test
     public void concurrentlyCommittingTransactionsMustNotRotateOutLoggedCommandsOfFailingTransaction()
@@ -70,7 +72,7 @@ public class PartialTransactionFailureIT
     {
         final ClassGuardedAdversary adversary = new ClassGuardedAdversary(
                 new CountingAdversary( 1, false ),
-                "org.neo4j.kernel.impl.nioneo.xa.Command$RelationshipCommand" );
+                Command.RelationshipCommand.class );
         adversary.disable();
 
         File storeDir = dir.graphDbDir();
@@ -80,12 +82,12 @@ public class PartialTransactionFailureIT
             @Override
             protected void create( File storeDir, Map<String, String> params, GraphDatabaseFacadeFactory.Dependencies dependencies )
             {
-                new CommunityFacadeFactory()
+                new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, CommunityEditionModule::new )
                 {
                     @Override
-                    protected PlatformModule createPlatform( File storeDir, Map<String, String> params, Dependencies dependencies, GraphDatabaseFacade graphDatabaseFacade )
+                    protected PlatformModule createPlatform( File storeDir, Config config, Dependencies dependencies, GraphDatabaseFacade graphDatabaseFacade )
                     {
-                        return new PlatformModule( storeDir, params, dependencies, graphDatabaseFacade )
+                        return new PlatformModule( storeDir, config, databaseInfo, dependencies, graphDatabaseFacade )
                         {
                             @Override
                             protected FileSystemAbstraction createFileSystemAbstraction()
@@ -94,10 +96,9 @@ public class PartialTransactionFailureIT
                             }
                         };
                     }
-                }.newFacade( storeDir, params, dependencies, this );
+                }.initFacade( storeDir, params, dependencies, this );
             }
         };
-
 
         Node a, b, c, d;
         try ( Transaction tx = db.beginTx() )
@@ -181,11 +182,13 @@ public class PartialTransactionFailureIT
             {
                 try ( Transaction tx = db.beginTx() )
                 {
-                    x.createRelationshipTo( y, DynamicRelationshipType.withName( "r" ) );
+                    x.createRelationshipTo( y, RelationshipType.withName( "r" ) );
                     tx.success();
                     latch.await();
                     db.getDependencyResolver().resolveDependency( LogRotation.class ).rotateLogFile();
-                    db.getDependencyResolver().resolveDependency( CheckPointer.class ).forceCheckPoint();
+                    db.getDependencyResolver().resolveDependency( CheckPointer.class ).forceCheckPoint(
+                            new SimpleTriggerInfo( "test" )
+                    );
                 }
                 catch ( Exception ignore )
                 {
@@ -198,7 +201,7 @@ public class PartialTransactionFailureIT
 
     private static class TestEmbeddedGraphDatabase extends EmbeddedGraphDatabase
     {
-        public TestEmbeddedGraphDatabase( File storeDir, Map<String, String> params )
+        TestEmbeddedGraphDatabase( File storeDir, Map<String,String> params )
         {
             super( storeDir,
                     params,
@@ -208,9 +211,7 @@ public class PartialTransactionFailureIT
         private static GraphDatabaseFacadeFactory.Dependencies dependencies()
         {
             GraphDatabaseFactoryState state = new GraphDatabaseFactoryState();
-            state.setKernelExtensions( Arrays.asList(
-                    new InMemoryIndexProviderFactory(),
-                    new InMemoryLabelScanStoreExtension() ) );
+            state.addKernelExtensions( Arrays.asList( new InMemoryIndexProviderFactory() ) );
             return state.databaseDependencies();
         }
     }

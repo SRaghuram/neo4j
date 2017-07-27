@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -57,26 +57,26 @@ public class StateTransition
     @Override
     public boolean equals( Object o )
     {
-        if( this == o )
+        if ( this == o )
         {
             return true;
         }
-        if( o == null || getClass() != o.getClass() )
+        if ( o == null || getClass() != o.getClass() )
         {
             return false;
         }
 
         StateTransition that = (StateTransition) o;
 
-        if( !message.equals( that.message ) )
+        if ( !message.equals( that.message ) )
         {
             return false;
         }
-        if( !newState.equals( that.newState ) )
+        if ( !newState.equals( that.newState ) )
         {
             return false;
         }
-        if( !oldState.equals( that.oldState ) )
+        if ( !oldState.equals( that.oldState ) )
         {
             return false;
         }
@@ -96,13 +96,14 @@ public class StateTransition
     @Override
     public String toString()
     {
-        if (message.getPayload() instanceof String)
-            return getOldState().toString()+
-                   "-["+getMessage().getMessageType()+":"+getMessage().getPayload()+"]->"+
-                   getNewState().toString();
+        if ( message.getPayload() instanceof String )
+        {
+            return getOldState().toString() + "-[" + getMessage().getMessageType() + ":" + getMessage().getPayload() +
+                    "]->" + getNewState().toString();
+        }
         else
-            return getOldState().toString()+
-                   "-["+getMessage().getMessageType()+"]->"+
-                   getNewState().toString();
+        {
+            return getOldState().toString() + "-[" + getMessage().getMessageType() + "]->" + getNewState().toString();
+        }
     }
 }

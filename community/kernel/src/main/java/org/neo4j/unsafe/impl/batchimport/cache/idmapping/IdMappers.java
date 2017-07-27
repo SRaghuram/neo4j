@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,6 +33,7 @@ import org.neo4j.unsafe.impl.batchimport.input.InputNode;
 import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 
 import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.EncodingIdMapper.NO_MONITOR;
+import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.TrackerFactories.dynamic;
 
 /**
  * Place to instantiate common {@link IdMapper} implementations.
@@ -73,6 +74,11 @@ public class IdMappers
         {
             return getClass().getSimpleName();
         }
+
+        @Override
+        public void close()
+        {   // Nothing to close
+        }
     }
 
     /**
@@ -94,7 +100,7 @@ public class IdMappers
      */
     public static IdMapper strings( NumberArrayFactory cacheFactory )
     {
-        return new EncodingIdMapper( cacheFactory, new StringEncoder(), Radix.STRING, NO_MONITOR );
+        return new EncodingIdMapper( cacheFactory, new StringEncoder(), Radix.STRING, NO_MONITOR, dynamic() );
     }
 
     /**
@@ -106,6 +112,6 @@ public class IdMappers
      */
     public static IdMapper longs( NumberArrayFactory cacheFactory )
     {
-        return new EncodingIdMapper( cacheFactory, new LongEncoder(), Radix.LONG, NO_MONITOR );
+        return new EncodingIdMapper( cacheFactory, new LongEncoder(), Radix.LONG, NO_MONITOR, dynamic() );
     }
 }

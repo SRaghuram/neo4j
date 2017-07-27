@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,13 +24,11 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-
 import javax.management.MBeanServer;
-import javax.management.remote.JMXServiceURL;
 
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.helpers.Service;
-import org.neo4j.kernel.KernelData;
+import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -42,7 +40,6 @@ public class JmxKernelExtension implements Lifecycle
     private List<Neo4jMBean> beans;
     private MBeanServer mbs;
     private ManagementSupport support;
-    private JMXServiceURL url;
 
     public JmxKernelExtension( KernelData kernelData, LogProvider logProvider )
     {
@@ -54,7 +51,6 @@ public class JmxKernelExtension implements Lifecycle
     public void init() throws Throwable
     {
         support = ManagementSupport.load();
-        url = support.getJMXServiceURL( kernelData );
         mbs = support.getMBeanServer();
         beans = new LinkedList<>();
         try
@@ -121,11 +117,6 @@ public class JmxKernelExtension implements Lifecycle
         }
     }
 
-    public JMXServiceURL getConnectionURL()
-    {
-        return url;
-    }
-
     public final <T> T getSingleManagementBean( Class<T> type )
     {
         Iterator<T> beans = getManagementBeans( type ).iterator();
@@ -138,7 +129,7 @@ public class JmxKernelExtension implements Lifecycle
             }
             return bean;
         }
-        throw new NotFoundException( "No management bean found for "+type.getName() );
+        throw new NotFoundException( "No management bean found for " + type.getName() );
     }
 
     public <T> Collection<T> getManagementBeans( Class<T> beanInterface )

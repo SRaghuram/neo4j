@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -52,7 +52,7 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
     {
         try
         {
-            clientA.releaseExclusive( NODE, 1l );
+            clientA.releaseExclusive( NODE, 1L );
             fail( "Invalid release should throw exception" );
         }
         catch ( Exception e )
@@ -61,7 +61,7 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
         }
         try
         {
-            clientA.releaseShared( NODE, 1l );
+            clientA.releaseShared( NODE, 1L );
             fail( "Invalid release should throw exception" );
         }
         catch ( Exception e )
@@ -69,10 +69,10 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
             // good
         }
 
-        clientA.acquireShared( NODE, 1l );
+        clientA.acquireShared( LockTracer.NONE, NODE, 1L );
         try
         {
-            clientA.releaseExclusive( NODE, 1l );
+            clientA.releaseExclusive( NODE, 1L );
             fail( "Invalid release should throw exception" );
         }
         catch ( Exception e )
@@ -80,49 +80,49 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
             // good
         }
 
-        clientA.releaseShared( NODE, 1l );
-        clientA.acquireExclusive( NODE, 1l );
+        clientA.releaseShared( NODE, 1L );
+        clientA.acquireExclusive( LockTracer.NONE, NODE, 1L );
         try
         {
-            clientA.releaseShared( NODE, 1l );
+            clientA.releaseShared( NODE, 1L );
             fail( "Invalid release should throw exception" );
         }
         catch ( Exception e )
         {
             // good
         }
-        clientA.releaseExclusive( NODE, 1l );
+        clientA.releaseExclusive( NODE, 1L );
 
-        clientA.acquireShared( NODE, 1l );
-        clientA.acquireExclusive( NODE, 1l );
-        clientA.releaseExclusive( NODE, 1l );
-        clientA.releaseShared( NODE, 1l );
+        clientA.acquireShared( LockTracer.NONE, NODE, 1L );
+        clientA.acquireExclusive( LockTracer.NONE, NODE, 1L );
+        clientA.releaseExclusive( NODE, 1L );
+        clientA.releaseShared( NODE, 1L );
 
-        clientA.acquireExclusive( NODE, 1l );
-        clientA.acquireShared( NODE, 1l );
-        clientA.releaseShared( NODE, 1l );
-        clientA.releaseExclusive( NODE, 1l );
+        clientA.acquireExclusive( LockTracer.NONE, NODE, 1L );
+        clientA.acquireShared( LockTracer.NONE, NODE, 1L );
+        clientA.releaseShared( NODE, 1L );
+        clientA.releaseExclusive( NODE, 1L );
 
         for ( int i = 0; i < 10; i++ )
         {
             if ( (i % 2) == 0 )
             {
-                clientA.acquireExclusive( NODE, 1l );
+                clientA.acquireExclusive( LockTracer.NONE, NODE, 1L );
             }
             else
             {
-                clientA.acquireShared( NODE, 1l );
+                clientA.acquireShared( LockTracer.NONE, NODE, 1L );
             }
         }
         for ( int i = 9; i >= 0; i-- )
         {
             if ( (i % 2) == 0 )
             {
-                clientA.releaseExclusive( NODE, 1l );
+                clientA.releaseExclusive( NODE, 1L );
             }
             else
             {
-                clientA.releaseShared( NODE, 1l );
+                clientA.releaseShared( NODE, 1L );
             }
         }
     }
@@ -134,7 +134,7 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
         LockWorker t2 = new LockWorker( "T2", locks );
         LockWorker t3 = new LockWorker( "T3", locks );
         LockWorker t4 = new LockWorker( "T4", locks );
-        long r1 = 1l;
+        long r1 = 1L;
         try
         {
             t1.getReadLock( r1, true );
@@ -195,9 +195,16 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
         }
         catch ( Exception e )
         {
-            LockWorkFailureDump dumper = new LockWorkFailureDump( testDir.directory( getClass().getSimpleName() ) );
+            LockWorkFailureDump dumper = new LockWorkFailureDump( testDir.file( getClass().getSimpleName() ) );
             File file = dumper.dumpState( locks, t1, t2, t3, t4 );
             throw new RuntimeException( "Failed, forensics information dumped to " + file.getAbsolutePath(), e );
+        }
+        finally
+        {
+            t1.close();
+            t2.close();
+            t3.close();
+            t4.close();
         }
     }
 
@@ -246,12 +253,12 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
                             float f = rand.nextFloat();
                             if ( f < readWriteRatio )
                             {
-                                client.acquireShared( NODE, nodeId );
+                                client.acquireShared( LockTracer.NONE, NODE, nodeId );
                                 lockStack.push( READ );
                             }
                             else
                             {
-                                client.acquireExclusive( NODE, nodeId );
+                                client.acquireExclusive( LockTracer.NONE, NODE, nodeId );
                                 lockStack.push( WRITE );
                             }
                         }
@@ -269,9 +276,8 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
                             }
                         }
                     }
-                    catch ( DeadlockDetectedException e )
+                    catch ( DeadlockDetectedException ignored )
                     {
-
                     }
                     finally
                     {
@@ -305,8 +311,8 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
     @Test
     public void testStressMultipleThreads() throws Exception
     {
-        long r1 = 1l;
-        StressThread stressThreads[] = new StressThread[100];
+        long r1 = 1L;
+        StressThread[] stressThreads = new StressThread[100];
         CountDownLatch startSignal = new CountDownLatch( 1 );
         for ( int i = 0; i < 100; i++ )
         {
@@ -328,16 +334,18 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
         for ( StressThread stressThread : stressThreads )
         {
             if ( stressThread.error != null )
+            {
                 throw stressThread.error;
+            }
             else if ( stressThread.isAlive() )
             {
                 for ( StackTraceElement stackTraceElement : stressThread.getStackTrace() )
                 {
-                    System.out.println(stackTraceElement);
+                    System.out.println( stackTraceElement );
                 }
             }
         }
-        if(anyAlive)
+        if ( anyAlive )
         {
             throw new RuntimeException( "Expected all threads to complete." );
         }
@@ -361,9 +369,13 @@ public class RWLockCompatibility extends LockingCompatibilityTestSuite.Compatibi
         for ( StressThread stressThread : stressThreads )
         {
             if ( stressThread.error != null )
+            {
                 return false;
+            }
             if ( stressThread.isAlive() )
+            {
                 return true;
+            }
         }
         return false;
     }

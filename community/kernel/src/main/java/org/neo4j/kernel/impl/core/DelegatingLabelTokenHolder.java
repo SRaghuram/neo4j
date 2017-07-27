@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,10 +19,18 @@
  */
 package org.neo4j.kernel.impl.core;
 
+import org.neo4j.storageengine.api.Token;
+
 public class DelegatingLabelTokenHolder extends DelegatingTokenHolder<Token> implements LabelTokenHolder
 {
     public DelegatingLabelTokenHolder( TokenCreator tokenCreator )
     {
         super( tokenCreator, new Token.Factory() );
+    }
+
+    @Override
+    protected String tokenType()
+    {
+        return "Label";
     }
 }

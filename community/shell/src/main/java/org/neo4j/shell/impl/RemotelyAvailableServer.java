@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,12 +34,13 @@ import org.neo4j.shell.Welcome;
 
 /**
  * The remote aspect of a {@link ShellServer}.
- * 
+ *
  * @author Mattias Persson
  */
 class RemotelyAvailableServer extends UnicastRemoteObject implements ShellServer
 {
     private final ShellServer actual;
+    private RmiLocation location;
 
     RemotelyAvailableServer( ShellServer actual ) throws RemoteException
     {
@@ -78,7 +79,7 @@ class RemotelyAvailableServer extends UnicastRemoteObject implements ShellServer
     {
         return actual.welcome( initialSession );
     }
-    
+
     @Override
     public void leave( Serializable clientID ) throws RemoteException
     {
@@ -90,6 +91,10 @@ class RemotelyAvailableServer extends UnicastRemoteObject implements ShellServer
     {
         try
         {
+            if (this.location != null)
+            {
+                this.location.unbind();
+            }
             unexportObject( this, true );
         }
         catch ( NoSuchObjectException e )
@@ -103,11 +108,12 @@ class RemotelyAvailableServer extends UnicastRemoteObject implements ShellServer
     {
         makeRemotelyAvailable( "localhost", port, name );
     }
-    
+
     @Override
     public void makeRemotelyAvailable( String host, int port, String name ) throws RemoteException
     {
-        RmiLocation.location( host, port, name ).bind( this );
+        this.location = RmiLocation.location( host, port, name );
+        this.location.bind( this );
     }
 
     @Override

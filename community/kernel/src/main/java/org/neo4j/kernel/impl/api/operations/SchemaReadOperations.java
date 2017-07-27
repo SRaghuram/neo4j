@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,25 +22,22 @@ package org.neo4j.kernel.impl.api.operations;
 import java.util.Iterator;
 
 import org.neo4j.kernel.api.Statement;
-import org.neo4j.kernel.api.constraints.NodePropertyConstraint;
-import org.neo4j.kernel.api.constraints.PropertyConstraint;
-import org.neo4j.kernel.api.constraints.RelationshipPropertyConstraint;
-import org.neo4j.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.schema.SchemaRuleNotFoundException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
-import org.neo4j.kernel.api.procedures.ProcedureDescriptor;
-import org.neo4j.kernel.api.procedures.ProcedureSignature.ProcedureName;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.schema.SchemaDescriptor;
+import org.neo4j.kernel.api.schema.constaints.ConstraintDescriptor;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.KernelStatement;
-import org.neo4j.kernel.impl.store.SchemaStorage;
+import org.neo4j.storageengine.api.schema.PopulationProgress;
 
 public interface SchemaReadOperations
 {
     /**
      * Returns the descriptor for the given labelId and propertyKey.
      */
-    IndexDescriptor indexesGetForLabelAndPropertyKey( KernelStatement state, int labelId, int propertyKey );
+    IndexDescriptor indexGetForSchema( KernelStatement state, LabelSchemaDescriptor descriptor );
 
     /**
      * Get all indexes for a label.
@@ -53,19 +50,15 @@ public interface SchemaReadOperations
     Iterator<IndexDescriptor> indexesGetAll( KernelStatement state );
 
     /**
-     * Get all constraint indexes for a label.
-     */
-    Iterator<IndexDescriptor> uniqueIndexesGetForLabel( KernelStatement state, int labelId );
-
-    /**
-     * Returns all constraint indexes.
-     */
-    Iterator<IndexDescriptor> uniqueIndexesGetAll( KernelStatement state );
-
-    /**
      * Retrieve the state of an index.
      */
     InternalIndexState indexGetState( KernelStatement state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException;
+
+    /**
+     * Retrieve the population progress of an index.
+     */
+    PopulationProgress indexGetPopulationProgress( KernelStatement state, IndexDescriptor descriptor ) throws
+            IndexNotFoundKernelException;
 
     /**
      * Get the index size.
@@ -83,53 +76,38 @@ public interface SchemaReadOperations
     String indexGetFailure( Statement state, IndexDescriptor descriptor ) throws IndexNotFoundKernelException;
 
     /**
-     * Get all constraints applicable to label and propertyKey. There are only {@link NodePropertyConstraint}
-     * for the time being.
+     * Get all constraints applicable to label and propertyKeys.
      */
-    Iterator<NodePropertyConstraint> constraintsGetForLabelAndPropertyKey( KernelStatement state, int labelId, int propertyKeyId );
+    Iterator<ConstraintDescriptor> constraintsGetForSchema( KernelStatement state, SchemaDescriptor descriptor );
 
     /**
-     * Get all constraints applicable to label. There are only {@link NodePropertyConstraint}
-     * for the time being.
+     * Returns true if a constraint exists that matches the given {@link ConstraintDescriptor}.
      */
-    Iterator<NodePropertyConstraint> constraintsGetForLabel( KernelStatement state, int labelId );
+    boolean constraintExists( KernelStatement state, ConstraintDescriptor descriptor );
 
     /**
-     * Get all constraints applicable to relationship type and propertyKey.
-     * There are only {@link RelationshipPropertyConstraint} for the time being.
+     * Get all constraints applicable to label.
      */
-    Iterator<RelationshipPropertyConstraint> constraintsGetForRelationshipTypeAndPropertyKey( KernelStatement state,
-            int relTypeId, int propertyKeyId );
+    Iterator<ConstraintDescriptor> constraintsGetForLabel( KernelStatement state, int labelId );
 
     /**
-     * Get all constraints applicable to relationship type. There are only {@link RelationshipPropertyConstraint}
-     * for the time being.
+     * Get all constraints applicable to relationship type.
      */
-    Iterator<RelationshipPropertyConstraint> constraintsGetForRelationshipType( KernelStatement state, int typeId );
+    Iterator<ConstraintDescriptor> constraintsGetForRelationshipType( KernelStatement state, int typeId );
 
     /**
-     * Get all constraints. There are only {@link PropertyConstraint}
-     * for the time being.
+     * Get all constraints.
      */
-    Iterator<PropertyConstraint> constraintsGetAll( KernelStatement state );
+    Iterator<ConstraintDescriptor> constraintsGetAll( KernelStatement state );
 
     /**
      * Get the owning constraint for a constraint index. Returns null if the index does not have an owning constraint.
      */
-    Long indexGetOwningUniquenessConstraintId( KernelStatement state, IndexDescriptor index ) throws SchemaRuleNotFoundException;
+    Long indexGetOwningUniquenessConstraintId( KernelStatement state, IndexDescriptor index );
 
     /**
      * Get the index id (the id or the schema rule record) for a committed index
      * - throws exception for indexes that aren't committed.
      */
-    long indexGetCommittedId( KernelStatement state, IndexDescriptor index, SchemaStorage.IndexRuleKind constraint ) throws SchemaRuleNotFoundException;
-
-    /** List all defined procedures, given the current transactional context
-     * @param kernelStatement*/
-    Iterator<ProcedureDescriptor> proceduresGetAll( KernelStatement kernelStatement );
-
-    /**
-     * Load a procedure description given a signature, or return null if the procedure does not exist.
-     */
-    ProcedureDescriptor procedureGet( KernelStatement statement, ProcedureName signature ) throws ProcedureException;
+    long indexGetCommittedId( KernelStatement state, IndexDescriptor index ) throws SchemaRuleNotFoundException;
 }

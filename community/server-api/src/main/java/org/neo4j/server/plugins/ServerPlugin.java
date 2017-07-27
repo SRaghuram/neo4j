@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.server.plugins;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -114,11 +115,12 @@ public abstract class ServerPlugin
         }
         try
         {
-            if ( !URLEncoder.encode( name, "UTF-8" ).equals( name ) )
+            if ( !URLEncoder.encode( name, StandardCharsets.UTF_8.name() ).equals( name ) )
             {
                 throw new IllegalArgumentException( "Name contains illegal characters" );
             }
-        } catch ( UnsupportedEncodingException e )
+        }
+        catch ( UnsupportedEncodingException e )
         {
             throw new Error( "UTF-8 should be supported", e );
         }

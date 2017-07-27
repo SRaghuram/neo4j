@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,10 @@
  */
 package org.neo4j.kernel.impl.locking;
 
+import org.junit.After;
+import org.junit.Ignore;
+import org.junit.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -26,10 +30,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.junit.After;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.DeadlockDetectedException;
 
 import static org.neo4j.kernel.impl.locking.Locks.Client;
@@ -55,24 +56,24 @@ public class DeadlockCompatibility extends LockingCompatibilityTestSuite.Compati
     public void shouldDetectTwoClientExclusiveDeadlock() throws Exception
     {
         assertDetectsDeadlock(
-                acquireExclusive( clientA, NODE, 1l ),
-                acquireExclusive( clientB, NODE, 2l ),
+                acquireExclusive( clientA, LockTracer.NONE, NODE, 1L ),
+                acquireExclusive( clientB, LockTracer.NONE, NODE, 2L ),
 
-                acquireExclusive( clientB, NODE, 1l ),
-                acquireExclusive( clientA, NODE, 2l ) );
+                acquireExclusive( clientB, LockTracer.NONE, NODE, 1L ),
+                acquireExclusive( clientA, LockTracer.NONE, NODE, 2L ) );
     }
 
     @Test
     public void shouldDetectThreeClientExclusiveDeadlock() throws Exception
     {
         assertDetectsDeadlock(
-                acquireExclusive( clientA, NODE, 1l ),
-                acquireExclusive( clientB, NODE, 2l ),
-                acquireExclusive( clientC, NODE, 3l ),
+                acquireExclusive( clientA, LockTracer.NONE, NODE, 1L ),
+                acquireExclusive( clientB, LockTracer.NONE, NODE, 2L ),
+                acquireExclusive( clientC, LockTracer.NONE, NODE, 3L ),
 
-                acquireExclusive( clientB, NODE, 1l ),
-                acquireExclusive( clientC, NODE, 2l ),
-                acquireExclusive( clientA, NODE, 3l ) );
+                acquireExclusive( clientB, LockTracer.NONE, NODE, 1L ),
+                acquireExclusive( clientC, LockTracer.NONE, NODE, 2L ),
+                acquireExclusive( clientA, LockTracer.NONE, NODE, 3L ) );
     }
 
     @Test
@@ -80,11 +81,11 @@ public class DeadlockCompatibility extends LockingCompatibilityTestSuite.Compati
     {
         assertDetectsDeadlock(
 
-                acquireShared( clientA, NODE, 1l ),
-                acquireExclusive( clientB, NODE, 2l ),
+                acquireShared( clientA, LockTracer.NONE, NODE, 1L ),
+                acquireExclusive( clientB, LockTracer.NONE, NODE, 2L ),
 
-                acquireExclusive( clientB, NODE, 1l ),
-                acquireShared( clientA, NODE, 2l ) );
+                acquireExclusive( clientB, LockTracer.NONE, NODE, 1L ),
+                acquireShared( clientA, LockTracer.NONE, NODE, 2L ) );
     }
 
     private void assertDetectsDeadlock( LockCommand... commands )
@@ -96,17 +97,17 @@ public class DeadlockCompatibility extends LockingCompatibilityTestSuite.Compati
         }
 
         long timeout = System.currentTimeMillis() + (1000 * 10);
-        while(System.currentTimeMillis() < timeout)
+        while ( System.currentTimeMillis() < timeout )
         {
-            for ( Pair<Client, Future<Object>> call : calls )
+            for ( Pair<Client,Future<Object>> call : calls )
             {
                 try
                 {
-                    call.other().get(1, TimeUnit.MILLISECONDS);
+                    call.other().get( 1, TimeUnit.MILLISECONDS );
                 }
                 catch ( ExecutionException e )
                 {
-                    if(e.getCause() instanceof DeadlockDetectedException)
+                    if ( e.getCause() instanceof DeadlockDetectedException )
                     {
                         return;
                     }

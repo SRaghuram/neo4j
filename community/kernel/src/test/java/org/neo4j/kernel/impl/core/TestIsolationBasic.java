@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,18 +19,19 @@
  */
 package org.neo4j.kernel.impl.core;
 
+import org.junit.Test;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Test;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class TestIsolationBasic extends AbstractNeo4jTestCase
 {
@@ -50,8 +51,8 @@ public class TestIsolationBasic extends AbstractNeo4jTestCase
         {
             n1 = getGraphDb().createNode();
             n2 = getGraphDb().createNode();
-            r1 = n1.createRelationshipTo( n2, 
-                DynamicRelationshipType.withName( "TEST" ) );
+            r1 = n1.createRelationshipTo( n2,
+                    RelationshipType.withName( "TEST" ) );
             tx.success();
         }
 
@@ -77,12 +78,11 @@ public class TestIsolationBasic extends AbstractNeo4jTestCase
             public void run()
             {
 
-                try(Transaction tx = getGraphDb().beginTx())
+                try ( Transaction tx = getGraphDb().beginTx() )
                 {
                     node1.setProperty( "key", "new" );
                     rel1.setProperty( "key", "new" );
-                    node1.createRelationshipTo( node2, 
-                        DynamicRelationshipType.withName( "TEST" ) );
+                    node1.createRelationshipTo( node2, RelationshipType.withName( "TEST" ) );
                     assertPropertyEqual( node1, "key", "new" );
                     assertPropertyEqual( rel1, "key", "new" );
                     assertRelationshipCount( node1, 2 );
@@ -110,7 +110,7 @@ public class TestIsolationBasic extends AbstractNeo4jTestCase
                         assertRelationshipCount( node1, 1 );
                         assertRelationshipCount( node2, 1 );
                     }
-                    catch(Exception e)
+                    catch ( Exception e )
                     {
                         t1Exception.compareAndSet( null, e );
                     }
@@ -136,11 +136,10 @@ public class TestIsolationBasic extends AbstractNeo4jTestCase
         assertRelationshipCount( node1, 1 );
         assertRelationshipCount( node2, 1 );
 
-        if(t1Exception.get() != null)
+        if ( t1Exception.get() != null )
         {
             throw t1Exception.get();
         }
-
 
         try (Transaction tx = getGraphDb().beginTx())
         {
@@ -153,8 +152,8 @@ public class TestIsolationBasic extends AbstractNeo4jTestCase
             tx.success();
         }
     }
-    
-    private void assertPropertyEqual( PropertyContainer primitive, String key, 
+
+    private void assertPropertyEqual( PropertyContainer primitive, String key,
         String value )
     {
         try ( Transaction tx = getGraphDb().beginTx() )
@@ -162,7 +161,7 @@ public class TestIsolationBasic extends AbstractNeo4jTestCase
             assertEquals( value, primitive.getProperty( key ) );
         }
     }
-    
+
     private void assertRelationshipCount( Node node, int count )
     {
 

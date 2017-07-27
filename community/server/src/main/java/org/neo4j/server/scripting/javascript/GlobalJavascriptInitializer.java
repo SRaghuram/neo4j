@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.server.scripting.javascript;
 import org.mozilla.javascript.ClassShutter;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
+
 import org.neo4j.server.scripting.UserScriptClassWhiteList;
 
 /**
@@ -43,7 +44,7 @@ public class GlobalJavascriptInitializer
 
     private static Mode initializationMode;
 
-    public static enum Mode
+    public enum Mode
     {
         SANDBOXED,
         UNSAFE
@@ -51,23 +52,24 @@ public class GlobalJavascriptInitializer
 
     public static synchronized void initialize(Mode requestedMode)
     {
-        if(initializationMode != null)
+        if ( initializationMode != null )
         {
-            if(initializationMode == requestedMode)
+            if ( initializationMode == requestedMode )
             {
                 return;
             }
             else
             {
-                throw new RuntimeException( "Cannot initialize javascript context twice, " +
-                        "system is currently initialized as: '" + initializationMode.name() + "'." );
+                throw new RuntimeException(
+                        "Cannot initialize javascript context twice, " + "system is currently initialized as: '" +
+                                initializationMode.name() + "'." );
             }
         }
 
         initializationMode = requestedMode;
 
         ContextFactory contextFactory;
-        switch(requestedMode)
+        switch ( requestedMode )
         {
             case UNSAFE:
                 contextFactory = new ContextFactory()

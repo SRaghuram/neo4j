@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,7 @@ package org.neo4j.jmx;
 @Description( "Estimates of the numbers of different kinds of Neo4j primitives" )
 public interface Primitives
 {
-    final String NAME = "Primitive count";
+    String NAME = "Primitive count";
 
     @Description( "An estimation of the number of nodes used in this Neo4j instance" )
     long getNumberOfNodeIdsInUse();

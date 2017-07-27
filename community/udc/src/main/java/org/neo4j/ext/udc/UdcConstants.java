@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,6 +30,8 @@ public class UdcConstants
     public static final String DATABASE_MODE = "databasemode";
     public static final String SERVER_ID = "serverid";
 
+    public static final String FEATURES = "features";
+
     public static final String USER_AGENTS = "ua";
     public static final String VERSION = "v";
     public static final String REVISION = "revision";
@@ -46,7 +48,9 @@ public class UdcConstants
     public static final String PROPERTY_IDS_IN_USE = "propids";
     public static final String LABEL_IDS_IN_USE = "labelids";
 
-    public static final String UDC_PROPERTY_PREFIX = "neo4j.ext.udc";
+    public static final String UDC_PROPERTY_PREFIX = "unsupported.dbms.udc";
     public static final String OS_PROPERTY_PREFIX = "os";
     public static final String UNKNOWN_DIST = "unknown";
+
+    public static final String STORE_SIZE = "storesize";
 }

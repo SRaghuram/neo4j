@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,8 @@ import java.util.Comparator;
 
 public class IntegerComparator implements Comparator<Integer>
 {
-    public int compare(Integer o1, Integer o2) {
+    public int compare(Integer o1, Integer o2)
+    {
         return o1 - o2;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -47,7 +47,10 @@ public final class ServerExtender
     Iterable<PluginPoint> getExtensionsFor( Class<?> type )
     {
         Map<String, PluginPoint> ext = targetToPluginMap.get( type );
-        if ( ext == null ) return Collections.emptyList();
+        if ( ext == null )
+        {
+            return Collections.emptyList();
+        }
         return ext.values();
     }
 
@@ -84,7 +87,10 @@ public final class ServerExtender
     void addExtension( Class<?> type, PluginPoint plugin )
     {
         Map<String, PluginPoint> ext = targetToPluginMap.get( type );
-        if ( ext == null ) throw new IllegalStateException( "Cannot extend " + type );
+        if ( ext == null )
+        {
+            throw new IllegalStateException( "Cannot extend " + type );
+        }
         add( ext, plugin );
     }
 

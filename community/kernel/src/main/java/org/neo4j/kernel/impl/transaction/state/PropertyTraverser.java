@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
@@ -31,6 +32,19 @@ import org.neo4j.kernel.impl.util.Listener;
 
 public class PropertyTraverser
 {
+    /**
+     * Traverses a property record chain and finds the record containing the property with key {@code propertyKey}.
+     * If none is found and {@code strict} is {@code true} then {@link IllegalStateException} is thrown,
+     * otherwise id value of {@link Record#NO_NEXT_PROPERTY} is returned.
+     *
+     * @param primitive {@link PrimitiveRecord} which is the owner of the chain.
+     * @param propertyKey property key token id to look for.
+     * @param propertyRecords access to records.
+     * @param strict dictates behavior on property key not found. If {@code true} then {@link IllegalStateException}
+     * is thrown, otherwise value of {@link Record#NO_NEXT_PROPERTY} is returned.
+     * @return property record id containing property with the given {@code propertyKey}, otherwise if
+     * {@code strict} is false value of {@link Record#NO_NEXT_PROPERTY}.
+     */
     public long findPropertyRecordContaining( PrimitiveRecord primitive, int propertyKey,
             RecordAccess<Long, PropertyRecord, PrimitiveRecord> propertyRecords, boolean strict )
     {
@@ -81,6 +95,7 @@ public class PropertyTraverser
             toCheck.add( propRecord );
             assert propRecord.inUse() : primitive + "->"
                                         + Arrays.toString( toCheck.toArray() );
+            assert propRecord.size() <= PropertyType.getPayloadSize() : propRecord + " size " + propRecord.size();
             nextIdToFetch = propRecord.getNextProp();
         }
         if ( toCheck.isEmpty() )

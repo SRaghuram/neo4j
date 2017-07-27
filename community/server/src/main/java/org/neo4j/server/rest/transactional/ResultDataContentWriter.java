@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,13 @@
  */
 package org.neo4j.server.rest.transactional;
 
-import java.io.IOException;
-
 import org.codehaus.jackson.JsonGenerator;
+
+import java.io.IOException;
 
 import org.neo4j.graphdb.Result;
 
 public interface ResultDataContentWriter
 {
-    void write( JsonGenerator out, Iterable<String> columns, Result.ResultRow row ) throws IOException;
+    void write( JsonGenerator out, Iterable<String> columns, Result.ResultRow row, TransactionStateChecker txStateChecker ) throws IOException;
 }

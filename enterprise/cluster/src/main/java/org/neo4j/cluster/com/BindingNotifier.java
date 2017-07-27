@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,9 +21,13 @@ package org.neo4j.cluster.com;
 
 import org.neo4j.cluster.BindingListener;
 
+/**
+ * Instances of this interface notify listeners when the cluster client has been bound to a particular network interface
+ * and port.
+ */
 public interface BindingNotifier
 {
-    public void addBindingListener( BindingListener listener );
+    void addBindingListener( BindingListener listener );
 
-    public void removeBindingListener( BindingListener listener );
+    void removeBindingListener( BindingListener listener );
 }

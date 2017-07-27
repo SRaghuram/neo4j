@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -106,7 +106,7 @@ public class PrimitiveLongObjectHashMap<VALUE> extends AbstractLongHopScotchColl
         private PrimitiveLongObjectHashMap other;
         private boolean equal = true;
 
-        public LongObjEquality( PrimitiveLongObjectHashMap that )
+        LongObjEquality( PrimitiveLongObjectHashMap that )
         {
             this.other = that;
         }
@@ -148,6 +148,21 @@ public class PrimitiveLongObjectHashMap<VALUE> extends AbstractLongHopScotchColl
         public int hashCode()
         {
             return hash;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            HashCodeComputer<?> that = (HashCodeComputer<?>) o;
+            return hash == that.hash;
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,76 +19,45 @@
  */
 package org.neo4j.adversaries;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toSet;
 
 /**
- * An adversary that delegates failure injection only when invoked through certain classes.
+ * An adversary that delegates failure injection only when invoked through certain call sites.
+ * For every potential failure injection the current stack trace (the elements of it) are analyzed
+ * and if there's a match with the specified victims then failure will be delegated to the actual
+ * {@link Adversary} underneath.
  */
-public class ClassGuardedAdversary implements Adversary
+public class ClassGuardedAdversary extends StackTraceElementGuardedAdversary
 {
-    private final Adversary delegate;
-    private final Set<String> victimClasses;
-    private volatile boolean enabled;
 
-    public ClassGuardedAdversary( Adversary delegate, String... victimClassNames )
+    public ClassGuardedAdversary( Adversary delegate, Class<?>... victimClassSet )
     {
-        this.delegate = delegate;
-        victimClasses = new HashSet<String>();
-        Collections.addAll( victimClasses, victimClassNames );
-        enabled = true;
-    }
-
-    @Override
-    public void injectFailure( Class<? extends Throwable>... failureTypes )
-    {
-        if ( enabled && calledFromVictimClass() )
+        super( delegate, new Predicate<StackTraceElement>()
         {
-            delegateFailureInjection( failureTypes );
-        }
-    }
+            private final Set<String> victimClasses = Stream.of( victimClassSet ).map( Class::getName ).collect( toSet() );
 
-    @Override
-    public boolean injectFailureOrMischief( Class<? extends Throwable>... failureTypes )
-    {
-        if ( enabled && calledFromVictimClass() )
-        {
-            return delegateFailureOrMischiefInjection( failureTypes );
-        }
-        return false;
-    }
-
-    protected void delegateFailureInjection( Class<? extends Throwable>[] failureTypes )
-    {
-        delegate.injectFailure( failureTypes );
-    }
-
-    protected boolean delegateFailureOrMischiefInjection( Class<? extends Throwable>[] failureTypes )
-    {
-        return delegate.injectFailureOrMischief( failureTypes );
-    }
-
-    private boolean calledFromVictimClass()
-    {
-        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-        for ( StackTraceElement element : stackTrace )
-        {
-            if ( victimClasses.contains( element.getClassName() ) )
+            @Override
+            public boolean test( StackTraceElement stackTraceElement )
             {
-                return true;
+                return victimClasses.contains( stackTraceElement.getClassName() );
             }
-        }
-        return false;
+        } );
     }
 
-    public void disable()
+    /**
+     * Specifies victims as arbitrary {@link StackTraceElement} {@link Predicate}.
+     *
+     * @param delegate {@link Adversary} to delegate calls to.
+     * @param victims arbitrary {@link Predicate} for {@link StackTraceElement} in the executing
+     * thread and if any of the elements in the current stack trace matches then failure is injected.
+     */
+    @SafeVarargs
+    public ClassGuardedAdversary( Adversary delegate, Predicate<StackTraceElement>... victims )
     {
-        enabled = false;
-    }
-
-    public void enable()
-    {
-        enabled = true;
+        super(delegate, victims);
     }
 }

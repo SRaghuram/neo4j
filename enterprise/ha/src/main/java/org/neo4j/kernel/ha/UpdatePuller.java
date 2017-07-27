@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,16 +19,14 @@
  */
 package org.neo4j.kernel.ha;
 
-
 /**
  * Puller of transactions updates from a different store. Pulls for updates and applies them into a current store.
  * <p>
  * On a running instance of a store there should be only one active implementation of this interface.
  * <p>
- * Typically master instance should use {@link #NONE} implementation since master is owner of data in cluster env
- * and its up to slaves to pull updates.
  *
  * @see SlaveUpdatePuller
+ * @see MasterUpdatePuller
  */
 public interface UpdatePuller
 {
@@ -39,7 +37,6 @@ public interface UpdatePuller
      */
     void pullUpdates() throws InterruptedException;
 
-
     /**
      * Try to pull all updates
      *
@@ -47,6 +44,16 @@ public interface UpdatePuller
      * @throws InterruptedException in case if interrupted while waiting for updates
      */
     boolean tryPullUpdates() throws InterruptedException;
+
+    /**
+     * Start update pulling
+     */
+    void start();
+
+    /**
+     * Terminate update pulling
+     */
+    void stop();
 
     /**
      * Pull updates and waits for the supplied condition to be
@@ -69,24 +76,4 @@ public interface UpdatePuller
         boolean evaluate( int currentTicket, int targetTicket );
     }
 
-    UpdatePuller NONE = new UpdatePuller()
-    {
-        @Override
-        public void pullUpdates() throws InterruptedException
-        {
-        }
-
-        @Override
-        public boolean tryPullUpdates() throws InterruptedException
-        {
-            return false;
-        }
-
-        @Override
-        public void pullUpdates( Condition condition, boolean assertPullerActive )
-                throws InterruptedException
-        {
-
-        }
-    };
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,7 @@
  */
 package org.neo4j.server.plugins;
 
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.rest.repr.BadInputException;
 
 abstract class ListParameterExtractor extends ParameterExtractor
@@ -35,10 +35,16 @@ abstract class ListParameterExtractor extends ParameterExtractor
         Object[] result = caster.getList( graphDb, parameters, name );
         if ( result != null )
         {
-            if ( type.isPrimitive() ) return caster.convert( result );
+            if ( type.isPrimitive() )
+            {
+                return caster.convert( result );
+            }
             return convert( result );
         }
-        if ( optional ) return null;
+        if ( optional )
+        {
+            return null;
+        }
         throw new IllegalArgumentException( "Mandatory argument \"" + name + "\" not supplied." );
     }
 

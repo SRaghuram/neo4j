@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,11 +21,8 @@ package org.neo4j.kernel.impl.store.kvstore;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.locks.Lock;
-
-import org.neo4j.kernel.impl.util.function.Optional;
-
-import static org.neo4j.kernel.impl.util.function.Optionals.some;
 
 public abstract class ActiveState<Key> extends ProgressiveState<Key>
 {
@@ -66,7 +63,7 @@ public abstract class ActiveState<Key> extends ProgressiveState<Key>
     @Override
     final Optional<EntryUpdater<Key>> optionalUpdater( long version, Lock lock )
     {
-        return some( updater( version, lock ) );
+        return Optional.of( updater( version, lock ) );
     }
 
     protected abstract EntryUpdater<Key> updater( long version, Lock lock );
@@ -84,10 +81,6 @@ public abstract class ActiveState<Key> extends ProgressiveState<Key>
     @Override
     final ProgressiveState<Key> stop() throws IOException
     {
-        if ( hasChanges() )
-        {
-            throw new IllegalStateException( "Cannot stop while there are changes." );
-        }
         close();
         return new DeadState.Stopped<>( keyFormat(), factory() );
     }
@@ -109,9 +102,6 @@ public abstract class ActiveState<Key> extends ProgressiveState<Key>
     protected abstract boolean hasChanges();
 
     protected abstract PrototypeState<Key> prototype( long version );
-
-    @Override
-    protected abstract void close() throws IOException;
 
     protected abstract Factory factory();
 

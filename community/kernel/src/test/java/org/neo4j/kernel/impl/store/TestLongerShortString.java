@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,28 +19,30 @@
  */
 package org.neo4j.kernel.impl.store;
 
-import java.util.List;
-
 import org.junit.Test;
 
-import org.neo4j.kernel.impl.store.LongerShortString;
-import org.neo4j.kernel.impl.store.PropertyStore;
-import org.neo4j.kernel.impl.store.TestShortString.Charset;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.kernel.impl.store.format.standard.PropertyRecordFormat.DEFAULT_PAYLOAD_SIZE;
 
 public class TestLongerShortString
 {
 
     @Test
-    public void testMasks() throws Exception {
-        assertEquals(0,1 & LongerShortString.invertedBitMask(LongerShortString.NUMERICAL));
-        assertEquals(0,2 & LongerShortString.invertedBitMask(LongerShortString.DATE));
-        assertEquals(LongerShortString.NUMERICAL.bitMask(),3 & LongerShortString.invertedBitMask(LongerShortString.DATE));
-        assertEquals(0, (LongerShortString.NUMERICAL.bitMask()|LongerShortString.NUMERICAL.bitMask()) & LongerShortString.invertedBitMask(LongerShortString.NUMERICAL, LongerShortString.DATE));
+    public void testMasks() throws Exception
+    {
+        assertEquals( 0, 1 & LongerShortString.invertedBitMask( LongerShortString.NUMERICAL ) );
+        assertEquals( 0, 2 & LongerShortString.invertedBitMask( LongerShortString.DATE ) );
+        assertEquals( LongerShortString.NUMERICAL.bitMask(),
+                3 & LongerShortString.invertedBitMask( LongerShortString.DATE ) );
+        assertEquals( 0, (LongerShortString.NUMERICAL.bitMask() | LongerShortString.NUMERICAL.bitMask()) &
+                         LongerShortString.invertedBitMask( LongerShortString.NUMERICAL, LongerShortString.DATE ) );
     }
 
     @Test
@@ -68,13 +70,13 @@ public class TestLongerShortString
     {
         for ( int i = 0; i < 1000; i++ )
         {
-            for ( Charset charset : Charset.values() )
+            for ( TestStringCharset charset : TestStringCharset.values() )
             {
-                List<String> list = TestShortString.randomStrings( 100, charset, 30 );
+                List<String> list = randomStrings( 100, charset, 30 );
                 for ( String string : list )
                 {
                     PropertyBlock record = new PropertyBlock();
-                    if ( LongerShortString.encode( 10, string, record, PropertyStore.DEFAULT_PAYLOAD_SIZE ) )
+                    if ( LongerShortString.encode( 10, string, record, DEFAULT_PAYLOAD_SIZE ) )
                     {
                         assertEquals( string, LongerShortString.decode( record ) );
                     }
@@ -131,9 +133,19 @@ public class TestLongerShortString
         assertCanEncodeAndDecodeToSame( "81fe144f-484b-4a34-8e36-17a021540318" );
     }
 
+    private static List<String> randomStrings( int count, TestStringCharset charset, int maxLen )
+    {
+        List<String> result = new ArrayList<>( count );
+        for ( int i = 0; i < count; i++ )
+        {
+            result.add( charset.randomString( maxLen ) );
+        }
+        return result;
+    }
+
     private void assertCanEncodeAndDecodeToSame( String string )
     {
-        assertCanEncodeAndDecodeToSame( string, PropertyStore.DEFAULT_PAYLOAD_SIZE );
+        assertCanEncodeAndDecodeToSame( string, DEFAULT_PAYLOAD_SIZE );
     }
 
     private void assertCanEncodeAndDecodeToSame( String string, int payloadSize )
@@ -145,12 +157,11 @@ public class TestLongerShortString
 
     private void assertCannotEncode( String string )
     {
-        assertCannotEncode( string, PropertyStore.DEFAULT_PAYLOAD_SIZE );
+        assertCannotEncode( string, DEFAULT_PAYLOAD_SIZE );
     }
 
     private void assertCannotEncode( String string, int payloadSize )
     {
-        assertFalse( LongerShortString.encode( 0, string, new PropertyBlock(),
-                payloadSize ) );
+        assertFalse( LongerShortString.encode( 0, string, new PropertyBlock(), payloadSize ) );
     }
 }

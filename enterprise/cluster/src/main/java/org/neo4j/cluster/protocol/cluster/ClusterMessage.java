@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -119,10 +119,12 @@ public enum ClusterMessage
     public static class ConfigurationResponseState
             implements Serializable
     {
-        private final Map<InstanceId, URI> nodes;
-        private final org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId latestReceivedInstanceId;
-        private final Map<String, InstanceId> roles;
-        private final String clusterName;
+        private static final long serialVersionUID = -2394291383400324304L;
+
+        private Map<InstanceId, URI> nodes;
+        private org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId latestReceivedInstanceId;
+        private Map<String, InstanceId> roles;
+        private String clusterName;
 
         public ConfigurationResponseState( Map<String, InstanceId> roles, Map<InstanceId, URI> nodes,
                                            org.neo4j.cluster.protocol.atomicbroadcast.multipaxos.InstanceId latestReceivedInstanceId,
@@ -220,6 +222,8 @@ public enum ClusterMessage
     public static class ConfigurationChangeState
             implements Serializable
     {
+        private static final long serialVersionUID = 3798148961231305356L;
+
         private InstanceId join;
         private URI joinUri;
 
@@ -329,10 +333,14 @@ public enum ClusterMessage
                 return "Change cluster config, leave:" + leave;
             }
 
-            if (roleWon != null)
+            if ( roleWon != null )
+            {
                 return "Change cluster config, elected:" + winner + " as " + roleWon;
+            }
             else
+            {
                 return "Change cluster config, unelected:" + loser + " as " + roleWon;
+            }
         }
 
         @Override

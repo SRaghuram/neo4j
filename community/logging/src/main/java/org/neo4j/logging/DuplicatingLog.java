@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,13 @@
  */
 package org.neo4j.logging;
 
-import org.neo4j.function.Consumer;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.function.Consumer;
+import javax.annotation.Nonnull;
 
 /**
  * A {@link Log} implementation that duplicates all messages to other Log instances
@@ -100,24 +100,28 @@ public class DuplicatingLog extends AbstractLog
         return false;
     }
 
+    @Nonnull
     @Override
     public Logger debugLogger()
     {
         return this.debugLogger;
     }
 
+    @Nonnull
     @Override
     public Logger infoLogger()
     {
         return this.infoLogger;
     }
 
+    @Nonnull
     @Override
     public Logger warnLogger()
     {
         return this.warnLogger;
     }
 
+    @Nonnull
     @Override
     public Logger errorLogger()
     {
@@ -125,9 +129,9 @@ public class DuplicatingLog extends AbstractLog
     }
 
     @Override
-    public void bulk( Consumer<Log> consumer )
+    public void bulk( @Nonnull Consumer<Log> consumer )
     {
-        bulk( new LinkedList<>( logs ), new ArrayList<Log>( logs.size() ), consumer );
+        bulk( new LinkedList<>( logs ), new ArrayList<>( logs.size() ), consumer );
     }
 
     private static void bulk( final LinkedList<Log> remaining, final ArrayList<Log> bulkLogs, final Consumer<Log> finalConsumer )
@@ -135,16 +139,13 @@ public class DuplicatingLog extends AbstractLog
         if ( !remaining.isEmpty() )
         {
             Log log = remaining.pop();
-            log.bulk( new Consumer<Log>()
+            log.bulk( bulkLog ->
             {
-                @Override
-                public void accept( Log bulkLog )
-                {
-                    bulkLogs.add( bulkLog );
-                    bulk( remaining, bulkLogs, finalConsumer );
-                }
+                bulkLogs.add( bulkLog );
+                bulk( remaining, bulkLogs, finalConsumer );
             } );
-        } else
+        }
+        else
         {
             Log log = new DuplicatingLog( bulkLogs );
             finalConsumer.accept( log );
@@ -155,7 +156,7 @@ public class DuplicatingLog extends AbstractLog
     {
         private final CopyOnWriteArraySet<Logger> loggers;
 
-        public DuplicatingLogger( List<Logger> loggers )
+        DuplicatingLogger( List<Logger> loggers )
         {
             this.loggers = new CopyOnWriteArraySet<>( loggers );
         }
@@ -166,7 +167,7 @@ public class DuplicatingLog extends AbstractLog
         }
 
         @Override
-        public void log( String message )
+        public void log( @Nonnull String message )
         {
             for ( Logger logger : loggers )
             {
@@ -175,7 +176,7 @@ public class DuplicatingLog extends AbstractLog
         }
 
         @Override
-        public void log( String message, Throwable throwable )
+        public void log( @Nonnull String message, @Nonnull Throwable throwable )
         {
             for ( Logger logger : loggers )
             {
@@ -184,7 +185,7 @@ public class DuplicatingLog extends AbstractLog
         }
 
         @Override
-        public void log( String format, Object... arguments )
+        public void log( @Nonnull String format, @Nonnull Object... arguments )
         {
             for ( Logger logger : loggers )
             {
@@ -193,9 +194,9 @@ public class DuplicatingLog extends AbstractLog
         }
 
         @Override
-        public void bulk( Consumer<Logger> consumer )
+        public void bulk( @Nonnull Consumer<Logger> consumer )
         {
-            bulk( new LinkedList<>( loggers ), new ArrayList<Logger>( loggers.size() ), consumer );
+            bulk( new LinkedList<>( loggers ), new ArrayList<>( loggers.size() ), consumer );
         }
 
         private static void bulk( final LinkedList<Logger> remaining, final ArrayList<Logger> bulkLoggers, final Consumer<Logger> finalConsumer )
@@ -203,16 +204,13 @@ public class DuplicatingLog extends AbstractLog
             if ( !remaining.isEmpty() )
             {
                 Logger logger = remaining.pop();
-                logger.bulk( new Consumer<Logger>()
+                logger.bulk( bulkLogger ->
                 {
-                    @Override
-                    public void accept( Logger bulkLogger )
-                    {
-                        bulkLoggers.add( bulkLogger );
-                        bulk( remaining, bulkLoggers, finalConsumer );
-                    }
+                    bulkLoggers.add( bulkLogger );
+                    bulk( remaining, bulkLoggers, finalConsumer );
                 } );
-            } else
+            }
+            else
             {
                 Logger logger = new DuplicatingLogger( bulkLoggers );
                 finalConsumer.accept( logger );

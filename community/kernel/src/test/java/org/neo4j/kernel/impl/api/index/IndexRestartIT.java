@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,44 +31,45 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.test.DoubleLatch;
-import org.neo4j.test.EphemeralFileSystemRule;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.neo4j.graphdb.DynamicLabel.label;
-import static org.neo4j.graphdb.Neo4jMatchers.getIndexState;
-import static org.neo4j.graphdb.Neo4jMatchers.getIndexes;
-import static org.neo4j.graphdb.Neo4jMatchers.hasSize;
-import static org.neo4j.graphdb.Neo4jMatchers.haveState;
-import static org.neo4j.graphdb.Neo4jMatchers.inTx;
+import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.kernel.api.index.InternalIndexState.ONLINE;
 import static org.neo4j.kernel.api.index.InternalIndexState.POPULATING;
 import static org.neo4j.kernel.impl.api.index.SchemaIndexTestHelper.singleInstanceSchemaIndexProviderFactory;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.getIndexState;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.getIndexes;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.hasSize;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.haveState;
+import static org.neo4j.test.mockito.matcher.Neo4jMatchers.inTx;
 
 public class IndexRestartIT
 {
+    @Rule
+    public final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
 
     private GraphDatabaseService db;
-    @Rule public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
     private TestGraphDatabaseFactory factory;
     private final ControlledPopulationSchemaIndexProvider provider = new ControlledPopulationSchemaIndexProvider();
     private final Label myLabel = label( "MyLabel" );
-
 
     @Before
     public void before() throws Exception
     {
         factory = new TestGraphDatabaseFactory();
-        factory.setFileSystem( fs.get() );
-        factory.addKernelExtensions( Collections.<KernelExtensionFactory<?>>singletonList(
-                singleInstanceSchemaIndexProviderFactory( "test", provider ) ) );
+        factory.setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fs.get() ) );
+        factory.addKernelExtensions( Collections.singletonList(
+            singleInstanceSchemaIndexProviderFactory( "test", provider )
+        ) );
     }
 
     @After
@@ -88,7 +89,7 @@ public class IndexRestartIT
         startDb();
         DoubleLatch populationCompletionLatch = provider.installPopulationJobCompletionLatch();
         IndexDefinition index = createIndex();
-        populationCompletionLatch.awaitStart(); // await population job to start
+        populationCompletionLatch.waitForAllToStart(); // await population job to start
 
         // WHEN
         dropIndex( index, populationCompletionLatch );
@@ -144,8 +145,6 @@ public class IndexRestartIT
         assertThat( getIndexes( db, myLabel ), inTx( db, not( haveState( db, Schema.IndexState.FAILED ) ) ) );
         assertEquals( 2, provider.populatorCallCount.get() );
     }
-
-
 
     private IndexDefinition createIndex()
     {

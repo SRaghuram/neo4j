@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,7 +33,6 @@ import java.util.List;
  * can be figured out and {@link #testCaseWriter(String, Printable) test case} can be written.
  *
  * @param <T> type of target for the actions, i.e. the subject under test here.
- * @param <V> type of value the actions revolve around.
  * @param <F> type of failure an {@link Action} may produce.
  */
 public class RandomizedTester<T extends TestResource,F>
@@ -120,8 +119,8 @@ public class RandomizedTester<T extends TestResource,F>
             RandomizedTester<T,F> reducedActions = new RandomizedTester<>( targetFactory,
                     actionFactoryThatSkipsOneAction( givenActions.iterator(), actionToSkip, failingAction ),
                     failingAction, failure );
-            Result<T,F> result = reducedActions.run( numberOfIterations-1 );
-            if ( result.isFailure() && result.getIndex() == givenActions.size()-1 &&
+            Result<T,F> result = reducedActions.run( numberOfIterations - 1 );
+            if ( result.isFailure() && result.getIndex() == givenActions.size() - 1 &&
                     result.getFailure().equals( failure ) )
             {
                 return reducedActions;

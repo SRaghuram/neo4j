@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,7 +29,7 @@ import org.neo4j.kernel.impl.locking.Locks;
  */
 public class LockTransaction
 {
-    private final static AtomicInteger IDS = new AtomicInteger( 0 );
+    private static final AtomicInteger IDS = new AtomicInteger( 0 );
 
     private final int id = IDS.getAndIncrement();
 

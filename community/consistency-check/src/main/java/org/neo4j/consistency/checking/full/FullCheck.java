@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,6 @@ package org.neo4j.consistency.checking.full;
 import java.lang.reflect.Array;
 import java.util.List;
 
-import org.neo4j.consistency.ConsistencyCheckSettings;
 import org.neo4j.consistency.checking.CheckDecorator;
 import org.neo4j.consistency.checking.cache.CacheAccess;
 import org.neo4j.consistency.checking.cache.DefaultCacheAccess;
@@ -51,6 +50,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.logging.Log;
 
 import static org.neo4j.consistency.report.ConsistencyReporter.NO_MONITOR;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 
 public class FullCheck
 {
@@ -66,14 +66,20 @@ public class FullCheck
     public FullCheck( Config tuningConfiguration, ProgressMonitorFactory progressFactory,
             Statistics statistics, int threads )
     {
+        this(progressFactory, statistics, threads, new CheckConsistencyConfig(tuningConfiguration) );
+    }
+
+    public FullCheck( ProgressMonitorFactory progressFactory, Statistics statistics, int threads,
+            CheckConsistencyConfig checkConsistencyConfig )
+    {
         this.statistics = statistics;
         this.threads = threads;
-        this.checkPropertyOwners = tuningConfiguration.get( ConsistencyCheckSettings.consistency_check_property_owners );
-        this.checkLabelScanStore = tuningConfiguration.get( ConsistencyCheckSettings.consistency_check_label_scan_store );
-        this.checkIndexes = tuningConfiguration.get( ConsistencyCheckSettings.consistency_check_indexes );
-        this.checkGraph = tuningConfiguration.get( ConsistencyCheckSettings.consistency_check_graph );
-        this.samplingConfig = new IndexSamplingConfig( tuningConfiguration );
         this.progressFactory = progressFactory;
+        this.samplingConfig = new IndexSamplingConfig( Config.embeddedDefaults() );
+        this.checkGraph = checkConsistencyConfig.isCheckGraph();
+        this.checkIndexes = checkConsistencyConfig.isCheckIndexes();
+        this.checkLabelScanStore = checkConsistencyConfig.isCheckLabelScanStore();
+        this.checkPropertyOwners = checkConsistencyConfig.isCheckPropertyOwners();
     }
 
     public ConsistencySummaryStatistics execute( DirectStoreAccess stores, Log log )
@@ -122,14 +128,15 @@ public class FullCheck
         return summary;
     }
 
-    void execute( final DirectStoreAccess directStoreAccess, CheckDecorator decorator,
+    void execute( final DirectStoreAccess directStoreAccess, final CheckDecorator decorator,
                   final RecordAccess recordAccess, final InconsistencyReport report,
                   CacheAccess cacheAccess, Monitor reportMonitor )
             throws ConsistencyCheckIncompleteException
     {
         final ConsistencyReporter reporter = new ConsistencyReporter( recordAccess, report, reportMonitor );
         StoreProcessor processEverything = new StoreProcessor( decorator, reporter, Stage.SEQUENTIAL_FORWARD, cacheAccess );
-        ProgressMonitorFactory.MultiPartBuilder progress = progressFactory.multipleParts( "Full Consistency Check" );
+        ProgressMonitorFactory.MultiPartBuilder progress = progressFactory.multipleParts(
+                "Full Consistency Check" );
         final StoreAccess nativeStores = directStoreAccess.nativeStores();
         try ( IndexAccessors indexes =
                       new IndexAccessors( directStoreAccess.indexes(), nativeStores.getSchemaStore(), samplingConfig ) )
@@ -141,7 +148,7 @@ public class FullCheck
                     multiPass, reporter, threads );
             List<ConsistencyCheckerTask> tasks =
                     taskCreator.createTasksForFullCheck( checkLabelScanStore, checkIndexes, checkGraph );
-            TaskExecutor.execute( tasks, progress.build() );
+            TaskExecutor.execute( tasks, decorator::prepare );
         }
         catch ( Exception e )
         {
@@ -164,7 +171,7 @@ public class FullCheck
         T[] records = (T[]) Array.newInstance( type, (int) store.getHighId() );
         for ( int i = 0; i < records.length; i++ )
         {
-            records[i] = store.forceGetRecord( i );
+            records[i] = store.getRecord( i, store.newRecord(), FORCE );
         }
         return records;
     }

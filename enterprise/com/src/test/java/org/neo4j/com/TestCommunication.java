@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,13 +23,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
 
 import org.neo4j.com.storecopy.ResponseUnpacker;
-import org.neo4j.com.storecopy.ResponseUnpacker.TxHandler;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.kernel.impl.store.MismatchingStoreIdException;
 import org.neo4j.kernel.impl.store.StoreId;
@@ -46,13 +44,15 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.neo4j.com.MadeUpServer.FRAME_LENGTH;
+import static org.neo4j.com.StoreIdTestFactory.newStoreIdForCurrentVersion;
 import static org.neo4j.com.TxChecksumVerifier.ALWAYS_MATCH;
+import static org.neo4j.com.storecopy.ResponseUnpacker.TxHandler.NO_OP_TX_HANDLER;
 
 public class TestCommunication
 {
@@ -67,7 +67,7 @@ public class TestCommunication
     @Before
     public void doBefore()
     {
-        storeIdToUse = new StoreId();
+        storeIdToUse = newStoreIdForCurrentVersion();
         builder = new Builder();
     }
 
@@ -107,7 +107,7 @@ public class TestCommunication
     public void makeSureClientStoreIdsMustMatch() throws Throwable
     {
         MadeUpServer server = builder.server();
-        MadeUpClient client = builder.storeId( new StoreId( 10, 10, 10, 10 ) ).client();
+        MadeUpClient client = builder.storeId( newStoreIdForCurrentVersion( 10, 10, 10, 10 ) ).client();
         addToLifeAndStart( server, client );
 
         client.multiply( 1, 2 );
@@ -116,7 +116,7 @@ public class TestCommunication
     @Test(expected = MismatchingStoreIdException.class)
     public void makeSureServerStoreIdsMustMatch() throws Throwable
     {
-        MadeUpServer server = builder.storeId( new StoreId( 10, 10, 10, 10 ) ).server();
+        MadeUpServer server = builder.storeId( newStoreIdForCurrentVersion( 10, 10, 10, 10 ) ).server();
         MadeUpClient client = builder.client();
         addToLifeAndStart( server, client );
 
@@ -129,7 +129,6 @@ public class TestCommunication
         MadeUpServer server = builder.server();
         MadeUpClient client = builder.client();
         addToLifeAndStart( server, client );
-
 
         client.fetchDataStream( new ToAssertionWriter(), FRAME_LENGTH * 3 );
     }
@@ -389,14 +388,11 @@ public class TestCommunication
         // Given
         final String comExceptionMessage = "The ComException";
 
-        MadeUpCommunicationInterface communication = mock( MadeUpCommunicationInterface.class, new Answer<Response<?>>()
-        {
-            @Override
-            public Response<?> answer( InvocationOnMock _ ) throws ComException
-            {
-                throw new ComException( comExceptionMessage );
-            }
-        } );
+        MadeUpCommunicationInterface communication = mock( MadeUpCommunicationInterface.class,
+                (Answer<Response<?>>) ingored ->
+                {
+                    throw new ComException( comExceptionMessage );
+                } );
 
         ComExceptionHandler handler = mock( ComExceptionHandler.class );
 
@@ -429,7 +425,7 @@ public class TestCommunication
 
     @Test
     @SuppressWarnings("rawtypes")
-    public void masterResponseShouldBeUnpackedIfRequestTypeRequires() throws IOException
+    public void masterResponseShouldBeUnpackedIfRequestTypeRequires() throws Exception
     {
         // Given
         ResponseUnpacker responseUnpacker = mock( ResponseUnpacker.class );
@@ -441,7 +437,7 @@ public class TestCommunication
 
         // Then
         ArgumentCaptor<Response> captor = ArgumentCaptor.forClass( Response.class );
-        verify( responseUnpacker ).unpackResponse( captor.capture(), any( TxHandler.class ) );
+        verify( responseUnpacker ).unpackResponse( captor.capture(), eq( NO_OP_TX_HANDLER ) );
         assertEquals( storeIdToUse, captor.getValue().getStoreId() );
         assertEquals( 42 * 42, captor.getValue().response() );
     }
@@ -519,13 +515,13 @@ public class TestCommunication
         private final TxChecksumVerifier verifier;
         private final StoreId storeId;
 
-        public Builder()
+        Builder()
         {
             this( PORT, FRAME_LENGTH, INTERNAL_PROTOCOL_VERSION, APPLICATION_PROTOCOL_VERSION,
                     ALWAYS_MATCH, storeIdToUse );
         }
 
-        public Builder( int port, int chunkSize, byte internalProtocolVersion, byte applicationProtocolVersion,
+        Builder( int port, int chunkSize, byte internalProtocolVersion, byte applicationProtocolVersion,
                         TxChecksumVerifier verifier, StoreId storeId )
         {
             this.port = port;
@@ -586,14 +582,19 @@ public class TestCommunication
 
         public MadeUpClient client()
         {
-            return new MadeUpClient( port, storeId, internalProtocolVersion, applicationProtocolVersion, chunkSize,
-                    ResponseUnpacker.NO_OP_RESPONSE_UNPACKER );
+            return clientWith( ResponseUnpacker.NO_OP_RESPONSE_UNPACKER );
         }
 
         public MadeUpClient clientWith( ResponseUnpacker responseUnpacker )
         {
-            return new MadeUpClient( port, storeId, internalProtocolVersion, applicationProtocolVersion, chunkSize,
-                    responseUnpacker );
+            return new MadeUpClient( port, storeId, chunkSize, responseUnpacker )
+            {
+                @Override
+                public ProtocolVersion getProtocolVersion()
+                {
+                    return new ProtocolVersion( applicationProtocolVersion, internalProtocolVersion );
+                }
+            };
         }
 
         public ServerInterface serverInOtherJvm()
@@ -607,7 +608,7 @@ public class TestCommunication
     }
 
     public class TransactionStreamVerifyingResponseHandler
-            implements Response.Handler, Visitor<CommittedTransactionRepresentation,IOException>
+            implements Response.Handler, Visitor<CommittedTransactionRepresentation,Exception>
     {
         private final long txCount;
         private long expectedTxId = 1;
@@ -624,7 +625,7 @@ public class TestCommunication
         }
 
         @Override
-        public Visitor<CommittedTransactionRepresentation,IOException> transactions()
+        public Visitor<CommittedTransactionRepresentation,Exception> transactions()
         {
             return this;
         }
@@ -650,7 +651,7 @@ public class TestCommunication
         }
 
         @Override
-        public Visitor<CommittedTransactionRepresentation,IOException> transactions()
+        public Visitor<CommittedTransactionRepresentation,Exception> transactions()
         {
             throw new UnsupportedOperationException( "Should not be called" );
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,5 +22,5 @@ package org.neo4j.ha.correctness;
 /** Something that will cause a state transition. For instance, delivery of a message or an instance crashing. */
 interface ClusterAction
 {
-    public Iterable<ClusterAction> perform( ClusterState state ) throws Exception;
+    Iterable<ClusterAction> perform( ClusterState state ) throws Exception;
 }

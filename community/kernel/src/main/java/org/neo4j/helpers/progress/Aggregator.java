@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,9 +28,9 @@ import static java.util.concurrent.atomic.AtomicLongFieldUpdater.newUpdater;
 
 final class Aggregator
 {
-    private final Map<ProgressListener.MultiPartProgressListener, ProgressListener.MultiPartProgressListener.State> states =
+    private final Map<ProgressListener, ProgressListener.MultiPartProgressListener.State> states =
             new ConcurrentHashMap<>();
-    private Indicator indicator;
+    private final Indicator indicator;
     @SuppressWarnings("unused"/*accessed through updater*/)
     private volatile long progress;
     @SuppressWarnings("unused"/*accessed through updater*/)
@@ -41,15 +41,15 @@ final class Aggregator
     private long totalCount = 0;
     private final Completion completion = new Completion();
 
-    public Aggregator( Indicator indicator )
+    Aggregator( Indicator indicator )
     {
         this.indicator = indicator;
     }
 
-    synchronized void add( ProgressListener.MultiPartProgressListener progress )
+    synchronized void add( ProgressListener progress, long totalCount )
     {
         states.put( progress, ProgressListener.MultiPartProgressListener.State.INIT );
-        this.totalCount += progress.totalCount;
+        this.totalCount += totalCount;
     }
 
     synchronized Completion initialize()

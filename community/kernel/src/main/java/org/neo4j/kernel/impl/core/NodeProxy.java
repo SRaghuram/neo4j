@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,13 +25,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.cursor.Cursor;
-import org.neo4j.function.IntFunction;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -40,55 +39,43 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.ReturnableEvaluator;
-import org.neo4j.graphdb.StopEvaluator;
-import org.neo4j.graphdb.Traverser;
-import org.neo4j.graphdb.Traverser.Order;
-import org.neo4j.helpers.ThisShouldNotHappenError;
-import org.neo4j.kernel.api.EntityType;
 import org.neo4j.kernel.api.ReadOperations;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.StatementTokenNameLookup;
-import org.neo4j.kernel.api.cursor.NodeItem;
-import org.neo4j.kernel.api.cursor.PropertyItem;
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.kernel.api.exceptions.InvalidTransactionTypeKernelException;
 import org.neo4j.kernel.api.exceptions.LabelNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.PropertyNotFoundException;
 import org.neo4j.kernel.api.exceptions.RelationshipTypeIdNotFoundKernelException;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationKernelException;
+import org.neo4j.kernel.api.exceptions.legacyindex.AutoIndexingKernelException;
+import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.api.exceptions.schema.IllegalTokenNameException;
 import org.neo4j.kernel.api.exceptions.schema.TooManyLabelsException;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.operations.KeyReadOperations;
-import org.neo4j.kernel.impl.traversal.OldTraverserWrapper;
+import org.neo4j.storageengine.api.EntityType;
+import org.neo4j.storageengine.api.NodeItem;
+import org.neo4j.storageengine.api.PropertyItem;
 
 import static java.lang.String.format;
-
 import static org.neo4j.collection.primitive.PrimitiveIntCollections.map;
-import static org.neo4j.graphdb.DynamicLabel.label;
-import static org.neo4j.helpers.collection.IteratorUtil.asList;
+import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.helpers.collection.Iterators.asList;
 import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_RELATIONSHIP_TYPE;
 import static org.neo4j.kernel.impl.core.TokenHolder.NO_ID;
 
-public class NodeProxy
-        extends PropertyContainerProxy
-        implements Node
+public class NodeProxy implements Node
 {
     public interface NodeActions
     {
         Statement statement();
-        
+
         GraphDatabaseService getGraphDatabase();
 
         void assertInUnterminatedTransaction();
 
         void failTransaction();
-
-        Relationship lazyRelationshipProxy( long id );
-
-        Relationship newRelationshipProxy( long id );
 
         Relationship newRelationshipProxy( long id, long startNodeId, int typeId, long endNodeId );
     }
@@ -130,6 +117,11 @@ public class NodeProxy
             throw new NotFoundException( "Unable to delete Node[" + nodeId +
                                              "] since it has already been deleted." );
         }
+        catch ( AutoIndexingKernelException e )
+        {
+            throw new IllegalStateException( "Auto indexing encountered a failure while deleting the node: "
+                                             + e.getMessage(), e );
+        }
     }
 
     @Override
@@ -142,29 +134,25 @@ public class NodeProxy
     public ResourceIterable<Relationship> getRelationships( final Direction dir )
     {
         assertInUnterminatedTransaction();
-        return new ResourceIterable<Relationship>()
+        return () ->
         {
-            @Override
-            public ResourceIterator<Relationship> iterator()
+            Statement statement = actions.statement();
+            try
             {
-                Statement statement = actions.statement();
-                try
-                {
-                    RelationshipConversion result = new RelationshipConversion( actions );
-                    result.iterator = statement.readOperations().nodeGetRelationships( nodeId, dir );
-                    result.statement = statement;
-                    return result;
-                }
-                catch ( EntityNotFoundException e )
-                {
-                    statement.close();
-                    throw new NotFoundException( format( "Node %d not found", nodeId ), e );
-                }
-                catch ( Throwable e )
-                {
-                    statement.close();
-                    throw e;
-                }
+                RelationshipConversion result = new RelationshipConversion( actions );
+                result.iterator = statement.readOperations().nodeGetRelationships( nodeId, dir );
+                result.statement = statement;
+                return result;
+            }
+            catch ( EntityNotFoundException e )
+            {
+                statement.close();
+                throw new NotFoundException( format( "Node %d not found", nodeId ), e );
+            }
+            catch ( Throwable e )
+            {
+                statement.close();
+                throw e;
             }
         };
     }
@@ -189,30 +177,26 @@ public class NodeProxy
         {
             typeIds = relTypeIds( types, statement );
         }
-        return new ResourceIterable<Relationship>()
+        return () ->
         {
-            @Override
-            public ResourceIterator<Relationship> iterator()
+            Statement statement = actions.statement();
+            try
             {
-                Statement statement = actions.statement();
-                try
-                {
-                    RelationshipConversion result = new RelationshipConversion( actions );
-                    result.iterator = statement.readOperations().nodeGetRelationships(
-                            nodeId, direction, typeIds );
-                    result.statement = statement;
-                    return result;
-                }
-                catch ( EntityNotFoundException e )
-                {
-                    statement.close();
-                    throw new NotFoundException( format( "Node %d not found", nodeId ), e );
-                }
-                catch ( Throwable e )
-                {
-                    statement.close();
-                    throw e;
-                }
+                RelationshipConversion result = new RelationshipConversion( actions );
+                result.iterator = statement.readOperations().nodeGetRelationships(
+                        nodeId, direction, typeIds );
+                result.statement = statement;
+                return result;
+            }
+            catch ( EntityNotFoundException e )
+            {
+                statement.close();
+                throw new NotFoundException( format( "Node %d not found", nodeId ), e );
+            }
+            catch ( Throwable e )
+            {
+                statement.close();
+                throw e;
             }
         };
     }
@@ -292,7 +276,7 @@ public class NodeProxy
             {
                 statement.dataWriteOperations().nodeSetProperty( nodeId, Property.property( propertyKeyId, value ) );
             }
-            catch ( ConstraintValidationKernelException e )
+            catch ( ConstraintValidationException e )
             {
                 throw new ConstraintViolationException(
                         e.getUserMessage( new StatementTokenNameLookup( statement.readOperations() ) ), e );
@@ -316,6 +300,11 @@ public class NodeProxy
         {
             throw new ConstraintViolationException( e.getMessage(), e );
         }
+        catch ( AutoIndexingKernelException e )
+        {
+            throw new IllegalStateException( "Auto indexing encountered a failure while setting property: "
+                                             + e.getMessage(), e );
+        }
     }
 
     @Override
@@ -337,6 +326,11 @@ public class NodeProxy
         catch ( InvalidTransactionTypeKernelException e )
         {
             throw new ConstraintViolationException( e.getMessage(), e );
+        }
+        catch ( AutoIndexingKernelException e )
+        {
+            throw new IllegalStateException( "Auto indexing encountered a failure while removing property: "
+                                             + e.getMessage(), e );
         }
     }
 
@@ -379,18 +373,14 @@ public class NodeProxy
         }
         catch ( PropertyKeyIdNotFoundKernelException e )
         {
-            throw new ThisShouldNotHappenError( "Jake",
-                    "Property key retrieved through kernel API should exist.", e );
+            throw new IllegalStateException( "Property key retrieved through kernel API should exist.", e );
         }
     }
 
     @Override
     public Map<String, Object> getProperties( String... keys )
     {
-        if ( keys == null )
-        {
-            throw new NullPointerException( "keys" );
-        }
+        Objects.requireNonNull( keys, "Properties keys should be not null array." );
 
         if ( keys.length == 0 )
         {
@@ -399,18 +389,16 @@ public class NodeProxy
 
         try ( Statement statement = actions.statement() )
         {
-            try ( Cursor<NodeItem> node = statement.readOperations().nodeCursor( nodeId ) )
+            try ( Cursor<NodeItem> node = statement.readOperations().nodeCursorById( nodeId ) )
             {
-                if ( !node.next() )
+                try ( Cursor<PropertyItem> propertyCursor = statement.readOperations().nodeGetProperties( node.get() ) )
                 {
-                    throw new NotFoundException( "Node not found",
-                            new EntityNotFoundException( EntityType.NODE, getId() ) );
+                    return PropertyContainerProxyHelper.getProperties( statement, propertyCursor, keys );
                 }
-
-                try ( Cursor<PropertyItem> propertyCursor = node.get().properties() )
-                {
-                    return super.getProperties( statement, propertyCursor, keys );
-                }
+            }
+            catch ( EntityNotFoundException e )
+            {
+                throw new NotFoundException( "Node not found", e );
             }
         }
     }
@@ -420,15 +408,9 @@ public class NodeProxy
     {
         try ( Statement statement = actions.statement() )
         {
-            try ( Cursor<NodeItem> node = statement.readOperations().nodeCursor( nodeId ) )
+            try ( Cursor<NodeItem> node = statement.readOperations().nodeCursorById( nodeId ) )
             {
-                if ( !node.next() )
-                {
-                    throw new NotFoundException( "Node not found",
-                            new EntityNotFoundException( EntityType.NODE, getId() ) );
-                }
-
-                try ( Cursor<PropertyItem> propertyCursor = node.get().properties() )
+                try ( Cursor<PropertyItem> propertyCursor = statement.readOperations().nodeGetProperties( node.get() ) )
                 {
                     Map<String, Object> properties = new HashMap<>();
 
@@ -443,11 +425,14 @@ public class NodeProxy
                     return properties;
                 }
             }
+            catch ( EntityNotFoundException e )
+            {
+                throw new NotFoundException( "Node not found", e );
+            }
         }
         catch ( PropertyKeyIdNotFoundKernelException e )
         {
-            throw new ThisShouldNotHappenError( "Rickard",
-                    "Property key retrieved through kernel API should exist.", e );
+            throw new IllegalStateException( "Property key retrieved through kernel API should exist.", e );
         }
     }
 
@@ -471,8 +456,10 @@ public class NodeProxy
 
                 Object value = statement.readOperations().nodeGetProperty( nodeId, propertyKeyId );
 
-                if (value == null)
+                if ( value == null )
+                {
                     throw new PropertyNotFoundException( propertyKeyId, EntityType.NODE, nodeId );
+                }
 
                 return value;
 
@@ -576,41 +563,6 @@ public class NodeProxy
     }
 
     @Override
-    public Traverser traverse( Order traversalOrder,
-                               StopEvaluator stopEvaluator, ReturnableEvaluator returnableEvaluator,
-                               RelationshipType relationshipType, Direction direction )
-    {
-        assertInUnterminatedTransaction();
-        return OldTraverserWrapper.traverse( this,
-                traversalOrder, stopEvaluator,
-                returnableEvaluator, relationshipType, direction );
-    }
-
-    @Override
-    public Traverser traverse( Order traversalOrder,
-                               StopEvaluator stopEvaluator, ReturnableEvaluator returnableEvaluator,
-                               RelationshipType firstRelationshipType, Direction firstDirection,
-                               RelationshipType secondRelationshipType, Direction secondDirection )
-    {
-        assertInUnterminatedTransaction();
-        return OldTraverserWrapper.traverse( this,
-                traversalOrder, stopEvaluator,
-                returnableEvaluator, firstRelationshipType, firstDirection,
-                secondRelationshipType, secondDirection );
-    }
-
-    @Override
-    public Traverser traverse( Order traversalOrder,
-                               StopEvaluator stopEvaluator, ReturnableEvaluator returnableEvaluator,
-                               Object... relationshipTypesAndDirections )
-    {
-        assertInUnterminatedTransaction();
-        return OldTraverserWrapper.traverse( this,
-                traversalOrder, stopEvaluator,
-                returnableEvaluator, relationshipTypesAndDirections );
-    }
-
-    @Override
     public void addLabel( Label label )
     {
         try ( Statement statement = actions.statement() )
@@ -620,7 +572,7 @@ public class NodeProxy
                 statement.dataWriteOperations().nodeAddLabel( getId(),
                         statement.tokenWriteOperations().labelGetOrCreateForName( label.name() ) );
             }
-            catch ( ConstraintValidationKernelException e )
+            catch ( ConstraintValidationException e )
             {
                 throw new ConstraintViolationException(
                         e.getUserMessage( new StatementTokenNameLookup( statement.readOperations() ) ), e );
@@ -685,21 +637,23 @@ public class NodeProxy
         try ( Statement statement = actions.statement() )
         {
             PrimitiveIntIterator labels = statement.readOperations().nodeGetLabels( getId() );
-            List<Label> keys = new ArrayList<>();
-            while ( labels.hasNext() )
-            {
-                int labelId = labels.next();
-                keys.add( label( statement.readOperations().labelGetName( labelId ) ) );
-            }
-            return keys;
+            return asList( map( labelId -> convertToLabel( statement, labelId ), labels ) );
         }
         catch ( EntityNotFoundException e )
         {
             throw new NotFoundException( "Node not found", e );
         }
+    }
+
+    private Label convertToLabel( Statement statement, int labelId )
+    {
+        try
+        {
+            return label( statement.readOperations().labelGetName( labelId ) );
+        }
         catch ( LabelNotFoundKernelException e )
         {
-            throw new ThisShouldNotHappenError( "Stefan", "Label retrieved through kernel API should exist.", e );
+            throw new IllegalStateException( "Label retrieved through kernel API should exist.", e );
         }
     }
 
@@ -773,8 +727,8 @@ public class NodeProxy
     {
         try ( Statement statement = actions.statement() )
         {
-            ReadOperations ops = statement.readOperations();
-            return map2relTypes( statement, ops.nodeGetRelationshipTypes( nodeId ) );
+            PrimitiveIntIterator relTypes = statement.readOperations().nodeGetRelationshipTypes( nodeId );
+            return asList( map( relTypeId -> convertToRelationshipType( statement, relTypeId ), relTypes ) );
         }
         catch ( EntityNotFoundException e )
         {
@@ -803,23 +757,15 @@ public class NodeProxy
         return ids;
     }
 
-    private Iterable<RelationshipType> map2relTypes( final Statement statement, PrimitiveIntIterator input )
+    private RelationshipType convertToRelationshipType( final Statement statement, int relTypeId )
     {
-        return asList( map( new IntFunction<RelationshipType>()
+        try
         {
-            @Override
-            public RelationshipType apply( int id )
-            {
-                try
-                {
-                    return DynamicRelationshipType.withName( statement.readOperations().relationshipTypeGetName( id ) );
-                }
-                catch ( RelationshipTypeIdNotFoundKernelException e )
-                {
-                    throw new ThisShouldNotHappenError( "Jake",
-                            "Kernel API returned non-existent relationship type: " + id );
-                }
-            }
-        }, input ) );
+            return RelationshipType.withName( statement.readOperations().relationshipTypeGetName( relTypeId ) );
+        }
+        catch ( RelationshipTypeIdNotFoundKernelException e )
+        {
+            throw new IllegalStateException( "Kernel API returned non-existent relationship type: " + relTypeId );
+        }
     }
 }

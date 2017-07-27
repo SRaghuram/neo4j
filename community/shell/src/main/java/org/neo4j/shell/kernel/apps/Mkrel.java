@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -73,8 +73,8 @@ public class Mkrel extends TransactionProvidingApp
     public String getDescription()
     {
         return "Creates a relationship to a new or existing node, f.ex:\n" +
-        		"mkrel -ct KNOWS (will create a relationship to a new node)\n" +
-        		"mkrel -t KNOWS 123 (will create a relationship to node with id 123)";
+                "mkrel -ct KNOWS (will create a relationship to a new node)\n" +
+                "mkrel -t KNOWS 123 (will create a relationship to node with id 123)";
     }
 
     @Override
@@ -129,8 +129,11 @@ public class Mkrel extends TransactionProvidingApp
                 getServer(), session, relationship, true, false ) +
                 " created" );
         }
-        
-        if ( parser.options().containsKey( "cd" ) ) cdTo( session, node );
+
+        if ( parser.options().containsKey( "cd" ) )
+        {
+            cdTo( session, node );
+        }
         return Continuation.INPUT_COMPLETE;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -29,29 +29,29 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.transaction.log.LogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
-import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadableVersionableLogChannel;
+import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
-import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.TriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.keep_logical_logs;
-import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_LOG_VERSION;
 
 public class TestLogPruning
 {
@@ -72,6 +72,7 @@ public class TestLogPruning
         {
             db.shutdown();
         }
+        fs.close();
     }
 
     @Test
@@ -177,7 +178,7 @@ public class TestLogPruning
         this.rotateEveryNTransactions = rotateEveryNTransactions;
         fs = new EphemeralFileSystemAbstraction();
         TestGraphDatabaseFactory gdf = new TestGraphDatabaseFactory();
-        gdf.setFileSystem( fs );
+        gdf.setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fs ) );
         GraphDatabaseBuilder builder = gdf.newImpermanentDatabaseBuilder();
         builder.setConfig( keep_logical_logs, logPruning );
         this.db = (GraphDatabaseAPI) builder.newGraphDatabase();
@@ -199,8 +200,13 @@ public class TestLogPruning
             node.setProperty( "name", "a somewhat lengthy string of some sort, right?" );
             tx.success();
         }
+        checkPoint();
+    }
 
-        db.getDependencyResolver().resolveDependency( CheckPointer.class ).forceCheckPoint();
+    private void checkPoint() throws IOException
+    {
+        TriggerInfo triggerInfo = new SimpleTriggerInfo( "test" );
+        db.getDependencyResolver().resolveDependency( CheckPointer.class ).forceCheckPoint( triggerInfo );
     }
 
     private int figureOutSampleTransactionSizeBytes() throws IOException
@@ -269,14 +275,13 @@ public class TestLogPruning
                     }
                 };
                 StoreChannel storeChannel = fs.open( files.getLogFileForVersion( version ), "r" );
-                LogVersionedStoreChannel versionedStoreChannel = PhysicalLogFile.openForVersion( files, fs, version );
-                        new PhysicalLogVersionedStoreChannel( storeChannel, -1 /* ignored */, CURRENT_LOG_VERSION );
-                try ( ReadableVersionableLogChannel channel =
+                LogVersionedStoreChannel versionedStoreChannel =
+                        PhysicalLogFile.openForVersion( files, fs, version, false );
+                try ( ReadableLogChannel channel =
                               new ReadAheadLogChannel( versionedStoreChannel, bridge, 1000 ) )
                 {
-                    try (PhysicalTransactionCursor<ReadableVersionableLogChannel> physicalTransactionCursor =
-                            new PhysicalTransactionCursor<>( channel,
-                                    new VersionAwareLogEntryReader<ReadableVersionableLogChannel>() ))
+                    try ( PhysicalTransactionCursor<ReadableLogChannel> physicalTransactionCursor =
+                            new PhysicalTransactionCursor<>( channel, new VersionAwareLogEntryReader<>() ) )
                     {
                         while ( physicalTransactionCursor.next())
                         {

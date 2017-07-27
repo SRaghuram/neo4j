@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,29 +19,57 @@
  */
 package org.neo4j.server.rest.transactional;
 
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+
+import org.neo4j.kernel.GraphDatabaseQueryService;
+import org.neo4j.kernel.api.KernelTransaction.Type;
+import org.neo4j.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
+import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo;
+import org.neo4j.kernel.impl.query.TransactionalContext;
+import org.neo4j.kernel.impl.query.TransactionalContextFactory;
+import org.neo4j.server.rest.web.HttpConnectionInfoFactory;
 
 public class TransitionalPeriodTransactionMessContainer
 {
-    private final GraphDatabaseAPI db;
+    private static final PropertyContainerLocker locker = new PropertyContainerLocker();
+
+    private final GraphDatabaseFacade db;
     private final ThreadToStatementContextBridge txBridge;
 
-    public TransitionalPeriodTransactionMessContainer( GraphDatabaseAPI db )
+    public TransitionalPeriodTransactionMessContainer( GraphDatabaseFacade db )
     {
         this.db = db;
         this.txBridge = db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
     }
 
-    public TransitionalTxManagementKernelTransaction newTransaction()
+    public TransitionalTxManagementKernelTransaction newTransaction( Type type, SecurityContext securityContext,
+            long customTransactionTimeout )
     {
-        Transaction tx = db.beginTx();
-        TransactionTerminator txInterruptor = new TransactionTerminator( tx );
-
-        // Get and use the TransactionContext created in db.beginTx(). The role of creating
-        // TransactionContexts will be reversed soonish.
-        return new TransitionalTxManagementKernelTransaction( txInterruptor, txBridge );
+        return new TransitionalTxManagementKernelTransaction( db, type, securityContext, customTransactionTimeout, txBridge );
     }
 
+    ThreadToStatementContextBridge getBridge()
+    {
+        return txBridge;
+    }
+
+    public TransactionalContext create(
+            HttpServletRequest request,
+            GraphDatabaseQueryService service,
+            Type type,
+            SecurityContext securityContext,
+            String query,
+            Map<String, Object> queryParameters)
+    {
+        TransactionalContextFactory contextFactory = Neo4jTransactionalContextFactory.create( service, locker );
+        ClientConnectionInfo clientConnection = HttpConnectionInfoFactory.create( request );
+        InternalTransaction transaction = service.beginTransaction( type, securityContext );
+        return contextFactory.newContext( clientConnection, transaction, query, queryParameters );
+    }
 }

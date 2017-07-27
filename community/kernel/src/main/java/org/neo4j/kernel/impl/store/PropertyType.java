@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,11 +20,11 @@
 package org.neo4j.kernel.impl.store;
 
 import java.util.Arrays;
-import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 
-import org.neo4j.function.Supplier;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
+import org.neo4j.kernel.impl.store.format.standard.PropertyRecordFormat;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 
 /**
@@ -193,14 +193,7 @@ public enum PropertyType
         public DefinedProperty readProperty( int propertyKeyId, final PropertyBlock block,
                                              final Supplier<PropertyStore> store )
         {
-            return Property.lazyStringProperty(propertyKeyId, new Callable<String>()
-            {
-                @Override
-                public String call() throws Exception
-                {
-                    return getValue( block, store.get() );
-                }
-            });
+            return Property.lazyStringProperty(propertyKeyId, () -> getValue( block, store.get() ) );
         }
 
         @Override
@@ -224,14 +217,7 @@ public enum PropertyType
         @Override
         public DefinedProperty readProperty( int propertyKeyId, final PropertyBlock block, final Supplier<PropertyStore> store )
         {
-            return Property.lazyArrayProperty(propertyKeyId, new Callable<Object>()
-            {
-                @Override
-                public Object call() throws Exception
-                {
-                    return getValue( block, store.get() );
-                }
-            });
+            return Property.lazyArrayProperty(propertyKeyId, () -> getValue( block, store.get() ) );
         }
 
         @Override
@@ -306,10 +292,13 @@ public enum PropertyType
         }
     };
 
-    private final int type;
+    public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
+    public static final int BLOCKS_USED_FOR_BAD_TYPE_OR_ENCODING = -1;
 
     // TODO In wait of a better place
-    private static int payloadSize = PropertyStore.DEFAULT_PAYLOAD_SIZE;
+    private static int payloadSize = PropertyRecordFormat.DEFAULT_PAYLOAD_SIZE;
+
+    private final int type;
 
     PropertyType( int type )
     {
@@ -342,10 +331,10 @@ public enum PropertyType
 
     public abstract DefinedProperty readProperty( int propertyKeyId, PropertyBlock block, Supplier<PropertyStore> store );
 
-    public static PropertyType getPropertyType( long propBlock, boolean nullOnIllegal )
+    public static PropertyType getPropertyTypeOrNull( long propBlock )
     {
         // [][][][][    ,tttt][kkkk,kkkk][kkkk,kkkk][kkkk,kkkk]
-        int type = (int)((propBlock&0x000000000F000000L)>>24);
+        int type = typeIdentifier( propBlock );
         switch ( type )
         {
         case 1:
@@ -373,13 +362,23 @@ public enum PropertyType
         case 12:
             return SHORT_ARRAY;
         default:
-            if ( nullOnIllegal )
-            {
-                return null;
-            }
-            throw new InvalidRecordException( "Unknown property type for type "
-                                              + type );
+            return null;
         }
+    }
+
+    private static int typeIdentifier( long propBlock )
+    {
+        return (int) ((propBlock & 0x000000000F000000L) >> 24);
+    }
+
+    public static PropertyType getPropertyTypeOrThrow( long propBlock )
+    {
+        PropertyType type = getPropertyTypeOrNull( propBlock );
+        if ( type == null )
+        {
+            throw new InvalidRecordException( "Unknown property type for type " + typeIdentifier( propBlock ) );
+        }
+        return type;
     }
 
     // TODO In wait of a better place
@@ -397,7 +396,7 @@ public enum PropertyType
     // TODO In wait of a better place
     public static void setPayloadSize( int newPayloadSize )
     {
-        if ( newPayloadSize%8 != 0 )
+        if ( newPayloadSize % 8 != 0 )
         {
             throw new RuntimeException( "Payload must be divisible by 8" );
         }
@@ -413,6 +412,4 @@ public enum PropertyType
     {
         throw new UnsupportedOperationException();
     }
-
-    public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 }

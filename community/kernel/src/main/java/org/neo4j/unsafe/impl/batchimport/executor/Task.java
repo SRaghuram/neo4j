@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,6 +28,7 @@ import java.util.concurrent.Callable;
  *
  * @param <LOCAL> thread-local state provided by the {@link TaskExecutor} executing this task.
  */
+@FunctionalInterface
 public interface Task<LOCAL>
 {
     void run( LOCAL threadLocalState ) throws Exception;

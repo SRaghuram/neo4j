@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,6 @@ package org.neo4j.server.rest.dbms;
 import java.io.IOException;
 import java.security.Principal;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -31,17 +30,21 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.api.security.UserManager;
+import org.neo4j.kernel.api.security.UserManagerSupplier;
+import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.rest.repr.AuthorizationRepresentation;
 import org.neo4j.server.rest.repr.BadInputException;
 import org.neo4j.server.rest.repr.ExceptionRepresentation;
 import org.neo4j.server.rest.repr.InputFormat;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.transactional.error.Neo4jError;
-import org.neo4j.server.security.auth.AuthManager;
-import org.neo4j.server.security.auth.User;
 
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
+import static org.neo4j.server.rest.dbms.AuthorizedRequestWrapper.getSecurityContextFromUserPrincipal;
 import static org.neo4j.server.rest.web.CustomStatusType.UNPROCESSABLE;
 
 @Path("/user")
@@ -49,13 +52,14 @@ public class UserService
 {
     public static final String PASSWORD = "password";
 
-    private final AuthManager authManager;
+    private final UserManagerSupplier userManagerSupplier;
     private final InputFormat input;
     private final OutputFormat output;
 
-    public UserService( @Context AuthManager authManager, @Context InputFormat input, @Context OutputFormat output )
+    public UserService( @Context UserManagerSupplier userManagerSupplier, @Context InputFormat input, @Context OutputFormat
+            output )
     {
-        this.authManager = authManager;
+        this.userManagerSupplier = userManagerSupplier;
         this.input = input;
         this.output = output;
     }
@@ -70,12 +74,18 @@ public class UserService
             return output.notFound();
         }
 
-        final User currentUser = authManager.getUser( username );
-        if ( currentUser == null )
+        SecurityContext securityContext = getSecurityContextFromUserPrincipal( principal );
+        UserManager userManager = userManagerSupplier.getUserManager( securityContext );
+
+        try
+        {
+            User user = userManager.getUser( username );
+            return output.ok( new AuthorizationRepresentation( user ) );
+        }
+        catch ( InvalidArgumentsException e )
         {
             return output.notFound();
         }
-        return output.ok( new AuthorizationRepresentation( currentUser ) );
     }
 
     @POST
@@ -92,7 +102,8 @@ public class UserService
         try
         {
             deserialized = input.readMap( payload );
-        } catch ( BadInputException e )
+        }
+        catch ( BadInputException e )
         {
             return output.response( BAD_REQUEST, new ExceptionRepresentation(
                     new Neo4jError( Status.Request.InvalidFormat, e.getMessage() ) ) );
@@ -110,39 +121,29 @@ public class UserService
                     new Neo4jError( Status.Request.InvalidFormat, String.format( "Expected '%s' to be a string.", PASSWORD ) ) ) );
         }
         String newPassword = (String) o;
-        if ( newPassword.length() == 0 )
-        {
-            return output.response( UNPROCESSABLE, new ExceptionRepresentation(
-                    new Neo4jError( Status.Request.Invalid, "Password cannot be empty." ) ) );
-        }
 
-        final User currentUser = authManager.getUser( username );
-        if (currentUser == null)
-        {
-            return output.notFound();
-        }
-
-        if ( currentUser.credentials().matchesPassword( newPassword ) )
-        {
-            return output.response( UNPROCESSABLE, new ExceptionRepresentation(
-                    new Neo4jError( Status.Request.Invalid, "Old password and new password cannot be the same." ) ) );
-        }
-
-        final User updatedUser;
         try
         {
-            updatedUser = authManager.setPassword( username, newPassword );
-        } catch ( IOException e )
+            SecurityContext securityContext = getSecurityContextFromUserPrincipal( principal );
+            if ( securityContext == null )
+            {
+                return output.notFound();
+            }
+            else
+            {
+                UserManager userManager = userManagerSupplier.getUserManager( securityContext );
+                userManager.setUserPassword( username, newPassword, false );
+            }
+        }
+        catch ( IOException e )
         {
             return output.serverErrorWithoutLegacyStacktrace( e );
         }
-
-        if (updatedUser == null)
+        catch ( InvalidArgumentsException e )
         {
-            return output.notFound();
+            return output.response( UNPROCESSABLE, new ExceptionRepresentation(
+                    new Neo4jError( e.status(), e.getMessage() ) ) );
         }
-
         return output.ok();
     }
-
 }

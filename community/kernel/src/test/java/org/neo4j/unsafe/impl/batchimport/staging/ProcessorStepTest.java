@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,31 +19,36 @@
  */
 package org.neo4j.unsafe.impl.batchimport.staging;
 
+import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.neo4j.graphdb.Resource;
+import org.neo4j.test.OtherThreadExecutor.WorkerCommand;
+import org.neo4j.test.rule.concurrent.OtherThreadRule;
+import org.neo4j.unsafe.impl.batchimport.Configuration;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-import static org.neo4j.unsafe.impl.batchimport.staging.Step.ORDER_PROCESS;
+import static org.neo4j.unsafe.impl.batchimport.staging.Step.ORDER_SEND_DOWNSTREAM;
 
 public class ProcessorStepTest
 {
+    @Rule
+    public final OtherThreadRule<Void> t2 = new OtherThreadRule<>();
+
     @Test
     public void shouldUpholdProcessOrderingGuarantee() throws Exception
     {
         // GIVEN
         StageControl control = mock( StageControl.class );
-        MyProcessorStep step = new MyProcessorStep( control );
-        step.start( ORDER_PROCESS );
-        while ( step.numberOfProcessors() < 5 )
-        {
-            step.incrementNumberOfProcessors();
-        }
+        MyProcessorStep step = new MyProcessorStep( control, 0 );
+        step.start( ORDER_SEND_DOWNSTREAM );
+        step.processors( 4 ); // now at 5
 
         // WHEN
         int batches = 10;
@@ -62,28 +67,84 @@ public class ProcessorStepTest
         step.close();
     }
 
-    public class MyProcessorStep extends ProcessorStep<Integer>
+    @Test
+    public void shouldHaveTaskQueueSizeEqualToMaxNumberOfProcessors() throws Exception
     {
-        private final AtomicInteger nextExpected = new AtomicInteger();
-
-        private MyProcessorStep( StageControl control )
+        // GIVEN
+        StageControl control = mock( StageControl.class );
+        final CountDownLatch latch = new CountDownLatch( 1 );
+        final int processors = 2;
+        int maxProcessors = 5;
+        Configuration configuration = new Configuration()
         {
-            super( control, "test", Configuration.DEFAULT, 0 );
+            @Override
+            public int maxNumberOfProcessors()
+            {
+                return maxProcessors;
+            }
+        };
+        final ProcessorStep<Void> step = new BlockingProcessorStep( control, configuration, processors, latch );
+        step.start( ORDER_SEND_DOWNSTREAM );
+        step.processors( 1 ); // now at 2
+        // adding up to max processors should be fine
+        for ( int i = 0; i < processors + maxProcessors /* +1 since we allow queueing one more*/; i++ )
+        {
+            step.receive( i, null );
+        }
+
+        // WHEN
+        Future<Void> receiveFuture = t2.execute( receive( processors, step ) );
+        t2.get().waitUntilThreadState( Thread.State.TIMED_WAITING );
+        latch.countDown();
+
+        // THEN
+        receiveFuture.get();
+    }
+
+    private static class BlockingProcessorStep extends ProcessorStep<Void>
+    {
+        private final CountDownLatch latch;
+
+        BlockingProcessorStep( StageControl control, Configuration configuration,
+                int maxProcessors, CountDownLatch latch )
+        {
+            super( control, "test", configuration, maxProcessors );
+            this.latch = latch;
         }
 
         @Override
-        protected Resource permit( Integer batch ) throws Throwable
+        protected void process( Void batch, BatchSender sender ) throws Throwable
         {
-            // Sleep a little to allow other processors much more easily to catch up and have
-            // a chance to race, if permit ordering guarantee isn't upheld, that is.
-            Thread.sleep( 10 );
-            assertEquals( nextExpected.getAndIncrement(), batch.intValue() );
-            return super.permit( batch );
+            latch.await();
+        }
+    }
+
+    private static class MyProcessorStep extends ProcessorStep<Integer>
+    {
+        private final AtomicInteger nextExpected = new AtomicInteger();
+
+        private MyProcessorStep( StageControl control, int maxProcessors )
+        {
+            super( control, "test", Configuration.DEFAULT, maxProcessors );
         }
 
         @Override
         protected void process( Integer batch, BatchSender sender ) throws Throwable
         {   // No processing in this test
+            nextExpected.incrementAndGet();
         }
+    }
+
+    private WorkerCommand<Void,Void> receive( final int processors, final ProcessorStep<Void> step )
+    {
+        return new WorkerCommand<Void,Void>()
+        {
+            @Override
+            public Void doWork( Void state ) throws Exception
+            {
+                step.receive( processors, null );
+                return null;
+            }
+        };
     }
 }

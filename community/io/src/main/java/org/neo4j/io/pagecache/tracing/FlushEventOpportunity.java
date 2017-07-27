@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,17 +31,10 @@ public interface FlushEventOpportunity
     /**
      * A FlushEventOpportunity that only returns the FlushEvent.NULL.
      */
-    FlushEventOpportunity NULL = new FlushEventOpportunity()
-    {
-        @Override
-        public FlushEvent beginFlush( long filePageId, int cachePageId, PageSwapper swapper )
-        {
-            return FlushEvent.NULL;
-        }
-    };
+    FlushEventOpportunity NULL = ( filePageId, cachePageId, swapper ) -> FlushEvent.NULL;
 
     /**
      * Begin flushing the given page.
      */
-    public FlushEvent beginFlush( long filePageId, int cachePageId, PageSwapper swapper );
+    FlushEvent beginFlush( long filePageId, int cachePageId, PageSwapper swapper );
 }

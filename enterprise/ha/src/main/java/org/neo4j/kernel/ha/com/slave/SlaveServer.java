@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,22 +26,24 @@ import org.neo4j.com.Server;
 import org.neo4j.com.monitor.RequestMonitor;
 import org.neo4j.kernel.ha.com.master.Slave;
 import org.neo4j.kernel.ha.com.master.SlaveClient.SlaveRequestType;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.kernel.monitoring.ByteCounterMonitor;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.time.Clocks;
 
 import static org.neo4j.com.Protocol.DEFAULT_FRAME_LENGTH;
+import static org.neo4j.com.ProtocolVersion.INTERNAL_PROTOCOL_VERSION;
 import static org.neo4j.com.TxChecksumVerifier.ALWAYS_MATCH;
-import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
 
 public class SlaveServer extends Server<Slave, Void>
 {
     public static final byte APPLICATION_PROTOCOL_VERSION = 1;
+    public static final ProtocolVersion SLAVE_PROTOCOL_VERSION =
+            new ProtocolVersion( (byte) 1, INTERNAL_PROTOCOL_VERSION );
 
     public SlaveServer( Slave requestTarget, Configuration config, LogProvider logProvider, ByteCounterMonitor byteCounterMonitor, RequestMonitor requestMonitor )
     {
-        super( requestTarget, config, logProvider, DEFAULT_FRAME_LENGTH,
-                new ProtocolVersion( APPLICATION_PROTOCOL_VERSION, ProtocolVersion.INTERNAL_PROTOCOL_VERSION ),
-                ALWAYS_MATCH, SYSTEM_CLOCK, byteCounterMonitor, requestMonitor );
+        super( requestTarget, config, logProvider, DEFAULT_FRAME_LENGTH, SLAVE_PROTOCOL_VERSION, ALWAYS_MATCH,
+                Clocks.systemClock(), byteCounterMonitor, requestMonitor );
     }
 
     @Override

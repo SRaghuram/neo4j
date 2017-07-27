@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,8 +23,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 
-import org.neo4j.function.Function;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -50,22 +50,26 @@ public class KernelSchemaStateStore implements UpdateableSchemaState
     public <K, V> V get(K key)
     {
         lock.readLock().lock();
-        try {
+        try
+        {
             return (V) state.get( key );
         }
-        finally {
+        finally
+        {
             lock.readLock().unlock();
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public <K, V> V getOrCreate(K key, Function<K, V> creator) {
+    public <K, V> V getOrCreate(K key, Function<K, V> creator)
+    {
         V currentValue = get(key);
         if (currentValue == null)
         {
             lock.writeLock().lock();
-            try {
+            try
+            {
                 V lockedValue = (V) state.get( key );
                 if (lockedValue == null)
                 {
@@ -74,23 +78,30 @@ public class KernelSchemaStateStore implements UpdateableSchemaState
                     return newValue;
                 }
                 else
+                {
                     return lockedValue;
+                }
             }
-            finally {
+            finally
+            {
                 lock.writeLock().unlock();
             }
         }
         else
+        {
             return currentValue;
+        }
     }
 
     public void replace(Map<Object, Object> replacement)
     {
         lock.writeLock().lock();
-        try {
+        try
+        {
             state = replacement;
         }
-        finally {
+        finally
+        {
             lock.writeLock().unlock();
         }
     }
@@ -98,10 +109,12 @@ public class KernelSchemaStateStore implements UpdateableSchemaState
     public <K, V> void apply(Map<K, V> updates)
     {
         lock.writeLock().lock();
-        try {
+        try
+        {
             state.putAll( updates );
         }
-        finally {
+        finally
+        {
             lock.writeLock().unlock();
         }
     }
@@ -109,12 +122,14 @@ public class KernelSchemaStateStore implements UpdateableSchemaState
     public void clear()
     {
         lock.writeLock().lock();
-        try {
+        try
+        {
             state.clear();
         }
-        finally {
+        finally
+        {
             lock.writeLock().unlock();
         }
-        log.info( "Schema state store has been cleared." );
+        log.debug( "Schema state store has been cleared." );
     }
 }

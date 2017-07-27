@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,9 +22,9 @@ package org.neo4j.kernel.impl.api.index.inmemory;
 import java.util.Set;
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
-import org.neo4j.kernel.api.direct.BoundedIterable;
+import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.kernel.api.index.ArrayEncoder;
-import org.neo4j.kernel.api.index.IndexReader;
+import org.neo4j.storageengine.api.schema.IndexReader;
 
 abstract class InMemoryIndexImplementation implements IndexReader, BoundedIterable<Long>
 {
@@ -32,27 +32,34 @@ abstract class InMemoryIndexImplementation implements IndexReader, BoundedIterab
 
     abstract void drop();
 
+    public final PrimitiveLongIterator seek( Object... values )
+    {
+        return doIndexSeek( encode( values ) );
+    }
+
+    final boolean add( long nodeId, boolean applyIdempotently, Object... propertyValues )
+    {
+        return doAdd( nodeId, applyIdempotently, encode( propertyValues ) );
+    }
+
+    final void remove( long nodeId, Object... propertyValues )
+    {
+        doRemove( nodeId, encode( propertyValues ) );
+    }
+
     @Override
-    public final PrimitiveLongIterator seek( Object value )
+    public final long countIndexedNodes( long nodeId, Object... propertyValues )
     {
-        return doIndexSeek( encode( value ) );
+        return doCountIndexedNodes( nodeId, encode( propertyValues ) );
     }
 
-    final boolean add( long nodeId, Object propertyValue, boolean applyIdempotently )
-    {
-        return doAdd( encode( propertyValue ), nodeId, applyIdempotently );
-    }
+    protected abstract long doCountIndexedNodes( long nodeId, Object... encode );
 
-    final void remove( long nodeId, Object propertyValue )
-    {
-        doRemove( encode( propertyValue ), nodeId );
-    }
+    abstract PrimitiveLongIterator doIndexSeek( Object... propertyValue );
 
-    abstract PrimitiveLongIterator doIndexSeek( Object propertyValue );
+    abstract boolean doAdd( long nodeId, boolean applyIdempotently, Object... propertyValue );
 
-    abstract boolean doAdd( Object propertyValue, long nodeId, boolean applyIdempotently );
-
-    abstract void doRemove( Object propertyValue, long nodeId );
+    abstract void doRemove( long nodeId, Object... propertyValue );
 
     abstract void remove( long nodeId );
 
@@ -63,24 +70,28 @@ abstract class InMemoryIndexImplementation implements IndexReader, BoundedIterab
     {
     }
 
-    private static Object encode( Object propertyValue )
+    private static Object[] encode( Object... propertyValues )
     {
-        if ( propertyValue instanceof Number )
+        for ( int i = 0; i < propertyValues.length; i++ )
         {
-            return ((Number) propertyValue).doubleValue();
+
+            if ( propertyValues[i] instanceof Number )
+            {
+                propertyValues[i] = ((Number) propertyValues[i]).doubleValue();
+            }
+
+            if ( propertyValues[i] instanceof Character )
+            {
+                propertyValues[i] = propertyValues[i].toString();
+            }
+
+            if ( propertyValues[i].getClass().isArray() )
+            {
+                propertyValues[i] = new ArrayKey( ArrayEncoder.encode( propertyValues[i] ) );
+            }
         }
 
-        if ( propertyValue instanceof Character )
-        {
-            return propertyValue.toString();
-        }
-
-        if ( propertyValue.getClass().isArray() )
-        {
-            return new ArrayKey( ArrayEncoder.encode( propertyValue ) );
-        }
-
-        return propertyValue;
+        return propertyValues;
     }
 
     static class ArrayKey

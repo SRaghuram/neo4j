@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,7 +28,6 @@ import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.register.Register;
 
 import static org.junit.Assert.assertEquals;
-
 import static org.neo4j.register.Registers.newDoubleLongRegister;
 
 public class CountsOracle
@@ -56,14 +55,14 @@ public class CountsOracle
         state.addRelationship( start.labels, type, end.labels );
     }
 
-    public void indexUpdatesAndSize( int labelId, int propertyKeyId, long updates, long size )
+    public void indexUpdatesAndSize( long indexId, long updates, long size )
     {
-        state.replaceIndexUpdateAndSize( labelId, propertyKeyId, updates, size );
+        state.replaceIndexUpdateAndSize( indexId, updates, size );
     }
 
-    public void indexSampling( int labelId, int propertyKeyId, long unique, long size )
+    public void indexSampling( long indexId, long unique, long size )
     {
-        state.replaceIndexSample( labelId, propertyKeyId, unique, size );
+        state.replaceIndexSample( indexId, unique, size );
     }
 
     public void update( CountsTracker target, long txId )
@@ -110,19 +109,19 @@ public class CountsOracle
             }
 
             @Override
-            public void visitIndexStatistics( int labelId, int propertyKeyId, long updates, long size )
+            public void visitIndexStatistics( long indexId, long updates, long size )
             {
                 Register.DoubleLongRegister output =
-                        tracker.indexUpdatesAndSize( labelId, propertyKeyId, newDoubleLongRegister() );
+                        tracker.indexUpdatesAndSize( indexId, newDoubleLongRegister() );
                 assertEquals( "Should be able to read visited state.", output.readFirst(), updates );
                 assertEquals( "Should be able to read visited state.", output.readSecond(), size );
             }
 
             @Override
-            public void visitIndexSample( int labelId, int propertyKeyId, long unique, long size )
+            public void visitIndexSample( long indexId, long unique, long size )
             {
                 Register.DoubleLongRegister output =
-                        tracker.indexSample( labelId, propertyKeyId, newDoubleLongRegister() );
+                        tracker.indexSample( indexId, newDoubleLongRegister() );
                 assertEquals( "Should be able to read visited state.", output.readFirst(), unique );
                 assertEquals( "Should be able to read visited state.", output.readSecond(), size );
             }

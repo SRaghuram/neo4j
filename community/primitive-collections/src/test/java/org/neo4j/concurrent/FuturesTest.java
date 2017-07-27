@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,7 +28,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.hamcrest.Matchers.contains;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 public class FuturesTest
 {
@@ -53,7 +54,8 @@ public class FuturesTest
         {
             combined.get( 10, TimeUnit.MILLISECONDS );
             fail( "should have timedout" );
-        } catch ( TimeoutException e )
+        }
+        catch ( TimeoutException e )
         {
             // continue
         }
@@ -65,7 +67,8 @@ public class FuturesTest
         {
             combined.get( 10, TimeUnit.MILLISECONDS );
             fail( "should have timedout" );
-        } catch ( TimeoutException e )
+        }
+        catch ( TimeoutException e )
         {
             // continue
         }

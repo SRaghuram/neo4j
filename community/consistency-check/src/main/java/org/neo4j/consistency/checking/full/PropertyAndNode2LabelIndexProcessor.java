@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,8 @@
  */
 package org.neo4j.consistency.checking.full;
 
+import java.util.function.Function;
+
 import org.neo4j.consistency.checking.ChainCheck;
 import org.neo4j.consistency.checking.PropertyRecordCheck;
 import org.neo4j.consistency.checking.RecordCheck;
@@ -28,14 +30,13 @@ import org.neo4j.consistency.checking.index.IndexAccessors;
 import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReport.NodeConsistencyReport;
 import org.neo4j.consistency.report.ConsistencyReporter;
-import org.neo4j.function.Function;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 
 /**
  * Processor of node records with the context of how they're indexed.
  */
-public class PropertyAndNode2LabelIndexProcessor implements RecordProcessor<NodeRecord>
+public class PropertyAndNode2LabelIndexProcessor extends RecordProcessor.Adapter<NodeRecord>
 {
     private final ConsistencyReporter reporter;
     private final RecordCheck<NodeRecord, ConsistencyReport.NodeConsistencyReport> nodeIndexCheck;
@@ -64,16 +65,20 @@ public class PropertyAndNode2LabelIndexProcessor implements RecordProcessor<Node
         try ( MandatoryProperties.Check<NodeRecord,ConsistencyReport.NodeConsistencyReport> mandatoryCheck =
                 mandatoryProperties.apply( nodeRecord ) )
         {
-            for ( PropertyRecord property : client.getPropertiesFromCache() )
+            Iterable<PropertyRecord> properties = client.getPropertiesFromCache();
+
+            // We do this null-check here because even if nodeIndexCheck should provide the properties for us,
+            // or an empty list at least, it may fail in one way or another and exception be caught by
+            // broad exception handler in reporter. The caught exception will produce an ERROR so it will not
+            // go by unnoticed.
+            if ( properties != null )
             {
-                reporter.forProperty( property, propertyCheck );
-                mandatoryCheck.receive( ChainCheck.keys( property ) );
+                for ( PropertyRecord property : properties )
+                {
+                    reporter.forProperty( property, propertyCheck );
+                    mandatoryCheck.receive( ChainCheck.keys( property ) );
+                }
             }
         }
-    }
-
-    @Override
-    public void close()
-    {
     }
 }

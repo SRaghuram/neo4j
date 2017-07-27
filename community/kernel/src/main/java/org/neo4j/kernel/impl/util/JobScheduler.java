@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,6 +21,7 @@ package org.neo4j.kernel.impl.util;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -91,8 +92,8 @@ public interface JobScheduler extends Lifecycle
      * This is an exhaustive list of job types that run in the database. It should be expanded as needed for new groups
      * of jobs.
      *
-     * For now, this does naming only, but it will allow us to define per-group configuration, such as how to handle
-     * failures, shared threads and (later on) affinity strategies.
+     * For now, this does minimal configuration, but opens up for things like common
+     * failure handling, shared threads and affinity strategies.
      */
     class Groups
     {
@@ -142,14 +143,64 @@ public interface JobScheduler extends Lifecycle
         public static final Group checkPoint = new Group( "CheckPoint", POOLED );
 
         /**
+         * Raft Log pruning
+         */
+        public static final Group raftLogPruning = new Group( "RaftLogPruning", POOLED );
+
+        /**
          * Network IO threads for the Bolt protocol.
          */
         public static final Group boltNetworkIO = new Group( "BoltNetworkIO", NEW_THREAD );
+
+        /**
+         * Reporting thread for Metrics events
+         */
+        public static final Group metricsEvent = new Group( "MetricsEvent", POOLED );
+
+        /**
+         * UDC timed events.
+         */
+        public static Group udc  = new Group( "UsageDataCollection", POOLED );
+
+        /**
+         * Storage maintenance.
+         */
+        public static Group storageMaintenance = new Group( "StorageMaintenance", POOLED );
+
+        /**
+         * Native security.
+         */
+        public static Group nativeSecurity = new Group( "NativeSecurity", POOLED );
+
+        /**
+         * File watch service group
+         */
+        public static Group fileWatch = new Group( "FileWatcher", NEW_THREAD );
     }
 
     interface JobHandle
     {
         void cancel( boolean mayInterruptIfRunning );
+
+        void waitTermination() throws InterruptedException, ExecutionException;
+
+        default void registerCancelListener( CancelListener listener )
+        {
+            throw new UnsupportedOperationException( "Unsupported in this implementation" );
+        }
+    }
+
+    /**
+     * Gets notified about calls to {@link JobHandle#cancel(boolean)}.
+     */
+    interface CancelListener
+    {
+        /**
+         * Notification that {@link JobHandle#cancel(boolean)} was called.
+         *
+         * @param mayInterruptIfRunning argument from {@link JobHandle#cancel(boolean)} call.
+         */
+        void cancelled( boolean mayInterruptIfRunning );
     }
 
     /** Expose a group scheduler as an {@link Executor} */

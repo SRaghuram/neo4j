@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.util;
 
+import java.util.concurrent.TimeoutException;
+
 import static java.lang.String.format;
 
 /**
@@ -29,14 +31,16 @@ public class ArrayQueueOutOfOrderSequence implements OutOfOrderSequence
     // odd means updating, even means no one is updating
     private volatile int version;
     // These don't need to be volatile, reading them is "guarded" by version access
-    private long highestGapFreeNumber;
+    private volatile long highestGapFreeNumber;
     private long[] highestGapFreeMeta;
     private final SequenceArray outOfOrderQueue;
     private long[] metaArray;
+    private volatile long highestEverSeen;
 
     public ArrayQueueOutOfOrderSequence( long startingNumber, int initialArraySize, long[] initialMeta )
     {
         this.highestGapFreeNumber = startingNumber;
+        this.highestEverSeen = startingNumber;
         this.highestGapFreeMeta = this.metaArray = initialMeta;
         this.outOfOrderQueue = new SequenceArray( initialMeta.length + 1, initialArraySize );
     }
@@ -44,17 +48,25 @@ public class ArrayQueueOutOfOrderSequence implements OutOfOrderSequence
     @Override
     public synchronized boolean offer( long number, long[] meta )
     {
+        highestEverSeen = Math.max( highestEverSeen, number );
         if ( highestGapFreeNumber + 1 == number )
         {
             version++;
             highestGapFreeNumber = outOfOrderQueue.pollHighestGapFree( number, metaArray );
             highestGapFreeMeta = highestGapFreeNumber == number ? meta : metaArray;
             version++;
+            notifyAll();
             return true;
         }
 
         outOfOrderQueue.offer( highestGapFreeNumber, number, pack( meta ) );
         return false;
+    }
+
+    @Override
+    public long highestEverSeen()
+    {
+        return this.highestEverSeen;
     }
 
     private long[] pack( long[] meta )
@@ -66,7 +78,8 @@ public class ArrayQueueOutOfOrderSequence implements OutOfOrderSequence
     @Override
     public long[] get()
     {
-        long number; long[] meta;
+        long number;
+        long[] meta;
         while ( true )
         {
             int versionBefore = version;
@@ -84,6 +97,24 @@ public class ArrayQueueOutOfOrderSequence implements OutOfOrderSequence
         }
 
         return createResult( number, meta );
+    }
+
+    @Override
+    public synchronized void await( long awaitedNumber, long timeoutMillis ) throws TimeoutException, InterruptedException
+    {
+        long endTime = System.currentTimeMillis() + timeoutMillis;
+        while ( awaitedNumber > highestGapFreeNumber )
+        {
+            long timeLeft = endTime - System.currentTimeMillis();
+            if ( timeLeft > 0 )
+            {
+                wait( timeLeft );
+            }
+            else
+            {
+                throw new TimeoutException( "Awaited number was not reached" );
+            }
+        }
     }
 
     private long[] createResult( long number, long[] meta )
@@ -121,6 +152,7 @@ public class ArrayQueueOutOfOrderSequence implements OutOfOrderSequence
     @Override
     public synchronized void set( long number, long[] meta )
     {
+        highestEverSeen = number;
         highestGapFreeNumber = number;
         highestGapFreeMeta = meta;
         outOfOrderQueue.clear();
@@ -129,6 +161,6 @@ public class ArrayQueueOutOfOrderSequence implements OutOfOrderSequence
     @Override
     public synchronized String toString()
     {
-        return format( "out-of-order-sequence:%d [%s]", highestGapFreeNumber, outOfOrderQueue );
+        return format( "out-of-order-sequence:%d %d [%s]", highestEverSeen, highestGapFreeNumber, outOfOrderQueue );
     }
 }

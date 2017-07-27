@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,8 +26,9 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.helpers.collection.PrefetchingIterator;
+import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.stats.Key;
 import org.neo4j.unsafe.impl.batchimport.stats.Stat;
 
@@ -43,9 +44,9 @@ public class StageExecution implements StageControl
     private final String stageName;
     private final Configuration config;
     private final Collection<Step<?>> pipeline;
-    private volatile Throwable panicCause;
     private long startTime;
     private final int orderingGuarantees;
+    private volatile Throwable panic;
 
     public StageExecution( String stageName, Configuration config, Collection<Step<?>> pipeline, int orderingGuarantees )
     {
@@ -57,13 +58,6 @@ public class StageExecution implements StageControl
 
     public boolean stillExecuting()
     {
-        Throwable panic = panicCause;
-        if ( panic != null )
-        {
-            String message = panic.getMessage();
-            throw launderedException( message == null? "Panic" : message, panic );
-        }
-
         for ( Step<?> step : pipeline )
         {
             if ( !step.isCompleted() )
@@ -85,7 +79,7 @@ public class StageExecution implements StageControl
 
     public long getExecutionTime()
     {
-        return currentTimeMillis()-startTime;
+        return currentTimeMillis() - startTime;
     }
 
     public String getStageName()
@@ -168,12 +162,28 @@ public class StageExecution implements StageControl
     }
 
     @Override
-    public void panic( Throwable cause )
+    public synchronized void panic( Throwable cause )
     {
-        panicCause = cause;
-        for ( Step<?> step : pipeline )
+        if ( panic == null )
         {
-            step.receivePanic( cause );
+            panic = cause;
+            for ( Step<?> step : pipeline )
+            {
+                step.receivePanic( cause );
+            }
+        }
+        else
+        {
+            panic.addSuppressed( cause );
+        }
+    }
+
+    @Override
+    public void assertHealthy()
+    {
+        if ( panic != null )
+        {
+            throw launderedException( panic );
         }
     }
 

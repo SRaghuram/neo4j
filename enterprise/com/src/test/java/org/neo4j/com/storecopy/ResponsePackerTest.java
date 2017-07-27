@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,13 +26,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.com.RequestContext;
 import org.neo4j.com.Response;
+import org.neo4j.com.StoreIdTestFactory;
 import org.neo4j.function.Suppliers;
 import org.neo4j.helpers.collection.Visitor;
-import org.neo4j.kernel.impl.store.StoreId;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.DeadSimpleTransactionIdStore;
-import org.neo4j.kernel.impl.transaction.log.IOCursor;
+import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
+import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.entry.OnePhaseCommit;
 
@@ -43,6 +44,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
 public class ResponsePackerTest
 {
@@ -52,12 +54,13 @@ public class ResponsePackerTest
         // GIVEN
         LogicalTransactionStore transactionStore = mock( LogicalTransactionStore.class );
         long lastAppliedTransactionId = 5L;
-        IOCursor<CommittedTransactionRepresentation> endlessCursor = new EndlessCursor( lastAppliedTransactionId+1 );
+        TransactionCursor endlessCursor = new EndlessCursor( lastAppliedTransactionId + 1 );
         when( transactionStore.getTransactions( anyLong() ) ).thenReturn( endlessCursor );
         final long targetTransactionId = 8L;
-        final TransactionIdStore transactionIdStore = new DeadSimpleTransactionIdStore( targetTransactionId, 0, 0, 0 );
+        final TransactionIdStore transactionIdStore = new DeadSimpleTransactionIdStore( targetTransactionId, 0,
+                BASE_TX_COMMIT_TIMESTAMP, 0, 0 );
         ResponsePacker packer = new ResponsePacker( transactionStore, transactionIdStore,
-                Suppliers.singleton( new StoreId() ) );
+                Suppliers.singleton( StoreIdTestFactory.newStoreIdForCurrentVersion() ) );
 
         // WHEN
         Response<Object> response = packer.packTransactionStreamResponse( requestContextStartingAt( 5L ), null );
@@ -71,12 +74,12 @@ public class ResponsePackerTest
             }
 
             @Override
-            public Visitor<CommittedTransactionRepresentation, IOException> transactions()
+            public Visitor<CommittedTransactionRepresentation,Exception> transactions()
             {
-                return new Visitor<CommittedTransactionRepresentation, IOException>()
+                return new Visitor<CommittedTransactionRepresentation,Exception>()
                 {
                     @Override
-                    public boolean visit( CommittedTransactionRepresentation element ) throws IOException
+                    public boolean visit( CommittedTransactionRepresentation element )
                     {
                         // THEN
                         long txId = element.getCommitEntry().getTxId();
@@ -85,7 +88,8 @@ public class ResponsePackerTest
 
                         // Move the target transaction id forward one step, effectively always keeping it out of reach
                         transactionIdStore.setLastCommittedAndClosedTransactionId(
-                                transactionIdStore.getLastCommittedTransactionId()+1, 0, 0, 0 );
+                                transactionIdStore.getLastCommittedTransactionId() + 1, 0, BASE_TX_COMMIT_TIMESTAMP,
+                                3, 4 );
                         return true;
                     }
                 };
@@ -98,8 +102,9 @@ public class ResponsePackerTest
         return new RequestContext( 0, 0, 0, txId, 0 );
     }
 
-    public class EndlessCursor implements IOCursor<CommittedTransactionRepresentation>
+    public class EndlessCursor implements TransactionCursor
     {
+        private final LogPosition position = new LogPosition( 0, 0 );
         private long txId;
         private CommittedTransactionRepresentation transaction;
 
@@ -125,6 +130,12 @@ public class ResponsePackerTest
             transaction = new CommittedTransactionRepresentation( null, null,
                     new OnePhaseCommit( txId++, 0 ) );
             return true;
+        }
+
+        @Override
+        public LogPosition position()
+        {
+            return position;
         }
     }
 }

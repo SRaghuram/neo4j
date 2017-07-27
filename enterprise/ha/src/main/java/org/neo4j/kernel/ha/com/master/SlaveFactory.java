@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,10 +21,11 @@ package org.neo4j.kernel.ha.com.master;
 
 import org.neo4j.kernel.ha.cluster.member.ClusterMember;
 import org.neo4j.kernel.impl.store.StoreId;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 
 public interface SlaveFactory
 {
-    Slave newSlave( ClusterMember clusterMember );
+    Slave newSlave( LifeSupport life, ClusterMember clusterMember, String originHostNameOrIp, int originPort );
 
     void setStoreId( StoreId storeId );
 }

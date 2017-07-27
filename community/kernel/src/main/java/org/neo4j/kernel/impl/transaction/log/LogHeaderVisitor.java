@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,5 +21,9 @@ package org.neo4j.kernel.impl.transaction.log;
 
 public interface LogHeaderVisitor
 {
+    /***
+     * Used for visiting log headers in reverse order of age, meaning latest first.
+     * Stops visiting when false is returned.
+     */
     boolean visit( LogPosition position, long firstTransactionIdInLog, long lastTransactionIdInLog );
 }

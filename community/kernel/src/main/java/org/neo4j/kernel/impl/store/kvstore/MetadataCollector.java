@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 abstract class MetadataCollector extends Metadata implements EntryVisitor<BigEndianByteArrayBuffer>
@@ -32,14 +33,16 @@ abstract class MetadataCollector extends Metadata implements EntryVisitor<BigEnd
     private final HeaderField<?>[] headerFields;
     private final Map<HeaderField<?>, Integer> headerIndexes = new HashMap<>();
     private final Object[] headerValues;
-    private int header, trailer, data;
+    private int header, data;
     private State state = State.expecting_format_specifier;
     private byte[] catalogue = NO_DATA;
+    private final ReadableBuffer expectedFormat;
 
-    public MetadataCollector( int entriesPerPage, HeaderField<?>[] headerFields )
+    MetadataCollector( int entriesPerPage, HeaderField<?>[] headerFields, ReadableBuffer expectedFormat)
     {
         this.entriesPerPage = entriesPerPage;
         this.headerFields = headerFields = headerFields.clone();
+        this.expectedFormat = expectedFormat;
         this.headerValues = new Object[headerFields.length];
         for ( int i = 0; i < headerFields.length; i++ )
         {
@@ -84,6 +87,11 @@ abstract class MetadataCollector extends Metadata implements EntryVisitor<BigEnd
 
     abstract boolean verifyFormatSpecifier( ReadableBuffer value );
 
+    ReadableBuffer expectedFormat()
+    {
+        return expectedFormat;
+    }
+
     @Override
     byte[] pageCatalogue()
     {
@@ -97,15 +105,9 @@ abstract class MetadataCollector extends Metadata implements EntryVisitor<BigEnd
     }
 
     @Override
-    int trailerEntries()
-    {
-        return trailer;
-    }
-
-    @Override
     int totalEntries()
     {
-        return header + data + trailer;
+        return header + data;
     }
 
     private enum State
@@ -115,7 +117,7 @@ abstract class MetadataCollector extends Metadata implements EntryVisitor<BigEnd
             @Override
             boolean visit( MetadataCollector collector, BigEndianByteArrayBuffer key, BigEndianByteArrayBuffer value )
             {
-                return readFormatSpecifier( collector, key, value, expecting_header );
+                return readFormatSpecifier( collector, key, value );
             }
         },
         expecting_header
@@ -154,9 +156,9 @@ abstract class MetadataCollector extends Metadata implements EntryVisitor<BigEnd
             {
                 if ( key.allZeroes() )
                 {
-                    if ( value.allZeroes() )
+                    if ( value.minusOneAtTheEnd() )
                     {
-                        collector.state = expecting_format_specifier_trailer;
+                        collector.state = done;
                         return false;
                     }
                     if ( collector.header > collector.headerFields.length )
@@ -187,15 +189,16 @@ abstract class MetadataCollector extends Metadata implements EntryVisitor<BigEnd
             {
                 if ( key.allZeroes() )
                 {
-                    long entries = value.getIntegerFromEnd();
+                    long encodedEntries = value.getIntegerFromEnd();
+                    long entries = encodedEntries == -1 ? 0 : encodedEntries;
                     if ( entries != collector.data )
                     {
                         collector.state = in_error;
                         throw new IllegalStateException( "Number of data entries does not match. (counted=" +
                                                          collector.data + ", trailer=" + entries + ")" );
                     }
-                    collector.state = expecting_format_specifier_trailer;
-                    return true;
+                    collector.state = done;
+                    return false;
                 }
                 else
                 {
@@ -203,14 +206,6 @@ abstract class MetadataCollector extends Metadata implements EntryVisitor<BigEnd
                     collector.readData( key );
                     return true;
                 }
-            }
-        },
-        expecting_format_specifier_trailer
-        {
-            @Override
-            boolean visit( MetadataCollector collector, BigEndianByteArrayBuffer key, BigEndianByteArrayBuffer value )
-            {
-                return readFormatSpecifier( collector, key, value, done );
             }
         },
         done
@@ -231,11 +226,10 @@ abstract class MetadataCollector extends Metadata implements EntryVisitor<BigEnd
         };
 
         abstract boolean visit( MetadataCollector collector,
-                                BigEndianByteArrayBuffer key, BigEndianByteArrayBuffer value );
-
+                BigEndianByteArrayBuffer key, BigEndianByteArrayBuffer value );
 
         private static boolean readFormatSpecifier( MetadataCollector collector,
-                BigEndianByteArrayBuffer key, BigEndianByteArrayBuffer value, State nextState )
+                BigEndianByteArrayBuffer key, BigEndianByteArrayBuffer value )
         {
             if ( !key.allZeroes() )
             {
@@ -244,25 +238,18 @@ abstract class MetadataCollector extends Metadata implements EntryVisitor<BigEnd
             if ( !collector.verifyFormatSpecifier( value ) )
             {
                 collector.state = in_error;
-                throw new IllegalStateException( "Format header/trailer has changed." );
+                throw new IllegalStateException( format( "Format header/trailer has changed. " +
+                        "Expected format:`%s`, actual:`%s`.", collector.expectedFormat(), value) );
             }
 
             try
             {
-                if ( nextState == expecting_header )
-                {
-                    collector.header = 1;
-                    return true;
-                }
-                else
-                {
-                    collector.trailer = 1;
-                    return false;
-                }
+                collector.header = 1;
+                return true;
             }
             finally
             {
-                collector.state = nextState;
+                collector.state = expecting_header;
             }
         }
     }

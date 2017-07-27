@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,28 +19,23 @@
  */
 package org.neo4j.kernel.api.properties;
 
-import java.lang.reflect.Array;
-import java.util.Arrays;
-import java.util.Collection;
-
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.neo4j.function.Function;
+
+import java.lang.reflect.Array;
+import java.util.Arrays;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
-import static org.neo4j.helpers.collection.Iterables.map;
-import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
-import static org.neo4j.helpers.collection.IteratorUtil.asIterable;
+import static org.neo4j.helpers.collection.Iterables.asIterable;
 
 @RunWith(value = Parameterized.class)
 public class PropertyEqualityTest
 {
     @Parameterized.Parameters(name = "{0}")
-    public static Collection<Object[]> data()
+    public static Iterable<Test> data()
     {
-        Iterable<Test> testValues = asIterable(
+        return asIterable(
                 // boolean properties
                 shouldMatch( true, true ),
                 shouldMatch( false, false ),
@@ -140,14 +135,6 @@ public class PropertyEqualityTest
                 shouldMatch( new String[]{"A", "B", "C"}, new char[]{'A', 'B', 'C'} ),
                 shouldMatch( new char[]{'A', 'B', 'C'},  new String[]{"A", "B", "C"} )
         );
-        return asCollection( map( new Function<Test, Object[]>()
-        {
-            @Override
-            public Object[] apply( Test testValue )
-            {
-                return new Object[]{testValue};
-            }
-        }, testValues ) );
     }
 
     private Test currentTest;
@@ -323,7 +310,8 @@ public class PropertyEqualityTest
                 if ( value instanceof Object[] )
                 {
                     valueRepresentation = Arrays.toString( (Object[]) value );
-                } else
+                }
+                else
                 {
                     int length = Array.getLength( value );
                     Object[] objArr = new Object[length];
@@ -333,7 +321,8 @@ public class PropertyEqualityTest
                     }
                     valueRepresentation = Arrays.toString( objArr );
                 }
-            } else
+            }
+            else
             {
                 valueRepresentation = value.toString();
             }

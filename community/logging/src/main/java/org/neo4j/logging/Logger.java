@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,9 @@
  */
 package org.neo4j.logging;
 
-import org.neo4j.function.Consumer;
+import java.util.function.Consumer;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * A log into which messages can be written
@@ -29,19 +31,19 @@ public interface Logger
     /**
      * @param message The message to be written
      */
-    void log( String message );
+    void log( @Nonnull String message );
 
     /**
      * @param message   The message to be written
      * @param throwable An exception that will also be written
      */
-    void log( String message, Throwable throwable );
+    void log( @Nonnull String message, @Nonnull Throwable throwable );
 
     /**
      * @param format    A string format for writing a message
-     * @param arguments Arguments to substitute into the message according to the {@param format}
+     * @param arguments Arguments to substitute into the message according to the {@code format}
      */
-    void log( String format, Object... arguments );
+    void log( @Nonnull String format, @Nullable Object... arguments );
 
     /**
      * Used to temporarily write several messages in bulk. The implementation may choose to
@@ -49,5 +51,5 @@ public interface Logger
      *
      * @param consumer A callback operation that accepts an equivalent {@link Logger}
      */
-    void bulk( Consumer<Logger> consumer );
+    void bulk( @Nonnull Consumer<Logger> consumer );
 }

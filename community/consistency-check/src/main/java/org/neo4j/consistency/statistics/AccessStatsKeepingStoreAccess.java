@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,6 +24,7 @@ import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
+import org.neo4j.kernel.impl.store.record.RecordLoad;
 
 /**
  * {@link StoreAccess} that decorates each store, feeding stats about access into {@link AccessStatistics}.
@@ -51,7 +52,7 @@ public class AccessStatsKeepingStoreAccess extends StoreAccess
     {
         private final AccessStats accessStats;
 
-        public AccessStatsKeepingRecordStore( RecordStore<RECORD> actual, AccessStats accessStats )
+        AccessStatsKeepingRecordStore( RecordStore<RECORD> actual, AccessStats accessStats )
         {
             super( actual );
             this.accessStats = accessStats;
@@ -63,17 +64,10 @@ public class AccessStatsKeepingStoreAccess extends StoreAccess
         }
 
         @Override
-        public RECORD getRecord( long id )
+        public RECORD getRecord( long id, RECORD record, RecordLoad load )
         {
             accessStats.upRead( id );
-            return super.getRecord( id );
-        }
-
-        @Override
-        public RECORD forceGetRecord( long id )
-        {
-            accessStats.upRead( id );
-            return super.forceGetRecord( id );
+            return super.getRecord( id, record, load );
         }
     }
 }

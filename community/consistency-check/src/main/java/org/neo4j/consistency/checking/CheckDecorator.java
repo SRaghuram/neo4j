@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,6 +32,11 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 
 public interface CheckDecorator
 {
+    /**
+     * Called before each pass over the store(s) to check.
+     */
+    void prepare();
+
     OwningRecordCheck<NeoStoreRecord, ConsistencyReport.NeoStoreConsistencyReport> decorateNeoStoreChecker(
             OwningRecordCheck<NeoStoreRecord, ConsistencyReport.NeoStoreConsistencyReport> checker );
 
@@ -53,16 +58,18 @@ public interface CheckDecorator
     RecordCheck<LabelTokenRecord, ConsistencyReport.LabelTokenConsistencyReport> decorateLabelTokenChecker(
             RecordCheck<LabelTokenRecord, ConsistencyReport.LabelTokenConsistencyReport> checker );
 
-    RecordCheck<NodeRecord, ConsistencyReport.LabelsMatchReport> decorateLabelMatchChecker(
-            RecordCheck<NodeRecord, ConsistencyReport.LabelsMatchReport> checker );
-
     RecordCheck<RelationshipGroupRecord, ConsistencyReport.RelationshipGroupConsistencyReport> decorateRelationshipGroupChecker(
             RecordCheck<RelationshipGroupRecord, ConsistencyReport.RelationshipGroupConsistencyReport> checker );
 
-    static CheckDecorator NONE = new Adapter();
+    CheckDecorator NONE = new Adapter();
 
-    static class Adapter implements CheckDecorator
+    class Adapter implements CheckDecorator
     {
+        @Override
+        public void prepare()
+        {
+        }
+
         @Override
         public OwningRecordCheck<NeoStoreRecord, ConsistencyReport.NeoStoreConsistencyReport> decorateNeoStoreChecker(
                 OwningRecordCheck<NeoStoreRecord, ConsistencyReport.NeoStoreConsistencyReport> checker )
@@ -113,13 +120,6 @@ public interface CheckDecorator
         }
 
         @Override
-        public RecordCheck<NodeRecord, ConsistencyReport.LabelsMatchReport> decorateLabelMatchChecker(
-                RecordCheck<NodeRecord, ConsistencyReport.LabelsMatchReport> checker )
-        {
-            return checker;
-        }
-
-        @Override
         public RecordCheck<RelationshipGroupRecord, RelationshipGroupConsistencyReport> decorateRelationshipGroupChecker(
                 RecordCheck<RelationshipGroupRecord, RelationshipGroupConsistencyReport> checker )
         {
@@ -127,13 +127,22 @@ public interface CheckDecorator
         }
     }
 
-    static class ChainCheckDecorator implements CheckDecorator
+    class ChainCheckDecorator implements CheckDecorator
     {
         private final CheckDecorator[] decorators;
 
         public ChainCheckDecorator( CheckDecorator...decorators )
         {
             this.decorators = decorators;
+        }
+
+        @Override
+        public void prepare()
+        {
+            for ( CheckDecorator decorator : decorators )
+            {
+                decorator.prepare();
+            }
         }
 
         @Override
@@ -210,17 +219,6 @@ public interface CheckDecorator
             for ( CheckDecorator decorator: decorators)
             {
                 checker = decorator.decorateLabelTokenChecker( checker );
-            }
-            return checker;
-        }
-
-        @Override
-        public RecordCheck<NodeRecord,ConsistencyReport.LabelsMatchReport> decorateLabelMatchChecker(
-                RecordCheck<NodeRecord,ConsistencyReport.LabelsMatchReport> checker )
-        {
-            for ( CheckDecorator decorator: decorators)
-            {
-                checker = decorator.decorateLabelMatchChecker( checker );
             }
             return checker;
         }

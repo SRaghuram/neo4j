@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,12 +21,33 @@ package org.neo4j.kernel.impl.store.counts.keys;
 
 public enum CountsKeyType
 {
-    EMPTY( 0 ), ENTITY_NODE( 2 ), ENTITY_RELATIONSHIP( 3 ), INDEX_STATISTICS( 4 ), INDEX_SAMPLE( 5 );
+    EMPTY( 0 ),
+    ENTITY_NODE( 2 ),
+    ENTITY_RELATIONSHIP( 3 ),
+    INDEX_STATISTICS( 4 ),
+    INDEX_SAMPLE( 5 );
 
     public final byte code;
 
-    private CountsKeyType( int code )
+    CountsKeyType( int code )
     {
         this.code = (byte) code;
+    }
+
+    public static CountsKeyType value(byte val)
+    {
+        switch ( val )
+        {
+        case 2:
+            return CountsKeyType.ENTITY_NODE;
+        case 3:
+            return CountsKeyType.ENTITY_RELATIONSHIP;
+        case 4:
+            return CountsKeyType.INDEX_STATISTICS;
+        case 5:
+            return CountsKeyType.INDEX_SAMPLE;
+        default:
+            throw new IllegalArgumentException( "Parsed key type from count store deserialization of unknown type." );
+        }
     }
 }

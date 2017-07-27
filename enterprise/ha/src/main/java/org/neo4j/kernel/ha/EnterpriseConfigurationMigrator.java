@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,17 +19,8 @@
  */
 package org.neo4j.kernel.ha;
 
-import org.neo4j.kernel.configuration.GraphDatabaseConfigurationMigrator;
+import org.neo4j.kernel.configuration.BaseConfigurationMigrator;
 
-// TODO: This shouldn't extend GraphDatabaseConfigurationMigrator,
-// the migrations there will be applied when we load config from GraphDatabaseSettings.
-// We need to move the migration of online backup settings out before this can be done.
-public class EnterpriseConfigurationMigrator extends GraphDatabaseConfigurationMigrator
+public class EnterpriseConfigurationMigrator extends BaseConfigurationMigrator
 {
-    {
-        add(propertyRenamed(
-        		"ha.machine_id", 
-        		"ha.server_id", 
-        		"ha.machine_id has been replaced with ha.server_id"));
-    }
 }

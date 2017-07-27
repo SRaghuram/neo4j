@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.store.kvstore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.RuleChain;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,30 +33,36 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.function.IOFunction;
-import org.neo4j.function.Predicate;
 import org.neo4j.function.ThrowingConsumer;
-import org.neo4j.helpers.Clock;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.lifecycle.Lifespan;
-import org.neo4j.test.ThreadingRule;
+import org.neo4j.test.rule.Resources;
+import org.neo4j.test.rule.concurrent.ThreadingRule;
+import org.neo4j.time.Clocks;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 import static org.neo4j.kernel.impl.store.kvstore.DataProvider.EMPTY_DATA_PROVIDER;
-import static org.neo4j.kernel.impl.store.kvstore.Resources.InitialLifecycle.STARTED;
-import static org.neo4j.kernel.impl.store.kvstore.Resources.TestPath.FILE_IN_EXISTING_DIRECTORY;
+import static org.neo4j.test.rule.Resources.InitialLifecycle.STARTED;
+import static org.neo4j.test.rule.Resources.TestPath.FILE_IN_EXISTING_DIRECTORY;
 
 public class AbstractKeyValueStoreTest
 {
-    @Rule
-    public final Resources resourceManager = new Resources( FILE_IN_EXISTING_DIRECTORY );
+
+    private final ExpectedException expectedException = ExpectedException.none();
+    private final Resources resourceManager = new Resources( FILE_IN_EXISTING_DIRECTORY );
+
     @Rule
     public final ThreadingRule threading = new ThreadingRule();
     @Rule
-    public final ExpectedException expectedException = ExpectedException.none();
+    public final RuleChain ruleChain = RuleChain.outerRule( expectedException )
+            .around( resourceManager );
 
     private static final HeaderField<Long> TX_ID = new HeaderField<Long>()
     {
@@ -77,6 +84,44 @@ public class AbstractKeyValueStoreTest
             return "txId";
         }
     };
+
+    @Test
+    @Resources.Life( STARTED )
+    public void retryLookupOnConcurrentStoreStateChange() throws IOException
+    {
+        Store testStore = resourceManager.managed( createTestStore( TimeUnit.DAYS.toMillis( 2 ) ) );
+        ConcurrentMapState<String> newState = new ConcurrentMapState<>( testStore.state, mock( File.class ) );
+        testStore.put( "test", "value" );
+
+        CountingErroneousReader countingErroneousReader = new CountingErroneousReader( testStore, newState );
+
+        assertEquals( "New state contains stored value", "value", testStore.lookup( "test", countingErroneousReader ) );
+        assertEquals( "Should have 2 invocations: first throws exception, second re-read value.", 2,
+                countingErroneousReader.getInvocationCounter() );
+    }
+
+    @Test
+    @Resources.Life( STARTED )
+    public void accessClosedStateCauseIllegalStateException() throws Exception
+    {
+        Store store = resourceManager.managed( new Store() );
+        store.put( "test", "value" );
+        store.prepareRotation( 0 ).rotate();
+        ProgressiveState<String> lookupState = store.state;
+        store.prepareRotation( 0 ).rotate();
+
+        expectedException.expect( IllegalStateException.class );
+        expectedException.expectMessage( "File has been unmapped" );
+
+        lookupState.lookup( "test", new ValueSink()
+        {
+            @Override
+            protected void value( ReadableBuffer value )
+            {
+                // empty
+            }
+        } );
+    }
 
     @Test
     public void shouldStartAndStopStore() throws Exception
@@ -142,7 +187,7 @@ public class AbstractKeyValueStoreTest
         try ( Lifespan life = new Lifespan() )
         {
             Store store = life.add( createTestStore() );
-            assertEquals( 10l, store.headers().get( TX_ID ).longValue() );
+            assertEquals( 10L, store.headers().get( TX_ID ).longValue() );
         }
     }
 
@@ -212,7 +257,74 @@ public class AbstractKeyValueStoreTest
         {
             life.add( store );
 
-            assertEquals( 64l, store.headers().get( TX_ID ).longValue() );
+            assertEquals( 64L, store.headers().get( TX_ID ).longValue() );
+        }
+    }
+
+    @Test
+    public void shouldPickTheUncorruptedStoreWhenTruncatingAfterTheHeader() throws IOException
+    {
+        /*
+         * The problem was that if we were succesfull in writing the header but failing immediately after, we would
+         *  read 0 as counter for entry data and pick the corrupted store thinking that it was simply empty.
+         */
+
+        Store store = createTestStore();
+
+        Pair<File,KeyValueStoreFile> file = store.rotationStrategy.create( EMPTY_DATA_PROVIDER, 1 );
+        Pair<File,KeyValueStoreFile> next = store.rotationStrategy
+                .next( file.first(), Headers.headersBuilder().put( TX_ID, (long) 42 ).headers(), data( new Entry()
+                {
+                    @Override
+                    public void write( WritableBuffer key, WritableBuffer value )
+                    {
+                        key.putByte( 0, (byte) 'f' );
+                        key.putByte( 1, (byte) 'o' );
+                        key.putByte( 2, (byte) 'o' );
+                        value.putInt( 0, 42 );
+                    }
+                } ) );
+        file.other().close();
+        File correct = next.first();
+
+        Pair<File,KeyValueStoreFile> nextNext = store.rotationStrategy
+                .next( correct, Headers.headersBuilder().put( TX_ID, (long) 43 ).headers(), data( new Entry()
+                {
+                    @Override
+                    public void write( WritableBuffer key, WritableBuffer value )
+                    {
+                        key.putByte( 0, (byte) 'f' );
+                        key.putByte( 1, (byte) 'o' );
+                        key.putByte( 2, (byte) 'o' );
+                        value.putInt( 0, 42 );
+                    }
+                }, new Entry()
+                {
+                    @Override
+                    public void write( WritableBuffer key, WritableBuffer value )
+                    {
+                        key.putByte( 0, (byte) 'b' );
+                        key.putByte( 1, (byte) 'a' );
+                        key.putByte( 2, (byte) 'r' );
+                        value.putInt( 0, 4242 );
+                    }
+                }) );
+        next.other().close();
+        File corrupted = nextNext.first();
+        nextNext.other().close();
+
+        try ( StoreChannel channel = resourceManager.fileSystem().open( corrupted, "rw" ) )
+        {
+            channel.truncate( 16 * 4 );
+        }
+
+        // then
+        try ( Lifespan life = new Lifespan() )
+        {
+            life.add( store );
+
+            assertNotNull( store.get( "foo" ) );
+            assertEquals( 42L, store.headers().get( TX_ID ).longValue() );
         }
     }
 
@@ -248,14 +360,8 @@ public class AbstractKeyValueStoreTest
 
         assertEquals( 2, rotation.rotate() );
 
-        Future<Long> rotationFuture = threading.executeAndAwait( store.rotation, 5l, new Predicate<Thread>()
-        {
-            @Override
-            public boolean test( Thread thread )
-            {
-                return Thread.State.TIMED_WAITING == thread.getState();
-            }
-        }, 100, SECONDS );
+        Future<Long> rotationFuture = threading.executeAndAwait( store.rotation, 5L,
+                thread -> Thread.State.TIMED_WAITING == thread.getState(), 100, SECONDS );
 
         Thread.sleep( TimeUnit.SECONDS.toMillis( 1 ) );
 
@@ -274,21 +380,17 @@ public class AbstractKeyValueStoreTest
 
         // when
         updateStore( store, 1 );
-        Future<Long> rotation = threading.executeAndAwait( store.rotation, 3l, new Predicate<Thread>()
+        Future<Long> rotation = threading.executeAndAwait( store.rotation, 3L, thread ->
         {
-            @Override
-            public boolean test( Thread thread )
+            switch ( thread.getState() )
             {
-                switch ( thread.getState() )
-                {
-                case BLOCKED:
-                case WAITING:
-                case TIMED_WAITING:
-                case TERMINATED:
-                    return true;
-                default:
-                    return false;
-                }
+            case BLOCKED:
+            case WAITING:
+            case TIMED_WAITING:
+            case TERMINATED:
+                return true;
+            default:
+                return false;
             }
         }, 100, SECONDS );
         // rotation should wait...
@@ -313,7 +415,7 @@ public class AbstractKeyValueStoreTest
         // then
         assertEquals( 3, rotation.get().longValue() );
         assertEquals( 3, store.headers().get( TX_ID ).longValue() );
-        store.rotation.apply( 4l );
+        store.rotation.apply( 4L );
     }
 
     @Test( timeout = 2000 )
@@ -328,7 +430,66 @@ public class AbstractKeyValueStoreTest
         expectedException.expect( RotationTimeoutException.class );
 
         // WHEN
-        store.prepareRotation( 10l ).rotate();
+        store.prepareRotation( 10L ).rotate();
+    }
+
+    @Test
+    @Resources.Life( STARTED )
+    public void shouldLeaveStoreInGoodStateAfterRotationFailure() throws Exception
+    {
+        // GIVEN
+        final Store store = resourceManager.managed( createTestStore( 0 ) );
+        long initialVersion = store.version( store.headers() );
+        // a key/value which is rotated into a persistent version
+        String permanentKey = "permakey";
+        String permanentValue = "here";
+        try ( EntryUpdater<String> updater = store.updater( initialVersion + 1 ).get() )
+        {
+            updater.apply( permanentKey, value( permanentValue ) );
+        }
+        store.prepareRotation( initialVersion + 1 ).rotate();
+
+        // another key/value which is applied to the new version
+        String key = "mykey";
+        String value = "first";
+        try ( EntryUpdater<String> updater = store.updater( initialVersion + 2 ).get() )
+        {
+            updater.apply( key, value( "first" ) );
+        }
+
+        // WHEN rotating a version which doesn't exist
+        try
+        {
+            store.prepareRotation( initialVersion + 3 ).rotate();
+            fail( "Should've failed rotation, since that version doesn't exist yet" );
+        }
+        catch ( RotationTimeoutException e )
+        {
+            // THEN afterwards it should still be possible to read from the counts store
+            assertEquals( permanentValue, store.get( permanentKey ) );
+            assertEquals( value, store.get( key ) );
+
+            // and also continue to make updates
+            try ( EntryUpdater<String> updater = store.updater( initialVersion + 2 ).get() )
+            {
+                updater.apply( key, value( "second" ) );
+            }
+
+            // and eventually rotation again successfully
+            store.prepareRotation( initialVersion + 3 ).rotate();
+        }
+    }
+
+    private static ValueUpdate longValue( long value )
+    {
+        return new ValueUpdate()
+        {
+            @Override
+            public void update( WritableBuffer target )
+            {
+                target.putLong( 0, value );
+            }
+        };
     }
 
     private Store createTestStore()
@@ -346,7 +507,7 @@ public class AbstractKeyValueStoreTest
             {
                 if ( field == TX_ID )
                 {
-                    return (Value) (Object) 1l;
+                    return (Value) (Object) 1L;
                 }
                 else
                 {
@@ -370,22 +531,17 @@ public class AbstractKeyValueStoreTest
 
     private void updateStore( final Store store, long transaction ) throws IOException
     {
-        ThrowingConsumer<Long,IOException> update = new ThrowingConsumer<Long,IOException>()
+        ThrowingConsumer<Long,IOException> update = u ->
         {
-            @Override
-            public void accept( Long update ) throws IOException
+            try ( EntryUpdater<String> updater = store.updater( u ).get() )
             {
-                try ( EntryUpdater<String> updater = store.updater( update ).get() )
-                {
-                    updater.apply( "key " + update, store.value( "value " + update ) );
-                }
+                updater.apply( "key " + u, value( "value " + u ) );
             }
         };
         update.accept( transaction );
     }
 
-
-    static DataProvider data( final Entry... data )
+    private static DataProvider data( final Entry... data )
     {
         return new DataProvider()
         {
@@ -414,18 +570,42 @@ public class AbstractKeyValueStoreTest
         void write( WritableBuffer key, WritableBuffer value );
     }
 
+    private static class CountingErroneousReader extends AbstractKeyValueStore.Reader<String>
+    {
+        private final Store testStore;
+        private final ProgressiveState<String> newStoreState;
+        private int invocationCounter;
+
+        CountingErroneousReader( Store testStore, ProgressiveState<String> newStoreState )
+        {
+            this.testStore = testStore;
+            this.newStoreState = newStoreState;
+            invocationCounter = 0;
+        }
+
+        @Override
+        protected String parseValue( ReadableBuffer value )
+        {
+            invocationCounter++;
+            if ( invocationCounter == 1 )
+            {
+                testStore.state = newStoreState;
+                throw new IllegalStateException( "Exception during state rotation." );
+            }
+            return testStore.readKey( value );
+        }
+
+        int getInvocationCounter()
+        {
+            return invocationCounter;
+        }
+    }
+
     @Rotation( Rotation.Strategy.INCREMENTING )
     class Store extends AbstractKeyValueStore<String>
     {
         private final HeaderField<?>[] headerFields;
-        final IOFunction<Long,Long> rotation = new IOFunction<Long,Long>()
-        {
-            @Override
-            public Long apply( Long version ) throws IOException
-            {
-                return prepareRotation( version ).rotate();
-            }
-        };
+        final IOFunction<Long,Long> rotation = version -> prepareRotation( version ).rotate();
 
         private Store( HeaderField<?>... headerFields )
         {
@@ -435,8 +615,7 @@ public class AbstractKeyValueStoreTest
         private Store( long rotationTimeout, HeaderField<?>... headerFields )
         {
             super( resourceManager.fileSystem(), resourceManager.pageCache(), resourceManager.testPath(), null,
-                    new RotationTimerFactory( Clock.SYSTEM_CLOCK,
-                            rotationTimeout ), 16, 16, headerFields );
+                    new RotationTimerFactory( Clocks.systemClock(), rotationTimeout ), 16, 16, headerFields );
             this.headerFields = headerFields;
             setEntryUpdaterInitializer( new DataInitializer<EntryUpdater<String>>()
             {
@@ -480,24 +659,10 @@ public class AbstractKeyValueStoreTest
             return 0;
         }
 
-        @SuppressWarnings( "unchecked" )
-        private <Value> void putField( Headers.Builder builder, HeaderField<Value> field, Object change )
-        {
-            builder.put( field, (Value) change );
-        }
-
         @Override
         protected void writeKey( String key, WritableBuffer buffer )
         {
-            for ( int i = 0; i < key.length(); i++ )
-            {
-                char c = key.charAt( i );
-                if ( c == 0 || c >= 128 )
-                {
-                    throw new IllegalArgumentException( "Only ASCII keys allowed." );
-                }
-                buffer.putByte( i, (byte) c );
-            }
+            awriteKey( key, buffer );
         }
 
         @Override
@@ -545,18 +710,6 @@ public class AbstractKeyValueStoreTest
             }
         }
 
-        ValueUpdate value( final String value )
-        {
-            return new ValueUpdate()
-            {
-                @Override
-                public void update( WritableBuffer target )
-                {
-                    writeKey( value, target );
-                }
-            };
-        }
-
         public String get( String key ) throws IOException
         {
             return lookup( key, new Reader<String>()
@@ -567,6 +720,24 @@ public class AbstractKeyValueStoreTest
                     return readKey( value );
                 }
             } );
+        }
+    }
+
+    private static ValueUpdate value( final String value )
+    {
+        return target -> awriteKey( value, target );
+    }
+
+    private static void awriteKey( String key, WritableBuffer buffer )
+    {
+        for ( int i = 0; i < key.length(); i++ )
+        {
+            char c = key.charAt( i );
+            if ( c == 0 || c >= 128 )
+            {
+                throw new IllegalArgumentException( "Only ASCII keys allowed." );
+            }
+            buffer.putByte( i, (byte) c );
         }
     }
 }

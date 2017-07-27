@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.neo4j.assembly</groupId>
     <artifactId>neo4j-standalone</artifactId>
-    <version>2.3-SNAPSHOT</version>
+    <version>3.2.3-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -13,7 +13,7 @@
 
   <name>Neo4j Community - Server Assembler</name>
 
-  <version>2.3-SNAPSHOT</version>
+  <version>3.2.3-SNAPSHOT</version>
 
   <description>This project assembles the Neo4j Community stand-alone distribution,
     pulling together all the deliverable artifacts and packaging them
@@ -21,11 +21,13 @@
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
   <scm>
-	  <url>https://github.com/neo4j/neo4j/tree/master/packaging/standalone/standalone-community</url>
+    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+    <url>https://github.com/neo4j/neo4j</url>
   </scm>
 
   <properties>
-    <neo4j.mainClass>org.neo4j.server.CommunityBootstrapper</neo4j.mainClass>
+    <neo4j.mainClass>org.neo4j.server.CommunityEntryPoint</neo4j.mainClass>
   </properties>
 
   <licenses>
@@ -162,12 +164,12 @@ terms of the relevant Commercial Agreement.
     <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j</artifactId>
-      <version>${neo4j.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.neo4j.app</groupId>
       <artifactId>neo4j-server</artifactId>
-      <version>${neo4j.version}</version>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 

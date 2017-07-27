@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,7 +22,7 @@ package org.neo4j.shell.kernel.apps;
 import java.rmi.RemoteException;
 
 import org.neo4j.helpers.Service;
-import org.neo4j.kernel.TopLevelTransaction;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.shell.App;
 import org.neo4j.shell.AppCommandParser;
 import org.neo4j.shell.Continuation;
@@ -52,7 +52,7 @@ public class Commit extends NonTransactionProvidingApp
 
         Integer txCount = session.getCommitCount();
 
-        TopLevelTransaction tx = Begin.currentTransaction( getServer() );
+        KernelTransaction tx = Begin.currentTransaction( getServer() );
         if ( txCount == null || txCount.equals( 0 ) )
         {
             if ( tx != null )

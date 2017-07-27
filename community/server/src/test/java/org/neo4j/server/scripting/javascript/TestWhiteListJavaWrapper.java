@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,6 @@
  */
 package org.neo4j.server.scripting.javascript;
 
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
-
-import java.util.HashSet;
-import java.util.Set;
-
 import org.junit.After;
 import org.junit.Test;
 import org.mozilla.javascript.Context;
@@ -33,8 +26,16 @@ import org.mozilla.javascript.NativeJavaMethod;
 import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.UniqueTag;
+
+import java.util.HashSet;
+import java.util.Set;
+
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.server.scripting.UserScriptClassWhiteList;
+
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 public class TestWhiteListJavaWrapper
 {
@@ -42,9 +43,11 @@ public class TestWhiteListJavaWrapper
     @After
     public void exitContext()
     {
-        try {
+        try
+        {
             Context.exit();
-        } catch (IllegalStateException e)
+        }
+        catch ( IllegalStateException e )
         {
             // Om nom nom
         }
@@ -66,7 +69,6 @@ public class TestWhiteListJavaWrapper
         // Given
         Set<String> whiteList = new HashSet<String>(  );
         whiteList.add( Object.class.getName() );
-
 
         WhiteListJavaWrapper wrapper = new WhiteListJavaWrapper( new WhiteListClassShutter( whiteList ));
 
@@ -90,7 +92,6 @@ public class TestWhiteListJavaWrapper
         // Given
         Set<String> whiteList = new HashSet<String>(  );
         whiteList.add( Object.class.getName() );
-
 
         WhiteListJavaWrapper wrapper = new WhiteListJavaWrapper( new WhiteListClassShutter( whiteList ));
 

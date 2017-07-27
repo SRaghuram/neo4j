@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,10 +20,13 @@
 package org.neo4j.harness;
 
 import java.io.File;
+import java.util.function.Function;
 
-import org.neo4j.function.Function;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.procedure.Procedure;
+import org.neo4j.procedure.UserAggregationFunction;
+import org.neo4j.procedure.UserFunction;
 
 /**
  * Utility for constructing and starting Neo4j for test purposes.
@@ -39,7 +42,7 @@ public interface TestServerBuilder
      * When the returned controls are {@link ServerControls#close() closed}, the temporary directory the server used
      * will be removed as well.
      */
-    public ServerControls newServer();
+    ServerControls newServer();
 
     /**
      * Configure the Neo4j instance. Configuration here can be both configuration aimed at the server as well as the
@@ -49,12 +52,12 @@ public interface TestServerBuilder
      * @param value the config value
      * @return this builder instance
      */
-    public TestServerBuilder withConfig( Setting<?> key, String value );
+    TestServerBuilder withConfig( Setting<?> key, String value );
 
     /**
      * @see #withConfig(org.neo4j.graphdb.config.Setting, String)
      */
-    public TestServerBuilder withConfig( String key, String value );
+    TestServerBuilder withConfig( String key, String value );
 
     /**
      * Shortcut for configuring the server to use an unmanaged extension. Please refer to the Neo4j Manual on how to
@@ -64,7 +67,7 @@ public interface TestServerBuilder
      * @param extension the extension class.
      * @return this builder instance
      */
-    public TestServerBuilder withExtension( String mountPath, Class<?> extension );
+    TestServerBuilder withExtension( String mountPath, Class<?> extension );
 
     /**
      * Shortcut for configuring the server to find and mount all unmanaged extensions in the given package.
@@ -73,7 +76,7 @@ public interface TestServerBuilder
      * @param packageName a java package with extension classes.
      * @return this builder instance
      */
-    public TestServerBuilder withExtension( String mountPath, String packageName );
+    TestServerBuilder withExtension( String mountPath, String packageName );
 
     /**
      * Data fixtures to inject upon server start. This can be either a file with a plain-text cypher query
@@ -81,14 +84,14 @@ public interface TestServerBuilder
      * @param cypherFileOrDirectory file with cypher statement, or directory containing ".cyp"-suffixed files.
      * @return this builder instance
      */
-    public TestServerBuilder withFixture( File cypherFileOrDirectory );
+    TestServerBuilder withFixture( File cypherFileOrDirectory );
 
     /**
      * Data fixture to inject upon server start. This should be a valid Cypher statement.
      * @param fixtureStatement a cypher statement
      * @return this builder instance
      */
-    public TestServerBuilder withFixture( String fixtureStatement );
+    TestServerBuilder withFixture( String fixtureStatement );
 
     /**
      * Data fixture to inject upon server start. This should be a user implemented fixture function
@@ -96,12 +99,42 @@ public interface TestServerBuilder
      * @param fixtureFunction a fixture function
      * @return this builder instance
      */
-    public TestServerBuilder withFixture( Function<GraphDatabaseService, Void> fixtureFunction );
+    TestServerBuilder withFixture( Function<GraphDatabaseService, Void> fixtureFunction );
 
     /**
      * Pre-populate the server with a database copied from the specified directory
-     * @param sourceDirectory
+     * @param sourceDirectory the directory to copy from
      * @return this builder instance
      */
-    public TestServerBuilder copyFrom( File sourceDirectory );
+    TestServerBuilder copyFrom( File sourceDirectory );
+
+    /**
+     * Configure the server to load the specified procedure definition class. The class should contain one or more
+     * methods annotated with {@link Procedure}, these will become available to call through
+     * cypher.
+     *
+     * @param procedureClass a class containing one or more procedure definitions
+     * @return this builder instance
+     */
+    TestServerBuilder withProcedure( Class<?> procedureClass );
+
+    /**
+     * Configure the server to load the specified function definition class. The class should contain one or more
+     * methods annotated with {@link UserFunction}, these will become available to call through
+     * cypher.
+     *
+     * @param functionClass a class containing one or more function definitions
+     * @return this builder instance
+     */
+    TestServerBuilder withFunction( Class<?> functionClass );
+
+    /**
+     * Configure the server to load the specified aggregation function definition class. The class should contain one or more
+     * methods annotated with {@link UserAggregationFunction}, these will become available to call through
+     * cypher.
+     *
+     * @param functionClass a class containing one or more function definitions
+     * @return this builder instance
+     */
+    TestServerBuilder withAggregationFunction( Class<?> functionClass );
 }

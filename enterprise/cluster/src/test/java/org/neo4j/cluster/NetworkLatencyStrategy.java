@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,7 +27,7 @@ import org.neo4j.cluster.com.message.MessageType;
  */
 public interface NetworkLatencyStrategy
 {
-    public static long LOST = -1;
+    long LOST = -1;
 
     long messageDelay(Message<? extends MessageType> message, String serverIdTo);
 }

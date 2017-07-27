@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -38,7 +38,7 @@ public abstract class IndexRepresentation extends MappingRepresentation implemen
     @Override
     protected void serialize( final MappingSerializer serializer )
     {
-        serializer.putUriTemplate( "template", path() + "{key}/{value}" );
+        serializer.putRelativeUriTemplate( "template", path() + "{key}/{value}" );
         for ( Map.Entry<String, String> pair : type.entrySet() )
         {
             serializer.putString( pair.getKey(), pair.getValue() );

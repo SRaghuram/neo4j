@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -53,6 +53,7 @@ public interface LogRotation
     };
 
     /**
+     * Rotates the undelying log if it is required. Returns true if rotation happened, false otherwise
      * @param logAppendEvent A trace event for the current log append operation.
      */
     boolean rotateLogIfNeeded( LogAppendEvent logAppendEvent ) throws IOException;
@@ -63,12 +64,4 @@ public interface LogRotation
      * @throws IOException
      */
     void rotateLogFile() throws IOException;
-
-    class PrintFormat
-    {
-        public static String prefix( long currentVersion )
-        {
-            return "Log Rotation [" + currentVersion + "]: ";
-        }
-    }
 }

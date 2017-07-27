@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -41,7 +41,6 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.backup.OnlineBackup;
 import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -49,13 +48,13 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.TestHighlyAvailableGraphDatabaseFactory;
-import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.ha.UpdatePuller;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.Assert.assertTrue;
@@ -73,11 +72,11 @@ public class RollingUpgradeIT
 {
     private static final int CLUSTER_SIZE = 3;
 
-    public static final RelationshipType type1 = DynamicRelationshipType.withName( "type1" );
-    public static final RelationshipType type2 = DynamicRelationshipType.withName( "type2" );
+    public static final RelationshipType type1 = RelationshipType.withName( "type1" );
+    public static final RelationshipType type2 = RelationshipType.withName( "type2" );
 
     @Rule
-    public TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
+    public TestDirectory testDirectory = TestDirectory.testDirectory();
 
     private LegacyDatabase[] legacyDbs;
     private GraphDatabaseAPI[] newDbs;
@@ -147,7 +146,7 @@ public class RollingUpgradeIT
         ConsistencyCheckService service = new ConsistencyCheckService();
         for ( String storeDir : storeDirs )
         {
-            service.runFullConsistencyCheck( storeDir, new Config(),
+            service.runFullConsistencyCheck( storeDir, Config.defaults(),
                     ProgressMonitorFactory.textual(System.out), StringLogger.SYSTEM );
         }
 */
@@ -260,7 +259,7 @@ public class RollingUpgradeIT
 
     private int backupPort( int serverId )
     {
-        return (6362+serverId);
+        return 6362 + serverId;
     }
 
     private void rollOverToNewVersion() throws Exception
@@ -315,11 +314,11 @@ public class RollingUpgradeIT
             break;
         }
 
-        startStandaloneDbToRunUpgrade( storeDir, i );
+        startStandaloneDbToRunUpgrade( storeDirFile, i );
 
         // start that db up in this JVM
         newDbs[i] = (GraphDatabaseAPI) new TestHighlyAvailableGraphDatabaseFactory()
-                .newHighlyAvailableDatabaseBuilder( storeDir )
+                .newEmbeddedDatabaseBuilder( storeDirFile )
                 .setConfig( config( i ) )
                 .newGraphDatabase();
         debug( "Started " + i + " as current version" );
@@ -356,7 +355,7 @@ public class RollingUpgradeIT
         }
     }
 
-    private void startStandaloneDbToRunUpgrade( String storeDir, int dbIndex )
+    private void startStandaloneDbToRunUpgrade( File storeDir, int dbIndex )
     {
         GraphDatabaseService tempDbForUpgrade = null;
         try
@@ -384,7 +383,7 @@ public class RollingUpgradeIT
 
     public void doComplexLoad( GraphDatabaseAPI db, long center )
     {
-        try( Transaction tx = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Node central = db.getNodeById( center );
 
@@ -439,7 +438,7 @@ public class RollingUpgradeIT
             {
                 relationship.setProperty( "relProp", "relProp" + relationship.getId() + "-" + largestCreated );
                 Node end = relationship.getEndNode();
-                end.setProperty( "nodeProp", "nodeProp" + end.getId() + "-" + largestCreated  );
+                end.setProperty( "nodeProp", "nodeProp" + end.getId() + "-" + largestCreated );
             }
 
             tx.success();
@@ -449,13 +448,13 @@ public class RollingUpgradeIT
     public void verifyComplexLoad( GraphDatabaseAPI db, long centralNode ) throws InterruptedException
     {
         db.getDependencyResolver().resolveDependency( UpdatePuller.class ).pullUpdates();
-        try( Transaction tx = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Node center = db.getNodeById( centralNode );
             long maxRelId = -1;
             for ( Relationship relationship : center.getRelationships() )
             {
-                if (relationship.getId() > maxRelId )
+                if ( relationship.getId() > maxRelId )
                 {
                     maxRelId = relationship.getId();
                 }
@@ -465,38 +464,40 @@ public class RollingUpgradeIT
             for ( Relationship relationship : center.getRelationships( type1 ) )
             {
                 typeCount++;
-                if ( !relationship.getProperty( "relProp" ).equals( "relProp" +relationship.getId()+"-"+maxRelId) )
+                if ( !relationship.getProperty( "relProp" )
+                        .equals( "relProp" + relationship.getId() + "-" + maxRelId ) )
                 {
-                    fail( "damn");
+                    fail( "damn" );
                 }
                 Node other = relationship.getEndNode();
-                if ( !other.getProperty( "nodeProp" ).equals( "nodeProp"+other.getId()+"-"+maxRelId ) )
+                if ( !other.getProperty( "nodeProp" ).equals( "nodeProp" + other.getId() + "-" + maxRelId ) )
                 {
-                    fail("double damn");
+                    fail( "double damn" );
                 }
             }
             if ( typeCount != 100 )
             {
-                fail("tripled damn");
+                fail( "tripled damn" );
             }
 
             typeCount = 0;
             for ( Relationship relationship : center.getRelationships( type2 ) )
             {
                 typeCount++;
-                if ( !relationship.getProperty( "relProp" ).equals( "relProp" +relationship.getId()+"-"+maxRelId) )
+                if ( !relationship.getProperty( "relProp" )
+                        .equals( "relProp" + relationship.getId() + "-" + maxRelId ) )
                 {
-                    fail( "damn");
+                    fail( "damn" );
                 }
                 Node other = relationship.getEndNode();
-                if ( !other.getProperty( "nodeProp" ).equals( "nodeProp"+other.getId()+"-"+maxRelId ) )
+                if ( !other.getProperty( "nodeProp" ).equals( "nodeProp" + other.getId() + "-" + maxRelId ) )
                 {
-                    fail("double damn");
+                    fail( "double damn" );
                 }
             }
             if ( typeCount != 100 )
             {
-                fail("tripled damn");
+                fail( "tripled damn" );
             }
             tx.success();
         }

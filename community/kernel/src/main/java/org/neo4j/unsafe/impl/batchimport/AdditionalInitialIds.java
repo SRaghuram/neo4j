@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,7 @@
  */
 package org.neo4j.unsafe.impl.batchimport;
 
-import org.neo4j.kernel.impl.storemigration.StoreMigrator;
+import org.neo4j.kernel.impl.storemigration.participant.StoreMigrator;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 
 /**
@@ -37,12 +37,6 @@ import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
  */
 public interface AdditionalInitialIds
 {
-    int highLabelTokenId();
-
-    int highRelationshipTypeTokenId();
-
-    int highPropertyKeyTokenId();
-
     long lastCommittedTransactionId();
 
     long lastCommittedTransactionChecksum();
@@ -56,24 +50,6 @@ public interface AdditionalInitialIds
      */
     AdditionalInitialIds EMPTY = new AdditionalInitialIds()
     {
-        @Override
-        public int highRelationshipTypeTokenId()
-        {
-            return 0;
-        }
-
-        @Override
-        public int highPropertyKeyTokenId()
-        {
-            return 0;
-        }
-
-        @Override
-        public int highLabelTokenId()
-        {
-            return 0;
-        }
-
         @Override
         public long lastCommittedTransactionId()
         {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,11 @@
  */
 package org.neo4j.consistency.checking.full;
 
-import java.util.concurrent.BlockingQueue;
-
 import org.neo4j.consistency.checking.cache.CacheAccess;
+import org.neo4j.consistency.checking.full.QueueDistribution.QueueDistributor;
 import org.neo4j.consistency.statistics.Statistics;
-import org.neo4j.function.Function;
+import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.helpers.progress.ProgressMonitorFactory.MultiPartBuilder;
-import org.neo4j.kernel.api.direct.BoundedIterable;
 
 import static org.neo4j.consistency.checking.cache.DefaultCacheAccess.DEFAULT_QUEUE_SIZE;
 import static org.neo4j.consistency.checking.full.RecordDistributor.distributeRecords;
@@ -33,47 +31,26 @@ import static org.neo4j.consistency.checking.full.RecordDistributor.distributeRe
 public class ParallelRecordScanner<RECORD> extends RecordScanner<RECORD>
 {
     private final CacheAccess cacheAccess;
+    private final QueueDistribution distribution;
 
     public ParallelRecordScanner( String name, Statistics statistics, int threads, BoundedIterable<RECORD> store,
             MultiPartBuilder builder, RecordProcessor<RECORD> processor, CacheAccess cacheAccess,
+            QueueDistribution distribution,
             IterableStore... warmUpStores )
     {
         super( name, statistics, threads, store, builder, processor, warmUpStores );
         this.cacheAccess = cacheAccess;
+        this.distribution = distribution;
     }
 
     @Override
     protected void scan()
     {
-        long recordsPerCPU = (store.maxCount() / numberOfThreads) + 1;
+        long recordsPerCPU = RecordDistributor.calculateRecodsPerCpu( store.maxCount(), numberOfThreads );
         cacheAccess.prepareForProcessingOfSingleStore( recordsPerCPU );
 
-        Function<BlockingQueue<RECORD>,Worker<RECORD>> workerFactory = new Function<BlockingQueue<RECORD>,Worker<RECORD>>()
-        {
-            @Override
-            public Worker<RECORD> apply( BlockingQueue<RECORD> source )
-            {
-                return new Worker<>( source, processor );
-            }
-        };
+        QueueDistributor<RECORD> distributor = distribution.distributor( recordsPerCPU, numberOfThreads );
         distributeRecords( numberOfThreads, getClass().getSimpleName() + "-" + name,
-                DEFAULT_QUEUE_SIZE, workerFactory, store, progress );
-    }
-
-    private static class Worker<RECORD> extends RecordCheckWorker<RECORD>
-    {
-        private final RecordProcessor<RECORD> processor;
-
-        Worker( BlockingQueue<RECORD> recordsQ, RecordProcessor<RECORD> processor )
-        {
-            super( recordsQ );
-            this.processor = processor;
-        }
-
-        @Override
-        protected void process( RECORD record )
-        {
-            processor.process( record );
-        }
+                DEFAULT_QUEUE_SIZE, store.iterator(), progress, processor, distributor );
     }
 }

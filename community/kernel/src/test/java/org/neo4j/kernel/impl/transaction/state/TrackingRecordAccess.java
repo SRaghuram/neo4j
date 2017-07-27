@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -62,6 +62,12 @@ public class TrackingRecordAccess<RECORD, ADDITIONAL> implements RecordAccess<Lo
     public void setTo( Long key, RECORD newRecord, ADDITIONAL additionalData )
     {
         delegate.setTo( key, newRecord, additionalData );
+    }
+
+    @Override
+    public RecordProxy<Long,RECORD,ADDITIONAL> setRecord( Long key, RECORD record, ADDITIONAL additionalData )
+    {
+        return delegate.setRecord( key, record, additionalData );
     }
 
     @Override

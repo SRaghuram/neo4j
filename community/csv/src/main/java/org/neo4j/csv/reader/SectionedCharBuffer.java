@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -66,7 +66,7 @@ public class SectionedCharBuffer
      */
     public SectionedCharBuffer( int effectiveBuffserSize )
     {
-        this.buffer = new char[effectiveBuffserSize*2];
+        this.buffer = new char[effectiveBuffserSize * 2];
         this.front = this.pivot = effectiveBuffserSize;
     }
 
@@ -105,8 +105,8 @@ public class SectionedCharBuffer
     public void compact( SectionedCharBuffer into, int from )
     {
         assert buffer.length == into.buffer.length;
-        int diff = front-from;
-        into.back = pivot-diff;
+        int diff = front - from;
+        into.back = pivot - diff;
         System.arraycopy( buffer, from, into.buffer, into.back, diff );
     }
 
@@ -191,6 +191,6 @@ public class SectionedCharBuffer
      */
     public int available()
     {
-        return front-pivot;
+        return front - pivot;
     }
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2002-2015 "Neo Technology,"
+    Copyright (c) 2002-2017 "Neo Technology,"
     Network Engine for Objects in Lund AB [http://neotechnology.com]
 
     This file is part of Neo4j.
@@ -31,63 +31,74 @@
     <!-- filter plain text -->
     <fileSet>
       <directory>src/main/distribution/text/community</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory/>
       <lineEnding>keep</lineEnding>
       <filtered>true</filtered>
       <directoryMode>0755</directoryMode>
       <fileMode>0644</fileMode>
+      <excludes>
+        <exclude>**/.keep</exclude>
+      </excludes>
     </fileSet>
     <!-- non-maven jars -->
     <fileSet>
       <directory>src/main/distribution/binary</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory/>
       <includes>
-        <include>system/lib/*.jar</include>
         <include>lib/*.jar</include>
       </includes>
     </fileSet>
     <!-- filter and chmod 755 shell scripts -->
+    <!-- filter m4 scripts-->
     <fileSet>
       <directory>${project.parent.basedir}/src/main/distribution/shell-scripts</directory>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory/>
       <lineEnding>unix</lineEnding>
       <fileMode>0755</fileMode>
       <excludes>
         <exclude>**/*.bat</exclude>
+        <exclude>**/*.m4</exclude>
         <exclude>**/neo4j-backup*</exclude>
-        <exclude>**/neo4j-coord*</exclude>
-        <exclude>**/*arbiter*</exclude>
         <exclude>**/*.psd1</exclude>
         <exclude>**/*.psm1</exclude>
         <exclude>**/*.ps1</exclude>
+        <exclude>**/Neo4j-Management</exclude>
+        <exclude>**/*.exe</exclude>
+        <exclude>**/2.x-config-migrator.jar</exclude>
       </excludes>
       <filtered>true</filtered>
     </fileSet>
-    <!--add MacOS *.plist installer files -->
+    <!-- configuration migrator -->
     <fileSet>
-      <directory>${project.parent.basedir}/src/main/distribution/resources</directory>
-      <outputDirectory>/</outputDirectory>
-      <lineEnding>unix</lineEnding>
+      <directory>${project.parent.basedir}/src/main/distribution/shell-scripts</directory>
+      <outputDirectory/>
+      <includes>
+        <include>**/2.x-config-migrator.jar</include>
+      </includes>
+    </fileSet>
+    <!-- filter and chmod 755 cypher-shell -->
+    <fileSet>
+      <directory>${project.parent.basedir}/src/main/distribution/cypher-shell</directory>
+      <outputDirectory>bin</outputDirectory>
+      <lineEnding>keep</lineEnding>
       <fileMode>0755</fileMode>
       <excludes>
-        <exclude>**/org.neo4j.arbiter.plist</exclude>
+        <exclude>**/*.bat</exclude>
+        <exclude>**/*.jar</exclude>
       </excludes>
-      <filtered>true</filtered>
     </fileSet>
-    <!-- upgrade text file -->
     <fileSet>
-      <directory>target/upgrade</directory>
-      <outputDirectory>/</outputDirectory>
-      <fileMode>0644</fileMode>
+      <directory>${project.parent.basedir}/src/main/distribution/cypher-shell</directory>
+      <outputDirectory>bin/tools</outputDirectory>
       <includes>
-        <include>UPGRADE.txt</include>
+        <include>**/*.jar</include>
       </includes>
     </fileSet>
   </fileSets>
 
   <dependencySets>
     <dependencySet>
-      <outputDirectory>/lib</outputDirectory>
+      <outputDirectory>lib</outputDirectory>
       <directoryMode>0755</directoryMode>
       <fileMode>0755</fileMode>
       <unpack>false</unpack>
@@ -97,7 +108,10 @@
         <include>org.neo4j:*</include>
         <include>jline:jline</include>
         <include>org.apache.lucene:lucene-core</include>
-        <include>org.scala-lang:scala-library</include>
+        <include>org.apache.lucene:lucene-analyzers-common</include>
+        <include>org.apache.lucene:lucene-queryparser</include>
+        <include>org.apache.lucene:lucene-codecs</include>
+        <include>org.scala-lang:*</include>
         <include>org.parboiled:*</include>
         <include>com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru</include>
         <include>net.sf.opencsv:opencsv</include>
@@ -109,7 +123,7 @@
       </excludes>
     </dependencySet>
     <dependencySet>
-      <outputDirectory>system/lib</outputDirectory>
+      <outputDirectory>lib</outputDirectory>
       <directoryMode>0755</directoryMode>
       <fileMode>0755</fileMode>
       <unpack>false</unpack>
@@ -117,12 +131,10 @@
       <useStrictFiltering>true</useStrictFiltering>
       <excludes>
         <exclude>org.neo4j:*</exclude>
-        <exclude>org.neo4j.doc:*</exclude>
         <exclude>jline:jline</exclude>
-        <exclude>org.apache.lucene:lucene-core</exclude>
-        <exclude>org.scala-lang:scala-library</exclude>
+        <exclude>org.apache.lucene:*</exclude>
+        <exclude>org.scala-lang:*</exclude>
         <exclude>org.parboiled:*</exclude>
-        <exclude>org.neo4j.app:windows-service-wrapper:*</exclude>
         <exclude>com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru</exclude>
         <exclude>net.sf.opencsv:opencsv</exclude>
         <exclude>org.apache.commons:commons-lang3</exclude>
@@ -131,4 +143,3 @@
  </dependencySets>
 
 </assembly>
-

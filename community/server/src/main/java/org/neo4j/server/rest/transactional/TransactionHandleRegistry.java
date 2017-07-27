@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,15 @@
  */
 package org.neo4j.server.rest.transactional;
 
+import java.time.Clock;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 
-import org.neo4j.function.Predicate;
 import org.neo4j.function.Predicates;
-import org.neo4j.helpers.Clock;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.rest.transactional.error.InvalidConcurrentTransactionAccess;
@@ -38,7 +38,7 @@ import static java.lang.String.format;
 
 public class TransactionHandleRegistry implements TransactionRegistry
 {
-    private final AtomicLong idGenerator = new AtomicLong( 0l );
+    private final AtomicLong idGenerator = new AtomicLong( 0L );
     private final ConcurrentHashMap<Long, TransactionMarker> registry = new ConcurrentHashMap<>( 64 );
 
     private final Clock clock;
@@ -53,7 +53,7 @@ public class TransactionHandleRegistry implements TransactionRegistry
         this.log = logProvider.getLog( getClass() );
     }
 
-    private static abstract class TransactionMarker
+    private abstract static class TransactionMarker
     {
         abstract ActiveTransaction getActiveTransaction();
 
@@ -105,7 +105,7 @@ public class TransactionHandleRegistry implements TransactionRegistry
         {
             this.activeMarker = activeMarker;
             this.transactionHandle = transactionHandle;
-            this.lastActiveTimestamp = clock.currentTimeMillis();
+            this.lastActiveTimestamp = clock.millis();
         }
 
         @Override
@@ -230,9 +230,12 @@ public class TransactionHandleRegistry implements TransactionRegistry
             TransactionTerminationHandle handle = marker.getActiveTransaction().getTerminationHandle();
             handle.terminate();
 
-            try {
+            try
+            {
                 return acquire( id );
-            } catch (InvalidConcurrentTransactionAccess exception) {
+            }
+            catch ( InvalidConcurrentTransactionAccess exception )
+            {
                 // We could not acquire the transaction. Let the other request clean up.
                 return null;
             }
@@ -242,32 +245,28 @@ public class TransactionHandleRegistry implements TransactionRegistry
     @Override
     public void rollbackAllSuspendedTransactions()
     {
-        rollbackSuspended( Predicates.<TransactionMarker>alwaysTrue() );
+        rollbackSuspended( Predicates.alwaysTrue() );
     }
 
     public void rollbackSuspendedTransactionsIdleSince( final long oldestLastActiveTime )
     {
-        rollbackSuspended( new Predicate<TransactionMarker>()
+        rollbackSuspended( item ->
         {
-            @Override
-            public boolean test( TransactionMarker item )
+            try
             {
-                try
-                {
-                    SuspendedTransaction transaction = item.getSuspendedTransaction();
-                    return transaction.lastActiveTimestamp < oldestLastActiveTime;
-                }
-                catch ( InvalidConcurrentTransactionAccess concurrentTransactionAccessError )
-                {
-                    throw new RuntimeException( concurrentTransactionAccessError );
-                }
+                SuspendedTransaction transaction = item.getSuspendedTransaction();
+                return transaction.lastActiveTimestamp < oldestLastActiveTime;
+            }
+            catch ( InvalidConcurrentTransactionAccess concurrentTransactionAccessError )
+            {
+                throw new RuntimeException( concurrentTransactionAccessError );
             }
         } );
     }
 
     private void rollbackSuspended( Predicate<TransactionMarker> predicate )
     {
-        Set<Long> candidateTransactionIdsToRollback = new HashSet<Long>();
+        Set<Long> candidateTransactionIdsToRollback = new HashSet<>();
 
         for ( Map.Entry<Long, TransactionMarker> entry : registry.entrySet() )
         {
@@ -293,7 +292,9 @@ public class TransactionHandleRegistry implements TransactionRegistry
             try
             {
                 handle.forceRollback();
-                log.info( format( "Transaction with id %d has been automatically rolled back.", id ) );
+                log.info(
+                        format( "Transaction with id %d has been automatically rolled back due to transaction timeout.",
+                                id ) );
             }
             catch ( Throwable e )
             {

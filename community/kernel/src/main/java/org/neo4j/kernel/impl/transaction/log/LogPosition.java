@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -116,9 +116,8 @@ public class LogPosition implements Comparable<LogPosition>
     {
         if ( logVersion != o.logVersion )
         {
-            return (int) (logVersion - o.logVersion);
+            return Long.compare( logVersion, o.logVersion );
         }
-
-        return (int) (byteOffset - o.byteOffset);
+        return Long.compare( byteOffset, o.byteOffset );
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,12 @@
  */
 package org.neo4j.kernel.api.properties;
 
-import org.neo4j.helpers.MathUtil;
-import org.neo4j.helpers.ObjectUtil;
-
 import java.util.Comparator;
 
+import org.neo4j.helpers.MathUtil;
+import org.neo4j.helpers.Strings;
+
+import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_PROPERTY_KEY;
 import static org.neo4j.kernel.impl.api.PropertyValueComparison.COMPARE_VALUES;
 
 
@@ -47,7 +48,34 @@ import static org.neo4j.kernel.impl.api.PropertyValueComparison.COMPARE_VALUES;
  */
 public abstract class DefinedProperty extends Property
 {
-    public static Comparator<DefinedProperty> COMPARATOR = new Comparator<DefinedProperty>()
+    public static final DefinedProperty NO_SUCH_PROPERTY = new DefinedProperty( NO_SUCH_PROPERTY_KEY )
+    {
+        @Override
+        public Object value()
+        {
+            throw new UnsupportedOperationException( "This property does not exist!" );
+        }
+
+        @Override
+        public int valueHash()
+        {
+            return -1;
+        }
+
+        @Override
+        boolean hasEqualValue( DefinedProperty that )
+        {
+            return false;
+        }
+
+        @Override
+        public boolean valueEquals( Object other )
+        {
+            return false;
+        }
+    };
+
+    public static final Comparator<DefinedProperty> COMPARATOR = new Comparator<DefinedProperty>()
     {
         @Override
         public int compare( DefinedProperty left, DefinedProperty right )
@@ -115,7 +143,7 @@ public abstract class DefinedProperty extends Property
         return propertyKeyId ^ valueHash();
     }
 
-    abstract int valueHash();
+    public abstract int valueHash();
 
     /** We never pass {@link LazyProperty} to this method, since we check for it in {@link #equals(Object)}. */
     abstract boolean hasEqualValue( DefinedProperty that );
@@ -123,7 +151,7 @@ public abstract class DefinedProperty extends Property
     @Override
     public String valueAsString()
     {
-        return ObjectUtil.toString( value() );
+        return Strings.prettyPrint( value() );
     }
 
     DefinedProperty( int propertyKeyId )

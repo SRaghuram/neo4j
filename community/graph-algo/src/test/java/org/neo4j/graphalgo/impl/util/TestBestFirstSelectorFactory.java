@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -87,7 +87,6 @@ public class TestBestFirstSelectorFactory extends Neo4jAlgoTestCase
                 Arrays.toString( Arrays.copyOfRange(expectedResult, i, expectedResult.length ) ) ),
                 expectedResult.length, i );
     }
-
 
     @Parameterized.Parameters
     public static Collection<Object[]> data()

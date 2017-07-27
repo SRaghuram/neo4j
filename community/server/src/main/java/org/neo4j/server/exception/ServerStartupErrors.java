@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,8 @@
  */
 package org.neo4j.server.exception;
 
-import org.neo4j.function.Function;
+import java.util.function.Function;
+
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedException;
 import org.neo4j.server.ServerStartupException;
@@ -44,7 +45,7 @@ public class ServerStartupErrors
             public ServerStartupException apply( Throwable o )
             {
                 Throwable rootCause = Exceptions.rootCause( o );
-                if( rootCause instanceof UpgradeNotAllowedException )
+                if ( rootCause instanceof UpgradeNotAllowedException )
                 {
                     return new UpgradeDisallowedStartupException( (UpgradeNotAllowedException)rootCause );
                 }
@@ -58,7 +59,7 @@ public class ServerStartupErrors
         for ( Function<Throwable,ServerStartupException> translator : translators )
         {
             ServerStartupException r = translator.apply( cause );
-            if(r != null)
+            if (r != null)
             {
                 return r;
             }

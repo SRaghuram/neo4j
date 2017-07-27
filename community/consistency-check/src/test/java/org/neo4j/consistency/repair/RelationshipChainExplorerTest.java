@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,13 @@
  */
 package org.neo4j.consistency.repair;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
 import java.io.File;
 
@@ -31,25 +33,32 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
-import org.neo4j.test.PageCacheRule;
-import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
 public class RelationshipChainExplorerTest
 {
     private static final int NDegreeTwoNodes = 10;
 
+    private final TestDirectory storeLocation = TestDirectory.testDirectory();
+    private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+
     @ClassRule
     public static PageCacheRule pageCacheRule = new PageCacheRule();
     @Rule
-    public TargetDirectory.TestDirectory storeLocation = TargetDirectory.testDirForTest( getClass() );
+    public RuleChain ruleChain = RuleChain.outerRule( storeLocation ).around( fileSystemRule );
+
     private StoreAccess store;
 
     @Before
@@ -74,7 +83,7 @@ public class RelationshipChainExplorerTest
         int relationshipIdInMiddleOfChain = 10;
         RecordSet<RelationshipRecord> records = new RelationshipChainExplorer( relationshipStore )
                 .exploreRelationshipRecordChainsToDepthTwo(
-                        relationshipStore.getRecord( relationshipIdInMiddleOfChain ) );
+                        relationshipStore.getRecord( relationshipIdInMiddleOfChain, relationshipStore.newRecord(), NORMAL ) );
 
         // then
         assertEquals( NDegreeTwoNodes * 2, records.size() );
@@ -91,7 +100,7 @@ public class RelationshipChainExplorerTest
         int relationshipIdInMiddleOfChain = 10;
         RecordSet<RelationshipRecord> records = new RelationshipChainExplorer( relationshipStore )
                 .exploreRelationshipRecordChainsToDepthTwo(
-                        relationshipStore.getRecord( relationshipIdInMiddleOfChain ) );
+                        relationshipStore.getRecord( relationshipIdInMiddleOfChain, relationshipStore.newRecord(), NORMAL ) );
 
         // then
         int recordsInaccessibleBecauseOfBrokenChain = 3;
@@ -112,7 +121,10 @@ public class RelationshipChainExplorerTest
     private StoreAccess createStoreWithOneHighDegreeNodeAndSeveralDegreeTwoNodes( int nDegreeTwoNodes )
     {
         File storeDirectory = storeLocation.graphDbDir();
-        GraphDatabaseService database = new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDirectory );
+        GraphDatabaseService database = new TestGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( storeDirectory )
+                .setConfig( GraphDatabaseSettings.record_format, getRecordFormatName() )
+                .newGraphDatabase();
 
         try ( Transaction transaction = database.beginTx() )
         {
@@ -134,7 +146,14 @@ public class RelationshipChainExplorerTest
             transaction.success();
         }
         database.shutdown();
-        PageCache pageCache = pageCacheRule.getPageCache( new DefaultFileSystemAbstraction() );
-        return new StoreAccess( pageCache, storeDirectory ).initialize();
+        PageCache pageCache = pageCacheRule.getPageCache( fileSystemRule.get() );
+        StoreAccess storeAccess = new StoreAccess( fileSystemRule.get(), pageCache, storeDirectory,
+                Config.empty() );
+        return storeAccess.initialize();
+    }
+
+    protected String getRecordFormatName()
+    {
+        return StringUtils.EMPTY;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.neo4j.unsafe.impl.batchimport;
-
-import java.util.Iterator;
 
 import org.neo4j.kernel.impl.store.DynamicRecordAllocator;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
@@ -46,13 +44,18 @@ public class RelativeIdRecordAllocator implements DynamicRecordAllocator
     }
 
     @Override
-    public int dataSize()
+    public int getRecordDataSize()
     {
         return dataSize;
     }
 
+    public long peek()
+    {
+        return id;
+    }
+
     @Override
-    public DynamicRecord nextUsedRecordOrNew( Iterator<DynamicRecord> recordsToUseFirst )
+    public DynamicRecord nextRecord()
     {
         DynamicRecord record = new DynamicRecord( id++ );
         record.setInUse( true );

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,12 @@
  */
 package org.neo4j.cursor;
 
-import org.neo4j.function.LongSupplier;
+import java.util.function.LongSupplier;
 
 /**
  * Mutable implementation of {@link LongSupplier}.
  */
-public class LongValue
-    implements LongSupplier
+public class LongValue implements LongSupplier
 {
     private long value;
 

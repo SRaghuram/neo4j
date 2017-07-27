@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,7 +26,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,13 +34,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.test.EphemeralFileSystemRule;
-import org.neo4j.test.PageCacheRule;
-import org.neo4j.test.ResourceRule;
+import org.neo4j.test.rule.ConfigurablePageCacheRule;
+import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.ResourceRule;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -49,13 +49,16 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.kernel.impl.store.kvstore.KeyValueStoreFileFormatTest.Data.data;
 import static org.neo4j.kernel.impl.store.kvstore.KeyValueStoreFileFormatTest.DataEntry.entry;
-import static org.neo4j.test.ResourceRule.testPath;
+import static org.neo4j.test.rule.ResourceRule.testPath;
 
 public class KeyValueStoreFileFormatTest
 {
-    public final @Rule EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
-    public final @Rule PageCacheRule pages = new PageCacheRule();
-    public final @Rule ResourceRule<File> storeFile = testPath();
+    @Rule
+    public final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+    @Rule
+    public final ConfigurablePageCacheRule pages = new ConfigurablePageCacheRule();
+    @Rule
+    public final ResourceRule<File> storeFile = testPath();
 
     @Before
     public void existingStoreDirectory()
@@ -188,7 +191,7 @@ public class KeyValueStoreFileFormatTest
         headers.put( "two", new byte[]{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,} );
         Map<String,String> config = new HashMap<>();
         config.put( GraphDatabaseSettings.pagecache_memory.name(), "8M" );
-        config.put( GraphDatabaseSettings.mapped_memory_page_size.name(), "256" );
+        int pageSize = 256;
         Data data = data(
                 // page 0
                 entry( bytes( 17 ), bytes( 'v', 'a', 'l', 1 ) ),
@@ -209,7 +212,7 @@ public class KeyValueStoreFileFormatTest
                 entry( bytes( 2000 ), bytes( 'v', 'a', 'l', 14 ) ) );
 
         // when
-        try ( KeyValueStoreFile file = format.create( config, headers, data ) )
+        try ( KeyValueStoreFile file = format.create( config, pageSize, headers, data ) )
         // then
         {
             assertFind( file, 17, 17, true, new Bytes( 'v', 'a', 'l', 1 ) );
@@ -240,7 +243,7 @@ public class KeyValueStoreFileFormatTest
         Map<String,byte[]> metadata = new HashMap<>();
         Map<String,String> config = new HashMap<>();
         config.put( GraphDatabaseSettings.pagecache_memory.name(), "8M" );
-        config.put( GraphDatabaseSettings.mapped_memory_page_size.name(), "128" );
+        int pageSize = 128;
         Data data = data( // two full pages (and nothing more)
                 // page 0
                 entry( bytes( 12 ), bytes( 'v', 'a', 'l', 1 ) ),
@@ -252,7 +255,7 @@ public class KeyValueStoreFileFormatTest
                 entry( bytes( 18 ), bytes( 'v', 'a', 'l', 6 ) ) );
 
         // when
-        try ( KeyValueStoreFile file = format.create( config, metadata, data ) )
+        try ( KeyValueStoreFile file = format.create( config, pageSize, metadata, data ) )
         // then
         {
             assertFind( file, 14, 15, false, new Bytes( 'v', 'a', 'l', 3 ) ); // after the first page
@@ -266,7 +269,7 @@ public class KeyValueStoreFileFormatTest
     {
         Map<String,String> config = new HashMap<>();
         config.put( GraphDatabaseSettings.pagecache_memory.name(), "8M" );
-        config.put( GraphDatabaseSettings.mapped_memory_page_size.name(), "128" );
+        int pageSize = 128;
 
         // given a well written file
         {
@@ -274,7 +277,6 @@ public class KeyValueStoreFileFormatTest
             Map<String,byte[]> headers = new HashMap<>();
             headers.put( "one", new byte[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,} );
             headers.put( "two", new byte[]{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,} );
-
 
             Data data = data( // two full pages (and nothing more)
                     // page 0
@@ -286,11 +288,10 @@ public class KeyValueStoreFileFormatTest
                     entry( bytes( 17 ), bytes( 'v', 'a', 'l', 5 ) ),
                     entry( bytes( 18 ), bytes( 'v', 'a', 'l', 6 ) ) );
 
-            try ( KeyValueStoreFile ignored = format.create( config, headers, data ) )
+            try ( KeyValueStoreFile ignored = format.create( config, pageSize, headers, data ) )
             {
             }
         }
-
 
         {
             // when failing on creating the next version of that file
@@ -313,7 +314,7 @@ public class KeyValueStoreFileFormatTest
                 }
             };
 
-            try ( KeyValueStoreFile ignored = format.create( config, headers, data ) )
+            try ( KeyValueStoreFile ignored = format.create( config, pageSize, headers, data ) )
             {
             }
             catch ( IOException io )
@@ -345,7 +346,6 @@ public class KeyValueStoreFileFormatTest
             assertEquals( size, read );
             assertArrayEquals( new byte[]{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, readEntry );
 
-
             for ( int i = 0; i < headers.size(); i++ )
             {
                 read = stream.read( readEntry );
@@ -358,54 +358,6 @@ public class KeyValueStoreFileFormatTest
             }
 
             assertEquals( -1, stream.read() );
-        }
-    }
-
-    @Test
-    public void shouldFailToReadFailWithIncorrectTrailer() throws IOException
-    {
-        // when
-        String[] headerNames = {"abc", "xyz"};
-        Format format = new Format( headerNames );
-
-        Map<String,byte[]> headers = new HashMap<>();
-        headers.put( "abc", new byte[]{'h', 'e', 'l', 'l', 'o', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,} );
-        headers.put( "xyz", new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'w', 'o', 'r', 'l', 'd',} );
-        Data data = data(
-                entry( new byte[]{'o', 'n', 'e'}, new byte[]{'a', 'l', 'p', 'h', 'a'} ),
-                entry( new byte[]{'t', 'w', 'o'}, new byte[]{'b', 'e', 't', 'a'} ),
-                entry( new byte[]{'z', 'e', 'd'}, new byte[]{'o', 'm', 'e', 'g', 'a'} ) );
-
-        // then
-        try ( KeyValueStoreFile originalValidFile = format.create( headers, data ) )
-        {
-            assertEquals( "number of entries", 3, data.index );
-            assertEntries( 3, originalValidFile );
-        }
-
-        FileSystemAbstraction fileSystem = fs.get();
-        try ( StoreChannel channel = fileSystem.open( storeFile.get(), "rw" ) )
-        {
-            long size = channel.size();
-            ByteBuffer buffer = ByteBuffer.allocate( 16 );
-            for ( int i = 0; i < buffer.capacity(); i++ )
-            {
-                buffer.put( (byte) 0xF0 );
-            }
-            buffer.flip();
-            channel.position( size - buffer.capacity() );
-            channel.write( buffer );
-            channel.force( false );
-        }
-
-        try
-        {
-            format.open();
-            fail( "It should not be possible to open count store file with incorrect trailer." );
-        }
-        catch ( IllegalStateException e )
-        {
-            assertEquals( "Format header/trailer has changed.", e.getMessage() );
         }
     }
 
@@ -577,7 +529,7 @@ public class KeyValueStoreFileFormatTest
     {
         private final Map<String,HeaderField<byte[]>> headerFields = new HashMap<>();
 
-        public Format( String... defaultHeaderFields )
+        Format( String... defaultHeaderFields )
         {
             this( StubCollector.headerFields( defaultHeaderFields ) );
         }
@@ -603,10 +555,14 @@ public class KeyValueStoreFileFormatTest
                     data );
         }
 
-        KeyValueStoreFile create( Map<String,String> config, Map<String,byte[]> headers, DataProvider data )
+        KeyValueStoreFile create( Map<String,String> config, int pageSize, Map<String,byte[]> headers,
+                DataProvider data )
                 throws IOException
         {
-            return createStore( fs.get(), pages.getPageCache( fs.get(), new Config( config ) ), storeFile.get(), 16, 16,
+            PageCacheRule.PageCacheConfig pageCacheConfig = PageCacheRule.config().withPageSize( pageSize );
+            PageCache pageCache = pages.getPageCache( fs.get(), pageCacheConfig, Config.embeddedDefaults( config ) );
+            return createStore( fs.get(),
+                    pageCache, storeFile.get(), 16, 16,
                     headers( headers ), data );
         }
 

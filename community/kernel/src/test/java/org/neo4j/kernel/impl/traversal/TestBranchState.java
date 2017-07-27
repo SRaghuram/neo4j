@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,6 +20,7 @@
 package org.neo4j.kernel.impl.traversal;
 
 import org.junit.Test;
+
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PathExpander;
@@ -29,14 +30,12 @@ import org.neo4j.graphdb.traversal.BranchState;
 import org.neo4j.graphdb.traversal.Evaluation;
 import org.neo4j.graphdb.traversal.InitialBranchState;
 import org.neo4j.graphdb.traversal.PathEvaluator;
+import org.neo4j.graphdb.traversal.Uniqueness;
+import org.neo4j.helpers.collection.Iterables;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.graphdb.traversal.Evaluation.ofIncludes;
-import static org.neo4j.helpers.collection.IteratorUtil.count;
-import static org.neo4j.kernel.Traversal.initialState;
-import static org.neo4j.kernel.Traversal.traversal;
-import static org.neo4j.kernel.Uniqueness.NODE_PATH;
 
 public class TestBranchState extends TraversalTestBase
 {
@@ -54,7 +53,8 @@ public class TestBranchState extends TraversalTestBase
         try (Transaction tx = beginTx())
         {
             DepthStateExpander expander = new DepthStateExpander();
-            count( traversal().expand( expander, initialState( 0 ) ).traverse( getNodeWithName( "a" ) ) );
+            Iterables.count( getGraphDb().traversalDescription().expand( expander,
+                    new InitialBranchState.State<>( 0, 0 ) ).traverse( getNodeWithName( "a" ) ) );
             tx.success();
         }
     }
@@ -74,7 +74,8 @@ public class TestBranchState extends TraversalTestBase
          * set new state for every step.
          */
             IncrementEveryOtherDepthCountingExpander expander = new IncrementEveryOtherDepthCountingExpander();
-            count( traversal().expand( expander, initialState( 0 ) ).traverse( getNodeWithName( "a" ) ) );
+            Iterables.count( getGraphDb().traversalDescription().expand( expander,
+                    new InitialBranchState.State<>( 0, 0 ) ).traverse( getNodeWithName( "a" ) ) );
             tx.success();
         }
     }
@@ -101,19 +102,20 @@ public class TestBranchState extends TraversalTestBase
                 }
             };
 
-            expectPaths( traversal( NODE_PATH ).expand( new RelationshipWeightExpander(), new InitialBranchState.State<Integer>( 1, 1 ) )
+            expectPaths( getGraphDb().traversalDescription().uniqueness( Uniqueness.NODE_PATH ).expand(
+                    new RelationshipWeightExpander(), new InitialBranchState.State<>( 1, 1 ) )
                     .evaluator( evaluator ).traverse( getNodeWithName( "a" ) ), "a,b,c" );
             tx.success();
         }
     }
-    
+
     private static class DepthStateExpander implements PathExpander<Integer>
     {
         @Override
         public Iterable<Relationship> expand( Path path, BranchState<Integer> state )
         {
             assertEquals( path.length(), state.getState().intValue() );
-            state.setState( state.getState()+1 );
+            state.setState( state.getState() + 1 );
             return path.endNode().getRelationships( Direction.OUTGOING );
         }
 
@@ -129,9 +131,11 @@ public class TestBranchState extends TraversalTestBase
         @Override
         public Iterable<Relationship> expand( Path path, BranchState<Integer> state )
         {
-            assertEquals( path.length()/2, state.getState().intValue() );
+            assertEquals( path.length() / 2, state.getState().intValue() );
             if ( path.length() % 2 == 1 )
+            {
                 state.setState( state.getState() + 1 );
+            }
             return path.endNode().getRelationships( Direction.OUTGOING );
         }
 
@@ -141,7 +145,7 @@ public class TestBranchState extends TraversalTestBase
             return this;
         }
     }
-    
+
     private static class RelationshipWeightExpander implements PathExpander<Integer>
     {
         @Override

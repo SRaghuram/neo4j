@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,11 +23,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.neo4j.helpers.UTF8;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.storemigration.StoreVersionCheck.Result;
 import org.neo4j.kernel.impl.storemigration.StoreVersionCheck.Result.Outcome;
+import org.neo4j.string.UTF8;
 
 public class LegacyStoreVersionCheck
 {
@@ -64,7 +64,7 @@ public class LegacyStoreVersionCheck
             String actualVersion = readVersion( fileChannel, expectedVersionBytes.length );
             if ( !expectedVersion.equals( actualVersion ) )
             {
-                return new Result( Outcome.unexpectedUpgradingStoreVersion, actualVersion, storeFilename );
+                return new Result( Outcome.unexpectedStoreVersion, actualVersion, storeFilename );
             }
         }
         catch ( IOException e )

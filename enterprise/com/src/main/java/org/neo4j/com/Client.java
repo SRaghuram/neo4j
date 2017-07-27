@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,7 +23,6 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -31,8 +30,12 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.queue.BlockingReadHandler;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -43,17 +46,20 @@ import org.neo4j.com.storecopy.ResponseUnpacker.TxHandler;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.impl.store.MismatchingStoreIdException;
 import org.neo4j.kernel.impl.store.StoreId;
+import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
+import org.neo4j.kernel.impl.util.HexPrinter;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.ByteCounterMonitor;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.time.Clocks;
 
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static org.neo4j.com.Protocol.addLengthFieldPipes;
 import static org.neo4j.com.Protocol.assertChunkSizeIsWithinFrameSize;
 import static org.neo4j.com.ResourcePool.DEFAULT_CHECK_INTERVAL;
-import static org.neo4j.com.storecopy.ResponseUnpacker.NO_OP_TX_HANDLER;
-import static org.neo4j.helpers.Clock.SYSTEM_CLOCK;
+import static org.neo4j.com.storecopy.ResponseUnpacker.TxHandler.NO_OP_TX_HANDLER;
 import static org.neo4j.helpers.NamedThreadFactory.daemon;
 
 /**
@@ -76,7 +82,8 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
     private static final String MONITORING_CHANNEL_HANDLER_NAME = "monitor";
 
     private ClientBootstrap bootstrap;
-    private final SocketAddress address;
+    private final SocketAddress destination;
+    private final SocketAddress origin;
     private final Log msgLog;
     private ResourcePool<ChannelContext> channelPool;
     private final Protocol protocol;
@@ -89,12 +96,17 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
     private final ResponseUnpacker responseUnpacker;
     private final ByteCounterMonitor byteCounterMonitor;
     private final RequestMonitor requestMonitor;
+    private final LogEntryReader<ReadableClosablePositionAwareChannel> entryReader;
 
-    public Client( String hostNameOrIp, int port, LogProvider logProvider, StoreId storeId, int frameLength,
-            ProtocolVersion protocolVersion, long readTimeout, int maxConcurrentChannels, int chunkSize,
+    public Client( String destinationHostNameOrIp, int destinationPort, String originHostNameOrIp,
+            LogProvider logProvider, StoreId storeId, int frameLength,
+            long readTimeout, int maxConcurrentChannels, int chunkSize,
             ResponseUnpacker responseUnpacker,
-            ByteCounterMonitor byteCounterMonitor, RequestMonitor requestMonitor )
+            ByteCounterMonitor byteCounterMonitor,
+            RequestMonitor requestMonitor,
+            LogEntryReader<ReadableClosablePositionAwareChannel> entryReader )
     {
+        this.entryReader = entryReader;
         assert byteCounterMonitor != null;
         assert requestMonitor != null;
 
@@ -108,47 +120,113 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
         this.readTimeout = readTimeout;
         // ResourcePool no longer controls max concurrent channels. Use this value for the pool size
         this.maxUnusedChannels = maxConcurrentChannels;
-        this.comExceptionHandler = ComExceptionHandler.NO_OP;
-        this.address = new InetSocketAddress( hostNameOrIp, port );
+        this.comExceptionHandler = getNoOpComExceptionHandler();
+
+        if ( destinationHostNameOrIp.equals( "0.0.0.0" ) )
+        {
+            // So it turns out that on Windows, connecting to 0.0.0.0 when specifying
+            // an origin address will not succeed. But since we know we are
+            // connecting to ourselves, and that we are listening on everything,
+            // replacing with localhost is the proper thing to do.
+            this.destination = new InetSocketAddress( getLocalAddress(), destinationPort );
+        }
+        else
+        {
+            // An explicit destination address is always correct
+            this.destination = new InetSocketAddress( destinationHostNameOrIp, destinationPort );
+        }
+
+        if ( originHostNameOrIp == null || originHostNameOrIp.equals( "0.0.0.0" ) )
+        {
+            origin = null;
+        }
+        else
+        {
+            origin = new InetSocketAddress( originHostNameOrIp, 0 );
+        }
+
+        ProtocolVersion protocolVersion = getProtocolVersion();
         this.protocol = createProtocol( chunkSize, protocolVersion.getApplicationProtocol() );
         this.responseUnpacker = responseUnpacker;
 
-        msgLog.info( getClass().getSimpleName() + " communication channel created towards " + address );
+        msgLog.info( getClass().getSimpleName() + " communication channel created towards " + destination );
+    }
+
+    private String getLocalAddress()
+    {
+        try
+        {
+            // Null corresponds to localhost
+            return InetAddress.getByName( null ).getHostAddress();
+        }
+        catch ( UnknownHostException e )
+        {
+            // Fetching the localhost address won't throw this exception, so this should never happen, but if it
+            // were, then the computer doesn't even have a loopback interface, so crash now rather than later
+            throw new AssertionError( e );
+        }
+    }
+
+    private ComExceptionHandler getNoOpComExceptionHandler()
+    {
+        return exception ->
+        {
+            if ( ComException.TRACE_HA_CONNECTIVITY )
+            {
+                String noOpComExceptionHandler = "NoOpComExceptionHandler";
+                //noinspection ThrowableResultOfMethodCallIgnored
+                traceComException( exception, noOpComExceptionHandler );
+            }
+        };
+    }
+
+    private ComException traceComException( ComException exception, String tracePoint )
+    {
+        return exception.traceComException( msgLog, tracePoint );
     }
 
     protected Protocol createProtocol( int chunkSize, byte applicationProtocolVersion )
     {
-        return new Protocol214( chunkSize, applicationProtocolVersion, getInternalProtocolVersion() );
+        return new Protocol320( chunkSize, applicationProtocolVersion, getInternalProtocolVersion() );
     }
+
+    public abstract ProtocolVersion getProtocolVersion();
 
     @Override
     public void start()
     {
         bootstrap = new ClientBootstrap( new NioClientSocketChannelFactory(
-                newCachedThreadPool( daemon( getClass().getSimpleName() + "-boss@" + address ) ),
-                newCachedThreadPool( daemon( getClass().getSimpleName() + "-worker@" + address ) ) ) );
+                newCachedThreadPool( daemon( getClass().getSimpleName() + "-boss@" + destination ) ),
+                newCachedThreadPool( daemon( getClass().getSimpleName() + "-worker@" + destination ) ) ) );
         bootstrap.setPipelineFactory( this );
 
         channelPool = new ResourcePool<ChannelContext>( maxUnusedChannels,
-                new ResourcePool.CheckStrategy.TimeoutCheckStrategy( DEFAULT_CHECK_INTERVAL, SYSTEM_CLOCK ),
+                new ResourcePool.CheckStrategy.TimeoutCheckStrategy( DEFAULT_CHECK_INTERVAL, Clocks.systemClock() ),
                 new LoggingResourcePoolMonitor( msgLog ) )
         {
             @Override
             protected ChannelContext create()
             {
-                ChannelFuture channelFuture = bootstrap.connect( address );
+                msgLog.info( threadInfo() + "Trying to open a new channel from " + origin + " to " + destination,
+                        true );
+                // We must specify the origin address in case the server has multiple IPs per interface
+                ChannelFuture channelFuture = bootstrap.connect( destination, origin );
                 channelFuture.awaitUninterruptibly( 5, TimeUnit.SECONDS );
                 if ( channelFuture.isSuccess() )
                 {
-                    msgLog.info( threadInfo() + "Opened a new channel to " + address );
+                    msgLog.info( threadInfo() + "Opened a new channel from " +
+                            channelFuture.getChannel().getLocalAddress() + " to " +
+                            channelFuture.getChannel().getRemoteAddress() );
 
                     return new ChannelContext( channelFuture.getChannel(), ChannelBuffers.dynamicBuffer(),
                             ByteBuffer.allocate( 1024 * 1024 ) );
                 }
 
-                String msg = Client.this.getClass().getSimpleName() + " could not connect to " + address;
-                msgLog.warn( msg );
-                throw new ComException( msg, channelFuture.getCause() );
+                Throwable cause = channelFuture.getCause();
+                String msg = Client.this.getClass().getSimpleName() + " could not connect from " + origin + " to " +
+                        destination;
+                msgLog.debug( msg, true );
+                throw traceComException( new ComException( msg, cause ), "Client.start" );
             }
 
             @Override
@@ -181,19 +259,14 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
          * release it eventually. Also, logically, closing the channel is not dependent on the
          * TransactionStream.
          */
-        resourcePoolReleaser = new ResourceReleaser()
+        resourcePoolReleaser = () ->
         {
-            @Override
-            public void release()
+            if ( channelPool != null)
             {
-                if ( channelPool != null)
-                {
-                    channelPool.release();
-                }
+                channelPool.release();
             }
         };
     }
-
 
     @Override
     public void stop()
@@ -205,7 +278,7 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
             channelPool = null;
         }
 
-        comExceptionHandler = ComExceptionHandler.NO_OP;
+        comExceptionHandler = getNoOpComExceptionHandler();
         msgLog.info( toString() + " shutdown", true );
     }
 
@@ -231,7 +304,8 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
 
             // Response
             Response<R> response = protocol.deserializeResponse( extractBlockingReadHandler( channelContext ),
-                    channelContext.input(), getReadTimeout( type, readTimeout ), deserializer, resourcePoolReleaser );
+                    channelContext.input(), getReadTimeout( type, readTimeout ), deserializer, resourcePoolReleaser,
+                    entryReader );
 
             if ( type.responseShouldBeUnpacked() )
             {
@@ -257,7 +331,7 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
         {
             failure = e;
             comExceptionHandler.handle( e );
-            throw e;
+            throw traceComException( e, "Client.sendRequest" );
         }
         catch ( Throwable e )
         {
@@ -306,7 +380,7 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
         {
             if ( channelPool == null )
             {
-                throw new ComException( String.format( "Client for %s is stopped", address.toString() ) );
+                throw new ComException( String.format( "Client for %s is stopped", destination.toString() ) );
             }
 
             // Calling acquire is dangerous since it may be a blocking call... and if this
@@ -316,7 +390,9 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
             if ( result == null )
             {
                 msgLog.error( "Unable to acquire new channel for " + type );
-                throw new ComException( "Unable to acquire new channel for " + type );
+                throw traceComException(
+                        new ComException( "Unable to acquire new channel for " + type ),
+                        "Client.acquireChannelContext" );
             }
             return result;
         }
@@ -342,14 +418,14 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
         pipeline.addLast( MONITORING_CHANNEL_HANDLER_NAME, new MonitorChannelHandler( byteCounterMonitor ) );
         addLengthFieldPipes( pipeline, frameLength );
         BlockingReadHandler<ChannelBuffer> reader =
-                new BlockingReadHandler<>( new ArrayBlockingQueue<ChannelEvent>( 100, false ) );
+                new BlockingReadHandler<>( new ArrayBlockingQueue<>( 100, false ) );
         pipeline.addLast( BLOCKING_CHANNEL_HANDLER_NAME, reader );
         return pipeline;
     }
 
     public void setComExceptionHandler( ComExceptionHandler handler )
     {
-        comExceptionHandler = (handler == null) ? ComExceptionHandler.NO_OP : handler;
+        comExceptionHandler = (handler == null) ? getNoOpComExceptionHandler() : handler;
     }
 
     protected byte getInternalProtocolVersion()
@@ -364,9 +440,32 @@ public abstract class Client<T> extends LifecycleAdapter implements ChannelPipel
         return (BlockingReadHandler<ChannelBuffer>) pipeline.get( BLOCKING_CHANNEL_HANDLER_NAME );
     }
 
+    protected static String beginningOfBufferAsHexString( ChannelBuffer buffer, int maxBytesToPrint )
+    {
+        // read buffer from pos 0 - writeIndex
+        int prevIndex = buffer.readerIndex();
+        buffer.readerIndex( 0 );
+        try
+        {
+            ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream( buffer.readableBytes() );
+            PrintStream stream = new PrintStream( byteArrayStream );
+            HexPrinter printer = new HexPrinter( stream ).withLineNumberDigits( 4 );
+            for ( int i = 0; buffer.readable() && i < maxBytesToPrint; i++ )
+            {
+                printer.append( buffer.readByte() );
+            }
+            stream.flush();
+            return byteArrayStream.toString();
+        }
+        finally
+        {
+            buffer.readerIndex( prevIndex );
+        }
+    }
+
     @Override
     public String toString()
     {
-        return getClass().getSimpleName() + "[" + address + "]";
+        return getClass().getSimpleName() + "[" + destination + "]";
     }
 }

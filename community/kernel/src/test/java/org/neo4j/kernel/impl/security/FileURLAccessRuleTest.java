@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,24 +19,20 @@
  */
 package org.neo4j.kernel.impl.security;
 
-import org.apache.commons.lang3.SystemUtils;
 import org.junit.Test;
 
+import java.io.File;
 import java.net.URL;
 
-import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.security.URLAccessValidationError;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.security.URLAccessValidationError;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class FileURLAccessRuleTest
 {
@@ -45,12 +41,13 @@ public class FileURLAccessRuleTest
     {
         try
         {
-            URLAccessRules.fileAccess().validate( mock( GraphDatabaseAPI.class ), new URL( "file://foo/bar/baz" ) );
+            URLAccessRules.fileAccess().validate( Config.empty(), new URL( "file://foo/bar/baz" ) );
             fail( "expected exception not thrown " );
         }
         catch ( URLAccessValidationError error )
         {
-            assertThat( error.getMessage(), equalTo( "file URL may not contain an authority section (i.e. it should be 'file:///')" ) );
+            assertThat( error.getMessage(),
+                    equalTo( "file URL may not contain an authority section (i.e. it should be 'file:///')" ) );
         }
     }
 
@@ -59,7 +56,7 @@ public class FileURLAccessRuleTest
     {
         try
         {
-            URLAccessRules.fileAccess().validate( mock( GraphDatabaseAPI.class ), new URL( "file:///bar/baz?q=foo" ) );
+            URLAccessRules.fileAccess().validate( Config.empty(), new URL( "file:///bar/baz?q=foo" ) );
             fail( "expected exception not thrown " );
         }
         catch ( URLAccessValidationError error )
@@ -72,39 +69,43 @@ public class FileURLAccessRuleTest
     public void shouldThrowWhenFileAccessIsDisabled() throws Exception
     {
         final URL url = new URL( "file:///bar/baz.csv" );
-        final GraphDatabaseAPI gdb = mock( GraphDatabaseAPI.class );
-        final DependencyResolver mockResolver = mock( DependencyResolver.class );
-        when( gdb.getDependencyResolver() ).thenReturn( mockResolver );
-        final Config config = new Config( MapUtil.stringMap( GraphDatabaseSettings.allow_file_urls.name(), "false" ) );
-        when( mockResolver.resolveDependency( eq( Config.class ) ) ).thenReturn( config );
-
+        final Config config = Config.embeddedDefaults( MapUtil.stringMap( GraphDatabaseSettings.allow_file_urls.name(), "false" ) );
         try
         {
-            URLAccessRules.fileAccess().validate( gdb, url );
+            URLAccessRules.fileAccess().validate( config, url );
             fail( "expected exception not thrown " );
         }
         catch ( URLAccessValidationError error )
         {
-            assertThat( error.getMessage(), equalTo( "configuration property 'allow_file_urls' is false" ) );
+            assertThat( error.getMessage(), equalTo( "configuration property 'dbms.security.allow_csv_import_from_file_urls' is false" ) );
+        }
+    }
+
+    @Test
+    public void shouldThrowWhenRelativePathIsOutsideImportDirectory() throws Exception
+    {
+        File importDir = new File( "/tmp/neo4jtest" ).getAbsoluteFile();
+        final Config config = Config.embeddedDefaults(
+                MapUtil.stringMap( GraphDatabaseSettings.load_csv_file_url_root.name(), importDir.toString() ) );
+        try
+        {
+            URLAccessRules.fileAccess().validate( config, new URL( "file:///../baz.csv" ) );
+            fail( "expected exception not thrown " );
+        }
+        catch ( URLAccessValidationError error )
+        {
+            assertThat( error.getMessage(), equalTo( "file URL points outside configured import directory" ) );
         }
     }
 
     @Test
     public void shouldAdjustURLToWithinImportDirectory() throws Exception
     {
-        final URL url = SystemUtils.IS_OS_WINDOWS
-                        ? new URL( "file:///C:/bar/baz.csv" )
-                        : new URL( "file:///bar/baz.csv" );
-        final GraphDatabaseAPI gdb = mock( GraphDatabaseAPI.class );
-        final DependencyResolver mockResolver = mock( DependencyResolver.class );
-        when( gdb.getDependencyResolver() ).thenReturn( mockResolver );
-        final Config config = new Config( MapUtil.stringMap( GraphDatabaseSettings.load_csv_file_url_root.name(), "/var/lib/neo4j/import" ) );
-        when( mockResolver.resolveDependency( eq( Config.class ) ) ).thenReturn( config );
-
-        URL accessURL = URLAccessRules.fileAccess().validate( gdb, url );
-        URL expected = SystemUtils.IS_OS_WINDOWS
-                       ? new URL( "file:///C:/var/lib/neo4j/import/bar/baz.csv" )
-                       : new URL( "file:///var/lib/neo4j/import/bar/baz.csv" );
-        assertThat( accessURL, equalTo( expected ) );
+        final URL url = new File( "/bar/baz.csv" ).toURI().toURL();
+        final Config config = Config.embeddedDefaults(
+                MapUtil.stringMap( GraphDatabaseSettings.load_csv_file_url_root.name(), "/var/lib/neo4j/import" ) );
+        URL accessURL = URLAccessRules.fileAccess().validate( config, url );
+        URL expected = new File( "/var/lib/neo4j/import/bar/baz.csv" ).toURI().toURL();
+        assertEquals( expected, accessURL );
     }
 }

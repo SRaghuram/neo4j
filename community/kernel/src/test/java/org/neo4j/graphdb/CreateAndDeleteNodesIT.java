@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,13 +22,13 @@ package org.neo4j.graphdb;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.test.ImpermanentDatabaseRule;
-import org.neo4j.tooling.GlobalGraphOperations;
+import org.neo4j.test.GraphDatabaseServiceCleaner;
+import org.neo4j.test.rule.ImpermanentDatabaseRule;
 
 public class CreateAndDeleteNodesIT
 {
-
-    public @Rule ImpermanentDatabaseRule dbRule = new ImpermanentDatabaseRule();
+    @Rule
+    public ImpermanentDatabaseRule dbRule = new ImpermanentDatabaseRule();
 
     enum RelTypes implements RelationshipType
     {
@@ -39,7 +39,7 @@ public class CreateAndDeleteNodesIT
     public void addingALabelUsingAValidIdentifierShouldSucceed() throws Exception
     {
         // Given
-        GraphDatabaseService dataBase = dbRule.getGraphDatabaseService();
+        GraphDatabaseService dataBase = dbRule.getGraphDatabaseAPI();
         Node myNode;
 
         // When
@@ -52,21 +52,7 @@ public class CreateAndDeleteNodesIT
             bobTransaction.success();
         }
 
-
         // When
-        try ( Transaction tx2 = dataBase.beginTx() )
-        {
-            for ( Relationship r : GlobalGraphOperations.at( dataBase ).getAllRelationships() )
-            {
-                r.delete();
-            }
-
-            for ( Node n : GlobalGraphOperations.at( dataBase ).getAllNodes() )
-            {
-                n.delete();
-            }
-
-            tx2.success();
-        }
+        GraphDatabaseServiceCleaner.cleanupAllRelationshipsAndNodes( dataBase );
     }
 }

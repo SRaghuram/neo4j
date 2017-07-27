@@ -5,20 +5,22 @@
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>cypher-parent</artifactId>
-    <version>2.3-SNAPSHOT</version>
+    <version>3.2.3-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <artifactId>neo4j-cypher</artifactId>
   <packaging>jar</packaging>
-  <version>2.3-SNAPSHOT</version>
+  <version>3.2.3-SNAPSHOT</version>
   <name>Neo4j - Cypher</name>
   <description>Neo4j query language</description>
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
   <scm>
-	  <url>https://github.com/neo4j/neo4j/tree/master/community/cypher</url>
+    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+    <url>https://github.com/neo4j/neo4j</url>
   </scm>
 
   <licenses>
@@ -43,11 +45,10 @@
 
   <properties>
     <version-package>cypher.internal</version-package>
-    <scala.version>2.11.7</scala.version>
+    <scala.version>2.11.8</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
     <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
     <doclint-groups>none</doclint-groups>
-    <jetty.version>9.2.4.v20141103</jetty.version>
   </properties>
 
   <build>
@@ -85,11 +86,6 @@
       <artifactId>scala-reflect</artifactId>
       <groupId>org.scala-lang</groupId>
       <version>${scala.version}</version>
-    </dependency>
-
-    <dependency>
-      <artifactId>scala-parser-combinators_2.11</artifactId>
-      <groupId>org.scala-lang.modules</groupId>
     </dependency>
 
     <!-- scala test dependencies -->
@@ -150,8 +146,13 @@
 
     <dependency>
       <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-common</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
       <artifactId>neo4j-io</artifactId>
-      <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -169,11 +170,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-graphviz</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <scope>test</scope>
@@ -188,8 +184,8 @@
     <!-- neo4j-cypher -->
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-cypher-compiler-1.9_2.11</artifactId>
-      <version>2.0.5</version>
+      <artifactId>neo4j-cypher-compiler-2.3</artifactId>
+      <version>2.3.11</version>
       <exclusions>
         <exclusion>
           <groupId>org.neo4j</groupId>
@@ -198,10 +194,6 @@
         <exclusion>
           <groupId>org.neo4j</groupId>
           <artifactId>neo4j-lucene-index</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.neo4j</groupId>
-          <artifactId>neo4j-graph-matching</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.neo4j</groupId>
@@ -219,8 +211,8 @@
     </dependency>
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-cypher-compiler-2.2_2.11</artifactId>
-      <version>2.2.3</version>
+      <artifactId>neo4j-cypher-compiler-3.1</artifactId>
+      <version>3.1.5</version>
       <exclusions>
         <exclusion>
           <groupId>org.neo4j</groupId>
@@ -232,19 +224,15 @@
         </exclusion>
         <exclusion>
           <groupId>org.neo4j</groupId>
-          <artifactId>neo4j-graph-matching</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.neo4j</groupId>
           <artifactId>neo4j-graph-algo</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.neo4j</groupId>
-          <artifactId>neo4j-cypher-commons</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.scala-lang</groupId>
           <artifactId>scala-library</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>scala-reflect</artifactId>
+          <groupId>org.scala-lang</groupId>
         </exclusion>
         <exclusion>
           <groupId>org.parboiled</groupId>
@@ -254,11 +242,15 @@
           <groupId>net.sf.opencsv</groupId>
           <artifactId>opencsv</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
+          <artifactId>concurrentlinkedhashmap-lru</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-cypher-compiler-2.3</artifactId>
+      <artifactId>neo4j-cypher-compiler-3.2</artifactId>
       <version>${project.version}</version>
       <exclusions>
         <exclusion>
@@ -268,10 +260,6 @@
         <exclusion>
           <groupId>org.neo4j</groupId>
           <artifactId>neo4j-lucene-index</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.neo4j</groupId>
-          <artifactId>neo4j-graph-matching</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.neo4j</groupId>
@@ -293,10 +281,6 @@
           <groupId>net.sf.opencsv</groupId>
           <artifactId>opencsv</artifactId>
         </exclusion>
-	      <exclusion>
-          <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
-          <artifactId>concurrentlinkedhashmap-lru</artifactId>
-	      </exclusion>
       </exclusions>
     </dependency>
 
@@ -304,7 +288,15 @@
 
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-cypher-compiler-2.3</artifactId>
+      <artifactId>neo4j-cypher-compiler-3.2</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-cypher-frontend-3.2</artifactId>
       <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
@@ -324,8 +316,8 @@
     <!-- other -->
 
     <dependency>
-      <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
-      <artifactId>concurrentlinkedhashmap-lru</artifactId>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>annotations</artifactId>
     </dependency>
 
     <dependency>
@@ -348,13 +340,11 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>${jetty.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-servlet</artifactId>
-      <version>${jetty.version}</version>
       <scope>test</scope>
     </dependency>
 

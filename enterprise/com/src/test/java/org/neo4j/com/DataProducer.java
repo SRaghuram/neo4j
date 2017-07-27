@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,11 +19,11 @@
  */
 package org.neo4j.com;
 
-import static java.lang.Math.min;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
+
+import static java.lang.Math.min;
 
 public class DataProducer implements ReadableByteChannel
 {
@@ -34,7 +34,7 @@ public class DataProducer implements ReadableByteChannel
     {
         this.bytesLeftToProduce = size;
     }
-    
+
     @Override
     public boolean isOpen()
     {
@@ -45,7 +45,9 @@ public class DataProducer implements ReadableByteChannel
     public void close() throws IOException
     {
         if ( closed )
+        {
             throw new IllegalStateException( "Already closed" );
+        }
         closed = true;
     }
 
@@ -54,10 +56,14 @@ public class DataProducer implements ReadableByteChannel
     {
         int toFill = min( dst.remaining(), bytesLeftToProduce ), leftToFill = toFill;
         if ( toFill <= 0 )
+        {
             return -1;
-        
+        }
+
         while ( leftToFill-- > 0 )
+        {
             dst.put( (byte) 5 );
+        }
         bytesLeftToProduce -= toFill;
         return toFill;
     }

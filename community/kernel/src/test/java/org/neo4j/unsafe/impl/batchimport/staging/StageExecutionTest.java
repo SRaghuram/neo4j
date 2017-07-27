@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,12 +25,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.unsafe.impl.batchimport.stats.Keys;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
 import static org.neo4j.unsafe.impl.batchimport.staging.ControlledStep.stepWithAverageOf;
 import static org.neo4j.unsafe.impl.batchimport.staging.Step.ORDER_SEND_DOWNSTREAM;
@@ -52,9 +51,9 @@ public class StageExecutionTest
 
         // THEN
         Pair<Step<?>,Float> fastest = ordered.next();
-        assertEquals( 1f/2f, fastest.other().floatValue(), 0f );
+        assertEquals( 1f / 2f, fastest.other().floatValue(), 0f );
         Pair<Step<?>,Float> faster = ordered.next();
-        assertEquals( 1f/3f, faster.other().floatValue(), 0f );
+        assertEquals( 1f / 3f, faster.other().floatValue(), 0f );
         Pair<Step<?>,Float> fast = ordered.next();
         assertEquals( 1f, fast.other().floatValue(), 0f );
         assertFalse( ordered.hasNext() );

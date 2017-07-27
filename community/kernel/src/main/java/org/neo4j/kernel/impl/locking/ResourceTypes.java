@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,33 +22,25 @@ package org.neo4j.kernel.impl.locking;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.kernel.api.procedures.ProcedureSignature.ProcedureName;
+import org.neo4j.kernel.api.properties.DefinedProperty;
+import org.neo4j.kernel.api.properties.Property;
+import org.neo4j.kernel.api.schema.IndexQuery;
 import org.neo4j.kernel.impl.util.concurrent.LockWaitStrategies;
-import org.neo4j.kernel.impl.util.concurrent.WaitStrategy;
+import org.neo4j.storageengine.api.lock.ResourceType;
+import org.neo4j.storageengine.api.lock.WaitStrategy;
 
 import static org.neo4j.collection.primitive.hopscotch.HopScotchHashingAlgorithm.DEFAULT_HASHING;
 
-public enum ResourceTypes implements Locks.ResourceType
+public enum ResourceTypes implements ResourceType
 {
-    NODE        (0, LockWaitStrategies.INCREMENTAL_BACKOFF),
-    RELATIONSHIP(1, LockWaitStrategies.INCREMENTAL_BACKOFF),
+    NODE( 0, LockWaitStrategies.INCREMENTAL_BACKOFF ),
+    RELATIONSHIP( 1, LockWaitStrategies.INCREMENTAL_BACKOFF ),
+    GRAPH_PROPS( 2, LockWaitStrategies.INCREMENTAL_BACKOFF ),
+    SCHEMA( 3, LockWaitStrategies.INCREMENTAL_BACKOFF ),
+    INDEX_ENTRY( 4, LockWaitStrategies.INCREMENTAL_BACKOFF ),
+    LEGACY_INDEX( 5, LockWaitStrategies.INCREMENTAL_BACKOFF );
 
-    GRAPH_PROPS (2, LockWaitStrategies.INCREMENTAL_BACKOFF),
-
-    SCHEMA      (3, LockWaitStrategies.INCREMENTAL_BACKOFF),
-    INDEX_ENTRY (4, LockWaitStrategies.INCREMENTAL_BACKOFF),
-
-    LEGACY_INDEX(5, LockWaitStrategies.INCREMENTAL_BACKOFF),
-
-    /**
-     * Procedure lock is used to keep multiple actors from creating procedures with conflicting names.
-     * Dropping procedures is done with the protection of an exclusive schema lock, meaning procedure creation
-     * is expected to be done holding both this lock and a shared schema lock.
-     */
-    PROCEDURE   (6, LockWaitStrategies.INCREMENTAL_BACKOFF)
-    ;
-
-    private final static Map<Integer, Locks.ResourceType> idToType = new HashMap<>();
+    private static final Map<Integer, ResourceType> idToType = new HashMap<>();
     static
     {
         for ( ResourceTypes resourceTypes : ResourceTypes.values() )
@@ -61,7 +53,7 @@ public enum ResourceTypes implements Locks.ResourceType
 
     private final WaitStrategy waitStrategy;
 
-    private ResourceTypes( int typeId, WaitStrategy waitStrategy )
+    ResourceTypes( int typeId, WaitStrategy waitStrategy )
     {
         this.typeId = typeId;
         this.waitStrategy = waitStrategy;
@@ -87,29 +79,41 @@ public enum ResourceTypes implements Locks.ResourceType
     /**
      * This is the schema index entry hashing method used since 2.2.0 and onwards.
      */
-    public static long indexEntryResourceId( long labelId, long propertyKeyId, String propertyValue )
+    public static long indexEntryResourceId( long labelId, IndexQuery.ExactPredicate... predicates )
+    {
+        return indexEntryResourceId( labelId, predicates, 0 );
+    }
+
+    private static long indexEntryResourceId( long labelId, IndexQuery.ExactPredicate[] predicates, int i )
+    {
+        int propertyKeyId = predicates[i].propertyKeyId();
+        Object value = predicates[i].value();
+        // Note:
+        // It is important that single-property indexes only hash with this particular call; no additional hashing!
+        long hash = indexEntryResourceId( labelId, propertyKeyId, stringOf( propertyKeyId, value ) );
+        i++;
+        if ( i < predicates.length )
+        {
+            hash = hash( hash + indexEntryResourceId( labelId, predicates, i ) );
+        }
+        return hash;
+    }
+
+    private static long indexEntryResourceId( long labelId, long propertyKeyId, String propertyValue )
     {
         long hob = hash( labelId + hash( propertyKeyId ) );
         hob <<= 32;
         return hob + propertyValue.hashCode();
-
-        // The previous schema index entry hashing method used up until and
-        // including Neo4j 2.1.x looks like the following:
-        //
-        //   long result = labelId;
-        //   result = 31 * result + propertyKeyId;
-        //   result = 31 * result + propertyValue.hashCode();
-        //   return result;
-        //
-        // It was replaced because it was prone to collisions. I left it in
-        // this comment in case we need it for supporting rolling upgrades.
-        // This comment can be deleted once RU from 2.1 to 2.2 is no longer a
-        // concern.
     }
 
-    public static long procedureResourceId( ProcedureName procedureName )
+    private static String stringOf( int propertyKeyId, Object value )
     {
-        return procedureName.name().hashCode();
+        if ( null != value )
+        {
+            DefinedProperty property = Property.property( propertyKeyId, value );
+            return property.valueAsString();
+        }
+        return "";
     }
 
     private static int hash( long value )
@@ -119,15 +123,15 @@ public enum ResourceTypes implements Locks.ResourceType
 
     public static long graphPropertyResource()
     {
-        return 0l;
+        return 0L;
     }
 
     public static long schemaResource()
     {
-        return 0l;
+        return 0L;
     }
 
-    public static Locks.ResourceType fromId( int typeId )
+    public static ResourceType fromId( int typeId )
     {
         return idToType.get( typeId );
     }

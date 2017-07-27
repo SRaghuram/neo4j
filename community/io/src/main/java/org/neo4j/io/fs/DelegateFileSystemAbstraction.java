@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,6 +19,7 @@
  */
 package org.neo4j.io.fs;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -29,6 +30,8 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import java.nio.file.CopyOption;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -36,10 +39,15 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
-import org.neo4j.function.Function;
+import org.neo4j.io.IOUtils;
+import org.neo4j.io.fs.watcher.DefaultFileSystemWatcher;
+import org.neo4j.io.fs.watcher.FileWatcher;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 /**
  * This FileSystemAbstract implementation delegates all calls to a given {@link FileSystem} implementation.
@@ -48,10 +56,17 @@ import org.neo4j.function.Function;
 public class DelegateFileSystemAbstraction implements FileSystemAbstraction
 {
     private final FileSystem fs;
+    private final Map<Class<?>, ThirdPartyFileSystem> thirdPartyFs = new HashMap<>();
 
     public DelegateFileSystemAbstraction( FileSystem fs )
     {
         this.fs = fs;
+    }
+
+    @Override
+    public FileWatcher fileWatcher() throws IOException
+    {
+        return new DefaultFileSystemWatcher( fs.newWatchService() );
     }
 
     @Override
@@ -83,15 +98,15 @@ public class DelegateFileSystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public Reader openAsReader( File fileName, String encoding ) throws IOException
+    public Reader openAsReader( File fileName, Charset charset ) throws IOException
     {
-        return new InputStreamReader( openAsInputStream( fileName ), encoding );
+        return new InputStreamReader( openAsInputStream( fileName ), charset );
     }
 
     @Override
-    public Writer openAsWriter( File fileName, String encoding, boolean append ) throws IOException
+    public Writer openAsWriter( File fileName, Charset charset, boolean append ) throws IOException
     {
-        return new OutputStreamWriter( openAsOutputStream( fileName, append ), encoding );
+        return new OutputStreamWriter( openAsOutputStream( fileName, append ), charset );
     }
 
     @Override
@@ -166,54 +181,38 @@ public class DelegateFileSystemAbstraction implements FileSystemAbstraction
     }
 
     @Override
-    public boolean renameFile( File from, File to ) throws IOException
+    public void renameFile( File from, File to, CopyOption... copyOptions ) throws IOException
     {
-        Files.move( path( from ), path( to ) );
-        return true;
+        Files.move( path( from ), path( to ), copyOptions );
     }
 
     @Override
     public File[] listFiles( File directory )
     {
-        List<File> files = new ArrayList<>();
-        try
+        try ( Stream<Path> listing = Files.list( path( directory ) ) )
         {
-            for ( Path path : Files.newDirectoryStream( path( directory ) ) )
-            {
-                files.add( path.toFile() );
-            }
+            return listing.map( Path::toFile ).toArray( File[]::new );
         }
         catch ( IOException e )
         {
             return null;
         }
-        return files.toArray( new File[files.size()] );
     }
 
     @Override
     public File[] listFiles( File directory, final FilenameFilter filter )
     {
-        List<File> files = new ArrayList<>();
-        try
+        try ( Stream<Path> listing = Files.list( path( directory ) ) )
         {
-            DirectoryStream.Filter<Path> dirfilter = new DirectoryStream.Filter<Path>()
-            {
-                @Override
-                public boolean accept( Path entry ) throws IOException
-                {
-                    return filter.accept( entry.getParent().toFile(), entry.getFileName().toString() );
-                }
-            };
-            for ( Path path : Files.newDirectoryStream( path( directory ), dirfilter ) )
-            {
-                files.add( path.toFile() );
-            }
+            return listing
+                    .filter( entry -> filter.accept( entry.getParent().toFile(), entry.getFileName().toString() ) )
+                    .map( Path::toFile )
+                    .toArray( File[]::new );
         }
         catch ( IOException e )
         {
             return null;
         }
-        return files.toArray( new File[files.size()] );
     }
 
     @Override
@@ -244,23 +243,24 @@ public class DelegateFileSystemAbstraction implements FileSystemAbstraction
 
     private void copyRecursively( Path source, Path target ) throws IOException
     {
-        for ( Path sourcePath : Files.newDirectoryStream( source ) )
+        try ( DirectoryStream<Path> directoryStream = Files.newDirectoryStream( source ) )
         {
-            Path targetPath = target.resolve( sourcePath.getFileName() );
-            if ( Files.isDirectory( sourcePath ) )
+            for ( Path sourcePath : directoryStream )
             {
-                Files.createDirectories( targetPath );
-                copyRecursively( sourcePath, targetPath );
-            }
-            else
-            {
-                Files.copy( sourcePath, targetPath,
-                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES );
+                Path targetPath = target.resolve( sourcePath.getFileName() );
+                if ( Files.isDirectory( sourcePath ) )
+                {
+                    Files.createDirectories( targetPath );
+                    copyRecursively( sourcePath, targetPath );
+                }
+                else
+                {
+                    Files.copy( sourcePath, targetPath,
+                            REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES );
+                }
             }
         }
     }
-
-    private final Map<Class<?>,Object> thirdPartyFs = new HashMap<>();
 
     @Override
     public synchronized <K extends ThirdPartyFileSystem> K getOrCreateThirdPartyFileSystem(
@@ -283,5 +283,26 @@ public class DelegateFileSystemAbstraction implements FileSystemAbstraction
         {
             channel.truncate( size );
         }
+    }
+
+    @Override
+    public long lastModifiedTime( File file ) throws IOException
+    {
+        return Files.getLastModifiedTime( path( file ) ).toMillis();
+    }
+
+    @Override
+    public void deleteFileOrThrow( File file ) throws IOException
+    {
+        Files.delete( path( file ) );
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+        ArrayList<Closeable> fsToClose = new ArrayList<>( thirdPartyFs.size() + 1 );
+        fsToClose.add( fs );
+        fsToClose.addAll( thirdPartyFs.values() );
+        IOUtils.closeAll( fsToClose );
     }
 }

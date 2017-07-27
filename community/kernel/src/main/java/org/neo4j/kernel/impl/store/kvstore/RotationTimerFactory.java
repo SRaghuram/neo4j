@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,7 @@
  */
 package org.neo4j.kernel.impl.store.kvstore;
 
-import org.neo4j.helpers.Clock;
+import java.time.Clock;
 
 public class RotationTimerFactory
 {
@@ -34,7 +34,7 @@ public class RotationTimerFactory
 
     public RotationTimer createTimer()
     {
-        long startTime = clock.currentTimeMillis();
+        long startTime = clock.millis();
         return new RotationTimer( startTime, startTime + timeoutMillis );
     }
 
@@ -43,7 +43,7 @@ public class RotationTimerFactory
         private long startTime;
         private long timeoutTime;
 
-        public RotationTimer( long startTime, long timeoutTime )
+        RotationTimer( long startTime, long timeoutTime )
         {
             this.startTime = startTime;
             this.timeoutTime = timeoutTime;
@@ -51,12 +51,12 @@ public class RotationTimerFactory
 
         public boolean isTimedOut()
         {
-            return clock.currentTimeMillis() > timeoutTime;
+            return clock.millis() > timeoutTime;
         }
 
         public long getElapsedTimeMillis()
         {
-            return clock.currentTimeMillis() - startTime;
+            return clock.millis() - startTime;
         }
 
     }

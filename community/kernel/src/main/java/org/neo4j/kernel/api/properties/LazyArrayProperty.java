@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -59,7 +59,7 @@ class LazyArrayProperty extends LazyProperty<Object>
     }
 
     @Override
-    int valueHash()
+    public int valueHash()
     {
         Object myValue = value(); // value() accesses LazyProperty.value, implying a read barrier ...
         return type.hashCode( myValue ); // ... so accessing type is safe

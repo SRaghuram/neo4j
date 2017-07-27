@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -173,6 +173,11 @@ object HttpServerTestSupport {
   def hasCookie(cookie: String)(exchange: HttpExchange) = {
     val cookieString = Option(exchange.getRequestHeaders.getFirst("Cookie"))
     cookieString.exists(cookie => cookie.split(";").contains(cookie))
+  }
+
+  def hasUserAgent(userAgent: String)(exchange: HttpExchange) = {
+    val userAgentString = Option(exchange.getRequestHeaders.getFirst("User-Agent"))
+    userAgentString.contains(userAgent)
   }
 
   def setCookie(cookie: String)(exchange: HttpExchange) = {

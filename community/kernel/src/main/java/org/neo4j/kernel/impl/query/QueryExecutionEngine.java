@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,12 +25,14 @@ import org.neo4j.graphdb.Result;
 
 public interface QueryExecutionEngine
 {
-    Result executeQuery( String query, Map<String, Object> parameters, QuerySession querySession ) throws QueryExecutionKernelException;
+    Result executeQuery( String query, Map<String,Object> parameters, TransactionalContext context )
+            throws QueryExecutionKernelException;
+
+    Result profileQuery( String query, Map<String,Object> parameters, TransactionalContext context )
+            throws QueryExecutionKernelException;
 
     boolean isPeriodicCommit( String query );
 
     String prettify( String query );
-
-    Result profileQuery( String query, Map<String, Object> parameters, QuerySession querySession) throws QueryExecutionKernelException;
 }
 

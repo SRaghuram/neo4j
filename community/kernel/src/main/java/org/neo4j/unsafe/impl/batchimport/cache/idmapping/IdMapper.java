@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,8 +31,10 @@ import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
  * Maps node ids as specified by {@link InputNode#id()}, {@link InputRelationship#startNode()} and
  * {@link InputRelationship#endNode()} from an id of some unknown sort, coming directly from input, to actual node ids.
  */
-public interface IdMapper extends MemoryStatsVisitor.Home
+public interface IdMapper extends MemoryStatsVisitor.Visitable
 {
+    long ID_NOT_FOUND = -1;
+
     /**
      * Maps an {@code inputId} to an actual node id.
      * @param inputId an id of an unknown type, coming from input.
@@ -74,4 +76,6 @@ public interface IdMapper extends MemoryStatsVisitor.Home
      * @return the actual node id previously specified by {@link #put(Object, long, Group)}, or {@code -1} if not found.
      */
     long get( Object inputId, Group group );
+
+    void close();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,35 +20,27 @@
 package org.neo4j.kernel.impl.store.counts.keys;
 
 import static org.neo4j.kernel.impl.util.IdPrettyPrinter.label;
-import static org.neo4j.kernel.impl.util.IdPrettyPrinter.propertyKey;
 
 abstract class IndexKey implements CountsKey
 {
-    private final int labelId;
-    private final int propertyKeyId;
+    private final long indexId;
     private final CountsKeyType type;
 
-    IndexKey( int labelId, int propertyKeyId, CountsKeyType type )
+    IndexKey( long indexId, CountsKeyType type )
     {
-        this.labelId = labelId;
-        this.propertyKeyId = propertyKeyId;
+        this.indexId = indexId;
         this.type = type;
     }
 
-    public int labelId()
+    public long indexId()
     {
-        return labelId;
-    }
-
-    public int propertyKeyId()
-    {
-        return propertyKeyId;
+        return indexId;
     }
 
     @Override
     public String toString()
     {
-        return String.format( "IndexKey[%s (%s {%s})]", type.name(), label( labelId ), propertyKey( propertyKeyId ) );
+        return String.format( "IndexKey[%s:%d]", type.name(), indexId );
     }
 
     @Override
@@ -57,14 +49,10 @@ abstract class IndexKey implements CountsKey
         return type;
     }
 
-
     @Override
     public int hashCode()
     {
-        int result = labelId;
-        result = 31 * result + propertyKeyId;
-        result = 31 * result + type.hashCode();
-        return result;
+        return 31 * (int) indexId + type.hashCode();
     }
 
     @Override
@@ -78,8 +66,16 @@ abstract class IndexKey implements CountsKey
         {
             return false;
         }
+        return ((IndexKey) other).indexId() == indexId;
+    }
 
-        IndexKey indexKey = (IndexKey) other;
-        return labelId == indexKey.labelId && propertyKeyId == indexKey.propertyKeyId && type == indexKey.type;
+    @Override
+    public int compareTo( CountsKey other )
+    {
+        if ( other instanceof IndexKey )
+        {
+            return (int) (indexId - ((IndexKey) other).indexId());
+        }
+        return recordType().ordinal() - other.recordType().ordinal();
     }
 }

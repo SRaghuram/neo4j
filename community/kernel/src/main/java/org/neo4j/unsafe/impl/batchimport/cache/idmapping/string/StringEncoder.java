@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -160,7 +160,7 @@ public class StringEncoder implements Encoder
             for ( int k = 1; k <= i; k++ )
             {
                 long prev = val;
-                val = ((val << 4) + prev);//% Integer.MAX_VALUE;
+                val = (val << 4) + prev;//% Integer.MAX_VALUE;
             }
             code += val;
         }

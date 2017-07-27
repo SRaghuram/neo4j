@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -51,22 +51,24 @@ public class GraphVizExporter
         out.println("digraph G {");
         out.println("    rankdir=LR;");
 
-        try( Transaction tx = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Set<Node> seen = new HashSet<>();
             Queue<Node> toExplore = new LinkedList<>();
             toExplore.add( db.getNodeById( 0 ) );
 
-            while(toExplore.size() > 0)
+            while ( toExplore.size() > 0 )
             {
                 Node current = toExplore.poll();
 
-                out.println( "    " + current.getId() + " [shape=box,label=\"" + current.getProperty( "description" ) + "\"];" );
+                out.println( "    " + current.getId() + " [shape=box,label=\"" +
+                        current.getProperty( "description" ) + "\"];" );
                 for ( Relationship relationship : current.getRelationships() )
                 {
-                    out.println("    " + current.getId() + " -> " + relationship.getEndNode().getId() + " [label=\""+relationship.getProperty( "description" )+"\"];" );
+                    out.println( "    " + current.getId() + " -> " + relationship.getEndNode().getId() + " [label=\"" +
+                            relationship.getProperty( "description" ) + "\"];" );
 
-                    if(!seen.contains( relationship.getEndNode() ))
+                    if ( !seen.contains( relationship.getEndNode() ) )
                     {
                         toExplore.offer( relationship.getEndNode() );
                         seen.add( relationship.getEndNode() );

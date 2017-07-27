@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,9 @@
  */
 package org.neo4j.kernel.impl.api.index;
 
+import org.neo4j.collection.primitive.PrimitiveIntCollection;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
-import org.neo4j.kernel.api.index.IndexDescriptor;
+import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 
 public class IndexMapReference implements IndexMapSnapshotProvider
 {
@@ -42,7 +43,7 @@ public class IndexMapReference implements IndexMapSnapshotProvider
         return proxy;
     }
 
-    public IndexProxy getIndexProxy( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public IndexProxy getIndexProxy( LabelSchemaDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         IndexProxy proxy = indexMap.getIndexProxy( descriptor );
         if ( proxy == null )
@@ -52,22 +53,38 @@ public class IndexMapReference implements IndexMapSnapshotProvider
         return proxy;
     }
 
-    public IndexProxy getOnlineIndexProxy( IndexDescriptor descriptor ) throws IndexNotFoundKernelException
+    public long getIndexId( LabelSchemaDescriptor descriptor ) throws IndexNotFoundKernelException
+    {
+        IndexProxy proxy = indexMap.getIndexProxy( descriptor );
+        if ( proxy == null )
+        {
+            throw new IndexNotFoundKernelException( "No index for " + descriptor + " exists." );
+        }
+        return indexMap.getIndexId( descriptor );
+    }
+
+    public long getOnlineIndexId( LabelSchemaDescriptor descriptor ) throws IndexNotFoundKernelException
     {
         IndexProxy proxy = getIndexProxy( descriptor );
         switch ( proxy.getState() )
         {
-            case ONLINE:
-                return proxy;
+        case ONLINE:
+            return indexMap.getIndexId( descriptor );
 
-            default:
-                throw new IndexNotFoundKernelException( "Expected index on " + descriptor + " to be online.");
+        default:
+            throw new IndexNotFoundKernelException( "Expected index on " + descriptor + " to be online.");
         }
     }
 
     public Iterable<IndexProxy> getAllIndexProxies()
     {
         return indexMap.getAllIndexProxies();
+    }
+
+    public Iterable<LabelSchemaDescriptor> getRelatedIndexes(
+            long[] changedLabels, long[] unchangedLabels, PrimitiveIntCollection properties )
+    {
+        return indexMap.getRelatedIndexes( changedLabels, unchangedLabels, properties );
     }
 
     public void setIndexMap( IndexMap newIndexMap )

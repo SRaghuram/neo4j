@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,6 @@
  */
 package org.neo4j.kernel.api.index;
 
-import java.io.File;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Assert;
@@ -36,29 +27,38 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.function.Consumer;
+import java.io.File;
+import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.function.Consumer;
+
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.DependencyResolver;
-import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.TopLevelTransaction;
+import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.locking.Lock;
 import org.neo4j.kernel.impl.locking.LockService;
+import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.test.TargetDirectory;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
-
 import static org.neo4j.kernel.impl.locking.LockService.LockType;
 
 @Ignore( "Not a test. This is a compatibility suite that provides test cases for verifying" +
@@ -70,7 +70,7 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
 {
     public UniqueConstraintCompatibility( IndexProviderCompatibilityTestSuite testSuite )
     {
-        super( testSuite );
+        super( testSuite, IndexDescriptorFactory.uniqueForLabel( 1, 2 ) );
     }
 
     /*
@@ -177,9 +177,8 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
                 assertLookupNode( "m", is( m ) ) );
     }
 
-    @Ignore("Until constraint violation has been updated to double check with property store")
     @Test
-    public void onlineConstrainthouldNotFalselyCollideOnFindNodesByLabelAndProperty() throws Exception
+    public void onlineConstraintShouldNotFalselyCollideOnFindNodesByLabelAndProperty() throws Exception
     {
         // Given
         givenOnlineConstraint();
@@ -689,7 +688,7 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
     private static final long COLLISION_Y = 4611686018427387907L;
     private static final ExecutorService executor = Executors.newCachedThreadPool();
 
-    private Label label = DynamicLabel.label( "Cybermen" );
+    private Label label = Label.label( "Cybermen" );
     private String property = "name";
     private Node a;
     private Node b;
@@ -821,7 +820,7 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
             StringBuilder sb = new StringBuilder( "Transaction failed:\n\n" );
             for ( int i = 0; i < actions.length; i++ )
             {
-                String mark = progress == i? " failed --> " : "            ";
+                String mark = progress == i ? " failed --> " : "            ";
                 sb.append( mark ).append( actions[i] ).append( '\n' );
             }
             ex.addSuppressed( new AssertionError( sb.toString() ) );
@@ -932,21 +931,17 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
 
     private String reprValue( Object value )
     {
-        return value instanceof String? "\"" + value + "\"" : String.valueOf( value );
+        return value instanceof String ? "\"" + value + "\"" : String.valueOf( value );
     }
 
     private String reprNode( Node node )
     {
-        return node == a? "a"
-                : node == b? "b"
-                : node == c? "c"
-                : node == d? "d"
-                : "n";
+        return node == a ? "a" : node == b ? "b" : node == c ? "c" : node == d ? "d" : "n";
     }
 
     // -- Set Up: Advanced transaction handling
 
-    private final Map<Transaction, TopLevelTransaction> txMap = new IdentityHashMap<>();
+    private final Map<Transaction,KernelTransaction> txMap = new IdentityHashMap<>();
 
     private void suspend( Transaction tx ) throws Exception
     {
@@ -999,10 +994,11 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
     // -- Set Up: Environment parts
 
     @Rule
-    public TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
+    public TestDirectory testDirectory = TestDirectory.testDirectory( getClass() );
 
     @Before
-    public void setUp() {
+    public void setUp()
+    {
         File storeDir = testDirectory.graphDbDir();
         TestGraphDatabaseFactory dbfactory = new TestGraphDatabaseFactory();
         dbfactory.addKernelExtension( new PredefinedSchemaIndexProviderFactory( indexProvider ) );
@@ -1010,7 +1006,8 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
     }
 
     @After
-    public void tearDown() {
+    public void tearDown()
+    {
         db.shutdown();
     }
 
@@ -1019,15 +1016,16 @@ public class UniqueConstraintCompatibility extends IndexProviderCompatibilityTes
         private final SchemaIndexProvider indexProvider;
 
         @Override
-        public Lifecycle newKernelExtension( NoDeps noDeps ) throws Throwable
+        public Lifecycle newInstance( KernelContext context, NoDeps noDeps ) throws Throwable
         {
             return indexProvider;
         }
 
-        public static interface NoDeps {
+        interface NoDeps
+        {
         }
 
-        public PredefinedSchemaIndexProviderFactory( SchemaIndexProvider indexProvider )
+        PredefinedSchemaIndexProviderFactory( SchemaIndexProvider indexProvider )
         {
             super( indexProvider.getClass().getSimpleName() );
             this.indexProvider = indexProvider;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -24,19 +24,18 @@ import java.util.concurrent.Future;
 
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
-import org.neo4j.kernel.api.index.IndexConfiguration;
-import org.neo4j.kernel.api.index.IndexDescriptor;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.api.schema.index.IndexDescriptor;
+import org.neo4j.storageengine.api.schema.PopulationProgress;
 
 import static org.neo4j.helpers.FutureAdapter.VOID;
 
 public class RecoveringIndexProxy extends AbstractSwallowingIndexProxy
 {
-    public RecoveringIndexProxy( IndexDescriptor descriptor, SchemaIndexProvider.Descriptor providerDescriptor,
-                                 IndexConfiguration configuration )
+    public RecoveringIndexProxy( IndexDescriptor descriptor, SchemaIndexProvider.Descriptor providerDescriptor )
     {
-        super( descriptor, providerDescriptor, null, configuration );
+        super( descriptor, providerDescriptor, null );
     }
 
     @Override
@@ -77,6 +76,12 @@ public class RecoveringIndexProxy extends AbstractSwallowingIndexProxy
 
     @Override
     public IndexPopulationFailure getPopulationFailure() throws IllegalStateException
+    {
+        throw new IllegalStateException( this + " is recovering" );
+    }
+
+    @Override
+    public PopulationProgress getIndexPopulationProgress()
     {
         throw new IllegalStateException( this + " is recovering" );
     }

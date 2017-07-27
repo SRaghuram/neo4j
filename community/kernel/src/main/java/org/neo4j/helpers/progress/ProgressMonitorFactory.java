@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,8 +22,8 @@ package org.neo4j.helpers.progress;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -46,14 +46,7 @@ public abstract class ProgressMonitorFactory
 
     public static ProgressMonitorFactory textual( final OutputStream out )
     {
-        try
-        {
-            return textual( new OutputStreamWriter( out, "UTF-8" ) );
-        }
-        catch ( UnsupportedEncodingException e )
-        {
-            throw new RuntimeException( e );
-        }
+        return textual( new OutputStreamWriter( out, StandardCharsets.UTF_8 ) );
     }
 
     public static ProgressMonitorFactory textual( final Writer out )
@@ -101,7 +94,7 @@ public abstract class ProgressMonitorFactory
     public static class MultiPartBuilder
     {
         private Aggregator aggregator;
-        private Set<String> parts = new HashSet<String>();
+        private Set<String> parts = new HashSet<>();
         private Completion completion = null;
 
         private MultiPartBuilder( ProgressMonitorFactory factory, String process )
@@ -111,17 +104,37 @@ public abstract class ProgressMonitorFactory
 
         public ProgressListener progressForPart( String part, long totalCount )
         {
-            if ( aggregator == null )
-            {
-                throw new IllegalStateException( "Builder has been completed." );
-            }
+            assertNotBuilt();
+            assertUniquePart( part );
+            ProgressListener.MultiPartProgressListener progress =
+                    new ProgressListener.MultiPartProgressListener( aggregator, part, totalCount );
+            aggregator.add( progress, totalCount );
+            return progress;
+        }
+
+        public ProgressListener progressForUnknownPart( String part )
+        {
+            assertNotBuilt();
+            assertUniquePart( part );
+            ProgressListener progress = ProgressListener.NONE;
+            aggregator.add( progress, 0 );
+            return progress;
+        }
+
+        private void assertUniquePart( String part )
+        {
             if ( !parts.add( part ) )
             {
                 throw new IllegalArgumentException( String.format( "Part '%s' has already been defined.", part ) );
             }
-            ProgressListener.MultiPartProgressListener progress = new ProgressListener.MultiPartProgressListener( aggregator, part, totalCount );
-            aggregator.add( progress );
-            return progress;
+        }
+
+        private void assertNotBuilt()
+        {
+            if ( aggregator == null )
+            {
+                throw new IllegalStateException( "Builder has been completed." );
+            }
         }
 
         public Completion build()

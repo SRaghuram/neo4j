@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.transaction.log;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import org.neo4j.cursor.IOCursor;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionMetadataCache.TransactionMetadata;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
@@ -31,6 +32,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_CHECKSUM;
+import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryByteCodes.TX_1P_COMMIT;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryByteCodes.TX_START;
@@ -39,16 +41,24 @@ public class PhysicalLogicalTransactionStore implements LogicalTransactionStore
 {
     private final LogFile logFile;
     private final TransactionMetadataCache transactionMetadataCache;
+    private final LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader;
 
-    public PhysicalLogicalTransactionStore( LogFile logFile, TransactionMetadataCache transactionMetadataCache )
+    public PhysicalLogicalTransactionStore( LogFile logFile, TransactionMetadataCache transactionMetadataCache,
+            LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader )
     {
         this.logFile = logFile;
         this.transactionMetadataCache = transactionMetadataCache;
+        this.logEntryReader = logEntryReader;
     }
 
+    @Override
+    public TransactionCursor getTransactions( LogPosition position ) throws IOException
+    {
+        return new PhysicalTransactionCursor<>( logFile.getReader( position ), new VersionAwareLogEntryReader<>() );
+    }
 
     @Override
-    public IOCursor<CommittedTransactionRepresentation> getTransactions( final long transactionIdToStartFrom )
+    public TransactionCursor getTransactions( final long transactionIdToStartFrom )
             throws IOException
     {
         // look up in position cache
@@ -56,11 +66,10 @@ public class PhysicalLogicalTransactionStore implements LogicalTransactionStore
         {
             TransactionMetadataCache.TransactionMetadata transactionMetadata =
                     transactionMetadataCache.getTransactionMetadata( transactionIdToStartFrom );
-            LogEntryReader<ReadableVersionableLogChannel> logEntryReader = new VersionAwareLogEntryReader<>();
             if ( transactionMetadata != null )
             {
                 // we're good
-                ReadableVersionableLogChannel channel = logFile.getReader( transactionMetadata.getStartPosition() );
+                ReadableLogChannel channel = logFile.getReader( transactionMetadata.getStartPosition() );
                 return new PhysicalTransactionCursor<>( channel, logEntryReader );
             }
 
@@ -83,7 +92,8 @@ public class PhysicalLogicalTransactionStore implements LogicalTransactionStore
     }
 
     private static final TransactionMetadataCache.TransactionMetadata METADATA_FOR_EMPTY_STORE =
-            new TransactionMetadataCache.TransactionMetadata( -1, -1, LogPosition.start( 0 ), BASE_TX_CHECKSUM );
+            new TransactionMetadataCache.TransactionMetadata( -1, -1, LogPosition.start( 0 ), BASE_TX_CHECKSUM,
+                    BASE_TX_COMMIT_TIMESTAMP );
 
     @Override
     public TransactionMetadata getMetadataFor( long transactionId ) throws IOException
@@ -102,10 +112,13 @@ public class PhysicalLogicalTransactionStore implements LogicalTransactionStore
                 while ( cursor.next() )
                 {
                     CommittedTransactionRepresentation tx = cursor.get();
-                    long committedTxId = tx.getCommitEntry().getTxId();
+                    LogEntryCommit commitEntry = tx.getCommitEntry();
+                    long committedTxId = commitEntry.getTxId();
+                    long timeWritten = commitEntry.getTimeWritten();
                     TransactionMetadata metadata = transactionMetadataCache.cacheTransactionMetadata( committedTxId,
                             tx.getStartEntry().getStartPosition(), tx.getStartEntry().getMasterId(),
-                            tx.getStartEntry().getLocalId(), LogEntryStart.checksum( tx.getStartEntry() ) );
+                            tx.getStartEntry().getLocalId(), LogEntryStart.checksum( tx.getStartEntry() ),
+                            timeWritten );
                     if ( committedTxId == transactionId )
                     {
                         transactionMetadata = metadata;
@@ -124,18 +137,19 @@ public class PhysicalLogicalTransactionStore implements LogicalTransactionStore
     public static class TransactionPositionLocator implements LogFile.LogFileVisitor
     {
         private final long startTransactionId;
-        private final LogEntryReader<ReadableVersionableLogChannel> logEntryReader;
+        private final LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader;
         private LogEntryStart startEntryForFoundTransaction;
+        private long commitTimestamp;
 
         public TransactionPositionLocator( long startTransactionId,
-                LogEntryReader<ReadableVersionableLogChannel> logEntryReader )
+                LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader )
         {
             this.startTransactionId = startTransactionId;
             this.logEntryReader = logEntryReader;
         }
 
         @Override
-        public boolean visit( LogPosition position, ReadableVersionableLogChannel channel ) throws IOException
+        public boolean visit( LogPosition position, ReadableClosablePositionAwareChannel channel ) throws IOException
         {
             LogEntry logEntry;
             LogEntryStart startEntry = null;
@@ -151,6 +165,7 @@ public class PhysicalLogicalTransactionStore implements LogicalTransactionStore
                     if ( commit.getTxId() == startTransactionId )
                     {
                         startEntryForFoundTransaction = startEntry;
+                        commitTimestamp = commit.getTimeWritten();
                         return false;
                     }
                 default: // just skip commands
@@ -172,7 +187,8 @@ public class PhysicalLogicalTransactionStore implements LogicalTransactionStore
                     startEntryForFoundTransaction.getStartPosition(),
                     startEntryForFoundTransaction.getMasterId(),
                     startEntryForFoundTransaction.getLocalId(),
-                    LogEntryStart.checksum( startEntryForFoundTransaction )
+                    LogEntryStart.checksum( startEntryForFoundTransaction ),
+                    commitTimestamp
             );
             return startEntryForFoundTransaction.getStartPosition();
         }

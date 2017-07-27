@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,7 +26,6 @@ import org.neo4j.kernel.impl.api.RelationshipDataExtractor;
 import org.neo4j.kernel.impl.api.RelationshipVisitor;
 import org.neo4j.kernel.impl.api.store.RelationshipIterator;
 
-//TODO this must live outside 2.3
 public abstract class CompiledExpandUtils
 {
     public static RelationshipIterator connectingRelationships( ReadOperations readOperations,
@@ -65,9 +64,8 @@ public abstract class CompiledExpandUtils
         return connectingRelationshipsIterator( allRelationships, startNode, endNode );
     }
 
-
     public static RelationshipIterator connectingRelationships( ReadOperations readOperations,
-            long fromNode, Direction direction, long toNode, int... relTypes ) throws EntityNotFoundException
+            long fromNode, Direction direction, long toNode, int[] relTypes ) throws EntityNotFoundException
     {
         int fromDegree = calculateTotalDegree( readOperations, fromNode, direction, relTypes);
         if ( fromDegree == 0 )

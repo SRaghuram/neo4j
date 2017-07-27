@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,30 +20,23 @@
 package org.neo4j.kernel.impl.factory;
 
 import java.io.File;
+import java.time.Clock;
+import java.util.function.Predicate;
 
+import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.DatabaseAvailability;
-import org.neo4j.kernel.DefaultIdGeneratorFactory;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.IdGeneratorFactory;
-import org.neo4j.kernel.KernelData;
-import org.neo4j.kernel.KernelHealth;
-import org.neo4j.kernel.NeoStoreDataSource;
-import org.neo4j.kernel.Version;
-import org.neo4j.kernel.api.exceptions.InvalidTransactionTypeKernelException;
+import org.neo4j.kernel.api.exceptions.KernelException;
+import org.neo4j.kernel.api.security.AuthManager;
+import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.api.CommitProcessFactory;
-import org.neo4j.kernel.impl.api.ReadOnlyTransactionCommitProcess;
+import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
-import org.neo4j.kernel.impl.api.TransactionCommitProcess;
-import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
-import org.neo4j.kernel.impl.api.TransactionRepresentationStoreApplier;
-import org.neo4j.kernel.impl.api.index.IndexUpdatesValidator;
-import org.neo4j.kernel.impl.api.index.RemoveOrphanConstraintIndexesOnStartup;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.impl.core.DefaultLabelIdCreator;
@@ -54,31 +47,38 @@ import org.neo4j.kernel.impl.core.DelegatingPropertyKeyTokenHolder;
 import org.neo4j.kernel.impl.core.DelegatingRelationshipTypeTokenHolder;
 import org.neo4j.kernel.impl.core.ReadOnlyTokenCreator;
 import org.neo4j.kernel.impl.core.TokenCreator;
+import org.neo4j.kernel.impl.coreapi.CoreAPIAvailabilityGuard;
+import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
+import org.neo4j.kernel.impl.locking.SimpleStatementLocksFactory;
+import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.locking.community.CommunityLockManger;
 import org.neo4j.kernel.impl.logging.LogService;
-import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.storemigration.ConfigMapUpgradeConfiguration;
+import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdReuseEligibility;
+import org.neo4j.kernel.impl.store.id.configuration.CommunityIdTypeConfigurationProvider;
+import org.neo4j.kernel.impl.store.id.configuration.IdTypeConfigurationProvider;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
-import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
+import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
-import org.neo4j.kernel.impl.transaction.state.NeoStoreInjectedTransactionValidator;
+import org.neo4j.kernel.internal.DefaultKernelData;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.kernel.lifecycle.LifecycleListener;
 import org.neo4j.kernel.lifecycle.LifecycleStatus;
 import org.neo4j.udc.UsageData;
-import org.neo4j.udc.UsageDataKeys;
-
 
 /**
  * This implementation of {@link org.neo4j.kernel.impl.factory.EditionModule} creates the implementations of services
  * that are specific to the Community edition.
  */
-public class CommunityEditionModule
-    extends EditionModule
+public class CommunityEditionModule extends EditionModule
 {
+    public static final String COMMUNITY_SECURITY_MODULE_ID = "community-security-module";
+
     public CommunityEditionModule( PlatformModule platformModule )
     {
         org.neo4j.kernel.impl.util.Dependencies dependencies = platformModule.dependencies;
@@ -89,11 +89,28 @@ public class CommunityEditionModule
         File storeDir = platformModule.storeDir;
         DataSourceManager dataSourceManager = platformModule.dataSourceManager;
         LifeSupport life = platformModule.life;
+        life.add( platformModule.dataSourceManager );
+
+        watcherService = createFileSystemWatcherService( fileSystem, storeDir, logging,
+                platformModule.jobScheduler, fileWatcherFileNameFilter() );
+        dependencies.satisfyDependencies( watcherService );
+        life.add( watcherService );
+
+        this.accessCapability = config.get( GraphDatabaseSettings.read_only ) ? new ReadOnly() : new CanWrite();
+
         GraphDatabaseFacade graphDatabaseFacade = platformModule.graphDatabaseFacade;
 
-        lockManager = dependencies.satisfyDependency( createLockManager( config, logging ) );
+        dependencies.satisfyDependency( SslPolicyLoader.create( config, logging.getInternalLogProvider() ) ); // for bolt and web server
 
-        idGeneratorFactory = dependencies.satisfyDependency( createIdGeneratorFactory( fileSystem ) );
+        lockManager = dependencies.satisfyDependency( createLockManager( config, platformModule.clock, logging ) );
+        statementLocksFactory = createStatementLocksFactory( lockManager, config, logging );
+
+        idTypeConfigurationProvider = createIdTypeConfigurationProvider( config );
+        eligibleForIdReuse = IdReuseEligibility.ALWAYS;
+
+        createIdComponents( platformModule, dependencies, createIdGeneratorFactory( fileSystem, idTypeConfigurationProvider ) );
+        dependencies.satisfyDependency( idGeneratorFactory );
+        dependencies.satisfyDependency( idController );
 
         propertyKeyTokenHolder = life.add( dependencies.satisfyDependency( new DelegatingPropertyKeyTokenHolder(
                 createPropertyKeyCreator( config, dataSourceManager, idGeneratorFactory ) ) ) );
@@ -102,24 +119,41 @@ public class CommunityEditionModule
         relationshipTypeTokenHolder = life.add( dependencies.satisfyDependency(new DelegatingRelationshipTypeTokenHolder(
                 createRelationshipTypeCreator( config, dataSourceManager, idGeneratorFactory ) ) ));
 
-        life.add( dependencies.satisfyDependency(
-                createKernelData( fileSystem, pageCache, storeDir, config, graphDatabaseFacade ) ) );
+        dependencies.satisfyDependency(
+                createKernelData( fileSystem, pageCache, storeDir, config, graphDatabaseFacade, life ) );
 
-        commitProcessFactory = createCommitProcessFactory();
+        commitProcessFactory = new CommunityCommitProcessFactory();
 
         headerInformationFactory = createHeaderInformationFactory();
 
         schemaWriteGuard = createSchemaWriteGuard();
 
-        transactionStartTimeout = config.get( GraphDatabaseSettings.transaction_start_timeout );
-
-        upgradeConfiguration = new ConfigMapUpgradeConfiguration( config );
+        transactionStartTimeout = config.get( GraphDatabaseSettings.transaction_start_timeout ).toMillis();
 
         constraintSemantics = createSchemaRuleVerifier();
 
-        registerRecovery( config.get( GraphDatabaseFacadeFactory.Configuration.editionName), life, dependencies );
+        coreAPIAvailabilityGuard = new CoreAPIAvailabilityGuard( platformModule.availabilityGuard, transactionStartTimeout );
 
-        publishEditionInfo( dependencies.resolveDependency( UsageData.class ) );
+        ioLimiter = IOLimiter.unlimited();
+
+        registerRecovery( platformModule.databaseInfo, life, dependencies );
+
+        publishEditionInfo( dependencies.resolveDependency( UsageData.class ), platformModule.databaseInfo, config );
+
+        dependencies.satisfyDependency( createSessionTracker() );
+    }
+
+    static Predicate<String> fileWatcherFileNameFilter()
+    {
+        return Predicates.any(
+                fileName -> fileName.startsWith( PhysicalLogFile.DEFAULT_NAME ),
+                fileName -> fileName.startsWith( IndexConfigStore.INDEX_DB_FILE_NAME )
+        );
+    }
+
+    protected IdTypeConfigurationProvider createIdTypeConfigurationProvider( Config config )
+    {
+        return new CommunityIdTypeConfigurationProvider();
     }
 
     protected ConstraintSemantics createSchemaRuleVerifier()
@@ -127,76 +161,18 @@ public class CommunityEditionModule
         return new StandardConstraintSemantics();
     }
 
-    private void publishEditionInfo( UsageData sysInfo )
+    protected StatementLocksFactory createStatementLocksFactory( Locks locks, Config config, LogService logService )
     {
-        sysInfo.set( UsageDataKeys.edition, determineEdition() );
-        sysInfo.set( UsageDataKeys.operationalMode, UsageDataKeys.OperationalMode.single );
-    }
-
-    private UsageDataKeys.Edition determineEdition()
-    {
-        // Currently, a user can be running enterprise or advanced edition and end up using this module to bootstrap
-        // So, until we've organized this differently, we use introspection to tell which edition is running
-        try
-        {
-            getClass().getClassLoader().loadClass( "org.neo4j.kernel.ha.HighlyAvailableGraphDatabase" );
-            return UsageDataKeys.Edition.enterprise;
-        }
-        catch ( ClassNotFoundException e )
-        {
-            // Not Enterprise
-        }
-        try
-        {
-            getClass().getClassLoader().loadClass( "org.neo4j.management.Neo4jManager" );
-            return UsageDataKeys.Edition.advanced;
-        }
-        catch ( ClassNotFoundException e )
-        {
-            // Not Advanced
-        }
-        return UsageDataKeys.Edition.community;
-
-    }
-
-    public static CommitProcessFactory createCommitProcessFactory()
-    {
-        return new CommitProcessFactory()
-        {
-            @Override
-            public TransactionCommitProcess create( TransactionAppender appender,
-                                                    KernelHealth kernelHealth, NeoStores neoStores,
-                                                    TransactionRepresentationStoreApplier storeApplier,
-                                                    NeoStoreInjectedTransactionValidator txValidator,
-                                                    IndexUpdatesValidator indexUpdatesValidator,
-                                                    Config config )
-            {
-                if ( config.get( GraphDatabaseSettings.read_only ) )
-                {
-                    return new ReadOnlyTransactionCommitProcess();
-                }
-                else
-                {
-                    return new TransactionRepresentationCommitProcess( appender, storeApplier, indexUpdatesValidator );
-                }
-            }
-        };
+        return new SimpleStatementLocksFactory( locks );
     }
 
     protected SchemaWriteGuard createSchemaWriteGuard()
     {
-        return new SchemaWriteGuard()
-        {
-            @Override
-            public void assertSchemaWritesAllowed() throws InvalidTransactionTypeKernelException
-            {
-            }
-        };
+        return () -> {};
     }
 
-
-    protected TokenCreator createRelationshipTypeCreator( Config config, DataSourceManager dataSourceManager,
-                                                          IdGeneratorFactory idGeneratorFactory )
+    private TokenCreator createRelationshipTypeCreator( Config config, DataSourceManager dataSourceManager,
+            IdGeneratorFactory idGeneratorFactory )
     {
         if ( config.get( GraphDatabaseSettings.read_only ) )
         {
@@ -208,8 +184,8 @@ public class CommunityEditionModule
         }
     }
 
-    protected TokenCreator createPropertyKeyCreator( Config config, DataSourceManager dataSourceManager,
-                                                     IdGeneratorFactory idGeneratorFactory )
+    private TokenCreator createPropertyKeyCreator( Config config, DataSourceManager dataSourceManager,
+            IdGeneratorFactory idGeneratorFactory )
     {
         if ( config.get( GraphDatabaseSettings.read_only ) )
         {
@@ -221,8 +197,8 @@ public class CommunityEditionModule
         }
     }
 
-    protected TokenCreator createLabelIdCreator( Config config, DataSourceManager dataSourceManager,
-                                                 IdGeneratorFactory idGeneratorFactory )
+    private TokenCreator createLabelIdCreator( Config config, DataSourceManager dataSourceManager,
+            IdGeneratorFactory idGeneratorFactory )
     {
         if ( config.get( GraphDatabaseSettings.read_only ) )
         {
@@ -234,44 +210,44 @@ public class CommunityEditionModule
         }
     }
 
-    protected KernelData createKernelData( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir, Config config,
-            GraphDatabaseAPI graphAPI )
+    private KernelData createKernelData( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir,
+            Config config, GraphDatabaseAPI graphAPI, LifeSupport life )
     {
-        return new DefaultKernelData( fileSystem, pageCache, storeDir, config, graphAPI );
+        return life.add( new DefaultKernelData( fileSystem, pageCache, storeDir, config, graphAPI ) );
     }
 
-    protected IdGeneratorFactory createIdGeneratorFactory( FileSystemAbstraction fs )
+    protected IdGeneratorFactory createIdGeneratorFactory( FileSystemAbstraction fs, IdTypeConfigurationProvider idTypeConfigurationProvider )
     {
-        return new DefaultIdGeneratorFactory( fs );
+        return new DefaultIdGeneratorFactory( fs, idTypeConfigurationProvider );
     }
 
-    public static Locks createLockManager( Config config, LogService logging )
+    public static Locks createLockManager( Config config, Clock clock, LogService logging )
     {
         String key = config.get( GraphDatabaseFacadeFactory.Configuration.lock_manager );
         for ( Locks.Factory candidate : Service.load( Locks.Factory.class ) )
         {
             String candidateId = candidate.getKeys().iterator().next();
-            if ( candidateId.equals( key ) )
+            if ( key.equals( candidateId ) )
             {
-                return candidate.newInstance( ResourceTypes.values() );
+                return candidate.newInstance( config, clock, ResourceTypes.values() );
             }
             else if ( key.equals( "" ) )
             {
-                logging.getInternalLog( CommunityFacadeFactory.class )
+                logging.getInternalLog( CommunityEditionModule.class )
                         .info( "No locking implementation specified, defaulting to '" + candidateId + "'" );
-                return candidate.newInstance( ResourceTypes.values() );
+                return candidate.newInstance( config, clock, ResourceTypes.values() );
             }
         }
 
         if ( key.equals( "community" ) )
         {
-            return new CommunityLockManger();
+            return new CommunityLockManger( config, clock );
         }
         else if ( key.equals( "" ) )
         {
-            logging.getInternalLog( CommunityFacadeFactory.class )
+            logging.getInternalLog( CommunityEditionModule.class )
                     .info( "No locking implementation specified, defaulting to 'community'" );
-            return new CommunityLockManger();
+            return new CommunityLockManger( config, clock );
         }
 
         throw new IllegalArgumentException( "No lock manager found with the name '" + key + "'." );
@@ -282,67 +258,36 @@ public class CommunityEditionModule
         return TransactionHeaderInformationFactory.DEFAULT;
     }
 
-    protected void registerRecovery( final String editionName, LifeSupport life,
-                                     final DependencyResolver dependencyResolver )
+    private void registerRecovery( final DatabaseInfo databaseInfo, LifeSupport life,
+            final DependencyResolver dependencyResolver )
     {
-        life.addLifecycleListener( new LifecycleListener()
+        life.addLifecycleListener( ( instance, from, to ) ->
         {
-            @Override
-            public void notifyStatusChanged( Object instance, LifecycleStatus from, LifecycleStatus to )
+            if ( instance instanceof DatabaseAvailability && to.equals( LifecycleStatus.STARTED ) )
             {
-                if ( instance instanceof DatabaseAvailability && to.equals( LifecycleStatus.STARTED ) )
-                {
-                    doAfterRecoveryAndStartup( editionName, dependencyResolver );
-                }
+                doAfterRecoveryAndStartup( databaseInfo, dependencyResolver );
             }
         } );
     }
 
     @Override
-    protected void doAfterRecoveryAndStartup( String editionName, DependencyResolver dependencyResolver )
+    public void registerEditionSpecificProcedures( Procedures procedures ) throws KernelException
     {
-        super.doAfterRecoveryAndStartup( editionName, dependencyResolver );
-
-        new RemoveOrphanConstraintIndexesOnStartup( dependencyResolver.resolveDependency( NeoStoreDataSource.class )
-                .getKernel(), dependencyResolver.resolveDependency( LogService.class ).getInternalLogProvider() ).perform();
+        // Community does not add any extra procedures
     }
 
-    protected final class DefaultKernelData extends KernelData implements Lifecycle
+    @Override
+    public void setupSecurityModule( PlatformModule platformModule, Procedures procedures )
     {
-        private final GraphDatabaseAPI graphDb;
-
-        public DefaultKernelData( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir, Config config,
-                GraphDatabaseAPI graphDb )
+        if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
         {
-            super( fileSystem, pageCache, storeDir, config );
-            this.graphDb = graphDb;
+            setupSecurityModule( platformModule, platformModule.logging.getUserLog( getClass() ),
+                    procedures, COMMUNITY_SECURITY_MODULE_ID );
         }
-
-        @Override
-        public Version version()
+        else
         {
-            return Version.getKernel();
-        }
-
-        @Override
-        public GraphDatabaseAPI graphDatabase()
-        {
-            return graphDb;
-        }
-
-        @Override
-        public void init() throws Throwable
-        {
-        }
-
-        @Override
-        public void start() throws Throwable
-        {
-        }
-
-        @Override
-        public void stop() throws Throwable
-        {
+            platformModule.life.add( platformModule.dependencies.satisfyDependency( AuthManager.NO_AUTH ) );
+            platformModule.life.add( platformModule.dependencies.satisfyDependency( UserManagerSupplier.NO_AUTH ) );
         }
     }
 }

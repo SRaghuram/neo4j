@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,10 @@
  */
 package org.neo4j.kernel.impl.transaction.log.checkpoint;
 
-import org.neo4j.helpers.Clock;
+import java.time.Clock;
+import java.util.concurrent.ThreadLocalRandom;
 
-public class TimeCheckPointThreshold implements CheckPointThreshold
+public class TimeCheckPointThreshold extends AbstractCheckPointThreshold
 {
     private volatile long lastCheckPointedTransactionId;
     private volatile long nextCheckPointTime;
@@ -29,11 +30,13 @@ public class TimeCheckPointThreshold implements CheckPointThreshold
     private final long timeMillisThreshold;
     private final Clock clock;
 
-    public TimeCheckPointThreshold( long timeMillisThreshold, Clock clock )
+    public TimeCheckPointThreshold( long thresholdMillis, Clock clock )
     {
-        this.timeMillisThreshold = timeMillisThreshold;
+        this.timeMillisThreshold = thresholdMillis;
         this.clock = clock;
-        this.nextCheckPointTime = clock.currentTimeMillis() + timeMillisThreshold;
+        // The random start offset means database in a cluster will not all check-point at the same time.
+        long randomStartOffset = thresholdMillis > 0 ? ThreadLocalRandom.current().nextLong( thresholdMillis ) : 0;
+        this.nextCheckPointTime = clock.millis() + thresholdMillis + randomStartOffset;
 
     }
 
@@ -44,16 +47,22 @@ public class TimeCheckPointThreshold implements CheckPointThreshold
     }
 
     @Override
-    public boolean isCheckPointingNeeded( long lastCommittedTransactionId )
+    protected boolean thresholdReached( long lastCommittedTransactionId )
     {
         return lastCommittedTransactionId > lastCheckPointedTransactionId &&
-               clock.currentTimeMillis() >= nextCheckPointTime;
+               clock.millis() >= nextCheckPointTime;
+    }
+
+    @Override
+    protected String description()
+    {
+        return "time threshold";
     }
 
     @Override
     public void checkPointHappened( long transactionId )
     {
-        nextCheckPointTime = clock.currentTimeMillis() + timeMillisThreshold;
+        nextCheckPointTime = clock.millis() + timeMillisThreshold;
         lastCheckPointedTransactionId = transactionId;
     }
 }

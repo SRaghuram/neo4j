@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,7 @@ import java.util.Collection;
 
 import org.neo4j.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.impl.transaction.command.Command;
+import org.neo4j.storageengine.api.StorageCommand;
 
 /**
  * Keeper of state that is about to be committed. That state can be {@link #extractCommands(Collection) extracted}
@@ -41,5 +42,5 @@ public interface RecordState
      * @param target list that commands will be added into.
      * @throws TransactionFailureException if the state is invalid or not applicable.
      */
-    void extractCommands( Collection<Command> target ) throws TransactionFailureException;
+    void extractCommands( Collection<StorageCommand> target ) throws TransactionFailureException;
 }

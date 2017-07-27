@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -44,10 +45,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
-import org.neo4j.function.Function;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.NotFoundException;
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.rest.domain.EndNodeNotFoundException;
 import org.neo4j.server.rest.domain.EvaluationException;
@@ -66,7 +67,6 @@ import org.neo4j.server.rest.web.DatabaseActions.RelationshipDirection;
 
 import static java.lang.String.format;
 import static org.neo4j.helpers.collection.Iterables.map;
-import static org.neo4j.helpers.collection.IteratorUtil.single;
 import static org.neo4j.helpers.collection.MapUtil.toMap;
 import static org.neo4j.server.rest.web.Surface.PATH_LABELS;
 import static org.neo4j.server.rest.web.Surface.PATH_NODES;
@@ -445,7 +445,7 @@ public class RestfulGraphDatabase
                 s.add((String) rawInput);
                 actions.addLabelToNode( nodeId, s );
             }
-            else if(rawInput instanceof Collection)
+            else if ( rawInput instanceof Collection )
             {
                 actions.addLabelToNode( nodeId, (Collection<String>) rawInput );
             }
@@ -1009,8 +1009,8 @@ public class RestfulGraphDatabase
                             String.valueOf( entityBody.get( "key" ) ),
                             getOrCreateValue, extractNodeIdOrNull( getStringOrNull(
                             entityBody, "uri" ) ), getMapOrNull( entityBody, "properties" ) );
-                    return result.other() ? output.created( result.first() ) : output.okIncludeLocation( result.first
-                            () );
+                    return result.other() ? output.created( result.first() )
+                                          : output.okIncludeLocation( result.first() );
 
                 case CreateOrFail:
                     entityBody = input.readMap( postBody, "key", "value" );
@@ -1107,8 +1107,8 @@ public class RestfulGraphDatabase
                     entityBody = input.readMap( postBody, "key", "value" );
                     result = actions.getOrCreateIndexedRelationship( indexName,
                             String.valueOf( entityBody.get( "key" ) ),
-                            String.valueOf( entityBody.get( "value" ) ), extractRelationshipIdOrNull( getStringOrNull
-                            ( entityBody, "uri" ) ),
+                            String.valueOf( entityBody.get( "value" ) ),
+                            extractRelationshipIdOrNull( getStringOrNull( entityBody, "uri" ) ),
                             extractNodeIdOrNull( getStringOrNull( entityBody, "start" ) ),
                             getStringOrNull( entityBody, "type" ), extractNodeIdOrNull( getStringOrNull( entityBody,
                             "end" ) ),
@@ -1119,8 +1119,8 @@ public class RestfulGraphDatabase
                     entityBody = input.readMap( postBody, "key", "value" );
                     result = actions.getOrCreateIndexedRelationship( indexName,
                             String.valueOf( entityBody.get( "key" ) ),
-                            String.valueOf( entityBody.get( "value" ) ), extractRelationshipIdOrNull( getStringOrNull
-                            ( entityBody, "uri" ) ),
+                            String.valueOf( entityBody.get( "value" ) ),
+                            extractRelationshipIdOrNull( getStringOrNull( entityBody, "uri" ) ),
                             extractNodeIdOrNull( getStringOrNull( entityBody, "start" ) ),
                             getStringOrNull( entityBody, "type" ), extractNodeIdOrNull( getStringOrNull( entityBody,
                             "end" ) ),
@@ -1756,7 +1756,7 @@ public class RestfulGraphDatabase
             }
             return output.ok( actions.createSchemaIndex( labelName, singlePropertyKey ) );
         }
-        catch( UnsupportedOperationException e )
+        catch ( UnsupportedOperationException e )
         {
             return output.badRequest( e );
         }
@@ -1796,7 +1796,7 @@ public class RestfulGraphDatabase
             return output.badRequest( new IllegalArgumentException( "Single property key assumed" ) );
         }
 
-        String property = single( properties );
+        String property = Iterables.single( properties );
         try
         {
             if ( actions.dropSchemaIndex( labelName, property ) )
@@ -1843,7 +1843,7 @@ public class RestfulGraphDatabase
             }
             return output.ok( actions.createPropertyUniquenessConstraint( labelName, singlePropertyKey ) );
         }
-        catch( UnsupportedOperationException e )
+        catch ( UnsupportedOperationException e )
         {
             return output.badRequest( e );
         }
@@ -1965,12 +1965,12 @@ public class RestfulGraphDatabase
     {
         try
         {
-        	ListRepresentation constraints = actions.getPropertyUniquenessConstraint( labelName, propertyKeys );
-    		return output.ok( constraints );
+            ListRepresentation constraints = actions.getPropertyUniquenessConstraint( labelName, propertyKeys );
+            return output.ok( constraints );
         }
         catch ( IllegalArgumentException e )
         {
-        	return output.notFound( e );
+            return output.notFound( e );
         }
     }
 

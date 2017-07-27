@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -101,7 +101,7 @@ public class LogEntryStart extends AbstractLogEntry
     {
         // [4 bits combined masterId/myId][4 bits xid hashcode, which combines time/randomness]
         long lowBits = Arrays.hashCode( additionalHeader );
-        long highBits = masterId*37 + authorId;
+        long highBits = masterId * 37 + authorId;
         return (highBits << 32) | (lowBits & 0xFFFFFFFFL);
     }
 
@@ -130,6 +130,7 @@ public class LogEntryStart extends AbstractLogEntry
                 "time=" + timestamp( timeWritten, timeZone ) + "," +
                 "lastCommittedTxWhenTransactionStarted=" + lastCommittedTxWhenTransactionStarted + "," +
                 "additionalHeaderLength=" + (additionalHeader == null ? -1 : additionalHeader.length) + "," +
+                (additionalHeader == null ? "" : Arrays.toString( additionalHeader ) ) + "," +
                 "position=" + startPosition + "," +
                 "checksum=" + checksum( this ) +
                 "]";

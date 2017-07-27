@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,9 +19,10 @@
  */
 package org.neo4j.unsafe.impl.batchimport.input;
 
-import org.neo4j.function.Function;
-import org.neo4j.function.Functions;
+import java.util.stream.Stream;
+
 import org.neo4j.helpers.ArrayUtil;
+import org.neo4j.unsafe.impl.batchimport.input.csv.Decorator;
 
 /**
  * Common {@link InputEntity} decorators, able to provide defaults or overrides.
@@ -31,30 +32,26 @@ public class InputEntityDecorators
     /**
      * Ensures that all {@link InputNode input nodes} will at least have the given set of labels.
      */
-    public static Function<InputNode,InputNode> additiveLabels( final String[] labelNamesToAdd )
+    public static Decorator<InputNode> additiveLabels( final String[] labelNamesToAdd )
     {
         if ( labelNamesToAdd == null || labelNamesToAdd.length == 0 )
         {
-            return Functions.identity();
+            return NO_NODE_DECORATOR;
         }
 
-        return new Function<InputNode,InputNode>()
+        return node ->
         {
-            @Override
-            public InputNode apply( InputNode node )
+            if ( node.hasLabelField() )
             {
-                if ( node.hasLabelField() )
-                {
-                    return node;
-                }
-
-                String[] union = ArrayUtil.union( node.labels(), labelNamesToAdd );
-                if ( union != node.labels() )
-                {
-                    node.setLabels( union );
-                }
                 return node;
             }
+
+            String[] union = ArrayUtil.union( node.labels(), labelNamesToAdd );
+            if ( union != node.labels() )
+            {
+                node.setLabels( union );
+            }
+            return node;
         };
     }
 
@@ -62,45 +59,52 @@ public class InputEntityDecorators
      * Ensures that {@link InputRelationship input relationships} without a specified relationship type will get
      * the specified default relationship type.
      */
-    public static Function<InputRelationship,InputRelationship> defaultRelationshipType( final String defaultType )
+    public static Decorator<InputRelationship> defaultRelationshipType( final String defaultType )
     {
         if ( defaultType == null )
         {
-            return Functions.identity();
+            return value -> value;
         }
 
-        return new Function<InputRelationship,InputRelationship>()
+        return relationship ->
         {
-            @Override
-            public InputRelationship apply( InputRelationship relationship )
+            if ( relationship.type() == null && !relationship.hasTypeId() )
             {
-                if ( relationship.type() == null && !relationship.hasTypeId() )
-                {
-                    relationship.setType( defaultType );
-                }
-
-                return relationship;
+                relationship.setType( defaultType );
             }
+
+            return relationship;
         };
     }
 
-    public static <ENTITY extends InputEntity> Function<ENTITY,ENTITY> decorators(
-            final Function<ENTITY,ENTITY>... decorators )
+    public static <ENTITY extends InputEntity> Decorator<ENTITY> decorators(
+            final Decorator<ENTITY>... decorators )
     {
-        return new Function<ENTITY,ENTITY>()
+        return new Decorator<ENTITY>()
         {
             @Override
-            public ENTITY apply( ENTITY from ) throws RuntimeException
+            public ENTITY apply( ENTITY from )
             {
-                for ( Function<ENTITY,ENTITY> decorator : decorators )
+                for ( Decorator<ENTITY> decorator : decorators )
                 {
                     from = decorator.apply( from );
                 }
                 return from;
             }
+
+            @Override
+            public boolean isMutable()
+            {
+                return Stream.of( decorators ).anyMatch( Decorator::isMutable );
+            }
         };
     }
 
-    public static final Function<InputNode,InputNode> NO_NODE_DECORATOR = Functions.identity();
-    public static final Function<InputRelationship,InputRelationship> NO_RELATIONSHIP_DECORATOR = Functions.identity();
+    public static final Decorator<InputNode> NO_NODE_DECORATOR = value -> value;
+    public static final Decorator<InputRelationship> NO_RELATIONSHIP_DECORATOR = value -> value;
+
+    public static <ENTITY extends InputEntity> Decorator<ENTITY> noDecorator()
+    {
+        return value -> value;
+    }
 }

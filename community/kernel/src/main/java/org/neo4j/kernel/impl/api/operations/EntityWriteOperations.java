@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,10 @@
 package org.neo4j.kernel.impl.api.operations;
 
 import org.neo4j.kernel.api.exceptions.EntityNotFoundException;
-import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationKernelException;
+import org.neo4j.kernel.api.exceptions.InvalidTransactionTypeKernelException;
+import org.neo4j.kernel.api.exceptions.KernelException;
+import org.neo4j.kernel.api.exceptions.legacyindex.AutoIndexingKernelException;
+import org.neo4j.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.kernel.api.properties.DefinedProperty;
 import org.neo4j.kernel.api.properties.Property;
 import org.neo4j.kernel.impl.api.KernelStatement;
@@ -36,9 +39,15 @@ public interface EntityWriteOperations
 
     long nodeCreate( KernelStatement statement );
 
-    void nodeDelete( KernelStatement state, long nodeId ) throws EntityNotFoundException;
+    void nodeDelete( KernelStatement state, long nodeId )
+            throws EntityNotFoundException, InvalidTransactionTypeKernelException, AutoIndexingKernelException;
 
-    void relationshipDelete( KernelStatement state, long relationshipId ) throws EntityNotFoundException;
+    void relationshipDelete( KernelStatement state, long relationshipId )
+            throws EntityNotFoundException, InvalidTransactionTypeKernelException, AutoIndexingKernelException;
+
+    int nodeDetachDelete( KernelStatement state, long nodeId )
+            throws EntityNotFoundException, AutoIndexingKernelException, InvalidTransactionTypeKernelException,
+            KernelException;
 
     /**
      * Labels a node with the label corresponding to the given label id.
@@ -48,7 +57,7 @@ public interface EntityWriteOperations
      * KeyReadOperations#labelGetForName(org.neo4j.kernel.api.Statement, String)}.
      */
     boolean nodeAddLabel( KernelStatement state, long nodeId, int labelId )
-            throws ConstraintValidationKernelException, EntityNotFoundException;
+            throws EntityNotFoundException, ConstraintValidationException;
 
     /**
      * Removes a label with the corresponding id from a node.
@@ -60,9 +69,11 @@ public interface EntityWriteOperations
     boolean nodeRemoveLabel( KernelStatement state, long nodeId, int labelId ) throws EntityNotFoundException;
 
     Property nodeSetProperty( KernelStatement state, long nodeId, DefinedProperty property )
-            throws ConstraintValidationKernelException, EntityNotFoundException;
+            throws EntityNotFoundException, AutoIndexingKernelException,
+                   InvalidTransactionTypeKernelException, ConstraintValidationException;
 
-    Property relationshipSetProperty( KernelStatement state, long relationshipId, DefinedProperty property ) throws EntityNotFoundException;
+    Property relationshipSetProperty( KernelStatement state, long relationshipId, DefinedProperty property )
+            throws EntityNotFoundException, AutoIndexingKernelException, InvalidTransactionTypeKernelException;
 
     Property graphSetProperty( KernelStatement state, DefinedProperty property );
 
@@ -70,9 +81,11 @@ public interface EntityWriteOperations
      * Remove a node's property given the node's id and the property key id and return the value to which
      * it was set or null if it was not set on the node
      */
-    Property nodeRemoveProperty( KernelStatement state, long nodeId, int propertyKeyId ) throws EntityNotFoundException;
+    Property nodeRemoveProperty( KernelStatement state, long nodeId, int propertyKeyId )
+            throws EntityNotFoundException, AutoIndexingKernelException, InvalidTransactionTypeKernelException;
 
-    Property relationshipRemoveProperty( KernelStatement state, long relationshipId, int propertyKeyId ) throws EntityNotFoundException;
+    Property relationshipRemoveProperty( KernelStatement state, long relationshipId, int propertyKeyId )
+            throws EntityNotFoundException, AutoIndexingKernelException, InvalidTransactionTypeKernelException;
 
     Property graphRemoveProperty( KernelStatement state, int propertyKeyId );
 }

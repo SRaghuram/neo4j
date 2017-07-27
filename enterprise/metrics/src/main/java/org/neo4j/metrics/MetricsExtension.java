@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,99 +21,71 @@ package org.neo4j.metrics;
 
 import com.codahale.metrics.MetricRegistry;
 
-import org.neo4j.cluster.ClusterSettings;
-import org.neo4j.io.pagecache.monitoring.PageCacheMonitor;
-import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.LogService;
-import org.neo4j.kernel.impl.transaction.TransactionCounters;
+import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
-import org.neo4j.metrics.output.CsvOutput;
-import org.neo4j.metrics.output.GangliaOutput;
-import org.neo4j.metrics.output.GraphiteOutput;
-import org.neo4j.metrics.source.Neo4jMetrics;
+import org.neo4j.metrics.output.CompositeEventReporter;
+import org.neo4j.metrics.output.EventReporterBuilder;
+import org.neo4j.metrics.source.Neo4jMetricsBuilder;
 
 public class MetricsExtension implements Lifecycle
 {
-    private final LifeSupport life;
-    private final LogService logService;
-    private final Config configuration;
-    private final Monitors monitors;
-    private final TransactionCounters transactionCounters;
-    private final PageCacheMonitor pageCacheCounters;
-    private final IdGeneratorFactory idGeneratorFactory;
+    private final LifeSupport life = new LifeSupport();
+    private Log logger;
+    private CompositeEventReporter reporter;
+    private boolean metricsBuilt;
 
-
-    public MetricsExtension( MetricsKernelExtensionFactory.Dependencies dependencies )
+    MetricsExtension( KernelContext kernelContext, MetricsKernelExtensionFactory.Dependencies dependencies )
     {
-        life = new LifeSupport();
-        logService = dependencies.logService();
-        configuration = dependencies.configuration();
-        monitors = dependencies.monitors();
-        transactionCounters = dependencies.transactionCounters();
-        pageCacheCounters = dependencies.pageCacheCounters();
-        idGeneratorFactory = dependencies.idGeneratorFactory();
+        LogService logService = dependencies.logService();
+        Config configuration = dependencies.configuration();
+        logger = logService.getUserLog( getClass() );
+
+        MetricRegistry registry = new MetricRegistry();
+        reporter = new EventReporterBuilder( configuration, registry, logger, kernelContext, life ).build();
+        metricsBuilt = new Neo4jMetricsBuilder( registry, reporter, configuration, logService, kernelContext,
+                                                dependencies, life ).build();
     }
 
     @Override
-    public void init() throws Throwable
+    public void init()
     {
-        Log logger = logService.getUserLog( getClass() );
+        logger.info( "Initiating metrics..." );
+        if ( metricsBuilt && reporter.isEmpty() )
+        {
+            logger.warn( "Several metrics were enabled but no exporting option was configured to report values to. " +
+                         "Disabling kernel metrics extension." );
+            life.clear();
+        }
 
-        // Setup metrics
-        final MetricRegistry registry = new MetricRegistry();
-
-        logger.info( "Initiating metrics.." );
-
-        // Setup output
-        String prefix = computePrefix( configuration );
-
-        life.add( new CsvOutput( configuration, registry, logger ) );
-        life.add( new GraphiteOutput( configuration, registry, logger, prefix ) );
-        life.add( new GangliaOutput( configuration, registry, logger, prefix ) );
-
-        // Setup metric gathering
-        life.add( new Neo4jMetrics( registry, configuration, monitors,
-                transactionCounters, pageCacheCounters,
-                idGeneratorFactory ) );
+        if ( !reporter.isEmpty() && !metricsBuilt )
+        {
+            logger.warn( "Exporting tool have been configured to report values to but no metrics were enabled. " +
+                         "Disabling kernel metrics extension." );
+            life.clear();
+        }
 
         life.init();
     }
 
     @Override
-    public void start() throws Throwable
+    public void start()
     {
         life.start();
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop()
     {
         life.stop();
     }
 
     @Override
-    public void shutdown() throws Throwable
+    public void shutdown()
     {
         life.shutdown();
-    }
-
-    private String computePrefix( Config config )
-    {
-        String prefix = config.get( MetricsSettings.metricsPrefix );
-
-        if ( prefix.equals( MetricsSettings.metricsPrefix.getDefaultValue() ) )
-        {
-            // If default name and in HA, try to figure out a nicer name
-            if ( config.getParams().containsKey( ClusterSettings.server_id.name() ) )
-            {
-                prefix += "." + config.get( ClusterSettings.cluster_name );
-                prefix += "." + config.get( ClusterSettings.server_id );
-            }
-        }
-        return prefix;
     }
 }

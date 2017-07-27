@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -46,7 +46,7 @@ public class IndexManagerFacadeMethods
         }
     };
 
-    private static final FacadeMethod<IndexManager> FOR_NODES_WITH_CONFIGURATION = new FacadeMethod<IndexManager>(
+    private static final FacadeMethod<IndexManager> FOR_NODES_WITH_CONFIG = new FacadeMethod<IndexManager>(
             "Index<Node> forNodes( String indexName, Map<String, String> customConfiguration )" )
     {
         @Override
@@ -89,9 +89,8 @@ public class IndexManagerFacadeMethods
         }
     };
 
-    private static final FacadeMethod<IndexManager> FOR_RELATIONSHIPS_WITH_CONFIGURATION = new
-            FacadeMethod<IndexManager>
-            ( "RelationshipIndex forRelationships( String indexName, Map<String, String> customConfiguration )" )
+    private static final FacadeMethod<IndexManager> FOR_RELATIONSHIPS_WITH_CONFIG = new FacadeMethod<IndexManager>(
+            "RelationshipIndex forRelationships( String indexName, Map<String, String> customConfiguration )" )
     {
         @Override
         public void call( IndexManager indexManager )
@@ -117,11 +116,11 @@ public class IndexManagerFacadeMethods
             unmodifiableCollection( asList(
                     EXISTS_FOR_NODES,
                     FOR_NODES,
-                    FOR_NODES_WITH_CONFIGURATION,
+                    FOR_NODES_WITH_CONFIG,
                     NODE_INDEX_NAMES,
                     EXISTS_FOR_RELATIONSHIPS,
                     FOR_RELATIONSHIPS,
-                    FOR_RELATIONSHIPS_WITH_CONFIGURATION,
+                    FOR_RELATIONSHIPS_WITH_CONFIG,
                     RELATIONSHIP_INDEX_NAMES
             ) );
 }

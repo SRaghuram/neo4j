@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,27 +26,44 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.neo4j.graphdb.DynamicLabel;
+import org.neo4j.adversaries.ClassGuardedAdversary;
+import org.neo4j.adversaries.CountingAdversary;
+import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.helpers.Format;
+import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.io.ByteUnit;
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.storemigration.LogFiles;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.kernel.impl.transaction.command.Command;
+import org.neo4j.kernel.internal.DatabaseHealth;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.AdversarialPageCacheGraphDatabaseFactory;
+import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.neo4j.graphdb.RelationshipType.withName;
 
 public class RecoveryIT
 {
-
     @Rule
-    public final TargetDirectory.TestDirectory directory = TargetDirectory.testDirForTest( getClass() );
+    public final TestDirectory directory = TestDirectory.testDirectory();
+    @Rule
+    public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
 
     @Test
     public void idGeneratorsRebuildAfterRecovery() throws IOException
@@ -66,19 +83,21 @@ public class RecoveryIT
         File restoreDbStoreDir = copyTransactionLogs();
 
         GraphDatabaseService recoveredDatabase = startDatabase( restoreDbStoreDir );
-        NeoStores neoStore =
-                ((GraphDatabaseAPI) recoveredDatabase).getDependencyResolver().resolveDependency( NeoStores.class );
+        NeoStores neoStore = ((GraphDatabaseAPI) recoveredDatabase).getDependencyResolver()
+                .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores();
         assertEquals( numberOfNodes, neoStore.getNodeStore().getHighId() );
+        // Make sure id generator has been rebuilt so this doesn't throw null pointer exception
+        assertTrue( neoStore.getNodeStore().nextId() > 0 );
 
         database.shutdown();
         recoveredDatabase.shutdown();
     }
 
     @Test
-    public void deleteAndRemoveNodePropertyDuringOneRecoveryRun() throws IOException
+    public void shouldRecoverIdsCorrectlyWhenWeCreateAndDeleteANodeInTheSameRecoveryRun() throws IOException
     {
         GraphDatabaseService database = startDatabase( directory.graphDbDir() );
-        Label testLabel = DynamicLabel.label( "testLabel" );
+        Label testLabel = Label.label( "testLabel" );
         final String propertyToDelete = "propertyToDelete";
         final String validPropertyName = "validProperty";
 
@@ -120,6 +139,77 @@ public class RecoveryIT
         recoveredDatabase.shutdown();
     }
 
+    @Test( timeout = 60_000 )
+    public void recoveryShouldFixPartiallyAppliedSchemaIndexUpdates()
+    {
+        Label label = Label.label( "Foo" );
+        String property = "Bar";
+
+        // cause failure during 'relationship.delete()' command application
+        ClassGuardedAdversary adversary = new ClassGuardedAdversary( new CountingAdversary( 1, true ),
+                Command.RelationshipCommand.class );
+        adversary.disable();
+
+        File storeDir = directory.graphDbDir();
+        GraphDatabaseService db = AdversarialPageCacheGraphDatabaseFactory.create( fileSystemRule.get(), adversary )
+                .newEmbeddedDatabaseBuilder( storeDir )
+                .newGraphDatabase();
+        try
+        {
+            try ( Transaction tx = db.beginTx() )
+            {
+                db.schema().constraintFor( label ).assertPropertyIsUnique( property ).create();
+                tx.success();
+            }
+
+            long relationshipId = createRelationship( db );
+
+            TransactionFailureException txFailure = null;
+            try ( Transaction tx = db.beginTx() )
+            {
+                Node node = db.createNode( label );
+                node.setProperty( property, "B" );
+                db.getRelationshipById( relationshipId ).delete(); // this should fail because of the adversary
+                tx.success();
+                adversary.enable();
+            }
+            catch ( TransactionFailureException e )
+            {
+                txFailure = e;
+            }
+            assertNotNull( txFailure );
+            adversary.disable();
+
+            healthOf( db ).healed(); // heal the db so it is possible to inspect the data
+
+            // now we can observe partially committed state: node is in the index and relationship still present
+            try ( Transaction tx = db.beginTx() )
+            {
+                assertNotNull( findNode( db, label, property, "B" ) );
+                assertNotNull( db.getRelationshipById( relationshipId ) );
+                tx.success();
+            }
+
+            healthOf( db ).panic( txFailure.getCause() ); // panic the db again to force recovery on the next startup
+
+            // restart the database, now with regular page cache
+            db.shutdown();
+            db = startDatabase( storeDir );
+
+            // now we observe correct state: node is in the index and relationship is removed
+            try ( Transaction tx = db.beginTx() )
+            {
+                assertNotNull( findNode( db, label, property, "B" ) );
+                assertRelationshipNotExist( db, relationshipId );
+                tx.success();
+            }
+        }
+        finally
+        {
+            db.shutdown();
+        }
+    }
+
     private Node findNodeByLabel( GraphDatabaseService database, Label testLabel )
     {
         try ( ResourceIterator<Node> nodes = database.findNodes( testLabel ) )
@@ -128,22 +218,62 @@ public class RecoveryIT
         }
     }
 
+    private static Node findNode( GraphDatabaseService db, Label label, String property, String value )
+    {
+        try ( ResourceIterator<Node> nodes = db.findNodes( label, property, value ) )
+        {
+            return Iterators.single( nodes );
+        }
+    }
+
+    private static long createRelationship( GraphDatabaseService db )
+    {
+        long relationshipId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node start = db.createNode( Label.label( System.currentTimeMillis() + "" ) );
+            Node end = db.createNode( Label.label( System.currentTimeMillis() + "" ) );
+            relationshipId = start.createRelationshipTo( end, withName( "KNOWS" ) ).getId();
+            tx.success();
+        }
+        return relationshipId;
+    }
+
+    private static void assertRelationshipNotExist( GraphDatabaseService db, long id )
+    {
+        try
+        {
+            db.getRelationshipById( id );
+            fail( "Exception expected" );
+        }
+        catch ( Exception e )
+        {
+            assertThat( e, instanceOf( NotFoundException.class ) );
+        }
+    }
+
+    private static DatabaseHealth healthOf( GraphDatabaseService db )
+    {
+        DependencyResolver resolver = ((GraphDatabaseAPI) db).getDependencyResolver();
+        return resolver.resolveDependency( DatabaseHealth.class );
+    }
+
     private String createLongString()
     {
-        String[] strings = new String[Format.KB * 2];
+        String[] strings = new String[(int) ByteUnit.kibiBytes( 2 )];
         Arrays.fill( strings, "a" );
         return Arrays.toString( strings );
     }
 
     private GraphDatabaseService startDatabase( File storeDir )
     {
-        return new GraphDatabaseFactory().newEmbeddedDatabase( storeDir.getAbsolutePath() );
+        return new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
     }
 
     private File copyTransactionLogs() throws IOException
     {
         File restoreDbStoreDir = this.directory.directory( "restore-db" );
-        LogFiles.move( new DefaultFileSystemAbstraction(), this.directory.graphDbDir(), restoreDbStoreDir );
+        LogFiles.move( fileSystemRule.get(), this.directory.graphDbDir(), restoreDbStoreDir );
         return restoreDbStoreDir;
     }
 }

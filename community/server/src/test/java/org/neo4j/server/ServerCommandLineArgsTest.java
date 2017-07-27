@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,37 +19,58 @@
  */
 package org.neo4j.server;
 
+import java.io.File;
+import java.util.Optional;
+
 import org.junit.Test;
 
-import java.io.File;
-
-import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.collection.Pair;
+import org.neo4j.server.configuration.ConfigLoader;
 
 import static org.junit.Assert.assertEquals;
 
+import static org.junit.Assert.assertNull;
 import static org.neo4j.helpers.ArrayUtil.array;
-import static org.neo4j.helpers.collection.IteratorUtil.asSet;
+import static org.neo4j.helpers.collection.Iterators.asSet;
 
 public class ServerCommandLineArgsTest
 {
     @Test
     public void shouldPickUpSpecifiedConfigFile() throws Exception
     {
-        shouldPickUpSpecifiedConfigFile( ServerCommandLineArgs.CONFIG_KEY_ALT_1 );
-        shouldPickUpSpecifiedConfigFile( ServerCommandLineArgs.CONFIG_KEY_ALT_2 );
+        File dir = new File( "/some-dir" ).getAbsoluteFile();
+        Optional<File> expectedFile = Optional.of( new File( dir, ConfigLoader.DEFAULT_CONFIG_FILE_NAME ) );
+        assertEquals( expectedFile, parse( "--config-dir", dir.toString() ).configFile() );
+        assertEquals( expectedFile, parse( "--config-dir=" + dir ).configFile() );
     }
 
-    public void shouldPickUpSpecifiedConfigFile( String key )
+    @Test
+    public void shouldResolveConfigFileRelativeToWorkingDirectory() throws Exception
     {
-        // GIVEN
-        String customConfigFile = "MyConfigFile";
-        String[] args = array( "--" + key, customConfigFile );
+        Optional<File> expectedFile = Optional.of( new File( "some-dir", ConfigLoader.DEFAULT_CONFIG_FILE_NAME ) );
+        assertEquals( expectedFile, parse( "--config-dir", "some-dir" ).configFile() );
+        assertEquals( expectedFile, parse( "--config-dir=some-dir" ).configFile() );
+    }
 
-        // WHEN
-        ServerCommandLineArgs parsed = ServerCommandLineArgs.parse( args );
+    @Test
+    public void shouldReturnNullIfConfigDirIsNotSpecified()
+    {
+        assertEquals( Optional.empty(), parse().configFile() );
+    }
 
-        // THEN
-        assertEquals( new File( customConfigFile ), parsed.configFile() );
+    @Test
+    public void shouldPickUpSpecifiedHomeDir() throws Exception
+    {
+        File homeDir = new File( "/some/absolute/homedir" ).getAbsoluteFile();
+
+        assertEquals( homeDir, parse( "--home-dir", homeDir.toString() ).homeDir() );
+        assertEquals( homeDir, parse( "--home-dir=" + homeDir.toString() ).homeDir() );
+    }
+
+    @Test
+    public void shouldReturnNullIfHomeDirIsNotSpecified()
+    {
+        assertNull( parse().homeDir() );
     }
 
     @Test
@@ -94,10 +115,15 @@ public class ServerCommandLineArgsTest
 
         // THEN
         assertEquals( asSet(
-                Pair.of( "my_first_option", "first" ),
-                Pair.of( "myoptionenabled", Boolean.TRUE.toString() ),
-                Pair.of( "my_second_option", "second" ) ),
+                        Pair.of( "my_first_option", "first" ),
+                        Pair.of( "myoptionenabled", Boolean.TRUE.toString() ),
+                        Pair.of( "my_second_option", "second" ) ),
 
                 asSet( parsed.configOverrides() ) );
+    }
+
+    private ServerCommandLineArgs parse( String... args )
+    {
+        return ServerCommandLineArgs.parse( args );
     }
 }

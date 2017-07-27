@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,16 +19,16 @@
  */
 package org.neo4j.kernel.impl.core;
 
-import java.io.File;
-
 import org.junit.Rule;
 import org.junit.Test;
+
+import java.io.File;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.EphemeralFileSystemRule;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
 
@@ -39,7 +39,7 @@ public class TestIdReuse
     {
         makeSureIdsGetsReused( "neostore.propertystore.db", 10, 200 );
     }
-    
+
     @Test
     public void makeSureIdsGetsReusedForArrayStore() throws Exception
     {
@@ -50,7 +50,7 @@ public class TestIdReuse
         }
         makeSureIdsGetsReused( "neostore.propertystore.db.arrays", array, 20 );
     }
-    
+
     @Test
     public void makeSureIdsGetsReusedForStringStore() throws Exception
     {
@@ -61,9 +61,10 @@ public class TestIdReuse
         }
         makeSureIdsGetsReused( "neostore.propertystore.db.strings", string, 20 );
     }
-    
-    @Rule public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
-    
+
+    @Rule
+    public EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+
     private void makeSureIdsGetsReused( String fileName, Object value, int iterations ) throws Exception
     {
         File storeDir = new File( "target/var/idreuse" );
@@ -85,7 +86,7 @@ public class TestIdReuse
         db.shutdown();
         assertEquals( sizeBefore, file.length() );
     }
-    
+
     private void setAndRemoveSomeProperties( GraphDatabaseService graphDatabaseService, Object value )
     {
         Node commonNode;

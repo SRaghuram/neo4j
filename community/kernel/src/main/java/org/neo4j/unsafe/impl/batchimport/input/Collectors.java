@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,22 +20,38 @@
 package org.neo4j.unsafe.impl.batchimport.input;
 
 import java.io.OutputStream;
+import java.util.function.Function;
 
-import org.neo4j.function.Function;
+import org.neo4j.io.NullOutputStream;
 
 /**
  * Common implementations of {@link Collector}
  */
 public class Collectors
 {
-    public static Collector badCollector( OutputStream out, int tolerance )
+    public static Collector silentBadCollector( int tolerance )
     {
-        return badCollector( out, tolerance, BadCollector.COLLECT_ALL );
+        return silentBadCollector( tolerance, BadCollector.COLLECT_ALL );
     }
 
-    public static Collector badCollector( OutputStream out, int tolerance, int collect )
+    public static Collector silentBadCollector( long tolerance, int collect )
     {
-        return new BadCollector( out, tolerance, collect );
+        return badCollector( NullOutputStream.NULL_OUTPUT_STREAM, tolerance, collect );
+    }
+
+    public static Collector badCollector( OutputStream out, int tolerance )
+    {
+        return badCollector( out, tolerance, BadCollector.COLLECT_ALL, false );
+    }
+
+    public static Collector badCollector( OutputStream out, long tolerance, int collect )
+    {
+        return new BadCollector( out, tolerance, collect, false );
+    }
+
+    public static Collector badCollector( OutputStream out, int tolerance, int collect, boolean skipBadEntriesLogging )
+    {
+        return new BadCollector( out, tolerance, collect, skipBadEntriesLogging );
     }
 
     public static Function<OutputStream,Collector> badCollector( final int tolerance )
@@ -45,19 +61,13 @@ public class Collectors
 
     public static Function<OutputStream,Collector> badCollector( final int tolerance, final int collect )
     {
-        return new Function<OutputStream,Collector>()
-        {
-            @Override
-            public Collector apply( OutputStream out ) throws RuntimeException
-            {
-                return badCollector( out, tolerance, collect );
-            }
-        };
+        return out -> badCollector( out, tolerance, collect, false );
     }
 
-    public static int collect( boolean skipBadRelationships, boolean skipDuplicateNodes )
+    public static int collect( boolean skipBadRelationships, boolean skipDuplicateNodes, boolean ignoreExtraColumns )
     {
         return (skipBadRelationships ? BadCollector.BAD_RELATIONSHIPS : 0 ) |
-               (skipDuplicateNodes ? BadCollector.DUPLICATE_NODES : 0 );
+               (skipDuplicateNodes ? BadCollector.DUPLICATE_NODES : 0 ) |
+               (ignoreExtraColumns ? BadCollector.EXTRA_COLUMNS : 0 );
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,15 +26,27 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static org.junit.Assert.assertTrue;
-
-import static org.neo4j.graphdb.DynamicLabel.label;
+import static org.neo4j.graphdb.Label.label;
 
 public class LabelRecoveryTest
 {
+    public final EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
+    private GraphDatabaseService database;
+
+    @After
+    public void tearDown() throws Exception
+    {
+        if ( database != null )
+        {
+            database.shutdown();
+        }
+        fs.close();
+    }
+
     /**
      * Reading a node command might leave a node record which referred to
      * labels in one or more dynamic records as marked as heavy even if that
@@ -88,17 +100,4 @@ public class LabelRecoveryTest
             }
         }
     }
-
-    @After
-    public void tearDown()
-    {
-        if ( database != null )
-        {
-            database.shutdown();
-        }
-        fs.shutdown();
-    }
-
-    public final EphemeralFileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
-    private GraphDatabaseService database;
 }

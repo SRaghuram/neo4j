@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -47,12 +47,10 @@ public class DefaultCacheAccess implements CacheAccess
     private final PackedMultiFieldCache cache;
     private long recordsPerCPU;
     private final Counts counts;
-    private final int threads;
 
     public DefaultCacheAccess( Counts counts, int threads )
     {
         this.counts = counts;
-        this.threads = threads;
         this.propertiesProcessed = new Collection[threads];
         this.cache = new PackedMultiFieldCache( 1, 63 );
     }
@@ -88,17 +86,17 @@ public class DefaultCacheAccess implements CacheAccess
     }
 
     @Override
-    public void prepareForProcessingOfSingleStore( long storeHighId )
+    public void prepareForProcessingOfSingleStore( long recordsPerCpu )
     {
         clients.resetId();
-        recordsPerCPU = (storeHighId / threads) + 1;
+        this.recordsPerCPU = recordsPerCpu;
     }
 
     private class DefaultClient implements Client
     {
         private final int threadIndex;
 
-        public DefaultClient( int threadIndex )
+        DefaultClient( int threadIndex )
         {
             this.threadIndex = threadIndex;
         }
@@ -107,6 +105,12 @@ public class DefaultCacheAccess implements CacheAccess
         public long getFromCache( long id, int slot )
         {
             return cache.get( id, slot );
+        }
+
+        @Override
+        public boolean getBooleanFromCache( long id, int slot )
+        {
+            return cache.get( id, slot ) != 0;
         }
 
         @Override
@@ -139,7 +143,7 @@ public class DefaultCacheAccess implements CacheAccess
             }
 
             return id >= threadIndex * recordsPerCPU &&
-                   id <= (threadIndex + 1) * recordsPerCPU;
+                   id < (threadIndex + 1) * recordsPerCPU;
         }
 
         @Override
@@ -190,6 +194,12 @@ public class DefaultCacheAccess implements CacheAccess
         public void incAndGetCount( Type type )
         {
             counts.incAndGet( type, threadIndex );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "Client[" + threadIndex + ", records/CPU:" + recordsPerCPU + "]";
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,25 +19,25 @@
  */
 package org.neo4j.graphdb;
 
+import org.junit.Test;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 
-import org.junit.Test;
-
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.locking.LockCountVisitor;
 import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static java.util.concurrent.TimeUnit.SECONDS;
-
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
-
+import static org.junit.Assert.fail;
 import static org.neo4j.graphdb.DynamicLabel.label;
 import static org.neo4j.helpers.Exceptions.rootCause;
 
@@ -47,7 +47,7 @@ public class GraphDatabaseShutdownTest
     public void transactionShouldReleaseLocksWhenGraphDbIsBeingShutdown() throws Exception
     {
         // GIVEN
-        final GraphDatabaseAPI db = (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabase();
+        final GraphDatabaseAPI db = newDb();
         final Locks locks = db.getDependencyResolver().resolveDependency( Locks.class );
         assertEquals( 0, lockCount( locks ) );
         Exception exceptionThrownByTxClose = null;
@@ -79,7 +79,7 @@ public class GraphDatabaseShutdownTest
     public void shouldBeAbleToShutdownWhenThereAreTransactionsWaitingForLocks() throws Exception
     {
         // GIVEN
-        final GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        final GraphDatabaseService db = newDb();
 
         final Node node;
         try ( Transaction tx = db.beginTx() )
@@ -130,6 +130,7 @@ public class GraphDatabaseShutdownTest
         try
         {
             secondTxResult.get( 60, SECONDS );
+            fail( "Exception expected" );
         }
         catch ( Exception e )
         {
@@ -142,5 +143,13 @@ public class GraphDatabaseShutdownTest
         LockCountVisitor lockCountVisitor = new LockCountVisitor();
         locks.accept( lockCountVisitor );
         return lockCountVisitor.getLockCount();
+    }
+
+    private GraphDatabaseAPI newDb()
+    {
+        return (GraphDatabaseAPI) new TestGraphDatabaseFactory()
+                .newImpermanentDatabaseBuilder()
+                .setConfig( GraphDatabaseSettings.shutdown_transaction_end_timeout, "1s" )
+                .newGraphDatabase();
     }
 }

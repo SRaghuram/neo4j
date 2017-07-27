@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -26,14 +26,14 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.test.LimitedFileSystemGraphDatabase;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.test.CleanupRule;
-import org.neo4j.test.PageCacheRule;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.kernel.impl.transaction.log.LogVersionRepository;
+import org.neo4j.test.LimitedFileSystemGraphDatabase;
+import org.neo4j.test.rule.CleanupRule;
+import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -41,7 +41,12 @@ import static org.junit.Assert.fail;
 
 public class RunOutOfDiskSpaceIT
 {
-    public final @Rule CleanupRule cleanup = new CleanupRule();
+    @Rule
+    public final CleanupRule cleanup = new CleanupRule();
+    @Rule
+    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
 
     @Test
     public void shouldPropagateIOExceptions() throws Exception
@@ -49,7 +54,7 @@ public class RunOutOfDiskSpaceIT
         // Given
         TransactionFailureException exceptionThrown = null;
 
-        String storeDir = testDirectory.absolutePath();
+        File storeDir = testDirectory.absolutePath();
         LimitedFileSystemGraphDatabase db = new LimitedFileSystemGraphDatabase( storeDir );
 
         try ( Transaction tx = db.beginTx() )
@@ -58,7 +63,7 @@ public class RunOutOfDiskSpaceIT
             tx.success();
         }
 
-        long logVersion = db.getDependencyResolver().resolveDependency( NeoStores.class ).getMetaDataStore()
+        long logVersion = db.getDependencyResolver().resolveDependency( LogVersionRepository.class )
                             .getCurrentLogVersion();
 
         db.runOutOfDiskSpaceNao();
@@ -94,9 +99,8 @@ public class RunOutOfDiskSpaceIT
         // Given
         TransactionFailureException expectedCommitException = null;
         TransactionFailureException expectedStartException = null;
-        String storeDir = testDirectory.absolutePath();
+        File storeDir = testDirectory.absolutePath();
         LimitedFileSystemGraphDatabase db = cleanup.add( new LimitedFileSystemGraphDatabase( storeDir ) );
-
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -104,8 +108,8 @@ public class RunOutOfDiskSpaceIT
             tx.success();
         }
 
-        long logVersion = db.getDependencyResolver().resolveDependency( NeoStores.class ).getMetaDataStore()
-                            .getCurrentLogVersion();
+        long logVersion = db.getDependencyResolver().resolveDependency( LogVersionRepository.class )
+                .getCurrentLogVersion();
 
         db.runOutOfDiskSpaceNao();
 
@@ -148,8 +152,4 @@ public class RunOutOfDiskSpaceIT
         assertEquals( logVersion, MetaDataStore.getRecord( pageCache, neoStore, MetaDataStore.Position.LOG_VERSION ) );
     }
 
-    @Rule
-    public final TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
-    @Rule
-    public final PageCacheRule pageCacheRule = new PageCacheRule();
 }

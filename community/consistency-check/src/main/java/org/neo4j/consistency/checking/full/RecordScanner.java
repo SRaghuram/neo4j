@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,9 +21,9 @@ package org.neo4j.consistency.checking.full;
 
 import org.neo4j.consistency.statistics.Statistics;
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
-import org.neo4j.kernel.api.direct.BoundedIterable;
 
 abstract class RecordScanner<RECORD> extends ConsistencyCheckerTask
 {
@@ -32,14 +32,17 @@ abstract class RecordScanner<RECORD> extends ConsistencyCheckerTask
     protected final RecordProcessor<RECORD> processor;
     private final IterableStore[] warmUpStores;
 
-    public RecordScanner( String name, Statistics statistics, int threads, BoundedIterable<RECORD> store,
+    RecordScanner( String name, Statistics statistics, int threads, BoundedIterable<RECORD> store,
             ProgressMonitorFactory.MultiPartBuilder builder, RecordProcessor<RECORD> processor,
             IterableStore... warmUpStores )
     {
         super( name, statistics, threads );
         this.store = store;
         this.processor = processor;
-        this.progress = builder.progressForPart( name, store.maxCount() );
+        long maxCount = store.maxCount();
+        this.progress = maxCount == -1
+                ? builder.progressForUnknownPart( name )
+                : builder.progressForPart( name, maxCount );
         this.warmUpStores = warmUpStores;
     }
 

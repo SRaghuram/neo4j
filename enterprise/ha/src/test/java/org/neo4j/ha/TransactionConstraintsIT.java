@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,15 +19,17 @@
  */
 package org.neo4j.ha;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
-
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.RuleChain;
 
-import org.neo4j.graphdb.DynamicLabel;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
+import org.neo4j.cluster.InstanceId;
+import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Lock;
@@ -36,55 +38,62 @@ import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
-import org.neo4j.graphdb.schema.ConstraintDefinition;
+import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.impl.MyRelTypes;
 import org.neo4j.kernel.impl.ha.ClusterManager;
-import org.neo4j.qa.tooling.DumpProcessInformationRule;
 import org.neo4j.test.OtherThreadExecutor;
-import org.neo4j.test.OtherThreadExecutor.WorkerCommand;
-import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.ha.ClusterRule;
+import org.neo4j.test.rule.dump.DumpProcessInformationRule;
+
+import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import static org.neo4j.helpers.collection.IteratorUtil.single;
 import static org.neo4j.kernel.impl.ha.ClusterManager.allSeesAllAsAvailable;
 import static org.neo4j.kernel.impl.ha.ClusterManager.masterAvailable;
-import static org.neo4j.qa.tooling.DumpProcessInformationRule.localVm;
+import static org.neo4j.test.rule.dump.DumpProcessInformationRule.localVm;
 
 public class TransactionConstraintsIT
 {
+    private static final int SLAVE_ONLY_ID = ClusterManager.FIRST_SERVER_ID + 1;
+
     @Rule
-    public final ClusterRule clusterRule = new ClusterRule(getClass()).config(HaSettings.pull_interval, "0");
+    public final ClusterRule clusterRule =
+            new ClusterRule( getClass() ).withSharedSetting( HaSettings.pull_interval, "0" )
+                    .withInstanceSetting( HaSettings.slave_only,
+                            ( serverId ) -> serverId == SLAVE_ONLY_ID ? "true" : "false" );
+
+    private DumpProcessInformationRule dumpInfo = new DumpProcessInformationRule( 1, MINUTES, localVm( System.out ) );
+    private ExpectedException exception = ExpectedException.none();
+
+    @Rule
+    public RuleChain ruleChain = RuleChain.outerRule( dumpInfo ).around( exception );
 
     protected ClusterManager.ManagedCluster cluster;
 
     @Before
     public void setup() throws Exception
     {
-        cluster = clusterRule.startCluster( );
+        cluster = clusterRule.startCluster();
     }
 
     private static final String PROPERTY_KEY = "name";
     private static final String PROPERTY_VALUE = "yo";
-    private static final String LABEL = "Person";
+    private static final Label LABEL = Label.label( "Person" );
 
     @Test
     public void startTxAsSlaveAndFinishItAfterHavingSwitchedToMasterShouldNotSucceed() throws Exception
     {
         // GIVEN
-        GraphDatabaseService db = cluster.getAnySlave();
-        takeTheLeadInAnEventualMasterSwitch( db );
+        GraphDatabaseService db = cluster.getAnySlave( getSlaveOnlySlave() );
 
         // WHEN
         Transaction tx = db.beginTx();
@@ -95,11 +104,12 @@ public class TransactionConstraintsIT
         }
         finally
         {
-            cluster.shutdown( cluster.getMaster() );
+            HighlyAvailableGraphDatabase oldMaster = cluster.getMaster();
+            cluster.shutdown( oldMaster );
+            // Wait for new master
+            cluster.await( masterAvailable( oldMaster ) );
             assertFinishGetsTransactionFailure( tx );
         }
-
-        cluster.await( masterAvailable() );
 
         // THEN
         assertEquals( db, cluster.getMaster() );
@@ -112,10 +122,10 @@ public class TransactionConstraintsIT
     public void startTxAsSlaveAndFinishItAfterAnotherMasterBeingAvailableShouldNotSucceed() throws Exception
     {
         // GIVEN
-        HighlyAvailableGraphDatabase db = cluster.getAnySlave();
+        HighlyAvailableGraphDatabase db = getSlaveOnlySlave();
+        HighlyAvailableGraphDatabase oldMaster;
 
         // WHEN
-        HighlyAvailableGraphDatabase theOtherSlave;
         Transaction tx = db.beginTx();
         try
         {
@@ -124,20 +134,27 @@ public class TransactionConstraintsIT
         }
         finally
         {
-            theOtherSlave = cluster.getAnySlave( db );
-            takeTheLeadInAnEventualMasterSwitch( theOtherSlave );
-            cluster.shutdown( cluster.getMaster() );
+            oldMaster = cluster.getMaster();
+            cluster.shutdown( oldMaster );
+            // Wait for new master
+            cluster.await( masterAvailable( oldMaster ) );
+            // THEN
             assertFinishGetsTransactionFailure( tx );
         }
 
-        cluster.await( ClusterManager.masterAvailable() );
-
-        // THEN
         assertFalse( db.isMaster() );
-        assertTrue( theOtherSlave.isMaster() );
+        assertFalse( oldMaster.isMaster() );
         // to prevent a deadlock scenario which occurs if this test exists (and @After starts)
         // before the db has recovered from its KERNEL_PANIC
         awaitFullyOperational( db );
+    }
+
+    private HighlyAvailableGraphDatabase getSlaveOnlySlave()
+    {
+        HighlyAvailableGraphDatabase db = cluster.getMemberByServerId( new InstanceId( SLAVE_ONLY_ID ) );
+        assertEquals( SLAVE_ONLY_ID, cluster.getServerId( db ).toIntegerIndex() );
+        assertFalse( db.isMaster() );
+        return db;
     }
 
     @Test
@@ -147,19 +164,16 @@ public class TransactionConstraintsIT
         HighlyAvailableGraphDatabase aSlave = cluster.getAnySlave();
         Node node = createMiniTree( aSlave );
 
-        // WHEN
         Transaction tx = aSlave.beginTx();
-        try
-        {
-            // Deleting this node isn't allowed since it still has relationships
-            node.delete();
-            tx.success();
-        }
-        finally
-        {
-            // THEN
-            assertFinishGetsTransactionFailure( tx );
-        }
+        // Deleting this node isn't allowed since it still has relationships
+        node.delete();
+        tx.success();
+
+        // EXPECT
+        exception.expect( ConstraintViolationException.class );
+
+        // WHEN
+        tx.close();
     }
 
     @Test
@@ -169,19 +183,16 @@ public class TransactionConstraintsIT
         HighlyAvailableGraphDatabase master = cluster.getMaster();
         Node node = createMiniTree( master );
 
-        // WHEN
         Transaction tx = master.beginTx();
-        try
-        {
-            // Deleting this node isn't allowed since it still has relationships
-            node.delete();
-            tx.success();
-        }
-        finally
-        {
-            // THEN
-            assertFinishGetsTransactionFailure( tx );
-        }
+        // Deleting this node isn't allowed since it still has relationships
+        node.delete();
+        tx.success();
+
+        // EXPECT
+        exception.expect( ConstraintViolationException.class );
+
+        // WHEN
+        tx.close();
     }
 
     @Test
@@ -226,12 +237,12 @@ public class TransactionConstraintsIT
         // GIVEN
         // -- node created on slave
         HighlyAvailableGraphDatabase aSlave = cluster.getAnySlave();
-        Node node = createNode( aSlave );
+        Node node = createNode( aSlave, PROPERTY_VALUE );
         // -- that node delete on master, but the slave doesn't see it yet
         deleteNode( cluster.getMaster(), node.getId() );
 
         // WHEN
-        try (Transaction slaveTransaction = aSlave.beginTx())
+        try ( Transaction slaveTransaction = aSlave.beginTx() )
         {
             node.setProperty( "name", "test" );
             fail( "Shouldn't be able to modify a node deleted on master" );
@@ -256,7 +267,8 @@ public class TransactionConstraintsIT
         deadlockDetectionBetween( cluster.getAnySlave(), cluster.getMaster() );
     }
 
-    private void deadlockDetectionBetween( HighlyAvailableGraphDatabase slave1, final HighlyAvailableGraphDatabase slave2 ) throws Exception
+    private void deadlockDetectionBetween( HighlyAvailableGraphDatabase slave1,
+            final HighlyAvailableGraphDatabase slave2 ) throws Exception
     {
         // GIVEN
         // -- two members acquiring a read lock on the same entity
@@ -271,23 +283,23 @@ public class TransactionConstraintsIT
         Transaction tx1 = slave1.beginTx();
         Transaction tx2 = thread2.execute( new BeginTx() );
         tx1.acquireReadLock( commonNode );
-        thread2.execute( new AcquireReadLockOnReferenceNode( tx2, commonNode ) );
+        thread2.execute( state -> tx2.acquireReadLock( commonNode ) );
         // -- and one of them wanting (and awaiting) to upgrade its read lock to a write lock
-        Future<Lock> writeLockFuture = thread2.executeDontWait( new AcquireWriteLock( tx2, new Callable<Node>(){
-            @Override
-            public Node call() throws Exception
+        Future<Lock> writeLockFuture = thread2.executeDontWait( state ->
+        {
+            try ( Transaction ignored = tx2 ) // Close transaction no matter what happens
             {
-                return commonNode;
+                return tx2.acquireWriteLock( commonNode );
             }
-        } ) );
+        } );
 
         for ( int i = 0; i < 10; i++ )
         {
             thread2.waitUntilThreadState( Thread.State.TIMED_WAITING, Thread.State.WAITING );
-            Thread.sleep(2);
+            Thread.sleep( 2 );
         }
 
-        try
+        try ( Transaction ignored = tx1 ) // Close transaction no matter what happens
         {
             // WHEN
             tx1.acquireWriteLock( commonNode );
@@ -300,12 +312,12 @@ public class TransactionConstraintsIT
         {
             // THEN -- deadlock should be avoided with this exception
         }
-        finally
+        catch ( ExecutionException e )
         {
-            tx1.close();
+            // OR -- the tx2 thread fails with executionexception, caused by deadlock on its end
+            assertThat( e.getCause(), instanceOf( DeadlockDetectedException.class ) );
         }
 
-        thread2.execute( new FinishTx( tx2, true ) );
         thread2.close();
     }
 
@@ -316,7 +328,7 @@ public class TransactionConstraintsIT
         // -- a node with a label and a property, and a constraint on those
         HighlyAvailableGraphDatabase master = cluster.getMaster();
         createConstraint( master, LABEL, PROPERTY_KEY );
-        createNode( master, LABEL ).getId();
+        createNode( master, PROPERTY_VALUE, LABEL ).getId();
 
         // WHEN
         cluster.sync();
@@ -325,100 +337,66 @@ public class TransactionConstraintsIT
         takeTheLeadInAnEventualMasterSwitch( cluster.getMaster() );
         cluster.sync();
 
-        // TODO There is a bug, where the master does not notice that its followers have vanished.
-        // We have to do this sleep here to make sure that it times them out properly.
-        // See https://trello.com/c/hcTvl0bv
-        Thread.sleep( 30000 );
-
         originalMasterRepairKit.repair();
         cluster.await( allSeesAllAsAvailable() );
         cluster.sync();
-        cluster.stop();
 
-        // THEN
-        // -- these fiddlings with the stores must not throw
+        // THEN the constraints should still be in place and enforced
+        int i = 0;
         for ( HighlyAvailableGraphDatabase instance : cluster.getAllMembers() )
         {
-            GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( instance.getStoreDir() );
-            Label label = DynamicLabel.label( LABEL );
-            try ( Transaction tx = db.beginTx() )
+            try
             {
-                Node node = db.createNode( label );
-                node.setProperty( PROPERTY_KEY, PROPERTY_VALUE + "1" );
-                tx.success();
+                createNode( instance, PROPERTY_VALUE, LABEL );
+                fail( "Node with " + PROPERTY_VALUE + " should already exist" );
             }
-            try ( Transaction tx = db.beginTx() )
+            catch ( ConstraintViolationException e )
             {
-                ConstraintDefinition constraint = single( db.schema().getConstraints( label ) );
-                constraint.drop();
-                tx.success();
+                // Good, this node should already exist
             }
-            db.shutdown();
-        }
-    }
-
-    @Ignore( "Known issue where locks acquired from Transaction#acquireXXXLock() methods doesn't get properly released when calling Lock#release() method" )
-    @Test
-    public void manuallyAcquireAndReleaseTransactionLock() throws Exception
-    {
-        // GIVEN
-        // -- a slave acquiring a lock on an ubiquitous node
-        HighlyAvailableGraphDatabase master = cluster.getMaster();
-        OtherThreadExecutor<HighlyAvailableGraphDatabase> masterWorker = new OtherThreadExecutor<>( "master worker", master );
-        final Node node = createNode( master );
-        cluster.sync();
-        HighlyAvailableGraphDatabase slave = cluster.getAnySlave();
-        try ( Transaction slaveTx = slave.beginTx() )
-        {
-            Lock lock = slaveTx.acquireWriteLock( slave.getNodeById( node.getId() ) );
-
-            // WHEN
-            // -- the lock is manually released (tx still running)
-            lock.release();
-
-            // THEN
-            // -- that entity should be able to be locked from another member
-            Transaction masterTx = masterWorker.execute( new BeginTx() );
-            masterWorker.execute( new AcquireWriteLock( masterTx, new Callable<Node>()
+            for ( int p = 0; p < i - 1; p++ )
             {
-                @Override
-                public Node call() throws Exception
+                try
                 {
-                    return node;
+                    createNode( instance, PROPERTY_VALUE + String.valueOf( p ), LABEL );
+                    fail( "Node with " + PROPERTY_VALUE + String.valueOf( p ) + " should already exist" );
                 }
-            } ), 1, SECONDS );
-        }
-        finally
-        {
-            masterWorker.close();
+                catch ( ConstraintViolationException e )
+                {
+                    // Good
+                }
+            }
+
+            createNode( instance, PROPERTY_VALUE + String.valueOf( i ), LABEL );
+            i++;
         }
     }
 
     private void takeTheLeadInAnEventualMasterSwitch( GraphDatabaseService db )
     {
-        createNode( db );
+        createNode( db, PROPERTY_VALUE );
     }
 
-    private Node createNode( GraphDatabaseService db, String... labels )
+    private Node createNode( GraphDatabaseService db, Object propertyValue, Label... labels )
     {
         try ( Transaction tx = db.beginTx() )
         {
             Node node = db.createNode();
-            for ( String label : labels )
+            for ( Label label : labels )
             {
-                node.addLabel( DynamicLabel.label( label ) );
+                node.addLabel( label );
             }
-            node.setProperty( PROPERTY_KEY, PROPERTY_VALUE );
+            node.setProperty( PROPERTY_KEY, propertyValue );
             tx.success();
             return node;
         }
     }
 
-    private void createConstraint( HighlyAvailableGraphDatabase db, String label, String propertyName )
+    private void createConstraint( HighlyAvailableGraphDatabase db, Label label, String propertyName )
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().constraintFor( DynamicLabel.label( label ) ).assertPropertyIsUnique( propertyName ).create();
+            db.schema().constraintFor( label ).assertPropertyIsUnique( propertyName ).create();
             tx.success();
         }
     }
@@ -451,49 +429,10 @@ public class TransactionConstraintsIT
             tx.close();
             fail( "Transaction shouldn't be able to finish" );
         }
-        catch ( TransactionFailureException e )
+        catch ( TransientTransactionFailureException | TransactionFailureException e )
         {   // Good
         }
     }
-
-    private static class AcquireReadLockOnReferenceNode implements WorkerCommand<HighlyAvailableGraphDatabase, Lock>
-    {
-        private final Transaction tx;
-        private final Node commonNode;
-
-        public AcquireReadLockOnReferenceNode( Transaction tx, Node commonNode )
-        {
-            this.tx = tx;
-            this.commonNode = commonNode;
-        }
-
-        @Override
-        public Lock doWork( HighlyAvailableGraphDatabase state )
-        {
-            return tx.acquireReadLock( commonNode );
-        }
-    }
-
-    private static class AcquireWriteLock implements WorkerCommand<HighlyAvailableGraphDatabase, Lock>
-    {
-        private final Transaction tx;
-        private final Callable<Node> callable;
-
-        public AcquireWriteLock( Transaction tx, Callable<Node> callable )
-        {
-            this.tx = tx;
-            this.callable = callable;
-        }
-
-        @Override
-        public Lock doWork( HighlyAvailableGraphDatabase state ) throws Exception
-        {
-            return tx.acquireWriteLock( callable.call() );
-        }
-    }
-
-    @Rule
-    public DumpProcessInformationRule dumpInfo = new DumpProcessInformationRule( 1, MINUTES, localVm( System.out ) );
 
     private void awaitFullyOperational( GraphDatabaseService db ) throws InterruptedException
     {
@@ -507,7 +446,7 @@ public class TransactionConstraintsIT
             }
             catch ( Exception e )
             {
-                if ( i > 0 && i%10 == 0 )
+                if ( i > 0 && i % 10 == 0 )
                 {
                     e.printStackTrace();
                 }

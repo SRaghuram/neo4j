@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -17,7 +17,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.neo4j.codegen;
 
 import java.lang.reflect.Modifier;
@@ -37,6 +36,7 @@ public class ClassGenerator implements AutoCloseable
     private final ClassHandle handle;
     private ClassEmitter emitter;
     private Map<String,FieldReference> fields;
+    private boolean hasConstructor = false;
 
     ClassGenerator( ClassHandle handle, ClassEmitter emitter )
     {
@@ -47,6 +47,10 @@ public class ClassGenerator implements AutoCloseable
     @Override
     public void close()
     {
+        if (!hasConstructor)
+        {
+            generate( MethodTemplate.constructor().invokeSuper().build() );
+        }
         emitter.done();
         handle.generator.closeClass();
         emitter = InvalidState.CLASS_DONE;
@@ -104,22 +108,37 @@ public class ClassGenerator implements AutoCloseable
         {
             template.generate( generator );
         }
-        return methodReference( handle, template.returnType(), template.name(), template.parameterTypes() );
+        return methodReference( handle, template.returnType(), template.name(), template.modifiers(),  template.parameterTypes() );
     }
 
     public CodeBlock generateConstructor( Parameter... parameters )
     {
-        return generate( constructor( handle, parameters,/*throws:*/NO_TYPES, NO_PARAMETERS ) );
+        return generate( constructor( handle, parameters,/*throws:*/NO_TYPES, Modifier.PUBLIC, NO_PARAMETERS ) );
+    }
+
+    public CodeBlock generateConstructor( int modifiers, Parameter... parameters )
+    {
+        return generate( constructor( handle, parameters,/*throws:*/NO_TYPES, modifiers, NO_PARAMETERS ) );
     }
 
     public CodeBlock generateMethod( Class<?> returnType, String name, Parameter... parameters )
     {
-        return generateMethod( typeReference( returnType ), name, parameters );
+        return generateMethod( typeReference( returnType ), name, Modifier.PUBLIC, parameters );
+    }
+
+    public CodeBlock generateMethod( Class<?> returnType, String name, int modifiers, Parameter... parameters )
+    {
+        return generateMethod( typeReference( returnType ), name, modifiers, parameters );
     }
 
     public CodeBlock generateMethod( TypeReference returnType, String name, Parameter... parameters )
     {
-        return generate( method( handle, returnType, name, parameters,/*throws:*/NO_TYPES, NO_PARAMETERS ) );
+        return generate( method( handle, returnType, name, parameters,/*throws:*/NO_TYPES, Modifier.PUBLIC, NO_PARAMETERS ) );
+    }
+
+    public CodeBlock generateMethod( TypeReference returnType, String name, int modifiers, Parameter... parameters )
+    {
+        return generate( method( handle, returnType, name, parameters,/*throws:*/NO_TYPES, modifiers, NO_PARAMETERS ) );
     }
 
     public CodeBlock generate( MethodDeclaration.Builder builder )
@@ -129,7 +148,11 @@ public class ClassGenerator implements AutoCloseable
 
     private CodeBlock generate( MethodDeclaration declaration )
     {
-        return new CodeBlock( this, emitter.method( declaration ) );
+        if (declaration.isConstructor())
+        {
+            hasConstructor = true;
+        }
+        return new CodeBlock( this, emitter.method( declaration ), declaration.parameters() );
     }
 
     FieldReference getField( String name )

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,7 +19,7 @@
  */
 package org.neo4j.kernel.impl.transaction.state;
 
-import org.neo4j.kernel.impl.store.RelationshipGroupStore;
+import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
@@ -27,9 +27,9 @@ import org.neo4j.kernel.impl.transaction.state.RecordAccess.RecordProxy;
 
 public class RelationshipGroupGetter
 {
-    private final RelationshipGroupStore store;
+    private final RecordStore<RelationshipGroupRecord> store;
 
-    public RelationshipGroupGetter( RelationshipGroupStore store )
+    public RelationshipGroupGetter( RecordStore<RelationshipGroupRecord> store )
     {
         this.store = store;
     }

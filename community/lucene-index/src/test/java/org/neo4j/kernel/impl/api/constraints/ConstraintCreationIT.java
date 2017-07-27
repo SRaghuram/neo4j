@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -25,25 +25,26 @@ import org.junit.Test;
 import java.io.File;
 
 import org.neo4j.graphdb.ConstraintViolationException;
-import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterables;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.api.impl.index.LuceneSchemaIndexProviderFactory;
+import org.neo4j.kernel.api.impl.index.storage.layout.IndexFolderLayout;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
-import org.neo4j.test.EmbeddedDatabaseRule;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.rule.EmbeddedDatabaseRule;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 public class ConstraintCreationIT
 {
-    private static final Label LABEL = DynamicLabel.label( "label1" );
     @Rule
     public EmbeddedDatabaseRule dbRule = new EmbeddedDatabaseRule( ConstraintCreationIT.class );
+
+    private static final Label LABEL = Label.label( "label1" );
+    private static final String INDEX_IDENTIFIER = "1";
 
     @Test
     public void shouldNotLeaveLuceneIndexFilesHangingAroundIfConstraintCreationFails()
@@ -66,23 +67,23 @@ public class ConstraintCreationIT
         try ( Transaction tx = db.beginTx() )
         {
             db.schema().constraintFor( LABEL ).assertPropertyIsUnique( "prop" ).create();
-            fail("Should have failed with ConstraintViolationException");
+            fail( "Should have failed with ConstraintViolationException" );
             tx.success();
         }
-        catch ( ConstraintViolationException ignored )  { }
-
-        // then
-        try(Transaction ignore = db.beginTx())
+        catch ( ConstraintViolationException ignored )
         {
-            assertEquals(0, Iterables.count(db.schema().getIndexes() ));
         }
 
-        File schemaStorePath = SchemaIndexProvider
-                .getRootDirectory( new File( db.getStoreDir() ), LuceneSchemaIndexProviderFactory.KEY );
+        // then
+        try ( Transaction ignore = db.beginTx() )
+        {
+            assertEquals( 0, Iterables.count( db.schema().getIndexes() ) );
+        }
 
-        String indexId = "1";
-        File[] files = new File(schemaStorePath, indexId ).listFiles();
-        assertNotNull( files );
-        assertEquals(0, files.length);
+        SchemaIndexProvider schemaIndexProvider =
+                db.getDependencyResolver().resolveDependency( SchemaIndexProvider.class );
+        File schemaStoreDir = schemaIndexProvider.getSchemaIndexStoreDirectory( new File( db.getStoreDir() ) );
+
+        assertFalse( new IndexFolderLayout( schemaStoreDir, INDEX_IDENTIFIER ).getIndexFolder().exists() );
     }
 }

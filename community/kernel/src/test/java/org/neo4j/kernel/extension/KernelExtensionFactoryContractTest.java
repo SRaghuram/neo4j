@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,9 +27,10 @@ import java.util.Map;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.Service;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.kernel.internal.EmbeddedGraphDatabase;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -46,7 +47,7 @@ public abstract class KernelExtensionFactoryContractTest
     private final String key;
 
     @Rule
-    public TargetDirectory.TestDirectory target = TargetDirectory.testDirForTest( getClass() );
+    public TestDirectory target = TestDirectory.testDirectory( getClass() );
 
     public KernelExtensionFactoryContractTest( String key, Class<? extends KernelExtensionFactory<?>> extClass )
     {
@@ -70,7 +71,7 @@ public abstract class KernelExtensionFactoryContractTest
      *                   created.
      * @param instance   used for differentiating multiple instances that will run
      *                   simultaneously.
-     * @return configuration for an {@link org.neo4j.kernel.EmbeddedGraphDatabase} that
+     * @return configuration for an {@link EmbeddedGraphDatabase} that
      */
     protected Map<String, String> configuration( boolean shouldLoad, int instance )
     {
@@ -150,7 +151,7 @@ public abstract class KernelExtensionFactoryContractTest
         }
     }
 
-    private final KernelExtensionFactory<?> newInstance()
+    private KernelExtensionFactory<?> newInstance()
     {
         try
         {

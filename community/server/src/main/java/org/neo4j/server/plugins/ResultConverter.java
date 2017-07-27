@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -117,7 +117,7 @@ abstract class ResultConverter
 
     abstract RepresentationType type();
 
-    private static abstract class ValueResult extends ResultConverter
+    private abstract static class ValueResult extends ResultConverter
     {
         private final RepresentationType type;
 

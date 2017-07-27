@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,22 +23,24 @@ import java.util.Collections;
 
 import org.neo4j.server.rest.web.RestfulGraphDatabase;
 
-public class NodeAutoIndexRepresentation extends IndexRepresentation {
-	
-	public NodeAutoIndexRepresentation() {
-		super("", Collections.EMPTY_MAP);
-	}
+public class NodeAutoIndexRepresentation extends IndexRepresentation
+{
 
-	@Override
+    public NodeAutoIndexRepresentation()
+    {
+        super("", Collections.EMPTY_MAP);
+    }
+
+    @Override
     protected String path()
     {
         return RestfulGraphDatabase.PATH_AUTO_INDEX.replace("{type}", RestfulGraphDatabase.NODE_AUTO_INDEX_TYPE) + "/";
     }
-	
-	@Override
-	protected String propertyContainerType() {
-		return null;
-	}
 
+    @Override
+    protected String propertyContainerType()
+    {
+        return null;
+    }
 
 }

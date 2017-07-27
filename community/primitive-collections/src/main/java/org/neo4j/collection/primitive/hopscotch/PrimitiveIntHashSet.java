@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -18,6 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.neo4j.collection.primitive.hopscotch;
+
+import java.util.function.IntPredicate;
 
 import org.neo4j.collection.primitive.PrimitiveIntIterator;
 import org.neo4j.collection.primitive.PrimitiveIntSet;
@@ -63,19 +65,13 @@ public class PrimitiveIntHashSet extends AbstractIntHopScotchCollection<Object> 
     }
 
     /**
-     * Prefer using {@link #contains(int)} - this method is identical and required by the {@link org.neo4j.function.IntPredicate} interface
+     * Prefer using {@link #contains(int)} - this method is identical and required by the {@link IntPredicate} interface
      *
      * @param value the input argument
      * @return true if the input argument matches the predicate, otherwise false
      */
     @Override
     public boolean test( int value )
-    {
-        return HopScotchHashingAlgorithm.get( table, monitor, DEFAULT_HASHING, value ) == valueMarker;
-    }
-
-    @Override
-    public boolean accept( int value )
     {
         return HopScotchHashingAlgorithm.get( table, monitor, DEFAULT_HASHING, value ) == valueMarker;
     }
@@ -105,7 +101,7 @@ public class PrimitiveIntHashSet extends AbstractIntHopScotchCollection<Object> 
         private final PrimitiveIntHashSet other;
         private boolean equal = true;
 
-        public IntKeyEquality( PrimitiveIntHashSet that )
+        IntKeyEquality( PrimitiveIntHashSet that )
         {
             this.other = that;
         }
@@ -146,6 +142,21 @@ public class PrimitiveIntHashSet extends AbstractIntHopScotchCollection<Object> 
         public int hashCode()
         {
             return hash;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            HashCodeComputer that = (HashCodeComputer) o;
+            return hash == that.hash;
         }
     }
 

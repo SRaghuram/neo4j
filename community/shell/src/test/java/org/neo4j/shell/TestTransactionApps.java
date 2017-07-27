@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,28 +19,26 @@
  */
 package org.neo4j.shell;
 
-import java.io.Serializable;
-import java.rmi.RemoteException;
-import java.util.HashMap;
-import java.util.regex.Pattern;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.omg.CORBA.SystemException;
 
-import org.neo4j.kernel.GraphDatabaseAPI;
+import java.io.Serializable;
+import java.rmi.RemoteException;
+import java.util.HashMap;
+import java.util.regex.Pattern;
+
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.shell.impl.CollectingOutput;
 import org.neo4j.shell.impl.SameJvmClient;
 import org.neo4j.shell.kernel.GraphDatabaseShellServer;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static java.util.regex.Pattern.compile;
-
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import static org.neo4j.helpers.collection.IteratorUtil.asCollection;
 
 public class TestTransactionApps
 {
@@ -161,7 +159,7 @@ public class TestTransactionApps
                 }
             }
             assertTrue( "Was expecting a line matching '" + lineThatMustExist + "', but didn't find any from out of " +
-                    asCollection( output ), found != negative );
+                        Iterables.asCollection( output ), found != negative );
         }
     }
 
@@ -172,7 +170,8 @@ public class TestTransactionApps
         {
             shellClient.evaluate( command, output );
             fail( "Was expecting an exception" );
-        } catch ( ShellException e )
+        }
+        catch ( ShellException e )
         {
             String errorMessage = e.getMessage();
             if ( !errorMessage.toLowerCase().contains( errorMessageShouldContain.toLowerCase() ) )
@@ -183,9 +182,10 @@ public class TestTransactionApps
     }
 }
 
-class FakeShellServer extends GraphDatabaseShellServer {
+class FakeShellServer extends GraphDatabaseShellServer
+{
 
-    public FakeShellServer( GraphDatabaseAPI graphDb ) throws RemoteException
+    FakeShellServer( GraphDatabaseAPI graphDb ) throws RemoteException
     {
         super( graphDb );
     }

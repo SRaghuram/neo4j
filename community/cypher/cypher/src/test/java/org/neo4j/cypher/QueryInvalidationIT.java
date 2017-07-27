@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -27,18 +27,21 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.neo4j.cypher.internal.compiler.v2_3.CypherCacheHitMonitor;
-import org.neo4j.cypher.internal.frontend.v2_3.ast.Query;
-import org.neo4j.graphdb.DynamicLabel;
+import org.neo4j.cypher.internal.compiler.v3_2.CypherCacheHitMonitor;
+import org.neo4j.cypher.internal.frontend.v3_2.ast.Query;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.test.DatabaseRule;
-import org.neo4j.test.ImpermanentDatabaseRule;
+import org.neo4j.test.rule.DatabaseRule;
+import org.neo4j.test.rule.ImpermanentDatabaseRule;
 
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class QueryInvalidationIT
 {
@@ -46,7 +49,9 @@ public class QueryInvalidationIT
     private static final int CONNECTIONS = 100;
 
     @Rule
-    public final DatabaseRule db = new ImpermanentDatabaseRule();
+    public final DatabaseRule db = new ImpermanentDatabaseRule()
+            .withSetting( GraphDatabaseSettings.query_statistics_divergence_threshold, "0.5" )
+            .withSetting( GraphDatabaseSettings.cypher_min_replan_interval, "1s" );
 
     @Test
     public void shouldRePlanAfterDataChangesFromAnEmptyDatabase() throws Exception
@@ -83,6 +88,10 @@ public class QueryInvalidationIT
     public void shouldRePlanAfterDataChangesFromAPopulatedDatabase() throws Exception
     {
         // GIVEN
+        Config config = db.getConfigCopy();
+        double divergenceThreshold = config.get( GraphDatabaseSettings.query_statistics_divergence_threshold );
+        long replanInterval = config.get( GraphDatabaseSettings.cypher_min_replan_interval ).toMillis();
+
         TestMonitor monitor = new TestMonitor();
         db.resolveDependency( Monitors.class ).addMonitorListener( monitor );
         // - setup schema -
@@ -91,13 +100,18 @@ public class QueryInvalidationIT
         createData( 0, USERS, CONNECTIONS );
         executeDistantFriendsCountQuery( USERS );
 
-        long replanTime = System.currentTimeMillis() + 1_800;
+        long replanTime = System.currentTimeMillis() + replanInterval;
 
-        //create more date
-        createData( USERS, USERS, CONNECTIONS );
+        assertTrue( "Test does not work with edge setting for query_statistics_divergence_threshold: " + divergenceThreshold,
+                divergenceThreshold > 0.0 && divergenceThreshold < 1.0 );
+
+        int usersToCreate = ((int) (Math.ceil( ((double) USERS) / (1.0 - divergenceThreshold) ))) - USERS + 1;
+
+        //create more data
+        createData( USERS, usersToCreate, CONNECTIONS );
 
         // - after the query TTL has expired -
-        while ( System.currentTimeMillis() < replanTime )
+        while ( System.currentTimeMillis() <= replanTime )
         {
             Thread.sleep( 100 );
         }
@@ -115,7 +129,7 @@ public class QueryInvalidationIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().indexFor( DynamicLabel.label( "User" ) ).on( "userId" ).create();
+            db.schema().indexFor( Label.label( "User" ) ).on( "userId" ).create();
             tx.success();
         }
         try ( Transaction tx = db.beginTx() )
@@ -144,7 +158,7 @@ public class QueryInvalidationIT
             params.put( "user1", user1 );
             params.put( "user2", user2 );
             db.execute( "MATCH (user1:User { userId: {user1} }), (user2:User { userId: {user2} }) " +
-                        "CREATE UNIQUE user1 -[:FRIEND]- user2", params );
+                        "MERGE (user1) -[:FRIEND]- (user2)", params );
         }
     }
 
@@ -187,7 +201,7 @@ public class QueryInvalidationIT
         }
 
         @Override
-        public void cacheDiscard( Query key )
+        public void cacheDiscard( Query key, String ignored )
         {
             discards.incrementAndGet();
         }

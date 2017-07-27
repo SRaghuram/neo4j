@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,30 +19,34 @@
  */
 package org.neo4j.kernel.impl.transaction;
 
+import org.junit.Rule;
+import org.junit.Test;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.junit.Rule;
-import org.junit.Test;
-
 import org.neo4j.helpers.collection.Visitor;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.kernel.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.LogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-
 import static org.neo4j.kernel.impl.transaction.log.LogVersionBridge.NO_MORE_CHANNELS;
 
 public class ReadAheadLogChannelTest
 {
+
+    @Rule
+    public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Rule
+    public final TestDirectory directory = TestDirectory.testDirectory();
+
     @Test
     public void shouldReadFromSingleChannel() throws Exception
     {
@@ -71,7 +75,7 @@ public class ReadAheadLogChannelTest
             }
         } );
 
-        StoreChannel storeChannel = fs.open( file, "r" );
+        StoreChannel storeChannel = fileSystemRule.get().open( file, "r" );
         PhysicalLogVersionedStoreChannel versionedStoreChannel =
                 new PhysicalLogVersionedStoreChannel( storeChannel, -1 /* ignored */, (byte) -1 /* ignored */ );
         try ( ReadAheadLogChannel channel = new ReadAheadLogChannel( versionedStoreChannel, NO_MORE_CHANNELS, 16 ) )
@@ -119,7 +123,7 @@ public class ReadAheadLogChannelTest
             }
         } );
 
-        StoreChannel storeChannel = fs.open( file( 0 ), "r" );
+        StoreChannel storeChannel = fileSystemRule.get().open( file( 0 ), "r" );
         PhysicalLogVersionedStoreChannel versionedStoreChannel =
                 new PhysicalLogVersionedStoreChannel( storeChannel, -1 /* ignored */, (byte) -1 /* ignored */ );
         try ( ReadAheadLogChannel channel = new ReadAheadLogChannel( versionedStoreChannel, new LogVersionBridge()
@@ -132,7 +136,8 @@ public class ReadAheadLogChannelTest
                 if ( !returned )
                 {
                     returned = true;
-                    return new PhysicalLogVersionedStoreChannel( fs.open( file( 1 ), "r" ),
+                    channel.close();
+                    return new PhysicalLogVersionedStoreChannel( fileSystemRule.get().open( file( 1 ), "r" ),
                             -1 /* ignored */, (byte) -1 /* ignored */ );
                 }
                 return channel;
@@ -149,7 +154,7 @@ public class ReadAheadLogChannelTest
 
     private void writeSomeData( File file, Visitor<ByteBuffer, IOException> visitor ) throws IOException
     {
-        try ( StoreChannel channel = fs.open( file, "rw" ) )
+        try ( StoreChannel channel = fileSystemRule.get().open( file, "rw" ) )
         {
             ByteBuffer buffer = ByteBuffer.allocate( 1024 );
             visitor.visit( buffer );
@@ -157,9 +162,6 @@ public class ReadAheadLogChannelTest
             channel.write( buffer );
         }
     }
-
-    private final FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-    public final @Rule TargetDirectory.TestDirectory directory = TargetDirectory.testDirForTest( getClass() );
 
     private File file( int index )
     {

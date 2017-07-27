@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -35,24 +35,24 @@ import static java.util.Arrays.asList;
 
 public class ThirdPartyJAXRSModule implements ServerModule
 {
-	private final Config config;
-	private final WebServer webServer;
+    private final Config config;
+    private final WebServer webServer;
 
     private final ExtensionInitializer extensionInitializer;
-	private List<ThirdPartyJaxRsPackage> packages;
+    private List<ThirdPartyJaxRsPackage> packages;
     private final Log log;
 
     public ThirdPartyJAXRSModule( WebServer webServer, Config config, LogProvider logProvider,
             NeoServer neoServer )
     {
-    	this.webServer = webServer;
-    	this.config = config;
-    	this.log = logProvider.getLog( getClass() );
+        this.webServer = webServer;
+        this.config = config;
+        this.log = logProvider.getLog( getClass() );
         extensionInitializer = new ExtensionInitializer( neoServer );
     }
 
     @Override
-	public void start()
+    public void start()
     {
         this.packages = config.get( ServerSettings.third_party_packages );
         for ( ThirdPartyJaxRsPackage tpp : packages )
@@ -70,7 +70,7 @@ public class ThirdPartyJAXRSModule implements ServerModule
     }
 
     @Override
-	public void stop()
+    public void stop()
     {
         if ( packages == null )
         {

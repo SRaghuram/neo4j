@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,7 +33,6 @@ import javax.ws.rs.core.Response;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.tooling.GlobalGraphOperations;
 
 @Path( "/" )
 public class DummyThirdPartyWebService
@@ -50,11 +49,11 @@ public class DummyThirdPartyWebService
                 .build();
     }
 
-
     @GET
     @Path("/{something}/{somethingElse}")
     @Produces( MediaType.TEXT_PLAIN )
-    public Response forSecurityTesting() {
+    public Response forSecurityTesting()
+    {
         return Response.ok().entity("you've reached a dummy service").build();
     }
 
@@ -100,7 +99,7 @@ public class DummyThirdPartyWebService
     private int countNodesIn( GraphDatabaseService db )
     {
         int count = 0;
-        for ( @SuppressWarnings("unused") Node node : GlobalGraphOperations.at(db).getAllNodes() )
+        for ( Node ignore : db.getAllNodes() )
         {
             count++;
         }

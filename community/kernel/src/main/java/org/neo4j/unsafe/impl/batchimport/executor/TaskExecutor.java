@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -22,6 +22,7 @@ package org.neo4j.unsafe.impl.batchimport.executor;
 import java.util.concurrent.ExecutorService;
 
 import org.neo4j.unsafe.impl.batchimport.Parallelizable;
+import org.neo4j.unsafe.impl.batchimport.staging.Panicable;
 
 /**
  * Like an {@link ExecutorService} with additional absolute control of the current processor count,
@@ -30,15 +31,8 @@ import org.neo4j.unsafe.impl.batchimport.Parallelizable;
  * @param <LOCAL> object/state local to each thread, that submitted {@link Task tasks} can get access to
  * when {@link Task#run(Object) running}.
  */
-public interface TaskExecutor<LOCAL> extends Parallelizable
+public interface TaskExecutor<LOCAL> extends Parallelizable, AutoCloseable, Panicable
 {
-    /**
-     * Sets the processor count for this executor, i.e. number of threads executing tasks in parallel.
-     *
-     * @param count number of processors executing tasks.
-     */
-    void setNumberOfProcessors( int count );
-
     /**
      * Submits a task to be executed by one of the processors in this {@link TaskExecutor}. Tasks will be
      * executed in the order of which they arrive.
@@ -48,12 +42,15 @@ public interface TaskExecutor<LOCAL> extends Parallelizable
     void submit( Task<LOCAL> task );
 
     /**
-     * Shuts down this {@link TaskExecutor}, disallowing new tasks to be {@link #submit(Task) submitted}.
-     *
-     * @param awaitAllCompleted if {@code true} will wait for all queued or already executing tasks to be
-     * executed and completed, before returning from this method.
+     * Closes this {@link TaskExecutor}, disallowing new tasks to be {@link #submit(Task) submitted}.
      */
-    void shutdown( boolean awaitAllCompleted );
+    @Override
+    void close();
+
+    /**
+     * @return {@code true} if {@link #close()} has been called, otherwise {@code false}.
+     */
+    boolean isClosed();
 
     /**
      * Asserts that this {@link TaskExecutor} is healthy. Useful to call when deciding to wait on a condition

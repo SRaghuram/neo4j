@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -31,31 +31,32 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.neo4j.graphdb.DynamicLabel;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.collection.IteratorUtil;
+import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.api.index.inmemory.InMemoryIndexProvider;
 import org.neo4j.kernel.impl.api.index.inmemory.InMemoryIndexProviderFactory;
 import org.neo4j.kernel.impl.core.LabelTokenHolder;
-import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
-import org.neo4j.kernel.impl.transaction.log.rotation.StoreFlusher;
-import org.neo4j.test.EphemeralFileSystemRule;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.neo4j.graphdb.DynamicLabel.label;
+import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.register.Registers.newDoubleLongRegister;
-import static org.neo4j.test.EphemeralFileSystemRule.shutdownDbAction;
 
 
 /**
@@ -111,7 +112,7 @@ public class TestRecoveryScenarios
         try ( Transaction tx = db.beginTx() )
         {
             assertEquals( "Updates not propagated correctly during recovery", Collections.<Node>emptyList(),
-                    IteratorUtil.asList( db.findNodes( label, "key", "value" ) ) );
+                    Iterators.asList( db.findNodes( label, "key", "value" ) ) );
             tx.success();
         }
     }
@@ -124,7 +125,7 @@ public class TestRecoveryScenarios
         Label[] labels = new Label[16];
         for (int i = 0; i < labels.length; i++ )
         {
-            labels[i] = DynamicLabel.label( "Label" + Integer.toHexString( i ) );
+            labels[i] = label( "Label" + Integer.toHexString( i ) );
         }
         Node node;
         try ( Transaction tx = db.beginTx() )
@@ -166,7 +167,8 @@ public class TestRecoveryScenarios
         // -- really the problem was that recovery threw exception, so mostly assert that.
         try ( Transaction tx = db.beginTx() )
         {
-            CountsTracker tracker = db.getDependencyResolver().resolveDependency( NeoStores.class ).getCounts();
+            CountsTracker tracker = db.getDependencyResolver().resolveDependency( RecordStorageEngine.class )
+                    .testAccessNeoStores().getCounts();
             assertEquals( 0, tracker.nodeCount( -1, newDoubleLongRegister() ).readSecond() );
             final LabelTokenHolder holder = db.getDependencyResolver().resolveDependency( LabelTokenHolder.class );
             int labelId = holder.getIdByName( label.name() );
@@ -259,7 +261,8 @@ public class TestRecoveryScenarios
                     @Override
                     void flush( GraphDatabaseAPI db )
                     {
-                        db.getDependencyResolver().resolveDependency( StoreFlusher.class ).forceEverything();
+                        IOLimiter limiter = IOLimiter.unlimited();
+                        db.getDependencyResolver().resolveDependency( StorageEngine.class ).flushAndForce( limiter );
                     }
                 },
         FLUSH_PAGE_CACHE
@@ -275,9 +278,10 @@ public class TestRecoveryScenarios
         abstract void flush( GraphDatabaseAPI db ) throws IOException;
     }
 
-    public final @Rule EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
+    @Rule
+    public final EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
     private final Label label = label( "label" );
-    @SuppressWarnings("deprecation") private GraphDatabaseAPI db;
+    private GraphDatabaseAPI db;
     private final InMemoryIndexProvider indexProvider = new InMemoryIndexProvider( 100 );
 
     private final FlushStrategy flush;
@@ -308,7 +312,9 @@ public class TestRecoveryScenarios
 
     private void checkPoint() throws IOException
     {
-        db.getDependencyResolver().resolveDependency( CheckPointer.class ).forceCheckPoint();
+        db.getDependencyResolver().resolveDependency( CheckPointer.class ).forceCheckPoint(
+                new SimpleTriggerInfo( "test" )
+        );
     }
 
     private void deleteNode( Node node )
@@ -330,9 +336,10 @@ public class TestRecoveryScenarios
     }
 
     @SuppressWarnings("deprecation")
-    private void crashAndRestart( InMemoryIndexProvider indexProvider )
+    private void crashAndRestart( InMemoryIndexProvider indexProvider ) throws Exception
     {
-        FileSystemAbstraction uncleanFs = fsRule.snapshot( shutdownDbAction( db ) );
+        final GraphDatabaseService db1 = db;
+        FileSystemAbstraction uncleanFs = fsRule.snapshot( () -> db1.shutdown() );
         db = (GraphDatabaseAPI) databaseFactory( uncleanFs, indexProvider ).newImpermanentDatabase();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -30,27 +30,36 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.api.impl.index.LuceneSchemaIndexProvider;
+import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.api.impl.schema.LuceneSchemaIndexProvider;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
-import org.neo4j.test.TargetDirectory;
+import org.neo4j.kernel.extension.dependency.HighestSelectionStrategy;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.graphdb.DynamicLabel.label;
-import static org.neo4j.helpers.collection.IteratorUtil.single;
+import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
 public class TestLuceneSchemaBatchInsertIT
 {
+    @Rule
+    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Rule
+    public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+
+    private static final Label LABEL = label( "Person" );
+
     @Test
     public void shouldLoadAndUseLuceneProvider() throws Exception
     {
         // GIVEN
         File storeDir = testDirectory.graphDbDir();
-        BatchInserter inserter = BatchInserters.inserter( storeDir );
+        BatchInserter inserter = BatchInserters.inserter( storeDir, fileSystemRule.get() );
         inserter.createDeferredSchemaIndex( LABEL ).on( "name" ).create();
 
         // WHEN
@@ -62,13 +71,12 @@ public class TestLuceneSchemaBatchInsertIT
         GraphDatabaseAPI db = (GraphDatabaseAPI) graphDatabaseFactory.newEmbeddedDatabase( storeDir );
         DependencyResolver dependencyResolver = db.getDependencyResolver();
         SchemaIndexProvider schemaIndexProvider = dependencyResolver.resolveDependency(
-                SchemaIndexProvider.class,
-                SchemaIndexProvider.HIGHEST_PRIORITIZED_OR_NONE );
+                SchemaIndexProvider.class, HighestSelectionStrategy.getInstance() );
 
         // assert the indexProvider is a Lucene one
         try ( Transaction ignore = db.beginTx() )
         {
-            IndexDefinition indexDefinition = single( db.schema().getIndexes( LABEL ) );
+            IndexDefinition indexDefinition = Iterables.single( db.schema().getIndexes( LABEL ) );
             assertThat( db.schema().getIndexState( indexDefinition ), is( Schema.IndexState.ONLINE ) );
             assertThat( schemaIndexProvider, instanceOf( LuceneSchemaIndexProvider.class ) );
         }
@@ -76,9 +84,4 @@ public class TestLuceneSchemaBatchInsertIT
         // CLEANUP
         db.shutdown();
     }
-
-    @Rule
-    public final TargetDirectory.TestDirectory testDirectory = TargetDirectory.testDirForTest( getClass() );
-
-    private static final Label LABEL = label( "Person" );
 }

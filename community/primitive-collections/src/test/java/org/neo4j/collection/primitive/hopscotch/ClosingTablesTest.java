@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -32,20 +32,20 @@ public class ClosingTablesTest
     {
         // Given
         Table table = mock( Table.class );
-        AbstractIntHopScotchCollection coll =
-                new AbstractIntHopScotchCollection( table ) {
-                    @Override
-                    public boolean equals( Object other )
-                    {
-                        return false;
-                    }
+        AbstractIntHopScotchCollection coll = new AbstractIntHopScotchCollection( table )
+        {
+            @Override
+            public boolean equals( Object other )
+            {
+                return false;
+            }
 
-                    @Override
-                    public int hashCode()
-                    {
-                        return 0;
-                    }
-                };
+            @Override
+            public int hashCode()
+            {
+                return 0;
+            }
+        };
 
         // When
         coll.close();
@@ -53,7 +53,7 @@ public class ClosingTablesTest
         // Then
         verify( table ).close();
     }
-    
+
     @Test
     public void longCollectionsMustDelegateCloseToTable()
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -33,51 +33,173 @@ interface ArrayValue
         double doubleValue( int index );
     }
 
-    // <pre>
     final class ByteArray implements IntegralArray
     {
-        private final byte[] value; ByteArray( byte[] value ) { this.value = value; }
-        @Override public int length()                    { return value.length; }
-        @Override public long longValue( int index )     { return value[index]; }
+        private final byte[] value;
+
+        ByteArray( byte[] value )
+        {
+            this.value = value;
+        }
+
+        @Override
+        public int length()
+        {
+            return value.length;
+        }
+
+        @Override
+        public long longValue( int index )
+        {
+            return value[index];
+        }
     }
+
     final class ShortArray implements IntegralArray
     {
-        private final short[] value; ShortArray( short[] value ) { this.value = value; }
-        @Override public int length()                    { return value.length; }
-        @Override public long longValue( int index )     { return value[index]; }
+        private final short[] value;
+
+        ShortArray( short[] value )
+        {
+            this.value = value;
+        }
+
+        @Override
+        public int length()
+        {
+            return value.length;
+        }
+
+        @Override
+        public long longValue( int index )
+        {
+            return value[index];
+        }
     }
+
     final class IntArray implements IntegralArray
     {
-        private final int[] value; IntArray( int[] value ) { this.value = value; }
-        @Override public int length()                    { return value.length; }
-        @Override public long longValue( int index )     { return value[index]; }
+        private final int[] value;
+
+        IntArray( int[] value )
+        {
+            this.value = value;
+        }
+
+        @Override
+        public int length()
+        {
+            return value.length;
+        }
+
+        @Override
+        public long longValue( int index )
+        {
+            return value[index];
+        }
     }
+
     final class LongArray implements IntegralArray
     {
-        private final long[] value; LongArray( long[] value ) { this.value = value; }
-        @Override public int length()                    { return value.length; }
-        @Override public long longValue( int index )     { return value[index]; }
+        private final long[] value;
+
+        LongArray( long[] value )
+        {
+            this.value = value;
+        }
+
+        @Override
+        public int length()
+        {
+            return value.length;
+        }
+
+        @Override
+        public long longValue( int index )
+        {
+            return value[index];
+        }
     }
+
     final class FloatArray implements FloatingPointArray
     {
-        private final float[] value; FloatArray( float[] value ) { this.value = value; }
-        @Override public int length()                    { return value.length; }
-        @Override public double doubleValue( int index ) { return value[index]; }
+        private final float[] value;
+
+        FloatArray( float[] value )
+        {
+            this.value = value;
+        }
+
+        @Override
+        public int length()
+        {
+            return value.length;
+        }
+
+        @Override
+        public double doubleValue( int index )
+        {
+            return value[index];
+        }
     }
+
     final class DoubleArray implements FloatingPointArray
     {
-        private final double[] value; DoubleArray( double[] value ) { this.value = value; }
-        @Override public int length()                    { return value.length; }
-        @Override public double doubleValue( int index ) { return value[index]; }
+        private final double[] value;
+
+        DoubleArray( double[] value )
+        {
+            this.value = value;
+        }
+
+        @Override
+        public int length()
+        {
+            return value.length;
+        }
+
+        @Override
+        public double doubleValue( int index )
+        {
+            return value[index];
+        }
     }
+
     final class NumberArray implements IntegralArray, FloatingPointArray
     {
-        static IntegralArray asIntegral( Number[] value )           { return new NumberArray( value ); }
-        static FloatingPointArray asFloatingPoint( Number[] value ) { return new NumberArray( value ); }
-        private final Number[] value; private NumberArray( Number[] value ) { this.value = value; }
-        @Override public int length()                    { return value.length; }
-        @Override public long longValue( int index )     { return value[index].longValue(); }
-        @Override public double doubleValue( int index ) { return value[index].doubleValue(); }
+        static IntegralArray asIntegral( Number[] value )
+        {
+            return new NumberArray( value );
+        }
+
+        static FloatingPointArray asFloatingPoint( Number[] value )
+        {
+            return new NumberArray( value );
+        }
+
+        private final Number[] value;
+
+        private NumberArray( Number[] value )
+        {
+            this.value = value;
+        }
+
+        @Override
+        public int length()
+        {
+            return value.length;
+        }
+
+        @Override
+        public long longValue( int index )
+        {
+            return value[index].longValue();
+        }
+
+        @Override
+        public double doubleValue( int index )
+        {
+            return value[index].doubleValue();
+        }
     }
-    //</pre>
 }

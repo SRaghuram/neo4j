@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -34,6 +34,8 @@ import java.util.ServiceLoader;
 import java.util.Set;
 
 import org.neo4j.helpers.collection.PrefetchingIterator;
+
+import static org.neo4j.unsafe.impl.internal.dragons.FeatureToggles.flag;
 
 /**
  * A utility for locating services. This implements the same functionality as <a
@@ -117,7 +119,9 @@ public abstract class Service
      * Enabling this is useful for debugging why services aren't loaded where you would expect them to.
      */
     private static final boolean printServiceLoaderStackTraces =
-            Boolean.getBoolean( "org.neo4j.helpers.Service.printServiceLoaderStackTraces" );
+            flag( Service.class, "printServiceLoaderStackTraces", false );
+
+    final Set<String> keys;
 
     /**
      * Designates that a class implements the specified service and should be
@@ -130,8 +134,8 @@ public abstract class Service
      *
      * @author Tobias Ivarsson
      */
-    @Target(ElementType.TYPE)
-    @Retention(RetentionPolicy.SOURCE)
+    @Target( ElementType.TYPE )
+    @Retention( RetentionPolicy.SOURCE )
     public @interface Implementation
     {
         /**
@@ -143,44 +147,9 @@ public abstract class Service
     }
 
     /**
-     * A base class for services, similar to {@link Service}, that compares keys
-     * using case insensitive comparison instead of exact comparison.
-     *
-     * @author Tobias Ivarsson
-     */
-    public static abstract class CaseInsensitiveService extends Service
-    {
-        /**
-         * Create a new instance of a service implementation identified with the
-         * specified key(s).
-         *
-         * @param key     the main key for identifying this service implementation
-         * @param altKeys alternative spellings of the identifier of this
-         *                service implementation
-         */
-        protected CaseInsensitiveService( String key, String... altKeys )
-        {
-            super( key, altKeys );
-        }
-
-        @Override
-        final public boolean matches( String key )
-        {
-            for ( String id : keys )
-            {
-                if ( id.equalsIgnoreCase( key ) )
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
-
-    /**
      * Load all implementations of a Service.
      *
-     * @param <T>  the type of the Service
+     * @param <T> the type of the Service
      * @param type the type of the Service to load
      * @return all registered implementations of the Service
      */
@@ -195,36 +164,52 @@ public abstract class Service
     }
 
     /**
+     * Load the Service implementation with the specified key. This method will return null if requested service not
+     * found.
+     *
+     * @param type the type of the Service to load
+     * @param key the key that identifies the desired implementation
+     * @param <T> the type of the Service to load
+     * @return requested service
+     */
+    public static <T extends Service> T loadSilently( Class<T> type, String key )
+    {
+        for ( T service : load( type ) )
+        {
+            if ( service.matches( key ) )
+            {
+                return service;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Load the Service implementation with the specified key. This method should never return null.
      *
-     * @param <T>  the type of the Service
+     * @param <T> the type of the Service
      * @param type the type of the Service to load
-     * @param key  the key that identifies the desired implementation
+     * @param key the key that identifies the desired implementation
      * @return the matching Service implementation
      */
     public static <T extends Service> T load( Class<T> type, String key )
     {
-        for ( T impl : load( type ) )
+        T service = loadSilently( type, key );
+        if ( service == null )
         {
-            if ( impl.matches( key ) )
-            {
-                return impl;
-            }
+            throw new NoSuchElementException(
+                    String.format( "Could not find any implementation of %s with a key=\"%s\"", type.getName(), key ) );
         }
-        throw new NoSuchElementException( String.format(
-                "Could not find any implementation of %s with a key=\"%s\"",
-                type.getName(), key ) );
+        return service;
     }
-
-    final Set<String> keys;
 
     /**
      * Create a new instance of a service implementation identified with the
      * specified key(s).
      *
-     * @param key     the main key for identifying this service implementation
+     * @param key the main key for identifying this service implementation
      * @param altKeys alternative spellings of the identifier of this service
-     *                implementation
+     * implementation
      */
     protected Service( String key, String... altKeys )
     {
@@ -316,7 +301,7 @@ public abstract class Service
     {
         try
         {
-            HashMap<String, T> services = new HashMap<>();
+            HashMap<String,T> services = new HashMap<>();
             ClassLoader currentCL = Service.class.getClassLoader();
             ClassLoader contextCL = Thread.currentThread().getContextClassLoader();
 
@@ -350,8 +335,7 @@ public abstract class Service
         }
     }
 
-    private static <T> void putAllInstancesToMap( Iterable<T> services,
-                                                  Map<String, T> servicesMap )
+    private static <T> void putAllInstancesToMap( Iterable<T> services, Map<String,T> servicesMap )
     {
         for ( T instance : filterExceptions( services ) )
         {

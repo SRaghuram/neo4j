@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,17 +19,19 @@
  */
 package org.neo4j.collection.primitive;
 
+import org.junit.Test;
+
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongPredicate;
 
-import org.junit.Test;
-
-import org.neo4j.function.LongPredicate;
+import org.neo4j.collection.primitive.PrimitiveLongCollections.PrimitiveLongBaseIterator;
 
 import static java.util.Arrays.asList;
-
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
@@ -113,27 +115,20 @@ public class PrimitiveLongCollectionsTest
         PrimitiveLongIterator items = PrimitiveLongCollections.iterator( 1, 2, 3 );
 
         // WHEN
-        PrimitiveLongIterator filtered = PrimitiveLongCollections.filter( items, new LongPredicate()
-        {
-            @Override
-            public boolean test( long item )
-            {
-                return item != 2;
-            }
-        } );
+        PrimitiveLongIterator filtered = PrimitiveLongCollections.filter( items, (LongPredicate) item -> item != 2 );
 
         // THEN
         assertItems( filtered, 1, 3 );
     }
 
     @Test
-    public void dedup() throws Exception
+    public void deduplicate() throws Exception
     {
         // GIVEN
         PrimitiveLongIterator items = PrimitiveLongCollections.iterator( 1, 1, 2, 3, 2 );
 
         // WHEN
-        PrimitiveLongIterator deduped = PrimitiveLongCollections.dedup( items );
+        PrimitiveLongIterator deduped = PrimitiveLongCollections.deduplicate( items );
 
         // THEN
         assertItems( deduped, 1, 2, 3 );
@@ -586,6 +581,45 @@ public class PrimitiveLongCollectionsTest
         assertTrue( Arrays.equals( new long[] { 1, 2, 3 }, array ) );
     }
 
+    @Test
+    public void shouldDeduplicate() throws Exception
+    {
+        // GIVEN
+        long[] array = new long[] {1L, 1L, 2L, 5L, 6L, 6L};
+
+        // WHEN
+        long[] deduped = PrimitiveLongCollections.deduplicate( array );
+
+        // THEN
+        assertArrayEquals( new long[] {1L, 2L, 5L, 6L}, deduped );
+    }
+
+    @Test
+    public void shouldNotContinueToCallNextOnHasNextFalse() throws Exception
+    {
+        // GIVEN
+        AtomicLong count = new AtomicLong( 2 );
+        PrimitiveLongIterator iterator = new PrimitiveLongBaseIterator()
+        {
+            @Override
+            protected boolean fetchNext()
+            {
+                return count.decrementAndGet() >= 0 ? next( count.get() ) : false;
+            }
+        };
+
+        // WHEN/THEN
+        assertTrue( iterator.hasNext() );
+        assertTrue( iterator.hasNext() );
+        assertEquals( 1L, iterator.next() );
+        assertTrue( iterator.hasNext() );
+        assertTrue( iterator.hasNext() );
+        assertEquals( 0L, iterator.next() );
+        assertFalse( iterator.hasNext() );
+        assertFalse( iterator.hasNext() );
+        assertEquals( -1L, count.get() );
+    }
+
     private void assertNoMoreItems( PrimitiveLongIterator iterator )
     {
         assertFalse( iterator + " should have no more items", iterator.hasNext() );
@@ -620,7 +654,7 @@ public class PrimitiveLongCollectionsTest
         long[] result = new long[items.length];
         for ( int i = 0; i < items.length; i++ )
         {
-            result[i] = items[items.length-i-1];
+            result[i] = items[items.length - i - 1];
         }
         return result;
     }

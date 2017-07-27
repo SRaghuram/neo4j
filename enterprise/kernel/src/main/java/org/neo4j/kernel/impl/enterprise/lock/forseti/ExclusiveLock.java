@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,13 +19,15 @@
  */
 package org.neo4j.kernel.impl.enterprise.lock.forseti;
 
+import java.util.Set;
+
 import org.neo4j.kernel.impl.util.collection.SimpleBitSet;
 
 class ExclusiveLock implements ForsetiLockManager.Lock
 {
     private final ForsetiClient owner;
 
-    public ExclusiveLock( ForsetiClient owner )
+    ExclusiveLock( ForsetiClient owner )
     {
         this.owner = owner;
     }
@@ -37,15 +39,9 @@ class ExclusiveLock implements ForsetiLockManager.Lock
     }
 
     @Override
-    public int holderWaitListSize()
+    public int detectDeadlock( int client )
     {
-        return owner.waitListSize();
-    }
-
-    @Override
-    public boolean anyHolderIsWaitingFor( int client )
-    {
-        return owner.isWaitingFor( client );
+        return owner.isWaitingFor( client ) ? owner.id() : -1;
     }
 
     @Override
@@ -55,10 +51,16 @@ class ExclusiveLock implements ForsetiLockManager.Lock
     }
 
     @Override
+    public void collectOwners( Set<ForsetiClient> owners )
+    {
+        owners.add( owner );
+    }
+
+    @Override
     public String toString()
     {
         return "ExclusiveLock{" +
-                "owner=" + owner +
-                '}';
+               "owner=" + owner +
+               '}';
     }
 }

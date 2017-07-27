@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,7 +28,7 @@ import org.junit.Test;
 
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.server.CommunityNeoServer;
-import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.web.WebServer;
 
 import static org.mockito.Matchers.any;
@@ -51,8 +51,8 @@ public class ManagementApiModuleTest
 
         Map<String, String> params = new HashMap();
         String managementPath = "/db/manage";
-        params.put( Configurator.MANAGEMENT_PATH_PROPERTY_KEY, managementPath );
-        Config config = new Config( params );
+        params.put( ServerSettings.management_api_path.name(), managementPath );
+        Config config = Config.embeddedDefaults( params );
 
         when( neoServer.getConfig() ).thenReturn( config );
 

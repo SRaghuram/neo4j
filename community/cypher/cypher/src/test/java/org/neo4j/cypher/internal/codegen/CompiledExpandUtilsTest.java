@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -72,10 +72,10 @@ public class CompiledExpandUtilsTest
         when( readOperations.nodeGetDegree( 2L, Direction.INCOMING, 1 ) ).thenReturn( 3 );
 
         // WHEN
-        connectingRelationships( readOperations, 1L, Direction.OUTGOING, 2L, 1 );
+        connectingRelationships( readOperations, 1L, Direction.OUTGOING, 2L, new int[]{1} );
 
         // THEN
-        verify( readOperations, times( 1 ) ).nodeGetRelationships( 1L, Direction.OUTGOING, 1 );
+        verify( readOperations, times( 1 ) ).nodeGetRelationships( 1L, Direction.OUTGOING, new int[]{1} );
     }
 
     @Test
@@ -87,10 +87,10 @@ public class CompiledExpandUtilsTest
         when( readOperations.nodeGetDegree( 2L, Direction.INCOMING, 1 ) ).thenReturn( 1 );
 
         // WHEN
-        connectingRelationships( readOperations, 1L, Direction.OUTGOING, 2L, 1 );
+        connectingRelationships( readOperations, 1L, Direction.OUTGOING, 2L, new int[]{1} );
 
         // THEN
-        verify( readOperations, times( 1 ) ).nodeGetRelationships( 2L, Direction.INCOMING, 1 );
+        verify( readOperations, times( 1 ) ).nodeGetRelationships( 2L, Direction.INCOMING, new int[]{1} );
     }
 
 }

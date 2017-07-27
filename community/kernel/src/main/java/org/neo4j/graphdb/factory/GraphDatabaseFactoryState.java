@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,44 +19,49 @@
  */
 package org.neo4j.graphdb.factory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 
+import org.neo4j.graphdb.security.URLAccessRule;
 import org.neo4j.helpers.Service;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.security.URLAccessRule;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.logging.LogProvider;
 
 import static org.neo4j.kernel.GraphDatabaseDependencies.newDependencies;
 
 public class GraphDatabaseFactoryState
 {
+    // Keep these fields volatile or equivalent because of this scenario:
+    // - one thread creates a GraphDatabaseFactory (including state)
+    // - this factory will potentially be handed over to other threads, which will create databases
     private final List<Class<?>> settingsClasses;
     private final List<KernelExtensionFactory<?>> kernelExtensions;
-    private Monitors monitors;
-    private LogProvider userLogProvider;
-    private Map<String,URLAccessRule> urlAccessRules;
+    private volatile Monitors monitors;
+    private volatile LogProvider userLogProvider;
+    private final Map<String,URLAccessRule> urlAccessRules;
 
-    public GraphDatabaseFactoryState() {
-        settingsClasses = new ArrayList<>();
+    public GraphDatabaseFactoryState()
+    {
+        settingsClasses = new CopyOnWriteArrayList<>();
         settingsClasses.add( GraphDatabaseSettings.class );
-        kernelExtensions = new ArrayList<>();
-        for ( KernelExtensionFactory factory : Service.load( KernelExtensionFactory.class ) )
+        kernelExtensions = new CopyOnWriteArrayList<>();
+        for ( KernelExtensionFactory<?> factory : Service.load( KernelExtensionFactory.class ) )
         {
             kernelExtensions.add( factory );
         }
-        urlAccessRules = new HashMap<>();
+        urlAccessRules = new ConcurrentHashMap<>();
     }
 
     public GraphDatabaseFactoryState( GraphDatabaseFactoryState previous )
     {
-        settingsClasses = new ArrayList<>( previous.settingsClasses );
-        kernelExtensions = new ArrayList<>( previous.kernelExtensions );
-        urlAccessRules = new HashMap<>( previous.urlAccessRules );
+        settingsClasses = new CopyOnWriteArrayList<>( previous.settingsClasses );
+        kernelExtensions = new CopyOnWriteArrayList<>( previous.kernelExtensions );
+        urlAccessRules = new ConcurrentHashMap<>( previous.urlAccessRules );
         monitors = previous.monitors;
         monitors = previous.monitors;
         userLogProvider = previous.userLogProvider;
@@ -65,6 +70,11 @@ public class GraphDatabaseFactoryState
     public Iterable<KernelExtensionFactory<?>> getKernelExtension()
     {
         return kernelExtensions;
+    }
+
+    public void removeKernelExtensions( Predicate<KernelExtensionFactory<?>> toRemove )
+    {
+        kernelExtensions.removeIf( toRemove );
     }
 
     public void setKernelExtensions( Iterable<KernelExtensionFactory<?>> newKernelExtensions )
@@ -78,6 +88,14 @@ public class GraphDatabaseFactoryState
         for ( KernelExtensionFactory<?> newKernelExtension : newKernelExtensions )
         {
             kernelExtensions.add( newKernelExtension );
+        }
+    }
+
+    public void addSettingsClasses( Iterable<Class<?>> settings )
+    {
+        for ( Class<?> setting : settings )
+        {
+            settingsClasses.add( setting );
         }
     }
 

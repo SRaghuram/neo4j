@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,7 @@
 package org.neo4j.kernel.impl.store;
 
 import java.io.File;
-import java.io.IOException;
+import java.nio.file.OpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -28,22 +28,24 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.kernel.IdGeneratorFactory;
-import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.core.Token;
-import org.neo4j.kernel.impl.core.TokenFactory;
+import org.neo4j.kernel.impl.store.format.RecordFormat;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.Record;
+import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.TokenRecord;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.Token;
+import org.neo4j.storageengine.api.TokenFactory;
 
-import static org.neo4j.io.pagecache.PagedFile.PF_EXCLUSIVE_LOCK;
-import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_LOCK;
+import static org.neo4j.kernel.impl.store.NoStoreHeaderFormat.NO_STORE_HEADER_FORMAT;
 import static org.neo4j.kernel.impl.store.PropertyStore.decodeString;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
-public abstract class TokenStore<RECORD extends TokenRecord, TOKEN extends Token> extends AbstractRecordStore<RECORD>
+public abstract class TokenStore<RECORD extends TokenRecord,TOKEN extends Token>
+        extends CommonAbstractStore<RECORD,NoStoreHeader>
 {
     public static final int NAME_STORE_BLOCK_SIZE = 30;
 
@@ -51,16 +53,21 @@ public abstract class TokenStore<RECORD extends TokenRecord, TOKEN extends Token
     private final TokenFactory<TOKEN> tokenFactory;
 
     public TokenStore(
-            File fileName,
+            File file,
             Config configuration,
             IdType idType,
             IdGeneratorFactory idGeneratorFactory,
             PageCache pageCache,
             LogProvider logProvider,
             DynamicStringStore nameStore,
-            TokenFactory<TOKEN> tokenFactory )
+            String typeDescriptor,
+            TokenFactory<TOKEN> tokenFactory,
+            RecordFormat<RECORD> recordFormat,
+            String storeVersion,
+            OpenOption... openOptions )
     {
-        super( fileName, configuration, idType, idGeneratorFactory, pageCache, logProvider);
+        super( file, configuration, idType, idGeneratorFactory, pageCache, logProvider, typeDescriptor,
+                recordFormat, NO_STORE_HEADER_FORMAT, storeVersion, openOptions );
         this.nameStore = nameStore;
         this.tokenFactory = tokenFactory;
     }
@@ -71,13 +78,7 @@ public abstract class TokenStore<RECORD extends TokenRecord, TOKEN extends Token
     }
 
     @Override
-    public int getRecordHeaderSize()
-    {
-        return getRecordSize();
-    }
-
-    @Override
-    protected boolean doFastIdGeneratorRebuild()
+    protected boolean isOnlyFastIdGeneratorRebuildEnabled( Config config )
     {
         return false;
     }
@@ -87,17 +88,14 @@ public abstract class TokenStore<RECORD extends TokenRecord, TOKEN extends Token
         LinkedList<TOKEN> records = new LinkedList<>();
         long maxIdInUse = getHighestPossibleIdInUse();
         int found = 0;
+        RECORD record = newRecord();
         for ( int i = 0; i <= maxIdInUse && found < maxCount; i++ )
         {
-            RECORD record;
-            try
-            {
-                record = getRecord( i );
-            }
-            catch ( InvalidRecordException t )
+            if ( !getRecord( i, record, RecordLoad.CHECK ).inUse() )
             {
                 continue;
             }
+
             found++;
             if ( record != null && record.inUse() && record.getNameId() != Record.RESERVED.intValue() )
             {
@@ -110,84 +108,8 @@ public abstract class TokenStore<RECORD extends TokenRecord, TOKEN extends Token
 
     public TOKEN getToken( int id )
     {
-        RECORD record = getRecord( id );
-        return tokenFactory.newToken( getStringFor( record ), record.getId() );
-    }
-
-    public RECORD getRecord( int id )
-    {
-        RECORD record = newRecord( id );
-        byte inUseByte = Record.NOT_IN_USE.byteValue();
-
-        try ( PageCursor cursor = storeFile.io( pageIdForRecord( id ), PF_SHARED_LOCK ) )
-        {
-            if ( cursor.next() )
-            {
-                do
-                {
-                    inUseByte = getRecord( id, record, cursor );
-                } while ( cursor.shouldRetry() );
-
-            }
-
-            if ( inUseByte != Record.IN_USE.byteValue() )
-            {
-                throw new InvalidRecordException( getClass().getSimpleName() + " Record[" + id + "] not in use" );
-            }
-
-            checkInUseByteValidity( id, inUseByte );
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( e );
-        }
-
-        record.addNameRecords( nameStore.getLightRecords( record.getNameId() ) );
-        return record;
-    }
-
-    @Override
-    public RECORD getRecord( long id )
-    {
-        return getRecord( (int) id );
-    }
-
-    @Override
-    public RECORD forceGetRecord( long id )
-    {
-        try ( PageCursor cursor = storeFile.io( pageIdForRecord( id ), PF_SHARED_LOCK ) )
-        {
-            if ( cursor.next() )
-            {
-                RECORD record = newRecord( (int) id );
-                byte inUseByte;
-                do
-                {
-                    inUseByte = getRecord( (int) id, record, cursor );
-                } while ( cursor.shouldRetry() );
-
-                checkInUseByteValidity( id, inUseByte );
-
-                record.setIsLight( true );
-                return record;
-            }
-            else
-            {
-                return newRecord( (int) id );
-            }
-        }
-        catch ( IOException e )
-        {
-            return newRecord( (int) id );
-        }
-    }
-
-    private void checkInUseByteValidity( long id, byte inUseByte )
-    {
-        if ( inUseByte != Record.IN_USE.byteValue() && inUseByte != Record.NOT_IN_USE.byteValue() )
-        {
-            throw new InvalidRecordException( getClass().getSimpleName() + " Record[" + id + "] unknown in use flag[" + inUseByte + "]" );
-        }
+        RECORD record = getRecord( id, newRecord(), NORMAL );
+        return tokenFactory.newToken( getStringFor( record ), record.getIntId() );
     }
 
     public Collection<DynamicRecord> allocateNameRecords( byte[] chars )
@@ -200,7 +122,7 @@ public abstract class TokenStore<RECORD extends TokenRecord, TOKEN extends Token
     @Override
     public void updateRecord( RECORD record )
     {
-        forceUpdateRecord( record );
+        super.updateRecord( record );
         if ( !record.isLight() )
         {
             for ( DynamicRecord keyRecord : record.getNameRecords() )
@@ -211,79 +133,19 @@ public abstract class TokenStore<RECORD extends TokenRecord, TOKEN extends Token
     }
 
     @Override
-    public void forceUpdateRecord( RECORD record )
-    {
-        try ( PageCursor cursor = storeFile.io( pageIdForRecord( record.getId() ), PF_EXCLUSIVE_LOCK ) )
-        {
-            if ( cursor.next() )
-            {
-                do
-                {
-                    updateRecord( record, cursor );
-                } while ( cursor.shouldRetry() );
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new UnderlyingStorageException( e );
-        }
-    }
-
-    protected abstract RECORD newRecord( int id );
-
-    protected byte getRecord( int id, RECORD record, PageCursor cursor )
-    {
-        cursor.setOffset( offsetForId( id ) );
-        byte inUseByte = cursor.getByte();
-        boolean inUse = (inUseByte == Record.IN_USE.byteValue());
-
-        record.setInUse( inUse );
-        if ( inUse )
-        {
-            readRecord( record, cursor );
-        }
-        return inUseByte;
-    }
-
-    protected void readRecord( RECORD record, PageCursor cursor )
-    {
-        record.setNameId( cursor.getInt() );
-    }
-
-    protected void updateRecord( RECORD record, PageCursor cursor )
-    {
-        int id = record.getId();
-        cursor.setOffset( offsetForId( id ) );
-        if ( record.inUse() )
-        {
-            cursor.putByte( Record.IN_USE.byteValue() );
-            writeRecord( record, cursor );
-        }
-        else
-        {
-            cursor.putByte( Record.NOT_IN_USE.byteValue() );
-            freeId( id );
-        }
-    }
-
-    protected void writeRecord( RECORD record, PageCursor cursor )
-    {
-        cursor.putInt( record.getNameId() );
-    }
-
     public void ensureHeavy( RECORD record )
     {
-        if (!record.isLight())
+        if ( !record.isLight() )
         {
             return;
         }
 
-        record.setIsLight( false );
-        record.addNameRecords( nameStore.getRecords( record.getNameId() ) );
+        record.addNameRecords( nameStore.getRecords( record.getNameId(), NORMAL ) );
     }
 
     public String getStringFor( RECORD nameRecord )
     {
+        ensureHeavy( nameRecord );
         int recordToFind = nameRecord.getNameId();
         Iterator<DynamicRecord> records = nameRecord.getNameRecords().iterator();
         Collection<DynamicRecord> relevantRecords = new ArrayList<>();
@@ -293,7 +155,7 @@ public abstract class TokenStore<RECORD extends TokenRecord, TOKEN extends Token
             if ( record.inUse() && record.getId() == recordToFind )
             {
                 recordToFind = (int) record.getNextBlock();
-//                // TODO: optimize here, high chance next is right one
+                // TODO: optimize here, high chance next is right one
                 relevantRecords.add( record );
                 records = nameRecord.getNameRecords().iterator();
             }

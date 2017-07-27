@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -23,6 +23,6 @@ public class PropertyKeyNotFoundException extends KernelException
 {
     public PropertyKeyNotFoundException( String propertyKey, Exception cause )
     {
-        super( Status.Schema.NoSuchPropertyKey, cause, "Property key '" + propertyKey + "' not found" );
+        super( Status.Schema.PropertyKeyAccessFailed, cause, "Property key '" + propertyKey + "' not found" );
     }
 }

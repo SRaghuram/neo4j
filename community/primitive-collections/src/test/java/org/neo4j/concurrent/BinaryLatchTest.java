@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -75,7 +75,9 @@ public class BinaryLatchTest
             fail( "Call should have timed out" );
         }
         catch ( TimeoutException ignore )
-        {}
+        {
+            // empty
+        }
 
         latch.release();
 

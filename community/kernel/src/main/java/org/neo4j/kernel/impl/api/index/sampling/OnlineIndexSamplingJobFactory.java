@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -38,9 +38,9 @@ public class OnlineIndexSamplingJobFactory implements IndexSamplingJobFactory
     }
 
     @Override
-    public IndexSamplingJob create( IndexProxy indexProxy )
+    public IndexSamplingJob create( long indexId, IndexProxy indexProxy )
     {
         final String indexUserDescription = indexProxy.getDescriptor().userDescription( nameLookup );
-        return new OnlineIndexSamplingJob( indexProxy, storeView, indexUserDescription, logProvider );
+        return new OnlineIndexSamplingJob( indexId, indexProxy, storeView, indexUserDescription, logProvider );
     }
 }

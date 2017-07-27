@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -28,20 +28,24 @@ import org.neo4j.csv.reader.CharSeekers;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.csv.reader.Readables;
 import org.neo4j.helpers.Args;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.SimpleLogService;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
-import org.neo4j.unsafe.impl.batchimport.input.Groups;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header;
 import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 
-import static org.neo4j.kernel.configuration.Config.parseLongWithUnit;
-import static org.neo4j.tooling.CsvDataGenerator.bareboneNodeHeader;
-import static org.neo4j.tooling.CsvDataGenerator.bareboneRelationshipHeader;
-import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
+import static java.lang.System.currentTimeMillis;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
+import static org.neo4j.kernel.configuration.Settings.parseLongWithUnit;
+import static org.neo4j.tooling.DataGeneratorInput.bareboneNodeHeader;
+import static org.neo4j.tooling.DataGeneratorInput.bareboneRelationshipHeader;
+import static org.neo4j.unsafe.impl.batchimport.input.Collectors.silentBadCollector;
 import static org.neo4j.unsafe.impl.batchimport.input.csv.Configuration.COMMAS;
 import static org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories.defaultFormatNodeFileHeader;
 import static org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories.defaultFormatRelationshipFileHeader;
@@ -55,10 +59,10 @@ import static org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors.defaul
  * Quick comes from gaming terminology where you sometimes just want to play a quick game, without
  * any settings or hazzle, just play.
  *
- * Uses {@link CsvDataGeneratorInput} as random data {@link Input}.
+ * Uses {@link DataGeneratorInput} as random data {@link Input}.
  *
  * For the time being the node/relationship data can't be controlled via command-line arguments,
- * only through changing the code. The {@link CsvDataGeneratorInput} accepts two {@link Header headers}
+ * only through changing the code. The {@link DataGeneratorInput} accepts two {@link Header headers}
  * describing which sort of data it should generate.
  */
 public class QuickImport
@@ -71,20 +75,53 @@ public class QuickImport
         int labelCount = args.getNumber( "labels", 4 ).intValue();
         int relationshipTypeCount = args.getNumber( "relationship-types", 4 ).intValue();
         File dir = new File( args.get( ImportTool.Options.STORE_DIR.key() ) );
+        long randomSeed = args.getNumber( "random-seed", currentTimeMillis() ).longValue();
+        Configuration config = COMMAS;
 
-        Extractors extractors = new Extractors( COMMAS.arrayDelimiter() );
+        Extractors extractors = new Extractors( config.arrayDelimiter() );
         IdType idType = IdType.valueOf( args.get( "id-type", IdType.ACTUAL.name() ) );
 
         Header nodeHeader = parseNodeHeader( args, idType, extractors );
         Header relationshipHeader = parseRelationshipHeader( args, idType, extractors );
 
-        Input input = new CsvDataGeneratorInput(
-                nodeHeader, relationshipHeader,
-                COMMAS, nodeCount, relationshipCount, new Groups(), idType, labelCount, relationshipTypeCount );
         FormattedLogProvider sysoutLogProvider = FormattedLogProvider.toOutputStream( System.out );
-        BatchImporter importer = new ParallelBatchImporter(
-                dir, DEFAULT, new SimpleLogService( sysoutLogProvider, sysoutLogProvider ), defaultVisible() );
-        importer.doImport( input );
+        org.neo4j.unsafe.impl.batchimport.Configuration importConfig =
+                new org.neo4j.unsafe.impl.batchimport.Configuration()
+        {
+            @Override
+            public int maxNumberOfProcessors()
+            {
+                return args.getNumber( ImportTool.Options.PROCESSORS.key(), DEFAULT.maxNumberOfProcessors() ).intValue();
+            }
+
+            @Override
+            public int denseNodeThreshold()
+            {
+                return args.getNumber( dense_node_threshold.name(), DEFAULT.denseNodeThreshold() ).intValue();
+            }
+        };
+
+        SimpleDataGenerator generator = new SimpleDataGenerator( nodeHeader, relationshipHeader, randomSeed,
+                nodeCount, labelCount, relationshipTypeCount, idType );
+        Input input = new DataGeneratorInput(
+                nodeCount, relationshipCount,
+                generator.nodes(), generator.relationships(),
+                idType, silentBadCollector( 0 ) );
+
+        try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
+        {
+            BatchImporter consumer;
+            if ( args.getBoolean( "to-csv" ) )
+            {
+                consumer = new CsvOutput( dir, nodeHeader, relationshipHeader, config );
+            }
+            else
+            {
+                consumer = new ParallelBatchImporter( dir, fileSystem, importConfig,
+                        new SimpleLogService( sysoutLogProvider, sysoutLogProvider ), defaultVisible(), Config.defaults() );
+            }
+            consumer.doImport( input );
+        }
     }
 
     private static Header parseNodeHeader( Args args, IdType idType, Extractors extractors )

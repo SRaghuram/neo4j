@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,17 +19,7 @@
  */
 package org.neo4j.com;
 
-
 public interface ConnectionLostHandler
 {
-    public static final ConnectionLostHandler NO_ACTION = new ConnectionLostHandler()
-    {
-
-        @Override
-        public void handle( Exception e )
-        {
-        }
-    };
-
     void handle( Exception e );
 }

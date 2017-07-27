@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,8 +19,8 @@
  */
 package org.neo4j.kernel.impl.util;
 
-import org.neo4j.function.Consumer;
-import org.neo4j.function.Supplier;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Caches single instances. This is meant to be used within a single thread, where

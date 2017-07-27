@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -18,20 +18,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.neo4j.shell.util.json;
+
 /**
- * The <code>JSONString</code> interface allows a <code>toJSONString()</code> 
- * method so that a class can change the behavior of 
+ * The <code>JSONString</code> interface allows a <code>toJSONString()</code>
+ * method so that a class can change the behavior of
  * <code>JSONObject.toString()</code>, <code>JSONArray.toString()</code>,
- * and <code>JSONWriter.value(</code>Object<code>)</code>. The 
- * <code>toJSONString</code> method will be used instead of the default behavior 
+ * and <code>JSONWriter.value(</code>Object<code>)</code>. The
+ * <code>toJSONString</code> method will be used instead of the default behavior
  * of using the Object's <code>toString()</code> method and quoting the result.
  */
-public interface JSONString {
-	/**
-	 * The <code>toJSONString</code> method allows a class to produce its own JSON 
-	 * serialization. 
-	 * 
-	 * @return A strictly syntactically correct JSON text.
-	 */
-	public String toJSONString();
+public interface JSONString
+{
+    /**
+     * The <code>toJSONString</code> method allows a class to produce its own JSON
+     * serialization.
+     *
+     * @return A strictly syntactically correct JSON text.
+     */
+    String toJSONString();
 }

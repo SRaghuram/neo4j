@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -21,8 +21,8 @@ package org.neo4j.unsafe.impl.batchimport;
 
 import java.util.Collection;
 
-import org.neo4j.helpers.Predicate;
 import org.neo4j.kernel.impl.store.RecordStore;
+import org.neo4j.kernel.impl.store.id.validation.IdValidator;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.unsafe.impl.batchimport.staging.BatchSender;
 import org.neo4j.unsafe.impl.batchimport.staging.ProcessorStep;
@@ -33,8 +33,7 @@ import org.neo4j.unsafe.impl.batchimport.stats.Stat;
 import org.neo4j.unsafe.impl.batchimport.stats.StatsProvider;
 
 /**
- * Updates a batch of records to a store. Can be given a {@link Predicate} that can choose to not
- * {@link Predicate#accept(Object) accept} a record, which will have that record be written as unused instead.
+ * Updates a batch of records to a store.
  */
 public class UpdateRecordsStep<RECORD extends AbstractBaseRecord>
         extends ProcessorStep<RECORD[]>
@@ -42,43 +41,34 @@ public class UpdateRecordsStep<RECORD extends AbstractBaseRecord>
 {
     protected final RecordStore<RECORD> store;
     private final int recordSize;
-    private int recordsUpdated;
+    private long recordsUpdated;
 
     public UpdateRecordsStep( StageControl control, Configuration config, RecordStore<RECORD> store )
     {
-        super( control, "v", config, 1 );
+        super( control, "v", config, config.parallelRecordWrites() ? 0 : 1 );
         this.store = store;
         this.recordSize = store.getRecordSize();
     }
 
-    @SuppressWarnings( "unchecked" )
     @Override
     protected void process( RECORD[] batch, BatchSender sender ) throws Throwable
     {
+        int recordsUpdatedInThisBatch = 0;
         for ( RECORD record : batch )
         {
-            if ( record.inUse() && !accept( record ) )
+            if ( record != null && record.inUse() && !IdValidator.isReservedId( record.getId() ) )
             {
-                record = (RECORD) record.clone();
-                record.setInUse( false );
+                update( record );
+                recordsUpdatedInThisBatch++;
             }
-            update( record );
         }
-
-        // Flush after each batch.
-        // We get vectored, sequential IO when we write with flush, plus it makes future page faulting faster.
-        store.flush();
-        recordsUpdated += batch.length;
+        recordsUpdated += recordsUpdatedInThisBatch;
     }
 
     protected void update( RECORD record ) throws Throwable
     {
+        store.prepareForCommit( record );
         store.updateRecord( record );
-    }
-
-    protected boolean accept( @SuppressWarnings( "unused" ) RECORD record )
-    {
-        return true;
     }
 
     @Override
@@ -91,7 +81,7 @@ public class UpdateRecordsStep<RECORD extends AbstractBaseRecord>
     @Override
     public Stat stat( Key key )
     {
-        return key == Keys.io_throughput ? new IoThroughputStat( startTime, endTime, recordSize*recordsUpdated ) : null;
+        return key == Keys.io_throughput ? new IoThroughputStat( startTime, endTime, recordSize * recordsUpdated ) : null;
     }
 
     @Override

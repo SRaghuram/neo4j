@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2015 "Neo Technology,"
+ * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -19,14 +19,22 @@
  */
 package org.neo4j.server.web;
 
-import javax.ws.rs.core.MediaType;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.MediaType;
 
-public class HttpHeaderUtils {
-    private static final String UTF8 = "UTF-8";
-    public static final Map<String, String> CHARSET = Collections.singletonMap("charset", UTF8);
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.logging.Log;
+
+public class HttpHeaderUtils
+{
+
+    public static final String MAX_EXECUTION_TIME_HEADER = "max-execution-time";
+
+    public static final Map<String, String> CHARSET = Collections.singletonMap("charset", StandardCharsets.UTF_8.name());
 
     public static MediaType mediaTypeWithCharsetUtf8(String mediaType)
     {
@@ -47,5 +55,31 @@ public class HttpHeaderUtils {
         Map<String, String> paramsWithCharset = new HashMap<String, String>(parameters);
         paramsWithCharset.putAll(CHARSET);
         return new MediaType(mediaType.getType(), mediaType.getSubtype(), paramsWithCharset);
+    }
+
+    /**
+     * Retrieve custom transaction timeout in milliseconds from numeric {@link #MAX_EXECUTION_TIME_HEADER} request
+     * header.
+     * If header is not set returns -1.
+     * @param request http request
+     * @param errorLog errors log for header parsing errors
+     * @return custom timeout if header set, -1 otherwise or when value is not a valid number.
+     */
+    public static long getTransactionTimeout( HttpServletRequest request, Log errorLog )
+    {
+        String headerValue = request.getHeader( MAX_EXECUTION_TIME_HEADER );
+        if ( headerValue != null )
+        {
+            try
+            {
+                return Long.parseLong( headerValue );
+            }
+            catch ( NumberFormatException e )
+            {
+                errorLog.error( String.format( "Fail to parse `%s` header with value: '%s'. Should be a positive number.",
+                        MAX_EXECUTION_TIME_HEADER, headerValue), e );
+            }
+        }
+        return GraphDatabaseSettings.UNSPECIFIED_TIMEOUT;
     }
 }
