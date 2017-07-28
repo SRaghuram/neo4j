@@ -32,51 +32,33 @@ import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper.ID_NOT_
  * Increments counts for each visited relationship, once for start node and once for end node
  * (unless for loops). This to be able to determine which nodes are dense before starting to import relationships.
  */
-public class CalculateDenseNodesStep extends ForkedProcessorStep<Batch<InputRelationship,RelationshipRecord>>
+public class CalculateDenseNodesStep extends ForkedProcessorStep<RelationshipRecord[]>
 {
     private final NodeRelationshipCache cache;
-    private final Collector badCollector;
 
-    public CalculateDenseNodesStep( StageControl control, Configuration config, NodeRelationshipCache cache,
-            Collector badCollector )
+    public CalculateDenseNodesStep( StageControl control, Configuration config, NodeRelationshipCache cache )
     {
         super( control, "CALCULATE", config );
         this.cache = cache;
-        this.badCollector = badCollector;
     }
 
     @Override
-    protected void forkedProcess( int id, int processors, Batch<InputRelationship,RelationshipRecord> batch )
+    protected void forkedProcess( int id, int processors, RelationshipRecord[] batch )
     {
-        for ( int i = 0, idIndex = 0; i < batch.input.length; i++ )
+        for ( int i = 0; i < batch.length; i++ )
         {
-            InputRelationship relationship = batch.input[i];
-            long startNodeId = batch.ids[idIndex++];
-            long endNodeId = batch.ids[idIndex++];
-            processNodeId( id, processors, startNodeId, relationship, relationship.startNode() );
-            if ( startNodeId != endNodeId ||                 // avoid counting loops twice
-                 startNodeId == ID_NOT_FOUND ) // although always collect bad relationships
+        		RelationshipRecord relationship = batch[i];
+            long startNodeId = relationship.getFirstNode();
+            long endNodeId = relationship.getSecondNode();
+            if (!relationship.inUse())
+            		continue;
+            cache.incrementCount( startNodeId );
+            if ( startNodeId != endNodeId      // avoid counting loops twice
+            									) // although always collect bad relationships
             {
                 // Loops only counts as one
-                processNodeId( id, processors, endNodeId, relationship, relationship.endNode() );
+            		cache.incrementCount( endNodeId );
             }
-        }
-    }
-
-    private void processNodeId( int id, int processors, long nodeId,
-            InputRelationship relationship, Object inputId )
-    {
-        if ( nodeId == ID_NOT_FOUND )
-        {
-            if ( id == MAIN )
-            {
-                // Only let the processor with id=0 (which always exists) report the bad relationships
-                badCollector.collectBadRelationship( relationship, inputId );
-            }
-        }
-        else if ( nodeId % processors == id )
-        {
-            cache.incrementCount( nodeId );
         }
     }
 }

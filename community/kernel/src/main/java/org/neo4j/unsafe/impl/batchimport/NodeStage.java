@@ -27,6 +27,7 @@ import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
+import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter.HighNodeIDHolder;
 import org.neo4j.unsafe.impl.batchimport.cache.NodeRelationshipCache;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdGenerator;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
@@ -60,14 +61,14 @@ import static org.neo4j.unsafe.impl.batchimport.staging.Step.ORDER_SEND_DOWNSTRE
  */
 public class NodeStage extends Stage
 {
-    private final NodeRelationshipCache cache;
+	private HighNodeIDHolder cache;//private final NodeRelationshipCache cache;
     private final NodeStore nodeStore;
 
     public NodeStage( Configuration config, IoMonitor writeMonitor,
             InputIterable<InputNode> nodes, IdMapper idMapper, IdGenerator idGenerator,
             BatchingNeoStores neoStore, InputCache inputCache, LabelScanStore labelScanStore,
             EntityStoreUpdaterStep.Monitor storeUpdateMonitor,
-            NodeRelationshipCache cache,
+            HighNodeIDHolder cache,//NodeRelationshipCache cache,
             StatsProvider memoryUsage ) throws IOException
     {
         super( "Nodes", config, ORDER_SEND_DOWNSTREAM );

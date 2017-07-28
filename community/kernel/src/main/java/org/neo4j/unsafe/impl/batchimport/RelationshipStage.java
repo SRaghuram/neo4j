@@ -62,7 +62,7 @@ public class RelationshipStage extends Stage
 
     public RelationshipStage( Configuration config, IoMonitor writeMonitor,
             InputIterable<InputRelationship> relationships, IdMapper idMapper,
-            Collector badCollector, InputCache inputCache, NodeRelationshipCache cache,
+            Collector badCollector, InputCache inputCache, //NodeRelationshipCache cache,
             BatchingNeoStores neoStore, EntityStoreUpdaterStep.Monitor storeUpdateMonitor ) throws IOException
     {
         super( "Relationships", config, ORDER_SEND_DOWNSTREAM );
@@ -79,7 +79,7 @@ public class RelationshipStage extends Stage
         add( new AssignRelationshipIdBatchStep( control(), config, 0 ) );
         add( new RelationshipPreparationStep( control(), config, idMapper ) );
         add( new RelationshipRecordPreparationStep( control(), config, neoStore.getRelationshipTypeRepository() ) );
-        add( new CalculateDenseNodesStep( control(), config, cache, badCollector ) );
+        //add( new CalculateDenseNodesStep( control(), config, cache, badCollector ) );
         add( new PropertyEncoderStep<>( control(), config, neoStore.getPropertyKeyRepository(), propertyStore ) );
         add( new EntityStoreUpdaterStep<>( control(), config, relationshipStore, propertyStore,
                 writeMonitor, storeUpdateMonitor ) );

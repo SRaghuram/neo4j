@@ -21,6 +21,7 @@ package org.neo4j.unsafe.impl.batchimport;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.function.Predicate;
@@ -62,12 +63,12 @@ import org.neo4j.unsafe.impl.batchimport.stats.StatsProvider;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingNeoStores;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingTokenRepository.BatchingRelationshipTypeTokenRepository;
 import org.neo4j.unsafe.impl.batchimport.store.io.IoMonitor;
+import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
 
 import static java.lang.Long.max;
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 
-import static org.neo4j.helpers.Format.bytes;
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.unsafe.impl.batchimport.SourceOrCachedInputIterable.cachedForSure;
 import static org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory.AUTO;
@@ -151,17 +152,33 @@ public class ParallelBatchImporter implements BatchImporter
                 withDynamicProcessorAssignment( executionMonitor, config ), EMPTY, dbConfig,
                 RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ) );
     }
+    public static String bytes(long size) {
+        if(size <= 0) return "0";
+        final String[] units = new String[] { "B", "kB", "MB", "GB", "TB" };
+        int digitGroups = (int) (Math.log10(size)/Math.log10(1024));
+        return new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + " " + units[digitGroups];
+    }
 
+    public class HighNodeIDHolder{
+    		long highNodeId;
+    		public void setHighNodeId(long nodeId)
+    		{
+    			highNodeId = nodeId;
+    		}
+    		public long getHighNodeId() {
+    			return highNodeId;
+    		}
+    }
     @Override
     public void doImport( Input input ) throws IOException
     {
         log.info( "Import starting" );
-
         // Things that we need to close later. The reason they're not in the try-with-resource statement
         // is that we need to close, and set to null, at specific points preferably. So use good ol' finally block.
         long maxMemory = config.maxMemoryUsage();
         NodeRelationshipCache nodeRelationshipCache = null;
         NodeLabelsCache nodeLabelsCache = null;
+        HighNodeIDHolder highNodeIDHolder = new HighNodeIDHolder();
         long startTime = currentTimeMillis();
         CountingStoreUpdateMonitor storeUpdateMonitor = new CountingStoreUpdateMonitor();
         try ( BatchingNeoStores neoStore = getBatchingNeoStores();
@@ -186,7 +203,7 @@ public class ParallelBatchImporter implements BatchImporter
             Configuration nodeConfig = configWithRecordsPerPageBasedBatchSize( config, neoStore.getNodeStore() );
             NodeStage nodeStage = new NodeStage( nodeConfig, writeMonitor,
                     nodes, idMapper, idGenerator, neoStore, inputCache, neoStore.getLabelScanStore(),
-                    storeUpdateMonitor, nodeRelationshipCache, memoryUsageStats );
+                    storeUpdateMonitor, highNodeIDHolder, memoryUsageStats );
             neoStore.startFlushingPageCache();
             executeStage( nodeStage );
             neoStore.stopFlushingPageCache();
@@ -200,30 +217,35 @@ public class ParallelBatchImporter implements BatchImporter
                     executeStage( new DeleteDuplicateNodesStage( config, duplicateNodeIds, neoStore ) );
                 }
             }
-
             // Import relationships (unlinked), properties
             Configuration relationshipConfig =
                     configWithRecordsPerPageBasedBatchSize( config, neoStore.getNodeStore() );
             RelationshipStage unlinkedRelationshipStage =
                     new RelationshipStage( relationshipConfig, writeMonitor, relationships, idMapper,
-                            badCollector, inputCache, nodeRelationshipCache, neoStore, storeUpdateMonitor );
+                            badCollector, inputCache, neoStore, storeUpdateMonitor );
             neoStore.startFlushingPageCache();
             executeStage( unlinkedRelationshipStage );
             neoStore.stopFlushingPageCache();
-
+            idMapper.close();
+            idMapper = null;
             // Link relationships together with each other, their nodes and their relationship groups
-            long availableMemory = maxMemory - totalMemoryUsageOf( nodeRelationshipCache, idMapper, neoStore );
+            long availableMemory = maxMemory - totalMemoryUsageOf( nodeRelationshipCache, neoStore );
+            // this is where the nodeRelationshipCache is allocated memory. This has to happen after idMapped is released
+            nodeRelationshipCache.setHighNodeId(highNodeIDHolder.getHighNodeId());
+            NodeDegreeCountStage nodeDegreeStage = new NodeDegreeCountStage(" Trying:", relationshipConfig, 
+            		neoStore.getRelationshipStore(), nodeRelationshipCache );
+            neoStore.startFlushingPageCache();
+            executeStage( nodeDegreeStage );
+            neoStore.stopFlushingPageCache();
+            
             linkData( nodeRelationshipCache, neoStore, unlinkedRelationshipStage.getDistribution(),
                     availableMemory );
 
             // Release this potentially really big piece of cached data
-            long peakMemoryUsage = totalMemoryUsageOf( nodeRelationshipCache, idMapper, neoStore );
-            long highNodeId = nodeRelationshipCache.getHighNodeId();
-            idMapper.close();
-            idMapper = null;
+            long peakMemoryUsage = totalMemoryUsageOf( nodeRelationshipCache, neoStore );
+            long highNodeId = nodeRelationshipCache.getHighNodeId();          
             nodeRelationshipCache.close();
             nodeRelationshipCache = null;
-
             // Defragment relationships groups for better performance
             new RelationshipGroupDefragmenter( config, executionMonitor ).run( max( maxMemory, peakMemoryUsage ),
                     neoStore, highNodeId );
