@@ -68,11 +68,6 @@
 
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-commercial</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.neo4j</groupId>
       <artifactId>neo4j-security-enterprise</artifactId>
       <version>${project.version}</version>
     </dependency>
