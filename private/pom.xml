@@ -46,6 +46,7 @@
 
   <modules>
     <module>enterprise</module>
+    <module>packaging</module>
   </modules>
 
   <build>
