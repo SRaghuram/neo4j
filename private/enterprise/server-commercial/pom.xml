@@ -62,7 +62,7 @@
 
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-commercial-causal-clustering</artifactId>
+      <artifactId>neo4j-causal-clustering-commercial</artifactId>
       <version>${project.version}</version>
     </dependency>
 
@@ -195,11 +195,6 @@
     </dependency>
 
     <dependency>
-      <groupId>org.picocontainer</groupId>
-      <artifactId>picocontainer</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-shell</artifactId>
       <version>${project.version}</version>
@@ -216,7 +211,7 @@
     <dependency>
       <groupId>org.neo4j.app</groupId>
       <artifactId>neo4j-server-enterprise</artifactId>
-      <version>3.3.0-SNAPSHOT</version>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
   

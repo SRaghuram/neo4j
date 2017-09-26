@@ -30,6 +30,7 @@
 
   <modules>
     <module>causal-clustering-commercial</module>
+    <module>server-commercial</module>
   </modules>
 
 
