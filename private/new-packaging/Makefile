@@ -12,9 +12,9 @@ ARTIFACT_E := ../packaging/standalone/target
 TARBALLS := $(ARTIFACT_C)/$(TARBALL_C) $(ARTIFACT_E)/$(TARBALL_E)
 COMMUNITY_LICENSE := ../../neo4j/community/LICENSE.txt
 COMMUNITY_POM := ../../neo4j/community/pom.xml
-CYPHER_SHELL := ../packaging/standalone/src/main/distribution/cypher-shell
+CYPHER_SHELL := ../../neo4j/packaging/standalone/src/main/distribution/cypher-shell
 OUT := out
-SHELL_SCRIPTS := ../packaging/standalone/src/main/distribution/shell-scripts/bin
+SHELL_SCRIPTS := ../../neo4j/packaging/standalone/src/main/distribution/shell-scripts/bin
 
 COMMON_FILES := $(shell find src/common -type f)
 RPM_FILES := $(shell find src/rpm -type f)
