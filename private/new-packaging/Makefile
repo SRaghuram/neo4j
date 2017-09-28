@@ -7,7 +7,6 @@ VERSION := $(shell bin/extract-version-from-pom ../pom.xml)
 
 TARBALL_C := neo4j-community-$(VERSION)-unix.tar.gz
 TARBALL_E := neo4j-enterprise-$(VERSION)-unix.tar.gz
-ARTIFACTS := ../packaging/standalone/target ../../neo4j/packaging/standalone/target
 ARTIFACT_C := ../../neo4j/packaging/standalone/target
 ARTIFACT_E := ../packaging/standalone/target
 TARBALLS := $(ARTIFACT_C)/$(TARBALL_C) $(ARTIFACT_E)/$(TARBALL_E)
@@ -21,8 +20,8 @@ COMMON_FILES := $(shell find src/common -type f)
 RPM_FILES := $(shell find src/rpm -type f)
 DEBIAN_FILES := $(shell find src/debian -type f)
 
-DEBS=$(patsubst ${ARTIFACTS}/%-unix.tar.gz,${OUT}/debian/%,${TARBALLS})
-RPMS=$(patsubst ${ARTIFACTS}/%-unix.tar.gz,${OUT}/rpm/%,${TARBALLS})
+DEBS=$(patsubst ${ARTIFACT_C}/%-unix.tar.gz,${OUT}/debian/%,${TARBALLS}) $(patsubst ${ARTIFACT_E}/%-unix.tar.gz,${OUT}/debian/%,${TARBALLS})
+RPMS=$(patsubst ${ARTIFACT_C}/%-unix.tar.gz,${OUT}/rpm/%,${TARBALLS}) $(patsubst ${ARTIFACT_E}/%-unix.tar.gz,${OUT}/rpm/%,${TARBALLS})
 
 all: debian neo4j-desktop-mac neo4j-desktop-windows rpm
 
