@@ -7,6 +7,7 @@ VERSION := $(shell bin/extract-version-from-pom ../pom.xml)
 
 TARBALL_C := neo4j-community-$(VERSION)-unix.tar.gz
 TARBALL_E := neo4j-enterprise-$(VERSION)-unix.tar.gz
+ARTIFACTS := ../packaging/standalone/target ../../neo4j/packaging/standalone/target
 ARTIFACT_C := ../../neo4j/packaging/standalone/target
 ARTIFACT_E := ../packaging/standalone/target
 TARBALLS := $(ARTIFACT_C)/$(TARBALL_C) $(ARTIFACT_E)/$(TARBALL_E)
