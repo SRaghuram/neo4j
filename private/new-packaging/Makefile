@@ -46,11 +46,19 @@ ${OUT}/neo4j-desktop/uberjar-filename.txt: ${OUT}/neo4j-desktop/community-versio
 	mkdir -p ${OUT}/neo4j-desktop
 	bin/generate-uberjar-filename ${OUT}/neo4j-desktop/community-version.txt >${OUT}/neo4j-desktop/uberjar-filename.txt
 
-${OUT}/rpm/%: ${ARTIFACTS}/%-unix.tar.gz $(COMMON_FILES) $(RPM_FILES)
+${OUT}/rpm/%: ${ARTIFACT_C}/%-unix.tar.gz $(COMMON_FILES) $(RPM_FILES)
+	rm -rf $@
+	bin/build-rpm-package $@ $< ${DISTRIBUTION}
+	
+${OUT}/rpm/%: ${ARTIFACT_E}/%-unix.tar.gz $(COMMON_FILES) $(RPM_FILES)
 	rm -rf $@
 	bin/build-rpm-package $@ $< ${DISTRIBUTION}
 
-${OUT}/debian/%: ${ARTIFACTS}/%-unix.tar.gz $(COMMON_FILES) $(DEBIAN_FILES)
+${OUT}/debian/%: ${ARTIFACT_C}/%-unix.tar.gz $(COMMON_FILES) $(DEBIAN_FILES)
+	rm -rf $@
+	bin/build-debian-package $@ $< ${DISTRIBUTION}
+	
+${OUT}/debian/%: ${ARTIFACT_E}/%-unix.tar.gz $(COMMON_FILES) $(DEBIAN_FILES)
 	rm -rf $@
 	bin/build-debian-package $@ $< ${DISTRIBUTION}
 
