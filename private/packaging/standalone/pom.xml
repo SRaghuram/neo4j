@@ -17,9 +17,11 @@
 
   <version>3.3.0-SNAPSHOT</version>
 
-  <description>This project assembles the Neo4j stand-alone distribution,
+  <description>
+    This project assembles the Neo4j stand-alone distribution,
     pulling together all the deliverable artifacts and packaging them
-    into a downloadable installer.</description>
+    into a downloadable installer.
+  </description>
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
   <scm>
@@ -33,11 +35,6 @@
   </modules>
 
   <properties>
-    <short-name>neo4j-standalone</short-name>
-    <docs-plugin.skip>true</docs-plugin.skip>
-
-    <!-- Document substitution properties are in document.properties file -->
-
     <!-- other filter properties -->
     <neo4j.version>${project.version}</neo4j.version>
 

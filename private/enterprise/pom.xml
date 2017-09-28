@@ -17,11 +17,6 @@
   <description>Project that builds the Neo4j Enterprise distribution.</description>
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
-  <properties>
-    <short-name>enterprise-build</short-name>
-    <componentversion.skip>true</componentversion.skip>
-  </properties>
-
   <scm>
     <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
     <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>

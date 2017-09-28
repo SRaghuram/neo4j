@@ -16,9 +16,11 @@
 
   <version>3.3.0-SNAPSHOT</version>
 
-  <description>This project assembles the Neo4j Enterprise stand-alone distribution,
+  <description>
+    This project assembles the Neo4j Enterprise stand-alone distribution,
     pulling together all the deliverable artifacts and packaging them
-      into a downloadable installer.</description>
+    into a downloadable installer.
+  </description>
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
   <scm>
