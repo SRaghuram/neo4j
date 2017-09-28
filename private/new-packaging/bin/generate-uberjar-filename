@@ -13,4 +13,4 @@ version_file=${1}
 
 version=$(cat ${version_file})
 
-echo "../packaging/neo4j-desktop/target/neo4j-desktop-${version}.jar"
+echo "../../neo4j/packaging/neo4j-desktop/target/neo4j-desktop-${version}.jar"
