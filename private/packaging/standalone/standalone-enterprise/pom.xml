@@ -3,7 +3,7 @@
 
   <parent>
     <groupId>org.neo4j.assembly</groupId>
-    <artifactId>neo4j-standalone</artifactId>
+    <artifactId>neo4j-standalone-commercial</artifactId>
     <version>3.3.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
