@@ -29,3 +29,6 @@ Thumbs.db
 /cypher-shell.zip
 packaging/standalone/src/main/distribution/cypher-shell
 /.profiler/
+/in
+/out
+devenv.local
