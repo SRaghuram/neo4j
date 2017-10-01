@@ -24,44 +24,40 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.neo4j.backup.OnlineBackupSettings;
-import org.neo4j.com.ports.allocation.PortAuthority;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.enterprise.CommercialNeoServer;
-import org.neo4j.server.helpers.CommunityServerBuilder;
 import org.neo4j.server.rest.web.DatabaseActions;
 
-import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
-
-public class EnterpriseServerBuilder extends CommunityServerBuilder
+public class CommercialServerBuilder extends EnterpriseServerBuilder
 {
-    protected EnterpriseServerBuilder( LogProvider logProvider )
+    protected CommercialServerBuilder( LogProvider logProvider )
     {
         super( logProvider );
     }
 
-    public static EnterpriseServerBuilder server()
+    public static CommercialServerBuilder server()
     {
         return server( NullLogProvider.getInstance() );
     }
 
-    public static EnterpriseServerBuilder serverOnRandomPorts()
+    public static CommercialServerBuilder serverOnRandomPorts()
     {
-        EnterpriseServerBuilder server = server();
+        CommercialServerBuilder server = server();
         server.onRandomPorts();
         server.withProperty( new BoltConnector( "bolt" ).listen_address.name(), "localhost:0" );
-        server.withProperty( OnlineBackupSettings.online_backup_server.name(),
-                listenAddress( "127.0.0.1", PortAuthority.allocatePort() ) );
+        server.withProperty( OnlineBackupSettings.online_backup_enabled.name(), Settings.FALSE );
         return server;
     }
 
-    public static EnterpriseServerBuilder server( LogProvider logProvider )
+    public static CommercialServerBuilder server( LogProvider logProvider )
     {
-        return new EnterpriseServerBuilder( logProvider );
+        return new CommercialServerBuilder( logProvider );
     }
 
     @Override
@@ -71,7 +67,7 @@ public class EnterpriseServerBuilder extends CommunityServerBuilder
     }
 
     @Override
-    public EnterpriseServerBuilder usingDataDir( String dataDir )
+    public CommercialServerBuilder usingDataDir( String dataDir )
     {
         super.usingDataDir( dataDir );
         return this;
@@ -117,7 +113,7 @@ public class EnterpriseServerBuilder extends CommunityServerBuilder
     {
         Map<String, String> configuration = super.createConfiguration( temporaryFolder );
 
-        configuration.put( OnlineBackupSettings.online_backup_server.name(), listenAddress( "127.0.0.1", PortAuthority.allocatePort() ) );
+        configuration.put( OnlineBackupSettings.online_backup_enabled.name(), Settings.FALSE );
 
         return configuration;
     }

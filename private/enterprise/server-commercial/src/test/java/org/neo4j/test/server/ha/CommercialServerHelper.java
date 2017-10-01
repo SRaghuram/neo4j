@@ -23,11 +23,11 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.server.enterprise.CommercialNeoServer;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 
-public class EnterpriseServerHelper
+public class CommercialServerHelper
 {
-    private EnterpriseServerHelper()
+    private CommercialServerHelper()
     {
     }
 
@@ -38,10 +38,10 @@ public class EnterpriseServerHelper
 
     private static CommercialNeoServer createServer( File databaseDir, boolean persistent ) throws IOException
     {
-        EnterpriseServerBuilder builder = EnterpriseServerBuilder.serverOnRandomPorts().usingDataDir( databaseDir.getAbsolutePath() );
+        CommercialServerBuilder builder = CommercialServerBuilder.serverOnRandomPorts().usingDataDir( databaseDir.getAbsolutePath() );
         if ( persistent )
         {
-            builder = (EnterpriseServerBuilder) builder.persistent();
+            builder = (CommercialServerBuilder) builder.persistent();
         }
         builder.withDefaultDatabaseTuning();
         CommercialNeoServer server = builder.build();

@@ -30,7 +30,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.enterprise.CommercialNeoServer;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
@@ -55,7 +55,7 @@ public class ServerManagementIT
         String dataDirectory1 = baseDir.directory( "data1" ).getAbsolutePath();
         String dataDirectory2 = baseDir.directory( "data2" ).getAbsolutePath();
 
-        Config config = Config.fromFile( EnterpriseServerBuilder
+        Config config = Config.fromFile( CommercialServerBuilder
                     .serverOnRandomPorts()
                     .withDefaultDatabaseTuning()
                     .usingDataDir( dataDirectory1 )

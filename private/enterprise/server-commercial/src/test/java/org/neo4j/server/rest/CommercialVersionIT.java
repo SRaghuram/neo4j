@@ -19,16 +19,16 @@
  */
 package org.neo4j.server.rest;
 
+import java.util.concurrent.Callable;
+
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
 
-import java.util.concurrent.Callable;
-
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.neo4j.server.helpers.FunctionalTestHelper;
 import org.neo4j.test.server.ExclusiveServerTestBase;
 import org.neo4j.time.Clocks;
@@ -36,7 +36,7 @@ import org.neo4j.time.FakeClock;
 
 import static org.neo4j.test.rule.SuppressOutput.suppressAll;
 
-public abstract class EnterpriseVersionIT extends ExclusiveServerTestBase
+public abstract class CommercialVersionIT extends ExclusiveServerTestBase
 {
     @ClassRule
     public static TemporaryFolder staticFolder = new TemporaryFolder();
@@ -47,7 +47,7 @@ public abstract class EnterpriseVersionIT extends ExclusiveServerTestBase
     public static void setupServer() throws Exception
     {
         FakeClock clock = Clocks.fakeClock();
-        server = EnterpriseServerBuilder.serverOnRandomPorts()
+        server = CommercialServerBuilder.serverOnRandomPorts()
                 .usingDataDir( staticFolder.getRoot().getAbsolutePath() )
                 .withClock(clock)
                 .build();

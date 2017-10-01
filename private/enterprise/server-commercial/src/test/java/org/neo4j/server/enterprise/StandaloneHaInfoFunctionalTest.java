@@ -19,13 +19,13 @@
  */
 package org.neo4j.server.enterprise;
 
+import java.io.IOException;
+import java.util.Map;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Map;
 
 import org.neo4j.server.helpers.FunctionalTestHelper;
 import org.neo4j.server.rest.JaxRsResponse;
@@ -39,7 +39,7 @@ import static org.junit.Assert.assertEquals;
 import static org.neo4j.server.rest.MasterInfoService.BASE_PATH;
 import static org.neo4j.server.rest.MasterInfoService.IS_MASTER_PATH;
 import static org.neo4j.server.rest.MasterInfoService.IS_SLAVE_PATH;
-import static org.neo4j.test.server.ha.EnterpriseServerHelper.createNonPersistentServer;
+import static org.neo4j.test.server.ha.CommercialServerHelper.createNonPersistentServer;
 
 public class StandaloneHaInfoFunctionalTest
 {

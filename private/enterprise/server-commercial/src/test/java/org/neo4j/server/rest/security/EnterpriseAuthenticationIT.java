@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 import javax.ws.rs.core.HttpHeaders;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.neo4j.test.server.HTTP;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -40,7 +40,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
     @Override
     public void startServer( boolean authEnabled ) throws IOException
     {
-        server = EnterpriseServerBuilder.serverOnRandomPorts()
+        server = CommercialServerBuilder.serverOnRandomPorts()
                 .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( authEnabled ) )
                 .build();
         server.start();
@@ -97,7 +97,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
 
     private void startServerWithAuthDisabled() throws IOException
     {
-        server = EnterpriseServerBuilder.serverOnRandomPorts()
+        server = CommercialServerBuilder.serverOnRandomPorts()
                 .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( false ) )
                 .build();
         server.start();

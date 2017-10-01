@@ -19,20 +19,20 @@
  */
 package org.neo4j.server.enterprise.functional;
 
+import java.io.File;
+import java.io.IOException;
+
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.File;
-import java.io.IOException;
-
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.metrics.source.server.ServerMetrics;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.configuration.ServerSettings;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -55,7 +55,7 @@ public class ServerMetricsIT
         // Given
         String path = folder.getRoot().getAbsolutePath();
         File metricsPath = new File( path + "/metrics" );
-        NeoServer server = EnterpriseServerBuilder.serverOnRandomPorts()
+        NeoServer server = CommercialServerBuilder.serverOnRandomPorts()
                 .usingDataDir( path )
                 .withProperty( MetricsSettings.metricsEnabled.name(), "true" )
                 .withProperty( MetricsSettings.csvEnabled.name(), "true" )

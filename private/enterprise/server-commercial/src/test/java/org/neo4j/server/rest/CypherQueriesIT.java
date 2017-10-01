@@ -25,7 +25,7 @@ import org.neo4j.test.server.HTTP;
 
 import static org.junit.Assert.assertEquals;
 
-public class CypherQueriesIT extends EnterpriseVersionIT
+public class CypherQueriesIT extends CommercialVersionIT
 {
 
     @Test
