@@ -24,9 +24,10 @@
   <licenses>
     <license>
       <name>Neo4j Commercial license</name>
-      <url>http://neo4j.com/commercial-license.html</url>
       <comments>
-        Some commercial license blurb
+        Copyright (c) 2002-2017 "Neo Technology,"
+        Network Engine for Objects in Lund AB [http://neotechnology.com]
+        This file is a commercial add-on to Neo4j Enterprise Edition.
       </comments>
     </license>
   </licenses>
@@ -61,6 +62,89 @@
           </execution>
         </executions>
       </plugin>
+      <!--
+      The first plugin simply sets up the license headers.
+      The other two override the parent config to disable any community license checks, header checks etc.
+      Eventually, once we sanitize our use of licensing plugins this will be simplified.
+      -->
+      <plugin>
+        <groupId>com.mycila</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <version>2.5</version>
+        <configuration>
+          <header>license-header.txt</header>
+          <properties>
+            <owner>Neo Technology,</owner>
+            <year>${project.inceptionYear}</year>
+          </properties>
+          <mapping>
+            <java>SLASHSTAR_STYLE</java>
+            <ps1>SCRIPT_STYLE</ps1>
+            <psm1>SCRIPT_STYLE</psm1>
+            <psd1>SCRIPT_STYLE</psd1>
+            <bar>BATCH</bar>
+          </mapping>
+          <includes>
+            <include>**/*.java</include>
+            <include>**/*.ps1</include>
+            <include>**/*.psm1</include>
+            <include>**/*.psd1</include>
+            <include>**/*.bat</include>
+          </includes>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.neo4j.build.plugins</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>check-licenses</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>list-all-licenses-win</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.neo4j.build.plugins</groupId>
+        <artifactId>licensing-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>enforce-licensing-oss</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>enforce-licensing-com</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>list-all-licenses</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>list-all-licenses-win</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.neo4j.build</groupId>
+            <artifactId>licensecheck-config</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <!--<plugin>put some stuff here</plugin>-->
     </plugins>
     <pluginManagement>
       <plugins>
@@ -83,76 +167,6 @@
               <port.authority.directory>${user.dir}/target/port-authority-${maven.build.timestamp}</port.authority.directory>
             </systemPropertyVariables>
           </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.neo4j.build.plugins</groupId>
-          <artifactId>licensing-maven-plugin</artifactId>
-          <version>1.7.5</version>
-          <configuration>
-            <failIfDisliked>true</failIfDisliked>
-            <failIfMissing>true</failIfMissing>
-            <plainTextReport>true</plainTextReport>
-            <prependText>${licensing.prepend.text}</prependText>
-            <excludedGroups>
-              ^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1}|(org.neo4j.bolt){1}|(org.neo4j.build){1}|(org.neo4j.test){1})$
-            </excludedGroups>
-            <excludedArtifacts>^((neo4j-browser))$</excludedArtifacts>
-            <includedScopes>compile</includedScopes>
-          </configuration>
-          <executions>
-            <execution>
-              <id>enforce-licensing-oss</id>
-              <phase>${licensing.phase}</phase>
-              <goals>
-                <goal>check</goal>
-              </goals>
-              <configuration>
-                <licensingRequirementFiles>
-                  <licensingRequirementFile>licensing-requirements-commercial.xml</licensingRequirementFile>
-                </licensingRequirementFiles>
-                <thirdPartyLicensingFilename>${project.artifactId}-${project.version}-oss.txt
-                </thirdPartyLicensingFilename>
-              </configuration>
-            </execution>
-            <execution>
-              <id>enforce-licensing-com</id>
-              <phase>${licensing.phase}</phase>
-              <goals>
-                <goal>check</goal>
-              </goals>
-              <configuration>
-                <licensingRequirementFiles>
-                  <licensingRequirementFile>licensing-requirements-commercial.xml</licensingRequirementFile>
-                </licensingRequirementFiles>
-                <thirdPartyLicensingFilename>${project.artifactId}-${project.version}.txt</thirdPartyLicensingFilename>
-              </configuration>
-            </execution>
-            <execution>
-              <id>list-all-licenses</id>
-              <phase>${licensing.phase}</phase>
-              <goals>
-                <goal>check</goal>
-              </goals>
-              <configuration>
-                <licensingRequirementFiles>
-                  <licensingRequirementFile>licensing-requirements-commercial.xml</licensingRequirementFile>
-                </licensingRequirementFiles>
-                <thirdPartyLicensingFilename>${project.artifactId}-${project.version}-NOTICE.txt
-                </thirdPartyLicensingFilename>
-                <checkExistingNoticeFile>${project.build.directory}/../NOTICE.txt</checkExistingNoticeFile>
-                <listPrependText>list-prefix.txt</listPrependText>
-                <listReport>${project.artifactId}-${project.version}-LICENSES.txt</listReport>
-                <checkExistingLicensesFile>${project.build.directory}/../LICENSES.txt</checkExistingLicensesFile>
-              </configuration>
-            </execution>
-          </executions>
-          <dependencies>
-            <dependency>
-              <groupId>org.neo4j.build</groupId>
-              <artifactId>licensecheck-config</artifactId>
-              <version>${project.version}</version>
-            </dependency>
-          </dependencies>
         </plugin>
       </plugins>
     </pluginManagement>

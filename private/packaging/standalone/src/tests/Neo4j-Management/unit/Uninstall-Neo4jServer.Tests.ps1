@@ -1,3 +1,9 @@
+#
+# Copyright (c) 2002-2017 "Neo Technology,"
+# Network Engine for Objects in Lund AB [http://neotechnology.com]
+# This file is a commercial add-on to Neo4j Enterprise Edition.
+#
+
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.", ".")
 $common = Join-Path (Split-Path -Parent $here) 'Common.ps1'
