@@ -29,6 +29,7 @@ import org.neo4j.com.ports.allocation.PortAuthority;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
+import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
 import org.neo4j.test.rule.SuppressOutput;
@@ -41,8 +42,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.cluster.ClusterSettings.cluster_server;
 import static org.neo4j.cluster.ClusterSettings.initial_hosts;
-import static org.neo4j.cluster.ClusterSettings.mode;
 import static org.neo4j.cluster.ClusterSettings.server_id;
+import static org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.mode;
 
 public class EnterpriseServerIT
 {
