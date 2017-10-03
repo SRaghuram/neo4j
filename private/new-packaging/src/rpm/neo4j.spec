@@ -8,9 +8,10 @@ License: ${LICENSE}
 URL: http://neo4j.org/
 #Source: https://github.com/neo4j/neo4j/archive/%{version}.tar.gz
 
+PreReq: dialog
 Requires: java-1.8.0-headless, cypher-shell
 
-BuildArch:      noarch
+BuildArch: noarch
 
 %define neo4jhome %{_localstatedir}/lib/neo4j
 
@@ -30,6 +31,25 @@ leverage not only data but also its relationships.
 %pretrans
 
 %pre
+
+# The user must accept the license agreement to install Enterprise.
+if [ "$PACKAGE_NAME" = "neo4j-enterprise" ]; then
+    if [ "$NEO4J_ACCEPT_LICENSE_AGREEMENT" != "yes" ]; then
+        if ! DIALOG_TTY=1 dialog --stderr --title "Neo4j Enterprise License" --defaultno --yesno "\
+Copyright (c) Neo4j Sweden AB.  2017.  All Rights Reserved.  Use of
+this Software without a proper commercial license with Neo4j, Inc. or
+its affiliates is prohibited.
+
+Email inquiries can be directed to: licensing@neo4j.com
+
+More information is also available at: https://neo4j.com/licensing/
+
+
+Do you agree to the license terms?" 16 78; then
+            exit 1
+        fi
+    fi
+fi
 
 # Create neo4j user if it doesn't exist.
 if ! id neo4j > /dev/null 2>&1 ; then
