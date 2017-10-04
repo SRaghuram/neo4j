@@ -1,23 +1,11 @@
 /*
  * Copyright (c) 2002-2017 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
- *
- * This file is part of Neo4j.
- *
- * Neo4j is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package org.neo4j.server.rest;
+
+import java.util.concurrent.Callable;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -25,10 +13,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
 
-import java.util.concurrent.Callable;
-
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.neo4j.server.helpers.FunctionalTestHelper;
 import org.neo4j.test.server.ExclusiveServerTestBase;
 import org.neo4j.time.Clocks;
@@ -36,7 +22,7 @@ import org.neo4j.time.FakeClock;
 
 import static org.neo4j.test.rule.SuppressOutput.suppressAll;
 
-public abstract class EnterpriseVersionIT extends ExclusiveServerTestBase
+public abstract class CommercialVersionIT extends ExclusiveServerTestBase
 {
     @ClassRule
     public static TemporaryFolder staticFolder = new TemporaryFolder();
@@ -47,7 +33,7 @@ public abstract class EnterpriseVersionIT extends ExclusiveServerTestBase
     public static void setupServer() throws Exception
     {
         FakeClock clock = Clocks.fakeClock();
-        server = EnterpriseServerBuilder.serverOnRandomPorts()
+        server = CommercialServerBuilder.serverOnRandomPorts()
                 .usingDataDir( staticFolder.getRoot().getAbsolutePath() )
                 .withClock(clock)
                 .build();

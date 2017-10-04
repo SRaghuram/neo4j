@@ -55,26 +55,46 @@
 
   <licenses>
     <license>
-      <name>GNU Affero General Public License, Version 3</name>
-      <url>http://www.gnu.org/licenses/agpl-3.0-standalone.html</url>
-      <comments>The software ("Software") developed and owned by Network Engine for
-        Objects in Lund AB (referred to in this notice as "Neo Technology") is
-        licensed under the GNU AFFERO GENERAL PUBLIC LICENSE Version 3 to all
-        third parties and that license is included below.
-
-        However, if you have executed an End User Software License and Services
-        Agreement or an OEM Software License and Support Services Agreement, or
-        another commercial license agreement with Neo Technology or one of its
-        affiliates (each, a "Commercial Agreement"), the terms of the license in
-        such Commercial Agreement will supersede the GNU AFFERO GENERAL PUBLIC
-        LICENSE Version 3 and you may use the Software solely pursuant to the
-        terms of the relevant Commercial Agreement.
+      <name>Neo4j Commercial license</name>
+      <comments>
+        Copyright (c) 2002-2017 "Neo Technology,"
+        Network Engine for Objects in Lund AB [http://neotechnology.com]
+        This file is a commercial add-on to Neo4j Enterprise Edition.
       </comments>
     </license>
   </licenses>
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>com.mycila</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <version>2.5</version>
+        <configuration>
+          <header>license-header.txt</header>
+          <properties>
+            <owner>Neo Technology,</owner>
+            <year>${project.inceptionYear}</year>
+          </properties>
+          <mapping>
+            <ps1>SCRIPT_STYLE</ps1>
+            <psm1>SCRIPT_STYLE</psm1>
+            <psd1>SCRIPT_STYLE</psd1>
+            <bat>BATCH</bat>
+          </mapping>
+          <includes>
+            <include>src/main/*</include>
+          </includes>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <inherited>false</inherited>
         <groupId>org.apache.maven.plugins</groupId>
@@ -114,11 +134,6 @@
       </plugin>
 
       <plugin>
-        <groupId>org.neo4j.build.plugins</groupId>
-        <artifactId>license-maven-plugin</artifactId>
-      </plugin>
-
-      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>wagon-maven-plugin</artifactId>
         <executions>
@@ -127,114 +142,6 @@
             <phase>none</phase>
           </execution>
         </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.neo4j.build.plugins</groupId>
-        <artifactId>licensing-maven-plugin</artifactId>
-        <configuration>
-          <failIfDisliked>true</failIfDisliked>
-          <failIfMissing>true</failIfMissing>
-          <plainTextReport>true</plainTextReport>
-          <prependText>notice-agpl-prefix.txt</prependText>
-          <excludedGroups>^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1})$</excludedGroups>
-        </configuration>
-        <executions>
-          <execution>
-            <id>enforce-licensing-oss</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <configuration>
-              <licensingRequirementFiles>
-                <licensingRequirementFile>licensing-requirements-base.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-js.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-browser.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-oss.xml</licensingRequirementFile>
-              </licensingRequirementFiles>
-              <thirdPartyLicensingFilename>${project.artifactId}-${neo4j.version}-oss.txt</thirdPartyLicensingFilename>
-            </configuration>
-          </execution>
-          <execution>
-            <id>enforce-licensing-oss-win</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <configuration>
-              <licensingRequirementFiles>
-                <licensingRequirementFile>licensing-requirements-base.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-js.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-browser.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-win.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-oss.xml</licensingRequirementFile>
-              </licensingRequirementFiles>
-              <thirdPartyLicensingFilename>${project.artifactId}-${neo4j.version}-oss-win.txt</thirdPartyLicensingFilename>
-            </configuration>
-          </execution>
-          <execution>
-            <id>list-all-licenses</id>
-            <phase>none</phase>
-          </execution>
-          <execution>
-            <id>list-all-licenses-packaging</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <configuration>
-              <licensingRequirementFiles>
-                <licensingRequirementFile>licensing-requirements-base.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-js.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-browser.xml</licensingRequirementFile>
-              </licensingRequirementFiles>
-              <thirdPartyLicensingFilename>${project.artifactId}-${neo4j.version}-NOTICE.txt</thirdPartyLicensingFilename>
-              <listPrependText>list-prefix.txt</listPrependText>
-              <listReport>${project.artifactId}-${neo4j.version}-LICENSES.txt</listReport>
-            </configuration>
-          </execution>
-          <execution>
-            <id>enforce-licensing-com</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <configuration>
-              <licensingRequirementFiles>
-                <licensingRequirementFile>licensing-requirements-base.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-js.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-browser.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-com.xml</licensingRequirementFile>
-              </licensingRequirementFiles>
-              <thirdPartyLicensingFilename>${project.artifactId}-${neo4j.version}.txt</thirdPartyLicensingFilename>
-            </configuration>
-          </execution>
-          <execution>
-            <id>enforce-licensing-com-win</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <configuration>
-              <licensingRequirementFiles>
-                <licensingRequirementFile>licensing-requirements-base.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-js.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-browser.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-win.xml</licensingRequirementFile>
-                <licensingRequirementFile>licensing-requirements-com.xml</licensingRequirementFile>
-              </licensingRequirementFiles>
-              <thirdPartyLicensingFilename>${project.artifactId}-${neo4j.version}-win.txt</thirdPartyLicensingFilename>
-            </configuration>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>org.neo4j.build</groupId>
-            <artifactId>licensecheck-config</artifactId>
-            <version>${project.version}</version>
-          </dependency>
-        </dependencies>
       </plugin>
 
       <plugin>

@@ -1,3 +1,9 @@
+#
+# Copyright (c) 2002-2017 "Neo Technology,"
+# Network Engine for Objects in Lund AB [http://neotechnology.com]
+# This file is a commercial add-on to Neo4j Enterprise Edition.
+#
+
 $DebugPreference = "SilentlyContinue"
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Definition

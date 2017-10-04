@@ -1,3 +1,6 @@
+# Copyright (c) 2002-2017 "Neo Technology,"
+# Network Engine for Objects in Lund AB [http://neotechnology.com]
+# This file is a commercial add-on to Neo4j Enterprise Edition.
 
 set -o errexit -o nounset -o pipefail
 [[ "${TRACE:-}" ]] && set -o xtrace
