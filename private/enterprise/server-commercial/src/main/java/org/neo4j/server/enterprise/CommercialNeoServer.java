@@ -9,9 +9,10 @@ import java.io.File;
 
 import org.neo4j.causalclustering.core.CommercialCoreGraphDatabase;
 import org.neo4j.causalclustering.readreplica.CommercialReadReplicaGraphDatabase;
+import org.neo4j.cluster.ClusterSettings;
+import org.neo4j.cluster.ClusterSettings.Mode;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory.Dependencies;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.database.Database;
@@ -40,7 +41,7 @@ public class CommercialNeoServer extends EnterpriseNeoServer
 
     protected static Database.Factory createDbFactory( Config config )
     {
-        final EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
+        final Mode mode = config.get( ClusterSettings.mode );
 
         switch ( mode )
         {
