@@ -42,6 +42,7 @@ import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.input.InputEntity;
 import org.neo4j.unsafe.impl.batchimport.input.InputNode;
 import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
+import org.neo4j.unsafe.impl.batchimport.input.Inputs;
 import org.neo4j.unsafe.impl.batchimport.input.SimpleDataGenerator;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header.Entry;
@@ -320,5 +321,11 @@ public class SimpleRandomizedInput implements Input
                 relationship.getStartNode().getProperty( ID_KEY ),
                 relationship.getType().name(),
                 relationship.getEndNode().getProperty( ID_KEY ) );
+    }
+
+    @Override
+    public Estimates calculateEstimates()
+    {
+        return Inputs.knownEstimates( nodeCount, relationshipCount );
     }
 }

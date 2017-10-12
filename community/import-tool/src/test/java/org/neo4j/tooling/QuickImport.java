@@ -34,7 +34,8 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.SimpleLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
-import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
 import org.neo4j.unsafe.impl.batchimport.input.BadCollector;
@@ -109,7 +110,7 @@ public class QuickImport
 
         boolean highIo = args.getBoolean( ImportTool.Options.HIGH_IO.key() );
 
-        FormattedLogProvider sysoutLogProvider = FormattedLogProvider.toOutputStream( System.out );
+        LogProvider logging = NullLogProvider.getInstance();
         long pageCacheMemory = args.getNumber( "pagecache-memory",
                 org.neo4j.unsafe.impl.batchimport.Configuration.MAX_PAGE_CACHE_MEMORY ).longValue();
         org.neo4j.unsafe.impl.batchimport.Configuration importConfig =
@@ -169,8 +170,8 @@ public class QuickImport
                 ImportTool.printOverview( dir, Collections.emptyList(), Collections.emptyList(), importConfig, System.out );
 
                 consumer = new RestartableParallelBatchImporter( dir, fileSystem, null, importConfig,
-                        new SimpleLogService( sysoutLogProvider, sysoutLogProvider ), defaultVisible(), EMPTY, dbConfig,
-                        RecordFormatSelector.selectForConfig( dbConfig, sysoutLogProvider ) );
+                        new SimpleLogService( logging, logging ), defaultVisible(), EMPTY, dbConfig,
+                        RecordFormatSelector.selectForConfig( dbConfig, logging ) );
             }
             consumer.doImport( input );
         }

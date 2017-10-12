@@ -30,6 +30,7 @@ import org.neo4j.io.ByteUnit;
 public class Format
 {
     private static final String[] BYTE_SIZES = { "B", "kB", "MB", "GB" };
+    private static final String[] COUNT_SIZES = { "", "k", "M", "bn", "tr" };
 
     public static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSSZ";
     public static final String TIME_FORMAT = "HH:mm:ss.SSS";
@@ -107,14 +108,24 @@ public class Format
 
     public static String bytes( long bytes )
     {
-        double size = bytes;
-        for ( String suffix : BYTE_SIZES )
+        return suffixCount( bytes, BYTE_SIZES, KB );
+    }
+
+    public static String count( long count )
+    {
+        return suffixCount( count, COUNT_SIZES, 1_000 );
+    }
+
+    private static String suffixCount( long value, String[] sizes, int stride )
+    {
+        double size = value;
+        for ( String suffix : sizes )
         {
-            if ( size < KB )
+            if ( size < stride )
             {
                 return String.format( "%.2f %s", Double.valueOf( size ), suffix );
             }
-            size /= KB;
+            size /= stride;
         }
         return String.format( "%.2f TB", Double.valueOf( size ) );
     }

@@ -22,11 +22,13 @@ package org.neo4j.unsafe.impl.batchimport.staging;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.unsafe.impl.batchimport.Configuration;
+import org.neo4j.unsafe.impl.batchimport.stats.StatsProvider;
 import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
 
 import static java.lang.Integer.max;
 import static java.lang.Integer.min;
 import static java.lang.System.nanoTime;
+
 import static org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil.getFieldOffset;
 
 /**
@@ -57,9 +59,9 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
     private final int maxQueueLength;
     private volatile Thread receiverThread;
 
-    protected ForkedProcessorStep( StageControl control, String name, Configuration config )
+    protected ForkedProcessorStep( StageControl control, String name, Configuration config, StatsProvider... statsProviders )
     {
-        super( control, name, config );
+        super( control, name, config, statsProviders );
         this.maxProcessors = config.maxNumberOfProcessors();
         this.forkedProcessors = new Object[this.maxProcessors];
 
