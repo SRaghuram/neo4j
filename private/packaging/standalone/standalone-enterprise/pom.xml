@@ -111,23 +111,26 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>get-javadoc-sources</id>
-            <phase>none</phase>
-          </execution>
-        </executions>
-      </plugin>
 
-       <plugin>
+      <plugin>
         <groupId>org.neo4j.build.plugins</groupId>
         <artifactId>licensing-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>list-all-licenses-win</id>
-            <phase>none</phase>
+            <id>list-all-licenses</id>
+            <configuration>
+              <licensingRequirementFiles combine.children="append">
+                <licensingRequirementFile>licensing-requirements-browser.xml</licensingRequirementFile>
+              </licensingRequirementFiles>
+              <excludedGroups>^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1})$</excludedGroups>
+
+              <thirdPartyLicensingFilename>${project.artifactId}-${neo4j.version}-NOTICE.txt</thirdPartyLicensingFilename>
+              <prependText>commercial-notice.txt</prependText>
+              <checkExistingNoticeFile combine.self="override" />
+              <listPrependText>list-prefix.txt</listPrependText>
+              <listReport>${project.artifactId}-${neo4j.version}-LICENSES.txt</listReport>
+              <checkExistingLicensesFile>${project.basedir}/src/main/distribution/text/enterprise/LICENSES.txt</checkExistingLicensesFile>
+            </configuration>
           </execution>
         </executions>
       </plugin>
