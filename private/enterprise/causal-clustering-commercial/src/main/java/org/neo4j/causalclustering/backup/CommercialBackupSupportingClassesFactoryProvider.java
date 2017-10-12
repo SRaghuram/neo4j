@@ -8,7 +8,9 @@ package org.neo4j.causalclustering.backup;
 import org.neo4j.backup.AbstractBackupSupportingClassesFactory;
 import org.neo4j.backup.BackupModuleResolveAtRuntime;
 import org.neo4j.backup.BackupSupportingClassesFactoryProvider;
+import org.neo4j.helpers.Service;
 
+@Service.Implementation( BackupSupportingClassesFactoryProvider.class )
 public class CommercialBackupSupportingClassesFactoryProvider extends BackupSupportingClassesFactoryProvider
 {
     /**

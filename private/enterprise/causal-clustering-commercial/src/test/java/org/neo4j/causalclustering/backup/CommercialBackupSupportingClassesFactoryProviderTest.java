@@ -29,7 +29,7 @@ public class CommercialBackupSupportingClassesFactoryProviderTest
     {
         Collection<BackupSupportingClassesFactoryProvider> discoveredProviders =
                 BackupSupportingClassesFactoryProviderTest.allAvailableSupportingClassesFactories();
-        
+
         assertEquals( 1, BackupSupportingClassesFactoryProviderTest.findInstancesOf( CommunityBackupSupportingClassesFactoryProvider.class,
                 discoveredProviders ).size() );
     }
