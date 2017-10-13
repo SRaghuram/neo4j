@@ -1,10 +1,10 @@
+#
 # Copyright (c) 2002-2017 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
 # This file is a commercial add-on to Neo4j Enterprise Edition.
 #
-# Module manifest for module 'Neo4j-Management'
-#
 
+# Module manifest for module 'Neo4j-Management'
 
 @{
 ModuleVersion = '3.0.0'

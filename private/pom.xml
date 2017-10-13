@@ -70,36 +70,6 @@
       <plugin>
         <groupId>com.mycila</groupId>
         <artifactId>license-maven-plugin</artifactId>
-        <version>2.5</version>
-        <configuration>
-          <header>license-header.txt</header>
-          <properties>
-            <owner>Neo Technology,</owner>
-            <year>${project.inceptionYear}</year>
-          </properties>
-          <mapping>
-            <java>SLASHSTAR_STYLE</java>
-            <ps1>SCRIPT_STYLE</ps1>
-            <psm1>SCRIPT_STYLE</psm1>
-            <psd1>SCRIPT_STYLE</psd1>
-            <bar>BATCH</bar>
-          </mapping>
-          <includes>
-            <include>**/*.java</include>
-            <include>**/*.ps1</include>
-            <include>**/*.psm1</include>
-            <include>**/*.psd1</include>
-            <include>**/*.bat</include>
-          </includes>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>compile</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.neo4j.build.plugins</groupId>
@@ -120,34 +90,68 @@
         <artifactId>licensing-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>enforce-licensing-oss</id>
-            <phase>none</phase>
-          </execution>
-          <execution>
-            <id>enforce-licensing-com</id>
-            <phase>none</phase>
-          </execution>
-          <execution>
             <id>list-all-licenses</id>
-            <phase>none</phase>
-          </execution>
-          <execution>
-            <id>list-all-licenses-win</id>
-            <phase>none</phase>
+            <inherited>true</inherited>
+            <configuration>
+              <prependText>commercial-notice.txt</prependText>
+              <checkExistingNoticeFile combine.self="override" />
+            </configuration>
           </execution>
         </executions>
         <dependencies>
           <dependency>
             <groupId>org.neo4j.build</groupId>
-            <artifactId>licensecheck-config</artifactId>
+            <artifactId>licensecheck-commercial-config</artifactId>
             <version>${project.version}</version>
           </dependency>
         </dependencies>
+        <inherited>false</inherited>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
       </plugin>
       <!--<plugin>put some stuff here</plugin>-->
     </plugins>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>com.mycila</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <version>3.0</version>
+          <configuration>
+            <header>license-header.txt</header>
+            <mapping>
+              <java>SLASHSTAR_STYLE</java>
+              <ps1>SCRIPT_STYLE</ps1>
+              <psm1>SCRIPT_STYLE</psm1>
+              <psd1>SCRIPT_STYLE</psd1>
+              <bat>BATCH</bat>
+            </mapping>
+            <includes>
+              <include>**/*.java</include>
+              <include>**/*.ps1</include>
+              <include>**/*.psm1</include>
+              <include>**/*.psd1</include>
+              <include>**/*.bat</include>
+            </includes>
+          </configuration>
+          <executions>
+            <execution>
+              <id>check-headers</id>
+              <phase>compile</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+          <dependencies>
+            <dependency>
+              <groupId>org.neo4j.build</groupId>
+              <artifactId>licensecheck-commercial-config</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
