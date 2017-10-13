@@ -10,7 +10,7 @@
 
   <groupId>org.neo4j</groupId>
   <artifactId>commercial-parent</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.3.0-rc2</version>
 
   <packaging>pom</packaging>
   <name>Neo4j</name>
@@ -62,15 +62,7 @@
           </execution>
         </executions>
       </plugin>
-      <!--
-      The first plugin simply sets up the license headers.
-      The other two override the parent config to disable any community license checks, header checks etc.
-      Eventually, once we sanitize our use of licensing plugins this will be simplified.
-      -->
-      <plugin>
-        <groupId>com.mycila</groupId>
-        <artifactId>license-maven-plugin</artifactId>
-      </plugin>
+
       <plugin>
         <groupId>org.neo4j.build.plugins</groupId>
         <artifactId>license-maven-plugin</artifactId>
@@ -85,35 +77,30 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.neo4j.build.plugins</groupId>
-        <artifactId>licensing-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>list-all-licenses</id>
-            <inherited>true</inherited>
-            <configuration>
-              <prependText>commercial-notice.txt</prependText>
-              <checkExistingNoticeFile combine.self="override" />
-            </configuration>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>org.neo4j.build</groupId>
-            <artifactId>licensecheck-commercial-config</artifactId>
-            <version>${project.version}</version>
-          </dependency>
-        </dependencies>
-        <inherited>false</inherited>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-      <!--<plugin>put some stuff here</plugin>-->
     </plugins>
+
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.neo4j.build.plugins</groupId>
+          <artifactId>licensing-maven-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>list-all-licenses</id>
+              <configuration>
+                <prependText>commercial-notice.txt</prependText>
+                <checkExistingNoticeFile combine.self="override" />
+              </configuration>
+            </execution>
+          </executions>
+          <dependencies>
+            <dependency>
+              <groupId>org.neo4j.build</groupId>
+              <artifactId>licensecheck-commercial-config</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
         <plugin>
           <groupId>com.mycila</groupId>
           <artifactId>license-maven-plugin</artifactId>
@@ -175,6 +162,31 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <profiles>
+  <!-- Only generate NOTICE and LICENSES files for projects with src/ directory -->
+    <profile>
+      <id>has-sources</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <file>
+          <exists>src</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.neo4j.build.plugins</groupId>
+            <artifactId>licensing-maven-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>com.mycila</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 
 </project>
