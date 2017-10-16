@@ -24,11 +24,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PushbackInputStream;
 import java.io.Reader;
+import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
@@ -37,7 +36,6 @@ import java.util.zip.ZipFile;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.function.IOFunction;
-import org.neo4j.function.IOFunctions;
 import org.neo4j.function.ThrowingFunction;
 
 /**
@@ -83,94 +81,28 @@ public class Readables
         {
             return -1;
         }
+
+        @Override
+        public long length()
+        {
+            return 0;
+        }
     };
 
-    public static CharReadable wrap( final InputStream stream, final String sourceName, Charset charset )
-            throws IOException
+    public static CharReadable wrap( String data )
     {
-        byte[] bytes = new byte[Magic.longest()];
-        PushbackInputStream pushbackStream = new PushbackInputStream( stream, bytes.length );
-        Charset usedCharset = charset;
-        int read = stream.read( bytes );
-        if ( read >= 0 )
-        {
-            bytes = read < bytes.length ? Arrays.copyOf( bytes, read ) : bytes;
-            Magic magic = Magic.of( bytes );
-            int excessiveBytes = read;
-            if ( magic.impliesEncoding() )
-            {
-                // Unread the diff between the BOM and the longest magic we gathered bytes for
-                excessiveBytes -= magic.length();
-                usedCharset = magic.encoding();
-            }
-            pushbackStream.unread( bytes, read - excessiveBytes, excessiveBytes );
-        }
-        return wrap( new InputStreamReader( pushbackStream, usedCharset )
-        {
-            @Override
-            public String toString()
-            {
-                return sourceName;
-            }
-        } );
+        return wrap( new StringReader( data ), data.length() * 2 );
     }
 
     /**
      * Remember that the {@link Reader#toString()} must provide a description of the data source.
      */
-    public static CharReadable wrap( final Reader reader )
+    public static CharReadable wrap( final Reader reader, long length )
     {
-        return new CharReadable.Adapter()
-        {
-            private long position;
-            private final String sourceDescription = reader.toString();
-
-            @Override
-            public SectionedCharBuffer read( SectionedCharBuffer buffer, int from ) throws IOException
-            {
-                buffer.compact( buffer, from );
-                buffer.readFrom( reader );
-                position += buffer.available();
-                return buffer;
-            }
-
-            @Override
-            public int read( char[] into, int offset, int length ) throws IOException
-            {
-                int totalRead = 0;
-                while ( totalRead < length )
-                {
-                    int read = reader.read( into, offset + totalRead, length - totalRead );
-                    if ( read == -1 )
-                    {
-                        break;
-                    }
-                    totalRead += read;
-                }
-                return totalRead;
-            }
-
-            @Override
-            public void close() throws IOException
-            {
-                reader.close();
-            }
-
-            @Override
-            public long position()
-            {
-                return position;
-            }
-
-            @Override
-            public String sourceDescription()
-            {
-                return sourceDescription;
-            }
-        };
+        return new WrappedCharReadable( length, reader );
     }
 
-    private static class FromFile implements IOFunction<File, Reader>
+    private static class FromFile implements IOFunction<File,CharReadable>
     {
         private final Charset charset;
 
@@ -180,21 +112,21 @@ public class Readables
         }
 
         @Override
-        public Reader apply( final File file ) throws IOException
+        public CharReadable apply( final File file ) throws IOException
         {
             Magic magic = Magic.of( file );
             if ( magic == Magic.ZIP )
             {   // ZIP file
                 ZipFile zipFile = new ZipFile( file );
                 ZipEntry entry = getSingleSuitableEntry( zipFile );
-                return new InputStreamReader( zipFile.getInputStream( entry ), charset )
+                return wrap( new InputStreamReader( zipFile.getInputStream( entry ), charset )
                 {
                     @Override
                     public String toString()
                     {
                         return file.getPath();
                     }
-                };
+                }, file.length() );
             }
             else if ( magic == Magic.GZIP )
             {   // GZIP file. GZIP isn't an archive like ZIP, so this is purely data that is compressed.
@@ -203,14 +135,14 @@ public class Readables
                 // the data will look like garbage and the reader will fail for whatever it will be used for.
                 // TODO add tar support
                 GZIPInputStream zipStream = new GZIPInputStream( new FileInputStream( file ) );
-                return new InputStreamReader( zipStream, charset )
+                return wrap( new InputStreamReader( zipStream, charset )
                 {
                     @Override
                     public String toString()
                     {
                         return file.getPath();
                     }
-                };
+                }, file.length() );
             }
             else
             {
@@ -222,14 +154,14 @@ public class Readables
                     in.skip( magic.length() );
                     usedCharset = magic.encoding();
                 }
-                return new InputStreamReader( in, usedCharset )
+                return wrap( new InputStreamReader( in, usedCharset )
                 {
                     @Override
                     public String toString()
                     {
                         return file.getPath();
                     }
-                };
+                }, file.length() );
             }
         }
 
@@ -273,29 +205,24 @@ public class Readables
                name.contains( "/." );
     }
 
+    public static RawIterator<CharReadable,IOException> individualFiles( Charset charset, File... files )
+    {
+        return iterator( new FromFile( charset ), files );
+    }
+
     public static CharReadable files( Charset charset, File... files ) throws IOException
     {
-        IOFunction<File,Reader> opener = new FromFile( charset );
+        IOFunction<File,CharReadable> opener = new FromFile( charset );
         switch ( files.length )
         {
         case 0:  return EMPTY;
-        case 1:  return wrap( opener.apply( files[0] ) );
-        default: return new MultiReadable( iterator( files, opener ) );
+        case 1:  return opener.apply( files[0] );
+        default: return new MultiReadable( iterator( opener, files ) );
         }
     }
 
-    public static CharReadable sources( Reader... sources ) throws IOException
-    {
-        return new MultiReadable( iterator( sources, IOFunctions.identity() ) );
-    }
-
-    public static CharReadable sources( RawIterator<Reader,IOException> sources ) throws IOException
-    {
-        return new MultiReadable( sources );
-    }
-
-    private static <IN,OUT> RawIterator<OUT,IOException> iterator( final IN[] items,
-            final ThrowingFunction<IN,OUT,IOException> converter )
+    @SafeVarargs
+    public static <IN,OUT> RawIterator<OUT,IOException> iterator( ThrowingFunction<IN,OUT,IOException> converter, IN... items )
     {
         if ( items.length == 0 )
         {

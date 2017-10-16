@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.ToIntFunction;
 
 import org.neo4j.collection.primitive.PrimitiveLongObjectMap;
 import org.neo4j.cursor.Cursor;
@@ -44,7 +45,6 @@ import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.string.UTF8;
 import org.neo4j.values.storable.Value;
-
 import static org.neo4j.kernel.impl.store.DynamicArrayStore.getRightArray;
 import static org.neo4j.kernel.impl.store.NoStoreHeaderFormat.NO_STORE_HEADER_FORMAT;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
@@ -401,5 +401,13 @@ public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHea
     public PropertyRecord newRecord()
     {
         return new PropertyRecord( -1 );
+    }
+
+    /**
+     * @return a calculator of property value sizes. The returned instance is designed to be used multiple times by a single thread only.
+     */
+    public ToIntFunction<Value[]> newValueEncodedSizeCalculator()
+    {
+        return new PropertyValueRecordSizeCalculator( this );
     }
 }

@@ -27,13 +27,10 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.StringReader;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -162,7 +159,7 @@ public class ReadablesTest
         // GIVEN
         String data = "1234567890";
         //                 ^   ^
-        CharReadable reader = Readables.wrap( new StringReader( data ) );
+        CharReadable reader = Readables.wrap( data );
         SectionedCharBuffer buffer = new SectionedCharBuffer( 4 );
 
         // WHEN
@@ -207,41 +204,9 @@ public class ReadablesTest
         shouldReadTextFromFileWithBom( Magic.BOM_UTF_8, text );
     }
 
-    @Test
-    public void shouldReadTextFromWrappedInputStream() throws Exception
-    {
-        // GIVEN
-        String text = "abcdefghijklmnop";
-
-        // WHEN
-        File file = writeToFile( text, Charset.defaultCharset() );
-
-        // THEN
-        assertReadTextAsInputStream( file, text );
-    }
-
-    @Test
-    public void shouldSkipBomWhenWrappingInputStream() throws Exception
-    {
-        // GIVEN
-        String text = "abcdefghijklmnop";
-
-        // WHEN/THEN
-        shouldReadTextFromInputStreamWithBom( Magic.BOM_UTF_32_BE, text );
-        shouldReadTextFromInputStreamWithBom( Magic.BOM_UTF_32_LE, text );
-        shouldReadTextFromInputStreamWithBom( Magic.BOM_UTF_16_BE, text );
-        shouldReadTextFromInputStreamWithBom( Magic.BOM_UTF_16_LE, text );
-        shouldReadTextFromInputStreamWithBom( Magic.BOM_UTF_8, text );
-    }
-
     private void shouldReadTextFromFileWithBom( Magic bom, String text ) throws IOException
     {
         assertReadText( writeToFile( bom.bytes(), text, bom.encoding() ), text );
-    }
-
-    private void shouldReadTextFromInputStreamWithBom( Magic bom, String text ) throws IOException
-    {
-        assertReadTextAsInputStream( writeToFile( bom.bytes(), text, bom.encoding() ), text );
     }
 
     private void shouldComplyWithSpecifiedCharset( Charset charset ) throws Exception
@@ -328,14 +293,6 @@ public class ReadablesTest
     private void assertReadText( File file, String text ) throws IOException
     {
         assertReadText( Readables.files( Charset.defaultCharset(), file ), text );
-    }
-
-    private void assertReadTextAsInputStream( File file, String text ) throws IOException
-    {
-        try ( InputStream stream = new FileInputStream( file ) )
-        {
-            assertReadText( Readables.wrap( stream, file.getPath(), Charset.defaultCharset() ), text );
-        }
     }
 
     private void assertReadText( CharReadable readable, String text ) throws IOException

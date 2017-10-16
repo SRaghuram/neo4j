@@ -19,10 +19,12 @@
  */
 package org.neo4j.unsafe.impl.batchimport.restart;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.ToIntFunction;
 
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
@@ -53,6 +55,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Type;
+import org.neo4j.values.storable.Value;
 
 import static org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput.bareboneNodeHeader;
 import static org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput.bareboneRelationshipHeader;
@@ -324,8 +327,8 @@ public class SimpleRandomizedInput implements Input
     }
 
     @Override
-    public Estimates calculateEstimates()
+    public Estimates calculateEstimates( ToIntFunction<Value[]> valueSizeCalculator ) throws IOException
     {
-        return Inputs.knownEstimates( nodeCount, relationshipCount );
+        return Inputs.knownEstimates( nodeCount, relationshipCount, 0, 0, 0, 0, 0 );
     }
 }
