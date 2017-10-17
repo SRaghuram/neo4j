@@ -5,10 +5,12 @@
  */
 package org.neo4j.causalclustering.backup;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.neo4j.backup.BackupModuleResolveAtRuntime;
+import org.neo4j.causalclustering.handlers.PipelineHandlerAppender;
 import org.neo4j.causalclustering.handlers.PipelineHandlerAppenderFactory;
 import org.neo4j.causalclustering.handlers.SslPipelineHandlerAppenderFactory;
 import org.neo4j.commandline.admin.OutsideWorld;
