@@ -9,6 +9,10 @@ import org.neo4j.backup.AbstractBackupSupportingClassesFactory;
 import org.neo4j.backup.BackupModuleResolveAtRuntime;
 import org.neo4j.causalclustering.handlers.PipelineHandlerAppenderFactory;
 import org.neo4j.causalclustering.handlers.SslPipelineHandlerAppenderFactory;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
+import org.neo4j.kernel.impl.util.Dependencies;
+import org.neo4j.logging.LogProvider;
 
 public class CommercialBackupSupportingClassesFactory extends AbstractBackupSupportingClassesFactory
 {
@@ -21,6 +25,14 @@ public class CommercialBackupSupportingClassesFactory extends AbstractBackupSupp
     protected PipelineHandlerAppenderFactory getPipelineHandlerAppenderFactory()
     {
         return new SslPipelineHandlerAppenderFactory();
+    }
+
+    @Override
+    protected Dependencies getDependencies(LogProvider logProvider, Config config )
+    {
+        Dependencies dependencies = super.getDependencies( logProvider, config );
+        dependencies.satisfyDependencies( SslPolicyLoader.create( config, logProvider ) );
+        return dependencies;
     }
 }
 
