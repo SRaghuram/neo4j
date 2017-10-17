@@ -22,11 +22,15 @@ package org.neo4j.unsafe.impl.batchimport.store;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.OpenOption;
+import java.nio.file.StandardOpenOption;
+import java.util.function.Predicate;
 
+import org.neo4j.function.Predicates;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
@@ -43,10 +47,11 @@ import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.StoreFactory;
-import org.neo4j.kernel.impl.store.UnderlyingStorageException;
+import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
+import org.neo4j.kernel.impl.storemigration.StoreFileType;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
@@ -73,25 +78,28 @@ import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_C
  */
 public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visitable
 {
+    private static final String TEMP_NEOSTORE_NAME = "temp." + DEFAULT_NAME;
+
     private final FileSystemAbstraction fileSystem;
-    private final BatchingPropertyKeyTokenRepository propertyKeyRepository;
-    private final BatchingLabelTokenRepository labelRepository;
-    private final BatchingRelationshipTypeTokenRepository relationshipTypeRepository;
     private final LogProvider logProvider;
     private final File storeDir;
     private final Config neo4jConfig;
     private final Configuration importConfiguration;
     private final PageCache pageCache;
-    private final NeoStores neoStores;
-    private final LifeSupport life = new LifeSupport();
-    private final LabelScanStore labelScanStore;
     private final IoTracer ioTracer;
     private final RecordFormats recordFormats;
+    private final AdditionalInitialIds initialIds;
+    private final boolean externalPageCache;
 
     // Some stores are considered temporary during the import and will be reordered/restructured
     // into the main store. These temporary stores will live here
-    private final NeoStores temporaryNeoStores;
-    private final boolean externalPageCache;
+    private NeoStores neoStores;
+    private NeoStores temporaryNeoStores;
+    private BatchingPropertyKeyTokenRepository propertyKeyRepository;
+    private BatchingLabelTokenRepository labelRepository;
+    private BatchingRelationshipTypeTokenRepository relationshipTypeRepository;
+    private LifeSupport life = new LifeSupport();
+    private LabelScanStore labelScanStore;
     private PageCacheFlusher flusher;
 
     private BatchingNeoStores( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir,
@@ -101,60 +109,105 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
         this.fileSystem = fileSystem;
         this.recordFormats = recordFormats;
         this.importConfiguration = importConfiguration;
+        this.initialIds = initialIds;
         this.logProvider = logService.getInternalLogProvider();
         this.storeDir = storeDir;
         this.neo4jConfig = neo4jConfig;
         this.pageCache = pageCache;
         this.ioTracer = ioTracer;
         this.externalPageCache = externalPageCache;
-        this.neoStores = newStoreFactory( DEFAULT_NAME ).openAllNeoStores( true );
-        if ( alreadyContainsData( neoStores ) )
+    }
+
+    private static boolean databaseExists( PageCache pageCache, File storeDir )
+    {
+        // TODO enough to check meta data file?
+        File metaDataFile = new File( storeDir, StoreType.META_DATA.getStoreFile().fileName( StoreFileType.STORE ) );
+        try ( PagedFile pagedFile = pageCache.map( metaDataFile, pageCache.pageSize(), StandardOpenOption.READ ); )
         {
-            neoStores.close();
-            IllegalStateException ise =
-                    new IllegalStateException( storeDir + " already contains data, cannot do import here" );
-            if ( !externalPageCache )
-            {
-                try
-                {
-                    pageCache.close();
-                }
-                catch ( Exception e )
-                {
-                    // Oddly enough we can't close the page cache, how to communicate this? Here we add as suppressed
-                    ise.addSuppressed( e );
-                }
-            }
-            throw ise;
-        }
-        try
-        {
-            neoStores.rebuildCountStoreIfNeeded();
+            return true;
         }
         catch ( IOException e )
         {
-            throw new UnderlyingStorageException( e );
+            return false;
         }
+    }
+
+    /**
+     * Called when expecting a clean {@code storeDir} folder and where a new store will be created.
+     * This happens on an initial attempt to import.
+     *
+     * @throws IOException on I/O error.
+     * @throws IllegalStateException if {@code storeDir} already contains a database.
+     */
+    public void createNew() throws IOException
+    {
+        if ( databaseExists( pageCache, storeDir ) )
+        {
+            throw new IllegalStateException( storeDir + " already contains data, cannot do import here" );
+        }
+
+        instantiateStores();
+        neoStores.rebuildCountStoreIfNeeded();
         neoStores.getMetaDataStore().setLastCommittedAndClosedTransactionId(
                 initialIds.lastCommittedTransactionId(), initialIds.lastCommittedTransactionChecksum(),
                 BASE_TX_COMMIT_TIMESTAMP, initialIds.lastCommittedTransactionLogByteOffset(),
                 initialIds.lastCommittedTransactionLogVersion() );
-        this.propertyKeyRepository = new BatchingPropertyKeyTokenRepository(
-                neoStores.getPropertyKeyTokenStore() );
-        this.labelRepository = new BatchingLabelTokenRepository(
-                neoStores.getLabelTokenStore() );
-        this.relationshipTypeRepository = new BatchingRelationshipTypeTokenRepository(
-                neoStores.getRelationshipTypeTokenStore() );
+    }
 
-        // Instantiate the temporary stores
-        temporaryNeoStores = newStoreFactory(
-                "temp." + DEFAULT_NAME, DELETE_ON_CLOSE ).openNeoStores( true, RELATIONSHIP_GROUP );
+    /**
+     * Called when expecting a previous attempt/state of a database to open, where some store files should be kept,
+     * but others deleted. All temporary stores will be deleted in this call.
+     *
+     * @param storesToKeep {@link Predicate} controlling which files to keep, i.e. {@code true} means keep, {@code false} means delete.
+     * @throws IOException on I/O error.
+     */
+    public void pruneAndOpenExistingStore( Predicate<StoreType> storesToKeep ) throws IOException
+    {
+        deleteStoreFiles( TEMP_NEOSTORE_NAME, Predicates.alwaysFalse() );
+        deleteStoreFiles( DEFAULT_NAME, storesToKeep );
+        instantiateStores();
+    }
 
-        // Initialize kernel extensions
+    private void deleteStoreFiles( String storeName, Predicate<StoreType> storesToKeep )
+    {
+        FileSystemAbstraction fs = pageCache.getCachedFileSystem();
+        for ( StoreType type : StoreType.values() )
+        {
+            if ( !storesToKeep.test( type ) )
+            {
+                for ( StoreFileType fileType : StoreFileType.values() )
+                {
+                    fs.deleteFile( new File( storeDir, fileType.augment( storeName + type.getStoreFile().fileNamePart() ) ) );
+                }
+            }
+        }
+    }
+
+    private void instantiateKernelExtensions()
+    {
+        life = new LifeSupport();
         life.start();
         labelScanStore = new NativeLabelScanStore( pageCache, storeDir, FullStoreChangeStream.EMPTY, false, new Monitors(),
                 RecoveryCleanupWorkCollector.IMMEDIATE );
         life.add( labelScanStore );
+    }
+
+    private void instantiateStores()
+    {
+        neoStores = newStoreFactory( DEFAULT_NAME ).openAllNeoStores( true );
+        propertyKeyRepository = new BatchingPropertyKeyTokenRepository(
+                neoStores.getPropertyKeyTokenStore() );
+        labelRepository = new BatchingLabelTokenRepository(
+                neoStores.getLabelTokenStore() );
+        relationshipTypeRepository = new BatchingRelationshipTypeTokenRepository(
+                neoStores.getRelationshipTypeTokenStore() );
+        temporaryNeoStores = instantiateTempStores();
+        instantiateKernelExtensions();
+    }
+
+    private NeoStores instantiateTempStores()
+    {
+        return newStoreFactory( TEMP_NEOSTORE_NAME, DELETE_ON_CLOSE ).openNeoStores( true, RELATIONSHIP_GROUP );
     }
 
     public static BatchingNeoStores batchingNeoStores( FileSystemAbstraction fileSystem, File storeDir,
@@ -195,12 +248,7 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
                 log.getLog( BatchingNeoStores.class ) ).getOrCreatePageCache();
     }
 
-    private boolean alreadyContainsData( NeoStores neoStores )
-    {
-        return neoStores.getNodeStore().getHighId() > 0 || neoStores.getRelationshipStore().getHighId() > 0;
-    }
-
-        private StoreFactory newStoreFactory( String name, OpenOption... openOptions )
+    private StoreFactory newStoreFactory( String name, OpenOption... openOptions )
     {
         return new StoreFactory( storeDir, name, neo4jConfig,
                 new BatchingIdGeneratorFactory( fileSystem ), pageCache, fileSystem, recordFormats, logProvider,
