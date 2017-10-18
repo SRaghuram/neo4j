@@ -21,7 +21,10 @@ package org.neo4j.unsafe.impl.batchimport.restart;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -42,6 +45,7 @@ import static java.util.Arrays.asList;
 
 import static org.neo4j.kernel.impl.store.StoreType.LABEL_TOKEN;
 import static org.neo4j.kernel.impl.store.StoreType.LABEL_TOKEN_NAME;
+import static org.neo4j.kernel.impl.store.StoreType.META_DATA;
 import static org.neo4j.kernel.impl.store.StoreType.NODE;
 import static org.neo4j.kernel.impl.store.StoreType.NODE_LABEL;
 import static org.neo4j.kernel.impl.store.StoreType.PROPERTY;
@@ -50,15 +54,17 @@ import static org.neo4j.kernel.impl.store.StoreType.PROPERTY_KEY_TOKEN;
 import static org.neo4j.kernel.impl.store.StoreType.PROPERTY_KEY_TOKEN_NAME;
 import static org.neo4j.kernel.impl.store.StoreType.PROPERTY_STRING;
 import static org.neo4j.kernel.impl.store.StoreType.RELATIONSHIP;
+import static org.neo4j.kernel.impl.store.StoreType.RELATIONSHIP_GROUP;
 import static org.neo4j.kernel.impl.store.StoreType.RELATIONSHIP_TYPE_TOKEN;
 import static org.neo4j.kernel.impl.store.StoreType.RELATIONSHIP_TYPE_TOKEN_NAME;
 import static org.neo4j.unsafe.impl.batchimport.ImportLogic.instantiateNeoStores;
 
 public class RestartableParallelBatchImporter implements BatchImporter
 {
+    private static final String STATE_FILE_NAME = "state";
+
     private static final String STATE_NEW_IMPORT = StateStorage.NO_STATE;
     private static final String STATE_START = "start";
-    private static final String STATE_FILE_NAME = "state";
     private static final String STATE_DATA_IMPORT = "data-import";
     private static final String STATE_DATA_LINK = "data-link";
 
@@ -95,41 +101,90 @@ public class RestartableParallelBatchImporter implements BatchImporter
               ImportLogic logic = new ImportLogic( storeDir, fileSystem, store, config, logService,
                       executionMonitor, recordFormats, input ) )
         {
-            StateStorage state = new StateStorage( fileSystem, new File( storeDir, STATE_FILE_NAME ) );
-            String stateName = state.get();
-            initializeStore( store, stateName );
+            StateStorage stateStore = new StateStorage( fileSystem, new File( storeDir, STATE_FILE_NAME ) );
 
-            switch ( stateName )
+            Iterator<State> states = initializeStates( logic );
+            fastForwardToLastCompletedState( store, stateStore.get(), states );
+            runRemainingStates( store, stateStore, states );
+        }
+    }
+
+    private static Iterator<State> initializeStates( ImportLogic logic )
+    {
+        List<State> states = new ArrayList<>();
+
+        states.add( new State( STATE_START, META_DATA ) );
+        states.add( new State( STATE_DATA_IMPORT,
+                NODE, NODE_LABEL, LABEL_TOKEN, LABEL_TOKEN_NAME,
+                RELATIONSHIP, RELATIONSHIP_TYPE_TOKEN, RELATIONSHIP_TYPE_TOKEN_NAME,
+                PROPERTY, PROPERTY_ARRAY, PROPERTY_STRING, PROPERTY_KEY_TOKEN, PROPERTY_KEY_TOKEN_NAME )
+        {
+            @Override
+            void run() throws IOException
             {
-            case STATE_NEW_IMPORT:
-                setState( store, state, STATE_START );
-            case STATE_START:
                 logic.importNodes();
                 logic.prepareIdMapper();
                 logic.importRelationships();
-                setState( store, state, STATE_DATA_IMPORT );
-                // fall-through to next state
-
-            case STATE_DATA_IMPORT:
+            }
+        } );
+        states.add( new State( STATE_DATA_LINK, RELATIONSHIP_GROUP )
+        {
+            @Override
+            void run() throws IOException
+            {
                 logic.calculateNodeDegrees();
                 logic.linkRelationships();
                 logic.defragmentRelationshipGroups();
-                setState( store, state, STATE_DATA_LINK );
-                // fall-through to next state
-
-            case STATE_DATA_LINK:
+            }
+        } );
+        states.add( new State( null )
+        {
+            @Override
+            void run() throws IOException
+            {
                 logic.buildCountsStore();
-                // import completed
-                setState( store, state, null /*i.e. remove it*/ );
-                break;
+            }
+        } );
 
-            default:
-                throw new UnsupportedOperationException( "Unexpected state '" + stateName + "'" );
+        return states.iterator();
+    }
+
+    private static void fastForwardToLastCompletedState( BatchingNeoStores store, String stateName, Iterator<State> states )
+            throws IOException
+    {
+        if ( STATE_NEW_IMPORT.equals( stateName ) )
+        {
+            store.createNew();
+        }
+        else
+        {
+            Set<StoreType> storesToKeep = new HashSet<>();
+            while ( states.hasNext() )
+            {
+                State state = states.next();
+                storesToKeep.addAll( asList( state.completesStoreTypes() ) );
+                if ( state.name().equals( stateName ) )
+                {
+                    // Prepare to start from this state
+                    store.pruneAndOpenExistingStore( type -> storesToKeep.contains( type ) );
+                    state.load();
+                    break;
+                }
             }
         }
     }
 
-    private void setState( BatchingNeoStores store, StateStorage state, String stateName ) throws IOException
+    private static void runRemainingStates( BatchingNeoStores store, StateStorage stateStore, Iterator<State> states ) throws IOException
+    {
+        while ( states.hasNext() )
+        {
+            State state = states.next();
+            state.run();
+            markStateCompleted( store, stateStore, state.name() );
+        }
+    }
+
+    private static void markStateCompleted( BatchingNeoStores store, StateStorage state, String stateName ) throws IOException
     {
         store.flushAndForce();
         if ( stateName != null )
@@ -139,46 +194,6 @@ public class RestartableParallelBatchImporter implements BatchImporter
         else
         {
             state.remove();
-        }
-    }
-
-    private void initializeStore( BatchingNeoStores store, String stateName ) throws IOException
-    {
-        Set<StoreType> storesToKeep = new HashSet<>();
-
-        // Fall through the states, but in reverse order because the longer we've reached in the import the more to keep
-        // and it's clearer to specify what to keep instead of what to delete.
-        switch ( stateName )
-        {
-        case STATE_DATA_LINK:
-            storesToKeep.addAll( asList( StoreType.RELATIONSHIP_GROUP ) );
-            // fall-through to previous state
-
-        case STATE_DATA_IMPORT:
-            storesToKeep.addAll( asList(
-                    NODE, NODE_LABEL, LABEL_TOKEN, LABEL_TOKEN_NAME,
-                    RELATIONSHIP, RELATIONSHIP_TYPE_TOKEN, RELATIONSHIP_TYPE_TOKEN_NAME,
-                    PROPERTY, PROPERTY_ARRAY, PROPERTY_STRING, PROPERTY_KEY_TOKEN, PROPERTY_KEY_TOKEN_NAME ) );
-            // fall-through to previous state
-
-        case STATE_START:
-            storesToKeep.add( StoreType.META_DATA );
-            // fall-through to previous state
-
-        case STATE_NEW_IMPORT:
-            break;
-
-        default:
-            throw new UnsupportedOperationException( "Unknown state '" + stateName + "'" );
-        }
-
-        if ( storesToKeep.isEmpty() )
-        {
-            store.createNew();
-        }
-        else
-        {
-            store.pruneAndOpenExistingStore( type -> storesToKeep.contains( type ) );
         }
     }
 }
