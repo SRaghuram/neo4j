@@ -317,13 +317,12 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
             stopFlushingPageCache();
         }
 
+        flushAndForce();
+
         // Flush out all pending changes
         propertyKeyRepository.close();
         labelRepository.close();
         relationshipTypeRepository.close();
-
-        // Flush label scan store
-        labelScanStore.force( IOLimiter.unlimited() );
 
         // Close the neo store
         life.shutdown();
@@ -386,5 +385,14 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
     public PageCache getPageCache()
     {
         return pageCache;
+    }
+
+    public void flushAndForce()
+    {
+        propertyKeyRepository.flush();
+        labelRepository.flush();
+        relationshipTypeRepository.flush();
+        neoStores.flush( IOLimiter.unlimited() );
+        labelScanStore.force( IOLimiter.unlimited() );
     }
 }
