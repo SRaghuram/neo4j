@@ -147,7 +147,6 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
         }
 
         instantiateStores();
-        neoStores.rebuildCountStoreIfNeeded();
         neoStores.getMetaDataStore().setLastCommittedAndClosedTransactionId(
                 initialIds.lastCommittedTransactionId(), initialIds.lastCommittedTransactionChecksum(),
                 BASE_TX_COMMIT_TIMESTAMP, initialIds.lastCommittedTransactionLogByteOffset(),
@@ -173,7 +172,7 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
         FileSystemAbstraction fs = pageCache.getCachedFileSystem();
         for ( StoreType type : StoreType.values() )
         {
-            if ( !storesToKeep.test( type ) )
+            if ( type.isRecordStore() && !storesToKeep.test( type ) )
             {
                 for ( StoreFileType fileType : StoreFileType.values() )
                 {
@@ -192,9 +191,11 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
         life.add( labelScanStore );
     }
 
-    private void instantiateStores()
+    private void instantiateStores() throws IOException
     {
         neoStores = newStoreFactory( DEFAULT_NAME ).openAllNeoStores( true );
+        // TODO why do we need this counts store thing here?
+        neoStores.rebuildCountStoreIfNeeded();
         propertyKeyRepository = new BatchingPropertyKeyTokenRepository(
                 neoStores.getPropertyKeyTokenStore() );
         labelRepository = new BatchingLabelTokenRepository(
