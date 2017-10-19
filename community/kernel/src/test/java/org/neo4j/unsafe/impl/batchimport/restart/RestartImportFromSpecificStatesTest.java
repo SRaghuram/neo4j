@@ -23,6 +23,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
@@ -33,17 +35,18 @@ import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.RelationshipCountsStage;
 import org.neo4j.unsafe.impl.batchimport.RelationshipLinkbackStage;
 import org.neo4j.unsafe.impl.batchimport.RelationshipStage;
-import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
 import static org.junit.Assert.fail;
 
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
-import static org.neo4j.unsafe.impl.batchimport.restart.SimpleRandomizedInput.randomizedInput;
 
 public class RestartImportFromSpecificStatesTest
 {
+    private static final long NODE_COUNT = 100;
+    private static final long RELATIONSHIP_COUNT = 1_000;
+
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
     private final RandomRule random = new RandomRule();
     private final TestDirectory directory = TestDirectory.testDirectory( fs );
@@ -58,9 +61,11 @@ public class RestartImportFromSpecificStatesTest
         crashImportAt( RelationshipLinkbackStage.NAME );
 
         // when
-        importer( new PanicSpreadingExecutionMonitor( RelationshipStage.NAME, true ) ).doImport( input() );
+        SimpleRandomizedInput input = input();
+        importer( new PanicSpreadingExecutionMonitor( RelationshipStage.NAME, true ) ).doImport( input );
 
         // then good :)
+        verifyDb( input );
     }
 
     @Test
@@ -70,9 +75,11 @@ public class RestartImportFromSpecificStatesTest
         crashImportAt( RelationshipCountsStage.NAME );
 
         // when
-        importer( new PanicSpreadingExecutionMonitor( RelationshipLinkbackStage.NAME, true ) ).doImport( input() );
+        SimpleRandomizedInput input = input();
+        importer( new PanicSpreadingExecutionMonitor( RelationshipLinkbackStage.NAME, true ) ).doImport( input );
 
         // then good :)
+        verifyDb( input );
     }
 
     private void crashImportAt( String stageName )
@@ -88,9 +95,9 @@ public class RestartImportFromSpecificStatesTest
         }
     }
 
-    private Input input()
+    private SimpleRandomizedInput input()
     {
-        return randomizedInput( random.seed(), 100, 1_000, 0.05f, 0.05f );
+        return new SimpleRandomizedInput( random.seed(), NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
     }
 
     private BatchImporter importer( ExecutionMonitor monitor )
@@ -98,5 +105,18 @@ public class RestartImportFromSpecificStatesTest
         return new RestartableParallelBatchImporter(
               directory.absolutePath(), fs, null, DEFAULT, NullLogService.getInstance(), monitor,
               EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat() );
+    }
+
+    private void verifyDb( SimpleRandomizedInput input )
+    {
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
+        try
+        {
+            input.verify( db );
+        }
+        finally
+        {
+            db.shutdown();
+        }
     }
 }

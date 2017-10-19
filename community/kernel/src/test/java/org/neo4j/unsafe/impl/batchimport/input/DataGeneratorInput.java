@@ -19,6 +19,8 @@
  */
 package org.neo4j.unsafe.impl.batchimport.input;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 
 import org.neo4j.csv.reader.Extractors;
@@ -32,6 +34,8 @@ import org.neo4j.unsafe.impl.batchimport.input.csv.Header;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header.Entry;
 import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Type;
+
+import static java.util.Arrays.asList;
 
 /**
  * {@link Input} which generates data on the fly. This input wants to know number of nodes and relationships
@@ -148,14 +152,25 @@ public class DataGeneratorInput implements Input
 
     public static Header bareboneNodeHeader( IdType idType, Extractors extractors )
     {
-        return new Header( new Entry( null, Type.ID, null, idType.extractor( extractors ) ),
-                new Entry( null, Type.LABEL, null, extractors.stringArray() ) );
+        return bareboneNodeHeader( null, idType, extractors );
     }
 
-    public static Header bareboneRelationshipHeader( IdType idType, Extractors extractors )
+    public static Header bareboneNodeHeader( String idKey, IdType idType, Extractors extractors, Entry... additionalEntries )
     {
-        return new Header( new Entry( null, Type.START_ID, null, idType.extractor( extractors ) ),
-                new Entry( null, Type.END_ID, null, idType.extractor( extractors ) ),
-                new Entry( null, Type.TYPE, null, extractors.string() ) );
+        List<Entry> entries = new ArrayList<>();
+        entries.add( new Entry( idKey, Type.ID, null, idType.extractor( extractors ) ) );
+        entries.add( new Entry( null, Type.LABEL, null, extractors.stringArray() ) );
+        entries.addAll( asList( additionalEntries ) );
+        return new Header( entries.toArray( new Entry[entries.size()] ) );
+    }
+
+    public static Header bareboneRelationshipHeader( IdType idType, Extractors extractors, Entry... additionalEntries )
+    {
+        List<Entry> entries = new ArrayList<>();
+        entries.add( new Entry( null, Type.START_ID, null, idType.extractor( extractors ) ) );
+        entries.add( new Entry( null, Type.END_ID, null, idType.extractor( extractors ) ) );
+        entries.add( new Entry( null, Type.TYPE, null, extractors.string() ) );
+        entries.addAll( asList( additionalEntries ) );
+        return new Header( entries.toArray( new Entry[entries.size()] ) );
     }
 }

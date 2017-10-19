@@ -24,9 +24,7 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 
 import java.io.IOException;
-
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
@@ -49,15 +47,12 @@ import org.neo4j.unsafe.impl.batchimport.RelationshipStage;
 import org.neo4j.unsafe.impl.batchimport.ScanAndCacheGroupsStage;
 import org.neo4j.unsafe.impl.batchimport.SparseNodeFirstRelationshipStage;
 import org.neo4j.unsafe.impl.batchimport.WriteGroupsStage;
-import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
-import static org.junit.Assert.assertEquals;
+
 import static org.junit.Assert.fail;
 
-import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
-import static org.neo4j.unsafe.impl.batchimport.restart.SimpleRandomizedInput.randomizedInput;
 import static org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors.invisible;
 
 public class RestartableParallelBatchImporterIT
@@ -253,17 +248,24 @@ public class RestartableParallelBatchImporterIT
         }
 
         // when
-        Input input = input();
+        SimpleRandomizedInput input = input();
         importer( invisible() ).doImport( input );
 
         // then
-        verifyData( input );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
+        try
+        {
+            input.verify( db );
+        }
+        finally
+        {
+            db.shutdown();
+        }
     }
 
-    private Input input()
+    private SimpleRandomizedInput input()
     {
-        // TODO what about bad data?
-        return randomizedInput( random.seed(), NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
+        return new SimpleRandomizedInput( random.seed(), NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
     }
 
     private BatchImporter importer( ExecutionMonitor monitor )
@@ -271,20 +273,5 @@ public class RestartableParallelBatchImporterIT
         return new RestartableParallelBatchImporter(
               directory.absolutePath(), fs, null, DEFAULT, NullLogService.getInstance(), monitor,
               EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat() );
-    }
-
-    private void verifyData( Input input )
-    {
-        // TODO actually verify stuff
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
-        try ( Transaction tx = db.beginTx() )
-        {
-            long actualNodeCount = count( db.getAllNodes() );
-            long actualRelationshipCount = count( db.getAllRelationships() );
-            assertEquals( NODE_COUNT, actualNodeCount );
-            assertEquals( RELATIONSHIP_COUNT, actualRelationshipCount );
-            tx.success();
-        }
-        db.shutdown();
     }
 }
