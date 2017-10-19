@@ -56,7 +56,6 @@ import org.neo4j.unsafe.impl.batchimport.input.SimpleDataGenerator;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
 import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -72,8 +71,8 @@ import static org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors.invisi
 
 public class RestartableParallelBatchImporterIT
 {
-    private static final int RELATIONSHIP_COUNT = 1_000;
     private static final int NODE_COUNT = 100;
+    private static final int RELATIONSHIP_COUNT = 1_000;
 
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
     private final RandomRule random = new RandomRule();

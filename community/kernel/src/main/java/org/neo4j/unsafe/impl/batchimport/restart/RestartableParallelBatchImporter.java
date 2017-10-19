@@ -37,6 +37,7 @@ import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.ImportLogic;
+import org.neo4j.unsafe.impl.batchimport.RelationshipTypeDistribution;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingNeoStores;
@@ -61,7 +62,8 @@ import static org.neo4j.unsafe.impl.batchimport.ImportLogic.instantiateNeoStores
 
 public class RestartableParallelBatchImporter implements BatchImporter
 {
-    private static final String STATE_FILE_NAME = "state";
+    private static final String FILE_NAME_STATE = "state";
+    private static final String FILE_NAME_RELATIONSHIP_DISTRIBUTION = "relationship-type-distribution";
 
     private static final String STATE_NEW_IMPORT = StateStorage.NO_STATE;
     private static final String STATE_START = "start";
@@ -77,6 +79,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private final RecordFormats recordFormats;
     private final ExecutionMonitor executionMonitor;
     private final AdditionalInitialIds additionalInitialIds;
+    private final RelationshipTypeDistributionStorage relationshipTypeDistributionStorage;
 
     public RestartableParallelBatchImporter( File storeDir, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             Configuration config, LogService logService, ExecutionMonitor executionMonitor,
@@ -91,6 +94,8 @@ public class RestartableParallelBatchImporter implements BatchImporter
         this.recordFormats = recordFormats;
         this.executionMonitor = executionMonitor;
         this.additionalInitialIds = additionalInitialIds;
+        this.relationshipTypeDistributionStorage = new RelationshipTypeDistributionStorage( fileSystem,
+                new File( storeDir, FILE_NAME_RELATIONSHIP_DISTRIBUTION ) );
     }
 
     @Override
@@ -101,7 +106,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
               ImportLogic logic = new ImportLogic( storeDir, fileSystem, store, config, logService,
                       executionMonitor, recordFormats, input ) )
         {
-            StateStorage stateStore = new StateStorage( fileSystem, new File( storeDir, STATE_FILE_NAME ) );
+            StateStorage stateStore = new StateStorage( fileSystem, new File( storeDir, FILE_NAME_STATE ) );
 
             Iterator<State> states = initializeStates( logic );
             fastForwardToLastCompletedState( store, stateStore.get(), states );
@@ -109,7 +114,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         }
     }
 
-    private static Iterator<State> initializeStates( ImportLogic logic )
+    private Iterator<State> initializeStates( ImportLogic logic )
     {
         List<State> states = new ArrayList<>();
 
@@ -125,6 +130,18 @@ public class RestartableParallelBatchImporter implements BatchImporter
                 logic.importNodes();
                 logic.prepareIdMapper();
                 logic.importRelationships();
+            }
+
+            @Override
+            void save() throws IOException
+            {
+                relationshipTypeDistributionStorage.store( logic.getState( RelationshipTypeDistribution.class ) );
+            }
+
+            @Override
+            void load() throws IOException
+            {
+                logic.putState( relationshipTypeDistributionStorage.load() );
             }
         } );
         states.add( new State( STATE_DATA_LINK, RELATIONSHIP_GROUP )
@@ -163,11 +180,11 @@ public class RestartableParallelBatchImporter implements BatchImporter
             {
                 State state = states.next();
                 storesToKeep.addAll( asList( state.completesStoreTypes() ) );
+                state.load();
                 if ( state.name().equals( stateName ) )
                 {
                     // Prepare to start from this state
                     store.pruneAndOpenExistingStore( type -> storesToKeep.contains( type ) );
-                    state.load();
                     break;
                 }
             }
@@ -180,6 +197,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         {
             State state = states.next();
             state.run();
+            state.save();
             markStateCompleted( store, stateStore, state.name() );
         }
     }

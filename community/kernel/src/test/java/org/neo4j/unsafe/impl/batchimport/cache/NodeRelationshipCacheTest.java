@@ -19,7 +19,6 @@
  */
 package org.neo4j.unsafe.impl.batchimport.cache;
 
-import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -31,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -499,17 +499,16 @@ public class NodeRelationshipCacheTest
             cache.setCount( i, count, random.nextInt( numberOfTypes ), random.among( directions ) );
         }
         int numberOfDenseNodes = toIntExact( cache.calculateNumberOfDenseNodes() );
-        Map<Object,MutableLong> types = new HashMap<>();
+        List<Pair<Object,Long>> types = new ArrayList<>();
         for ( int i = 0; i < numberOfTypes; i++ )
         {
-            types.put( "TYPE" + i, new MutableLong( random.nextInt( 1, 1_000 ) ) );
+            types.add( Pair.of( "TYPE" + i, (long) random.nextInt( 1, 1_000 ) ) );
         }
 
         // WHEN enough memory for all types
         {
             long memory = numberOfDenseNodes * numberOfTypes * NodeRelationshipCache.GROUP_ENTRY_SIZE;
-            Collection<Object> fits =
-                    Iterators.single( cache.splitRelationshipTypesIntoRounds( types.entrySet().iterator(), memory ) );
+            Collection<Object> fits = Iterators.single( cache.splitRelationshipTypesIntoRounds( types.iterator(), memory ) );
             // THEN
             assertEquals( types.size(), fits.size() );
         }
@@ -518,8 +517,7 @@ public class NodeRelationshipCacheTest
         {
             int memory = numberOfDenseNodes * numberOfTypes / 5 * NodeRelationshipCache.GROUP_ENTRY_SIZE;
             int total = 0;
-            Iterator<Collection<Object>> rounds =
-                    cache.splitRelationshipTypesIntoRounds( types.entrySet().iterator(), memory );
+            Iterator<Collection<Object>> rounds = cache.splitRelationshipTypesIntoRounds( types.iterator(), memory );
             while ( rounds.hasNext() )
             {
                 Collection<Object> round = rounds.next();

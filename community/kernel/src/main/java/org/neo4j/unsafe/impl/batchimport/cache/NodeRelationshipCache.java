@@ -19,19 +19,16 @@
  */
 package org.neo4j.unsafe.impl.batchimport.cache;
 
-import org.apache.commons.lang3.mutable.MutableLong;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.graphdb.Direction;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 
 import static java.lang.Long.min;
@@ -869,13 +866,13 @@ public class NodeRelationshipCache implements MemoryStatsVisitor.Visitable
     }
 
     public Iterator<Collection<Object>> splitRelationshipTypesIntoRounds(
-            Iterator<Entry<Object,MutableLong>> allTypes, long freeMemoryForDenseNodeCache )
+            Iterator<Pair<Object,Long>> allTypes, long freeMemoryForDenseNodeCache )
     {
-        PrefetchingIterator<Entry<Object,MutableLong>> peekableAllTypes =
-                new PrefetchingIterator<Entry<Object,MutableLong>>()
+        PrefetchingIterator<Pair<Object,Long>> peekableAllTypes =
+                new PrefetchingIterator<Pair<Object,Long>>()
         {
             @Override
-            protected Entry<Object,MutableLong> fetchNextOrNull()
+            protected Pair<Object,Long> fetchNextOrNull()
             {
                 return allTypes.hasNext() ? allTypes.next() : null;
             }
@@ -892,8 +889,8 @@ public class NodeRelationshipCache implements MemoryStatsVisitor.Visitable
                 while ( peekableAllTypes.hasNext() )
                 {
                     // Calculate worst-case scenario
-                    Map.Entry<Object,MutableLong> type = peekableAllTypes.peek();
-                    long relationshipCountForThisType = type.getValue().longValue();
+                    Pair<Object,Long> type = peekableAllTypes.peek();
+                    long relationshipCountForThisType = type.other();
                     long maxDenseNodesForThisType = min( numberOfDenseNodes, relationshipCountForThisType * 2/*nodes/rel*/ );
                     long memoryUsageForThisType = maxDenseNodesForThisType * NodeRelationshipCache.GROUP_ENTRY_SIZE;
                     long memoryUsageUpToAndIncludingThisType =
@@ -906,7 +903,7 @@ public class NodeRelationshipCache implements MemoryStatsVisitor.Visitable
                         break;
                     }
                     peekableAllTypes.next();
-                    typesToImportThisRound.add( type.getKey() );
+                    typesToImportThisRound.add( type.first() );
                     currentSetOfRelationshipsMemoryUsage += memoryUsageForThisType;
                 }
                 return typesToImportThisRound.isEmpty() ? null : typesToImportThisRound;

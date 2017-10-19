@@ -23,7 +23,9 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.function.Predicate;
 
 import org.neo4j.collection.primitive.Primitive;
@@ -92,6 +94,12 @@ public class ImportLogic implements Closeable
     private final CountingStoreUpdateMonitor storeUpdateMonitor = new CountingStoreUpdateMonitor();
     private final long maxMemory;
 
+    // This map contains additional state that gets populated, created and used throughout the stages.
+    // The reason that this is a map is to allow for a uniform way of accessing and loading this stage
+    // from the outside. Currently these things live here:
+    //   - RelationshipTypeDistribution
+    private final Map<Class<?>,Object> accessibleState = new HashMap<>();
+
     // components which may get assigned and unassigned in some methods
     private NodeRelationshipCache nodeRelationshipCache;
     private NodeLabelsCache nodeLabelsCache;
@@ -106,7 +114,6 @@ public class ImportLogic implements Closeable
     private InputIterable<InputNode> nodes;
     private InputIterable<InputRelationship> relationships;
     private InputIterable<InputNode> cachedNodes;
-    private RelationshipTypeDistribution relationshipDistribution;
     private long peakMemoryUsage;
 
     /**
@@ -155,6 +162,31 @@ public class ImportLogic implements Closeable
         nodes = input.nodes();
         relationships = input.relationships();
         cachedNodes = cachedForSure( nodes, inputCache.nodes( MAIN, true ) );
+    }
+
+    /**
+     * Accesses state of a certain {@code type}. This is state that may be long- or short-lived and perhaps
+     * created in one part of the import to be used in another.
+     *
+     * @param type {@link Class} of the state to get.
+     * @return the state of the given type.
+     * @throws IllegalStateException if the state of the given {@code type} isn't available.
+     */
+    public <T> T getState( Class<T> type )
+    {
+        return type.cast( accessibleState.get( type ) );
+    }
+
+    /**
+     * Puts state of a certain type.
+     *
+     * @param state state instance to set.
+     * @see #getState(Class)
+     * @throws IllegalStateException if state of this type has already been defined.
+     */
+    public <T> void putState( T state )
+    {
+        accessibleState.put( state.getClass(), state );
     }
 
     /**
@@ -216,7 +248,7 @@ public class ImportLogic implements Closeable
         updatePeakMemoryUsage();
         idMapper.close();
         idMapper = null;
-        relationshipDistribution = unlinkedRelationshipStage.getDistribution();
+        putState( unlinkedRelationshipStage.getDistribution() );
     }
 
     /**
@@ -257,6 +289,7 @@ public class ImportLogic implements Closeable
         Configuration relationshipConfig =
                 configWithRecordsPerPageBasedBatchSize( config, neoStore.getRelationshipStore() );
         Configuration nodeConfig = configWithRecordsPerPageBasedBatchSize( config, neoStore.getNodeStore() );
+        RelationshipTypeDistribution relationshipDistribution = getState( RelationshipTypeDistribution.class );
         Iterator<Collection<Object>> rounds = nodeRelationshipCache.splitRelationshipTypesIntoRounds(
                 relationshipDistribution.iterator(), availableMemory );
         Configuration groupConfig =
