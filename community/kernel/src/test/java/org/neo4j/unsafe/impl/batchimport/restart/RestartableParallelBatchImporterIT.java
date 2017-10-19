@@ -25,7 +25,6 @@ import org.junit.rules.RuleChain;
 
 import java.io.IOException;
 
-import org.neo4j.csv.reader.Extractors;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -50,11 +49,7 @@ import org.neo4j.unsafe.impl.batchimport.RelationshipStage;
 import org.neo4j.unsafe.impl.batchimport.ScanAndCacheGroupsStage;
 import org.neo4j.unsafe.impl.batchimport.SparseNodeFirstRelationshipStage;
 import org.neo4j.unsafe.impl.batchimport.WriteGroupsStage;
-import org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
-import org.neo4j.unsafe.impl.batchimport.input.SimpleDataGenerator;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
-import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -62,11 +57,7 @@ import static org.junit.Assert.fail;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
-import static org.neo4j.unsafe.impl.batchimport.input.BadCollector.COLLECT_ALL;
-import static org.neo4j.unsafe.impl.batchimport.input.BadCollector.UNLIMITED_TOLERANCE;
-import static org.neo4j.unsafe.impl.batchimport.input.Collectors.silentBadCollector;
-import static org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput.bareboneNodeHeader;
-import static org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput.bareboneRelationshipHeader;
+import static org.neo4j.unsafe.impl.batchimport.restart.SimpleRandomizedInput.randomizedInput;
 import static org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors.invisible;
 
 public class RestartableParallelBatchImporterIT
@@ -253,7 +244,7 @@ public class RestartableParallelBatchImporterIT
     {
         try
         {
-            importer( new PanicSpreadingExecutionMonitor( stageName, trueForStart ) ).doImport( input( 100, 1_000 ) );
+            importer( new PanicSpreadingExecutionMonitor( stageName, trueForStart ) ).doImport( input() );
             fail( "Should fail, due to the execution monitor spreading panic" );
         }
         catch ( Exception e )
@@ -262,11 +253,17 @@ public class RestartableParallelBatchImporterIT
         }
 
         // when
-        Input input = input( NODE_COUNT, RELATIONSHIP_COUNT );
+        Input input = input();
         importer( invisible() ).doImport( input );
 
         // then
         verifyData( input );
+    }
+
+    private Input input()
+    {
+        // TODO what about bad data?
+        return randomizedInput( random.seed(), NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
     }
 
     private BatchImporter importer( ExecutionMonitor monitor )
@@ -278,6 +275,7 @@ public class RestartableParallelBatchImporterIT
 
     private void verifyData( Input input )
     {
+        // TODO actually verify stuff
         GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
         try ( Transaction tx = db.beginTx() )
         {
@@ -288,17 +286,5 @@ public class RestartableParallelBatchImporterIT
             tx.success();
         }
         db.shutdown();
-    }
-
-    private Input input( long nodes, long relationships )
-    {
-        IdType idType = IdType.INTEGER;
-        Extractors extractors = new Extractors( Configuration.COMMAS.arrayDelimiter() );
-        SimpleDataGenerator generator = new SimpleDataGenerator(
-                bareboneNodeHeader( idType, extractors ),
-                bareboneRelationshipHeader( idType, extractors ),
-                random.seed(), nodes, 4, 4, idType );
-        return new DataGeneratorInput( nodes, relationships,
-                generator.nodes(), generator.relationships(), idType, silentBadCollector( UNLIMITED_TOLERANCE, COLLECT_ALL ) );
     }
 }

@@ -341,7 +341,9 @@ public class ImportLogic implements Closeable
             executeStage( new RelationshipLinkbackStage( topic, relationshipConfig, neoStore.getRelationshipStore(),
                     nodeRelationshipCache, readFilter, denseChangeFilter, nodeTypes ) );
             typesImported += typesToLinkThisRound.size();
-        }        updatePeakMemoryUsage();
+        }
+
+        updatePeakMemoryUsage();
         nodeRelationshipCache.close();
         nodeRelationshipCache = null;
     }
