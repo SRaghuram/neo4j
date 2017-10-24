@@ -43,6 +43,7 @@ import org.neo4j.unsafe.impl.batchimport.input.SimpleDataGenerator;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header;
 import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
+import org.neo4j.unsafe.impl.batchimport.restart.RestartableParallelBatchImporter;
 
 import static java.lang.System.currentTimeMillis;
 
@@ -157,7 +158,7 @@ public class QuickImport
             }
             else
             {
-                consumer = new ParallelBatchImporter( dir, fileSystem, null, importConfig,
+                consumer = new RestartableParallelBatchImporter( dir, fileSystem, null, importConfig,
                         new SimpleLogService( sysoutLogProvider, sysoutLogProvider ), defaultVisible(), EMPTY, dbConfig,
                         RecordFormatSelector.selectForConfig( dbConfig, sysoutLogProvider ) );
             }
