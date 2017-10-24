@@ -513,7 +513,7 @@ public class ImportTool
         return args;
     }
 
-    private static Long parseMaxMemory( String maxMemoryString )
+    static Long parseMaxMemory( String maxMemoryString )
     {
         if ( maxMemoryString != null )
         {
@@ -642,7 +642,7 @@ public class ImportTool
         return file != null && file.exists() ? Config.defaults( MapUtil.load( file ) ) : Config.defaults();
     }
 
-    private static void printOverview( File storeDir, Collection<Option<File[]>> nodesFiles,
+    static void printOverview( File storeDir, Collection<Option<File[]>> nodesFiles,
             Collection<Option<File[]>> relationshipsFiles,
             org.neo4j.unsafe.impl.batchimport.Configuration configuration, PrintStream out )
     {

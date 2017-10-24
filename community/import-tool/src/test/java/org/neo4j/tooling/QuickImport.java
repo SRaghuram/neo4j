@@ -22,6 +22,7 @@ package org.neo4j.tooling;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.Collections;
 
 import org.neo4j.csv.reader.CharSeeker;
 import org.neo4j.csv.reader.CharSeekers;
@@ -137,6 +138,13 @@ public class QuickImport
             {
                 return pageCacheMemory;
             }
+
+            @Override
+            public long maxMemoryUsage()
+            {
+                String custom = args.get( ImportTool.Options.MAX_MEMORY.key(), null );
+                return custom != null ? ImportTool.parseMaxMemory( custom ) : DEFAULT.maxMemoryUsage();
+            }
         };
 
         float factorBadNodeData = args.getNumber( "factor-bad-node-data", 0 ).floatValue();
@@ -158,6 +166,8 @@ public class QuickImport
             }
             else
             {
+                ImportTool.printOverview( dir, Collections.emptyList(), Collections.emptyList(), importConfig, System.out );
+
                 consumer = new RestartableParallelBatchImporter( dir, fileSystem, null, importConfig,
                         new SimpleLogService( sysoutLogProvider, sysoutLogProvider ), defaultVisible(), EMPTY, dbConfig,
                         RecordFormatSelector.selectForConfig( dbConfig, sysoutLogProvider ) );
