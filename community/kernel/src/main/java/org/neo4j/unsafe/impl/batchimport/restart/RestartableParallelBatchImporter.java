@@ -111,13 +111,14 @@ public class RestartableParallelBatchImporter implements BatchImporter
         try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, storeDir, externalPageCache, recordFormats,
                       config, logService, additionalInitialIds, dbConfig );
               ImportLogic logic = new ImportLogic( storeDir, fileSystem, store, config, logService,
-                      executionMonitor, recordFormats, input ) )
+                      executionMonitor, recordFormats ) )
         {
             StateStorage stateStore = new StateStorage( fileSystem, new File( storeDir, FILE_NAME_STATE ) );
 
             PrefetchingIterator<State> states = initializeStates( logic );
             Pair<String,byte[]> previousState = stateStore.get();
             fastForwardToLastCompletedState( store, stateStore, previousState.first(), previousState.other(), states );
+            logic.initialize( input );
             runRemainingStates( store, stateStore, previousState.other(), states );
 
             store.success();

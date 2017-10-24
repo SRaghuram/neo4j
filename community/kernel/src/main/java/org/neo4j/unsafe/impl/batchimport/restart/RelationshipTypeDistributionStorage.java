@@ -21,6 +21,8 @@ package org.neo4j.unsafe.impl.batchimport.restart;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
+
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
@@ -34,6 +36,8 @@ import static org.neo4j.unsafe.impl.batchimport.restart.ChannelUtils.writeString
 
 class RelationshipTypeDistributionStorage
 {
+    private static final Charset charset = Charset.forName( "UTF-8" );
+
     private final FileSystemAbstraction fs;
     private final File file;
 
