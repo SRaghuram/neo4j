@@ -89,4 +89,21 @@ public abstract class PrefetchingIterator<T> implements Iterator<T>
     {
         throw new UnsupportedOperationException();
     }
+
+    public static <T> PrefetchingIterator<T> prefetching( Iterator<T> iterator )
+    {
+        if ( iterator instanceof PrefetchingIterator )
+        {
+            return (PrefetchingIterator<T>) iterator;
+        }
+
+        return new PrefetchingIterator<T>()
+        {
+            @Override
+            protected T fetchNextOrNull()
+            {
+                return iterator.hasNext() ? iterator.next() : null;
+            }
+        };
+    }
 }

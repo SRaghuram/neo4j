@@ -24,13 +24,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Predicate;
 
 import org.neo4j.collection.primitive.Primitive;
 import org.neo4j.collection.primitive.PrimitiveIntSet;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -70,6 +70,7 @@ import static java.lang.System.currentTimeMillis;
 import static org.neo4j.helpers.Format.bytes;
 import static org.neo4j.helpers.Format.duration;
 import static org.neo4j.unsafe.impl.batchimport.SourceOrCachedInputIterable.cachedForSure;
+import static org.neo4j.unsafe.impl.batchimport.cache.NodeRelationshipCache.calculateMaxMemoryUsage;
 import static org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory.auto;
 import static org.neo4j.unsafe.impl.batchimport.input.InputCache.MAIN;
 import static org.neo4j.unsafe.impl.batchimport.staging.ExecutionSupervisors.superviseExecution;
@@ -230,7 +231,7 @@ public class ImportLogic implements Closeable
     /**
      * Uses {@link IdMapper} as lookup for ID --> nodeId and imports all relationships from {@link Input#relationships()}
      * and writes them into the {@link RelationshipStore}. No linking between relationships is done in this method,
-     * it's done later in {@link #linkRelationships()}.
+     * it's done later in {@link #linkRelationships(int)}.
      *
      * @throws IOException on I/O error.
      */
@@ -253,7 +254,7 @@ public class ImportLogic implements Closeable
 
     /**
      * Populates {@link NodeRelationshipCache} with node degrees, which is required to know how to physically layout each
-     * relationship chain. This is required before running {@link #linkRelationships()}.
+     * relationship chain. This is required before running {@link #linkRelationships(int)}.
      */
     public void calculateNodeDegrees()
     {
@@ -263,10 +264,11 @@ public class ImportLogic implements Closeable
         NodeDegreeCountStage nodeDegreeStage = new NodeDegreeCountStage( relationshipConfig,
                 neoStore.getRelationshipStore(), nodeRelationshipCache );
         executeStage( nodeDegreeStage );
+        nodeRelationshipCache.countingCompleted();
     }
 
     /**
-     * Performs one or more rounds linking together relationships with each other. Number of rounds required
+     * Performs one round of linking together relationships with each other. Number of rounds required
      * is dictated by available memory. The more dense nodes and relationship types, the more memory required.
      * Every round all relationships of one or more types are linked.
      *
@@ -281,71 +283,126 @@ public class ImportLogic implements Closeable
      * This is done in the first round only, if there are multiple rounds.
      * </li>
      * </ul>
+     *
+     * A linking loop (from external caller POV) typically looks like:
+     * <pre>
+     * int type = 0;
+     * do
+     * {
+     *    type = logic.linkRelationships( type );
+     * }
+     * while ( type != -1 );
+     * </pre>
+     *
+     * @param startingFromType relationship type to start from.
+     * @return the next relationship type to start linking and, if != -1, should be passed into next call to this method.
      */
-    public void linkRelationships()
+    public int linkRelationships( int startingFromType )
     {
+        assert startingFromType >= 0 : startingFromType;
+
         // Link relationships together with each other, their nodes and their relationship groups
         long availableMemory = maxMemory - totalMemoryUsageOf( nodeRelationshipCache, neoStore );
-        Configuration relationshipConfig =
-                configWithRecordsPerPageBasedBatchSize( config, neoStore.getRelationshipStore() );
+        RelationshipTypeDistribution relationshipTypeDistribution = getState( RelationshipTypeDistribution.class );
+
+        // Figure out which types we can fit in node-->relationship cache memory.
+        // Types go from biggest to smallest group and so towards the end there will be
+        // smaller and more groups per round in this loop
+        int upToType = nextSetOfTypesThatFitInMemory(
+                relationshipTypeDistribution, startingFromType, availableMemory, nodeRelationshipCache.getNumberOfDenseNodes() );
+
+        Collection<Object> typesToLinkThisRound = relationshipTypeDistribution.types( startingFromType, upToType );
+        int typesImported = typesToLinkThisRound.size();
+        boolean thisIsTheFirstRound = startingFromType == 0;
+        boolean thisIsTheOnlyRound = thisIsTheFirstRound && upToType == relationshipTypeDistribution.getNumberOfRelationshipTypes();
+
+        Configuration relationshipConfig = configWithRecordsPerPageBasedBatchSize( config, neoStore.getRelationshipStore() );
         Configuration nodeConfig = configWithRecordsPerPageBasedBatchSize( config, neoStore.getNodeStore() );
-        RelationshipTypeDistribution relationshipDistribution = getState( RelationshipTypeDistribution.class );
-        Iterator<Collection<Object>> rounds = nodeRelationshipCache.splitRelationshipTypesIntoRounds(
-                relationshipDistribution.iterator(), availableMemory );
-        Configuration groupConfig =
-                configWithRecordsPerPageBasedBatchSize( config, neoStore.getRelationshipGroupStore() );
+        Configuration groupConfig = configWithRecordsPerPageBasedBatchSize( config, neoStore.getRelationshipGroupStore() );
 
-        // Do multiple rounds of relationship linking. Each round fits as many relationship types
-        // as it can (comparing with worst-case memory usage and available memory).
-        int typesImported = 0;
-        int round = 0;
-        for ( round = 0; rounds.hasNext(); round++ )
+        nodeRelationshipCache.setForwardScan( true, true/*dense*/ );
+        String range = typesToLinkThisRound.size() == 1
+                ? String.valueOf( oneBased( startingFromType ) )
+                : oneBased( startingFromType ) + "-" + (startingFromType + typesImported);
+        String topic = " " + range + "/" + relationshipTypeDistribution.getNumberOfRelationshipTypes();
+        int nodeTypes = thisIsTheFirstRound ? NodeType.NODE_TYPE_ALL : NodeType.NODE_TYPE_DENSE;
+        Predicate<RelationshipRecord> readFilter = thisIsTheFirstRound
+                ? null // optimization when all rels are imported in this round
+                : typeIdFilter( typesToLinkThisRound, neoStore.getRelationshipTypeRepository() );
+        Predicate<RelationshipRecord> denseChangeFilter = thisIsTheOnlyRound
+                ? null // optimization when all rels are imported in this round
+                : typeIdFilter( typesToLinkThisRound, neoStore.getRelationshipTypeRepository() );
+
+        // LINK Forward
+        RelationshipLinkforwardStage linkForwardStage = new RelationshipLinkforwardStage( topic, relationshipConfig,
+                neoStore.getRelationshipStore(), nodeRelationshipCache, readFilter, denseChangeFilter, nodeTypes );
+        executeStage( linkForwardStage );
+
+        // Write relationship groups cached from the relationship import above
+        executeStage( new RelationshipGroupStage( topic, groupConfig,
+                neoStore.getTemporaryRelationshipGroupStore(), nodeRelationshipCache ) );
+        if ( thisIsTheFirstRound )
         {
-            // Figure out which types we can fit in node-->relationship cache memory.
-            // Types go from biggest to smallest group and so towards the end there will be
-            // smaller and more groups per round in this loop
-            Collection<Object> typesToLinkThisRound = rounds.next();
-            boolean thisIsTheFirstRound = round == 0;
-            boolean thisIsTheOnlyRound = thisIsTheFirstRound && !rounds.hasNext();
-
-            nodeRelationshipCache.setForwardScan( true, true/*dense*/ );
-            String range = typesToLinkThisRound.size() == 1
-                    ? String.valueOf( typesImported + 1 )
-                    : (typesImported + 1) + "-" + (typesImported + typesToLinkThisRound.size());
-            String topic = " " + range + "/" + relationshipDistribution.getNumberOfRelationshipTypes();
-            int nodeTypes = thisIsTheFirstRound ? NodeType.NODE_TYPE_ALL : NodeType.NODE_TYPE_DENSE;
-            Predicate<RelationshipRecord> readFilter = thisIsTheFirstRound
-                    ? null // optimization when all rels are imported in this round
-                    : typeIdFilter( typesToLinkThisRound, neoStore.getRelationshipTypeRepository() );
-            Predicate<RelationshipRecord> denseChangeFilter = thisIsTheOnlyRound
-                    ? null // optimization when all rels are imported in this round
-                    : typeIdFilter( typesToLinkThisRound, neoStore.getRelationshipTypeRepository() );
-
-            // LINK Forward
-            RelationshipLinkforwardStage linkForwardStage = new RelationshipLinkforwardStage( topic, relationshipConfig,
-                    neoStore.getRelationshipStore(), nodeRelationshipCache, readFilter, denseChangeFilter, nodeTypes );
-            executeStage( linkForwardStage );
-
-            // Write relationship groups cached from the relationship import above
-            executeStage( new RelationshipGroupStage( topic, groupConfig,
-                    neoStore.getTemporaryRelationshipGroupStore(), nodeRelationshipCache ) );
-            if ( thisIsTheFirstRound )
-            {
-                // Set node nextRel fields for sparse nodes
-                executeStage( new SparseNodeFirstRelationshipStage( nodeConfig, neoStore.getNodeStore(),
-                        nodeRelationshipCache ) );
-            }
-
-            // LINK backward
-            nodeRelationshipCache.setForwardScan( false, true/*dense*/ );
-            executeStage( new RelationshipLinkbackStage( topic, relationshipConfig, neoStore.getRelationshipStore(),
-                    nodeRelationshipCache, readFilter, denseChangeFilter, nodeTypes ) );
-            typesImported += typesToLinkThisRound.size();
+            // Set node nextRel fields for sparse nodes
+            executeStage( new SparseNodeFirstRelationshipStage( nodeConfig, neoStore.getNodeStore(),
+                    nodeRelationshipCache ) );
         }
 
+        // LINK backward
+        nodeRelationshipCache.setForwardScan( false, true/*dense*/ );
+        executeStage( new RelationshipLinkbackStage( topic, relationshipConfig, neoStore.getRelationshipStore(),
+                nodeRelationshipCache, readFilter, denseChangeFilter, nodeTypes ) );
+
         updatePeakMemoryUsage();
-        nodeRelationshipCache.close();
-        nodeRelationshipCache = null;
+
+        if ( upToType == relationshipTypeDistribution.getNumberOfRelationshipTypes() )
+        {
+            // This means that we've linked all the types
+            nodeRelationshipCache.close();
+            nodeRelationshipCache = null;
+            return -1;
+        }
+
+        return upToType;
+    }
+
+    /**
+     * Convenience method (for code reading) to have a zero-based value become one based (for printing/logging).
+     */
+    private static int oneBased( int value )
+    {
+        return value + 1;
+    }
+
+    /**
+     * @return index (into {@link RelationshipTypeDistribution}) of last relationship type that fit in memory this round.
+     */
+    static int nextSetOfTypesThatFitInMemory( RelationshipTypeDistribution typeDistribution, int startingFromType,
+            long freeMemoryForDenseNodeCache, long numberOfDenseNodes )
+    {
+        assert startingFromType >= 0 : startingFromType;
+
+        long currentSetOfRelationshipsMemoryUsage = 0;
+        int numberOfTypes = typeDistribution.getNumberOfRelationshipTypes();
+        int toType = startingFromType;
+        for ( ; toType < numberOfTypes; toType++ )
+        {
+            // Calculate worst-case scenario
+            Pair<Object,Long> type = typeDistribution.get( toType );
+            long relationshipCountForThisType = type.other();
+            long memoryUsageForThisType = calculateMaxMemoryUsage( numberOfDenseNodes, relationshipCountForThisType );
+            long memoryUsageUpToAndIncludingThisType =
+                    currentSetOfRelationshipsMemoryUsage + memoryUsageForThisType;
+            if ( memoryUsageUpToAndIncludingThisType > freeMemoryForDenseNodeCache &&
+                    currentSetOfRelationshipsMemoryUsage > 0 )
+            {
+                // OK the current set of types is enough to fill the cache
+                break;
+            }
+
+            currentSetOfRelationshipsMemoryUsage += memoryUsageForThisType;
+        }
+        return toType;
     }
 
     /**

@@ -83,9 +83,18 @@ public class ParallelBatchImporter implements BatchImporter
             logic.prepareIdMapper();
             logic.importRelationships();
             logic.calculateNodeDegrees();
-            logic.linkRelationships();
+
+            int type = 0;
+            do
+            {
+                type = logic.linkRelationships( type );
+            }
+            while ( type != -1 );
+
             logic.defragmentRelationshipGroups();
             logic.buildCountsStore();
+
+            store.success();
         }
     }
 }

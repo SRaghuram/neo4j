@@ -28,7 +28,6 @@ import java.util.function.Predicate;
 import org.neo4j.function.Predicates;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
@@ -64,10 +63,10 @@ import org.neo4j.unsafe.impl.batchimport.store.BatchingTokenRepository.BatchingR
 import org.neo4j.unsafe.impl.batchimport.store.io.IoTracer;
 
 import static java.lang.String.valueOf;
-import static java.nio.file.StandardOpenOption.DELETE_ON_CLOSE;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.io.pagecache.IOLimiter.unlimited;
 import static org.neo4j.kernel.impl.store.MetaDataStore.DEFAULT_NAME;
 import static org.neo4j.kernel.impl.store.StoreType.RELATIONSHIP_GROUP;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
@@ -101,6 +100,8 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
     private LifeSupport life = new LifeSupport();
     private LabelScanStore labelScanStore;
     private PageCacheFlusher flusher;
+
+    private boolean successful;
 
     private BatchingNeoStores( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir,
             RecordFormats recordFormats, Config neo4jConfig, Configuration importConfiguration, LogService logService,
@@ -157,13 +158,14 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
      * Called when expecting a previous attempt/state of a database to open, where some store files should be kept,
      * but others deleted. All temporary stores will be deleted in this call.
      *
-     * @param storesToKeep {@link Predicate} controlling which files to keep, i.e. {@code true} means keep, {@code false} means delete.
+     * @param mainStoresToKeep {@link Predicate} controlling which files to keep, i.e. {@code true} means keep, {@code false} means delete.
+     * @param tempStoresToKeep {@link Predicate} controlling which files to keep, i.e. {@code true} means keep, {@code false} means delete.
      * @throws IOException on I/O error.
      */
-    public void pruneAndOpenExistingStore( Predicate<StoreType> storesToKeep ) throws IOException
+    public void pruneAndOpenExistingStore( Predicate<StoreType> mainStoresToKeep, Predicate<StoreType> tempStoresToKeep ) throws IOException
     {
-        deleteStoreFiles( TEMP_NEOSTORE_NAME, Predicates.alwaysFalse() );
-        deleteStoreFiles( DEFAULT_NAME, storesToKeep );
+        deleteStoreFiles( TEMP_NEOSTORE_NAME, tempStoresToKeep );
+        deleteStoreFiles( DEFAULT_NAME, mainStoresToKeep );
         instantiateStores();
     }
 
@@ -208,7 +210,7 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
 
     private NeoStores instantiateTempStores()
     {
-        return newStoreFactory( TEMP_NEOSTORE_NAME, DELETE_ON_CLOSE ).openNeoStores( true, RELATIONSHIP_GROUP );
+        return newStoreFactory( TEMP_NEOSTORE_NAME ).openNeoStores( true, RELATIONSHIP_GROUP );
     }
 
     public static BatchingNeoStores batchingNeoStores( FileSystemAbstraction fileSystem, File storeDir,
@@ -328,12 +330,21 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
         // Close the neo store
         life.shutdown();
         neoStores.close();
-        // These temporary stores are configured to be deleted when closed
         temporaryNeoStores.close();
         if ( !externalPageCache )
         {
             pageCache.close();
         }
+
+        if ( successful )
+        {
+            cleanup();
+        }
+    }
+
+    private void cleanup()
+    {
+        deleteStoreFiles( TEMP_NEOSTORE_NAME, Predicates.alwaysFalse() );
     }
 
     public long getLastCommittedTransactionId()
@@ -393,7 +404,13 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
         propertyKeyRepository.flush();
         labelRepository.flush();
         relationshipTypeRepository.flush();
-        neoStores.flush( IOLimiter.unlimited() );
-        labelScanStore.force( IOLimiter.unlimited() );
+        neoStores.flush( unlimited() );
+        temporaryNeoStores.flush( unlimited() );
+        labelScanStore.force( unlimited() );
+    }
+
+    public void success()
+    {
+        successful = true;
     }
 }

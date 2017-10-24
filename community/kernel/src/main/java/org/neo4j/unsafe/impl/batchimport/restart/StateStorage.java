@@ -19,14 +19,20 @@
  */
 package org.neo4j.unsafe.impl.batchimport.restart;
 
-import org.apache.commons.codec.Charsets;
-
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.Writer;
+
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
+import org.neo4j.kernel.impl.transaction.log.PhysicalFlushableChannel;
+import org.neo4j.kernel.impl.transaction.log.ReadAheadChannel;
+import org.neo4j.kernel.impl.transaction.log.ReadableClosableChannel;
+
+import static org.neo4j.kernel.impl.store.PropertyType.EMPTY_BYTE_ARRAY;
+import static org.neo4j.unsafe.impl.batchimport.restart.ChannelUtils.readString;
+import static org.neo4j.unsafe.impl.batchimport.restart.ChannelUtils.writeString;
 
 public class StateStorage
 {
@@ -41,24 +47,29 @@ public class StateStorage
         this.stateFile = stateFile;
     }
 
-    public String get() throws IOException
+    public Pair<String,byte[]> get() throws IOException
     {
-        try ( BufferedReader reader = new BufferedReader( fs.openAsReader( stateFile, Charsets.UTF_8 ) ) )
+        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fs.open( stateFile, "r" ) ) )
         {
-            return reader.readLine();
+            String name = readString( channel );
+            byte[] checkPoint = new byte[channel.getInt()];
+            channel.get( checkPoint, checkPoint.length );
+            return Pair.of( name, checkPoint );
         }
         catch ( FileNotFoundException e )
         {
-            return NO_STATE;
+            return Pair.of( NO_STATE, EMPTY_BYTE_ARRAY );
         }
     }
 
-    public void set( String name ) throws IOException
+    public void set( String name, byte[] checkPoint ) throws IOException
     {
         fs.truncate( stateFile, 0 );
-        try ( Writer writer = fs.openAsWriter( stateFile, Charsets.UTF_8, false ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.open( stateFile, "rw" ) ) )
         {
-            writer.write( name );
+            writeString( name, channel );
+            channel.putInt( checkPoint.length );
+            channel.put( checkPoint, checkPoint.length );
         }
     }
 
