@@ -340,7 +340,8 @@ public class ImportLogic implements Closeable
 
         // LINK Forward
         RelationshipLinkforwardStage linkForwardStage = new RelationshipLinkforwardStage( topic, relationshipConfig,
-                neoStore.getRelationshipStore(), nodeRelationshipCache, readFilter, denseChangeFilter, nodeTypes );
+                neoStore.getRelationshipStore(), nodeRelationshipCache, readFilter, denseChangeFilter, nodeTypes,
+                new RelationshipLinkingProgress(), memoryUsageStats );
         executeStage( linkForwardStage );
 
         // Write relationship groups cached from the relationship import above
@@ -356,7 +357,7 @@ public class ImportLogic implements Closeable
         // LINK backward
         nodeRelationshipCache.setForwardScan( false, true/*dense*/ );
         executeStage( new RelationshipLinkbackStage( topic, relationshipConfig, neoStore.getRelationshipStore(),
-                nodeRelationshipCache, readFilter, denseChangeFilter, nodeTypes ) );
+                nodeRelationshipCache, readFilter, denseChangeFilter, nodeTypes, new RelationshipLinkingProgress(), memoryUsageStats ) );
 
         updatePeakMemoryUsage();
 
