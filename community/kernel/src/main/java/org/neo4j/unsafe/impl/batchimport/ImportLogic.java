@@ -58,6 +58,7 @@ import org.neo4j.unsafe.impl.batchimport.input.InputCache;
 import org.neo4j.unsafe.impl.batchimport.input.InputNode;
 import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
+import org.neo4j.unsafe.impl.batchimport.staging.ExecutionSupervisors;
 import org.neo4j.unsafe.impl.batchimport.staging.Stage;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingNeoStores;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingTokenRepository.BatchingRelationshipTypeTokenRepository;
@@ -116,6 +117,7 @@ public class ImportLogic implements Closeable
     private InputIterable<InputRelationship> relationships;
     private InputIterable<InputNode> cachedNodes;
     private long peakMemoryUsage;
+    private long availableMemoryForLinking;
 
     /**
      * Advanced usage of the parallel batch importer, for special and very specific cases. Please use
@@ -140,7 +142,7 @@ public class ImportLogic implements Closeable
         this.config = config;
         this.recordFormats = recordFormats;
         this.log = logService.getInternalLogProvider().getLog( getClass() );
-        this.executionMonitor = executionMonitor;
+        this.executionMonitor = ExecutionSupervisors.withDynamicProcessorAssignment( executionMonitor, config );
         this.maxMemory = config.maxMemoryUsage();
 
         initialize( input );
@@ -265,6 +267,7 @@ public class ImportLogic implements Closeable
                 neoStore.getRelationshipStore(), nodeRelationshipCache );
         executeStage( nodeDegreeStage );
         nodeRelationshipCache.countingCompleted();
+        availableMemoryForLinking = maxMemory - totalMemoryUsageOf( nodeRelationshipCache, neoStore );
     }
 
     /**
@@ -302,14 +305,13 @@ public class ImportLogic implements Closeable
         assert startingFromType >= 0 : startingFromType;
 
         // Link relationships together with each other, their nodes and their relationship groups
-        long availableMemory = maxMemory - totalMemoryUsageOf( nodeRelationshipCache, neoStore );
         RelationshipTypeDistribution relationshipTypeDistribution = getState( RelationshipTypeDistribution.class );
 
         // Figure out which types we can fit in node-->relationship cache memory.
         // Types go from biggest to smallest group and so towards the end there will be
         // smaller and more groups per round in this loop
         int upToType = nextSetOfTypesThatFitInMemory(
-                relationshipTypeDistribution, startingFromType, availableMemory, nodeRelationshipCache.getNumberOfDenseNodes() );
+                relationshipTypeDistribution, startingFromType, availableMemoryForLinking, nodeRelationshipCache.getNumberOfDenseNodes() );
 
         Collection<Object> typesToLinkThisRound = relationshipTypeDistribution.types( startingFromType, upToType );
         int typesImported = typesToLinkThisRound.size();
