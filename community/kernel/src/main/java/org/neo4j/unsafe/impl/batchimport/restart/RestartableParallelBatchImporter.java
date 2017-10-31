@@ -68,7 +68,7 @@ import static org.neo4j.unsafe.impl.batchimport.ImportLogic.instantiateNeoStores
 
 public class RestartableParallelBatchImporter implements BatchImporter
 {
-    private static final String FILE_NAME_STATE = "state";
+    static final String FILE_NAME_STATE = "state";
     private static final String FILE_NAME_RELATIONSHIP_DISTRIBUTION = "relationship-type-distribution";
 
     private static final String STATE_NEW_IMPORT = StateStorage.NO_STATE;

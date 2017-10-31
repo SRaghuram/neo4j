@@ -23,13 +23,19 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.test.rule.RandomRule;
+import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
@@ -50,7 +56,6 @@ import org.neo4j.unsafe.impl.batchimport.WriteGroupsStage;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
 import static org.junit.Assert.fail;
-
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
 import static org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors.invisible;
@@ -235,6 +240,47 @@ public class RestartableParallelBatchImporterIT
         shouldRestartImport( RelationshipCountsStage.NAME, false );
     }
 
+    @RepeatRule.Repeat(times = 50)
+    @Test
+    public void shouldFinishDespiteUnfairShutdowns() throws Exception
+    {
+        long startTime = System.currentTimeMillis();
+        importer( invisible() ).doImport( input() );
+        long time = System.currentTimeMillis() - startTime;
+        fs.deleteRecursively( directory.absolutePath() );
+        Process process;
+        do
+        {
+
+            ProcessBuilder pb = new ProcessBuilder( ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(),
+                    SimpleImportRunningMain.class.getCanonicalName(), directory.absolutePath().getPath(), Long.toString( random.seed() ) );
+            File wd = new File( "target/test-classes" ).getAbsoluteFile();
+            pb.directory( wd );
+            pb.inheritIO();
+            process = pb.start();
+            process.waitFor( random.nextLong( time ), TimeUnit.MILLISECONDS );
+            if ( process.isAlive() )
+            {
+                process.destroyForcibly();
+            }
+        }
+        while ( process.exitValue() != 0 );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
+        try
+        {
+            input().verify( db );
+        }
+        finally
+        {
+            db.shutdown();
+        }
+    }
+
+    private SimpleRandomizedInput input()
+    {
+        return new SimpleRandomizedInput( random.seed(), NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
+    }
+
     private void shouldRestartImport( String stageName, boolean trueForStart ) throws IOException
     {
         try
@@ -261,11 +307,6 @@ public class RestartableParallelBatchImporterIT
         {
             db.shutdown();
         }
-    }
-
-    private SimpleRandomizedInput input()
-    {
-        return new SimpleRandomizedInput( random.seed(), NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
     }
 
     private BatchImporter importer( ExecutionMonitor monitor )
