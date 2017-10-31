@@ -248,6 +248,7 @@ public class RestartableParallelBatchImporterIT
         importer( invisible() ).doImport( input() );
         long time = System.currentTimeMillis() - startTime;
         fs.deleteRecursively( directory.absolutePath() );
+        fs.mkdir( directory.absolutePath() );
         Process process;
         do
         {
