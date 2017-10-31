@@ -46,7 +46,6 @@ import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingNeoStores;
 
 import static java.util.Arrays.asList;
-
 import static org.neo4j.helpers.ArrayUtil.array;
 import static org.neo4j.helpers.collection.PrefetchingIterator.prefetching;
 import static org.neo4j.kernel.impl.store.PropertyType.EMPTY_BYTE_ARRAY;
@@ -72,6 +71,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private static final String FILE_NAME_RELATIONSHIP_DISTRIBUTION = "relationship-type-distribution";
 
     private static final String STATE_NEW_IMPORT = StateStorage.NO_STATE;
+    private static final String STATE_INIT = "init";
     private static final String STATE_START = "start";
     private static final String STATE_DATA_IMPORT = "data-import";
     private static final String STATE_DATA_LINK = "data-link";
@@ -117,7 +117,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
 
             PrefetchingIterator<State> states = initializeStates( logic );
             Pair<String,byte[]> previousState = stateStore.get();
-            fastForwardToLastCompletedState( store, previousState.first(), previousState.other(), states );
+            fastForwardToLastCompletedState( store, stateStore, previousState.first(), previousState.other(), states );
             runRemainingStates( store, stateStore, previousState.other(), states );
 
             store.success();
@@ -128,6 +128,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
     {
         List<State> states = new ArrayList<>();
 
+        states.add( new State( STATE_INIT, array(), array() ) );
         states.add( new State( STATE_START, array( META_DATA ), array() ) );
         states.add( new State( STATE_DATA_IMPORT, array(
                 NODE, NODE_LABEL, LABEL_TOKEN, LABEL_TOKEN_NAME,
@@ -193,11 +194,12 @@ public class RestartableParallelBatchImporter implements BatchImporter
         return prefetching( states.iterator() );
     }
 
-    private static void fastForwardToLastCompletedState( BatchingNeoStores store, String stateName, byte[] checkPoint,
+    private static void fastForwardToLastCompletedState( BatchingNeoStores store, StateStorage stateStore, String stateName, byte[] checkPoint,
             PrefetchingIterator<State> states ) throws IOException
     {
         if ( STATE_NEW_IMPORT.equals( stateName ) )
         {
+            stateStore.set( STATE_INIT, EMPTY_BYTE_ARRAY );
             store.createNew();
         }
         else
