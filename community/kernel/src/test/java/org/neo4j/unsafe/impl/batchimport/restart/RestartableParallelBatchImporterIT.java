@@ -25,7 +25,6 @@ import org.junit.rules.RuleChain;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -241,7 +240,7 @@ public class RestartableParallelBatchImporterIT
     }
 
     @RepeatRule.Repeat(times = 50)
-    @Test
+    @Test( timeout = 100000 )
     public void shouldFinishDespiteUnfairShutdowns() throws Exception
     {
         long startTime = System.currentTimeMillis();

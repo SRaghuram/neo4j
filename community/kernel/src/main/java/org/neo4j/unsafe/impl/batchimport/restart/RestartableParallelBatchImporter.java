@@ -71,7 +71,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private static final String FILE_NAME_RELATIONSHIP_DISTRIBUTION = "relationship-type-distribution";
 
     private static final String STATE_NEW_IMPORT = StateStorage.NO_STATE;
-    private static final String STATE_INIT = "init";
+    private static final String STATE_INIT = StateStorage.INIT;
     private static final String STATE_START = "start";
     private static final String STATE_DATA_IMPORT = "data-import";
     private static final String STATE_DATA_LINK = "data-link";
