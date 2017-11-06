@@ -182,6 +182,8 @@ public class BatchingNeoStores implements AutoCloseable, MemoryStatsVisitor.Visi
                 }
             }
         }
+        // Delete label index
+        fs.deleteFile( new File( storeDir, NativeLabelScanStore.FILE_NAME ) );
     }
 
     private void instantiateKernelExtensions()

@@ -34,7 +34,6 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.test.rule.RandomRule;
-import org.neo4j.test.rule.RepeatRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
@@ -239,7 +238,6 @@ public class RestartableParallelBatchImporterIT
         shouldRestartImport( RelationshipCountsStage.NAME, false );
     }
 
-    @RepeatRule.Repeat(times = 50)
     @Test( timeout = 100000 )
     public void shouldFinishDespiteUnfairShutdowns() throws Exception
     {

@@ -67,8 +67,8 @@ public class StateStorage
         }
         catch ( ReadPastEndException e )
         {
-            //Unclear why this is happening. Maybe you are running windows or something?
-            //We found the 
+            // Unclear why this is happening. Maybe you are running windows or something?
+            // Seems to be due to a completely empty file. Simply fall back to INIT state
             return Pair.of( INIT, EMPTY_BYTE_ARRAY );
         }
     }
