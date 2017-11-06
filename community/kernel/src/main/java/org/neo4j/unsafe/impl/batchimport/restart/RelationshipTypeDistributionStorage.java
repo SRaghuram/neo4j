@@ -21,8 +21,6 @@ package org.neo4j.unsafe.impl.batchimport.restart;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
-
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
@@ -36,8 +34,6 @@ import static org.neo4j.unsafe.impl.batchimport.restart.ChannelUtils.writeString
 
 class RelationshipTypeDistributionStorage
 {
-    private static final Charset charset = Charset.forName( "UTF-8" );
-
     private final FileSystemAbstraction fs;
     private final File file;
 
@@ -53,6 +49,7 @@ class RelationshipTypeDistributionStorage
         // Perhaps simpler code, but this format is safe against any type of weird characters that the type may contain
         try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.open( file, "rw" ) ) )
         {
+            channel.putLong( distribution.getNodeCount() );
             channel.putInt( distribution.getNumberOfRelationshipTypes() );
             for ( Pair<Object,Long> entry : distribution )
             {
@@ -79,6 +76,7 @@ class RelationshipTypeDistributionStorage
     {
         try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fs.open( file, "r" ) ) )
         {
+            long nodeCount = channel.getLong();
             @SuppressWarnings( "unchecked" )
             Pair<Object,Long>[] entries = new Pair[channel.getInt()];
             for ( int i = 0; i < entries.length; i++ )
@@ -87,7 +85,7 @@ class RelationshipTypeDistributionStorage
                 Long value = channel.getLong();
                 entries[i] = Pair.of( key, value );
             }
-            return new RelationshipTypeDistribution( entries );
+            return new RelationshipTypeDistribution( nodeCount, entries );
         }
     }
 

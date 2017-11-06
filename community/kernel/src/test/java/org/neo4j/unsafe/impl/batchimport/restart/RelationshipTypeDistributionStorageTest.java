@@ -33,6 +33,7 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.unsafe.impl.batchimport.RelationshipTypeDistribution;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 import static java.util.stream.StreamSupport.stream;
 
@@ -61,12 +62,14 @@ public class RelationshipTypeDistributionStorageTest
             types.add( Pair.of( random.string( 3, 100, CSA_LETTERS_AND_DIGITS | CS_SYMBOLS ), random.nextLong( 1, 1_000_000 ) ) );
         }
         Pair<Object,Long>[] expectedTypes = types.stream().toArray( Pair[]::new );
+        long nodeCount = random.nextLong( 100_000_000_000L );
 
         // when
-        storage.store( new RelationshipTypeDistribution( types.toArray( new Pair[types.size()] ) ) );
+        storage.store( new RelationshipTypeDistribution( nodeCount, types.toArray( new Pair[types.size()] ) ) );
         RelationshipTypeDistribution loadedTypes = storage.load();
 
         // then
         assertArrayEquals( expectedTypes, stream( loadedTypes.spliterator(), false ).toArray( Pair[]::new ) );
+        assertEquals( nodeCount, loadedTypes.getNodeCount() );
     }
 }
