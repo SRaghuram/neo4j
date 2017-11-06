@@ -182,6 +182,7 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
         private long ioThroughput;
         private long totalTimeMillis;
         private long stageGcBlockTime;
+        private long doneBatches;
 
         StageDetails( StageExecution execution, CollectingMonitor gcBlockTime )
         {
@@ -201,6 +202,7 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
             printValue( out, ioThroughput, "I/O throughput", value -> bytes( value ) + "/s" );
             printValue( out, stageGcBlockTime, "GC block time", Format::duration );
             printValue( out, totalTimeMillis, "Duration", Format::duration );
+            printValue( out, doneBatches, "Done batches", String::valueOf );
 
             out.println();
         }
@@ -217,6 +219,7 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
         {
             totalTimeMillis = currentTimeMillis() - startTime;
             stageGcBlockTime = gcBlockTime.getGcBlockTime() - baseGcBlockTime;
+            long lastDoneBatches = doneBatches;
             for ( Step<?> step : execution.steps() )
             {
                 StepStats stats = step.stats();
@@ -230,7 +233,9 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
                 {
                     ioThroughput = ioStat.asLong();
                 }
+                lastDoneBatches = stats.stat( Keys.done_batches ).asLong();
             }
+            doneBatches = lastDoneBatches;
         }
     }
 }
