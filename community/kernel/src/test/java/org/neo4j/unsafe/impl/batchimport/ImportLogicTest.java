@@ -66,7 +66,7 @@ public class ImportLogicTest
         }
         types.sort( ( t1, t2 ) -> Long.compare( t2.other(), t1.other() ) );
         @SuppressWarnings( "unchecked" )
-        RelationshipTypeDistribution typeDistribution = new RelationshipTypeDistribution( 0, types.stream().toArray( Pair[]::new ) );
+        DataStatistics typeDistribution = new DataStatistics( 0, 0, types.stream().toArray( Pair[]::new ) );
 
         // WHEN enough memory for all types
         {

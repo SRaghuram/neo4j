@@ -40,7 +40,7 @@ import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.ImportLogic;
-import org.neo4j.unsafe.impl.batchimport.RelationshipTypeDistribution;
+import org.neo4j.unsafe.impl.batchimport.DataStatistics;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingNeoStores;
@@ -86,7 +86,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private final RecordFormats recordFormats;
     private final ExecutionMonitor executionMonitor;
     private final AdditionalInitialIds additionalInitialIds;
-    private final RelationshipTypeDistributionStorage relationshipTypeDistributionStorage;
+    private final RelationshipTypeDistributionStorage dataStatisticsStorage;
 
     public RestartableParallelBatchImporter( File storeDir, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             Configuration config, LogService logService, ExecutionMonitor executionMonitor,
@@ -101,7 +101,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         this.recordFormats = recordFormats;
         this.executionMonitor = executionMonitor;
         this.additionalInitialIds = additionalInitialIds;
-        this.relationshipTypeDistributionStorage = new RelationshipTypeDistributionStorage( fileSystem,
+        this.dataStatisticsStorage = new RelationshipTypeDistributionStorage( fileSystem,
                 new File( storeDir, FILE_NAME_RELATIONSHIP_DISTRIBUTION ) );
     }
 
@@ -147,13 +147,13 @@ public class RestartableParallelBatchImporter implements BatchImporter
             @Override
             void save() throws IOException
             {
-                relationshipTypeDistributionStorage.store( logic.getState( RelationshipTypeDistribution.class ) );
+                dataStatisticsStorage.store( logic.getState( DataStatistics.class ) );
             }
 
             @Override
             void load() throws IOException
             {
-                logic.putState( relationshipTypeDistributionStorage.load() );
+                logic.putState( dataStatisticsStorage.load() );
             }
         } );
         states.add( new State( STATE_DATA_LINK, array(), array( RELATIONSHIP_GROUP ) )

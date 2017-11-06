@@ -27,7 +27,7 @@ import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalFlushableChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosableChannel;
-import org.neo4j.unsafe.impl.batchimport.RelationshipTypeDistribution;
+import org.neo4j.unsafe.impl.batchimport.DataStatistics;
 
 import static org.neo4j.unsafe.impl.batchimport.restart.ChannelUtils.readString;
 import static org.neo4j.unsafe.impl.batchimport.restart.ChannelUtils.writeString;
@@ -43,13 +43,14 @@ class RelationshipTypeDistributionStorage
         this.file = file;
     }
 
-    void store( RelationshipTypeDistribution distribution ) throws IOException
+    void store( DataStatistics distribution ) throws IOException
     {
         // This could have been done using a writer and writing human readable text.
         // Perhaps simpler code, but this format is safe against any type of weird characters that the type may contain
         try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.open( file, "rw" ) ) )
         {
             channel.putLong( distribution.getNodeCount() );
+            channel.putLong( distribution.getPropertyCount() );
             channel.putInt( distribution.getNumberOfRelationshipTypes() );
             for ( Pair<Object,Long> entry : distribution )
             {
@@ -72,11 +73,12 @@ class RelationshipTypeDistributionStorage
         }
     }
 
-    RelationshipTypeDistribution load() throws IOException
+    DataStatistics load() throws IOException
     {
         try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fs.open( file, "r" ) ) )
         {
             long nodeCount = channel.getLong();
+            long propertyCount = channel.getLong();
             @SuppressWarnings( "unchecked" )
             Pair<Object,Long>[] entries = new Pair[channel.getInt()];
             for ( int i = 0; i < entries.length; i++ )
@@ -85,7 +87,7 @@ class RelationshipTypeDistributionStorage
                 Long value = channel.getLong();
                 entries[i] = Pair.of( key, value );
             }
-            return new RelationshipTypeDistribution( nodeCount, entries );
+            return new DataStatistics( nodeCount, propertyCount, entries );
         }
     }
 
