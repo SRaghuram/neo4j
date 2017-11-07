@@ -21,6 +21,7 @@ package org.neo4j.unsafe.impl.batchimport;
 
 import org.junit.Test;
 
+import org.neo4j.kernel.impl.store.id.BatchingIdSequence;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
@@ -45,7 +46,8 @@ public class RelationshipRecordPreparationStepTest
         Collector collector = mock( Collector.class );
         StageControl control = mock( StageControl.class );
         try ( RelationshipRecordPreparationStep step = new RelationshipRecordPreparationStep(
-                control, DEFAULT, mock( BatchingRelationshipTypeTokenRepository.class ), collector ) )
+                control, DEFAULT, mock( BatchingRelationshipTypeTokenRepository.class ), collector,
+                new BatchingIdSequence(), false ) )
         {
             DeadEndStep end = new DeadEndStep( control );
             end.start( 0 );
