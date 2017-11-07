@@ -74,27 +74,28 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
     {
         if ( numberOfForkedProcessors != numberOfProcessors )
         {
+            awaitAllCompleted();
+
+            // Now there's nothing in the pipeline so the changes below doesn't race with other batches being queued or completed
+
             int processors = numberOfProcessors;
             while ( numberOfForkedProcessors < processors )
             {
-                if ( forkedProcessors[numberOfForkedProcessors] == null )
-                {
-                    forkedProcessors[numberOfForkedProcessors] =
-                            new ForkedProcessor( numberOfForkedProcessors, head.get() );
-                }
+                forkedProcessors[numberOfForkedProcessors] = new ForkedProcessor( numberOfForkedProcessors, head.get() );
                 numberOfForkedProcessors++;
             }
             while ( numberOfForkedProcessors > processors )
             {
                 numberOfForkedProcessors--;
+                ((ForkedProcessor)forkedProcessors[numberOfForkedProcessors]).end();
+                forkedProcessors[numberOfForkedProcessors] = null;
                 // It will notice itself later, the most important thing here is that further Units
                 // will have a lower number of processor as expected max
             }
-            awaitEmpty();
         }
     }
 
-    private void awaitEmpty()
+    private void awaitAllCompleted()
     {
         while ( head.get() != tail.get() )
         {
@@ -121,7 +122,7 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
     {
         long time = nanoTime();
         applyProcessorCount();
-        while ( head.get().ticket - tail.get().ticket >= maxQueueLength )
+        while ( queuedBatches.get() >= maxQueueLength )
         {
             PARK.park( receiverThread = Thread.currentThread() );
         }
@@ -203,7 +204,6 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
             super( name );
         }
 
-        @SuppressWarnings( "unchecked" )
         @Override
         public void run()
         {
@@ -217,16 +217,6 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
                     {
                         sendDownstream( candidate );
                     }
-
-                    // Tell all processors to move to the next unit if they're on this one, otherwise they would be stranded
-                    for ( Object processor : forkedProcessors )
-                    {
-                        if ( processor != null )
-                        {
-                            ((ForkedProcessor)processor).nudge( current );
-                        }
-                    }
-
                     current.next = null;
                     current = candidate;
                     tail.set( current );
@@ -256,19 +246,21 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
     class ForkedProcessor extends Thread
     {
         private final int id;
-        private final AtomicReference<Unit> current;
+        private Unit current;
+        private volatile boolean end;
 
         ForkedProcessor( int id, Unit startingUnit )
         {
             super( name() + "-" + id );
             this.id = id;
-            this.current = new AtomicReference<>( startingUnit );
+            this.current = startingUnit;
             start();
         }
 
-        void nudge( Unit current )
+        void end()
         {
-            this.current.compareAndSet( current, current.next );
+            end = true;
+            PARK.unpark( this );
         }
 
         @Override
@@ -276,19 +268,17 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
         {
             try
             {
-                while ( !isCompleted() )
+                while ( !isCompleted() && !end )
                 {
-                    Unit candidate = current.get().next;
+                    Unit candidate = current.next;
                     if ( candidate != null )
                     {
-                        if ( id < candidate.processors )
-                        {
-                            // There's work to do
-                            long time = nanoTime();
-                            forkedProcess( id, candidate.processors, candidate.batch );
-                            candidate.processorDone( nanoTime() - time );
-                            current.set( candidate );
-                        }
+                        // There's work to do
+                        assert id < candidate.processors : "Expected " + id + " < " + candidate.processors;
+                        long time = nanoTime();
+                        forkedProcess( id, candidate.processors, candidate.batch );
+                        candidate.processorDone( nanoTime() - time );
+                        current = candidate;
                     }
                     else
                     {
