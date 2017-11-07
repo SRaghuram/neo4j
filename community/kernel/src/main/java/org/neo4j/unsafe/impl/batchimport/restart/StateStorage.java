@@ -75,7 +75,7 @@ public class StateStorage
 
     public void set( String name, byte[] checkPoint ) throws IOException
     {
-        fs.truncate( stateFile, 0 );
+        fs.mkdirs( stateFile.getParentFile() );
         try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.open( tempFile, "rw" ) ) )
         {
             writeString( name, channel );
