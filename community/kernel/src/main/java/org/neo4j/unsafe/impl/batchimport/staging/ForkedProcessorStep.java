@@ -19,6 +19,7 @@
  */
 package org.neo4j.unsafe.impl.batchimport.staging;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.unsafe.impl.batchimport.Configuration;
@@ -27,6 +28,7 @@ import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
 
 import static java.lang.Integer.max;
 import static java.lang.Integer.min;
+import static java.lang.String.format;
 import static java.lang.System.nanoTime;
 
 import static org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil.getFieldOffset;
@@ -50,9 +52,8 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
 
     private final Object[] forkedProcessors;
     private volatile int numberOfForkedProcessors;
-    private final Unit noop = new Unit( -1, null, 0 );
-    private final AtomicReference<Unit> head = new AtomicReference<>( noop );
-    private final AtomicReference<Unit> tail = new AtomicReference<>( noop );
+    private final AtomicReference<Unit> head;
+    private final AtomicReference<Unit> tail;
     private final Thread downstreamSender;
     private volatile int numberOfProcessors = 1;
     private final int maxProcessors;
@@ -64,6 +65,10 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
         super( control, name, config, statsProviders );
         this.maxProcessors = config.maxNumberOfProcessors();
         this.forkedProcessors = new Object[this.maxProcessors];
+
+        Unit noop = new Unit( -1, null, 0 );
+        head = new AtomicReference<>( noop );
+        tail = new AtomicReference<>( noop );
 
         applyProcessorCount();
         downstreamSender = new CompletedBatchesSender( name + " [CompletedBatchSender]" );
@@ -81,14 +86,15 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
             int processors = numberOfProcessors;
             while ( numberOfForkedProcessors < processors )
             {
-                forkedProcessors[numberOfForkedProcessors] = new ForkedProcessor( numberOfForkedProcessors, head.get() );
+                if ( forkedProcessors[numberOfForkedProcessors] == null )
+                {
+                    forkedProcessors[numberOfForkedProcessors] = new ForkedProcessor( numberOfForkedProcessors, head.get() );
+                }
                 numberOfForkedProcessors++;
             }
             while ( numberOfForkedProcessors > processors )
             {
                 numberOfForkedProcessors--;
-                ((ForkedProcessor)forkedProcessors[numberOfForkedProcessors]).end();
-                forkedProcessors[numberOfForkedProcessors] = null;
                 // It will notice itself later, the most important thing here is that further Units
                 // will have a lower number of processor as expected max
             }
@@ -104,7 +110,7 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
     }
 
     @Override
-    public synchronized int processors( int delta )
+    public int processors( int delta )
     {
         numberOfProcessors = max( 1, min( numberOfProcessors + delta, maxProcessors ) );
         return numberOfProcessors;
@@ -189,6 +195,12 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
             int prevCompletedProcessors = UnsafeUtil.getAndAddInt( this, COMPLETED_PROCESSORS_OFFSET, 1 );
             assert prevCompletedProcessors < processors : prevCompletedProcessors + " vs " + processors + " for " + ticket;
         }
+
+        @Override
+        public String toString()
+        {
+            return format( "Unit[%d/%d]", completedProcessors, processors );
+        }
     }
 
     /**
@@ -217,7 +229,6 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
                     {
                         sendDownstream( candidate );
                     }
-                    current.next = null;
                     current = candidate;
                     tail.set( current );
                     queuedBatches.decrementAndGet();
@@ -257,12 +268,6 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
             start();
         }
 
-        void end()
-        {
-            end = true;
-            PARK.unpark( this );
-        }
-
         @Override
         public void run()
         {
@@ -274,10 +279,14 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
                     if ( candidate != null )
                     {
                         // There's work to do
-                        assert id < candidate.processors : "Expected " + id + " < " + candidate.processors;
-                        long time = nanoTime();
-                        forkedProcess( id, candidate.processors, candidate.batch );
-                        candidate.processorDone( nanoTime() - time );
+                        if ( id < candidate.processors )
+                        {
+                            long time = nanoTime();
+                            forkedProcess( id, candidate.processors, candidate.batch );
+                            candidate.processorDone( nanoTime() - time );
+                        }
+                        // else skip to the next
+
                         current = candidate;
                     }
                     else
@@ -293,5 +302,41 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
                 issuePanic( e, false );
             }
         }
+    }
+
+    @Override
+    public void close() throws Exception
+    {
+        Arrays.fill( forkedProcessors, null );
+        super.close();
+    }
+
+    public String printState()
+    {
+        StringBuilder builder = new StringBuilder();
+        Unit unit = tail.get();
+        int i = 0;
+        do
+        {
+            if ( i++ > 0 )
+            {
+                builder.append( " --> " );
+            }
+            builder.append( unit );
+            unit = unit.next;
+        }
+        while ( unit != null );
+
+        builder.append( format( "%n" ) );
+        for ( Object processor : forkedProcessors )
+        {
+            if ( processor != null )
+            {
+                ForkedProcessor p = (ForkedProcessor)processor;
+                builder.append( p.id + " @ " + p.current );
+            }
+        }
+
+        return builder.toString();
     }
 }
