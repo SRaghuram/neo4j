@@ -67,7 +67,7 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
 {
     public interface Monitor
     {
-        public void detailsPrinted();
+        void detailsPrinted();
     }
 
     public static final Monitor NO_MONITOR = new Monitor()
