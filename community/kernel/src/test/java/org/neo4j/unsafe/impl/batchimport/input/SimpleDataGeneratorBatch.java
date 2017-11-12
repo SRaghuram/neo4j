@@ -123,7 +123,7 @@ class SimpleDataGeneratorBatch<T>
             if ( random.nextFloat() <= factorNodeDuplicates )
             {
                 // id between 0 - id
-                id = abs( random.nextLong() ) % id;
+                id = randoms.nextLong( id );
             }
         }
 
@@ -142,7 +142,7 @@ class SimpleDataGeneratorBatch<T>
                     return null;
                 }
                 // referencing some very likely non-existent node id
-                id = random.nextLong();
+                id = randoms.nextLong( Long.MAX_VALUE );
             }
         }
 
