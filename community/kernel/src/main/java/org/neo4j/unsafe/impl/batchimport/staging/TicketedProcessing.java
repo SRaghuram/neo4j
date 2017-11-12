@@ -65,6 +65,7 @@ public class TicketedProcessing<FROM,STATE,TO> implements Parallelizable, AutoCl
 {
     private static final ParkStrategy park = new ParkStrategy.Park( 10, MILLISECONDS );
 
+    private final String name;
     private final TaskExecutor<STATE> executor;
     private final BiFunction<FROM,STATE,TO> processor;
     private final ArrayBlockingQueue<TO> processed;
@@ -77,6 +78,7 @@ public class TicketedProcessing<FROM,STATE,TO> implements Parallelizable, AutoCl
     public TicketedProcessing( String name, int maxProcessors, BiFunction<FROM,STATE,TO> processor,
             Supplier<STATE> threadLocalStateSupplier )
     {
+        this.name = name;
         this.processor = processor;
         this.executor = new DynamicTaskExecutor<>( 1, maxProcessors, maxProcessors, park, name,
                 threadLocalStateSupplier );
@@ -130,7 +132,7 @@ public class TicketedProcessing<FROM,STATE,TO> implements Parallelizable, AutoCl
      */
     public Future<Void> slurp( Iterator<FROM> input, boolean closeAfterAllSubmitted )
     {
-        return future( () ->
+        return future( name + "-slurper", () ->
         {
             try
             {

@@ -19,6 +19,8 @@
  */
 package org.neo4j.helpers;
 
+import org.apache.lucene.util.NamedThreadFactory;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -157,9 +159,9 @@ public abstract class FutureAdapter<V> implements Future<V>
         };
     }
 
-    public static <T> Future<T> future( final Callable<T> task )
+    public static <T> Future<T> future( String threadName, final Callable<T> task )
     {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = Executors.newSingleThreadExecutor( new NamedThreadFactory( threadName ) );
         Future<T> future = executor.submit( task );
         executor.shutdown();
         return future;
