@@ -92,4 +92,10 @@ public class EntityDataGenerator<T> extends InputIterator.Adapter<T>
     {
         return processing.processors( delta );
     }
+
+    @Override
+    public void receivePanic( Throwable cause )
+    {
+        processing.receivePanic( cause );
+    }
 }
