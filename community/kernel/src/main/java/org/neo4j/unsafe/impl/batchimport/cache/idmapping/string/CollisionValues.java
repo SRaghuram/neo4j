@@ -19,19 +19,18 @@
  */
 package org.neo4j.unsafe.impl.batchimport.cache.idmapping.string;
 
-import org.neo4j.unsafe.impl.batchimport.input.DataException;
+import org.neo4j.unsafe.impl.batchimport.cache.MemoryStatsVisitor;
 
-import static java.lang.String.format;
-
-public class DuplicateInputIdException extends DataException
+/**
+ * Stores collision values efficiently for retrieval later. The idea is that there's a single thread {@link #add(Object) adding}
+ * ids, each gets assigned an offset, and later use those offsets to get back the added ids.
+ */
+public interface CollisionValues extends MemoryStatsVisitor.Visitable, AutoCloseable
 {
-    public DuplicateInputIdException( Object id, String groupName )
-    {
-        super( message( id, groupName ) );
-    }
+    long add( Object id );
 
-    public static String message( Object id, String groupName )
-    {
-        return format( "Id '%s' is defined more than once", id, groupName );
-    }
+    Object get( long offset );
+
+    @Override
+    void close();
 }

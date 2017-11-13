@@ -81,6 +81,7 @@ public class NodeStage extends Stage
         PropertyStore propertyStore = neoStore.getPropertyStore();
         add( new NodeEncoderStep( control(), config, idMapper, idGenerator,
                 neoStore.getLabelRepository(), nodeStore, memoryUsage ) );
+        add( new StoreNodeInputIdsStep( control(), config, neoStore.getTemporaryPropertyStore(), nodeStore ) );
         add( new PropertyEncoderStep<>( control(), config, neoStore.getPropertyKeyRepository(), propertyStore ) );
         add( new LabelScanStorePopulationStep( control(), config, labelScanStore ) );
         add( new EntityStoreUpdaterStep<>( control(), config, nodeStore, propertyStore, writeMonitor,

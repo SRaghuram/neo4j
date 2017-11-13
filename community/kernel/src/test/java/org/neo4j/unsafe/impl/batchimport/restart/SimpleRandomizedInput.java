@@ -285,7 +285,7 @@ public class SimpleRandomizedInput implements Input
         }
 
         @Override
-        public synchronized void collectDuplicateNode( Object id, long actualId, String group, String firstSource, String otherSource )
+        public synchronized void collectDuplicateNode( Object id, long actualId, String group )
         {
             badNodes.add( id );
         }

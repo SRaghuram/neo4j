@@ -113,10 +113,9 @@ public class BadCollector implements Collector
     }
 
     @Override
-    public void collectDuplicateNode( final Object id, long actualId, final String group,
-            final String firstSource, final String otherSource )
+    public void collectDuplicateNode( final Object id, long actualId, final String group )
     {
-        collect( new NodesProblemReporter( id, group, firstSource, otherSource ) );
+        collect( new NodesProblemReporter( id, group ) );
 
         // We can do this right in here because as it turns out this is never called by multiple concurrent threads.
         if ( leftOverDuplicateNodeIdsCursor == leftOverDuplicateNodeIds.length )
@@ -233,28 +232,24 @@ public class BadCollector implements Collector
     {
         private final Object id;
         private final String group;
-        private final String firstSource;
-        private final String otherSource;
 
-        NodesProblemReporter( Object id, String group, String firstSource, String otherSource )
+        NodesProblemReporter( Object id, String group )
         {
             super( DUPLICATE_NODES );
             this.id = id;
             this.group = group;
-            this.firstSource = firstSource;
-            this.otherSource = otherSource;
         }
 
         @Override
         public String message()
         {
-            return DuplicateInputIdException.message( id, group, firstSource, otherSource );
+            return DuplicateInputIdException.message( id, group );
         }
 
         @Override
         public InputException exception()
         {
-            return new DuplicateInputIdException( id, group, firstSource, otherSource );
+            return new DuplicateInputIdException( id, group );
         }
     }
 

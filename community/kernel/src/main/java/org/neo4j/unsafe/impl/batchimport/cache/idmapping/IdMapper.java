@@ -19,8 +19,9 @@
  */
 package org.neo4j.unsafe.impl.batchimport.cache.idmapping;
 
+import java.util.function.LongFunction;
+
 import org.neo4j.helpers.progress.ProgressListener;
-import org.neo4j.unsafe.impl.batchimport.InputIterable;
 import org.neo4j.unsafe.impl.batchimport.cache.MemoryStatsVisitor;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
@@ -48,7 +49,7 @@ public interface IdMapper extends MemoryStatsVisitor.Visitable
     void put( Object inputId, long actualId, Group group );
 
     /**
-     * @return whether or not a call to {@link #prepare(InputIterable, Collector, ProgressListener)} needs to commence after all calls to
+     * @return whether or not a call to {@link #prepare(LongFunction, Collector, ProgressListener)} needs to commence after all calls to
      * {@link #put(Object, long, Group)} and before any call to {@link #get(Object, Group)}. I.e. whether or not all ids
      * needs to be put before making any call to {@link #get(Object, Group)}.
      */
@@ -63,11 +64,11 @@ public interface IdMapper extends MemoryStatsVisitor.Visitable
      * @param collector {@link Collector} for bad entries, such as duplicate node ids.
      * @param progress reports preparation progress.
      */
-    void prepare( InputIterable<Object> allIds, Collector collector, ProgressListener progress );
+    void prepare( LongFunction<Object> allIds, Collector collector, ProgressListener progress );
 
     /**
      * Returns an actual node id representing {@code inputId}.
-     * For this call to work {@link #prepare(InputIterable, Collector, ProgressListener)} must have
+     * For this call to work {@link #prepare(LongFunction, Collector, ProgressListener)} must have
      * been called after all calls to {@link #put(Object, long, Group)} have been made,
      * iff {@link #needsPreparation()} returns {@code true}. Otherwise ids can be retrieved right after
      * @link #put(Object, long) being put}

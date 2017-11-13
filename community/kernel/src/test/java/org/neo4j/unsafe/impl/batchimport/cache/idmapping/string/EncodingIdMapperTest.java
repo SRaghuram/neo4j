@@ -30,16 +30,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.IntFunction;
+import java.util.function.LongFunction;
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.function.Factory;
-import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.RepeatRule;
@@ -58,6 +59,7 @@ import org.neo4j.unsafe.impl.batchimport.input.SimpleInputIteratorWrapper;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -68,12 +70,15 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+
+import static java.lang.Math.toIntExact;
+
+import static org.neo4j.collection.primitive.PrimitiveLongCollections.count;
 import static org.neo4j.helpers.progress.ProgressListener.NONE;
 import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper.ID_NOT_FOUND;
 import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.EncodingIdMapper.NO_MONITOR;
 import static org.neo4j.unsafe.impl.batchimport.input.Collectors.badCollector;
 import static org.neo4j.unsafe.impl.batchimport.input.Group.GLOBAL;
-import static org.neo4j.unsafe.impl.batchimport.input.SimpleInputIteratorWrapper.wrap;
 
 @RunWith( Parameterized.class )
 public class EncodingIdMapperTest
@@ -104,43 +109,28 @@ public class EncodingIdMapperTest
     {
         // GIVEN
         IdMapper idMapper = mapper( new StringEncoder(), Radix.STRING, NO_MONITOR );
-        InputIterable<Object> ids = new InputIterable<Object>()
+        int count = 300_000;
+        LongFunction<Object> ids = new LongFunction<Object>()
         {
             @Override
-            public InputIterator<Object> iterator()
+            public Object apply( long nodeId )
             {
-                return new InputIterator.Adapter<Object>()
-                {
-                    private int i;
-
-                    @Override
-                    protected Object fetchNextOrNull()
-                    {
-                        return i < 300_000 ? "" + (i++) : null;
-                    }
-                };
-            }
-
-            @Override
-            public boolean supportsMultiplePasses()
-            {
-                return false;
+                return "" + (nodeId++);
             }
         };
 
         // WHEN
-        long index = 0;
-        for ( Object id : ids )
+        for ( int id = 0; id < count; id++ )
         {
-            idMapper.put( id, index++, GLOBAL );
+            idMapper.put( ids.apply( id ), id, GLOBAL );
         }
         idMapper.prepare( ids, mock( Collector.class ), NONE );
 
         // THEN
-        for ( Object id : ids )
+        for ( int id = 0; id < count; id++ )
         {
             // the UUIDs here will be generated in the same sequence as above because we reset the random
-            if ( idMapper.get( id, GLOBAL ) == ID_NOT_FOUND )
+            if ( idMapper.get( ids.apply( id ), GLOBAL ) == ID_NOT_FOUND )
             {
                 fail( "Couldn't find " + id + " even though I added it just previously" );
             }
@@ -203,7 +193,7 @@ public class EncodingIdMapperTest
         IdMapper mapper = mapper( type.encoder(), type.radix(), NO_MONITOR );
 
         // WHEN
-        InputIterable<Object> values = new ValueGenerator( size, type.data( random.random() ) );
+        ValueGenerator values = new ValueGenerator( size, type.data( random.random() ) );
         {
             int id = 0;
             for ( Object value : values )
@@ -227,22 +217,25 @@ public class EncodingIdMapperTest
     {
         // GIVEN
         IdMapper mapper = mapper( new StringEncoder(), Radix.STRING, NO_MONITOR );
-        InputIterable<Object> ids = wrap( "source", Arrays.<Object>asList( "10", "9", "10" ) );
-        try ( ResourceIterator<Object> iterator = ids.iterator() )
+        List<Object> ids = Arrays.<Object>asList( "10", "9", "10" );
+        Iterator<Object> idIterator = ids.iterator();
+        for ( int i = 0; idIterator.hasNext(); i++ )
         {
-            for ( int i = 0; iterator.hasNext(); i++ )
-            {
-                mapper.put( iterator.next(), i, GLOBAL );
-            }
+            mapper.put( idIterator.next(), i, GLOBAL );
         }
 
         // WHEN
         Collector collector = mock( Collector.class );
-        mapper.prepare( ids, collector, NONE );
+        mapper.prepare( wrap( ids ), collector, NONE );
 
         // THEN
-        verify( collector, times( 1 ) ).collectDuplicateNode( "10", 2, GLOBAL.name(), "source:1", "source:3" );
+        verify( collector, times( 1 ) ).collectDuplicateNode( "10", 2, GLOBAL.name() );
         verifyNoMoreInteractions( collector );
+    }
+
+    private static LongFunction<Object> wrap( List<Object> ids )
+    {
+        return nodeId -> ids.get( toIntExact( nodeId ) );
     }
 
     @Test
@@ -251,29 +244,24 @@ public class EncodingIdMapperTest
         // GIVEN
         IdMapper mapper = mapper( new StringEncoder(), Radix.STRING, NO_MONITOR );
         final List<Object> idList = Arrays.asList( "10", "9", "10" );
-        InputIterable<Object> ids = wrap( "source", idList );
 
         Group group = new Group.Adapter( GLOBAL.id(), "global" );
-        try ( ResourceIterator<Object> iterator = ids.iterator() )
+        Iterator<Object> iterator = idList.iterator();
+        for ( int i = 0; iterator.hasNext(); i++ )
         {
-            for ( int i = 0; iterator.hasNext(); i++ )
-            {
-                mapper.put( iterator.next(), i, group );
-            }
+            mapper.put( iterator.next(), i, group );
         }
 
         // WHEN
         try
         {
-            mapper.prepare( ids, badCollector( new ByteArrayOutputStream(), 0 ), NONE );
+            mapper.prepare( wrap( idList ), badCollector( new ByteArrayOutputStream(), 0 ), NONE );
             fail( "Should have failed" );
         }
         catch ( DuplicateInputIdException e )
         {
             // THEN
             assertThat( e.getMessage(), containsString( "10" ) );
-            assertThat( e.getMessage(), containsString( "source:1" ) );
-            assertThat( e.getMessage(), containsString( "source:3" ) );
         }
     }
 
@@ -285,19 +273,17 @@ public class EncodingIdMapperTest
         Encoder encoder = mock( Encoder.class );
         when( encoder.encode( any() ) ).thenReturn( 12345L );
         IdMapper mapper = mapper( encoder, Radix.STRING, monitor );
-        InputIterable<Object> ids = wrap( "source", Arrays.<Object>asList( "10", "9" ) );
-        try ( ResourceIterator<Object> iterator = ids.iterator() )
+        List<Object> ids = Arrays.<Object>asList( "10", "9" );
+        Iterator<Object> iterator = ids.iterator();
+        for ( int i = 0; iterator.hasNext(); i++ )
         {
-            for ( int i = 0; iterator.hasNext(); i++ )
-            {
-                mapper.put( iterator.next(), i, GLOBAL );
-            }
+            mapper.put( iterator.next(), i, GLOBAL );
         }
 
         // WHEN
         ProgressListener progress = mock( ProgressListener.class );
         Collector collector = mock( Collector.class );
-        mapper.prepare( ids, collector, progress );
+        mapper.prepare( wrap( ids ), collector, progress );
 
         // THEN
         verifyNoMoreInteractions( collector );
@@ -329,7 +315,7 @@ public class EncodingIdMapperTest
         when( encoder.encode( e ) ).thenReturn( 2L );
         when( encoder.encode( f ) ).thenReturn( 1L );
         IdMapper mapper = mapper( encoder, Radix.STRING, monitor );
-        InputIterable<Object> ids = wrap( "source", Arrays.<Object>asList( "a", "b", "c", "a", "e", "f" ) );
+        List<Object> ids = Arrays.<Object>asList( "a", "b", "c", "a", "e", "f" );
         Group.Adapter groupA = new Group.Adapter( 1, "A" );
         Group.Adapter groupB = new Group.Adapter( 2, "B" );
         Group[] groups = new Group[] {groupA, groupA, groupA, groupB, groupB, groupB};
@@ -342,15 +328,13 @@ public class EncodingIdMapperTest
         // f/B --> 1 accidental collision with a/A
 
         // WHEN
-        try ( ResourceIterator<Object> iterator = ids.iterator() )
+        Iterator<Object> iterator = ids.iterator();
+        for ( int i = 0; iterator.hasNext(); i++ )
         {
-            for ( int i = 0; iterator.hasNext(); i++ )
-            {
-                mapper.put( iterator.next(), i, groups[i] );
-            }
+            mapper.put( iterator.next(), i, groups[i] );
         }
         Collector collector = mock( Collector.class );
-        mapper.prepare( ids, collector, mock( ProgressListener.class ) );
+        mapper.prepare( wrap( ids ), collector, mock( ProgressListener.class ) );
 
         // THEN
         verify( monitor ).numberOfCollisions( 4 );
@@ -368,21 +352,19 @@ public class EncodingIdMapperTest
         // GIVEN
         Monitor monitor = mock( Monitor.class );
         IdMapper mapper = mapper( new StringEncoder(), Radix.STRING, monitor );
-        InputIterable<Object> ids = wrap( "source", Arrays.<Object>asList( "10", "9", "10" ) );
+        List<Object> ids = Arrays.<Object>asList( "10", "9", "10" );
         Groups groups = new Groups();
         Group firstGroup = groups.getOrCreate( "first" );
         Group secondGroup = groups.getOrCreate( "second" );
-        try ( ResourceIterator<Object> iterator = ids.iterator() )
-        {
-            int id = 0;
-            // group 0
-            mapper.put( iterator.next(), id++, firstGroup );
-            mapper.put( iterator.next(), id++, firstGroup );
-            // group 1
-            mapper.put( iterator.next(), id++, secondGroup );
-        }
+        Iterator<Object> iterator = ids.iterator();
+        int id = 0;
+        // group 0
+        mapper.put( iterator.next(), id++, firstGroup );
+        mapper.put( iterator.next(), id++, firstGroup );
+        // group 1
+        mapper.put( iterator.next(), id++, secondGroup );
         Collector collector = mock( Collector.class );
-        mapper.prepare( ids, collector, NONE );
+        mapper.prepare( wrap( ids ), collector, NONE );
 
         // WHEN/THEN
         verifyNoMoreInteractions( collector );
@@ -390,6 +372,7 @@ public class EncodingIdMapperTest
         assertEquals( 0L, mapper.get( "10", firstGroup ) );
         assertEquals( 1L, mapper.get( "9", firstGroup ) );
         assertEquals( 2L, mapper.get( "10", secondGroup ) );
+        assertFalse( mapper.leftOverDuplicateNodesIds().hasNext() );
     }
 
     @Test
@@ -397,19 +380,17 @@ public class EncodingIdMapperTest
     {
         // GIVEN
         IdMapper mapper = mapper( new StringEncoder(), Radix.STRING, NO_MONITOR );
-        InputIterable<Object> ids = wrap( "source", Arrays.<Object>asList( "8", "9", "10" ) );
+        List<Object> ids = Arrays.<Object>asList( "8", "9", "10" );
         Groups groups = new Groups();
         Group firstGroup;
         Group secondGroup;
         Group thirdGroup;
-        try ( ResourceIterator<Object> iterator = ids.iterator() )
-        {
-            int id = 0;
-            mapper.put( iterator.next(), id++, firstGroup = groups.getOrCreate( "first" ) );
-            mapper.put( iterator.next(), id++, secondGroup = groups.getOrCreate( "second" ) );
-            mapper.put( iterator.next(), id++, thirdGroup = groups.getOrCreate( "third" ) );
-        }
-        mapper.prepare( ids, mock( Collector.class ), NONE );
+        Iterator<Object> iterator = ids.iterator();
+        int id = 0;
+        mapper.put( iterator.next(), id++, firstGroup = groups.getOrCreate( "first" ) );
+        mapper.put( iterator.next(), id++, secondGroup = groups.getOrCreate( "second" ) );
+        mapper.put( iterator.next(), id++, thirdGroup = groups.getOrCreate( "third" ) );
+        mapper.prepare( wrap( ids ), mock( Collector.class ), NONE );
 
         // WHEN/THEN
         assertEquals( 0L, mapper.get( "8", firstGroup ) );
@@ -452,17 +433,17 @@ public class EncodingIdMapperTest
     {
         // GIVEN
         final ControlledEncoder encoder = new ControlledEncoder( new LongEncoder() );
-        IdMapper mapper = mapper( encoder, Radix.LONG, NO_MONITOR );
+        IdMapper mapper = mapper( encoder, Radix.LONG, NO_MONITOR, ParallelSort.DEFAULT,
+                numberOfCollisions -> new LongCollisionValues( NumberArrayFactory.HEAP, numberOfCollisions ) );
         final int idsPerGroup = 20;
         int groups = 5;
         final AtomicReference<Group> group = new AtomicReference<>();
-        InputIterable<Object> ids = SimpleInputIteratorWrapper.wrap( "source", () -> new PrefetchingIterator<Object>()
+        LongFunction<Object> ids = new LongFunction<Object>()
         {
-            private int i;
-
             @Override
-            protected Object fetchNextOrNull()
+            public Object apply( long nodeId )
             {
+                int i = (int) nodeId;
                 // Change group every <idsPerGroup> id
                 if ( i % idsPerGroup == 0 )
                 {
@@ -493,24 +474,30 @@ public class EncodingIdMapperTest
                     i++;
                 }
             }
-        } );
+        };
 
         // WHEN
+        int count = idsPerGroup * groups;
         long actualId = 0;
-        for ( Object id : ids )
+        for ( int i = 0; i < count; i++ )
         {
+            Object id = ids.apply( i );
             mapper.put( id, actualId++, group.get() );
         }
         Collector collector = mock( Collector.class );
+
         mapper.prepare( ids, collector, NONE );
 
         // THEN
         verifyNoMoreInteractions( collector );
         actualId = 0;
-        for ( Object id : ids )
+        for ( int i = 0; i < count; i++ )
         {
+            Object id = ids.apply( i );
             assertEquals( actualId++, mapper.get( id, group.get() ) );
         }
+        verifyNoMoreInteractions( collector );
+        assertFalse( mapper.leftOverDuplicateNodesIds().hasNext() );
     }
 
     @Test
@@ -534,7 +521,7 @@ public class EncodingIdMapperTest
         }
 
         // WHEN
-        mapper.prepare( SimpleInputIteratorWrapper.wrap( "source", ids ), mock( Collector.class ), NONE );
+        mapper.prepare( wrap( ids ), mock( Collector.class ), NONE );
 
         // THEN
         for ( Object id : ids )
@@ -568,11 +555,11 @@ public class EncodingIdMapperTest
 
         // WHEN
         Collector collector = mock( Collector.class );
-        mapper.prepare( SimpleInputIteratorWrapper.wrap( "source", ids ), collector, NONE );
+        mapper.prepare( wrap( ids ), collector, NONE );
 
         // THEN
-        verify( collector, times( high ) ).collectDuplicateNode(
-                any( Object.class ), anyLong(), anyString(), anyString(), anyString() );
+        verify( collector, times( high ) ).collectDuplicateNode( any( Object.class ), anyLong(), anyString() );
+        assertEquals( high, count( mapper.leftOverDuplicateNodesIds() ) );
     }
 
     @Test
@@ -601,7 +588,7 @@ public class EncodingIdMapperTest
 
         // WHEN
         CountingCollector collector = new CountingCollector();
-        mapper.prepare( SimpleInputIteratorWrapper.wrap( "source", ids ), collector, NONE );
+        mapper.prepare( wrap( ids ), collector, NONE );
 
         // THEN
         assertEquals( count, collector.count );
@@ -614,8 +601,22 @@ public class EncodingIdMapperTest
 
     private IdMapper mapper( Encoder encoder, Factory<Radix> radix, Monitor monitor, Comparator comparator )
     {
+        return mapper( encoder, radix, monitor, comparator, autoDetect( encoder ) );
+    }
+
+    private IdMapper mapper( Encoder encoder, Factory<Radix> radix, Monitor monitor, Comparator comparator,
+            IntFunction<CollisionValues> collisionValuesFactory )
+    {
         return new EncodingIdMapper( NumberArrayFactory.HEAP, encoder, radix, monitor, RANDOM_TRACKER_FACTORY,
-                1_000, processors, comparator );
+                collisionValuesFactory, 1_000, processors, comparator );
+    }
+
+    private IntFunction<CollisionValues> autoDetect( Encoder encoder )
+    {
+        return numberOfCollisions -> encoder instanceof LongEncoder
+                ? new LongCollisionValues( NumberArrayFactory.HEAP, numberOfCollisions )
+                : new StringCollisionValues( NumberArrayFactory.HEAP, numberOfCollisions );
+
     }
 
     private static final TrackerFactory RANDOM_TRACKER_FACTORY =
@@ -623,7 +624,7 @@ public class EncodingIdMapperTest
                     ? new IntTracker( arrayFactory.newIntArray( size, IntTracker.DEFAULT_VALUE ) )
                     : new BigIdTracker( arrayFactory.newByteArray( size, BigIdTracker.DEFAULT_VALUE ) );
 
-    private class ValueGenerator implements InputIterable<Object>
+    private class ValueGenerator implements InputIterable<Object>, LongFunction<Object>
     {
         private final int size;
         private final Factory<Object> generator;
@@ -634,6 +635,12 @@ public class EncodingIdMapperTest
         {
             this.size = size;
             this.generator = generator;
+        }
+
+        @Override
+        public Object apply( long nodeId )
+        {
+            return values.get( toIntExact( nodeId ) );
         }
 
         @Override
@@ -805,8 +812,7 @@ public class EncodingIdMapperTest
         }
 
         @Override
-        public void collectDuplicateNode( Object id, long actualId, String group, String firstSource,
-                String otherSource )
+        public void collectDuplicateNode( Object id, long actualId, String group )
         {
             count++;
         }

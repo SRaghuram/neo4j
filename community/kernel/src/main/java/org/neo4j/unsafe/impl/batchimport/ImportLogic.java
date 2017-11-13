@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.LongFunction;
 import java.util.function.Predicate;
 
 import org.neo4j.collection.primitive.Primitive;
@@ -249,8 +250,8 @@ public class ImportLogic implements Closeable
     {
         if ( idMapper.needsPreparation() )
         {
-            executeStage( new IdMapperPreparationStage( config, idMapper, cachedNodes,
-                    badCollector, memoryUsageStats ) );
+            LongFunction<Object> allIds = new NodeInputIdStoreAccessor( neoStore.getTemporaryPropertyStore() );
+            executeStage( new IdMapperPreparationStage( config, idMapper, allIds, badCollector, memoryUsageStats ) );
             PrimitiveLongIterator duplicateNodeIds = badCollector.leftOverDuplicateNodesIds();
             if ( duplicateNodeIds.hasNext() )
             {
