@@ -555,7 +555,9 @@ public class EncodingIdMapper implements IdMapper
         detectDuplicateInputIds( radix, numberOfCollisions, sourceDescriptions, collector, progress );
 
         // We won't be needing these anymore
+        collisionSourceDataCache.close();
         collisionSourceDataCache = null;
+        collisionTrackerCache.close();
         collisionTrackerCache = null;
     }
 
