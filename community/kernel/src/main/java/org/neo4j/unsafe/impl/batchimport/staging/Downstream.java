@@ -21,21 +21,22 @@ package org.neo4j.unsafe.impl.batchimport.staging;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.ToLongFunction;
 
 class Downstream
 {
     private static final java.util.Comparator<TicketedBatch> TICKETED_BATCH_COMPARATOR =
             ( a, b ) -> Long.compare( b.ticket, a.ticket );
 
-    private final Step<Object> downstream;
     private final AtomicLong doneBatches;
     private final ArrayList<TicketedBatch> batches;
+    private final ToLongFunction<TicketedBatch> sender;
     private long lastSendTicket = -1;
 
-    Downstream( Step<Object> downstream, AtomicLong doneBatches )
+    Downstream( AtomicLong doneBatches, ToLongFunction<TicketedBatch> sender )
     {
-        this.downstream = downstream;
         this.doneBatches = doneBatches;
+        this.sender = sender;
         batches = new ArrayList<>();
     }
 
@@ -53,7 +54,7 @@ class Downstream
             {
                 batches.remove( i );
                 lastSendTicket = batch.ticket;
-                idleTimeSum += downstream.receive( batch.ticket, batch.batch );
+                idleTimeSum += sender.applyAsLong( batch );
                 batchesDone++;
             }
             else

@@ -160,13 +160,15 @@ public abstract class AbstractStep<T> implements Step<T>
         }
     }
 
+    @SuppressWarnings( "unchecked" )
     @Override
     public void setDownstream( Step<?> downstream )
     {
         assert downstream != this;
         this.downstream = downstream;
         //noinspection unchecked
-        this.downstreamWorkSync = new WorkSync<>( new Downstream( (Step<Object>) downstream, doneBatches ) );
+        this.downstreamWorkSync = new WorkSync<>( new Downstream( doneBatches,
+                batch -> ((Step<Object>)downstream).receive( batch.ticket, batch.batch ) ) );
     }
 
     @Override

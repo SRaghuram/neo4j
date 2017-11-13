@@ -110,6 +110,12 @@ public class Utils
                     }
 
                     @Override
+                    public int processors( int delta )
+                    {
+                        return iterator.processors( delta );
+                    }
+
+                    @Override
                     public void receivePanic( Throwable cause )
                     {
                         iterator.receivePanic( cause );

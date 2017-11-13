@@ -278,7 +278,7 @@ public class EncodingIdMapper implements IdMapper
                 {
                     // Due to a little technicality the iterator has to get going before accepting processor count requests
                     idIterator.hasNext();
-                    idIterator.processors( processorsForParallelWork );
+                    idIterator.processors( processorsForParallelWork / 2 );
                     buildCollisionInfo( idIterator, numberOfCollisions, collector, progress );
                 }
             }

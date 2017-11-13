@@ -21,17 +21,21 @@ package org.neo4j.unsafe.impl.batchimport.staging;
 
 import java.util.Iterator;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BiFunction;
-import java.util.function.LongPredicate;
 import java.util.function.Supplier;
 
+import org.neo4j.concurrent.AsyncApply;
+import org.neo4j.concurrent.WorkSync;
 import org.neo4j.unsafe.impl.batchimport.Parallelizable;
 import org.neo4j.unsafe.impl.batchimport.executor.DynamicTaskExecutor;
 import org.neo4j.unsafe.impl.batchimport.executor.ParkStrategy;
 import org.neo4j.unsafe.impl.batchimport.executor.TaskExecutor;
 
+import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.helpers.FutureAdapter.future;
 
@@ -66,13 +70,14 @@ public class TicketedProcessing<FROM,STATE,TO> implements Parallelizable, AutoCl
     private static final ParkStrategy park = new ParkStrategy.Park( 10, MILLISECONDS );
 
     private final String name;
-    private final TaskExecutor<STATE> executor;
+    private final TaskExecutor<LocalState<STATE>> executor;
     private final BiFunction<FROM,STATE,TO> processor;
     private final ArrayBlockingQueue<TO> processed;
     private final AtomicLong submittedTicket = new AtomicLong( -1 );
     private final AtomicLong processedTicket = new AtomicLong( -1 );
-    private final LongPredicate myTurnToAddToProcessedQueue = ticket -> processedTicket.get() == ticket - 1;
     private final Runnable healthCheck;
+    private final WorkSync<Downstream,SendDownstream> downstreamWorkSync;
+    private final LongAdder idleTime = new LongAdder();
     private volatile boolean done;
 
     public TicketedProcessing( String name, int maxProcessors, BiFunction<FROM,STATE,TO> processor,
@@ -81,9 +86,29 @@ public class TicketedProcessing<FROM,STATE,TO> implements Parallelizable, AutoCl
         this.name = name;
         this.processor = processor;
         this.executor = new DynamicTaskExecutor<>( 1, maxProcessors, maxProcessors, park, name,
-                threadLocalStateSupplier );
+                () -> new LocalState<>( threadLocalStateSupplier.get() ) );
         this.healthCheck = executor::assertHealthy;
         this.processed = new ArrayBlockingQueue<>( maxProcessors );
+        this.downstreamWorkSync = new WorkSync<>( new Downstream( processedTicket, this::addToResultQueue ) );
+    }
+
+    @SuppressWarnings( "unchecked" )
+    private long addToResultQueue( TicketedBatch batch )
+    {
+        long time = nanoTime();
+        try
+        {
+            while ( !processed.offer( (TO) batch.batch, 10, MILLISECONDS ) )
+            {
+                healthCheck.run();
+            }
+        }
+        catch ( InterruptedException e )
+        {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException( e );
+        }
+        return nanoTime() - time;
     }
 
     /**
@@ -102,20 +127,21 @@ public class TicketedProcessing<FROM,STATE,TO> implements Parallelizable, AutoCl
         executor.submit( threadLocalState ->
         {
             // Process this job (we're now in one of the processing threads)
-            TO result = processor.apply( job, threadLocalState );
-
-            // Wait until it's my turn to add this result to the result queue, we have to add it in the
-            // correct order so that we preserve the ticket order. We want to wait as short periods of time
-            // as possible here because every cycle we wait adding this result, we're also blocking
-            // other results from being added to the result queue
-            // OK now it's my turn to add this result to the result queue which user will pull from later on
-            while ( !myTurnToAddToProcessedQueue.test( ticket ) || !processed.offer( result, 10, MILLISECONDS ) )
+            TO result = processor.apply( job, threadLocalState.actual );
+            AsyncApply async = downstreamWorkSync.applyAsync( new SendDownstream( ticket, result, idleTime ) );
+            if ( threadLocalState.apply != null )
             {
-                healthCheck.run();
+                try
+                {
+                    threadLocalState.apply.await();
+                    async.await();
+                }
+                catch ( ExecutionException e )
+                {
+                    receivePanic( e.getCause() );
+                }
             }
-
-            // Signal that this ticket has been processed and added to the result queue
-            processedTicket.incrementAndGet();
+            threadLocalState.apply = async;
         } );
     }
 
@@ -209,5 +235,16 @@ public class TicketedProcessing<FROM,STATE,TO> implements Parallelizable, AutoCl
     public int processors( int delta )
     {
         return executor.processors( delta );
+    }
+
+    private static class LocalState<STATE>
+    {
+        final STATE actual;
+        AsyncApply apply;
+
+        LocalState( STATE actual )
+        {
+            this.actual = actual;
+        }
     }
 }
