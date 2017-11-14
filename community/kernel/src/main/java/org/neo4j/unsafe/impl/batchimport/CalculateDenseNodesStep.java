@@ -19,7 +19,6 @@
  */
 package org.neo4j.unsafe.impl.batchimport;
 
-import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.unsafe.impl.batchimport.cache.NodeRelationshipCache;
 import org.neo4j.unsafe.impl.batchimport.staging.ForkedProcessorStep;
 import org.neo4j.unsafe.impl.batchimport.staging.StageControl;
@@ -29,7 +28,7 @@ import org.neo4j.unsafe.impl.batchimport.stats.StatsProvider;
  * Increments counts for each visited relationship, once for start node and once for end node
  * (unless for loops). This to be able to determine which nodes are dense before starting to import relationships.
  */
-public class CalculateDenseNodesStep extends ForkedProcessorStep<RelationshipRecord[]>
+public class CalculateDenseNodesStep extends ForkedProcessorStep<long[]>
 {
     private final NodeRelationshipCache cache;
 
@@ -41,13 +40,12 @@ public class CalculateDenseNodesStep extends ForkedProcessorStep<RelationshipRec
     }
 
     @Override
-    protected void forkedProcess( int id, int processors, RelationshipRecord[] batch )
+    protected void forkedProcess( int id, int processors, long[] batch )
     {
-        for ( int i = 0; i < batch.length; i++ )
+        for ( int i = 0; i < batch.length; )
         {
-            RelationshipRecord relationship = batch[i];
-            long startNodeId = relationship.getFirstNode();
-            long endNodeId = relationship.getSecondNode();
+            long startNodeId = batch[i++];
+            long endNodeId = batch[i++];
             processNodeId( id, processors, startNodeId );
             if ( startNodeId != endNodeId ) // avoid counting loops twice
             {

@@ -145,17 +145,26 @@ public class RelationshipGroupCache implements Iterable<RelationshipGroupRecord>
         return toNodeId - fromNodeId;
     }
 
+    public boolean put( RelationshipGroupRecord groupRecord )
+    {
+        return put( groupRecord.getOwningNode(), groupRecord.getType(),
+                groupRecord.getFirstOut(), groupRecord.getFirstIn(), groupRecord.getFirstLoop() );
+    }
+
     /**
      * Caches a relationship group into this cache, it will be cached if the
      * {@link RelationshipGroupRecord#getOwningNode() owner} is within the {@link #prepare(long) prepared} range,
      * where {@code true} will be returned, otherwise {@code false}.
      *
-     * @param groupRecord {@link RelationshipGroupRecord} to cache.
+     * @param nodeId {@link RelationshipGroupRecord#getOwningNode()}
+     * @param type {@link RelationshipGroupRecord#getType()}
+     * @param firstOut {@link RelationshipGroupRecord#getFirstOut()}
+     * @param firstIn {@link RelationshipGroupRecord#getFirstIn()}
+     * @param firstLoop {@link RelationshipGroupRecord#getFirstLoop()}
      * @return whether or not the group was cached, i.e. whether or not it was within the prepared range.
      */
-    public boolean put( RelationshipGroupRecord groupRecord )
+    public boolean put( long nodeId, int type, long firstOut, long firstIn, long firstLoop )
     {
-        long nodeId = groupRecord.getOwningNode();
         assert nodeId < highNodeId;
         if ( nodeId < fromNodeId || nodeId >= toNodeId )
         {
@@ -165,14 +174,14 @@ public class RelationshipGroupCache implements Iterable<RelationshipGroupRecord>
         long baseIndex = offsets.get( rebase( nodeId ) );
         // grouCount is extra validation, really
         int groupCount = groupCount( nodeId );
-        long index = scanForFreeFrom( baseIndex, groupCount, groupRecord.getType(), groupRecord.getOwningNode() );
+        long index = scanForFreeFrom( baseIndex, groupCount, type, nodeId );
 
         // Put the group at this index
         cache.setByte( index, 0, (byte) 1 );
-        cache.set3ByteInt( index, 1, groupRecord.getType() );
-        cache.set6ByteLong( index, 1 + 3, groupRecord.getFirstOut() );
-        cache.set6ByteLong( index, 1 + 3 + 6, groupRecord.getFirstIn() );
-        cache.set6ByteLong( index, 1 + 3 + 6 + 6, groupRecord.getFirstLoop() );
+        cache.set3ByteInt( index, 1, type );
+        cache.set6ByteLong( index, 1 + 3, firstOut );
+        cache.set6ByteLong( index, 1 + 3 + 6, firstIn );
+        cache.set6ByteLong( index, 1 + 3 + 6 + 6, firstLoop );
         return true;
     }
 

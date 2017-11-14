@@ -45,7 +45,7 @@ public class RelationshipCountsStage extends Stage
         super( NAME, null, config, 0 );
         add( new BatchFeedStep( control(), config, allIn( relationshipStore, config ),
                 relationshipStore.getRecordSize() ) );
-        add( new ReadRecordsStep<>( control(), config, false, relationshipStore, null ) );
+        add( new ReadRecordsStep<>( control(), config, false, relationshipStore, null, new RelationshipCountDataAssembler() ) );
         add( new ProcessRelationshipCountsDataStep( control(), cache, config,
                 highLabelId, highRelationshipTypeId, countsUpdater, cacheFactory, progressMonitor ) );
     }

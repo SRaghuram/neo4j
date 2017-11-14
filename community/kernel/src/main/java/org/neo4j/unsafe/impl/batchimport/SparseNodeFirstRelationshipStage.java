@@ -48,7 +48,7 @@ public class SparseNodeFirstRelationshipStage extends Stage
     {
         super( NAME, null, config, ORDER_SEND_DOWNSTREAM );
         add( new ReadNodeIdsByCacheStep( control(), config, cache, NodeType.NODE_TYPE_SPARSE ) );
-        add( new ReadRecordsStep<>( control(), config, true, nodeStore, null ) );
+        add( new ReadRecordsStep<>( control(), config, true, nodeStore, null, NodeRecord.class ) );
         add( new RecordProcessorStep<>( control(), "LINK", config,
                 new SparseNodeFirstRelationshipProcessor( cache ), false ) );
         add( new UpdateRecordsStep<>( control(), config, nodeStore, new StorePrepareIdSequence<>() ) );

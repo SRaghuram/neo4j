@@ -19,8 +19,6 @@
  */
 package org.neo4j.unsafe.impl.batchimport.staging;
 
-import java.lang.reflect.Array;
-import java.util.Arrays;
 import java.util.function.Predicate;
 
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
@@ -42,18 +40,23 @@ import org.neo4j.unsafe.impl.batchimport.Configuration;
 public class ReadRecordsStep<RECORD extends AbstractBaseRecord> extends ProcessorStep<PrimitiveLongIterator>
 {
     private final RecordStore<RECORD> store;
-    private final Class<RECORD> klass;
     private final Predicate<RECORD> filter;
     private final int batchSize;
+    private final DataAssembler<RECORD> converter;
 
-    @SuppressWarnings( "unchecked" )
     public ReadRecordsStep( StageControl control, Configuration config, boolean inRecordWritingStage,
-            RecordStore<RECORD> store, Predicate<RECORD> filter )
+            RecordStore<RECORD> store, Predicate<RECORD> filter, Class<RECORD> klass )
+    {
+        this( control, config, inRecordWritingStage, store, filter, new RecordDataAssembler<>( klass ) );
+    }
+
+    public ReadRecordsStep( StageControl control, Configuration config, boolean inRecordWritingStage,
+            RecordStore<RECORD> store, Predicate<RECORD> filter, DataAssembler<RECORD> converter )
     {
         super( control, ">", config, parallelReading( config, inRecordWritingStage ) ? 0 : 1 );
         this.store = store;
         this.filter = filter;
-        this.klass = (Class<RECORD>) store.newRecord().getClass();
+        this.converter = converter;
         this.batchSize = config.batchSize();
     }
 
@@ -79,16 +82,16 @@ public class ReadRecordsStep<RECORD extends AbstractBaseRecord> extends Processo
 
         long id = idRange.next();
         RECORD record = store.newRecord();
-        RECORD[] batch = (RECORD[]) Array.newInstance( klass, batchSize );
+        Object batchObject = converter.newBatchObject( batchSize );
         int i = 0;
-        try ( RecordCursor cursor = store.newRecordCursor( record ).acquire( id, RecordLoad.CHECK ) )
+        try ( RecordCursor<RECORD> cursor = store.newRecordCursor( record ).acquire( id, RecordLoad.CHECK ) )
         {
             boolean hasNext = true;
             while ( hasNext )
             {
                 if ( cursor.next( id ) && !IdValidator.isReservedId( record.getId() ) && (filter == null || filter.test( record )) )
                 {
-                    batch[i++] = (RECORD) record.clone();
+                    converter.append( batchObject, record, i++ );
                 }
                 if ( hasNext = idRange.hasNext() )
                 {
@@ -97,6 +100,6 @@ public class ReadRecordsStep<RECORD extends AbstractBaseRecord> extends Processo
             }
         }
 
-        sender.send( i == batchSize ? batch : Arrays.copyOf( batch, i ) );
+        sender.send( converter.cutOffAt( batchObject, i ) );
     }
 }

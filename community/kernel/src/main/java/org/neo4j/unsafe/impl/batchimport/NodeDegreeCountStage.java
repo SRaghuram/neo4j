@@ -40,7 +40,7 @@ public class NodeDegreeCountStage extends Stage
     {
         super( NAME, null, config, 0 );
         add( new BatchFeedStep( control(), config, forwards( 0, store.getHighId(), config ), store.getRecordSize() ) );
-        add( new ReadRecordsStep<>( control(), config, false, store, null ) );
+        add( new ReadRecordsStep<>( control(), config, false, store, null, new RelationshipNodesAssembler() ) );
         add( new CalculateDenseNodesStep( control(), config, cache, memoryUsageStatsProvider ) );
     }
 }

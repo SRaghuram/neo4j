@@ -28,7 +28,7 @@ import org.neo4j.unsafe.impl.batchimport.stats.StatsProvider;
 /**
  * Caches {@link RelationshipGroupRecord} into {@link RelationshipGroupCache}.
  */
-public class CacheGroupsStep extends ProcessorStep<RelationshipGroupRecord[]>
+public class CacheGroupsStep extends ProcessorStep<long[]>
 {
     private final RelationshipGroupCache cache;
 
@@ -40,13 +40,13 @@ public class CacheGroupsStep extends ProcessorStep<RelationshipGroupRecord[]>
     }
 
     @Override
-    protected void process( RelationshipGroupRecord[] batch, BatchSender sender ) throws Throwable
+    protected void process( long[] batch, BatchSender sender ) throws Throwable
     {
         // These records are read page-wise forwards, but should be cached in reverse
         // since the records exists in the store in reverse order.
-        for ( int i = batch.length - 1; i >= 0; i-- )
+        for ( int i = batch.length - 1; i >= 0; i -= 5 )
         {
-            cache.put( batch[i] );
+            cache.put( batch[i - 4], (int) batch[i - 3], batch[i - 2], batch[i - 1], batch[i - 0] );
         }
     }
 }

@@ -61,7 +61,7 @@ public class RelationshipLinkbackStage extends Stage
         super( NAME, topic, config, ORDER_SEND_DOWNSTREAM );
         RelationshipStore store = stores.getRelationshipStore();
         add( new BatchFeedStep( control(), config, backwards( 0, store.getHighId(), config ), store.getRecordSize() ) );
-        add( new ReadRecordsStep<>( control(), config, true, store, readFilter ) );
+        add( new ReadRecordsStep<>( control(), config, true, store, readFilter, RelationshipRecord.class ) );
         add( new RelationshipLinkbackStep( control(), config, cache, changeFilter, nodeTypes, additionalStatsProvider ) );
         add( new UpdateRecordsStep<>( control(), config, store, PrepareIdSequence.of( stores.usesDoubleRelationshipRecordUnits() ) ) );
     }
