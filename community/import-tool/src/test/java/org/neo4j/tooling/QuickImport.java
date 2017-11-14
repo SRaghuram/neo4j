@@ -165,6 +165,7 @@ public class QuickImport
             }
             else
             {
+                System.out.println( "Seed " + randomSeed );
                 ImportTool.printOverview( dir, Collections.emptyList(), Collections.emptyList(), importConfig, System.out );
 
                 consumer = new RestartableParallelBatchImporter( dir, fileSystem, null, importConfig,
