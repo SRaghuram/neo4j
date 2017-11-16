@@ -94,21 +94,6 @@ public class Validators
         }
     };
 
-    public static final Validator<File> CONTAINS_NO_EXISTING_DATABASE = value ->
-    {
-        try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
-        {
-            if ( isExistingDatabase( fileSystem, value ) )
-            {
-                throw new IllegalArgumentException( "Directory '" + value + "' already contains a database" );
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
-    };
-
     public static final Validator<File> CONTAINS_EXISTING_DATABASE = value ->
     {
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )

@@ -57,7 +57,6 @@ import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.kernel.internal.Version;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
-import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.DuplicateInputIdException;
 import org.neo4j.unsafe.impl.batchimport.input.BadCollector;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
@@ -71,6 +70,7 @@ import org.neo4j.unsafe.impl.batchimport.input.csv.CsvInput;
 import org.neo4j.unsafe.impl.batchimport.input.csv.DataFactory;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Decorator;
 import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
+import org.neo4j.unsafe.impl.batchimport.restart.RestartableParallelBatchImporter;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
 import static java.lang.String.format;
@@ -430,7 +430,7 @@ public class ImportTool
             args = useArgumentsFromFileArgumentIfPresent( args );
 
             storeDir = args.interpretOption( Options.STORE_DIR.key(), Converters.mandatory(),
-                    Converters.toFile(), Validators.DIRECTORY_IS_WRITABLE, Validators.CONTAINS_NO_EXISTING_DATABASE );
+                    Converters.toFile(), Validators.DIRECTORY_IS_WRITABLE );
             Config config = Config.defaults( GraphDatabaseSettings.neo4j_home, storeDir.getAbsolutePath() );
             logsDir = config.get( GraphDatabaseSettings.logs_directory );
             fs.mkdirs( logsDir );
@@ -559,7 +559,7 @@ public class ImportTool
         LogService logService = life.add( StoreLogService.withInternalLog( internalLogFile ).build( fs ) );
 
         life.start();
-        BatchImporter importer = new ParallelBatchImporter( storeDir,
+        BatchImporter importer = new RestartableParallelBatchImporter( storeDir,
                 fs,
                 null, // no external page cache
                 configuration,

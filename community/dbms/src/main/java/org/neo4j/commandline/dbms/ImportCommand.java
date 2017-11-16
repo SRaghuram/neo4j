@@ -38,8 +38,6 @@ import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.helpers.Args;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.util.Validators;
-
 import static org.neo4j.csv.reader.Configuration.DEFAULT;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT_MAX_MEMORY_PERCENT;
 import static org.neo4j.unsafe.impl.batchimport.input.csv.Configuration.COMMAS;
@@ -249,8 +247,6 @@ public class ImportCommand implements AdminCommand
         {
             Config config =
                     loadNeo4jConfig( homeDir, configDir, database, loadAdditionalConfig( additionalConfigFile ) );
-            Validators.CONTAINS_NO_EXISTING_DATABASE
-                    .validate( config.get( DatabaseManagementSystemSettings.database_path ) );
 
             Importer importer = importerFactory.getImporterForMode( mode, Args.parse( args ), config, outsideWorld );
             importer.doImport();
