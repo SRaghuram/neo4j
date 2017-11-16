@@ -24,7 +24,16 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.function.Function;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
 
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.InputIterable;
@@ -42,22 +51,22 @@ public class CsvOutput implements BatchImporter
     private final File targetDirectory;
     private final Header nodeHeader;
     private final Header relationshipHeader;
-    private final Deserialization<String> deserialization;
+    private final Configuration config;
 
     public CsvOutput( File targetDirectory, Header nodeHeader, Header relationshipHeader, Configuration config )
     {
         this.targetDirectory = targetDirectory;
+        this.config = config;
         assert targetDirectory.isDirectory();
         this.nodeHeader = nodeHeader;
         this.relationshipHeader = relationshipHeader;
-        this.deserialization = new StringDeserialization( config );
         targetDirectory.mkdirs();
     }
 
     @Override
     public void doImport( Input input ) throws IOException
     {
-        consume( "nodes.csv", input.nodes(), nodeHeader, node ->
+        consume( "nodes", input.nodes(), nodeHeader, ( node, deserialization ) ->
         {
             deserialization.clear();
             for ( Header.Entry entry : nodeHeader.entries() )
@@ -78,7 +87,7 @@ public class CsvOutput implements BatchImporter
             }
             return deserialization.materialize();
         } );
-        consume( "relationships.csv", input.relationships(), relationshipHeader, relationship ->
+        consume( "relationships", input.relationships(), relationshipHeader, ( relationship, deserialization ) ->
         {
             deserialization.clear();
             for ( Header.Entry entry : relationshipHeader.entries() )
@@ -118,23 +127,85 @@ public class CsvOutput implements BatchImporter
     }
 
     private <ENTITY extends InputEntity> void consume( String name, InputIterable<ENTITY> entities, Header header,
-            Function<ENTITY,String> deserializer ) throws IOException
+            BiFunction<ENTITY,Deserialization<String>,String> deserializer ) throws IOException
     {
-        try ( PrintStream out = file( name ) )
+        try ( PrintStream out = file( name + "-header.csv" ) )
         {
             serialize( out, header );
-            try ( InputIterator<ENTITY> iterator = entities.iterator() )
+        }
+
+        try ( InputIterator<ENTITY> iterator = entities.iterator() )
+        {
+            int threads = Runtime.getRuntime().availableProcessors() / 2;
+            iterator.hasNext();
+            iterator.processors( threads );
+            ExecutorService executor = Executors.newFixedThreadPool( threads );
+            AtomicBoolean end = new AtomicBoolean();
+            BlockingQueue<List<ENTITY>> queue = new ArrayBlockingQueue<>( threads * 10 );
+            for ( int i = 0; i < threads; i++ )
             {
-                while ( iterator.hasNext() )
+                int id = i;
+                executor.submit( new Callable<Void>()
                 {
-                    out.println( deserializer.apply( iterator.next() ) );
+                    @Override
+                    public Void call() throws Exception
+                    {
+                        try ( PrintStream out = file( name + "-" + id + ".csv" ) )
+                        {
+                            StringDeserialization deserialization = new StringDeserialization( config );
+                            while ( true )
+                            {
+                                List<ENTITY> batch = queue.poll( 100, TimeUnit.MILLISECONDS );
+                                if ( batch != null )
+                                {
+                                    for ( ENTITY entity : batch )
+                                    {
+                                        out.println( deserializer.apply( entity, deserialization ) );
+                                    }
+                                }
+                                else if ( end.get() )
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                        return null;
+                    }
+                } );
+            }
+
+            while ( iterator.hasNext() )
+            {
+                List<ENTITY> batch = grabBatch( iterator, 10_000 );
+                while ( !queue.offer( batch, 100, TimeUnit.MILLISECONDS ) )
+                {
+                    // wait
                 }
             }
+            executor.shutdown();
+            end.set( true );
+            executor.awaitTermination( 10, TimeUnit.MINUTES );
         }
+        catch ( InterruptedException e )
+        {
+            Thread.currentThread().interrupt();
+            throw new IOException( e );
+        }
+    }
+
+    private static <T> List<T> grabBatch( InputIterator<T> iterator, int count )
+    {
+        List<T> list = new ArrayList<>( count );
+        for ( int i = 0; i < count && iterator.hasNext(); i++ )
+        {
+            list.add( iterator.next() );
+        }
+        return list;
     }
 
     private void serialize( PrintStream out, Header header )
     {
+        StringDeserialization deserialization = new StringDeserialization( config );
         deserialization.clear();
         for ( Header.Entry entry : header.entries() )
         {
@@ -146,6 +217,6 @@ public class CsvOutput implements BatchImporter
     private PrintStream file( String name ) throws IOException
     {
         return new PrintStream( new BufferedOutputStream( new FileOutputStream( new File( targetDirectory, name ) ),
-                (int) mebiBytes( 1 ) ) );
+                (int) mebiBytes( 4 ) ) );
     }
 }
