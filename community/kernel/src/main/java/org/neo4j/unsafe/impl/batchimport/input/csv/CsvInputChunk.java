@@ -27,6 +27,7 @@ import org.neo4j.csv.reader.CharSeeker;
 import org.neo4j.csv.reader.Extractor;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.csv.reader.Extractors.LongExtractor;
+import org.neo4j.csv.reader.Extractors.StringExtractor;
 import org.neo4j.csv.reader.Mark;
 import org.neo4j.csv.reader.Source.Chunk;
 import org.neo4j.helpers.Exceptions;
@@ -132,7 +133,10 @@ public class CsvInputChunk implements InputChunk
                         case STRING:
                         case INTEGER:
                             // TODO what about the configured name?
-                            Object idValue = entry.extractor().value();
+                            Extractor<?> extractor = entry.extractor();
+                            Object idValue = extractor instanceof StringExtractor
+                                    ? ((StringExtractor) extractor).flyweightExtract()
+                                    : entry.extractor().value();
                             doContinue = visitor.id( idValue, entry.group() );
                             if ( entry.name() != null )
                             {
@@ -170,7 +174,7 @@ public class CsvInputChunk implements InputChunk
                         switch ( idType )
                         {
                         case STRING:
-                            doContinue = visitor.startId( ((StringExtractor) entry.extractor()).flyweightExtract(), entry.group() );
+                            doContinue = visitor.endId( ((StringExtractor) entry.extractor()).flyweightExtract(), entry.group() );
                             break;
                         case INTEGER:
                             doContinue = visitor.endId( entry.extractor().value(), entry.group() );
@@ -193,7 +197,10 @@ public class CsvInputChunk implements InputChunk
                     {
                         // TODO since PropertyStore#encodeValue takes Object there's no point splitting up
                         // into different primitive types
-                        Object value = entry.extractor().value();
+                        Extractor<?> extractor = entry.extractor();
+                        Object value = extractor instanceof StringExtractor
+                                ? ((StringExtractor) extractor).flyweightExtract()
+                                : entry.extractor().value();
                         if ( !isEmptyArray( value ) )
                         {
                             doContinue = visitor.property( entry.name(), value );

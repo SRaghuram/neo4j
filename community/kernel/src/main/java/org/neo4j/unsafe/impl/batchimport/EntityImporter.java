@@ -31,7 +31,6 @@ import org.neo4j.unsafe.impl.batchimport.DataImporter.Monitor;
 import org.neo4j.unsafe.impl.batchimport.input.InputEntityVisitor;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingNeoStores;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingTokenRepository.BatchingPropertyKeyTokenRepository;
-import org.neo4j.values.storable.Values;
 
 /**
  * Abstract class containing logic for importing properties for an entity (node/relationship).
@@ -110,7 +109,7 @@ abstract class EntityImporter extends InputEntityVisitor.Adapter
     private void encodeProperty( PropertyBlock block, int key, Object value )
     {
         // TODO: dynamic record ids, batching of those
-        propertyStore.encodeValue( block, key, Values.of( value ) );
+        propertyStore.encodeValue( block, key, value );
     }
 
     protected long createAndWritePropertyChain()

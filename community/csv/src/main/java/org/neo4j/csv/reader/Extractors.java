@@ -300,11 +300,14 @@ public class Extractors
         protected abstract boolean extract0( char[] data, int offset, int length );
     }
 
-    public static class StringExtractor extends AbstractSingleValueExtractor<String>
+    public static class StringExtractor extends AbstractSingleValueExtractor<String> implements FlyweightString
     {
-        private String value;
         private final boolean emptyStringsAsNull;
         private final boolean trimStrings;
+        private String value;
+        private char[] rawData;
+        private int rawDataOffset;
+        private int rawDataLength;
 
         public StringExtractor( boolean emptyStringsAsNull, boolean trimStrings )
         {
@@ -325,21 +328,51 @@ public class Extractors
             return length == 0 && (!skippedChars || emptyStringsAsNull);
         }
 
+        public FlyweightString flyweightExtract()
+        {
+            return this;
+        }
+
         @Override
         protected boolean extract0( char[] data, int offset, int length )
         {
-            value = new String( data, offset, length );
-            if ( trimStrings )
-            {
-                value = value.trim();
-            }
+            rawData = data;
+            rawDataOffset = offset;
+            rawDataLength = length;
+            value = null;
             return true;
         }
 
         @Override
         public String value()
         {
+            if ( value == null )
+            {
+                value = new String( rawData, rawDataOffset, rawDataLength );
+                if ( trimStrings )
+                {
+                    value = value.trim();
+                }
+            }
             return value;
+        }
+
+        @Override
+        public int length()
+        {
+            return rawDataLength;
+        }
+
+        @Override
+        public char charAt( int index )
+        {
+            return rawData[rawDataOffset + index];
+        }
+
+        @Override
+        public String asString()
+        {
+            return value();
         }
     }
 

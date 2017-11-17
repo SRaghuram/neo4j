@@ -21,7 +21,11 @@ package org.neo4j.unsafe.impl.batchimport.cache.idmapping.string;
 
 import java.util.Arrays;
 
+import org.neo4j.csv.reader.FlyweightString;
+
 import static java.lang.Math.max;
+
+import static org.neo4j.csv.reader.FlyweightString.wrap;
 
 /**
  * Encodes String into a long with very small chance of collision, i.e. two different Strings encoded into
@@ -56,11 +60,11 @@ public class StringEncoder implements Encoder
     @Override
     public long encode( Object s )
     {
-        int[] val = encodeInt( (String) s );
+        int[] val = encodeInt( wrap( s ) );
         return (long) val[0] << 32 | val[1] & UPPER_INT_MASK;
     }
 
-    private int[] encodeInt( String s )
+    private int[] encodeInt( FlyweightString s )
     {
         // construct bytes from string
         int inputLength = s.length();
@@ -88,7 +92,7 @@ public class StringEncoder implements Encoder
         {
             temp = codes[i] & FOURTH_BYTE;
             codes[i] = codes[i] >>> 8 | carryOver << 24;
-            carryOver = temp;
+        carryOver = temp;
         }
         return codes;
     }

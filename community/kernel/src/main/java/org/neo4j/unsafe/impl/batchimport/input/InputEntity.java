@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.neo4j.csv.reader.FlyweightString;
+
 /**
  * Simple utility for gathering all information about an {@link InputEntityVisitor} and exposing getters
  * for that data. Easier to work with than purely visitor-based implementation in tests.
@@ -89,8 +91,13 @@ public class InputEntity implements InputEntityVisitor, Cloneable
     {
         checkClear();
         properties.add( key );
-        properties.add( value );
+        properties.add( value( value ) );
         return delegate.property( key, value );
+    }
+
+    private Object value( Object value )
+    {
+        return value instanceof FlyweightString ? ((FlyweightString)value).asString() : value;
     }
 
     @Override
@@ -116,7 +123,7 @@ public class InputEntity implements InputEntityVisitor, Cloneable
     public boolean id( Object id, Group group )
     {
         checkClear();
-        objectId = id;
+        objectId = value( id );
         idGroup = group;
         return delegate.id( id, group );
     }

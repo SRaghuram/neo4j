@@ -34,8 +34,6 @@ import org.neo4j.unsafe.impl.batchimport.input.Group;
 import org.neo4j.unsafe.impl.batchimport.input.InputChunk;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingNeoStores;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingTokenRepository.BatchingLabelTokenRepository;
-import org.neo4j.values.storable.Values;
-
 import static java.lang.Long.max;
 import static java.util.Arrays.copyOf;
 
@@ -91,7 +89,7 @@ public class NodeImporter extends EntityImporter
         // also store this id as property in temp property store
         if ( id != null )
         {
-            idPropertyStore.encodeValue( idPropertyBlock, 0, Values.of( id ) );
+            idPropertyStore.encodeValue( idPropertyBlock, 0, id );
             idPropertyRecord.addPropertyBlock( idPropertyBlock );
             idPropertyRecord.setId( nodeId ); // yes nodeId
             idPropertyRecord.setInUse( true );

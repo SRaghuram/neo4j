@@ -24,6 +24,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.neo4j.csv.reader.FlyweightString;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.values.storable.Values;
 
@@ -77,7 +78,7 @@ public class TestLongerShortString
                 for ( String string : list )
                 {
                     PropertyBlock record = new PropertyBlock();
-                    if ( LongerShortString.encode( 10, string, record, DEFAULT_PAYLOAD_SIZE ) )
+                    if ( LongerShortString.encode( 10, FlyweightString.wrap( string ), record, DEFAULT_PAYLOAD_SIZE ) )
                     {
                         assertEquals( Values.stringValue( string ), LongerShortString.decode( record ) );
                     }
@@ -154,7 +155,7 @@ public class TestLongerShortString
     private void assertCanEncodeAndDecodeToSame( String string, int payloadSize )
     {
         PropertyBlock target = new PropertyBlock();
-        assertTrue( LongerShortString.encode( 0, string, target, payloadSize ) );
+        assertTrue( LongerShortString.encode( 0, FlyweightString.wrap( string ), target, payloadSize ) );
         assertEquals( Values.stringValue( string ), LongerShortString.decode( target ) );
     }
 
@@ -165,6 +166,6 @@ public class TestLongerShortString
 
     private void assertCannotEncode( String string, int payloadSize )
     {
-        assertFalse( LongerShortString.encode( 0, string, new PropertyBlock(), payloadSize ) );
+        assertFalse( LongerShortString.encode( 0, FlyweightString.wrap( string ), new PropertyBlock(), payloadSize ) );
     }
 }

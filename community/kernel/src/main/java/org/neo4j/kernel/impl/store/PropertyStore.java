@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.function.ToIntFunction;
 
 import org.neo4j.collection.primitive.PrimitiveLongObjectMap;
+import org.neo4j.csv.reader.FlyweightString;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Pair;
@@ -223,20 +224,31 @@ public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHea
         encodeValue( block, keyId, value, stringStore, arrayStore );
     }
 
+    public void encodeValue( PropertyBlock block, int keyId, Object value )
+    {
+        encodeValue( block, keyId, value, stringStore, arrayStore );
+    }
+
     public static void encodeValue( PropertyBlock block, int keyId, Value value,
             DynamicRecordAllocator stringAllocator, DynamicRecordAllocator arrayAllocator )
     {
+        encodeValue( block, keyId, value.getInnerObject(), stringAllocator, arrayAllocator );
+    }
+
+    public static void encodeValue( PropertyBlock block, int keyId, Object value,
+            DynamicRecordAllocator stringAllocator, DynamicRecordAllocator arrayAllocator )
+    {
         // TODO: use ValueWriter
-        Object asObject = value.getInnerObject();
-        if ( asObject instanceof String )
+        if ( value instanceof String || value instanceof FlyweightString )
         {   // Try short string first, i.e. inlined in the property block
-            String string = (String) asObject;
-            if ( LongerShortString.encode( keyId, string, block, PropertyType.getPayloadSize() ) )
+            FlyweightString flyweightString = FlyweightString.wrap( value );
+            if ( LongerShortString.encode( keyId, flyweightString, block, PropertyType.getPayloadSize() ) )
             {
                 return;
             }
 
             // Fall back to dynamic string store
+            String string = flyweightString.asString();
             byte[] encodedString = encodeString( string );
             List<DynamicRecord> valueRecords = new ArrayList<>();
             allocateStringRecords( valueRecords, encodedString, stringAllocator );
@@ -247,60 +259,60 @@ public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHea
             }
             block.setValueRecords( valueRecords );
         }
-        else if ( asObject instanceof Integer )
+        else if ( value instanceof Integer )
         {
-            setSingleBlockValue( block, keyId, PropertyType.INT, ((Integer) asObject).longValue() );
+            setSingleBlockValue( block, keyId, PropertyType.INT, ((Integer) value).longValue() );
         }
-        else if ( asObject instanceof Boolean )
+        else if ( value instanceof Boolean )
         {
-            setSingleBlockValue( block, keyId, PropertyType.BOOL, (Boolean) asObject ? 1L : 0L );
+            setSingleBlockValue( block, keyId, PropertyType.BOOL, (Boolean) value ? 1L : 0L );
         }
-        else if ( asObject instanceof Float )
+        else if ( value instanceof Float )
         {
-            setSingleBlockValue( block, keyId, PropertyType.FLOAT, Float.floatToRawIntBits( (Float) asObject ) );
+            setSingleBlockValue( block, keyId, PropertyType.FLOAT, Float.floatToRawIntBits( (Float) value ) );
         }
-        else if ( asObject instanceof Long )
+        else if ( value instanceof Long )
         {
 
             long keyAndType = keyId | (((long) PropertyType.LONG.intValue()) <<
                                        StandardFormatSettings.PROPERTY_TOKEN_MAXIMUM_ID_BITS);
-            if ( ShortArray.LONG.getRequiredBits( (Long) asObject ) <= 35 )
+            if ( ShortArray.LONG.getRequiredBits( (Long) value ) <= 35 )
             {   // We only need one block for this value, special layout compared to, say, an integer
-                block.setSingleBlock( keyAndType | (1L << 28) | ((Long) asObject << 29) );
+                block.setSingleBlock( keyAndType | (1L << 28) | ((Long) value << 29) );
             }
             else
             {   // We need two blocks for this value
-                block.setValueBlocks( new long[]{keyAndType, (Long) asObject} );
+                block.setValueBlocks( new long[]{keyAndType, (Long) value} );
             }
         }
-        else if ( asObject instanceof Double )
+        else if ( value instanceof Double )
         {
             block.setValueBlocks( new long[]{ keyId |
                     (((long) PropertyType.DOUBLE.intValue()) << StandardFormatSettings.PROPERTY_TOKEN_MAXIMUM_ID_BITS),
-                    Double.doubleToRawLongBits( (Double) asObject )} );
+                    Double.doubleToRawLongBits( (Double) value )} );
         }
-        else if ( asObject instanceof Byte )
+        else if ( value instanceof Byte )
         {
-            setSingleBlockValue( block, keyId, PropertyType.BYTE, ((Byte) asObject).longValue() );
+            setSingleBlockValue( block, keyId, PropertyType.BYTE, ((Byte) value).longValue() );
         }
-        else if ( asObject instanceof Character )
+        else if ( value instanceof Character )
         {
-            setSingleBlockValue( block, keyId, PropertyType.CHAR, (Character) asObject );
+            setSingleBlockValue( block, keyId, PropertyType.CHAR, (Character) value );
         }
-        else if ( asObject instanceof Short )
+        else if ( value instanceof Short )
         {
-            setSingleBlockValue( block, keyId, PropertyType.SHORT, ((Short) asObject).longValue() );
+            setSingleBlockValue( block, keyId, PropertyType.SHORT, ((Short) value).longValue() );
         }
-        else if ( asObject.getClass().isArray() )
+        else if ( value.getClass().isArray() )
         {   // Try short array first, i.e. inlined in the property block
-            if ( ShortArray.encode( keyId, asObject, block, PropertyType.getPayloadSize() ) )
+            if ( ShortArray.encode( keyId, value, block, PropertyType.getPayloadSize() ) )
             {
                 return;
             }
 
             // Fall back to dynamic array store
             List<DynamicRecord> arrayRecords = new ArrayList<>();
-            allocateArrayRecords( arrayRecords, asObject, arrayAllocator );
+            allocateArrayRecords( arrayRecords, value, arrayAllocator );
             setSingleBlockValue( block, keyId, PropertyType.ARRAY, Iterables.first( arrayRecords ).getId() );
             for ( DynamicRecord valueRecord : arrayRecords )
             {
@@ -310,7 +322,7 @@ public class PropertyStore extends CommonAbstractStore<PropertyRecord,NoStoreHea
         }
         else
         {
-            throw new IllegalArgumentException( "Unknown property type on: " + asObject + ", " + asObject.getClass() );
+            throw new IllegalArgumentException( "Unknown property type on: " + value + ", " + value.getClass() );
         }
     }
 

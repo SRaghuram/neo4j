@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.store;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+import org.neo4j.csv.reader.FlyweightString;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.util.Bits;
 import org.neo4j.unsafe.impl.internal.dragons.UnsafeUtil;
@@ -701,8 +702,7 @@ public enum LongerShortString
      * E-  à  á  â  ã  ä  å  æ  ç    è  é  ê  ë  ì  í  î  ï
      * F-  ð  ñ  ò  ó  ô  õ  ö       ø  ù  ú  û  ü  ý  þ  ÿ
      */
-    public static boolean encode( int keyId, String string,
-                                  PropertyBlock target, int payloadSize )
+    public static boolean encode( int keyId, FlyweightString string, PropertyBlock target, int payloadSize )
     {
         // NUMERICAL can carry most characters, so compare to that
         int dataLength = string.length();
@@ -728,7 +728,7 @@ public enum LongerShortString
         return encodeWithCharSet( keyId, string, target, payloadSize, dataLength );
     }
 
-    private static boolean encodeWithCharSet( int keyId, String string, PropertyBlock target, int payloadSize,
+    private static boolean encodeWithCharSet( int keyId, FlyweightString string, PropertyBlock target, int payloadSize,
             int stringLength )
     {
         int maxBytes = PropertyType.getPayloadSize();
@@ -850,7 +850,7 @@ public enum LongerShortString
         }
     }
 
-    private static int determineEncoding( String string, byte[] data, int length, int payloadSize )
+    private static int determineEncoding( FlyweightString string, byte[] data, int length, int payloadSize )
     {
         if ( length == 0 )
         {
@@ -986,7 +986,7 @@ public enum LongerShortString
         return Bits.bits(calculateNumberOfBlocksUsedForStep8(length) << 3 ); //*8
     }
 
-    private static boolean encodeLatin1( int keyId, String string, PropertyBlock target )
+    private static boolean encodeLatin1( int keyId, FlyweightString string, PropertyBlock target )
     {
         int length = string.length();
         Bits bits = newBitsForStep8(length);
@@ -999,7 +999,7 @@ public enum LongerShortString
         return true;
     }
 
-    public static boolean writeLatin1Characters( String string, Bits bits )
+    public static boolean writeLatin1Characters( FlyweightString string, Bits bits )
     {
         int length = string.length();
         for ( int i = 0; i < length; i++ )
@@ -1014,9 +1014,9 @@ public enum LongerShortString
         return true;
     }
 
-    private static boolean encodeUTF8( int keyId, String string, PropertyBlock target, int payloadSize )
+    private static boolean encodeUTF8( int keyId, FlyweightString string, PropertyBlock target, int payloadSize )
     {
-        byte[] bytes = string.getBytes( StandardCharsets.UTF_8 );
+        byte[] bytes = string.asString().getBytes( StandardCharsets.UTF_8 );
         final int length = bytes.length;
         if ( length > payloadSize - 3/*key*/ - 2/*enc+len*/ )
         {
