@@ -26,8 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.ToIntFunction;
 
-import org.neo4j.collection.primitive.PrimitiveLongCollections;
-import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -299,12 +297,6 @@ public class SimpleRandomizedInput implements Input
         public long badEntries()
         {
             return badRelationships.size() + badNodes.size();
-        }
-
-        @Override
-        public PrimitiveLongIterator leftOverDuplicateNodesIds()
-        {
-            return PrimitiveLongCollections.emptyIterator();
         }
 
         @Override

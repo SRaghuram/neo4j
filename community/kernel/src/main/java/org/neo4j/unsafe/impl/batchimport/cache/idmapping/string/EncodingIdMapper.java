@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.function.IntFunction;
 import java.util.function.LongFunction;
 
+import org.neo4j.collection.primitive.PrimitiveLongCollections;
+import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.function.Factory;
 import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.unsafe.impl.batchimport.Utils.CompareType;
@@ -908,7 +910,37 @@ public class EncodingIdMapper implements IdMapper
     @Override
     public long calculateMemoryUsage( long numberOfNodes )
     {
-        int trackerSize = numberOfNodes > TrackerFactories.HIGHEST_ID_FOR_SMALL_TRACKER ? BigIdTracker.ID_SIZE : IntTracker.ID_SIZE;
+        int trackerSize = numberOfNodes > IntTracker.MAX_ID ? BigIdTracker.SIZE : IntTracker.SIZE;
         return numberOfNodes * (Long.BYTES /*data*/ + trackerSize /*tracker*/);
+    }
+
+    @Override
+    public PrimitiveLongIterator leftOverDuplicateNodesIds()
+    {
+        if ( highestSetCollisionIndex == -1 )
+        {
+            return PrimitiveLongCollections.emptyIterator();
+        }
+
+        // Scans duplicate marks in tracker cache. There is no bit left in dataCache to store this bit so we use
+        // the tracker cache as if each index into it was the node id.
+        return new PrimitiveLongCollections.PrimitiveLongBaseIterator()
+        {
+            private long nodeId;
+
+            @Override
+            protected boolean fetchNext()
+            {
+                while ( nodeId <= highestSetIndex )
+                {
+                    long candidate = nodeId++;
+                    if ( trackerCache.isMarkedAsDuplicate( candidate ) )
+                    {
+                        return next( candidate );
+                    }
+                }
+                return false;
+            }
+        };
     }
 }

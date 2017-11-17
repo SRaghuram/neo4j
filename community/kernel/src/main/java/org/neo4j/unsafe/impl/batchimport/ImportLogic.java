@@ -243,7 +243,7 @@ public class ImportLogic implements Closeable
         {
             LongFunction<Object> allIds = new NodeInputIdStoreAccessor( neoStore.getTemporaryPropertyStore() );
             executeStage( new IdMapperPreparationStage( config, idMapper, allIds, badCollector, memoryUsageStats ) );
-            PrimitiveLongIterator duplicateNodeIds = badCollector.leftOverDuplicateNodesIds();
+            PrimitiveLongIterator duplicateNodeIds = idMapper.leftOverDuplicateNodesIds();
             if ( duplicateNodeIds.hasNext() )
             {
                 executeStage( new DeleteDuplicateNodesStage( config, duplicateNodeIds, neoStore ) );
