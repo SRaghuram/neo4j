@@ -80,4 +80,9 @@ public class Groups
     {
         return Arrays.toString( byName.keySet().toArray( new String[byName.keySet().size()] ) );
     }
+
+    public int size()
+    {
+        return nextId;
+    }
 }

@@ -194,7 +194,7 @@ public class CsvInput implements Input
     @Override
     public IdMapper idMapper( NumberArrayFactory numberArrayFactory )
     {
-        return idType.idMapper( numberArrayFactory );
+        return idType.idMapper( numberArrayFactory, groups.size() );
     }
 
     @Override

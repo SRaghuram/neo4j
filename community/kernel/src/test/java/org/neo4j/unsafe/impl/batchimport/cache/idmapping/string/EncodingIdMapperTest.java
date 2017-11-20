@@ -597,7 +597,7 @@ public class EncodingIdMapperTest
             IntFunction<CollisionValues> collisionValuesFactory )
     {
         return new EncodingIdMapper( NumberArrayFactory.HEAP, encoder, radix, monitor, RANDOM_TRACKER_FACTORY,
-                collisionValuesFactory, 1_000, processors, comparator );
+                collisionValuesFactory, 1, 1_000, processors, comparator );
     }
 
     private IntFunction<CollisionValues> autoDetect( Encoder encoder )

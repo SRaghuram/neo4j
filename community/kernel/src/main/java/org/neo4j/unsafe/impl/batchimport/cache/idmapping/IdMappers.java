@@ -116,10 +116,10 @@ public class IdMappers
      * @param cacheFactory {@link NumberArrayFactory} for allocating memory for the cache used by this index.
      * @return {@link IdMapper} for when input ids are strings.
      */
-    public static IdMapper strings( NumberArrayFactory cacheFactory )
+    public static IdMapper strings( NumberArrayFactory cacheFactory, int numberOfGroups )
     {
         return new EncodingIdMapper( cacheFactory, new StringEncoder(), Radix.STRING, NO_MONITOR, dynamic(),
-                numberOfCollisions -> new StringCollisionValues( cacheFactory, numberOfCollisions ) );
+                numberOfCollisions -> new StringCollisionValues( cacheFactory, numberOfCollisions ), numberOfGroups );
     }
 
     /**
@@ -128,9 +128,9 @@ public class IdMappers
      * @param cacheFactory {@link NumberArrayFactory} for allocating memory for the cache used by this index.
      * @return {@link IdMapper} for when input ids are numbers.
      */
-    public static IdMapper longs( NumberArrayFactory cacheFactory )
+    public static IdMapper longs( NumberArrayFactory cacheFactory, int numberOfGroups )
     {
         return new EncodingIdMapper( cacheFactory, new LongEncoder(), Radix.LONG, NO_MONITOR, dynamic(),
-                numberOfCollisions -> new LongCollisionValues( cacheFactory, numberOfCollisions ) );
+                numberOfCollisions -> new LongCollisionValues( cacheFactory, numberOfCollisions ), numberOfGroups );
     }
 }

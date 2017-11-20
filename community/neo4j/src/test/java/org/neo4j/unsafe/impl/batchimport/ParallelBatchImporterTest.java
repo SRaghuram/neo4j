@@ -147,9 +147,9 @@ public class ParallelBatchImporterTest
     {
         return Arrays.<Object[]>asList(
                 // Long input ids, actual node id input
-                new Object[]{new LongInputIdGenerator(), longs( AUTO_WITHOUT_PAGECACHE )},
+                new Object[]{new LongInputIdGenerator(), longs( AUTO_WITHOUT_PAGECACHE, 1 )},
                 // String input ids, generate ids from stores
-                new Object[]{new StringInputIdGenerator(), strings( AUTO_WITHOUT_PAGECACHE )}
+                new Object[]{new StringInputIdGenerator(), strings( AUTO_WITHOUT_PAGECACHE, 2 )}
         );
     }
 

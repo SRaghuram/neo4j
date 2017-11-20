@@ -44,9 +44,9 @@ public enum IdType
         }
 
         @Override
-        public IdMapper idMapper( NumberArrayFactory numberArrayFactory )
+        public IdMapper idMapper( NumberArrayFactory numberArrayFactory, int numberOfGroups )
         {
-            return IdMappers.strings( numberArrayFactory );
+            return IdMappers.strings( numberArrayFactory, numberOfGroups );
         }
     },
 
@@ -63,9 +63,9 @@ public enum IdType
         }
 
         @Override
-        public IdMapper idMapper( NumberArrayFactory numberArrayFactory )
+        public IdMapper idMapper( NumberArrayFactory numberArrayFactory, int numberOfGroups )
         {
-            return IdMappers.longs( numberArrayFactory );
+            return IdMappers.longs( numberArrayFactory, numberOfGroups );
         }
     },
 
@@ -82,7 +82,7 @@ public enum IdType
         }
 
         @Override
-        public IdMapper idMapper( NumberArrayFactory numberArrayFactory )
+        public IdMapper idMapper( NumberArrayFactory numberArrayFactory, int numberOfGroups )
         {
             return IdMappers.actual();
         }
@@ -95,7 +95,7 @@ public enum IdType
         this.idsAreExternal = idsAreExternal;
     }
 
-    public abstract IdMapper idMapper( NumberArrayFactory numberArrayFactory );
+    public abstract IdMapper idMapper( NumberArrayFactory numberArrayFactory, int numberOfGroups );
 
     public boolean idsAreExternal()
     {
