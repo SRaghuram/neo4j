@@ -9,7 +9,7 @@ import java.io.File;
 
 import org.neo4j.causalclustering.core.CommercialCoreGraphDatabase;
 import org.neo4j.causalclustering.readreplica.CommercialReadReplicaGraphDatabase;
-import org.neo4j.dbms.DatabaseManagementSystemSettings;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacadeFactory.Dependencies;
@@ -23,13 +23,13 @@ public class CommercialNeoServer extends EnterpriseNeoServer
 {
     private static final GraphFactory CORE_FACTORY = ( config, dependencies ) ->
     {
-        File storeDir = config.get( DatabaseManagementSystemSettings.database_path );
+        File storeDir = config.get( GraphDatabaseSettings.database_path );
         return new CommercialCoreGraphDatabase( storeDir, config, dependencies );
     };
 
     private static final GraphFactory READ_REPLICA_FACTORY = ( config, dependencies ) ->
     {
-        File storeDir = config.get( DatabaseManagementSystemSettings.database_path );
+        File storeDir = config.get( GraphDatabaseSettings.database_path );
         return new CommercialReadReplicaGraphDatabase( storeDir, config, dependencies );
     };
 
