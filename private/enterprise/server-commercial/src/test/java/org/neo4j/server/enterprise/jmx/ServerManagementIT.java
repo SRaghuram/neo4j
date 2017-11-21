@@ -9,8 +9,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 
-import org.neo4j.dbms.DatabaseManagementSystemSettings;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.GraphDatabaseDependencies;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
@@ -23,6 +21,9 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.data_directory;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.database_path;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 
 public class ServerManagementIT
 {
@@ -47,7 +48,7 @@ public class ServerManagementIT
                     .usingDataDir( dataDirectory1 )
                     .createConfigFiles() )
                 .withHome( baseDir.directory() )
-                .withSetting( GraphDatabaseSettings.logs_directory, baseDir.directory( "logs" ).getPath() )
+                .withSetting( logs_directory, baseDir.directory( "logs" ).getPath() )
                 .build();
 
         // When
@@ -56,17 +57,17 @@ public class ServerManagementIT
         server.start();
 
         assertNotNull( server.getDatabase().getGraph() );
-        assertEquals( config.get( DatabaseManagementSystemSettings.database_path ).getAbsolutePath(),
+        assertEquals( config.get( database_path ).getAbsolutePath(),
                 server.getDatabase().getLocation().getAbsolutePath() );
 
         // Change the database location
-        config.augment( DatabaseManagementSystemSettings.data_directory, dataDirectory2 );
+        config.augment( data_directory, dataDirectory2 );
         ServerManagement bean = new ServerManagement( server );
         bean.restartServer();
 
         // Then
         assertNotNull( server.getDatabase().getGraph() );
-        assertEquals( config.get( DatabaseManagementSystemSettings.database_path ).getAbsolutePath(),
+        assertEquals( config.get( database_path ).getAbsolutePath(),
                 server.getDatabase().getLocation().getAbsolutePath() );
     }
 
