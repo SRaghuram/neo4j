@@ -86,4 +86,9 @@ class RelationshipTypeDistributionStorage
             return new RelationshipTypeDistribution( entries );
         }
     }
+
+    void remove()
+    {
+        fs.deleteFile( file );
+    }
 }

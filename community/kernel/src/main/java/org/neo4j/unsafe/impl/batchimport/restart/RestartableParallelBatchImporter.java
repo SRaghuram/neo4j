@@ -194,8 +194,8 @@ public class RestartableParallelBatchImporter implements BatchImporter
         return prefetching( states.iterator() );
     }
 
-    private static void fastForwardToLastCompletedState( BatchingNeoStores store, StateStorage stateStore, String stateName, byte[] checkPoint,
-            PrefetchingIterator<State> states ) throws IOException
+    private static void fastForwardToLastCompletedState( BatchingNeoStores store, StateStorage stateStore, String stateName,
+            byte[] checkPoint, PrefetchingIterator<State> states ) throws IOException
     {
         if ( STATE_NEW_IMPORT.equals( stateName ) )
         {
@@ -235,7 +235,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         }
     }
 
-    private static void runRemainingStates( BatchingNeoStores store, StateStorage stateStore, byte[] checkPoint,
+    private void runRemainingStates( BatchingNeoStores store, StateStorage stateStore, byte[] checkPoint,
             Iterator<State> states ) throws IOException
     {
         while ( states.hasNext() )
@@ -248,7 +248,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         }
     }
 
-    private static void writeState( BatchingNeoStores store, StateStorage state, String stateName, byte[] checkPoint ) throws IOException
+    private void writeState( BatchingNeoStores store, StateStorage state, String stateName, byte[] checkPoint ) throws IOException
     {
         store.flushAndForce();
         if ( stateName != null )
@@ -258,6 +258,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         else
         {
             state.remove();
+            relationshipTypeDistributionStorage.remove();
         }
     }
 
