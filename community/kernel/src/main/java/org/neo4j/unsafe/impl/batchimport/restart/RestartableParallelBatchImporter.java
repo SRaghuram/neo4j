@@ -259,7 +259,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         else
         {
             state.remove();
-            relationshipTypeDistributionStorage.remove();
+            dataStatisticsStorage.remove();
         }
     }
 
