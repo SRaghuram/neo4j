@@ -128,7 +128,7 @@ public interface Configuration
      */
     default boolean sequentialBackgroundFlushing()
     {
-        return true;
+        return !parallelRecordReadsWhenWriting();
     }
 
     /**
