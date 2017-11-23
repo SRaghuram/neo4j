@@ -114,7 +114,6 @@ public class ImportLogic implements Closeable
     private IoMonitor writeMonitor;
     private IdMapper idMapper;
     private IdGenerator idGenerator;
-    private MemoryUsageStatsProvider memoryUsageStats;
     private InputIterable<InputNode> nodes;
     private InputIterable<InputRelationship> relationships;
     private long peakMemoryUsage;
@@ -159,7 +158,6 @@ public class ImportLogic implements Closeable
         idMapper = input.idMapper( numberArrayFactory );
         idGenerator = input.idGenerator();
         nodeRelationshipCache = new NodeRelationshipCache( numberArrayFactory, config.denseNodeThreshold() );
-        memoryUsageStats = new MemoryUsageStatsProvider( nodeRelationshipCache, idMapper, neoStore );
         nodes = input.nodes();
         relationships = input.relationships();
         Estimates inputEstimates = input.calculateEstimates( neoStore.getPropertyStore().newValueEncodedSizeCalculator() );
@@ -225,6 +223,7 @@ public class ImportLogic implements Closeable
     {
         // Import nodes, properties, labels
         Configuration nodeConfig = configWithRecordsPerPageBasedBatchSize( config, neoStore.getNodeStore() );
+        MemoryUsageStatsProvider memoryUsageStats = new MemoryUsageStatsProvider( neoStore, idMapper );
         NodeStage nodeStage = new NodeStage( nodeConfig, writeMonitor,
                 nodes, idMapper, idGenerator, neoStore, inputCache, neoStore.getLabelScanStore(),
                 storeUpdateMonitor, memoryUsageStats );
@@ -242,6 +241,7 @@ public class ImportLogic implements Closeable
         if ( idMapper.needsPreparation() )
         {
             LongFunction<Object> allIds = new NodeInputIdStoreAccessor( neoStore.getTemporaryPropertyStore() );
+            MemoryUsageStatsProvider memoryUsageStats = new MemoryUsageStatsProvider( neoStore, idMapper );
             executeStage( new IdMapperPreparationStage( config, idMapper, allIds, badCollector, memoryUsageStats ) );
             PrimitiveLongIterator duplicateNodeIds = idMapper.leftOverDuplicateNodesIds();
             if ( duplicateNodeIds.hasNext() )
@@ -264,9 +264,10 @@ public class ImportLogic implements Closeable
         // Import relationships (unlinked), properties
         Configuration relationshipConfig =
                 configWithRecordsPerPageBasedBatchSize( config, neoStore.getRelationshipStore() );
+        MemoryUsageStatsProvider memoryUsageStats = new MemoryUsageStatsProvider( neoStore, idMapper );
         RelationshipStage unlinkedRelationshipStage =
                 new RelationshipStage( relationshipConfig, writeMonitor, relationships, idMapper,
-                        badCollector, inputCache, neoStore, storeUpdateMonitor );
+                        badCollector, inputCache, neoStore, storeUpdateMonitor, memoryUsageStats );
         neoStore.startFlushingPageCache();
         executeStage( unlinkedRelationshipStage );
         neoStore.stopFlushingPageCache();
@@ -285,6 +286,7 @@ public class ImportLogic implements Closeable
         Configuration relationshipConfig =
                 configWithRecordsPerPageBasedBatchSize( config, neoStore.getRelationshipStore() );
         nodeRelationshipCache.setNodeCount( neoStore.getNodeStore().getHighId() );
+        MemoryUsageStatsProvider memoryUsageStats = new MemoryUsageStatsProvider( neoStore, nodeRelationshipCache );
         NodeDegreeCountStage nodeDegreeStage = new NodeDegreeCountStage( relationshipConfig,
                 neoStore.getRelationshipStore(), nodeRelationshipCache, memoryUsageStats );
         executeStage( nodeDegreeStage );
@@ -328,6 +330,7 @@ public class ImportLogic implements Closeable
 
         // Link relationships together with each other, their nodes and their relationship groups
         DataStatistics relationshipTypeDistribution = getState( DataStatistics.class );
+        MemoryUsageStatsProvider memoryUsageStats = new MemoryUsageStatsProvider( neoStore, nodeRelationshipCache );
 
         // Figure out which types we can fit in node-->relationship cache memory.
         // Types go from biggest to smallest group and so towards the end there will be
@@ -452,7 +455,7 @@ public class ImportLogic implements Closeable
         {
             MigrationProgressMonitor progressMonitor = new SilentMigrationProgressMonitor();
             nodeLabelsCache = new NodeLabelsCache( numberArrayFactory, neoStore.getLabelRepository().getHighId() );
-            memoryUsageStats = new MemoryUsageStatsProvider( nodeLabelsCache );
+            MemoryUsageStatsProvider memoryUsageStats = new MemoryUsageStatsProvider( neoStore, nodeLabelsCache );
             executeStage( new NodeCountsStage( config, nodeLabelsCache, neoStore.getNodeStore(),
                     neoStore.getLabelRepository().getHighId(), countsUpdater, progressMonitor.startSection( "Nodes" ),
                     memoryUsageStats ) );
