@@ -440,7 +440,7 @@ public class ImportTool
             if ( !skipBadEntriesLogging )
             {
                 badFile = new File( storeDir, BAD_FILE_NAME );
-                badOutput = new BufferedOutputStream( fs.openAsOutputStream( badFile, false ) );
+                badOutput = new BufferedOutputStream( fs.openAsOutputStream( badFile, true ) );
             }
             nodesFiles = extractInputFiles( args, Options.NODE_DATA.key(), err );
             relationshipsFiles = extractInputFiles( args, Options.RELATIONSHIP_DATA.key(), err );
