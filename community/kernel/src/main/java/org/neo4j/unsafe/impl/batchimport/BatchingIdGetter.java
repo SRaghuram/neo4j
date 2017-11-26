@@ -22,9 +22,11 @@ package org.neo4j.unsafe.impl.batchimport;
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.kernel.impl.store.RecordStore;
+import org.neo4j.kernel.impl.store.id.IdRange;
 import org.neo4j.kernel.impl.store.id.IdRangeIterator;
 import org.neo4j.kernel.impl.store.id.IdSequence;
 import org.neo4j.kernel.impl.store.id.RenewableBatchIdSequences;
+import org.neo4j.kernel.impl.store.id.validation.IdValidator;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 
 /**
@@ -57,7 +59,12 @@ public class BatchingIdGetter extends PrimitiveLongCollections.PrimitiveLongBase
         long id;
         if ( batch == null || (id = batch.nextId()) == -1 )
         {
-            batch = new IdRangeIterator( source.nextIdBatch( batchSize ) );
+            IdRange idRange = source.nextIdBatch( batchSize );
+            while ( IdValidator.hasReservedIdInRange( idRange.getRangeStart(), idRange.getRangeStart() + idRange.getRangeLength() ) )
+            {
+                idRange = source.nextIdBatch( batchSize );
+            }
+            batch = new IdRangeIterator( idRange );
             id = batch.nextId();
         }
         return next( id );
