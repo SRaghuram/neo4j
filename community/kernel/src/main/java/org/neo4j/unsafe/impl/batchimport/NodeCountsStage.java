@@ -21,7 +21,6 @@ package org.neo4j.unsafe.impl.batchimport;
 
 import org.neo4j.kernel.impl.api.CountsAccessor;
 import org.neo4j.kernel.impl.store.NodeStore;
-import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.storemigration.monitoring.MigrationProgressMonitor;
 import org.neo4j.unsafe.impl.batchimport.cache.NodeLabelsCache;
 import org.neo4j.unsafe.impl.batchimport.staging.BatchFeedStep;
@@ -30,6 +29,7 @@ import org.neo4j.unsafe.impl.batchimport.staging.Stage;
 import org.neo4j.unsafe.impl.batchimport.stats.StatsProvider;
 
 import static org.neo4j.unsafe.impl.batchimport.RecordIdIterator.allIn;
+import static org.neo4j.unsafe.impl.batchimport.staging.Step.RECYCLE_BATCHES;
 
 /**
  * Reads all records from {@link NodeStore} and process the counts in them, populating {@link NodeLabelsCache}
@@ -43,9 +43,9 @@ public class NodeCountsStage extends Stage
             CountsAccessor.Updater countsUpdater, MigrationProgressMonitor.Section progressMonitor,
             StatsProvider... additionalStatsProviders )
     {
-        super( NAME, null, config, 0 );
+        super( NAME, null, config, RECYCLE_BATCHES );
         add( new BatchFeedStep( control(), config, allIn( nodeStore, config ), nodeStore.getRecordSize() ) );
-        add( new ReadRecordsStep<>( control(), config, false, nodeStore, null, NodeRecord.class ) );
+        add( new ReadRecordsStep<>( control(), config, false, nodeStore ) );
         add( new RecordProcessorStep<>( control(), "COUNT", config,
                 new NodeCountsProcessor( nodeStore, cache, highLabelId, countsUpdater, progressMonitor ), true,
                 additionalStatsProviders ) );

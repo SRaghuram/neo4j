@@ -19,6 +19,8 @@
  */
 package org.neo4j.unsafe.impl.batchimport.staging;
 
+import java.util.function.Supplier;
+
 import org.neo4j.helpers.Exceptions;
 
 /**
@@ -46,11 +48,23 @@ public class SimpleStageControl implements StageControl
         }
     }
 
+    @Override
     public void assertHealthy()
     {
         if ( panic != null )
         {
             throw Exceptions.launderedException( panic );
         }
+    }
+
+    @Override
+    public void recycle( Object batch )
+    {
+    }
+
+    @Override
+    public <T> T reuse( Supplier<T> fallback )
+    {
+        return fallback.get();
     }
 }

@@ -19,13 +19,10 @@
  */
 package org.neo4j.unsafe.impl.batchimport.staging;
 
-import java.util.function.Predicate;
-
 import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.RecordCursor;
 import org.neo4j.kernel.impl.store.RecordStore;
-import org.neo4j.kernel.impl.store.id.validation.IdValidator;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
@@ -40,23 +37,20 @@ import org.neo4j.unsafe.impl.batchimport.Configuration;
 public class ReadRecordsStep<RECORD extends AbstractBaseRecord> extends ProcessorStep<PrimitiveLongIterator>
 {
     private final RecordStore<RECORD> store;
-    private final Predicate<RECORD> filter;
     private final int batchSize;
-    private final DataAssembler<RECORD> converter;
+    private final RecordDataAssembler<RECORD> assembler;
 
-    public ReadRecordsStep( StageControl control, Configuration config, boolean inRecordWritingStage,
-            RecordStore<RECORD> store, Predicate<RECORD> filter, Class<RECORD> klass )
+    public ReadRecordsStep( StageControl control, Configuration config, boolean inRecordWritingStage, RecordStore<RECORD> store )
     {
-        this( control, config, inRecordWritingStage, store, filter, new RecordDataAssembler<>( klass ) );
+        this( control, config, inRecordWritingStage, store, new RecordDataAssembler<>( store::newRecord, record -> true ) );
     }
 
     public ReadRecordsStep( StageControl control, Configuration config, boolean inRecordWritingStage,
-            RecordStore<RECORD> store, Predicate<RECORD> filter, DataAssembler<RECORD> converter )
+            RecordStore<RECORD> store, RecordDataAssembler<RECORD> converter )
     {
         super( control, ">", config, parallelReading( config, inRecordWritingStage ) ? 0 : 1 );
         this.store = store;
-        this.filter = filter;
-        this.converter = converter;
+        this.assembler = converter;
         this.batchSize = config.batchSize();
     }
 
@@ -81,17 +75,18 @@ public class ReadRecordsStep<RECORD extends AbstractBaseRecord> extends Processo
         }
 
         long id = idRange.next();
-        RECORD record = store.newRecord();
-        Object batchObject = converter.newBatchObject( batchSize );
+        RECORD[] batch = control.reuse( () -> assembler.newBatchObject( batchSize ) );
         int i = 0;
-        try ( RecordCursor<RECORD> cursor = store.newRecordCursor( record ).acquire( id, RecordLoad.CHECK ) )
+        // Just use the first record in the batch here to satisfy the record cursor.
+        // The truth is that we'll be using the read method which accepts an external record anyway so it doesn't matter.
+        try ( RecordCursor<RECORD> cursor = store.newRecordCursor( batch[0] ).acquire( id, RecordLoad.CHECK ) )
         {
             boolean hasNext = true;
             while ( hasNext )
             {
-                if ( cursor.next( id ) && !IdValidator.isReservedId( record.getId() ) && (filter == null || filter.test( record )) )
+                if ( assembler.append( cursor, batch, id, i ) )
                 {
-                    converter.append( batchObject, record, i++ );
+                    i++;
                 }
                 if ( hasNext = idRange.hasNext() )
                 {
@@ -100,6 +95,6 @@ public class ReadRecordsStep<RECORD extends AbstractBaseRecord> extends Processo
             }
         }
 
-        sender.send( converter.cutOffAt( batchObject, i ) );
+        sender.send( assembler.cutOffAt( batch, i ) );
     }
 }

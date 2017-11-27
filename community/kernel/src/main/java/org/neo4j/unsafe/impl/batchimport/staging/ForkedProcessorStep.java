@@ -149,7 +149,6 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
 
     protected abstract void forkedProcess( int id, int processors, T batch ) throws Throwable;
 
-    @SuppressWarnings( "unchecked" )
     void sendDownstream( Unit unit )
     {
         downstreamIdleTime.add( downstream.receive( unit.ticket, unit.batch ) );
@@ -228,6 +227,10 @@ public abstract class ForkedProcessorStep<T> extends AbstractStep<T>
                     if ( downstream != null )
                     {
                         sendDownstream( candidate );
+                    }
+                    else
+                    {
+                        control.recycle( candidate.batch );
                     }
                     current = candidate;
                     tail.set( current );

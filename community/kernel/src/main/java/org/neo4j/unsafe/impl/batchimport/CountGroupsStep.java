@@ -19,6 +19,7 @@
  */
 package org.neo4j.unsafe.impl.batchimport;
 
+import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.unsafe.impl.batchimport.staging.BatchSender;
 import org.neo4j.unsafe.impl.batchimport.staging.ProcessorStep;
 import org.neo4j.unsafe.impl.batchimport.staging.StageControl;
@@ -28,7 +29,7 @@ import org.neo4j.unsafe.impl.batchimport.stats.StatsProvider;
  * After this step is {@link #done()} all BOTH ID fields in the rel group cache will contain,
  * for each node, the absolute number of groups from node 0 up to this point there is.
  */
-public class CountGroupsStep extends ProcessorStep<long[]>
+public class CountGroupsStep extends ProcessorStep<RelationshipGroupRecord[]>
 {
     private final RelationshipGroupCache cache;
 
@@ -40,11 +41,14 @@ public class CountGroupsStep extends ProcessorStep<long[]>
     }
 
     @Override
-    protected void process( long[] batch, BatchSender sender ) throws Throwable
+    protected void process( RelationshipGroupRecord[] batch, BatchSender sender ) throws Throwable
     {
-        for ( long nodeId : batch )
+        for ( RelationshipGroupRecord record : batch )
         {
-            cache.incrementGroupCount( nodeId );
+            if ( record.inUse() )
+            {
+                cache.incrementGroupCount( record.getOwningNode() );
+            }
         }
     }
 }

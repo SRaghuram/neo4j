@@ -21,6 +21,7 @@ package org.neo4j.unsafe.impl.batchimport;
 
 import org.junit.Test;
 
+import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.unsafe.impl.batchimport.cache.NodeRelationshipCache;
 import org.neo4j.unsafe.impl.batchimport.staging.StageControl;
 
@@ -45,12 +46,11 @@ public class CalculateDenseNodesStepTest
             step.start( 0 );
 
             // WHEN
-            long id = 0;
-            long[] batch = new long[] {
-                    1, 5,
-                    3, 10,
-                    2, 2, // <-- the loop
-                    4, 1 };
+            RelationshipRecord[] batch = new RelationshipRecord[] {
+                    record( 1, 5 ),
+                    record( 3, 10 ),
+                    record( 2, 2 ), // <-- the loop
+                    record( 4, 1 ) };
             step.receive( 0, batch );
             step.endOfUpstream();
             while ( !step.isCompleted() )
@@ -66,5 +66,14 @@ public class CalculateDenseNodesStepTest
             verify( cache, times( 1 ) ).incrementCount( eq( 5L ) );
             verify( cache, times( 1 ) ).incrementCount( eq( 10L ) );
         }
+    }
+
+    private RelationshipRecord record( long startNode, long endNode )
+    {
+        RelationshipRecord record = new RelationshipRecord( 0 );
+        record.setInUse( true );
+        record.setFirstNode( startNode );
+        record.setSecondNode( endNode );
+        return record;
     }
 }

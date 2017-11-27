@@ -22,16 +22,16 @@ package org.neo4j.unsafe.impl.batchimport;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.impl.api.CountsAccessor;
 import org.neo4j.kernel.impl.store.NodeStore;
-import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.storemigration.monitoring.MigrationProgressMonitor;
 import org.neo4j.unsafe.impl.batchimport.cache.NodeLabelsCache;
 import org.neo4j.unsafe.impl.batchimport.staging.BatchFeedStep;
 import org.neo4j.unsafe.impl.batchimport.staging.ReadRecordsStep;
 import org.neo4j.unsafe.impl.batchimport.staging.Stage;
-import org.neo4j.unsafe.impl.batchimport.staging.Step;
 import org.neo4j.unsafe.impl.batchimport.stats.StatsProvider;
 
 import static org.neo4j.unsafe.impl.batchimport.RecordIdIterator.allIn;
+import static org.neo4j.unsafe.impl.batchimport.staging.Step.ORDER_SEND_DOWNSTREAM;
+import static org.neo4j.unsafe.impl.batchimport.staging.Step.RECYCLE_BATCHES;
 
 /**
  * Counts nodes and their labels and also builds {@link LabelScanStore label index} while doing so.
@@ -44,9 +44,9 @@ public class NodeCountsAndLabelIndexBuildStage extends Stage
             int highLabelId, CountsAccessor.Updater countsUpdater, MigrationProgressMonitor.Section progressReporter,
             LabelScanStore labelIndex, StatsProvider... additionalStatsProviders )
     {
-        super( NAME, null, config, Step.ORDER_SEND_DOWNSTREAM );
+        super( NAME, null, config, ORDER_SEND_DOWNSTREAM | RECYCLE_BATCHES );
         add( new BatchFeedStep( control(), config, allIn( nodeStore, config ), nodeStore.getRecordSize() ) );
-        add( new ReadRecordsStep<>( control(), config, false, nodeStore, null, NodeRecord.class ) );
+        add( new ReadRecordsStep<>( control(), config, false, nodeStore ) );
         add( new LabelIndexWriterStep( control(), config, labelIndex, nodeStore ) );
         add( new RecordProcessorStep<>( control(), "COUNT", config, new NodeCountsProcessor(
                 nodeStore, cache, highLabelId, countsUpdater, progressReporter ), true, additionalStatsProviders ) );

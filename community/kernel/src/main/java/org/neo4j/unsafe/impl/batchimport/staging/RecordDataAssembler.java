@@ -20,38 +20,54 @@
 package org.neo4j.unsafe.impl.batchimport.staging;
 
 import java.lang.reflect.Array;
-import java.util.Arrays;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
+import org.neo4j.kernel.impl.store.RecordCursor;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
+import org.neo4j.kernel.impl.store.record.RecordLoad;
 
-public class RecordDataAssembler<RECORD extends AbstractBaseRecord> implements DataAssembler<RECORD>
+public class RecordDataAssembler<RECORD extends AbstractBaseRecord>
 {
+    private final Supplier<RECORD> factory;
     private final Class<RECORD> klass;
+    private final Predicate<RECORD> filter;
 
-    public RecordDataAssembler( Class<RECORD> klass )
+    @SuppressWarnings( "unchecked" )
+    public RecordDataAssembler( Supplier<RECORD> factory, Predicate<RECORD> filter )
     {
-        this.klass = klass;
-    }
-
-    @Override
-    public Object newBatchObject( int batchSize )
-    {
-        return Array.newInstance( klass, batchSize );
+        this.factory = factory;
+        this.filter = filter;
+        this.klass = (Class<RECORD>) factory.get().getClass();
     }
 
     @SuppressWarnings( "unchecked" )
-    @Override
-    public void append( Object batchObject, RECORD item, int index )
+    public RECORD[] newBatchObject( int batchSize )
     {
-        RECORD[] array = (RECORD[]) batchObject;
-        array[index] = (RECORD) item.clone();
+        Object array = Array.newInstance( klass, batchSize );
+        for ( int i = 0; i < batchSize; i++ )
+        {
+            Array.set( array, i, factory.get() );
+        }
+        return (RECORD[]) array;
     }
 
-    @SuppressWarnings( "unchecked" )
-    @Override
-    public Object cutOffAt( Object batchObject, int length )
+    public boolean append( RecordCursor<RECORD> cursor, RECORD[] array, long id, int index )
     {
-        RECORD[] array = (RECORD[]) batchObject;
-        return array.length == length ? array : Arrays.copyOf( array, length );
+        RECORD record = array[index];
+        if ( !cursor.next( id, record, RecordLoad.CHECK ) || (filter != null && !filter.test( record )) )
+        {
+            return false;
+        }
+        return true;
+    }
+
+    public RECORD[] cutOffAt( RECORD[] array, int length )
+    {
+        for ( int i = length; i < array.length; i++ )
+        {
+            array[i].clear();
+        }
+        return array;
     }
 }
