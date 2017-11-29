@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.neo4j.csv.reader.CharReadable;
+import org.neo4j.csv.reader.CharSeeker;
 import org.neo4j.csv.reader.Chunker;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.csv.reader.Source.Chunk;
@@ -33,6 +34,7 @@ import static org.neo4j.csv.reader.CharSeekers.charSeeker;
 
 public class EagerParserChunker implements Chunker
 {
+    private final CharSeeker seeker;
     private final CsvInputParser parser;
     private final int chunkSize;
 
@@ -40,14 +42,13 @@ public class EagerParserChunker implements Chunker
             int chunkSize, Configuration config )
     {
         this.chunkSize = chunkSize;
-        this.parser = new CsvInputParser( charSeeker( reader, config, true ), config.delimiter(),
-                idType, header, badCollector, extractors );
+        this.seeker = charSeeker( reader, config, true );
+        this.parser = new CsvInputParser( seeker, config.delimiter(), idType, header, badCollector, extractors );
     }
 
     @Override
     public boolean nextChunk( Chunk chunk ) throws IOException
     {
-        // TODO parse yey amount of entities into the chunk, which is a specific chunk that can accept those entities directly.
         InputEntity[] entities = new InputEntity[chunkSize];
         int cursor = 0;
         for ( ; cursor < chunkSize && parser.next( entities[cursor] = new InputEntity() ); cursor++ )
@@ -63,8 +64,15 @@ public class EagerParserChunker implements Chunker
     }
 
     @Override
+    public long position()
+    {
+        return seeker.position();
+    }
+
+    @Override
     public void close() throws IOException
     {
+        parser.close();
     }
 
     @Override

@@ -44,7 +44,7 @@ public class InputEntity implements InputEntityVisitor, Cloneable
 
     public InputEntity()
     {
-        this( new InputEntityVisitor.Adapter() );
+        this( InputEntityVisitor.NULL );
     }
 
     public boolean hasPropertyId;

@@ -64,9 +64,11 @@ public class CsvInputChunk implements InputChunk
      * @param header {@link Header} spec to read data according to.
      * @param decorator additional decoration of the {@link InputEntityVisitor} coming into
      * {@link #next(InputEntityVisitor)}.
+     * @throws IOException on I/O error.
      */
-    boolean initialize( CharSeeker seeker, Header header, Decorator decorator )
+    boolean initialize( CharSeeker seeker, Header header, Decorator decorator ) throws IOException
     {
+        closeCurrentParser();
         this.decorator = decorator;
         this.visitor = null;
         this.parser = new CsvInputParser( seeker, delimiter, idType, header, badCollector, extractors );
@@ -75,6 +77,14 @@ public class CsvInputChunk implements InputChunk
             return false;
         }
         return true;
+    }
+
+    private void closeCurrentParser() throws IOException
+    {
+        if ( parser != null )
+        {
+            parser.close();
+        }
     }
 
     @Override
@@ -103,5 +113,6 @@ public class CsvInputChunk implements InputChunk
     @Override
     public void close() throws IOException
     {
+        closeCurrentParser();
     }
 }

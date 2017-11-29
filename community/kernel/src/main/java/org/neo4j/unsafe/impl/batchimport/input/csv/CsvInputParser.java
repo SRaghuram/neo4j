@@ -19,6 +19,7 @@
  */
 package org.neo4j.unsafe.impl.batchimport.input.csv;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Array;
 
@@ -37,7 +38,7 @@ import org.neo4j.unsafe.impl.batchimport.input.csv.Header.Entry;
 
 import static java.lang.String.format;
 
-public class CsvInputParser
+public class CsvInputParser implements Closeable
 {
     private final CharSeeker seeker;
     private final Mark mark = new Mark();
@@ -242,5 +243,11 @@ public class CsvInputParser
     private static boolean isEmptyArray( Object value )
     {
         return value.getClass().isArray() && Array.getLength( value ) == 0;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+        seeker.close();
     }
 }

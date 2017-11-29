@@ -99,7 +99,7 @@ class CsvInputIterator implements SourceTraceability, Closeable
         return false;
     }
 
-    private boolean initialized( InputChunk chunk, CharSeeker seeker )
+    private boolean initialized( InputChunk chunk, CharSeeker seeker ) throws IOException
     {
         CsvInputChunk csvChunk = (CsvInputChunk) chunk;
         return csvChunk.initialize( seeker, header.clone(), decorator );
@@ -120,7 +120,7 @@ class CsvInputIterator implements SourceTraceability, Closeable
     @Override
     public long position()
     {
-        return stream.position();
+        return chunker.position();
     }
 
     private static CharSeeker seeker( Chunk chunk, Configuration config )
