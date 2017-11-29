@@ -21,6 +21,7 @@ import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.TestDirectory;
@@ -115,7 +116,7 @@ public class EncryptedBackupIT
         int noOfReadReplicas = 0;
 
         return new Cluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, new SslHazelcastDiscoveryServiceFactory(), coreParams, emptyMap(),
-                readReplicaParams, emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
+                readReplicaParams, emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false, new Monitors() );
     }
 
     private static void installCryptographicObjectsToEachCore( Cluster cluster, FileSystemRule fsRule ) throws IOException
