@@ -283,38 +283,6 @@ public class BufferedCharSeeker implements CharSeeker
 
         absoluteBufferStartPosition += dataLength;
 
-//<<<<<<< HEAD
-//            // Fill the buffer with new characters
-//            Chunk nextChunk = source.nextChunk( first ? -1 : seekStartPos );
-//            if ( nextChunk.backPosition() == nextChunk.startPosition() + nextChunk.length() )
-//            {
-//                return false;
-//            }
-//            buffer = nextChunk.data();
-//            dataLength = nextChunk.length();
-//            dataCapacity = nextChunk.maxFieldSize();
-//            bufferPos = nextChunk.startPosition();
-//            bufferStartPos = bufferPos;
-//            bufferEnd = bufferPos + dataLength;
-//            int shift = seekStartPos - nextChunk.backPosition();
-//            seekStartPos = nextChunk.backPosition();
-//            if ( first )
-//            {
-//                lineStartPos = seekStartPos;
-//            }
-//            else
-//            {
-//                lineStartPos -= shift;
-//            }
-//            String sourceDescriptionAfterRead = nextChunk.sourceDescription();
-//            if ( !sourceDescriptionAfterRead.equals( sourceDescription ) )
-//            {   // We moved over to a new source, reset line number
-//                lineNumber = 0;
-//                sourceDescription = sourceDescriptionAfterRead;
-//            }
-//            currentChunk = nextChunk;
-//            return dataLength > 0;
-//=======
         // Fill the buffer with new characters
         Chunk nextChunk = source.nextChunk( first ? -1 : seekStartPos );
         if ( nextChunk == Source.EMPTY_CHUNK )

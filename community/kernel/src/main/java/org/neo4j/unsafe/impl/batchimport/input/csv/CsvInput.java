@@ -242,24 +242,24 @@ public class CsvInput implements Input
                                 idType, badCollector, extractors( config ) );
                               InputEntity entity = new InputEntity() )
                         {
+                            int entities = 0;
+                            int properties = 0;
+                            int propertySize = 0;
+                            int additional = 0;
                             while ( iterator.position() < ESTIMATE_SAMPLE_SIZE && iterator.next( chunk ) )
                             {
-                                int entities = 0;
-                                int properties = 0;
-                                int propertySize = 0;
-                                int additional = 0;
                                 for ( ; chunk.next( entity ); entities++ )
                                 {
                                     properties += entity.propertyCount();
                                     propertySize += calculatePropertySize( entity, valueSizeCalculator );
                                     additional += additionalCalculator.applyAsInt( entity );
                                 }
-                                long entityCount = entities > 0 ? (long) (((double) source.length() / iterator.position()) * entities) : 0;
-                                estimates[0] += entityCount;
-                                estimates[1] += ((double) properties / entities) * entityCount;
-                                estimates[2] += ((double) propertySize / entities) * entityCount;
-                                estimates[3] += ((double) additional / entities) * entityCount;
                             }
+                            long entityCount = entities > 0 ? (long) (((double) source.length() / iterator.position()) * entities) : 0;
+                            estimates[0] += entityCount;
+                            estimates[1] += ((double) properties / entities) * entityCount;
+                            estimates[2] += ((double) propertySize / entities) * entityCount;
+                            estimates[3] += ((double) additional / entities) * entityCount;
                         }
                     }
                 }
