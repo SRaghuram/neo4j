@@ -20,10 +20,10 @@ public class CommercialCluster extends Cluster
                               DiscoveryServiceFactory discoveryServiceFactory,
                               Map<String,String> coreParams, Map<String,IntFunction<String>> instanceCoreParams,
                               Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
-                              String recordFormat, IpFamily ipFamily, boolean useWildcard )
+                              String recordFormat, IpFamily ipFamily, boolean useWildcard, Monitors monitors )
     {
         super( parentDir, noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, coreParams, instanceCoreParams,
-                readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard );
+                readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, new Monitors() );
     }
 
     protected CoreClusterMember createCoreClusterMember( int serverId,
@@ -32,7 +32,8 @@ public class CommercialCluster extends Cluster
                                                        List<AdvertisedSocketAddress> initialHosts,
                                                        String recordFormat,
                                                        Map<String, String> extraParams,
-                                                       Map<String, IntFunction<String>> instanceExtraParams )
+                                                       Map<String, IntFunction<String>> instanceExtraParams,
+                                                       Monitors monitors )
     {
         int txPort = PortAuthority.allocatePort();
         int raftPort = PortAuthority.allocatePort();
@@ -56,7 +57,8 @@ public class CommercialCluster extends Cluster
                 extraParams,
                 instanceExtraParams,
                 listenAddress,
-                advertisedAddress
+                advertisedAddress,
+                monitors
         );
     }
 

@@ -14,6 +14,7 @@ import org.neo4j.causalclustering.core.CommercialCoreGraphDatabase;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.GraphDatabaseDependencies;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.monitoring.Monitors;
 
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
@@ -36,11 +37,12 @@ public class CommercialCoreClusterMember extends CoreClusterMember
                                         Map<String, String> extraParams,
                                         Map<String, IntFunction<String>> instanceExtraParams,
                                         String listenAddress,
-                                        String advertisedAddress )
+                                        String advertisedAddress,
+                                        Monitors monitors)
     {
         super( serverId, discoveryPort, txPort, raftPort, boltPort, httpPort, backupPort, clusterSize, addresses,
                 discoveryServiceFactory, recordFormat, parentDir, extraParams, instanceExtraParams, listenAddress,
-                advertisedAddress );
+                advertisedAddress, monitors );
     }
 
     @Override
