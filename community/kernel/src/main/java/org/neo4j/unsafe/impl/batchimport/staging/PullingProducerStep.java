@@ -25,6 +25,11 @@ import static java.lang.System.nanoTime;
 
 public abstract class PullingProducerStep extends ProducerStep
 {
+    public PullingProducerStep( StageControl control, String name, Configuration config )
+    {
+        super( control, name, config );
+    }
+
     public PullingProducerStep( StageControl control, Configuration config )
     {
         super( control, config );

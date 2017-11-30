@@ -19,19 +19,13 @@
  */
 package org.neo4j.unsafe.impl.batchimport.staging;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.LongFunction;
 
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.helpers.Format;
-import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.impl.cache.MeasureDoNothing;
 import org.neo4j.kernel.impl.cache.MeasureDoNothing.CollectingMonitor;
 import org.neo4j.kernel.impl.util.OsBeanUtil;
@@ -80,7 +74,6 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
 
     private final List<StageDetails> details = new ArrayList<>();
     private final PrintStream out;
-    private final Map<String,Pair<String,Runnable>> actions = new HashMap<>();
     private final CollectingMonitor gcBlockTime = new CollectingMonitor();
     private final MeasureDoNothing gcMonitor;
     private final Monitor monitor;
@@ -92,9 +85,6 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
     {
         this.out = out;
         this.monitor = monitor;
-        this.actions.put( "i", Pair.of( "Print more detailed information", this::printDetails ) );
-        this.actions.put( "c", Pair.of( "Print more detailed information about current stage", this::printDetailsForCurrentStage ) );
-        this.actions.put( "gc", Pair.of( "Trigger GC", this::triggerGC ) );
         this.gcMonitor = new MeasureDoNothing( "Importer GC monitor", gcBlockTime, 100, 200 );
     }
 
@@ -102,7 +92,17 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
     public void initialize( DependencyResolver dependencyResolver )
     {
         out.println( "Interactive command list (end with ENTER):" );
-        actions.forEach( ( key, action ) -> out.println( "  " + key + ": " + action.first() ) );
+        try
+        {
+            InputCommands commands = dependencyResolver.resolveDependency( InputCommands.class );
+            commands.add( "i", "Print more detailed information", this::printDetails );
+            commands.add( "c", "Print more detailed information about current stage", this::printDetailsForCurrentStage );
+            commands.add( "gc", "Trigger GC", this::triggerGC );
+        }
+        catch ( IllegalArgumentException e )
+        {
+            // It's OK
+        }
         out.println();
         gcMonitor.start();
     }
@@ -124,7 +124,7 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
     {
         if ( printDetailsOnDone )
         {
-            printDetails();
+            printDetails( "" );
         }
         gcMonitor.stopMeasuring();
     }
@@ -139,10 +139,9 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
     public void check( StageExecution execution )
     {
         current.collect();
-        reactToUserInput();
     }
 
-    private void printDetails()
+    private void printDetails( String line )
     {
         printDetailsHeadline();
         long totalTime = 0;
@@ -173,7 +172,7 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
         monitor.detailsPrinted();
     }
 
-    private void printDetailsForCurrentStage()
+    private void printDetailsForCurrentStage( String line )
     {
         printDetailsHeadline();
         if ( !details.isEmpty() )
@@ -187,31 +186,9 @@ public class OnDemandDetailsExecutionMonitor implements ExecutionMonitor
         out.println( "\t" + string );
     }
 
-    private void triggerGC()
+    private void triggerGC( String line )
     {
         System.gc();
-    }
-
-    private void reactToUserInput()
-    {
-        try
-        {
-            if ( System.in.available() > 0 )
-            {
-                // don't close this read, since we really don't want to close the underlying System.in
-                BufferedReader reader = new BufferedReader( new InputStreamReader( System.in ) );
-                String line = reader.readLine();
-                Pair<String,Runnable> action = actions.get( line );
-                if ( action != null )
-                {
-                    action.other().run();
-                }
-            }
-        }
-        catch ( IOException e )
-        {
-            e.printStackTrace( out );
-        }
     }
 
     private static class StageDetails

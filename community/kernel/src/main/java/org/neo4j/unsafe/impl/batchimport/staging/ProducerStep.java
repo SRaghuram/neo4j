@@ -40,7 +40,12 @@ public abstract class ProducerStep extends AbstractStep<Void> implements StatsPr
 
     public ProducerStep( StageControl control, Configuration config )
     {
-        super( control, ">", config );
+        this( control, ">", config );
+    }
+
+    public ProducerStep( StageControl control, String name, Configuration config )
+    {
+        super( control, name, config );
         this.batchSize = config.batchSize();
     }
 

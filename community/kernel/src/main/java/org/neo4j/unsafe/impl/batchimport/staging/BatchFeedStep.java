@@ -33,7 +33,7 @@ public class BatchFeedStep extends PullingProducerStep
 
     public BatchFeedStep( StageControl control, Configuration config, RecordIdIterator ids, int recordSize )
     {
-        super( control, config );
+        super( control, "FEED", config );
         this.ids = ids;
         this.recordSize = recordSize;
     }

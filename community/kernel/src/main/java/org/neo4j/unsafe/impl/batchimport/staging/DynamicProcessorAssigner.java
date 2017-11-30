@@ -21,12 +21,15 @@ package org.neo4j.unsafe.impl.batchimport.staging;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.stats.Keys;
 
 import static java.lang.Integer.min;
+import static java.lang.Integer.parseInt;
 import static java.lang.Math.max;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -47,6 +50,7 @@ public class DynamicProcessorAssigner extends ExecutionMonitor.Adapter
 {
     private final Configuration config;
     private final Map<Step<?>,Long/*done batches*/> lastChangedProcessors = new HashMap<>();
+    private final Map<String,Integer> fixedThreadCounts = new ConcurrentHashMap<>();
     private final int availableProcessors;
 
     public DynamicProcessorAssigner( Configuration config )
@@ -57,9 +61,41 @@ public class DynamicProcessorAssigner extends ExecutionMonitor.Adapter
     }
 
     @Override
+    public void initialize( DependencyResolver dependencyResolver )
+    {
+        try
+        {
+            InputCommands commands = dependencyResolver.resolveDependency( InputCommands.class );
+            commands.add( "fix", "Fixes a step to a certain number of threads", this::fixThreads );
+        }
+        catch ( IllegalArgumentException e )
+        {
+            // It's OK
+        }
+    }
+
+    private void fixThreads( String line )
+    {
+        String[] parts = line.split( " " );
+        String name = parts[1];
+        if ( parts.length >= 3 )
+        {
+            int threads = parseInt( parts[2] );
+            fixedThreadCounts.put( name, threads );
+            System.out.println( "Fixed thread count for " + name + " to " + threads );
+        }
+        else
+        {
+            fixedThreadCounts.remove( name );
+            System.out.println( "Removed fixed thread count for " + name );
+        }
+    }
+
+    @Override
     public void start( StageExecution execution )
     {   // A new stage begins, any data that we had is irrelevant
         lastChangedProcessors.clear();
+        fixedThreadCounts.clear();
     }
 
     @Override
@@ -67,6 +103,15 @@ public class DynamicProcessorAssigner extends ExecutionMonitor.Adapter
     {
         if ( execution.stillExecuting() )
         {
+            fixedThreadCounts.forEach( ( name, threads ) ->
+            {
+                Step<?> step = stepByName( execution, name );
+                if ( step != null )
+                {
+                    step.processors( threads - step.processors( 0 ) );
+                }
+            } );
+
             int permits = availableProcessors - countActiveProcessors( execution );
             if ( permits > 0 )
             {
@@ -78,13 +123,26 @@ public class DynamicProcessorAssigner extends ExecutionMonitor.Adapter
         }
     }
 
+    private Step<?> stepByName( StageExecution execution, String name )
+    {
+        for ( Step<?> step : execution.steps() )
+        {
+            if ( step.name().equals( name ) )
+            {
+                return step;
+            }
+        }
+        return null;
+    }
+
     private void assignProcessorsToPotentialBottleNeck( StageExecution execution, int permits )
     {
         Pair<Step<?>,Float> bottleNeck = execution.stepsOrderedBy( Keys.avg_processing_time, false ).iterator().next();
         Step<?> bottleNeckStep = bottleNeck.first();
         long doneBatches = batches( bottleNeckStep );
         if ( bottleNeck.other() > 1.0f &&
-             batchesPassedSinceLastChange( bottleNeckStep, doneBatches ) >= config.movingAverageSize() )
+             batchesPassedSinceLastChange( bottleNeckStep, doneBatches ) >= config.movingAverageSize() &&
+             !fixedThreadCounts.containsKey( bottleNeckStep.name() ) )
         {
             // Assign 1/10th of the remaining permits. This will have processors being assigned more
             // aggressively in the beginning of the run
@@ -103,7 +161,7 @@ public class DynamicProcessorAssigner extends ExecutionMonitor.Adapter
         for ( Pair<Step<?>,Float> fast : execution.stepsOrderedBy( Keys.avg_processing_time, true ) )
         {
             int numberOfProcessors = fast.first().processors( 0 );
-            if ( numberOfProcessors == 1 )
+            if ( numberOfProcessors == 1 || fixedThreadCounts.containsKey( fast.first().name() ) )
             {
                 continue;
             }

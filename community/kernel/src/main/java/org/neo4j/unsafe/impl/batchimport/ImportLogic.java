@@ -56,8 +56,10 @@ import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.input.Input.Estimates;
 import org.neo4j.unsafe.impl.batchimport.input.InputCache;
+import org.neo4j.unsafe.impl.batchimport.staging.DynamicProcessorAssigner;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
-import org.neo4j.unsafe.impl.batchimport.staging.ExecutionSupervisors;
+import org.neo4j.unsafe.impl.batchimport.staging.InputCommands;
+import org.neo4j.unsafe.impl.batchimport.staging.MultiExecutionMonitor;
 import org.neo4j.unsafe.impl.batchimport.staging.Stage;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingNeoStores;
 
@@ -88,7 +90,8 @@ public class ImportLogic implements Closeable
     private final BatchingNeoStores neoStore;
     private final Configuration config;
     private final Log log;
-    private final ExecutionMonitor executionMonitor;
+    private final ExecutionMonitor userExecutionMonitor;
+    private ExecutionMonitor executionMonitor;
     private final RecordFormats recordFormats;
     private final DataImporter.Monitor storeUpdateMonitor = new DataImporter.Monitor();
     private final long maxMemory;
@@ -134,7 +137,7 @@ public class ImportLogic implements Closeable
         this.config = config;
         this.recordFormats = recordFormats;
         this.log = logService.getInternalLogProvider().getLog( getClass() );
-        this.executionMonitor = ExecutionSupervisors.withDynamicProcessorAssignment( executionMonitor, config );
+        this.userExecutionMonitor = executionMonitor;
         this.maxMemory = config.maxMemoryUsage();
     }
 
@@ -151,14 +154,17 @@ public class ImportLogic implements Closeable
         nodeRelationshipCache = new NodeRelationshipCache( numberArrayFactory, config.denseNodeThreshold() );
         Estimates inputEstimates = input.calculateEstimates( neoStore.getPropertyStore().newValueEncodedSizeCalculator() );
         sanityCheckEstimatesWithRecordFormat( inputEstimates );
-        dependencies.satisfyDependencies( inputEstimates, idMapper, neoStore, nodeRelationshipCache );
+        InputCommands commands = new InputCommands( System.out );
+        dependencies.satisfyDependencies( inputEstimates, idMapper, neoStore, nodeRelationshipCache, commands );
 
         if ( neoStore.determineDoubleRelationshipRecordUnits( inputEstimates ) )
         {
             System.out.println( "Will use double record units for all relationships" );
         }
 
+        executionMonitor = new MultiExecutionMonitor( userExecutionMonitor, new DynamicProcessorAssigner( config ), commands );
         executionMonitor.initialize( dependencies );
+        commands.printActions();
     }
 
     private void sanityCheckEstimatesWithRecordFormat( Estimates inputEstimates )

@@ -83,6 +83,11 @@ public class ExecutionSupervisors
             execution = stage.execute();
             supervisor.supervise( execution );
         }
+        catch ( Throwable t )
+        {
+            t.printStackTrace();
+            throw t;
+        }
         finally
         {
             stage.close();
