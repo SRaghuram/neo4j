@@ -10,7 +10,7 @@
   </parent>
 
   <groupId>org.neo4j.build</groupId>
-  <version>3.3.2-SNAPSHOT</version>
+  <version>3.3.2</version>
   <artifactId>licensecheck-commercial-config</artifactId>
 
   <name>Neo4j - Licensing configuration commercial</name>

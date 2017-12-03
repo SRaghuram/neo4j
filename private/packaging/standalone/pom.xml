@@ -15,7 +15,7 @@
 
   <name>Neo4j - Server Assembler</name>
 
-  <version>3.3.2-SNAPSHOT</version>
+  <version>3.3.2</version>
 
   <description>
     This project assembles the Neo4j stand-alone distribution,
