@@ -34,15 +34,11 @@ import org.neo4j.unsafe.impl.batchimport.InputIterator;
 import org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
-import org.neo4j.unsafe.impl.batchimport.input.Group;
 import org.neo4j.unsafe.impl.batchimport.input.Groups;
-import org.neo4j.unsafe.impl.batchimport.input.HeaderException;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.input.InputChunk;
 import org.neo4j.unsafe.impl.batchimport.input.InputEntity;
 import org.neo4j.values.storable.Value;
-
-import static java.lang.String.format;
 
 import static org.neo4j.csv.reader.CharSeekers.charSeeker;
 import static org.neo4j.helpers.collection.Iterators.iterator;
@@ -118,13 +114,9 @@ public class CsvInput implements Input
             {
                 try ( CharSeeker dataStream = charSeeker( new MultiReadable( dataFactory.create( config ).stream() ), config, true ) )
                 {
-                    Header header = nodeHeaderFactory.create( dataStream, config, idType, groups );
-                    Header.Entry idHeader = header.entry( Type.ID );
-                    if ( idHeader != null )
-                    {
-                        // will create this group inside groups, so no need to do something with the result of it right now
-                        groups.getOrCreate( idHeader.group().name() );
-                    }
+                    // Parsing and constructing this header will create this group,
+                    // so no need to do something with the result of it right now
+                    nodeHeaderFactory.create( dataStream, config, idType, groups );
                 }
             }
 
@@ -133,27 +125,15 @@ public class CsvInput implements Input
             {
                 try ( CharSeeker dataStream = charSeeker( new MultiReadable( dataFactory.create( config ).stream() ), config, true ) )
                 {
-                    Header header = relationshipHeaderFactory.create( dataStream, config, idType, groups );
-                    verifyRelationshipHeader( header, Type.START_ID, dataStream.sourceDescription() );
-                    verifyRelationshipHeader( header, Type.END_ID, dataStream.sourceDescription() );
+                    // Merely parsing and constructing the header here will as a side-effect verify that the
+                    // id groups already exists (relationship header isn't allowed to create groups)
+                    relationshipHeaderFactory.create( dataStream, config, idType, groups );
                 }
             }
         }
         catch ( IOException e )
         {
             throw new UncheckedIOException( e );
-        }
-    }
-
-    private void verifyRelationshipHeader( Header header, Type type, String source )
-    {
-        Header.Entry entry = header.entry( type );
-        String groupName = entry.group().name();
-        if ( groups.get( groupName ) == null )
-        {
-            throw new HeaderException(
-                    format( "Relationship header %s in %s refers to ID space %s which no node header specifies",
-                    header, source, groupName != null ? groupName : Group.GLOBAL.name() ) );
         }
     }
 

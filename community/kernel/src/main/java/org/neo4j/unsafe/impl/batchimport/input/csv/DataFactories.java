@@ -140,10 +140,12 @@ public class DataFactories
 
     private abstract static class AbstractDefaultFileHeaderParser implements Header.Factory
     {
+        private final boolean createGroups;
         private final Type[] mandatoryTypes;
 
-        protected AbstractDefaultFileHeaderParser( Type... mandatoryTypes )
+        protected AbstractDefaultFileHeaderParser( boolean createGroups, Type... mandatoryTypes )
         {
+            this.createGroups = createGroups;
             this.mandatoryTypes = mandatoryTypes;
         }
 
@@ -170,7 +172,7 @@ public class DataFactories
                     }
                     else
                     {
-                        Group group = groups.getOrCreate( spec.groupName );
+                        Group group = createGroups ? groups.getOrCreate( spec.groupName ) : groups.get( spec.groupName );
                         columns.add( entry( i, spec.name, spec.type, group, extractors, idExtractor ) );
                     }
                 }
@@ -289,6 +291,11 @@ public class DataFactories
 
     private static class DefaultNodeFileHeaderParser extends AbstractDefaultFileHeaderParser
     {
+        protected DefaultNodeFileHeaderParser()
+        {
+            super( true );
+        }
+
         @Override
         protected Header.Entry entry( int index, String name, String typeSpec, Group group, Extractors extractors,
                 Extractor<?> idExtractor )
@@ -331,7 +338,7 @@ public class DataFactories
         protected DefaultRelationshipFileHeaderParser()
         {
             // Don't have TYPE as mandatory since a decorator could provide that
-            super( Type.START_ID, Type.END_ID );
+            super( false, Type.START_ID, Type.END_ID );
         }
 
         @Override
