@@ -63,7 +63,7 @@ class CSVResources(cleaner: TaskCloser) extends ExternalCSVResource {
     val reader = if (url.getProtocol == "file") {
       Readables.files(StandardCharsets.UTF_8, Paths.get(url.toURI).toFile)
     } else {
-      Readables.wrap(inputStream, url.toString, StandardCharsets.UTF_8)
+      Readables.wrap(inputStream, url.toString, StandardCharsets.UTF_8, 0/*length doesn't really matter in this context*/)
     }
     val delimiter: Char = fieldTerminator.map(_.charAt(0)).getOrElse(CSVResources.DEFAULT_FIELD_TERMINATOR)
     val seeker = CharSeekers.charSeeker(reader, CSVResources.config(legacyCsvQuoteEscaping), true)

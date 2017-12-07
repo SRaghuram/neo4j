@@ -24,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PushbackInputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.Charset;
@@ -90,13 +91,58 @@ public class Readables
         }
     };
 
+    /**
+     * Wraps a {@link InputStream} in a {@link CharReadable}.
+     *
+     * @param stream {@link Reader} to wrap.
+     * @param sourceName name or description of the source of the stream.
+     * @param charset {@link Charset} to use for reading.
+     * @param length total number of bytes provided by the reader.
+     * @return a {@link CharReadable} for the {@link Reader}.
+     * @throws IOException on I/O error.
+     */
+    public static CharReadable wrap( final InputStream stream, final String sourceName, Charset charset, long length )
+            throws IOException
+    {
+        byte[] bytes = new byte[Magic.longest()];
+        PushbackInputStream pushbackStream = new PushbackInputStream( stream, bytes.length );
+        Charset usedCharset = charset;
+        int read = stream.read( bytes );
+        if ( read >= 0 )
+        {
+            bytes = read < bytes.length ? Arrays.copyOf( bytes, read ) : bytes;
+            Magic magic = Magic.of( bytes );
+            int excessiveBytes = read;
+            if ( magic.impliesEncoding() )
+            {
+                // Unread the diff between the BOM and the longest magic we gathered bytes for
+                excessiveBytes -= magic.length();
+                usedCharset = magic.encoding();
+            }
+            pushbackStream.unread( bytes, read - excessiveBytes, excessiveBytes );
+        }
+        return wrap( new InputStreamReader( pushbackStream, usedCharset )
+        {
+            @Override
+            public String toString()
+            {
+                return sourceName;
+            }
+        }, length );
+    }
+
     public static CharReadable wrap( String data )
     {
-        return wrap( new StringReader( data ), data.length() * 2 );
+        return wrap( new StringReader( data ), data.length() );
     }
 
     /**
+     * Wraps a {@link Reader} in a {@link CharReadable}.
      * Remember that the {@link Reader#toString()} must provide a description of the data source.
+     *
+     * @param reader {@link Reader} to wrap.
+     * @param length total number of bytes provided by the reader.
+     * @return a {@link CharReadable} for the {@link Reader}.
      */
     public static CharReadable wrap( final Reader reader, long length )
     {
