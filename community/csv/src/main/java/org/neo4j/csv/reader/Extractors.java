@@ -320,6 +320,9 @@ public class Extractors
         protected void clear()
         {
             value = null;
+            rawData = null;
+            rawDataOffset = 0;
+            rawDataLength = 0;
         }
 
         @Override
@@ -346,7 +349,7 @@ public class Extractors
         @Override
         public String value()
         {
-            if ( value == null )
+            if ( value == null && rawData != null )
             {
                 value = new String( rawData, rawDataOffset, rawDataLength );
                 if ( trimStrings )
