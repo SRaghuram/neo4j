@@ -23,13 +23,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
@@ -40,7 +36,7 @@ import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.CountGroupsStage;
 import org.neo4j.unsafe.impl.batchimport.DataImporter;
 import org.neo4j.unsafe.impl.batchimport.IdMapperPreparationStage;
-import org.neo4j.unsafe.impl.batchimport.NodeCountsStage;
+import org.neo4j.unsafe.impl.batchimport.NodeCountsAndLabelIndexBuildStage;
 import org.neo4j.unsafe.impl.batchimport.NodeDegreeCountStage;
 import org.neo4j.unsafe.impl.batchimport.NodeFirstGroupStage;
 import org.neo4j.unsafe.impl.batchimport.RelationshipCountsStage;
@@ -216,13 +212,13 @@ public class RestartableParallelBatchImporterIT
     @Test
     public void shouldRestartImportAfterNodeCountsStart() throws Exception
     {
-        shouldRestartImport( NodeCountsStage.NAME, true );
+        shouldRestartImport( NodeCountsAndLabelIndexBuildStage.NAME, true );
     }
 
     @Test
     public void shouldRestartImportAfterNodeCountsEnd() throws Exception
     {
-        shouldRestartImport( NodeCountsStage.NAME, false );
+        shouldRestartImport( NodeCountsAndLabelIndexBuildStage.NAME, false );
     }
 
     @Test
@@ -235,42 +231,6 @@ public class RestartableParallelBatchImporterIT
     public void shouldRestartImportAfterRelationshipCountsEnd() throws Exception
     {
         shouldRestartImport( RelationshipCountsStage.NAME, false );
-    }
-
-    @Test( timeout = 100000 )
-    public void shouldFinishDespiteUnfairShutdowns() throws Exception
-    {
-        long startTime = System.currentTimeMillis();
-        importer( invisible() ).doImport( input() );
-        long time = System.currentTimeMillis() - startTime;
-        fs.deleteRecursively( directory.absolutePath() );
-        fs.mkdir( directory.absolutePath() );
-        Process process;
-        do
-        {
-
-            ProcessBuilder pb = new ProcessBuilder( ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(),
-                    SimpleImportRunningMain.class.getCanonicalName(), directory.absolutePath().getPath(), Long.toString( random.seed() ) );
-            File wd = new File( "target/test-classes" ).getAbsoluteFile();
-            pb.directory( wd );
-            pb.inheritIO();
-            process = pb.start();
-            process.waitFor( random.nextLong( time ), TimeUnit.MILLISECONDS );
-            if ( process.isAlive() )
-            {
-                process.destroyForcibly();
-            }
-        }
-        while ( process.exitValue() != 0 );
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
-        try
-        {
-            input().verify( db );
-        }
-        finally
-        {
-            db.shutdown();
-        }
     }
 
     private SimpleRandomizedInput input()
