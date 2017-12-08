@@ -3,16 +3,16 @@
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.backup;
+package org.neo4j.backup.impl;
 
 import org.junit.Test;
 
 import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.backup.BackupSupportingClassesFactoryProvider.getProvidersByPriority;
-import static org.neo4j.backup.BackupSupportingClassesFactoryProviderTest.allAvailableSupportingClassesFactories;
-import static org.neo4j.backup.BackupSupportingClassesFactoryProviderTest.findInstancesOf;
+import static org.neo4j.backup.impl.BackupSupportingClassesFactoryProvider.getProvidersByPriority;
+import static org.neo4j.backup.impl.BackupSupportingClassesFactoryProviderTest.allAvailableSupportingClassesFactories;
+import static org.neo4j.backup.impl.BackupSupportingClassesFactoryProviderTest.findInstancesOf;
 
 public class CommercialBackupSupportingClassesFactoryProviderTest
 {

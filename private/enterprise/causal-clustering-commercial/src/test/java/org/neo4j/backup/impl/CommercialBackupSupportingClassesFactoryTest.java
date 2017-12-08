@@ -3,7 +3,7 @@
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.backup;
+package org.neo4j.backup.impl;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -12,6 +12,7 @@ import org.neo4j.causalclustering.handlers.PipelineHandlerAppender;
 import org.neo4j.causalclustering.handlers.SslPipelineHandlerAppender;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -29,6 +30,7 @@ public class CommercialBackupSupportingClassesFactoryTest
     public void setup()
     {
         when( backupModule.getOutsideWorld() ).thenReturn( outsideWorld );
+        when( backupModule.getLogProvider() ).thenReturn( NullLogProvider.getInstance() );
         subject = new CommercialBackupSupportingClassesFactory( backupModule );
     }
 

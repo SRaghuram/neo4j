@@ -3,7 +3,7 @@
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.backup;
+package org.neo4j.backup.impl;
 
 import org.junit.After;
 import org.junit.Rule;
@@ -30,9 +30,9 @@ import org.neo4j.test.rule.fs.FileSystemRule;
 
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.backup.OnlineBackupCommandCcIT.clusterDatabase;
-import static org.neo4j.backup.OnlineBackupCommandCcIT.createSomeData;
-import static org.neo4j.backup.OnlineBackupCommandCcIT.getBackupDbRepresentation;
+import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.clusterDatabase;
+import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.createSomeData;
+import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.getBackupDbRepresentation;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.util.TestHelpers.runBackupToolFromOtherJvmToGetExitCode;
 
@@ -47,7 +47,7 @@ public class EncryptedBackupIT
     private Cluster cluster;
 
     @After
-    public void cleanup() throws Exception
+    public void cleanup()
     {
         if ( cluster != null )
         {
@@ -70,9 +70,11 @@ public class EncryptedBackupIT
         installCryptographicObjectsToBackupHome( backupDir, backupName, cluster.getDbWithRole( Role.LEADER ).serverId() );
 
         // when a full backup is successful
-        assertEquals( 0,
-                runBackupToolFromOtherJvmToGetExitCode( NEO4J_HOME, "--cc-report-dir=" + backupDir, "--backup-dir=" + backupDir, "--name=" + backupName,
-                        "--from=" + backupAddress( cluster ) ) );
+        int exitCode = runBackupToolFromOtherJvmToGetExitCode(
+                NEO4J_HOME, "--cc-report-dir=" + backupDir,
+                "--backup-dir=" + backupDir, "--name=" + backupName,
+                "--from=" + backupAddress( cluster ) );
+        assertEquals( 0, exitCode );
 
         // then data matches
         backupDataMatchesDatabase( cluster, backupDir, backupName );
@@ -82,9 +84,12 @@ public class EncryptedBackupIT
         Cluster.dataMatchesEventually( cluster.getDbWithRole( Role.LEADER ), cluster.coreMembers() );
 
         // then an incremental backup is successful on that cluster
+        exitCode = runBackupToolFromOtherJvmToGetExitCode(
+                NEO4J_HOME, "--cc-report-dir=" + backupDir,
+                "--backup-dir=" + backupDir, "--name=" + backupName,
+                "--from=" + backupAddress( cluster ) );
         assertEquals( 0,
-                runBackupToolFromOtherJvmToGetExitCode( NEO4J_HOME, "--cc-report-dir=" + backupDir, "--backup-dir=" + backupDir, "--name=" + backupName,
-                        "--from=" + backupAddress( cluster ) ) );
+                exitCode );
 
         // and data matches
         backupDataMatchesDatabase( cluster, backupDir, backupName );
@@ -98,7 +103,6 @@ public class EncryptedBackupIT
     private void installCryptographicObjectsToBackupHome( File neo4J_home, String backupName, int keyId ) throws IOException
     {
         File baseDir = new File( neo4J_home, backupName );
-//        int keyId = new Double( Math.random() * 1000 ).intValue();
         installSsl( fsRule, baseDir, keyId );
     }
 
