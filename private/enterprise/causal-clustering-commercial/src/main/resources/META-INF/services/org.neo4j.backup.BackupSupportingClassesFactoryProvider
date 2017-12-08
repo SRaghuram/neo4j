@@ -1,1 +1,1 @@
-org.neo4j.causalclustering.backup.CommercialBackupSupportingClassesFactoryProvider
+org.neo4j.backup.CommercialBackupSupportingClassesFactoryProvider

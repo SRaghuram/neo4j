@@ -10,12 +10,15 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.ssl.SslPolicy;
 
 public class SslPipelineHandlerAppenderFactory implements PipelineHandlerAppenderFactory
 {
     public PipelineHandlerAppender create( Config config, Dependencies dependencies, LogProvider logProvider )
     {
-        return new SslPipelineHandlerAppender( dependencies.provideDependency( SslPolicyLoader.class ).get()
-                .getPolicy( config.get( CausalClusteringSettings.ssl_policy ) ) );
+        SslPolicyLoader sslPolicyLoader = dependencies.resolveDependency( SslPolicyLoader.class );
+        String policyName = config.get( CausalClusteringSettings.ssl_policy );
+        SslPolicy policy = sslPolicyLoader.getPolicy( policyName );
+        return new SslPipelineHandlerAppender( policy );
     }
 }
