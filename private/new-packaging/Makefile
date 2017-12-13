@@ -30,7 +30,6 @@ debian: ${DEBS}
 
 rpm: ${RPMS}
 
-
 ${OUT}/rpm/%: ${ARTIFACT_C}/%-unix.tar.gz $(COMMON_FILES) $(RPM_FILES)
 	rm -rf $@
 	bin/build-rpm-package $@ $< ${DISTRIBUTION}
