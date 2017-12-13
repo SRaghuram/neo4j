@@ -1,5 +1,5 @@
 .DEFAULT: all
-.PHONY: all clean debian neo4j-desktop-mac neo4j-desktop-windows rpm
+.PHONY: all clean debian rpm
 
 DISTRIBUTION ?= unstable
 
@@ -23,28 +23,14 @@ DEBIAN_FILES := $(shell find src/debian -type f)
 DEBS=$(patsubst ${ARTIFACT_C}/%-unix.tar.gz,${OUT}/debian/%,${TARBALLS}) $(patsubst ${ARTIFACT_E}/%-unix.tar.gz,${OUT}/debian/%,${TARBALLS})
 RPMS=$(patsubst ${ARTIFACT_C}/%-unix.tar.gz,${OUT}/rpm/%,${TARBALLS}) $(patsubst ${ARTIFACT_E}/%-unix.tar.gz,${OUT}/rpm/%,${TARBALLS})
 
-all: debian neo4j-desktop-mac neo4j-desktop-windows rpm
+all: debian rpm
 
 clean:
 	rm -rf ${OUT}
 
 debian: ${DEBS}
 
-neo4j-desktop-mac: ${OUT}/neo4j-desktop/community-version.txt ${OUT}/neo4j-desktop/uberjar-filename.txt
-	bin/build-neo4j-desktop ${OUT}/neo4j-desktop-mac ${OUT}/neo4j-desktop/uberjar-filename.txt ${COMMUNITY_LICENSE} ${SHELL_SCRIPTS} ${CYPHER_SHELL} ${OUT}/neo4j-desktop/community-version.txt macosArchive ${MAC_KEYSTORE} ${MAC_KEYSTORE_PASSWORD}
-
-neo4j-desktop-windows: ${OUT}/neo4j-desktop/community-version.txt ${OUT}/neo4j-desktop/uberjar-filename.txt
-	bin/build-neo4j-desktop ${OUT}/neo4j-desktop-windows ${OUT}/neo4j-desktop/uberjar-filename.txt ${COMMUNITY_LICENSE} ${SHELL_SCRIPTS} ${CYPHER_SHELL} ${OUT}/neo4j-desktop/community-version.txt windows ${WIN_KEYSTORE} ${WIN_KEYSTORE_PASSWORD}
-
 rpm: ${RPMS}
-
-${OUT}/neo4j-desktop/community-version.txt:
-	mkdir -p ${OUT}/neo4j-desktop
-	bin/extract-version-from-pom ${COMMUNITY_POM} >${OUT}/neo4j-desktop/community-version.txt
-
-${OUT}/neo4j-desktop/uberjar-filename.txt: ${OUT}/neo4j-desktop/community-version.txt
-	mkdir -p ${OUT}/neo4j-desktop
-	bin/generate-uberjar-filename ${OUT}/neo4j-desktop/community-version.txt >${OUT}/neo4j-desktop/uberjar-filename.txt
 
 ${OUT}/rpm/%: ${ARTIFACT_C}/%-unix.tar.gz $(COMMON_FILES) $(RPM_FILES)
 	rm -rf $@
