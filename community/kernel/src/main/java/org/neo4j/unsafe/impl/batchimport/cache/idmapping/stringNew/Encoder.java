@@ -17,22 +17,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.unsafe.impl.batchimport.cache.idmapping.string;
+package org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew;
 
-import org.neo4j.unsafe.impl.batchimport.input.DataException;
-
-import static java.lang.String.format;
-
-public class DuplicateInputIdException extends DataException
+/**
+ * Encodes a {@link Object} into a long. The implementation should be designed to return as few collisions
+ * as possible, i.e. different incoming values being encoded into the same long.
+ * The returned encoded value must not be {@code 0} since that is a reserved value for {@link EncodingIdMapper}.
+ */
+public interface Encoder
 {
-    public DuplicateInputIdException( Object id, String groupName )
-    {
-        super( message( id, groupName ) );
-    }
-
-    public static String message( Object id, String groupName )
-    {
-
-        return format( "Id '%s' is defined more than once in group '%s'", id, groupName );
-    }
+    long encode( Object value );
+    long encode( Object value, int version );
 }

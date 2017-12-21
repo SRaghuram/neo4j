@@ -17,22 +17,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.unsafe.impl.batchimport.cache.idmapping.string;
+package org.neo4j.unsafe.impl.batchimport.cache.idmapping.StringNew;
 
-import org.neo4j.unsafe.impl.batchimport.input.DataException;
+import org.junit.Test;
+import org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew.Encoder;
+import org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew.LongEncoder;
 
-import static java.lang.String.format;
+import static org.junit.Assert.assertNotEquals;
 
-public class DuplicateInputIdException extends DataException
+public class LongEncoderTest
 {
-    public DuplicateInputIdException( Object id, String groupName )
+    @Test
+    public void shouldProperlyEncodeLength() throws Exception
     {
-        super( message( id, groupName ) );
-    }
-
-    public static String message( Object id, String groupName )
-    {
-
-        return format( "Id '%s' is defined more than once in group '%s'", id, groupName );
+        // GIVEN
+        Encoder encoder = new LongEncoder();
+        // WHEN
+        long a = encoder.encode( 1L << 25 );
+        long b = encoder.encode( 1L << 28 );
+        // THEN
+        assertNotEquals( a, b );
     }
 }

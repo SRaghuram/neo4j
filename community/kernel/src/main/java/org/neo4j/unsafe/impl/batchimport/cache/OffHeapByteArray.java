@@ -272,4 +272,19 @@ public class OffHeapByteArray extends OffHeapNumberArray<ByteArray> implements B
             throw new IndexOutOfBoundsException( "Wanted to access " + rebased + " but range is " + base + "-" + length );
         }
     }
+
+    @Override
+    public byte getByteRaw( long position )
+    {
+        long location = address + position;
+        return UnsafeUtil.getByte( location );       
+    }
+
+    @Override
+    public void putByteRaw( long position, byte value )
+    {
+        long location = address + position;
+        UnsafeUtil.putByte( location, value );    
+        
+    }
 }

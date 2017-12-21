@@ -396,4 +396,20 @@ public class PageCacheByteArray extends PageCacheNumberArray<ByteArray> implemen
             throw new UncheckedIOException( e );
         }
     }
+
+    @Override
+    public byte getByteRaw( long position )
+    {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public void putByteRaw( long position, byte value )
+    {
+        // TODO Auto-generated method stub
+        
+    }
+
+   
 }

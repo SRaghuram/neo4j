@@ -32,10 +32,18 @@ public class IdTypeConfiguration
     static final int AGGRESSIVE_GRAB_SIZE = 50000;
 
     private final boolean allowAggressiveReuse;
+    private final boolean doubleRecordUnits;
 
     public IdTypeConfiguration( boolean allowAggressiveReuse )
     {
         this.allowAggressiveReuse = allowAggressiveReuse;
+        this.doubleRecordUnits = false;
+    }
+
+    public IdTypeConfiguration( boolean allowAggressiveReuse, boolean doubleRecordUnits )
+    {
+        this.allowAggressiveReuse = allowAggressiveReuse;
+        this.doubleRecordUnits = doubleRecordUnits;
     }
 
     public boolean allowAggressiveReuse()
@@ -46,5 +54,10 @@ public class IdTypeConfiguration
     public int getGrabSize()
     {
         return allowAggressiveReuse ? AGGRESSIVE_GRAB_SIZE : DEFAULT_GRAB_SIZE;
+    }
+    
+    public boolean allowDoubleRecordUnits()
+    {
+        return doubleRecordUnits;
     }
 }

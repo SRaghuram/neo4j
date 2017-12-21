@@ -107,7 +107,7 @@ public class ImportLogic implements Closeable
     // components which may get assigned and unassigned in some methods
     private NodeRelationshipCache nodeRelationshipCache;
     private NodeLabelsCache nodeLabelsCache;
-    private long startTime;
+    public static long startTime;
     private InputCache inputCache;
     private NumberArrayFactory numberArrayFactory;
     private Collector badCollector;

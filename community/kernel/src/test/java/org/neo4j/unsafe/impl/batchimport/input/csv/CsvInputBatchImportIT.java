@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
+import org.neo4j.csv.reader.FilePlus;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -138,8 +139,9 @@ public class CsvInputBatchImportIT
             org.neo4j.unsafe.impl.batchimport.input.csv.Configuration configuration, Collector badCollector )
     {
         return new CsvInput(
-                datas( data( NO_DECORATOR, defaultCharset(), nodes ) ), defaultFormatNodeFileHeader(),
-                datas( data( NO_DECORATOR, defaultCharset(), relationships ) ),
+
+                datas( data( NO_DECORATOR, defaultCharset(),  new FilePlus( nodes )) ), defaultFormatNodeFileHeader(),
+                datas( data( NO_DECORATOR, defaultCharset(),  new FilePlus(relationships )) ),
                 defaultFormatRelationshipFileHeader(), idType, configuration,
                 badCollector );
     }

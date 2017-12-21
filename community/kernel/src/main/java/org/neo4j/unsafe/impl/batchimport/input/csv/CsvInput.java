@@ -211,35 +211,38 @@ public class CsvInput implements Input
                 RawIterator<CharReadable,IOException> sources = data.stream();
                 while ( sources.hasNext() )
                 {
-                    try ( CharReadable source = sources.next() )
+                    try ( CharReadable source = sources.next())
                     {
-                        if ( header == null )
+                        if (source != null)
                         {
-                            // Extract the header from the first file in this group
-                            header = extractHeader( source, headerFactory, idType, config, groups );
-                        }
-                        try ( CsvInputIterator iterator = new CsvInputIterator( source, data.decorator(), header, config,
-                                idType, badCollector, extractors( config ) );
-                              InputEntity entity = new InputEntity() )
-                        {
-                            int entities = 0;
-                            int properties = 0;
-                            int propertySize = 0;
-                            int additional = 0;
-                            while ( iterator.position() < ESTIMATE_SAMPLE_SIZE && iterator.next( chunk ) )
+                            if ( header == null )
                             {
-                                for ( ; chunk.next( entity ); entities++ )
-                                {
-                                    properties += entity.propertyCount();
-                                    propertySize += calculatePropertySize( entity, valueSizeCalculator );
-                                    additional += additionalCalculator.applyAsInt( entity );
-                                }
+                                // Extract the header from the first file in this group
+                                header = extractHeader( source, headerFactory, idType, config, groups );
                             }
-                            long entityCount = entities > 0 ? (long) (((double) source.length() / iterator.position()) * entities) : 0;
-                            estimates[0] += entityCount;
-                            estimates[1] += ((double) properties / entities) * entityCount;
-                            estimates[2] += ((double) propertySize / entities) * entityCount;
-                            estimates[3] += ((double) additional / entities) * entityCount;
+                            try ( CsvInputIterator iterator = new CsvInputIterator( source, data.decorator(), header, config,
+                                    idType, badCollector, extractors( config ) );
+                                  InputEntity entity = new InputEntity() )
+                            {
+                                int entities = 0;
+                                int properties = 0;
+                                int propertySize = 0;
+                                int additional = 0;
+                                while ( iterator.position() < ESTIMATE_SAMPLE_SIZE && iterator.next( chunk ) )
+                                {
+                                    for ( ; chunk.next( entity ); entities++ )
+                                    {
+                                        properties += entity.propertyCount();
+                                        propertySize += calculatePropertySize( entity, valueSizeCalculator );
+                                        additional += additionalCalculator.applyAsInt( entity );
+                                    }
+                                }
+                                long entityCount = entities > 0 ? (long) (((double) source.length() / iterator.position()) * entities) : 0;
+                                estimates[0] += entityCount;
+                                estimates[1] += ((double) properties / entities) * entityCount;
+                                estimates[2] += ((double) propertySize / entities) * entityCount;
+                                estimates[3] += ((double) additional / entities) * entityCount;
+                            }
                         }
                     }
                 }

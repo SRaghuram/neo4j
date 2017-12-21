@@ -210,12 +210,15 @@ public class BadCollector implements Collector
         {
             if ( message == null )
             {
+                
                 message = !isMissingData()
                         ? format( "%s (%s)-[%s]->%s (%s) referring to missing node %s",
                                 startId, startIdGroup, type, endId, endIdGroup, specificValue )
                         : format( "%s (%s)-[%s]->%s (%s) is missing data",
                                 startId, startIdGroup, type, endId, endIdGroup );
             }
+            if (endId != specificValue && endId != null && specificValue != null)
+                System.out.println( "ERROR --"+message );
             return message;
         }
 

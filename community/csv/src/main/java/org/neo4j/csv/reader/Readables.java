@@ -146,10 +146,29 @@ public class Readables
      */
     public static CharReadable wrap( final Reader reader, long length )
     {
-        return new WrappedCharReadable( length, reader );
+        return wrap( reader, 0, length );
     }
 
-    private static class FromFile implements IOFunction<File,CharReadable>
+    public static CharReadable wrap( final Reader reader, long offset, long length )
+    {
+        if (offset == 0)
+            return new WrappedCharReadable( length, reader );
+        try 
+        {
+            if (offset > 0)
+            {
+                reader.skip( offset );
+                System.out.println( "Skipping file:"+ reader.toString() + " up to offset "+ offset + " bytes." );
+                return new WrappedCharReadable( length, reader );
+            }
+        } catch (IOException io)
+        {
+            /// not able to skip, just skip the entire file  
+        }
+        System.out.println( "Skipping entire file:"+ reader.toString() );
+        return null;
+    }
+    private static class FromFile implements IOFunction<FilePlus,CharReadable>
     {
         private final Charset charset;
 
@@ -159,7 +178,7 @@ public class Readables
         }
 
         @Override
-        public CharReadable apply( final File file ) throws IOException
+        public CharReadable apply( final FilePlus file ) throws IOException
         {
             Magic magic = Magic.of( file );
             if ( magic == Magic.ZIP )
@@ -173,7 +192,7 @@ public class Readables
                     {
                         return file.getPath();
                     }
-                }, file.length() );
+                }, file.getOffset(), file.length() );
             }
             else if ( magic == Magic.GZIP )
             {   // GZIP file. GZIP isn't an archive like ZIP, so this is purely data that is compressed.
@@ -189,7 +208,7 @@ public class Readables
                     {
                         return file.getPath();
                     }
-                }, file.length() );
+                }, file.getOffset(), file.length() );
             }
             else
             {
@@ -208,7 +227,7 @@ public class Readables
                     {
                         return file.getPath();
                     }
-                }, file.length() );
+                }, file.getOffset(), file.length() );
             }
         }
 
@@ -252,14 +271,22 @@ public class Readables
                name.contains( "/." );
     }
 
-    public static RawIterator<CharReadable,IOException> individualFiles( Charset charset, File... files )
+    public static RawIterator<CharReadable,IOException> individualFiles( Charset charset, FilePlus... files )
     {
         return iterator( new FromFile( charset ), files );
     }
-
+    
     public static CharReadable files( Charset charset, File... files ) throws IOException
     {
-        IOFunction<File,CharReadable> opener = new FromFile( charset );
+        FilePlus[] fp = new FilePlus[files.length];
+        for (int i = 0; i < files.length; i++)
+            fp[i] = new FilePlus(files[i].getPath());
+        return files(charset, fp);
+    }
+
+    public static CharReadable files( Charset charset, FilePlus... files ) throws IOException
+    {
+        IOFunction<FilePlus,CharReadable> opener = new FromFile( charset );
         switch ( files.length )
         {
         case 0:  return EMPTY;

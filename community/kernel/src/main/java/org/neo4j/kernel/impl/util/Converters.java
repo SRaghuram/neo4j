@@ -28,6 +28,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
+import org.neo4j.csv.reader.FilePlus;
 import org.neo4j.helpers.HostnamePort;
 
 public class Converters
@@ -102,6 +103,40 @@ public class Converters
                 files.addAll( Arrays.asList( eachFileConverter.apply( name ) ) );
             }
             return files.toArray( new File[files.size()] );
+        };
+    }
+    
+    public static Function<String,FilePlus[]> regexFilesPlus( final boolean cleverNumberRegexSort )
+    {
+        return name ->
+        {
+            Comparator<File> sorting = cleverNumberRegexSort ? BY_FILE_NAME_WITH_CLEVER_NUMBERS : BY_FILE_NAME;
+            List<File> files = Validators.matchingFiles( new File( name ) );
+            files.sort( sorting );
+            File[] tmp = files.toArray( new File[files.size()] );
+            FilePlus[] filePlus = new FilePlus[tmp.length];
+            for (int i = 0; i < tmp.length; i++)
+                filePlus[i] = new FilePlus( tmp[i] );
+            return filePlus;
+        };
+    }
+    public static Function<String,FilePlus[]> toFilesPlus( final String delimiter,
+            final Function<String,FilePlus[]> eachFileConverter )
+    {
+        return from ->
+        {
+            if ( from == null )
+            {
+                return new FilePlus[0];
+            }
+
+            String[] names = from.split( delimiter );
+            List<FilePlus> files = new ArrayList<>();
+            for ( String name : names )
+            {
+                files.addAll( Arrays.asList( eachFileConverter.apply( name ) ) );
+            }
+            return files.toArray( new FilePlus[files.size()] );
         };
     }
 

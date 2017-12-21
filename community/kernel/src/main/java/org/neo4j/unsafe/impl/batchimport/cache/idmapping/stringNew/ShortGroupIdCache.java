@@ -17,22 +17,32 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.unsafe.impl.batchimport.cache.idmapping.string;
+package org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew;
 
-import org.neo4j.unsafe.impl.batchimport.input.DataException;
+import org.neo4j.unsafe.impl.batchimport.cache.ByteArray;
+import org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory;
 
-import static java.lang.String.format;
-
-public class DuplicateInputIdException extends DataException
+public class ShortGroupIdCache extends GroupIdCache
 {
-    public DuplicateInputIdException( Object id, String groupName )
+    static final int MAX_GROUPS = 1 << Short.SIZE;
+
+    private final ByteArray cache;
+
+    public ShortGroupIdCache( NumberArrayFactory factory, int chunkSize )
     {
-        super( message( id, groupName ) );
+        super( Short.BYTES );
+        this.cache = factory.newDynamicByteArray( chunkSize, new byte[] {-1, -1} );
     }
 
-    public static String message( Object id, String groupName )
+    @Override
+    public void put( long index, int groupId )
     {
+        cache.setShort( index, 0, (short) groupId );
+    }
 
-        return format( "Id '%s' is defined more than once in group '%s'", id, groupName );
+    @Override
+    public int get( long index )
+    {
+        return cache.getShort( index, 0 ) & 0xFFFF;
     }
 }

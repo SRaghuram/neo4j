@@ -28,10 +28,12 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
+import org.neo4j.csv.reader.FilePlus;
 import org.neo4j.csv.reader.IllegalMultilineFieldException;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Args;
@@ -402,8 +404,7 @@ public class ImportTool
         }
 
         File storeDir;
-        Collection<Option<File[]>> nodesFiles;
-        Collection<Option<File[]>> relationshipsFiles;
+        Collection<Option<FilePlus[]>> nodesFiles, relationshipsFiles;
         boolean enableStacktrace;
         Number processors;
         Input input;
@@ -474,6 +475,8 @@ public class ImportTool
             configuration = importConfiguration(
                     processors, defaultSettingsSuitableForTests, dbConfig, maxMemory, storeDir,
                     allowCacheOnHeap, defaultHighIO );
+            nodesFiles = fromImportState( nodesFiles );
+            relationshipsFiles = fromImportState( relationshipsFiles );
             input = new CsvInput( nodeData( inputEncoding, nodesFiles ), defaultFormatNodeFileHeader(),
                     relationshipData( inputEncoding, relationshipsFiles ), defaultFormatRelationshipFileHeader(),
                     idType, csvConfiguration( args, defaultSettingsSuitableForTests ), badCollector );
@@ -500,6 +503,26 @@ public class ImportTool
         }
     }
 
+    static private Collection<Option<FilePlus[]>> fromImportState(Collection<Option<FilePlus[]>> files)
+    {
+        //read from the import state and set the offsets
+        for ( Option<FilePlus[]> fileGroup : files )
+        {
+            for ( FilePlus file : fileGroup.value() )
+            {                
+                /*if (file.toString().endsWith( "1.csv" ))
+                {
+                    file.putOffset( -1 );
+                }
+                if (file.toString().endsWith( "2.csv" ))
+                {
+                    file.putOffset( 1000 );
+                }*/
+            }
+        }
+        return files;
+    }
+    
     private static Args useArgumentsFromFileArgumentIfPresent( Args args ) throws IOException
     {
         String fileArgument = args.get( Options.FILE.key(), null );
@@ -543,8 +566,8 @@ public class ImportTool
     }
 
     public static void doImport( PrintStream out, PrintStream err, File storeDir, File logsDir, File badFile,
-                                 FileSystemAbstraction fs, Collection<Option<File[]>> nodesFiles,
-                                 Collection<Option<File[]>> relationshipsFiles, boolean enableStacktrace, Input input,
+                                 FileSystemAbstraction fs, Collection<Option<FilePlus[]>> nodesFiles,
+                                 Collection<Option<FilePlus[]>> relationshipsFiles, boolean enableStacktrace, Input input,
                                  Config dbConfig, OutputStream badOutput,
                                  org.neo4j.unsafe.impl.batchimport.Configuration configuration ) throws IOException
     {
@@ -604,20 +627,20 @@ public class ImportTool
         }
     }
 
-    public static Collection<Option<File[]>> extractInputFiles( Args args, String key, PrintStream err )
+    public static Collection<Option<FilePlus[]>> extractInputFiles( Args args, String key, PrintStream err )
     {
         return args
                 .interpretOptionsWithMetadata( key, Converters.optional(),
-                        Converters.toFiles( MULTI_FILE_DELIMITER, Converters.regexFiles( true ) ), filesExist(
+                        Converters.toFilesPlus( MULTI_FILE_DELIMITER, Converters.regexFilesPlus( true ) ), filesExist(
                                 err ),
                         Validators.atLeast( "--" + key, 1 ) );
     }
 
-    private static Validator<File[]> filesExist( PrintStream err )
+    private static Validator<FilePlus[]> filesExist( PrintStream err )
     {
         return files ->
         {
-            for ( File file : files )
+            for ( FilePlus file : files )
             {
                 if ( file.getName().startsWith( ":" ) )
                 {
@@ -649,8 +672,8 @@ public class ImportTool
         return file != null && file.exists() ? Config.defaults( MapUtil.load( file ) ) : Config.defaults();
     }
 
-    static void printOverview( File storeDir, Collection<Option<File[]>> nodesFiles,
-            Collection<Option<File[]>> relationshipsFiles,
+    static void printOverview( File storeDir, Collection<Option<FilePlus[]>> nodesFiles,
+            Collection<Option<FilePlus[]>> relationshipsFiles,
             org.neo4j.unsafe.impl.batchimport.Configuration configuration, PrintStream out )
     {
         out.println( "Neo4j version: " + Version.getNeo4jVersion() );
@@ -667,7 +690,7 @@ public class ImportTool
         out.println();
     }
 
-    private static void printInputFiles( String name, Collection<Option<File[]>> files, PrintStream out )
+    private static void printInputFiles( String name, Collection<Option<FilePlus[]>> files, PrintStream out )
     {
         if ( files.isEmpty() )
         {
@@ -676,7 +699,7 @@ public class ImportTool
 
         out.println( name + ":" );
         int i = 0;
-        for ( Option<File[]> group : files )
+        for ( Option<FilePlus[]> group : files )
         {
             if ( i++ > 0 )
             {
@@ -686,7 +709,7 @@ public class ImportTool
             {
                 printIndented( ":" + group.metadata(), out );
             }
-            for ( File file : group.value() )
+            for ( FilePlus file : group.value() )
             {
                 printIndented( file, out );
             }
@@ -695,11 +718,18 @@ public class ImportTool
 
     private static void printIndented( Object value, PrintStream out )
     {
-        out.println( "  " + value );
+        if (value instanceof FilePlus)
+        {
+            long offset = ((FilePlus)value).getOffset();
+            String msg = (offset == 0) ? "" : " at offset [" + offset + "] bytes" ;
+            out.println( "  " + value + msg);
+        }
+        else
+            out.println( "  " + value );
     }
 
-    public static void validateInputFiles( Collection<Option<File[]>> nodesFiles,
-            Collection<Option<File[]>> relationshipsFiles )
+    public static void validateInputFiles( Collection<Option<FilePlus[]>> nodesFiles,
+            Collection<Option<FilePlus[]>> relationshipsFiles )
     {
         if ( nodesFiles.isEmpty() )
         {
@@ -841,25 +871,25 @@ public class ImportTool
     }
 
     public static Iterable<DataFactory>
-            relationshipData( final Charset encoding, Collection<Option<File[]>> relationshipsFiles )
+            relationshipData( final Charset encoding, Collection<Option<FilePlus[]>> relationshipsFiles )
     {
-        return new IterableWrapper<DataFactory,Option<File[]>>( relationshipsFiles )
+        return new IterableWrapper<DataFactory,Option<FilePlus[]>>( relationshipsFiles )
         {
             @Override
-            protected DataFactory underlyingObjectToObject( Option<File[]> group )
+            protected DataFactory underlyingObjectToObject( Option<FilePlus[]> group )
             {
                 return data( defaultRelationshipType( group.metadata() ), encoding, group.value() );
             }
         };
-    }
+    }  
 
     public static Iterable<DataFactory> nodeData( final Charset encoding,
-            Collection<Option<File[]>> nodesFiles )
+            Collection<Option<FilePlus[]>> nodesFiles )
     {
-        return new IterableWrapper<DataFactory,Option<File[]>>( nodesFiles )
+        return new IterableWrapper<DataFactory,Option<FilePlus[]>>( nodesFiles )
         {
             @Override
-            protected DataFactory underlyingObjectToObject( Option<File[]> input )
+            protected DataFactory underlyingObjectToObject( Option<FilePlus[]> input )
             {
                 Decorator decorator = input.metadata() != null
                         ? additiveLabels( input.metadata().split( ":" ) )
@@ -868,7 +898,7 @@ public class ImportTool
             }
         };
     }
-
+    
     private static void printUsage( PrintStream out )
     {
         out.println( "Neo4j Import Tool" );

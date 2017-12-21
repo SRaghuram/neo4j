@@ -17,22 +17,36 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.unsafe.impl.batchimport.cache.idmapping.string;
+package org.neo4j.csv.reader;
 
-import org.neo4j.unsafe.impl.batchimport.input.DataException;
+import java.io.File;
 
-import static java.lang.String.format;
-
-public class DuplicateInputIdException extends DataException
+public class FilePlus extends File
 {
-    public DuplicateInputIdException( Object id, String groupName )
-    {
-        super( message( id, groupName ) );
-    }
-
-    public static String message( Object id, String groupName )
-    {
-
-        return format( "Id '%s' is defined more than once in group '%s'", id, groupName );
-    }
+        private static final long serialVersionUID = 1L;
+        long offset = 0;
+        public FilePlus(String name)
+        {
+            super(name);
+        }
+        public FilePlus(String name, long offset)
+        {
+            super(name);
+            this.offset = offset;
+        }
+        
+        public FilePlus(File file)
+        {
+            super(file.getAbsolutePath());
+        }
+        
+        public long getOffset()
+        {
+            return offset;
+        }
+        
+        public void putOffset(long offset)
+        {
+            this.offset = offset;
+        }
 }

@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.unsafe.impl.batchimport.cache.idmapping.string;
+package org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew;
 
 import org.neo4j.unsafe.impl.batchimport.input.DataException;
 
@@ -32,7 +32,6 @@ public class DuplicateInputIdException extends DataException
 
     public static String message( Object id, String groupName )
     {
-
-        return format( "Id '%s' is defined more than once in group '%s'", id, groupName );
+        return format( "Id '%s' is defined more than once", id, groupName );
     }
 }

@@ -193,4 +193,6 @@ public interface ByteArray extends NumberArray<ByteArray>
      * @param value the 3-byte int value to set at the given offset at the given array index.
      */
     void set3ByteInt( long index, int offset, int value );
+    byte getByteRaw( long position );
+    void putByteRaw( long position, byte value);
 }

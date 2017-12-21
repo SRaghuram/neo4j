@@ -43,11 +43,13 @@ import static org.neo4j.unsafe.impl.batchimport.cache.idmapping.string.TrackerFa
  */
 public class IdMappers
 {
+    private static boolean NEW_ID_MAPPER = true;
+
     private static class ActualIdMapper implements IdMapper
     {
         @Override
         public void put( Object inputId, long actualId, Group group )
-        {   // No need to remember anything
+        { // No need to remember anything
         }
 
         @Override
@@ -57,6 +59,7 @@ public class IdMappers
         }
 
         @Override
+
         public void prepare( LongFunction<Object> inputIdLookup, Collector collector, ProgressListener progress )
         {   // No need to prepare anything
         }
@@ -64,12 +67,12 @@ public class IdMappers
         @Override
         public long get( Object inputId, Group group )
         {
-            return ((Long)inputId).longValue();
+            return ((Long) inputId).longValue();
         }
 
         @Override
         public void acceptMemoryStatsVisitor( MemoryStatsVisitor visitor )
-        {   // No memory usage
+        { // No memory usage
         }
 
         @Override
@@ -80,7 +83,7 @@ public class IdMappers
 
         @Override
         public void close()
-        {   // Nothing to close
+        { // Nothing to close
         }
 
         @Override
@@ -118,8 +121,15 @@ public class IdMappers
      */
     public static IdMapper strings( NumberArrayFactory cacheFactory, int numberOfGroups )
     {
-        return new EncodingIdMapper( cacheFactory, new StringEncoder(), Radix.STRING, NO_MONITOR, dynamic(),
-                numberOfCollisions -> new StringCollisionValues( cacheFactory, numberOfCollisions ), numberOfGroups );
+       if ( !NEW_ID_MAPPER )
+       {
+             return new EncodingIdMapper( cacheFactory, new StringEncoder(), Radix.STRING, NO_MONITOR, dynamic(),
+                  numberOfCollisions -> new StringCollisionValues( cacheFactory, numberOfCollisions ), numberOfGroups );
+       }
+       return new org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew.EncodingIdMapper( cacheFactory,
+               new org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew.StringEncoder(),
+               org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew.Radix.STRING,
+               org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew.EncodingIdMapper.NO_MONITOR, numberOfGroups  );
     }
 
     /**
@@ -130,7 +140,14 @@ public class IdMappers
      */
     public static IdMapper longs( NumberArrayFactory cacheFactory, int numberOfGroups )
     {
+        if ( !NEW_ID_MAPPER )
+        {
         return new EncodingIdMapper( cacheFactory, new LongEncoder(), Radix.LONG, NO_MONITOR, dynamic(),
                 numberOfCollisions -> new LongCollisionValues( cacheFactory, numberOfCollisions ), numberOfGroups );
+        }
+        return new org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew.EncodingIdMapper( cacheFactory,
+                new org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew.LongEncoder(),
+                org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew.Radix.LONG,
+                org.neo4j.unsafe.impl.batchimport.cache.idmapping.stringNew.EncodingIdMapper.NO_MONITOR, numberOfGroups  );
     }
 }

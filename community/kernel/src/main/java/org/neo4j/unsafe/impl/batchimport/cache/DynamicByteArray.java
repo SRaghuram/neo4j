@@ -167,4 +167,19 @@ public class DynamicByteArray extends DynamicNumberArray<ByteArray> implements B
     {
         return factory.newByteArray( chunkSize, defaultValue, base );
     }
+
+    @Override
+    public byte getByteRaw( long position )
+    {
+        return at( position/defaultValue.length ).getByteRaw( position % ( chunkSize * defaultValue.length ));
+    }
+
+    @Override
+    public void putByteRaw( long position, byte value )
+    {
+        at( position/defaultValue.length ).putByteRaw( position % ( chunkSize * defaultValue.length ), value );
+        
+    }
+
+    
 }

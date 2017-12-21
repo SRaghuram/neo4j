@@ -33,6 +33,7 @@ import org.neo4j.csv.reader.CharReadable;
 import org.neo4j.csv.reader.CharSeeker;
 import org.neo4j.csv.reader.Extractor;
 import org.neo4j.csv.reader.Extractors;
+import org.neo4j.csv.reader.FilePlus;
 import org.neo4j.csv.reader.Mark;
 import org.neo4j.function.Factory;
 import org.neo4j.helpers.collection.Iterables;
@@ -66,7 +67,7 @@ public class DataFactories
      * @return {@link DataFactory} that returns a {@link CharSeeker} over all the supplied {@code files}.
      */
     public static DataFactory data( final Decorator decorator,
-            final Charset charset, final File... files )
+            final Charset charset, final FilePlus... files )
     {
         if ( files.length == 0 )
         {

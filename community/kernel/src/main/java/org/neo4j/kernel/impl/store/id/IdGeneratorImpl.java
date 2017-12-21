@@ -68,6 +68,7 @@ public class IdGeneratorImpl implements IdGenerator
     private final long max;
     private final IdContainer idContainer;
     private long highId;
+    private boolean allowDoubleRecordUnits = false;
 
     /**
      * Opens the id generator represented by <CODE>fileName</CODE>. The
@@ -114,6 +115,27 @@ public class IdGeneratorImpl implements IdGenerator
             this.highId = highId.get();
         }
     }
+    public IdGeneratorImpl( FileSystemAbstraction fs, File file, int grabSize, long max, boolean aggressiveReuse,
+            boolean allowDoubleRecordUnits,
+            Supplier<Long> highId )
+    {
+        this.max = max;
+        this.allowDoubleRecordUnits = allowDoubleRecordUnits;
+        this.idContainer = new IdContainer( fs, file, grabSize, aggressiveReuse );
+        /*
+         * The highId supplier will be called only if the id container tells us that the information found in the
+         * id file is not reliable (typically the file had to be created). Calling the supplier can be a potentially
+         * expensive operation.
+         */
+        if ( this.idContainer.init() )
+        {
+            this.highId = idContainer.getInitialHighId();
+        }
+        else
+        {
+            this.highId = highId.get();
+        }
+    }
 
     /**
      * Returns the next "free" id. If a defragged id exist it will be returned
@@ -130,10 +152,13 @@ public class IdGeneratorImpl implements IdGenerator
     public synchronized long nextId()
     {
         assertStillOpen();
-        long nextDefragId = idContainer.getReusableId();
-        if ( nextDefragId != IdContainer.NO_RESULT )
-        {
-            return nextDefragId;
+        if (!allowDoubleRecordUnits)
+        {          
+            long nextDefragId = idContainer.getReusableId();
+            if ( nextDefragId != IdContainer.NO_RESULT )
+            {
+                return nextDefragId;
+            }
         }
 
         if ( IdValidator.isReservedId( highId ) )
@@ -141,7 +166,14 @@ public class IdGeneratorImpl implements IdGenerator
             highId++;
         }
         IdValidator.assertValidId( highId, max );
-        return highId++;
+        if (!allowDoubleRecordUnits)
+            return highId++;
+        else
+        {
+            long returnId = highId;
+            highId +=2;
+            return returnId;
+        }
     }
 
     @Override
@@ -149,28 +181,38 @@ public class IdGeneratorImpl implements IdGenerator
     {
         assertStillOpen();
 
-        // Get from defrag list
-        int count = 0;
-        long[] defragIds = new long[size];
-        while ( count < size )
-        {
-            long id = idContainer.getReusableId();
-            if ( id == -1 )
-            {
-                break;
-            }
-            defragIds[count++] = id;
-        }
-
-        // Shrink the array to actual size
-        long[] tmpArray = defragIds;
-        defragIds = new long[count];
-        System.arraycopy( tmpArray, 0, defragIds, 0, count );
-
-        int sizeLeftForRange = size - count;
+        int sizeLeftForRange = 0;
         long start = highId;
-        setHighId( start + sizeLeftForRange );
-        return new IdRange( defragIds, start, sizeLeftForRange );
+        if (allowDoubleRecordUnits)
+        {
+            sizeLeftForRange = 2 * size;
+            setHighId( start + sizeLeftForRange );
+            return new IdRange( new long[0], start, sizeLeftForRange );
+        }
+        else
+        {
+            // Get from defrag list
+            int count = 0;
+            long[] defragIds = new long[size];
+            while ( count < size )
+            {
+                long id = idContainer.getReusableId();
+                if ( id == -1 )
+                {
+                    break;
+                }
+                defragIds[count++] = id;
+            }
+
+            // Shrink the array to actual size
+            long[] tmpArray = defragIds;
+            defragIds = new long[count];
+            System.arraycopy( tmpArray, 0, defragIds, 0, count );
+    
+            sizeLeftForRange = size - count;
+            setHighId( start + sizeLeftForRange );
+            return new IdRange( defragIds, start, sizeLeftForRange );
+        }
     }
 
     /**

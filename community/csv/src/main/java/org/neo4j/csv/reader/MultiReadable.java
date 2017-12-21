@@ -73,7 +73,7 @@ public class MultiReadable implements CharReadable
 
     private boolean goToNextSource() throws IOException
     {
-        if ( actual.hasNext() )
+        while ( actual.hasNext())
         {
             if ( current != null )
             {
@@ -81,7 +81,8 @@ public class MultiReadable implements CharReadable
             }
             closeCurrent();
             current = actual.next();
-            return true;
+            if (current != null)
+                return true;
         }
         return false;
     }
