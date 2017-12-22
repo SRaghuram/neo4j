@@ -37,12 +37,11 @@ public class CommercialCoreClusterMember extends CoreClusterMember
                                         Map<String, String> extraParams,
                                         Map<String, IntFunction<String>> instanceExtraParams,
                                         String listenAddress,
-                                        String advertisedAddress,
-                                        Monitors monitors)
+                                        String advertisedAddress)
     {
         super( serverId, discoveryPort, txPort, raftPort, boltPort, httpPort, backupPort, clusterSize, addresses,
                 discoveryServiceFactory, recordFormat, parentDir, extraParams, instanceExtraParams, listenAddress,
-                advertisedAddress, monitors );
+                advertisedAddress );
     }
 
     @Override
