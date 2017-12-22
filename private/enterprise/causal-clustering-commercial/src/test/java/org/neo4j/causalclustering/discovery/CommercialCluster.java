@@ -23,7 +23,7 @@ public class CommercialCluster extends Cluster
                               String recordFormat, IpFamily ipFamily, boolean useWildcard, Monitors monitors )
     {
         super( parentDir, noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, coreParams, instanceCoreParams,
-                readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, new Monitors() );
+                readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard );
     }
 
     protected CoreClusterMember createCoreClusterMember( int serverId,
