@@ -1,6 +1,3 @@
-# Copyright (c) 2002-2018 "Neo Technology,"
-# Network Engine for Objects in Lund AB [http://neotechnology.com]
-# This file is a commercial add-on to Neo4j Enterprise Edition.
 
 set -o errexit -o nounset -o pipefail
 [[ "${TRACE:-}" ]] && set -o xtrace
@@ -35,6 +32,12 @@ setup_heap() {
 
 build_classpath() {
   CLASSPATH="${NEO4J_PLUGINS}:${NEO4J_CONF}:${NEO4J_LIB}/*:${NEO4J_PLUGINS}/*"
+
+  # augment with tools.jar, will need JDK
+  JAVA_TOOLS="${JAVA_HOME}/lib/tools.jar"
+  if [ -e $JAVA_TOOLS ]; then
+    CLASSPATH="${CLASSPATH}:${JAVA_TOOLS}"
+  fi
 }
 
 detect_os() {
