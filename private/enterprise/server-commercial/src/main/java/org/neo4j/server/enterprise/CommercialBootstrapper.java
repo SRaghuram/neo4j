@@ -10,7 +10,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.NeoServer;
 
-public class CommercialBootstrapper extends EnterpriseBootstrapper
+public class CommercialBootstrapper extends OpenEnterpriseBootstrapper
 {
     @Override
     protected NeoServer createNeoServer( Config configurator, GraphDatabaseDependencies dependencies,

@@ -19,7 +19,7 @@ import org.neo4j.server.database.LifecycleManagingDatabase.GraphFactory;
 
 import static org.neo4j.server.database.LifecycleManagingDatabase.lifecycleManagingDatabase;
 
-public class CommercialNeoServer extends EnterpriseNeoServer
+public class CommercialNeoServer extends OpenEnterpriseNeoServer
 {
     private static final GraphFactory CORE_FACTORY = ( config, dependencies ) ->
     {
@@ -49,7 +49,7 @@ public class CommercialNeoServer extends EnterpriseNeoServer
         case READ_REPLICA:
             return lifecycleManagingDatabase( READ_REPLICA_FACTORY );
         default:
-            return EnterpriseNeoServer.createDbFactory( config );
+            return OpenEnterpriseNeoServer.createDbFactory( config );
         }
     }
 }
