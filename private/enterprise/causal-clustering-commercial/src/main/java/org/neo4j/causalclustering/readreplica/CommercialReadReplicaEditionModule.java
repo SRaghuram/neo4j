@@ -8,8 +8,8 @@ package org.neo4j.causalclustering.readreplica;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
-import org.neo4j.causalclustering.handlers.PipelineHandlerAppenderFactory;
-import org.neo4j.causalclustering.handlers.SslPipelineHandlerAppenderFactory;
+import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
+import org.neo4j.causalclustering.handlers.SecureClusteringPipelineFactory;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
@@ -45,8 +45,8 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
     }
 
     @Override
-    protected PipelineHandlerAppenderFactory appenderFactory()
+    protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
-        return new SslPipelineHandlerAppenderFactory();
+        return new SecureClusteringPipelineFactory();
     }
 }

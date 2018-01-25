@@ -40,7 +40,6 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
 
     private static void configureHazelcast( Config config )
     {
-        // tell hazelcast to not phone home
         System.setProperty( "hazelcast.phone.home.enabled", "false" );
         System.setProperty( "hazelcast.socket.server.bind.any", "false" );
 

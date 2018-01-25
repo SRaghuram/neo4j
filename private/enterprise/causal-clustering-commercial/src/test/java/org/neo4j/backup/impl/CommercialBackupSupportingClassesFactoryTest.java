@@ -8,8 +8,8 @@ package org.neo4j.backup.impl;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.neo4j.causalclustering.handlers.PipelineHandlerAppender;
-import org.neo4j.causalclustering.handlers.SslPipelineHandlerAppender;
+import org.neo4j.causalclustering.handlers.PipelineWrapper;
+import org.neo4j.causalclustering.handlers.SslServerPipelineWrapper;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
@@ -38,7 +38,7 @@ public class CommercialBackupSupportingClassesFactoryTest
     public void commercialFactoryReturnsSslProviders()
     {
         Config config = Config.defaults();
-        PipelineHandlerAppender appender = subject.createPipelineHandlerAppender( config );
-        assertEquals( SslPipelineHandlerAppender.class, appender.getClass() );
+        PipelineWrapper appender = subject.createPipelineWrapper( config );
+        assertEquals( SslServerPipelineWrapper.class, appender.getClass() );
     }
 }

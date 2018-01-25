@@ -9,8 +9,8 @@ import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.ClusteringModule;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
-import org.neo4j.causalclustering.handlers.PipelineHandlerAppenderFactory;
-import org.neo4j.causalclustering.handlers.SslPipelineHandlerAppenderFactory;
+import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
+import org.neo4j.causalclustering.handlers.SecureClusteringPipelineFactory;
 import org.neo4j.kernel.api.bolt.BoltConnectionTracker;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
@@ -27,8 +27,6 @@ import org.neo4j.ssl.SslPolicy;
  */
 public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 {
-    private SslPolicy clusterSslPolicy;
-
     CommercialCoreEditionModule( final PlatformModule platformModule,
                                  final DiscoveryServiceFactory discoveryServiceFactory )
     {
@@ -53,7 +51,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
                                                     IdentityModule identityModule, Dependencies dependencies )
     {
         SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
-        clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
+        SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
 
         if ( discoveryServiceFactory instanceof SslHazelcastDiscoveryServiceFactory )
         {
@@ -65,8 +63,8 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     }
 
     @Override
-    protected PipelineHandlerAppenderFactory appenderFactory()
+    protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
-        return new SslPipelineHandlerAppenderFactory();
+        return new SecureClusteringPipelineFactory();
     }
 }

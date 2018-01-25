@@ -12,13 +12,25 @@ import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ssl.SslPolicy;
 
-public class SslPipelineHandlerAppenderFactory implements PipelineHandlerAppenderFactory
+public class SecureClusteringPipelineFactory implements DuplexPipelineWrapperFactory
 {
-    public PipelineHandlerAppender create( Config config, Dependencies dependencies, LogProvider logProvider )
+    public PipelineWrapper forServer( Config config, Dependencies dependencies, LogProvider logProvider )
+    {
+        SslPolicy policy = getSslPolicy( config, dependencies );
+        return new SslServerPipelineWrapper( policy );
+    }
+
+    @Override
+    public PipelineWrapper forClient( Config config, Dependencies dependencies, LogProvider logProvider )
+    {
+        SslPolicy policy = getSslPolicy( config, dependencies );
+        return new SslClientPipelineWrapper( policy );
+    }
+
+    private SslPolicy getSslPolicy( Config config, Dependencies dependencies )
     {
         SslPolicyLoader sslPolicyLoader = dependencies.resolveDependency( SslPolicyLoader.class );
         String policyName = config.get( CausalClusteringSettings.ssl_policy );
-        SslPolicy policy = sslPolicyLoader.getPolicy( policyName );
-        return new SslPipelineHandlerAppender( policy );
+        return sslPolicyLoader.getPolicy( policyName );
     }
 }
