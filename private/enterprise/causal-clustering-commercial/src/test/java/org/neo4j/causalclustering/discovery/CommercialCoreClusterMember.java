@@ -13,15 +13,9 @@ import java.util.function.IntFunction;
 import org.neo4j.causalclustering.core.CommercialCoreGraphDatabase;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.GraphDatabaseDependencies;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.monitoring.Monitors;
-
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 public class CommercialCoreClusterMember extends CoreClusterMember
 {
-    private final Map<String, String> config = stringMap();
-
     public CommercialCoreClusterMember( int serverId,
                                         int discoveryPort,
                                         int txPort,
@@ -47,7 +41,7 @@ public class CommercialCoreClusterMember extends CoreClusterMember
     @Override
     public void start()
     {
-        database = new CommercialCoreGraphDatabase( storeDir, Config.defaults( config ),
+        database = new CommercialCoreGraphDatabase( storeDir, getMemberConfig(),
                 GraphDatabaseDependencies.newDependencies(), discoveryServiceFactory );
     }
 }

@@ -14,6 +14,7 @@ import org.junit.Test;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.Cluster;
+import org.neo4j.causalclustering.discovery.CommercialCluster;
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.discovery.ReadReplica;
@@ -21,7 +22,6 @@ import org.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import org.neo4j.graphdb.Node;
 import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -38,7 +38,7 @@ public class SecureClusterIT
     @Rule
     public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
 
-    private Cluster cluster;
+    private CommercialCluster cluster;
 
     @After
     public void cleanup() throws Exception
@@ -68,7 +68,7 @@ public class SecureClusterIT
         int noOfCoreMembers = 3;
         int noOfReadReplicas = 3;
 
-        cluster = new Cluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas,
+        cluster = new CommercialCluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas,
                 new SslHazelcastDiscoveryServiceFactory(), coreParams, emptyMap(), readReplicaParams,
                 emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
 

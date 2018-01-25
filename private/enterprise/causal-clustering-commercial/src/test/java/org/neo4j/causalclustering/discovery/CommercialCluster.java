@@ -26,6 +26,7 @@ public class CommercialCluster extends Cluster
                 readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard );
     }
 
+    @Override
     protected CoreClusterMember createCoreClusterMember( int serverId,
                                                        int hazelcastPort,
                                                        int clusterSize,
@@ -60,7 +61,8 @@ public class CommercialCluster extends Cluster
         );
     }
 
-    private ReadReplica createReadReplica( int serverId,
+    @Override
+    protected ReadReplica createReadReplica( int serverId,
                                            List<AdvertisedSocketAddress> initialHosts,
                                            Map<String, String> extraParams,
                                            Map<String, IntFunction<String>> instanceExtraParams,
