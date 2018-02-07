@@ -22,7 +22,7 @@ public class EnterpriseUserServiceTest extends UserServiceTest
     public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule(
             userRepository,
             mock( AuthenticationStrategy.class )
-        );
+    );
 
     @Override
     protected void setupAuthManagerAndSubject()
@@ -31,7 +31,7 @@ public class EnterpriseUserServiceTest extends UserServiceTest
 
         ShiroSubject shiroSubject = mock( ShiroSubject.class );
         when( shiroSubject.getPrincipal() ).thenReturn( "neo4j" );
-        neo4jContext = authManagerRule.makeSecurityContext( shiroSubject );
+        neo4jContext = authManagerRule.makeLoginContext( shiroSubject );
     }
 
     @Test
