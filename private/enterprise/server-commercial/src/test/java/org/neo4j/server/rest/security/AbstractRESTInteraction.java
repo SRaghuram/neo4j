@@ -186,7 +186,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     }
 
     @Override
-    public void assertPasswordChangeRequired( RESTSubject subject ) throws Exception
+    public void assertPasswordChangeRequired( RESTSubject subject )
     {
         HTTP.Response response = authenticate( subject.principalCredentials );
         assertThat( response.status(), equalTo( 403 ) );
