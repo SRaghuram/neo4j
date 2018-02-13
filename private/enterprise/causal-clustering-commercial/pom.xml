@@ -4,13 +4,13 @@
     <parent>
         <groupId>org.neo4j</groupId>
         <artifactId>commercial-parent</artifactId>
-        <version>3.3.3-SNAPSHOT</version>
+        <version>3.3.4-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>neo4j-causal-clustering-commercial</artifactId>
     <name>Neo4j - Commercial Causal Clustering</name>
-    <version>3.3.3-SNAPSHOT</version>
+    <version>3.3.4-SNAPSHOT</version>
 
     <description>
         A collection of components that provide Causal Clustering functionality that is exclusive to users

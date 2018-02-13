@@ -5,12 +5,12 @@
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>commercial-parent</artifactId>
-    <version>3.3.3-SNAPSHOT</version>
+    <version>3.3.4-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
 
   <groupId>org.neo4j.build</groupId>
-  <version>3.3.3-SNAPSHOT</version>
+  <version>3.3.4-SNAPSHOT</version>
   <artifactId>licensecheck-commercial-config</artifactId>
 
   <name>Neo4j - Licensing configuration commercial</name>
