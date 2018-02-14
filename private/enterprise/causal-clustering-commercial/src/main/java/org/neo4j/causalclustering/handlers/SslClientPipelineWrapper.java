@@ -36,4 +36,10 @@ public class SslClientPipelineWrapper implements PipelineWrapper
             return emptyList();
         }
     }
+
+    @Override
+    public String name()
+    {
+        return "ssl_client";
+    }
 }
