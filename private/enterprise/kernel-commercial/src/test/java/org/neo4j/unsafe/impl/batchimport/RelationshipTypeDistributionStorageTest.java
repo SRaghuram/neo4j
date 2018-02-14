@@ -16,14 +16,11 @@ import java.util.List;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
-import org.neo4j.unsafe.impl.batchimport.DataStatistics;
-import org.neo4j.unsafe.impl.batchimport.RelationshipTypeDistributionStorage;
 import org.neo4j.unsafe.impl.batchimport.DataStatistics.RelationshipTypeCount;
 
+import static java.util.stream.StreamSupport.stream;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-
-import static java.util.stream.StreamSupport.stream;
 
 public class RelationshipTypeDistributionStorageTest
 {
