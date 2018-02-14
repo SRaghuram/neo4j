@@ -10,10 +10,12 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
@@ -23,9 +25,12 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
+import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
 import static java.lang.Long.max;
 
+import static org.junit.Assert.assertEquals;
+import static org.neo4j.helpers.Format.duration;
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
 import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
@@ -47,19 +52,15 @@ public class RestartableImportIT
     public void shouldFinishDespiteUnfairShutdowns() throws Exception
     {
         long startTime = System.currentTimeMillis();
-        importer( invisible() ).doImport( input() );
+        int timeMeasuringImportExitCode = startImportInSeparateProcess().waitFor();
         long time = System.currentTimeMillis() - startTime;
+        assertEquals( 0, timeMeasuringImportExitCode );
         fs.deleteRecursively( directory.absolutePath() );
         fs.mkdir( directory.absolutePath() );
         Process process;
         do
         {
-            ProcessBuilder pb = new ProcessBuilder( ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(),
-                    SimpleImportRunningMain.class.getCanonicalName(), directory.absolutePath().getPath(), Long.toString( random.seed() ) );
-            File wd = new File( "target/test-classes" ).getAbsoluteFile();
-            pb.directory( wd );
-            pb.inheritIO();
-            process = pb.start();
+            process = startImportInSeparateProcess();
             long waitTime = max( time / 4, random.nextLong( time ) );
             process.waitFor( waitTime, TimeUnit.MILLISECONDS );
             if ( process.isAlive() )
@@ -71,7 +72,7 @@ public class RestartableImportIT
         GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
         try
         {
-            input().verify( db );
+            input( random.seed() ).verify( db );
         }
         finally
         {
@@ -79,15 +80,39 @@ public class RestartableImportIT
         }
     }
 
-    private BatchImporter importer( ExecutionMonitor monitor )
+    private Process startImportInSeparateProcess() throws IOException
     {
-        return BatchImporterFactory.withHighestPriority().instantiate(
-              directory.absolutePath(), fs, null, DEFAULT, NullLogService.getInstance(), monitor,
-              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR );
+        ProcessBuilder pb = new ProcessBuilder( ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(),
+                getClass().getCanonicalName(), directory.absolutePath().getPath(), Long.toString( random.seed() ) );
+        File wd = new File( "target/test-classes" ).getAbsoluteFile();
+        pb.directory( wd );
+        pb.inheritIO();
+        return pb.start();
     }
 
-    private SimpleRandomizedInput input()
+    private static SimpleRandomizedInput input( long seed )
     {
-        return new SimpleRandomizedInput( random.seed(), NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
+        return new SimpleRandomizedInput( seed, NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
+    }
+
+    public static void main( String[] args ) throws IOException
+    {
+        try
+        {
+            BatchImporterFactory.withHighestPriority().instantiate( new File( args[0] ), new DefaultFileSystemAbstraction(),
+                    null, DEFAULT, NullLogService.getInstance(),
+                    ExecutionMonitors.invisible(), EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR ).doImport(
+                    input( Long.parseLong( args[1] ) ) );
+        }
+        catch ( IllegalStateException e )
+        {
+            if ( e.getMessage().contains( "already contains data, cannot do import here" ) )
+            {   // In this test, this exception is OK
+            }
+            else
+            {
+                throw e;
+            }
+        }
     }
 }
