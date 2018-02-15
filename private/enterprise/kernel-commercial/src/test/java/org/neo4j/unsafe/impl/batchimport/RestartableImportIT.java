@@ -11,6 +11,7 @@ import org.junit.rules.RuleChain;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -23,18 +24,13 @@ import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
-import org.neo4j.unsafe.impl.batchimport.BatchImporter;
-import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
 import static java.lang.Long.max;
-
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.helpers.Format.duration;
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
 import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
-import static org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors.invisible;
 
 public class RestartableImportIT
 {
@@ -85,6 +81,7 @@ public class RestartableImportIT
         ProcessBuilder pb = new ProcessBuilder( ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(),
                 getClass().getCanonicalName(), directory.absolutePath().getPath(), Long.toString( random.seed() ) );
         File wd = new File( "target/test-classes" ).getAbsoluteFile();
+        Files.createDirectories( wd.toPath() );
         pb.directory( wd );
         pb.inheritIO();
         return pb.start();
