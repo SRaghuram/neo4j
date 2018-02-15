@@ -63,6 +63,7 @@ public class RestartableImportIT
             {
                 process.destroyForcibly();
             }
+            process.waitFor();
         }
         while ( process.exitValue() != 0 );
         GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
