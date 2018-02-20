@@ -30,7 +30,7 @@
   </scm>
 
   <properties>
-    <neo4j.mainClass>org.neo4j.server.enterprise.CommercialEntryPoint</neo4j.mainClass>
+    <neo4j.mainClass>com.neo4j.server.enterprise.CommercialEntryPoint</neo4j.mainClass>
   </properties>
 
   <licenses>

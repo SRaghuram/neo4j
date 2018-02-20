@@ -17,7 +17,7 @@
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
   <properties>
-    <neo4j-server.mainClass>org.neo4j.server.commercial.CommercialEntryPoint</neo4j-server.mainClass>
+    <neo4j-server.mainClass>com.neo4j.server.commercial.CommercialEntryPoint</neo4j-server.mainClass>
     <neo-server.home>target/generated-resources/appassembler/jsw</neo-server.home>
     <neo-server.confdir>target/test-classes/etc/neo-server</neo-server.confdir>
     <java.io.tmpdir>${project.build.directory}</java.io.tmpdir>
