@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <parent>
-    <groupId>org.neo4j</groupId>
+    <groupId>com.neo4j</groupId>
     <artifactId>commercial-parent</artifactId>
     <version>3.3.4-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.neo4j.app</groupId>
+  <groupId>com.neo4j.app</groupId>
   <artifactId>neo4j-server-commercial</artifactId>
   <version>3.3.4-SNAPSHOT</version>
 
@@ -58,7 +58,7 @@
     </dependency>
 
     <dependency>
-      <groupId>org.neo4j</groupId>
+      <groupId>com.neo4j</groupId>
       <artifactId>neo4j-causal-clustering-commercial</artifactId>
       <version>${project.version}</version>
     </dependency>

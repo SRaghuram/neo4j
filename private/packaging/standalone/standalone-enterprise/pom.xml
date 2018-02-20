@@ -2,13 +2,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.neo4j.assembly</groupId>
+    <groupId>com.neo4j.assembly</groupId>
     <artifactId>neo4j-standalone-commercial</artifactId>
     <version>3.3.4-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
-  <groupId>org.neo4j.assembly</groupId>
+  <groupId>com.neo4j.assembly</groupId>
   <artifactId>neo4j-enterprise-standalone</artifactId>
   <packaging>pom</packaging>
 
@@ -150,7 +150,7 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.neo4j.app</groupId>
+      <groupId>com.neo4j.app</groupId>
       <artifactId>neo4j-server-commercial</artifactId>
       <version>${project.version}</version>
     </dependency>
