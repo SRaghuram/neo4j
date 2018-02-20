@@ -84,6 +84,11 @@
         <plugin>
           <groupId>org.neo4j.build.plugins</groupId>
           <artifactId>licensing-maven-plugin</artifactId>
+          <configuration>
+            <excludedGroups>
+                ^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1}|(org.neo4j.bolt){1}|(org.neo4j.build){1}|(org.neo4j.test){1}|(com.neo4j){1}|(com.neo4j.app){1}|(com.neo4j.server.plugin){1}|(com.neo4j.assembly){1}|(com.neo4j.bolt){1}|(com.neo4j.build){1}|(com.neo4j.test){1})$
+            </excludedGroups>
+          </configuration>
           <executions>
             <execution>
               <id>list-all-licenses</id>
@@ -95,7 +100,7 @@
           </executions>
           <dependencies>
             <dependency>
-              <groupId>org.neo4j.build</groupId>
+              <groupId>com.neo4j.build</groupId>
               <artifactId>licensecheck-commercial-config</artifactId>
               <version>${project.version}</version>
             </dependency>
@@ -133,7 +138,7 @@
           </executions>
           <dependencies>
             <dependency>
-              <groupId>org.neo4j.build</groupId>
+              <groupId>com.neo4j.build</groupId>
               <artifactId>licensecheck-commercial-config</artifactId>
               <version>${project.version}</version>
             </dependency>
