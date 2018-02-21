@@ -68,7 +68,7 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <attach>false</attach>
-          <finalName>${product.shortname}-enterprise-${project.version}</finalName>
+          <finalName>neo4j-enterprise-${project.version}</finalName>
           <appendAssemblyId>true</appendAssemblyId>
           <outputDirectory>${project.parent.build.directory}</outputDirectory>
           <delimiters>
