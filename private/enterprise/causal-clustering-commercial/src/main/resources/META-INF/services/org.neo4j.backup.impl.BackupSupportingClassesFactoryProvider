@@ -1,1 +1,1 @@
-org.neo4j.backup.impl.CommercialBackupSupportingClassesFactoryProvider
+com.neo4j.backup.impl.CommercialBackupSupportingClassesFactoryProvider

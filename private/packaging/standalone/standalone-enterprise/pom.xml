@@ -2,13 +2,12 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.neo4j.assembly</groupId>
+    <groupId>com.neo4j.assembly</groupId>
     <artifactId>neo4j-standalone-commercial</artifactId>
     <version>3.4.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
-  <groupId>org.neo4j.assembly</groupId>
   <artifactId>neo4j-enterprise-standalone</artifactId>
   <packaging>pom</packaging>
 
@@ -30,7 +29,7 @@
   </scm>
 
   <properties>
-    <neo4j.mainClass>org.neo4j.server.enterprise.CommercialEntryPoint</neo4j.mainClass>
+    <neo4j.mainClass>com.neo4j.server.enterprise.CommercialEntryPoint</neo4j.mainClass>
   </properties>
 
   <licenses>
@@ -126,8 +125,20 @@
         <artifactId>licensing-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>list-all-licenses-win</id>
-            <phase>none</phase>
+            <id>list-all-licenses</id>
+            <configuration>
+              <licensingRequirementFiles combine.children="append">
+                <licensingRequirementFile>licensing-requirements-browser.xml</licensingRequirementFile>
+              </licensingRequirementFiles>
+              <excludedGroups>^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1}|(com.neo4j){1}|(com.neo4j.app){1}|(com.neo4j.server.plugin){1}|(com.neo4j.assembly){1})$</excludedGroups>
+
+              <thirdPartyLicensingFilename>${project.artifactId}-${neo4j.version}-NOTICE.txt</thirdPartyLicensingFilename>
+              <prependText>commercial-notice.txt</prependText>
+              <checkExistingNoticeFile combine.self="override" />
+              <listPrependText>list-prefix.txt</listPrependText>
+              <listReport>${project.artifactId}-${neo4j.version}-LICENSES.txt</listReport>
+              <checkExistingLicensesFile>${project.basedir}/src/main/distribution/text/enterprise/LICENSES.txt</checkExistingLicensesFile>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -147,7 +158,7 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.neo4j.app</groupId>
+      <groupId>com.neo4j.app</groupId>
       <artifactId>neo4j-server-commercial</artifactId>
       <version>${project.version}</version>
     </dependency>

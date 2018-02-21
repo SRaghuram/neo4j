@@ -96,6 +96,7 @@
       <useStrictFiltering>true</useStrictFiltering>
       <includes>
         <include>org.neo4j:*</include>
+        <include>com.neo4j:*</include>
         <include>jline:jline</include>
         <include>org.apache.lucene:lucene-core</include>
         <include>org.apache.lucene:lucene-analyzers-common</include>
@@ -123,6 +124,7 @@
       <useStrictFiltering>true</useStrictFiltering>
       <excludes>
         <exclude>org.neo4j:*</exclude>
+        <exclude>com.neo4j:*</exclude>
         <exclude>jline:jline</exclude>
         <exclude>org.apache.lucene:*</exclude>
         <exclude>io.netty:netty</exclude>
