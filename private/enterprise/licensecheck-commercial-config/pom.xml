@@ -3,13 +3,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.neo4j</groupId>
+    <groupId>com.neo4j</groupId>
     <artifactId>commercial-parent</artifactId>
     <version>3.3.4-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
 
-  <groupId>org.neo4j.build</groupId>
+  <groupId>com.neo4j.build</groupId>
   <version>3.3.4-SNAPSHOT</version>
   <artifactId>licensecheck-commercial-config</artifactId>
 
