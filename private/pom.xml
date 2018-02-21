@@ -63,6 +63,28 @@
         </executions>
       </plugin>
 
+      <!-- Override parent configuration to only allow "com.neo4j" packages -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <configuration combine.self="override">
+          <rules>
+            <evaluateBeanshell>
+              <message>Maven module has to be in a "groupId" beginning with "com.neo4j"</message>
+              <condition>String s = "${project.groupId}"; s.startsWith("com.neo4j")</condition>
+            </evaluateBeanshell>
+            <requireFilesDontExist>
+              <message>You are not allowed to have classes in "org" package</message>
+              <files>
+                <file>${project.build.sourceDirectory}/org</file>
+                <file>${project.build.testSourceDirectory}/org</file>
+              </files>
+            </requireFilesDontExist>
+          </rules>
+          <fail>true</fail>
+        </configuration>
+      </plugin>
+
       <plugin>
         <groupId>org.neo4j.build.plugins</groupId>
         <artifactId>license-maven-plugin</artifactId>
