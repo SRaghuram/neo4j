@@ -1,15 +1,16 @@
 .DEFAULT: all
-.PHONY: all clean debian rpm
 
 DISTRIBUTION ?= unstable
 
 VERSION := $(shell bin/extract-version-from-pom ../pom.xml)
+DEBVERSION := $(shell bin/convert-to-debian-version "$(VERSION)")
+RPMVERSION := $(shell bin/convert-to-rpm-version "$(VERSION)")
 
-TARBALL_C := neo4j-community-$(VERSION)-unix.tar.gz
-TARBALL_E := neo4j-enterprise-$(VERSION)-unix.tar.gz
 ARTIFACT_C := ../../neo4j/packaging/standalone/target
 ARTIFACT_E := ../packaging/standalone/target
-TARBALLS := $(ARTIFACT_C)/$(TARBALL_C) $(ARTIFACT_E)/$(TARBALL_E)
+TARBALL_C := $(ARTIFACT_C)/neo4j-community-$(VERSION)-unix.tar.gz
+TARBALL_E := $(ARTIFACT_E)/neo4j-enterprise-$(VERSION)-unix.tar.gz
+TARBALLS := $(TARBALL_C) $(TARBALL_E)
 COMMUNITY_LICENSE := ../../neo4j/community/LICENSE.txt
 COMMUNITY_POM := ../../neo4j/community/pom.xml
 CYPHER_SHELL := ../packaging/standalone/src/main/distribution/cypher-shell
@@ -20,33 +21,40 @@ COMMON_FILES := $(shell find src/common -type f)
 RPM_FILES := $(shell find src/rpm -type f)
 DEBIAN_FILES := $(shell find src/debian -type f)
 
-DEBS=$(patsubst ${ARTIFACT_C}/%-unix.tar.gz,${OUT}/debian/%,${TARBALLS}) $(patsubst ${ARTIFACT_E}/%-unix.tar.gz,${OUT}/debian/%,${TARBALLS})
-RPMS=$(patsubst ${ARTIFACT_C}/%-unix.tar.gz,${OUT}/rpm/%,${TARBALLS}) $(patsubst ${ARTIFACT_E}/%-unix.tar.gz,${OUT}/rpm/%,${TARBALLS})
+DEB_C := $(OUT)/debian/neo4j_$(DEBVERSION)_all.deb
+DEB_E := $(OUT)/debian/neo4j-enterprise_$(DEBVERSION)_all.deb
+
+RPM_C := $(OUT)/rpm/neo4j-$(RPMVERSION).noarch.rpm
+RPM_E := $(OUT)/rpm/neo4j-enterprise-$(RPMVERSION).noarch.rpm
 
 all: debian rpm
+.PHONY: all
 
 clean:
-	rm -rf ${OUT}
+	rm -rf $(OUT)
+.PHONY: clean
 
-debian: ${DEBS}
+debian: $(DEB_C) $(DEB_E)
+.PHONY: debian
 
-rpm: ${RPMS}
+rpm: $(RPM_C) $(RPM_E)
+.PHONY: rpm
 
-${OUT}/rpm/%: ${ARTIFACT_C}/%-unix.tar.gz $(COMMON_FILES) $(RPM_FILES)
-	rm -rf $@
-	bin/build-rpm-package $@ $< ${DISTRIBUTION}
-	
-${OUT}/rpm/%: ${ARTIFACT_E}/%-unix.tar.gz $(COMMON_FILES) $(RPM_FILES)
-	rm -rf $@
-	bin/build-rpm-package $@ $< ${DISTRIBUTION}
+$(DEB_C): $(TARBALL_C) $(COMMON_FILES) $(DEBIAN_FILES)
+	rm -rf out/debian/build_community
+	bin/build-debian-package out/debian/build_community $< $(DISTRIBUTION)
 
-${OUT}/debian/%: ${ARTIFACT_C}/%-unix.tar.gz $(COMMON_FILES) $(DEBIAN_FILES)
-	rm -rf $@
-	bin/build-debian-package $@ $< ${DISTRIBUTION}
-	
-${OUT}/debian/%: ${ARTIFACT_E}/%-unix.tar.gz $(COMMON_FILES) $(DEBIAN_FILES)
-	rm -rf $@
-	bin/build-debian-package $@ $< ${DISTRIBUTION}
+$(DEB_E): $(TARBALL_E) $(COMMON_FILES) $(DEBIAN_FILES)
+	rm -rf out/debian/build_enterprise
+	bin/build-debian-package out/debian/build_enterprise $< $(DISTRIBUTION)
+
+$(RPM_C): $(TARBALL_C) $(COMMON_FILES) $(RPM_FILES)
+	rm -rf out/rpm/build_community
+	bin/build-rpm-package out/rpm/build_community $< $(DISTRIBUTION)
+
+$(RPM_E): $(TARBALL_E) $(COMMON_FILES) $(RPM_FILES)
+	rm -rf out/rpm/build_enterprise
+	bin/build-rpm-package out/rpm/build_enterprise $< $(DISTRIBUTION)
 
 $(TARBALLS):
 	cd ../packaging && mvn package -DskipTests -T2C
