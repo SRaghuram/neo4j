@@ -28,7 +28,9 @@
       <name>Neo4j Commercial license</name>
       <url>http://neo4j.com/commercial-license.html</url>
       <comments>
-        Some commercial license blurb
+        Copyright (c) 2002-2018 "Neo Technology,"
+        Network Engine for Objects in Lund AB [http://neotechnology.com]
+        This file is a commercial add-on to Neo4j Enterprise Edition.
       </comments>
     </license>
   </licenses>
