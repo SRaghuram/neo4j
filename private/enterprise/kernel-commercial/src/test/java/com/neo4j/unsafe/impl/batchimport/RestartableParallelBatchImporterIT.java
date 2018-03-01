@@ -17,6 +17,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.test.rule.RandomRule;
+import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
@@ -50,9 +51,10 @@ public class RestartableParallelBatchImporterIT
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
     private final RandomRule random = new RandomRule();
     private final TestDirectory directory = TestDirectory.testDirectory( fs );
+    private final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
 
     @Rule
-    public final RuleChain rules = RuleChain.outerRule( random ).around( fs ).around( directory );
+    public final RuleChain rules = RuleChain.outerRule( random ).around( fs ).around( directory ).around( suppressOutput );
 
     @Test
     public void shouldRestartImportAfterNodeImportStart() throws Exception

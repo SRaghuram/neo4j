@@ -23,6 +23,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ssl.SslResourceBuilder;
+import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
@@ -34,6 +35,8 @@ public class SecureClusterIT
 {
     @Rule
     public TestDirectory testDir = TestDirectory.testDirectory();
+    @Rule
+    public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
 
     @Rule
     public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
