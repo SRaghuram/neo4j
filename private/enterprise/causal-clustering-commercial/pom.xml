@@ -19,6 +19,10 @@
     <url>http://components.neo4j.org/${project.artifactId}/${project.version}/</url>
     <packaging>jar</packaging>
 
+    <properties>
+        <moduleName>org.neo4j.causalclustering.commercial</moduleName>
+    </properties>
+
     <licenses>
         <license>
             <name>Neo4j Commercial license</name>
