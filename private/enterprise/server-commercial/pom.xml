@@ -25,6 +25,7 @@
     <!-- Run integration tests against a server that is started elsewhere This is used in ServerIntegrationTestFacade,
       which currently assumes external servers to be running at http://localhost:7474/ -->
     <testWithExternalServer>false</testWithExternalServer>
+    <moduleName>org.neo4j.server.commercial</moduleName>
   </properties>
 
   <packaging>jar</packaging>

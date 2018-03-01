@@ -13,6 +13,10 @@
   <version>3.4.0-SNAPSHOT</version>
   <artifactId>licensecheck-commercial-config</artifactId>
 
+  <properties>
+    <moduleName>org.neo4j.licensecheck.commercial</moduleName>
+  </properties>
+
   <name>Neo4j - Licensing configuration commercial</name>
   <description>Licensing configuration for the commercial part of Neo4j.</description>
 

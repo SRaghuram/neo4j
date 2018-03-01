@@ -35,6 +35,10 @@
     </license>
   </licenses>
 
+  <properties>
+    <moduleName>org.neo4j.kernel.commercial</moduleName>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.neo4j</groupId>
