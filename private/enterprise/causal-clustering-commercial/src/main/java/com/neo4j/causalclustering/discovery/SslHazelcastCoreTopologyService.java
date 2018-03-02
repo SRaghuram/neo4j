@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery;
 import com.hazelcast.config.NetworkConfig;
 
 import org.neo4j.causalclustering.discovery.HazelcastCoreTopologyService;
-import org.neo4j.causalclustering.discovery.HazelcastSslConfiguration;
 import org.neo4j.causalclustering.discovery.HostnameResolver;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
@@ -33,5 +32,4 @@ class SslHazelcastCoreTopologyService extends HazelcastCoreTopologyService
     {
         HazelcastSslConfiguration.configureSsl( networkConfig, sslPolicy, logProvider );
     }
-
 }
