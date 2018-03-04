@@ -249,7 +249,7 @@ public class BloomIT
             Node node1 = db.createNode();
             node1.setProperty( "prop", "Det finns en mening" );
             Node node2 = db.createNode();
-            node2.setProperty( "prop", "There is a sentance" );
+            node2.setProperty( "prop", "There is a sentence" );
             transaction.success();
         }
         db.execute( AWAIT_REFRESH );
