@@ -5,23 +5,24 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import java.io.File;
-import java.util.Map;
-
+import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
+
+import java.io.File;
+import java.util.Map;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.Cluster;
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.discovery.ReadReplica;
-import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import org.neo4j.graphdb.Node;
 import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ssl.SslResourceBuilder;
+import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
@@ -33,7 +34,8 @@ public class SecureClusterIT
 {
     @Rule
     public TestDirectory testDir = TestDirectory.testDirectory();
-
+    @Rule
+    public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
     @Rule
     public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
 
