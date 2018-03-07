@@ -36,7 +36,7 @@ import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
 public class RestartableImportIT
 {
     private static final int NODE_COUNT = 100;
-    private static final int RELATIONSHIP_COUNT = 1_000;
+    private static final int RELATIONSHIP_COUNT = 10_000;
 
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
     private final RandomRule random = new RandomRule();
