@@ -14,7 +14,7 @@
   <artifactId>licensecheck-commercial-config</artifactId>
 
   <properties>
-    <moduleName>org.neo4j.licensecheck.commercial</moduleName>
+    <moduleName>com.neo4j.licensecheck.commercial</moduleName>
   </properties>
 
   <name>Neo4j - Licensing configuration commercial</name>
