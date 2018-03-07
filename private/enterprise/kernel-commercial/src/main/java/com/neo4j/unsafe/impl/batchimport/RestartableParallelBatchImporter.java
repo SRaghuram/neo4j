@@ -189,8 +189,8 @@ public class RestartableParallelBatchImporter implements BatchImporter
     {
         if ( STATE_NEW_IMPORT.equals( stateName ) )
         {
-            stateStore.set( STATE_INIT, EMPTY_BYTE_ARRAY );
             store.createNew();
+            stateStore.set( STATE_INIT, EMPTY_BYTE_ARRAY );
         }
         else
         {
