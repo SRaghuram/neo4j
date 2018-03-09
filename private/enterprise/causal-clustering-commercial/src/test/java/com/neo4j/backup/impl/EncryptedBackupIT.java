@@ -20,7 +20,9 @@ import org.neo4j.causalclustering.discovery.Cluster;
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
+import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.SuppressOutput;
@@ -60,7 +62,7 @@ public class EncryptedBackupIT
     public void backupsArePossibleFromEncryptedCluster() throws Exception
     {
         // given there exists an encrypted cluster
-        cluster = anEncryptedCluster();
+        cluster = anEncryptedCluster( null );
         installCryptographicObjectsToEachCore( cluster, fsRule );
         cluster.start();
 
@@ -74,7 +76,7 @@ public class EncryptedBackupIT
         int exitCode = runBackupToolFromOtherJvmToGetExitCode(
                 NEO4J_HOME, "--cc-report-dir=" + backupDir,
                 "--backup-dir=" + backupDir, "--name=" + backupName,
-                "--from=" + backupAddress( cluster ) );
+                "--from=" + backupAddress( cluster, null ) );
         assertEquals( 0, exitCode );
 
         // then data matches
@@ -88,7 +90,7 @@ public class EncryptedBackupIT
         exitCode = runBackupToolFromOtherJvmToGetExitCode(
                 NEO4J_HOME, "--cc-report-dir=" + backupDir,
                 "--backup-dir=" + backupDir, "--name=" + backupName,
-                "--from=" + backupAddress( cluster ) );
+                "--from=" + backupAddress( cluster, null ) );
         assertEquals( 0,
                 exitCode );
 
@@ -96,9 +98,53 @@ public class EncryptedBackupIT
         backupDataMatchesDatabase( cluster, backupDir, backupName );
     }
 
-    private static String backupAddress( Cluster cluster )
+    @Test
+    public void encryptedBackupsArePossibleToBackupPort() throws Exception
     {
-        return cluster.getDbWithRole( Role.LEADER ).settingValue( CausalClusteringSettings.transaction_listen_address.name() );
+        // given there exists an encrypted cluster with exposed backup port
+        int backupPort = PortAuthority.allocatePort();
+        cluster = anEncryptedCluster( backupPort );
+        installCryptographicObjectsToEachCore( cluster, fsRule );
+        cluster.start();
+
+        // and backup client is configured
+        File NEO4J_HOME = testDir.directory( "NEO4J_HOME" );
+        String backupName = "encryptedBackup";
+        File backupDir = testDir.directory( "backup-dir" );
+        installCryptographicObjectsToBackupHome( backupDir, backupName, cluster.getDbWithRole( Role.LEADER ).serverId() );
+
+        // when a full backup is successful
+        int exitCode = runBackupToolFromOtherJvmToGetExitCode(
+                NEO4J_HOME, "--cc-report-dir=" + backupDir,
+                "--backup-dir=" + backupDir, "--name=" + backupName,
+                "--from=" + backupAddress( cluster, backupPort ) );
+        assertEquals( 0, exitCode );
+
+        // then data matches
+        backupDataMatchesDatabase( cluster, backupDir, backupName );
+
+        // when the cluster is populated with more data
+        createSomeData( cluster );
+        Cluster.dataMatchesEventually( cluster.getDbWithRole( Role.LEADER ), cluster.coreMembers() );
+
+        // then an incremental backup is successful on that cluster
+        exitCode = runBackupToolFromOtherJvmToGetExitCode(
+                NEO4J_HOME, "--cc-report-dir=" + backupDir,
+                "--backup-dir=" + backupDir, "--name=" + backupName,
+                "--from=" + backupAddress( cluster, backupPort ) );
+        assertEquals( 0,
+                exitCode );
+
+        // and data matches
+        backupDataMatchesDatabase( cluster, backupDir, backupName );
+    }
+
+    private static String backupAddress( Cluster cluster, Integer backupPort )
+    {
+        if (backupPort == null){
+            return cluster.getDbWithRole( Role.LEADER ).settingValue( CausalClusteringSettings.transaction_listen_address.name() );
+        }
+        return cluster.getDbWithRole( Role.LEADER ).settingValue( OnlineBackupSettings.online_backup_server.name() );
     }
 
     private void installCryptographicObjectsToBackupHome( File neo4J_home, String backupName, int keyId ) throws IOException
@@ -107,7 +153,7 @@ public class EncryptedBackupIT
         installSsl( fsRule, baseDir, keyId );
     }
 
-    private Cluster anEncryptedCluster()
+    private Cluster anEncryptedCluster( Integer backupPort )
     {
         String sslPolicyName = "cluster";
         SslPolicyConfig policyConfig = new SslPolicyConfig( sslPolicyName );
@@ -119,6 +165,12 @@ public class EncryptedBackupIT
 
         int noOfCoreMembers = 3;
         int noOfReadReplicas = 0;
+
+        if ( backupPort != null )
+        {
+            coreParams.put( OnlineBackupSettings.online_backup_enabled.name(), "true" );
+            coreParams.put( OnlineBackupSettings.online_backup_server.name(), "localhost:" + backupPort );
+        }
 
         return new Cluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, new SslHazelcastDiscoveryServiceFactory(), coreParams, emptyMap(),
                 readReplicaParams, emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
