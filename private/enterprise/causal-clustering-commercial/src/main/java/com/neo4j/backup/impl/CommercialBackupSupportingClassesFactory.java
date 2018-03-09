@@ -5,13 +5,14 @@
  */
 package com.neo4j.backup.impl;
 
-import com.neo4j.causalclustering.handlers.SecureClusteringPipelineFactory;
+import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 
 import org.neo4j.backup.impl.BackupModule;
 import org.neo4j.backup.impl.BackupSupportingClassesFactory;
 import org.neo4j.causalclustering.handlers.PipelineWrapper;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.util.Dependencies;
 
 public class CommercialBackupSupportingClassesFactory extends BackupSupportingClassesFactory
@@ -24,10 +25,10 @@ public class CommercialBackupSupportingClassesFactory extends BackupSupportingCl
     @Override
     protected PipelineWrapper createPipelineWrapper( Config config )
     {
-        SecureClusteringPipelineFactory factory = new SecureClusteringPipelineFactory();
+        SecurePipelineFactory factory = new SecurePipelineFactory();
         Dependencies deps = new Dependencies();
         deps.satisfyDependencies( SslPolicyLoader.create( config, logProvider ) );
-        return factory.forServer( config, deps, logProvider );
+        return factory.forClient( config, deps, logProvider, OnlineBackupSettings.ssl_policy );
     }
 }
 

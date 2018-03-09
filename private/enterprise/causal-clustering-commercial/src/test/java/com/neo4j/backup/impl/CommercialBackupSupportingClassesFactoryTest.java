@@ -5,6 +5,7 @@
  */
 package com.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.handlers.SslClientPipelineWrapper;
 import com.neo4j.causalclustering.handlers.SslServerPipelineWrapper;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,6 +41,6 @@ public class CommercialBackupSupportingClassesFactoryTest
     {
         Config config = Config.defaults();
         PipelineWrapper appender = subject.createPipelineWrapper( config );
-        assertEquals( SslServerPipelineWrapper.class, appender.getClass() );
+        assertEquals( SslClientPipelineWrapper.class, appender.getClass() );
     }
 }

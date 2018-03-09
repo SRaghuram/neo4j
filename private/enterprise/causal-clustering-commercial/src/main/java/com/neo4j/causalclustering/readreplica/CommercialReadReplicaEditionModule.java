@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
-import com.neo4j.causalclustering.handlers.SecureClusteringPipelineFactory;
+import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -37,8 +37,7 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
                                               Config config, LogProvider logProvider )
     {
         SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
-        SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings
-                .ssl_policy ) );
+        SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
 
         if ( discoveryServiceFactory instanceof SslHazelcastDiscoveryServiceFactory )
         {
@@ -49,6 +48,6 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
     @Override
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
-        return new SecureClusteringPipelineFactory();
+        return new SecurePipelineFactory();
     }
 }
