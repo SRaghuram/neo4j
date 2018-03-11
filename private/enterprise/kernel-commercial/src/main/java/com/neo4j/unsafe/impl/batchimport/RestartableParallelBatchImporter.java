@@ -151,15 +151,9 @@ public class RestartableParallelBatchImporter implements BatchImporter
             void run( byte[] fromCheckPoint, CheckPointer checkPointer ) throws IOException
             {
                 logic.calculateNodeDegrees();
-                int type = fromCheckPoint.length > 0
-                        // Looks like we're restarting after one or more rounds of linking
-                        ? ByteBuffer.wrap( fromCheckPoint ).getInt()
-                        // Looks like we're restarting from some point between data-import done and first round of linking
-                        : 0;
+                int type = 0;
                 while ( type != -1 )
                 {
-                    // Make a check point so that we can restart from this relationship type
-                    checkPointer.checkPoint( intCheckPoint( type ) );
                     type = logic.linkRelationships( type );
                 }
             }
@@ -189,8 +183,8 @@ public class RestartableParallelBatchImporter implements BatchImporter
     {
         if ( STATE_NEW_IMPORT.equals( stateName ) )
         {
-            stateStore.set( STATE_INIT, EMPTY_BYTE_ARRAY );
             store.createNew();
+            stateStore.set( STATE_INIT, EMPTY_BYTE_ARRAY );
         }
         else
         {
