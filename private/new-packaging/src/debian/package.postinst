@@ -74,7 +74,7 @@ case "$1" in
                     echo "    sudo cp ${old_config_file} /etc/neo4j/$(basename ${old_config_file}).dpkg-bak"
                 fi
             done
-            echo "And then rerun the 2.x-config-migrator like so:"
+            echo "And then run the 2.x-config-migrator like so:"
             echo
             echo "    sudo -u neo4j java -jar /usr/share/neo4j/bin/tools/2.x-config-migrator.jar /var/lib/neo4j /var/lib/neo4j"
             echo
