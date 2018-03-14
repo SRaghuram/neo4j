@@ -58,8 +58,7 @@ case "$1" in
             echo "guide can be found at https://neo4j.com/guides/upgrade/."
             echo
             echo
-            echo "After installation, Neo4j will automatically start up and create a new, empty database."
-            echo "In order to complete the upgrade, Neo4j must first be stopped and the database must be deleted:"
+            echo "Before upgrading Neo4j, the following commands must be run:"
             echo
             echo "    sudo service neo4j stop"
             echo "    sudo rm -rf /var/lib/neo4j/data/databases/graph.db"
@@ -72,7 +71,7 @@ case "$1" in
                                    /etc/neo4j/neo4j-server.properties.dpkg-bak \
                                    /etc/neo4j/neo4j-wrapper.conf.dpkg-bak; do
                 if [ -f ${old_config_file} ]; then
-                    echo "    sudo cp ${old_config_file} /etc/neo4j/$(basename ${old_config_file} .dpkg-bak)"
+                    echo "    sudo cp ${old_config_file} /etc/neo4j/$(basename ${old_config_file}).dpkg-bak"
                 fi
             done
             echo "And then rerun the 2.x-config-migrator like so:"
@@ -95,7 +94,7 @@ case "$1" in
                 echo "After you have completed the upgrade process, these can be safely deleted."
                 echo
             fi
-            echo "You must tell the database to migrate your active database when the service starts."
+            echo "You must tell the database to migrate your active database when the service restarts."
             echo "To do this, use the following command:"
             echo
             echo "    sudo -u neo4j sed -i 's/#dbms.allow_upgrade=true/dbms.allow_upgrade=true/' /etc/neo4j/neo4j.conf"
