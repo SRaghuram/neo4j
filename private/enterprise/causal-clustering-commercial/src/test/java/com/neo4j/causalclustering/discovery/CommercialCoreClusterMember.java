@@ -44,7 +44,7 @@ public class CommercialCoreClusterMember extends CoreClusterMember
     @Override
     public void start()
     {
-        database = new CommercialCoreGraphDatabase( storeDir, getMemberConfig(),
+        database = new CommercialCoreGraphDatabase( storeDir, config(),
                 GraphDatabaseDependencies.newDependencies(), discoveryServiceFactory );
     }
 }
