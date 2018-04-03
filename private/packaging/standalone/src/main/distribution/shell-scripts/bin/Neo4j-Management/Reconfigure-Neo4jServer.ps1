@@ -54,8 +54,6 @@ Function Reconfigure-Neo4jServer
       Write-Verbose "Reconfiguring Neo4j as a service with command line $($prunsrv.cmd) $($prunsrv.args)"
       $stdError = New-Neo4jTempFile -Prefix 'stderr'
       Write-Verbose $prunsrv
-      Write-Host "apa"
-      Write-Verbose "apa"
       $result = (Start-Process -FilePath $prunsrv.cmd -ArgumentList $prunsrv.args -Wait -NoNewWindow -PassThru -WorkingDirectory $Neo4jServer.Home -RedirectStandardError $stdError)
       Write-Verbose "Returned exit code $($result.ExitCode)"
 

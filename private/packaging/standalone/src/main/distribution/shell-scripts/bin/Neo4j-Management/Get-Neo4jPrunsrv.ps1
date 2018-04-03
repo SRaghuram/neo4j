@@ -44,7 +44,7 @@ Function Get-Neo4jPrunsrv
     ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerUninstallInvoke')]
     [switch]$ForServerUninstall
 
-    ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerReconfigure')]
+    ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerReconfigureInvoke')]
     [switch]$ForServerReconfigure
 
     ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ConsoleInvoke')]
@@ -157,7 +157,7 @@ Function Get-Neo4jPrunsrv
       "ServerUninstallInvoke"   { $PrunArgs += @("`"//DS//$($Name)`"") }
       "ConsoleInvoke"           { $PrunArgs += @("`"//TS//$($Name)`"") }
       default {
-        throw "Unknown ParameterSerName $($PsCmdlet.ParameterSetName)"
+        throw "Unknown ParameterSetName $($PsCmdlet.ParameterSetName)"
         return $null
       }
     }
