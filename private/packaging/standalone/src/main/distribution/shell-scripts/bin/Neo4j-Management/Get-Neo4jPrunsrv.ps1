@@ -44,6 +44,9 @@ Function Get-Neo4jPrunsrv
     ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerUninstallInvoke')]
     [switch]$ForServerUninstall
 
+    ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerReconfigure')]
+    [switch]$ForServerReconfigure
+
     ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ConsoleInvoke')]
     [switch]$ForConsole
   )
@@ -80,8 +83,13 @@ Function Get-Neo4jPrunsrv
 
     # Build the PRUNSRV command line
     switch ($PsCmdlet.ParameterSetName) {
-      "ServerInstallInvoke"   {
+      "ServerInstallInvoke"     {
         $PrunArgs += @("`"//IS//$($Name)`"")
+      }
+      "ServerReconfigureInvoke" {
+        $PrunArgs += @("`"//US//$($Name)`"")
+      }
+      {$_ -in @("ServerInstallInvoke", "ServerReconfigureInvoke")} {
 
         $JvmOptions = @()
 
@@ -146,8 +154,8 @@ Function Get-Neo4jPrunsrv
         $PrunArgs += @("`"--StopClass=$($serverMainClass)`"",
                        "`"--StartClass=$($serverMainClass)`"")
       }
-      "ServerUninstallInvoke" { $PrunArgs += @("`"//DS//$($Name)`"") }
-      "ConsoleInvoke"         { $PrunArgs += @("`"//TS//$($Name)`"") }
+      "ServerUninstallInvoke"   { $PrunArgs += @("`"//DS//$($Name)`"") }
+      "ConsoleInvoke"           { $PrunArgs += @("`"//TS//$($Name)`"") }
       default {
         throw "Unknown ParameterSerName $($PsCmdlet.ParameterSetName)"
         return $null
