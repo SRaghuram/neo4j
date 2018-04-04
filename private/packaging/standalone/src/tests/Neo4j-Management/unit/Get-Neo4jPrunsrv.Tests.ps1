@@ -123,8 +123,8 @@ InModuleScope Neo4j-Management {
 
       $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $serverObject -ForServerInstall
 
-      It "should have main class of org.neo4j.server.enterprise.OpenEnterpriseEntryPoint" {
-        ($prunsrv.args -join ' ') | Should Match ([regex]::Escape('=org.neo4j.server.enterprise.OpenEnterpriseEntryPoint'))
+      It "should have main class of com.neo4j.server.enterprise.CommercialEntryPoint" {
+        ($prunsrv.args -join ' ') | Should Match ([regex]::Escape('=com.neo4j.server.enterprise.CommercialEntryPoint'))
       }
     }
 
