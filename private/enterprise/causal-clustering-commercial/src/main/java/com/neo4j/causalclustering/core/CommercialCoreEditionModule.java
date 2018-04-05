@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
-import com.neo4j.causalclustering.handlers.SecureClusteringPipelineFactory;
+import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
@@ -69,6 +69,6 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     @Override
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
-        return new SecureClusteringPipelineFactory();
+        return new SecurePipelineFactory();
     }
 }
