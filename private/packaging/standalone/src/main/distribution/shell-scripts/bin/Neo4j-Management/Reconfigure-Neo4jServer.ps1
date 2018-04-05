@@ -74,7 +74,7 @@ Function Reconfigure-Neo4jServer
       Write-Output $result.ExitCode
     } else {
       Write-Verbose "Service reconfigure failed"
-      Write-Output 0
+      Write-Output 1
     }
   }
 
