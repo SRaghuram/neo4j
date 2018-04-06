@@ -10,9 +10,12 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -48,26 +51,37 @@ public class RestartableImportIT
     @Test( timeout = 100_000 )
     public void shouldFinishDespiteUnfairShutdowns() throws Exception
     {
+        File storeDir = directory.directory( "db" );
         long startTime = System.currentTimeMillis();
-        int timeMeasuringImportExitCode = startImportInSeparateProcess().waitFor();
+        int timeMeasuringImportExitCode = startImportInSeparateProcess( storeDir ).waitFor();
         long time = System.currentTimeMillis() - startTime;
         assertEquals( 0, timeMeasuringImportExitCode );
-        fs.deleteRecursively( directory.absolutePath() );
-        fs.mkdir( directory.absolutePath() );
+        fs.deleteRecursively( storeDir );
+        fs.mkdir( storeDir );
         Process process;
+        int restartCount = 0;
         do
         {
-            process = startImportInSeparateProcess();
+            process = startImportInSeparateProcess( storeDir );
             long waitTime = max( time / 4, random.nextLong( time ) );
             process.waitFor( waitTime, TimeUnit.MILLISECONDS );
+            boolean manuallyDestroyed = false;
             if ( process.isAlive() )
             {
                 process.destroyForcibly();
+                manuallyDestroyed = true;
             }
-            process.waitFor();
+            int exitCode = process.waitFor();
+            if ( !manuallyDestroyed )
+            {
+                assertEquals( 0, exitCode );
+            }
+
+            zip( storeDir, new File( directory.directory( "snapshots" ), "killed-" + restartCount + ".zip" ) );
+            restartCount++;
         }
         while ( process.exitValue() != 0 );
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
         try
         {
             input( random.seed() ).verify( db );
@@ -78,10 +92,10 @@ public class RestartableImportIT
         }
     }
 
-    private Process startImportInSeparateProcess() throws IOException
+    private Process startImportInSeparateProcess( File storeDir ) throws IOException
     {
         ProcessBuilder pb = new ProcessBuilder( ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(),
-                getClass().getCanonicalName(), directory.absolutePath().getPath(), Long.toString( random.seed() ) );
+                getClass().getCanonicalName(), storeDir.getPath(), Long.toString( random.seed() ) );
         File wd = new File( "target/test-classes" ).getAbsoluteFile();
         Files.createDirectories( wd.toPath() );
         pb.directory( wd );
@@ -112,6 +126,37 @@ public class RestartableImportIT
             {
                 throw e;
             }
+        }
+    }
+
+    private static void zip( File directory, File output ) throws IOException
+    {
+        try ( ZipOutputStream out = new ZipOutputStream( new FileOutputStream( output ) ) )
+        {
+            addFilesInDirectory( directory, out, "" );
+        }
+    }
+
+    private static void addFilesInDirectory( File directory, ZipOutputStream out, String path ) throws IOException
+    {
+        for ( File file : directory.listFiles() )
+        {
+            addToZip( out, file, path );
+        }
+    }
+
+    private static void addToZip( ZipOutputStream out, File file, String path ) throws IOException
+    {
+        if ( file.isDirectory() )
+        {
+            addFilesInDirectory( file, out, path + file.getName() + "/" );
+        }
+        else
+        {
+            ZipEntry entry = new ZipEntry( path + file.getName() );
+            entry.setSize( file.length() );
+            out.putNextEntry( entry );
+            Files.copy( file.toPath(), out );
         }
     }
 }
