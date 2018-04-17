@@ -63,7 +63,7 @@ public class RestartableImportIT
         do
         {
             process = startImportInSeparateProcess( storeDir );
-            long waitTime = max( time / 4, random.nextLong( time ) );
+            long waitTime = max( time / 4, random.nextLong( time ) + time/20 * restartCount );
             process.waitFor( waitTime, TimeUnit.MILLISECONDS );
             boolean manuallyDestroyed = false;
             if ( process.isAlive() )
@@ -77,7 +77,7 @@ public class RestartableImportIT
                 assertEquals( 0, exitCode );
             }
 
-            zip( storeDir, new File( directory.directory( "snapshots" ), "killed-" + restartCount + ".zip" ) );
+            zip( storeDir, new File( directory.directory( "snapshots" ), String.format( "killed-%02d.zip", restartCount ) ) );
             restartCount++;
         }
         while ( process.exitValue() != 0 );
