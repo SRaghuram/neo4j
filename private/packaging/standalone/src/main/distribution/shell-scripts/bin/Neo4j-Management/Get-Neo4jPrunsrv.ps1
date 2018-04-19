@@ -19,7 +19,10 @@ An object representing a valid Neo4j Server object
 Retrieve the PrunSrv command line to install a Neo4j Server
 
 .PARAMETER ForServerUninstall
-Retrieve the PrunSrv command line to install a Neo4j Server
+Retrieve the PrunSrv command line to uninstall a Neo4j Server
+
+.PARAMETER ForServerReconfigure
+Retrieve the PrunSrv command line to reconfigure a Neo4j Server
 
 .PARAMETER ForConsole
 Retrieve the PrunSrv command line to start a Neo4j Server in the console.

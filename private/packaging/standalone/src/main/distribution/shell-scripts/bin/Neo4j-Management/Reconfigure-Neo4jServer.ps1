@@ -73,7 +73,7 @@ Function Reconfigure-Neo4jServer
 
       Write-Output $result.ExitCode
     } else {
-      Write-Verbose "Service reconfigure failed"
+      Write-Host "Service reconfigure failed - service '$Name' not found"
       Write-Output 1
     }
   }
