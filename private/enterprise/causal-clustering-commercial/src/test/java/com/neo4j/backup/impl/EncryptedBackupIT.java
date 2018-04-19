@@ -113,7 +113,7 @@ public class EncryptedBackupIT
 
         // when the cluster is populated with more data
         createSomeData( cluster );
-        Cluster.dataMatchesEventually( cluster.getDbWithRole( Role.LEADER ), cluster.coreMembers() );
+        Cluster.dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), cluster.coreMembers() );
 
         // then an incremental backup is successful on that cluster
         exitCode = backupClient.getAsInt();
@@ -143,7 +143,7 @@ public class EncryptedBackupIT
 
         // when the cluster is populated with more data
         createSomeData( cluster );
-        Cluster.dataMatchesEventually( cluster.getDbWithRole( Role.LEADER ), cluster.coreMembers() );
+        Cluster.dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), cluster.coreMembers() );
 
         // then an incremental backup is successful on that cluster
         exitCode = backupClient.getAsInt();
@@ -538,7 +538,7 @@ public class EncryptedBackupIT
         {
             try
             {
-                Cluster.dataMatchesEventually( cluster.getDbWithRole( Role.LEADER ), allMembers( cluster ) );
+                Cluster.dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), allMembers( cluster ) );
                 return runBackupSameJvm( backupHome, backupName, selectedNodeAddress );
             }
             catch ( CommandFailed e )
