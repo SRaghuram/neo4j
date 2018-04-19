@@ -21,8 +21,8 @@ Retrieve the PrunSrv command line to install a Neo4j Server
 .PARAMETER ForServerUninstall
 Retrieve the PrunSrv command line to uninstall a Neo4j Server
 
-.PARAMETER ForServerReconfigure
-Retrieve the PrunSrv command line to reconfigure a Neo4j Server
+.PARAMETER ForServerUpdate
+Retrieve the PrunSrv command line to update a Neo4j Server
 
 .PARAMETER ForConsole
 Retrieve the PrunSrv command line to start a Neo4j Server in the console.
@@ -47,8 +47,8 @@ Function Get-Neo4jPrunsrv
     ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerUninstallInvoke')]
     [switch]$ForServerUninstall
 
-    ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerReconfigureInvoke')]
-    [switch]$ForServerReconfigure
+    ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerUpdateInvoke')]
+    [switch]$ForServerUpdate
 
     ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ConsoleInvoke')]
     [switch]$ForConsole
@@ -89,10 +89,10 @@ Function Get-Neo4jPrunsrv
       "ServerInstallInvoke"     {
         $PrunArgs += @("`"//IS//$($Name)`"")
       }
-      "ServerReconfigureInvoke" {
+      "ServerUpdateInvoke" {
         $PrunArgs += @("`"//US//$($Name)`"")
       }
-      {$_ -in @("ServerInstallInvoke", "ServerReconfigureInvoke")} {
+      {$_ -in @("ServerInstallInvoke", "ServerUpdateInvoke")} {
 
         $JvmOptions = @()
 

@@ -7,29 +7,29 @@
 
 <#
 .SYNOPSIS
-Reconfigure a Neo4j Server Windows Service
+Update an installed Neo4j Server Windows Service
 
 .DESCRIPTION
-Reconfigure a Neo4j Server Windows Service
+Update an installed Neo4j Server Windows Service
 
 .PARAMETER Neo4jServer
-An object representing a valid Neo4j Server object
+An object representing a valid Neo4j Server
 
 .EXAMPLE
-Reconfigure-Neo4jServer -Neo4jServer $ServerObject
+Update-Neo4jServer $ServerObject
 
-Reconfigure the Neo4j Windows Service for the Neo4j installation at $ServerObject
+Update the Neo4j Windows Service for the Neo4j installation at $ServerObject
 
 .OUTPUTS
 System.Int32
-0 = Service is successfully reconfigured
+0 = Service is successfully updated
 non-zero = an error occured
 
 .NOTES
 This function is private to the powershell module
 
 #>
-Function Reconfigure-Neo4jServer
+Function Update-Neo4jServer
 {
   [cmdletBinding(SupportsShouldProcess=$false,ConfirmImpact='Medium')]
   param (
@@ -48,10 +48,10 @@ Function Reconfigure-Neo4jServer
     $result = Get-Service -Name $Name -ComputerName '.' -ErrorAction 'SilentlyContinue'
     if ($result -ne $null)
     {
-      $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $Neo4jServer -ForServerReconfigure
+      $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $Neo4jServer -ForServerUpdate
       if ($prunsrv -eq $null) { throw "Could not determine the command line for PRUNSRV" }
 
-      Write-Verbose "Reconfiguring Neo4j as a service with command line $($prunsrv.cmd) $($prunsrv.args)"
+      Write-Verbose "Update installed Neo4j service with command line $($prunsrv.cmd) $($prunsrv.args)"
       $stdError = New-Neo4jTempFile -Prefix 'stderr'
       Write-Verbose $prunsrv
       $result = (Start-Process -FilePath $prunsrv.cmd -ArgumentList $prunsrv.args -Wait -NoNewWindow -PassThru -WorkingDirectory $Neo4jServer.Home -RedirectStandardError $stdError)
@@ -59,10 +59,10 @@ Function Reconfigure-Neo4jServer
 
       # Process the output
       if ($result.ExitCode -eq 0) {
-        Write-Host "Neo4j service reconfigured"
+        Write-Host "Neo4j service updated"
       } else {
-        Write-Host "Neo4j service did not reconfigure"
-        # Write out STDERR if it did not reconfigure
+        Write-Host "Neo4j service did not update"
+        # Write out STDERR if it did not update
         Get-Content -Path $stdError -ErrorAction 'SilentlyContinue' | ForEach-Object -Process {
           Write-Host $_
         }
@@ -73,7 +73,7 @@ Function Reconfigure-Neo4jServer
 
       Write-Output $result.ExitCode
     } else {
-      Write-Host "Service reconfigure failed - service '$Name' not found"
+      Write-Host "Service update failed - service '$Name' not found"
       Write-Output 1
     }
   }

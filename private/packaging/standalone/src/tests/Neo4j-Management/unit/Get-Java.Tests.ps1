@@ -170,7 +170,7 @@ InModuleScope Neo4j-Management {
       $result = Get-Java -ForServer -Neo4jServer $serverObject
       $resultArgs = ($result.args -join ' ')
 
-      It "should have main class of org.neo4j.server.enterprise.CommercialEntryPoint" {
+      It "should have main class of com.neo4j.server.enterprise.CommercialEntryPoint" {
         $resultArgs | Should Match ([regex]::Escape(' com.neo4j.server.enterprise.CommercialEntryPoint'))
       }
     }

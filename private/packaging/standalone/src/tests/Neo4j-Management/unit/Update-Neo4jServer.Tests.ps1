@@ -12,7 +12,7 @@ $common = Join-Path (Split-Path -Parent $here) 'Common.ps1'
 Import-Module "$src\Neo4j-Management.psm1"
 
 InModuleScope Neo4j-Management {
-  Describe "Reconfigure-Neo4jServer" {
+  Describe "Update-Neo4jServer" {
 
     # Setup mocking environment
     # Mock Java environment
@@ -33,14 +33,14 @@ InModuleScope Neo4j-Management {
       $serverObject = global:New-InvalidNeo4jInstall
 
       It "throws if invalid or missing neo4j directory" {
-        { Reconfigure-Neo4jServer -Neo4jServer $serverObject -ErrorAction Stop } | Should Throw
+        { Update-Neo4jServer -Neo4jServer $serverObject -ErrorAction Stop } | Should Throw
       }
     }
 
     Context "Non-existing service" {
       Mock Get-Service -Verifiable { return $null }
       $serverObject = global:New-MockNeo4jInstall
-      $result = Reconfigure-Neo4jServer -Neo4jServer $serverObject
+      $result = Update-Neo4jServer -Neo4jServer $serverObject
 
       It "returns 1 for service that does not exist" {
         $result | Should Be 1
@@ -48,24 +48,24 @@ InModuleScope Neo4j-Management {
       }
     }
 
-    Context "Reconfigure service failure" {
+    Context "Update service failure" {
       Mock Get-Service -Verifiable { return "Fake service" }
       Mock Start-Process -Verifiable { throw "Error reconfiguring" }
       $serverObject = global:New-MockNeo4jInstall
 
-      It "throws when reconfigure encounters an error" {
-        { Reconfigure-Neo4jServer -Neo4jServer $serverObject } | Should Throw
+      It "throws when update encounters an error" {
+        { Update-Neo4jServer -Neo4jServer $serverObject } | Should Throw
         Assert-VerifiableMocks
       }
     }
 
-    Context "Reconfigure service success" {
+    Context "Update service success" {
       Mock Get-Service -Verifiable { return "Fake service" }
       Mock Start-Process -Verifiable { @{'ExitCode' = 0} }
       $serverObject = global:New-MockNeo4jInstall
-      $result = Reconfigure-Neo4jServer -Neo4jServer $serverObject
+      $result = Update-Neo4jServer -Neo4jServer $serverObject
 
-      It "returns 0 when successfully reconfigured" {
+      It "returns 0 when successfully updated" {
         $result | Should Be 0
         Assert-VerifiableMocks
       }

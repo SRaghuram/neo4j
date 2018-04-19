@@ -71,8 +71,8 @@ InModuleScope Neo4j-Management {
         $prunsrv.args -join ' ' | Should Match ([regex]::Escape("//IS//$($global:mockServiceName)"))
       }
 
-      It "return //US/xxx argument on service reconfigure" {
-        $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $serverObject -ForServerReconfigure
+      It "return //US/xxx argument on service update" {
+        $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $serverObject -ForServerUpdate
 
         $prunsrv.args -join ' ' | Should Match ([regex]::Escape("//US//$($global:mockServiceName)"))
       }
