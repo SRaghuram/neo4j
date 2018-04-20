@@ -71,13 +71,19 @@ InModuleScope Neo4j-Management {
         $prunsrv.args -join ' ' | Should Match ([regex]::Escape("//IS//$($global:mockServiceName)"))
       }
 
-      It "return //DS/xxx argument on service install" {
+      It "return //US/xxx argument on service update" {
+        $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $serverObject -ForServerUpdate
+
+        $prunsrv.args -join ' ' | Should Match ([regex]::Escape("//US//$($global:mockServiceName)"))
+      }
+
+      It "return //DS/xxx argument on service uninstall" {
         $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $serverObject -ForServerUninstall
 
         $prunsrv.args -join ' ' | Should Match ([regex]::Escape("//DS//$($global:mockServiceName)"))
       }
 
-      It "return //TS/xxx argument on service install" {
+      It "return //TS/xxx argument on service run console" {
         $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $serverObject -ForConsole
 
         $prunsrv.args -join ' ' | Should Match ([regex]::Escape("//TS//$($global:mockServiceName)"))
@@ -123,8 +129,8 @@ InModuleScope Neo4j-Management {
 
       $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $serverObject -ForServerInstall
 
-      It "should have main class of org.neo4j.server.enterprise.OpenEnterpriseEntryPoint" {
-        ($prunsrv.args -join ' ') | Should Match ([regex]::Escape('=org.neo4j.server.enterprise.OpenEnterpriseEntryPoint'))
+      It "should have main class of com.neo4j.server.enterprise.CommercialEntryPoint" {
+        ($prunsrv.args -join ' ') | Should Match ([regex]::Escape('=com.neo4j.server.enterprise.CommercialEntryPoint'))
       }
     }
 
