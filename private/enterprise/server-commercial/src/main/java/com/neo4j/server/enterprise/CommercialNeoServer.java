@@ -6,6 +6,8 @@
 package com.neo4j.server.enterprise;
 
 import com.neo4j.causalclustering.core.CommercialCoreGraphDatabase;
+import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceFactorySelector;
+import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.readreplica.CommercialReadReplicaGraphDatabase;
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
 
@@ -24,17 +26,23 @@ import static org.neo4j.server.database.LifecycleManagingDatabase.lifecycleManag
 
 public class CommercialNeoServer extends OpenEnterpriseNeoServer
 {
-    private static final GraphFactory COMMERCIAL_CORE_FACTORY = ( config, dependencies ) ->
+    private static GraphFactory commercialCoreFactory( SslDiscoveryServiceFactory discoveryServiceFactory )
     {
-        File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
-        return new CommercialCoreGraphDatabase( storeDir, config, dependencies );
-    };
+        return ( config, dependencies ) ->
+        {
+            File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
+            return new CommercialCoreGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
+        };
+    }
 
-    private static final GraphFactory COMMERCIAL_READ_REPLICA_FACTORY = ( config, dependencies ) ->
+    private static GraphFactory commercialReadReplicaFactory( SslDiscoveryServiceFactory discoveryServiceFactory )
     {
-        File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
-        return new CommercialReadReplicaGraphDatabase( storeDir, config, dependencies );
-    };
+        return ( config, dependencies ) ->
+        {
+            File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
+            return new CommercialReadReplicaGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
+        };
+    }
 
     private static final GraphFactory COMMERCIAL_ENTERPRISE_FACTORY = ( config, dependencies ) ->
     {
@@ -51,12 +59,14 @@ public class CommercialNeoServer extends OpenEnterpriseNeoServer
     {
         final EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
 
+        final SslDiscoveryServiceFactory discoveryServiceFactory = new CommercialDiscoveryServiceFactorySelector().select( config );
+
         switch ( mode )
         {
         case CORE:
-            return lifecycleManagingDatabase( COMMERCIAL_CORE_FACTORY );
+            return lifecycleManagingDatabase( commercialCoreFactory( discoveryServiceFactory ) );
         case READ_REPLICA:
-            return lifecycleManagingDatabase( COMMERCIAL_READ_REPLICA_FACTORY );
+            return lifecycleManagingDatabase( commercialReadReplicaFactory( discoveryServiceFactory ) );
         case SINGLE:
             return lifecycleManagingDatabase( COMMERCIAL_ENTERPRISE_FACTORY );
         default:

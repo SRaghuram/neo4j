@@ -5,11 +5,13 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
+import com.neo4j.causalclustering.discovery.SslSharedDiscoveryServiceFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 
-import org.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+import java.util.UUID;
+
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.PlatformModule;
@@ -38,8 +40,8 @@ class CommercialReadReplicaEditionModuleTest
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
         PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() );
-        CommercialReadReplicaEditionModule editionModule = new CommercialReadReplicaEditionModule( platformModule, new SharedDiscoveryServiceFactory(),
-                mock( MemberId.class ) );
+        CommercialReadReplicaEditionModule editionModule = new CommercialReadReplicaEditionModule( platformModule, new SslSharedDiscoveryServiceFactory(),
+                new MemberId( UUID.randomUUID() ) );
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );

@@ -28,7 +28,6 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 
 public class ServerManagementIT
 {
-
     private final CleanupRule cleanup = new CleanupRule();
     private final TestDirectory baseDir = TestDirectory.testDirectory();
     private final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
@@ -53,8 +52,7 @@ public class ServerManagementIT
                 .build();
 
         // When
-        NeoServer server = cleanup.add( new CommercialNeoServer( config, graphDbDependencies(), NullLogProvider
-                .getInstance() ) );
+        NeoServer server = cleanup.add( new CommercialNeoServer( config, graphDbDependencies(), NullLogProvider.getInstance() ) );
         server.start();
 
         assertNotNull( server.getDatabase().getGraph() );

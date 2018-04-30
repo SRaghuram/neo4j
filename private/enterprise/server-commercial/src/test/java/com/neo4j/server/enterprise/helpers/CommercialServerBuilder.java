@@ -72,8 +72,7 @@ public class CommercialServerBuilder extends EnterpriseServerBuilder
     {
         private final File configFile;
 
-        TestCommercialNeoServer( Config config, File configFile,
-                                 GraphDatabaseFacadeFactory.Dependencies dependencies, LogProvider logProvider )
+        TestCommercialNeoServer( Config config, File configFile, GraphDatabaseFacadeFactory.Dependencies dependencies, LogProvider logProvider )
         {
             super( config, dependencies, logProvider );
             this.configFile = configFile;

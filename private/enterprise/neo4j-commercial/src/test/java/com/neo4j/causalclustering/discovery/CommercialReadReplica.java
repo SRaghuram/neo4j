@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.IntFunction;
 
-import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.ReadReplica;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -20,15 +19,18 @@ import org.neo4j.kernel.monitoring.Monitors;
 
 public class CommercialReadReplica extends ReadReplica
 {
-    public CommercialReadReplica( File parentDir, int serverId, int boltPort, int httpPort, int txPort, int backupPort,
-                                  DiscoveryServiceFactory discoveryServiceFactory,
-                                  List<AdvertisedSocketAddress> coreMemberHazelcastAddresses, Map<String, String> extraParams,
-                                  Map<String, IntFunction<String>> instanceExtraParams, String recordFormat, Monitors monitors,
-                                  String advertisedAddress, String listenAddress )
+    private final SslDiscoveryServiceFactory discoveryServiceFactory;
+
+    public CommercialReadReplica( File parentDir, int serverId, int boltPort, int httpPort, int txPort, int backupPort, int discoveryPort,
+            SslDiscoveryServiceFactory discoveryServiceFactory,
+            List<AdvertisedSocketAddress> coreMemberDiscoveryAddresses, Map<String,String> extraParams,
+            Map<String,IntFunction<String>> instanceExtraParams, String recordFormat, Monitors monitors,
+            String advertisedAddress, String listenAddress )
     {
-        super( parentDir, serverId, boltPort, httpPort, txPort, backupPort, discoveryServiceFactory,
-                coreMemberHazelcastAddresses, extraParams, instanceExtraParams, recordFormat, monitors,
+        super( parentDir, serverId, boltPort, httpPort, txPort, backupPort, discoveryPort, discoveryServiceFactory,
+                coreMemberDiscoveryAddresses, extraParams, instanceExtraParams, recordFormat, monitors,
                 advertisedAddress, listenAddress );
+        this.discoveryServiceFactory = discoveryServiceFactory;
     }
 
     @Override

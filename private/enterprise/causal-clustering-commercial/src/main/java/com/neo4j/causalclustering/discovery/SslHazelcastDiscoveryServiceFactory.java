@@ -18,7 +18,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
 
-public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServiceFactory
+public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServiceFactory implements SslDiscoveryServiceFactory
 {
     private SslPolicy sslPolicy;
 
@@ -33,7 +33,7 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
     }
 
     @Override
-    public TopologyService topologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
+    public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
                                            MemberId myself, HostnameResolver hostnameResolver,
                                            TopologyServiceRetryStrategy topologyServiceRetryStrategy )
     {
@@ -42,6 +42,7 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
                 jobScheduler, logProvider, config, myself );
     }
 
+    @Override
     public void setSslPolicy( SslPolicy sslPolicy )
     {
         this.sslPolicy = sslPolicy;

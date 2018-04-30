@@ -58,7 +58,7 @@ public class FulltextIndexCausalClusterIT
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 1 );
 
-    private Cluster cluster;
+    private Cluster<?> cluster;
     private long nodeId1;
     private long nodeId2;
     private long relId1;

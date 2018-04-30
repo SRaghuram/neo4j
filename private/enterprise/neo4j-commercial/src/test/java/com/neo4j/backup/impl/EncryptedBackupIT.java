@@ -70,7 +70,7 @@ class EncryptedBackupIT
     @Inject
     private DefaultFileSystemAbstraction fs;
 
-    private Cluster cluster;
+    private Cluster<?> cluster;
 
     private static final int BACKUP_SSL_START = 6; // certs for backup start after 6
     private static final String backupPolicyName = "backup";
@@ -426,7 +426,7 @@ class EncryptedBackupIT
         backupDataMatchesDatabase( cluster, backupHome, backupName );
     }
 
-    private Cluster aCluster()
+    private Cluster<?> aCluster()
     {
         int noOfCoreMembers = 3;
         int noOfReadReplicas = 3;
@@ -515,7 +515,7 @@ class EncryptedBackupIT
         };
     }
 
-    private static void exchangeBackupClientKeyWithCluster( Cluster cluster, File backupHome, String targetPolicyName ) throws IOException
+    private static void exchangeBackupClientKeyWithCluster( Cluster<?> cluster, File backupHome, String targetPolicyName ) throws IOException
     {
         // Copy backup cert to cluster trusted and copy cluster keys to backup
         for ( ClusterMember clusterMember : allMembers( cluster ) )
@@ -579,7 +579,7 @@ class EncryptedBackupIT
                ? 0 : 1;
     }
 
-    private static void backupDataMatchesDatabase( Cluster cluster, File backupDir, String backupName )
+    private static void backupDataMatchesDatabase( Cluster<?> cluster, File backupDir, String backupName )
     {
         assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ),
                 OnlineBackupCommandCcIT.getBackupDbRepresentation( backupName, backupDir ) );
@@ -587,7 +587,7 @@ class EncryptedBackupIT
 
     // ---------------------- New functionality
 
-    private void setupClusterWithEncryption( Cluster cluster, boolean encryptedTx, boolean encryptedBackup ) throws IOException
+    private void setupClusterWithEncryption( Cluster<?> cluster, boolean encryptedTx, boolean encryptedBackup ) throws IOException
     {
         allMembers( cluster ).forEach( member -> member.config().augment( OnlineBackupSettings.online_backup_enabled, "true" ) );
         if ( encryptedTx )
@@ -602,7 +602,7 @@ class EncryptedBackupIT
         }
     }
 
-    private static void configureClusterConfigEncryptedCluster( Cluster cluster )
+    private static void configureClusterConfigEncryptedCluster( Cluster<?> cluster )
     {
         for ( ClusterMember clusterMember : allMembers( cluster ) )
         {
@@ -612,7 +612,7 @@ class EncryptedBackupIT
         }
     }
 
-    private static void configureClusterConfigEncryptedBackup( Cluster cluster )
+    private static void configureClusterConfigEncryptedBackup( Cluster<?> cluster )
     {
         for ( ClusterMember clusterMember : allMembers( cluster ) )
         {
@@ -622,7 +622,7 @@ class EncryptedBackupIT
         }
     }
 
-    private static Collection<ClusterMember> allMembers( Cluster cluster )
+    private static Collection<ClusterMember> allMembers( Cluster<?> cluster )
     {
         Collection<ClusterMember> members = new ArrayList<>();
         members.addAll( cluster.coreMembers() );
@@ -630,7 +630,7 @@ class EncryptedBackupIT
         return members;
     }
 
-    private void setupEntireClusterTrusted( Cluster cluster, String policyName, int baseKey ) throws IOException
+    private void setupEntireClusterTrusted( Cluster<?> cluster, String policyName, int baseKey ) throws IOException
     {
         for ( ClusterMember clusterMember : allMembers( cluster ) )
         {

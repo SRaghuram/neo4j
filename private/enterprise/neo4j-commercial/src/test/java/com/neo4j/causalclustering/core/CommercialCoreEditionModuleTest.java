@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.discovery.SslSharedDiscoveryServiceFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 
-import org.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.BoltConnector;
@@ -37,7 +37,7 @@ class CommercialCoreEditionModuleTest
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
         PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() );
-        CommercialCoreEditionModule editionModule = new CommercialCoreEditionModule( platformModule, new SharedDiscoveryServiceFactory() );
+        CommercialCoreEditionModule editionModule = new CommercialCoreEditionModule( platformModule, new SslSharedDiscoveryServiceFactory() );
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );

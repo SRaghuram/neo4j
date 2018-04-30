@@ -12,17 +12,16 @@ import java.util.function.IntFunction;
 
 import org.neo4j.causalclustering.discovery.Cluster;
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
-import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.discovery.ReadReplica;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.ports.allocation.PortAuthority;
 
-public class CommercialCluster extends Cluster
+public class CommercialCluster extends Cluster<SslDiscoveryServiceFactory>
 {
     public CommercialCluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas,
-                             DiscoveryServiceFactory discoveryServiceFactory,
+                             SslDiscoveryServiceFactory discoveryServiceFactory,
                              Map<String,String> coreParams, Map<String,IntFunction<String>> instanceCoreParams,
                              Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
                              String recordFormat, IpFamily ipFamily, boolean useWildcard )
@@ -32,7 +31,7 @@ public class CommercialCluster extends Cluster
     }
 
     protected CoreClusterMember createCoreClusterMember( int serverId,
-                                                       int hazelcastPort,
+                                                       int discoveryPort,
                                                        int clusterSize,
                                                        List<AdvertisedSocketAddress> initialHosts,
                                                        String recordFormat,
@@ -47,7 +46,7 @@ public class CommercialCluster extends Cluster
 
         return new CommercialCoreClusterMember(
                 serverId,
-                hazelcastPort,
+                discoveryPort,
                 txPort,
                 raftPort,
                 boltPort,
@@ -77,6 +76,7 @@ public class CommercialCluster extends Cluster
         int httpPort = PortAuthority.allocatePort();
         int txPort = PortAuthority.allocatePort();
         int backupPort = PortAuthority.allocatePort();
+        int discoveryPort = PortAuthority.allocatePort();
 
         return new CommercialReadReplica(
                 parentDir,
@@ -84,7 +84,9 @@ public class CommercialCluster extends Cluster
                 boltPort,
                 httpPort,
                 txPort,
-                backupPort, discoveryServiceFactory,
+                backupPort,
+                discoveryPort,
+                discoveryServiceFactory,
                 initialHosts,
                 extraParams,
                 instanceExtraParams,

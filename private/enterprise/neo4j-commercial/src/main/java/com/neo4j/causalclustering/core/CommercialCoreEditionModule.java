@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
@@ -37,7 +37,7 @@ import org.neo4j.ssl.SslPolicy;
  */
 public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 {
-    CommercialCoreEditionModule( final PlatformModule platformModule, final DiscoveryServiceFactory discoveryServiceFactory )
+    CommercialCoreEditionModule( final PlatformModule platformModule, final SslDiscoveryServiceFactory discoveryServiceFactory )
     {
         super( platformModule, discoveryServiceFactory );
     }
@@ -48,15 +48,16 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
         EnterpriseEditionModule.setupEnterpriseSecurityModule( this, platformModule, procedures );
     }
 
+    @Override
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
             ClusterStateDirectory clusterStateDirectory, IdentityModule identityModule, Dependencies dependencies, File databaseDirectory )
     {
         SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
 
-        if ( discoveryServiceFactory instanceof SslHazelcastDiscoveryServiceFactory )
+        if ( discoveryServiceFactory instanceof SslDiscoveryServiceFactory )
         {
-            ((SslHazelcastDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
+            ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
 
         return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, clusterStateDirectory.get(), databaseDirectory );

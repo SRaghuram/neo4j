@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.discovery.CommercialCluster;
-import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.CommercialAkkaDiscoveryServiceFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,10 +62,14 @@ class SecureClusterIT
         SslPolicyConfig policyConfig = new SslPolicyConfig( sslPolicyName );
 
         Map<String,String> coreParams = stringMap(
+                CausalClusteringSettings.disable_middleware_logging.name(), "false",
+                CausalClusteringSettings.middleware_logging_level.name(), "0",
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName,
                 policyConfig.base_directory.name(), "certificates/cluster"
         );
         Map<String,String> readReplicaParams = stringMap(
+                CausalClusteringSettings.disable_middleware_logging.name(), "false",
+                CausalClusteringSettings.middleware_logging_level.name(), "0",
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName,
                 policyConfig.base_directory.name(), "certificates/cluster"
         );
@@ -74,7 +78,7 @@ class SecureClusterIT
         int noOfReadReplicas = 3;
 
         cluster = new CommercialCluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas,
-                new SslHazelcastDiscoveryServiceFactory(), coreParams, emptyMap(), readReplicaParams,
+                new CommercialAkkaDiscoveryServiceFactory(), coreParams, emptyMap(), readReplicaParams,
                 emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
 
         // install the cryptographic objects for each core

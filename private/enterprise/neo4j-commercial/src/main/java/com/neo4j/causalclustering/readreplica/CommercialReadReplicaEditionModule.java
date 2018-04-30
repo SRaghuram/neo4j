@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
@@ -33,7 +33,7 @@ import org.neo4j.ssl.SslPolicy;
  */
 public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEditionModule
 {
-    CommercialReadReplicaEditionModule( final PlatformModule platformModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
+    CommercialReadReplicaEditionModule( final PlatformModule platformModule, final SslDiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
     {
         super( platformModule, discoveryServiceFactory, myself );
     }
@@ -45,9 +45,9 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
         SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
 
-        if ( discoveryServiceFactory instanceof SslHazelcastDiscoveryServiceFactory )
+        if ( discoveryServiceFactory instanceof SslDiscoveryServiceFactory )
         {
-            ((SslHazelcastDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
+            ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
     }
 

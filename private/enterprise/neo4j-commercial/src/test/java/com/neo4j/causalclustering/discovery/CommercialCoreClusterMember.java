@@ -13,12 +13,13 @@ import java.util.Map;
 import java.util.function.IntFunction;
 
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
-import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 
 public class CommercialCoreClusterMember extends CoreClusterMember
 {
+    private final SslDiscoveryServiceFactory discoveryServiceFactory;
+
     public CommercialCoreClusterMember( int serverId,
                                         int discoveryPort,
                                         int txPort,
@@ -28,7 +29,7 @@ public class CommercialCoreClusterMember extends CoreClusterMember
                                         int backupPort,
                                         int clusterSize,
                                         List<AdvertisedSocketAddress> addresses,
-                                        DiscoveryServiceFactory discoveryServiceFactory,
+                                        SslDiscoveryServiceFactory discoveryServiceFactory,
                                         String recordFormat,
                                         File parentDir,
                                         Map<String, String> extraParams,
@@ -39,6 +40,7 @@ public class CommercialCoreClusterMember extends CoreClusterMember
         super( serverId, discoveryPort, txPort, raftPort, boltPort, httpPort, backupPort, clusterSize, addresses,
                 discoveryServiceFactory, recordFormat, parentDir, extraParams, instanceExtraParams, listenAddress,
                 advertisedAddress );
+        this.discoveryServiceFactory = discoveryServiceFactory;
     }
 
     @Override
