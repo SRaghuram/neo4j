@@ -1,6 +1,6 @@
 @ECHO OFF
-rem Copyright (c) 2002-2018 "Neo Technology,"
-rem Network Engine for Objects in Lund AB [http://neotechnology.com]
+rem Copyright (c) 2002-2018 "Neo4j,"
+rem Neo4j Sweden AB [http://neo4j.com]
 rem This file is a commercial add-on to Neo4j Enterprise Edition.
 
 SETLOCAL
