@@ -38,7 +38,7 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
     {
         configureHazelcast( config, logProvider );
         return new HazelcastClient( new SslHazelcastClientConnector( config, logProvider, sslPolicy, hostnameResolver ),
-                jobScheduler, logProvider, config, myself, topologyServiceRetryStrategy );
+                jobScheduler, logProvider, config, myself );
     }
 
     public void setSslPolicy( SslPolicy sslPolicy )
