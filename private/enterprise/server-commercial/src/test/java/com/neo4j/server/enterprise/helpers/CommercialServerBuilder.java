@@ -82,7 +82,7 @@ public class CommercialServerBuilder extends EnterpriseServerBuilder
         @Override
         protected DatabaseActions createDatabaseActions()
         {
-            return createDatabaseActionsObject( database, getConfig() );
+            return createDatabaseActionsObject( database );
         }
 
         @Override

@@ -17,7 +17,6 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.kernel.GraphDatabaseDependencies;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
@@ -25,7 +24,6 @@ import org.neo4j.server.BaseBootstrapperTestIT;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.ServerBootstrapper;
 import org.neo4j.server.ServerTestUtils;
-import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.test.rule.CleanupRule;
 
 import static org.hamcrest.Matchers.is;
@@ -62,7 +60,6 @@ public class CommercialBootstrapperTestIT extends BaseBootstrapperTestIT
         int resultCode = ServerBootstrapper.start( bootstrapper,
                 "--home-dir", tempDir.newFolder( "home-dir" ).getAbsolutePath(),
                 "-c", configOption( EnterpriseEditionSettings.mode, "SINGLE" ),
-                "-c", configOption( ServerSettings.script_enabled, Settings.TRUE ),
                 "-c", configOption( data_directory, getRelativePath( folder.getRoot(), data_directory ) ),
                 "-c", configOption( logs_directory, tempDir.getRoot().getAbsolutePath() ),
                 "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ),
@@ -84,7 +81,6 @@ public class CommercialBootstrapperTestIT extends BaseBootstrapperTestIT
                 "--home-dir", tempDir.newFolder( "home-dir" ).getAbsolutePath(),
                 "-c", configOption( EnterpriseEditionSettings.mode, "HA" ),
                 "-c", configOption( ClusterSettings.server_id, "1" ),
-                "-c", configOption( ServerSettings.script_enabled, Settings.TRUE ),
                 "-c", configOption( ClusterSettings.initial_hosts, "127.0.0.1:" + clusterPort ),
                 "-c", configOption( ClusterSettings.cluster_server, "127.0.0.1:" + clusterPort ),
                 "-c", configOption( data_directory, getRelativePath( folder.getRoot(), data_directory ) ),
@@ -143,7 +139,6 @@ public class CommercialBootstrapperTestIT extends BaseBootstrapperTestIT
         cleanupRule.add( uncoveredEnterpriseBootstrapper );
         ServerBootstrapper.start( uncoveredEnterpriseBootstrapper,
                 "--home-dir", tempDir.newFolder( "home-dir" ).getAbsolutePath(),
-                "-c", configOption( ServerSettings.script_enabled, Settings.TRUE ),
                 "--config-dir", configFile.getParentFile().getAbsolutePath() );
 
         // Then
