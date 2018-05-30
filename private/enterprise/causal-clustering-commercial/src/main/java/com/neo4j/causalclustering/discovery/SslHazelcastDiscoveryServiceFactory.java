@@ -13,6 +13,7 @@ import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
@@ -24,11 +25,11 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
     @Override
     public CoreTopologyService coreTopologyService(Config config, MemberId myself, JobScheduler jobScheduler,
                                                    LogProvider logProvider, LogProvider userLogProvider, HostnameResolver hostnameResolver,
-                                                   TopologyServiceRetryStrategy topologyServiceRetryStrategy )
+                                                   TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors )
     {
         configureHazelcast( config, logProvider );
         return new SslHazelcastCoreTopologyService( config, sslPolicy, myself, jobScheduler, logProvider,
-                userLogProvider, hostnameResolver, topologyServiceRetryStrategy );
+                userLogProvider, hostnameResolver, topologyServiceRetryStrategy, monitors );
     }
 
     @Override

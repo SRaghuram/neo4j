@@ -12,6 +12,7 @@ import org.neo4j.causalclustering.discovery.HostnameResolver;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
@@ -22,9 +23,9 @@ class SslHazelcastCoreTopologyService extends HazelcastCoreTopologyService
 
     SslHazelcastCoreTopologyService( Config config, SslPolicy sslPolicy, MemberId myself, JobScheduler jobScheduler,
                                      LogProvider logProvider, LogProvider userLogProvider, HostnameResolver hostnameResolver,
-                                     TopologyServiceRetryStrategy topologyServiceRetryStrategy )
+                                     TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors )
     {
-        super( config, myself, jobScheduler, logProvider, userLogProvider, hostnameResolver, topologyServiceRetryStrategy );
+        super( config, myself, jobScheduler, logProvider, userLogProvider, hostnameResolver, topologyServiceRetryStrategy, monitors );
         this.sslPolicy = sslPolicy;
     }
 
