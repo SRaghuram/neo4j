@@ -60,8 +60,8 @@ import static org.neo4j.kernel.impl.transaction.state.NeoStoreFileListing.getSna
  */
 public class FulltextProviderImpl implements FulltextProvider
 {
-    private static final int ASIDE = 0;
-    private static final int BSIDE = 1;
+    private static final int A_SIDE = 0;
+    private static final int B_SIDE = 1;
 
     private final GraphDatabaseService db;
     private final Log log;
@@ -158,13 +158,13 @@ public class FulltextProviderImpl implements FulltextProvider
     @Override
     public void openIndex( String identifier, FulltextIndexType type ) throws IOException
     {
-        LuceneFulltext a = factory.openFulltextIndex( identifier, ASIDE, type );
-        LuceneFulltext b = factory.openFulltextIndex( identifier, BSIDE, type );
+        LuceneFulltext a = factory.openFulltextIndex( identifier, A_SIDE, type );
+        LuceneFulltext b = factory.openFulltextIndex( identifier, B_SIDE, type );
         configurationLock.writeLock().lock();
         try
         {
-            register( a, ASIDE );
-            register( b, BSIDE );
+            register( a, A_SIDE );
+            register( b, B_SIDE );
         }
         finally
         {
@@ -175,13 +175,13 @@ public class FulltextProviderImpl implements FulltextProvider
     @Override
     public void createIndex( String identifier, FulltextIndexType type, List<String> properties ) throws IOException
     {
-        LuceneFulltext a = factory.createFulltextIndex( identifier, ASIDE, type, properties );
-        LuceneFulltext b = factory.createFulltextIndex( identifier, BSIDE, type, properties );
+        LuceneFulltext a = factory.createFulltextIndex( identifier, A_SIDE, type, properties );
+        LuceneFulltext b = factory.createFulltextIndex( identifier, B_SIDE, type, properties );
         configurationLock.writeLock().lock();
         try
         {
-            register( a, ASIDE );
-            register( b, BSIDE );
+            register( a, A_SIDE );
+            register( b, B_SIDE );
         }
         finally
         {
@@ -291,13 +291,13 @@ public class FulltextProviderImpl implements FulltextProvider
             awaitPopulation();
             if ( type == FulltextIndexType.NODES )
             {
-                writableNodeIndices[ASIDE].remove( identifier ).drop();
-                writableNodeIndices[BSIDE].remove( identifier ).drop();
+                writableNodeIndices[A_SIDE].remove( identifier ).drop();
+                writableNodeIndices[B_SIDE].remove( identifier ).drop();
             }
             else
             {
-                writableRelationshipIndices[ASIDE].remove( identifier ).drop();
-                writableRelationshipIndices[BSIDE].remove( identifier ).drop();
+                writableRelationshipIndices[A_SIDE].remove( identifier ).drop();
+                writableRelationshipIndices[B_SIDE].remove( identifier ).drop();
             }
         }
         finally
@@ -365,8 +365,7 @@ public class FulltextProviderImpl implements FulltextProvider
             List<AsyncFulltextIndexOperation> populations = new ArrayList<>();
             synchronized ( this )
             {
-                int currentSide = side;
-                tentativeSide = (currentSide + 1) % 2;
+                tentativeSide = side == A_SIDE ? B_SIDE : A_SIDE;
                 notifyAll();
             }
             try
@@ -408,8 +407,8 @@ public class FulltextProviderImpl implements FulltextProvider
     private Resource snapshotStoreFiles( Collection<StoreFileMetadata> files ) throws IOException
     {
         final Collection<ResourceIterator<File>> snapshots = new ArrayList<>();
-            for ( WritableFulltext index : Iterables.concat( writableNodeIndices[ASIDE].values(), writableNodeIndices[BSIDE].values(),
-                    writableRelationshipIndices[ASIDE].values(), writableRelationshipIndices[BSIDE].values() ) )
+            for ( WritableFulltext index : Iterables.concat( writableNodeIndices[A_SIDE].values(), writableNodeIndices[B_SIDE].values(),
+                    writableRelationshipIndices[A_SIDE].values(), writableRelationshipIndices[B_SIDE].values() ) )
             {
                 // Save the last committed transaction, then drain the update queue to make sure that we have applied _at least_ the commits the config claims.
                 Lock listingLock = configurationLock.readLock();
@@ -517,9 +516,9 @@ public class FulltextProviderImpl implements FulltextProvider
                 log.error( "Unable to close fulltext index.", e );
             }
         };
-        writableNodeIndices[ASIDE].values().forEach( fulltextCloser );
-        writableNodeIndices[BSIDE].values().forEach( fulltextCloser );
-        writableRelationshipIndices[ASIDE].values().forEach( fulltextCloser );
-        writableRelationshipIndices[BSIDE].values().forEach( fulltextCloser );
+        writableNodeIndices[A_SIDE].values().forEach( fulltextCloser );
+        writableNodeIndices[B_SIDE].values().forEach( fulltextCloser );
+        writableRelationshipIndices[A_SIDE].values().forEach( fulltextCloser );
+        writableRelationshipIndices[B_SIDE].values().forEach( fulltextCloser );
     }
 }
