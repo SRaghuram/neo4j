@@ -50,6 +50,7 @@ import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.test.rule.fs.FileSystemRule;
+import org.neo4j.util.TestHelpers;
 
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
@@ -528,8 +529,7 @@ public class EncryptedBackupIT
     private void installCryptographicObjectsToBackupHome( File neo4J_home, int keyId ) throws IOException
     {
         createConfigFile( neo4J_home );
-        File certificatesLocation = neo4J_home.toPath().resolve( "certificates/" + backupPolicyName ).toFile();
-        System.out.printf( "Installing keyId %d to %s\n", keyId, certificatesLocation );
+        File certificatesLocation = neo4J_home.toPath().resolve( "certificates" ).resolve( backupPolicyName ).toFile();
         certificatesLocation.mkdirs();
         installSsl( fsRule, certificatesLocation, keyId );
         copySslToPolicyTrustedDirectory( neo4J_home, neo4J_home, backupPolicyName, "backup-key-copy.crt" );
@@ -584,6 +584,9 @@ public class EncryptedBackupIT
         return sslResourceBuilder;
     }
 
+    /**
+     * It is necessary to run from the same jvm due to being dependant on ssl which is commercial only
+     */
     private int runBackupSameJvm( File neo4jHome, String backupName, String host ) throws CommandFailed, IncorrectUsage
     {
         return new OnlineBackupCommandBuilder().withSelectedBackupStrategy( SelectedBackupProtocol.CATCHUP ).withHost( host ).backup( neo4jHome, backupName )
