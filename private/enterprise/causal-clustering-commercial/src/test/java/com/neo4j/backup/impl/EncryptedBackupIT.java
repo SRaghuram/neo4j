@@ -211,40 +211,6 @@ public class EncryptedBackupIT
         backupDataMatchesDatabase( cluster, backupHome, backupName );
     }
 
-    private static void debugCluster( Cluster cluster ) throws IOException
-    {
-        for ( ClusterMember clusterMember : allMembers( cluster ) )
-        {
-            System.out.printf( "Member<%d> txAddr:%s backupAddr:%s\n", clusterUniqueServerId( clusterMember ),
-                    clusterMember.config().get( CausalClusteringSettings.transaction_listen_address ),
-                    clusterMember.config().get( OnlineBackupSettings.online_backup_server ) );
-            SslPolicyConfig backupPolicy = new SslPolicyConfig( backupPolicyName );
-            SslPolicyConfig clusterPolicy = new SslPolicyConfig( clusterPolicyName );
-            Optional<Path> backupCert = Optional.of( clusterMember.config().get( backupPolicy.public_certificate ).toPath() )
-                    .filter( path -> path.toFile().exists() )
-                    .map( path -> relativeToHome( clusterMember, path ) );
-            Optional<Path> clusterCert = Optional.of( clusterMember.config().get( clusterPolicy.public_certificate ).toPath() )
-                    .filter( path -> path.toFile().exists() )
-                    .map( path -> relativeToHome( clusterMember, path ) );
-            System.out.printf( "Backup policy pub cert: %s\n", backupCert );
-            System.out.printf( "Cluster policy pub cert: %s\n", clusterCert );
-            System.out.printf( "Cluster policy=%s\n", clusterMember.config().get( CausalClusteringSettings.ssl_policy ) );
-            System.out.printf( "Backup policy=%s\n", clusterMember.config().get( OnlineBackupSettings.ssl_policy ) );
-        }
-    }
-
-    private static Path relativeToHome( ClusterMember clusterMember, Path relativePath )
-    {
-        try
-        {
-            return clusterMember.homeDir().toPath().resolve( ".." ).toRealPath().relativize( relativePath );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
-        }
-    }
-
     @Test
     public void noPolicyAgainstTxPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
@@ -291,7 +257,6 @@ public class EncryptedBackupIT
         setupClusterWithEncryption( cluster, true, true );
         cluster.start();
         createSomeData( cluster );
-        debugCluster( cluster );
 
         // and
         IntSupplier backupClient = backupClientWithBackupEncryption( CausalClusteringSettings.transaction_listen_address );
@@ -308,7 +273,6 @@ public class EncryptedBackupIT
     {
         cluster = aCluster();
         setupClusterWithEncryption( cluster, true, false );
-        debugCluster( cluster );
         cluster.start();
         createSomeData( cluster );
 
@@ -329,7 +293,6 @@ public class EncryptedBackupIT
         setupClusterWithEncryption( cluster, false, true );
         cluster.start();
         createSomeData( cluster );
-        debugCluster( cluster );
 
         // and
         IntSupplier backupClientFunction = backupClientWithoutEncryption( CausalClusteringSettings.transaction_listen_address );
@@ -348,7 +311,6 @@ public class EncryptedBackupIT
         // given
         cluster = aCluster();
         setupClusterWithEncryption( cluster, true, true );
-//        debugCluster( cluster );
         cluster.start();
         createSomeData( cluster );
 
@@ -370,7 +332,6 @@ public class EncryptedBackupIT
         setupClusterWithEncryption( cluster, true, true );
         cluster.start();
         createSomeData( cluster );
-        debugCluster( cluster );
 
         // and
         IntSupplier backupClient = backupClientWithBackupEncryptionToReplica( OnlineBackupSettings.online_backup_server );
@@ -611,7 +572,6 @@ public class EncryptedBackupIT
         fsRule.mkdirs( new File( baseDir, "revoked" ) );
         SslResourceBuilder sslResourceBuilder = SslResourceBuilder.selfSignedKeyId( keyId );
         trustInGroup( sslResourceBuilder, keyId ).install( baseDir );
-//        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
     }
 
     private static SslResourceBuilder trustInGroup( SslResourceBuilder sslResourceBuilder, int keyId )
