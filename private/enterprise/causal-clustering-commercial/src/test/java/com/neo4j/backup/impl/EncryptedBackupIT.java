@@ -538,7 +538,10 @@ public class EncryptedBackupIT
     private static void createConfigFile( File neo4J_home ) throws IOException
     {
         File config = neo4J_home.toPath().resolve( "conf/neo4j.conf" ).toFile();
-        File backupPolicyLocation = neo4J_home.toPath().resolve( "certificates/backup" ).toFile();
+        File backupPolicyLocation = neo4J_home.toPath()
+                .resolve( "certificates")
+                .resolve( "backup" )
+                .toFile();
         Assert.assertTrue( backupPolicyLocation.mkdirs() );
         List<String> lines = new ArrayList<>();
         SslPolicyConfig backupSslConfigGroup = new SslPolicyConfig( backupPolicyName );
