@@ -1,0 +1,222 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.neo4j</groupId>
+    <artifactId>parent</artifactId>
+    <version>3.4.1-SNAPSHOT</version>
+  </parent>
+
+  <groupId>com.neo4j</groupId>
+  <artifactId>commercial-parent</artifactId>
+  <version>3.4.1-SNAPSHOT</version>
+
+  <packaging>pom</packaging>
+  <name>Neo4j</name>
+  <description>Neo4j Graph Database</description>
+
+  <modules>
+    <module>enterprise</module>
+    <module>packaging</module>
+  </modules>
+
+  <licenses>
+    <license>
+      <name>Neo4j Commercial license</name>
+      <comments>
+        Copyright (c) 2002-2018 "Neo4j,"
+        Neo4j Sweden AB [http://neo4j.com]
+        This file is a commercial add-on to Neo4j Enterprise Edition.
+      </comments>
+    </license>
+  </licenses>
+
+  <properties>
+    <license-text.header>build/license-header.txt</license-text.header>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>2.17</version>
+        <configuration>
+          <configLocation>build/checkstyle.xml</configLocation>
+          <consoleOutput>true</consoleOutput>
+          <logViolationsToConsole>true</logViolationsToConsole>
+          <failsOnError>true</failsOnError>
+          <failOnViolation>true</failOnViolation>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>8.2</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>validate</id>
+            <phase>none</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Override parent configuration to only allow "com.neo4j" packages -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <configuration combine.self="override">
+          <rules>
+            <evaluateBeanshell>
+              <message>Maven module has to be in a "groupId" beginning with "com.neo4j"</message>
+              <condition>String s = "${project.groupId}"; s.startsWith("com.neo4j")</condition>
+            </evaluateBeanshell>
+            <requireFilesDontExist>
+              <message>You are not allowed to have classes in "org" package</message>
+              <files>
+                <file>${project.build.sourceDirectory}/org</file>
+                <file>${project.build.testSourceDirectory}/org</file>
+              </files>
+            </requireFilesDontExist>
+          </rules>
+          <fail>true</fail>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.neo4j.build.plugins</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>check-licenses</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>list-all-licenses-win</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.neo4j.build.plugins</groupId>
+          <artifactId>licensing-maven-plugin</artifactId>
+          <configuration>
+            <excludedGroups>
+              ^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1}|(org.neo4j.bolt){1}|(org.neo4j.build){1}|(org.neo4j.test){1}|(com.neo4j){1}|(com.neo4j.app){1}|(com.neo4j.server.plugin){1}|(com.neo4j.assembly){1}|(com.neo4j.bolt){1}|(com.neo4j.build){1}|(com.neo4j.test){1})$
+            </excludedGroups>
+          </configuration>
+          <executions>
+            <execution>
+              <id>list-all-licenses</id>
+              <configuration>
+                <prependText>commercial-notice.txt</prependText>
+                <checkExistingNoticeFile combine.self="override" />
+              </configuration>
+            </execution>
+          </executions>
+          <dependencies>
+            <dependency>
+              <groupId>com.neo4j.build</groupId>
+              <artifactId>licensecheck-commercial-config</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>com.mycila</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <version>3.0</version>
+          <configuration>
+            <header>license-header.txt</header>
+            <mapping>
+              <java>SLASHSTAR_STYLE</java>
+              <ps1>SCRIPT_STYLE</ps1>
+              <psm1>SCRIPT_STYLE</psm1>
+              <psd1>SCRIPT_STYLE</psd1>
+              <bat>BATCH</bat>
+            </mapping>
+            <includes>
+              <include>**/*.java</include>
+              <include>**/*.ps1</include>
+              <include>**/*.psm1</include>
+              <include>**/*.psd1</include>
+              <include>**/*.bat</include>
+            </includes>
+          </configuration>
+          <executions>
+            <execution>
+              <id>check-headers</id>
+              <phase>compile</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+          <dependencies>
+            <dependency>
+              <groupId>com.neo4j.build</groupId>
+              <artifactId>licensecheck-commercial-config</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <configuration>
+            <!-- Integration tests spend significant time waiting, so we can run more things in parallel here-->
+            <forkCount>1C</forkCount>
+            <!-- Misha says it is not safe to run tests with more than one thread per JVM -->
+            <!-- He also said he'd fix that! -->
+            <threadCount>1</threadCount>
+            <!-- slowest test class takes up to 10 minutes, so let's cater for that, with contingency -->
+            <parallelTestsTimeoutInSeconds>1200</parallelTestsTimeoutInSeconds>
+            <parallelTestsTimeoutForcedInSeconds>1800</parallelTestsTimeoutForcedInSeconds>
+            <!-- file system separation between forks -->
+            <workingDirectory>${project.build.directory}/FORK_DIRECTORY_${surefire.forkNumber}</workingDirectory>
+            <systemPropertyVariables>
+              <!-- coordination on ports between forks -->
+              <port.authority.directory>${user.dir}/target/port-authority-${maven.build.timestamp}</port.authority.directory>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <!-- Only generate NOTICE and LICENSES files for projects with src/ directory -->
+    <profile>
+      <id>has-sources</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <file>
+          <exists>src</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.neo4j.build.plugins</groupId>
+            <artifactId>licensing-maven-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>com.mycila</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

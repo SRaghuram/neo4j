@@ -1,0 +1,6 @@
+© Neo4j Sweden AB.  2018.  All Rights Reserved.
+
+Use of this Software without a proper commercial license with Neo4j Sweden AB. or its affiliates is prohibited.
+Commercial license inquiries can be directed to: licensing@neo4j.com
+More information is also available at:
+https://neo4j.com/licensing/

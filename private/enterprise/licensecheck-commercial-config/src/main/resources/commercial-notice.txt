@@ -1,0 +1,7 @@
+© Neo4j Sweden AB.  2018.  All Rights Reserved.
+Use of this Software without a proper commercial license with
+Neo4j Sweden AB. or its affiliates is prohibited.
+
+Third-party licenses
+A listing of third-party licenses including full license texts can be found in LICENSES.txt.
+
