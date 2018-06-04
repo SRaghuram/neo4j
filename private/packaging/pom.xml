@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <parent>
+    <groupId>com.neo4j</groupId>
+    <artifactId>commercial-parent</artifactId>
+    <version>3.3.6-SNAPSHOT</version>
+
+    <relativePath>..</relativePath>
+  </parent>
+
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.neo4j.build</groupId>
+  <artifactId>packaging-build-commercial</artifactId>
+  <version>3.3.6-SNAPSHOT</version>
+
+  <name>Neo4j Packaging Build</name>
+  <packaging>pom</packaging>
+  <description>Project that builds Neo4j Packages.</description>
+  <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
+
+  <scm>
+    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+    <url>https://github.com/neo4j/neo4j</url>
+  </scm>
+
+  <modules>
+    <module>standalone</module>
+  </modules>
+
+  <licenses>
+    <license>
+      <name>Neo4j Commercial license</name>
+      <comments>
+        Copyright (c) 2002-2018 "Neo Technology,"
+        Network Engine for Objects in Lund AB [http://neotechnology.com]
+        This file is a commercial add-on to Neo4j Enterprise Edition.
+      </comments>
+    </license>
+  </licenses>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.neo4j.build.plugins</groupId>
+        <artifactId>licensing-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>list-all-licenses</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
