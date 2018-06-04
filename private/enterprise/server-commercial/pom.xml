@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <parent>
+    <groupId>com.neo4j</groupId>
+    <artifactId>commercial-parent</artifactId>
+    <version>3.5.0-SNAPSHOT</version>
+    <relativePath>../..</relativePath>
+  </parent>
+
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.neo4j.app</groupId>
+  <artifactId>neo4j-server-commercial</artifactId>
+  <version>3.5.0-SNAPSHOT</version>
+
+  <name>Neo4j - Commercial Server</name>
+  <description>Standalone Commercial Neo4j server application.</description>
+  <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
+
+  <properties>
+    <neo4j-server.mainClass>com.neo4j.server.commercial.CommercialEntryPoint</neo4j-server.mainClass>
+    <neo-server.home>target/generated-resources/appassembler/jsw</neo-server.home>
+    <neo-server.confdir>target/test-classes/etc/neo-server</neo-server.confdir>
+    <java.io.tmpdir>${project.build.directory}</java.io.tmpdir>
+
+    <!-- Run integration tests against a server that is started elsewhere This is used in ServerIntegrationTestFacade,
+      which currently assumes external servers to be running at http://localhost:7474/ -->
+    <testWithExternalServer>false</testWithExternalServer>
+    <moduleName>com.neo4j.server.commercial</moduleName>
+  </properties>
+
+  <packaging>jar</packaging>
+
+  <scm>
+    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+    <url>https://github.com/neo4j/neo4j</url>
+  </scm>
+
+  <licenses>
+    <license>
+      <name>Neo4j Commercial license</name>
+      <comments>
+        Copyright (c) 2002-2018 "Neo Technology,"
+        Network Engine for Objects in Lund AB [http://neotechnology.com]
+        This file is a commercial add-on to Neo4j Enterprise Edition.
+      </comments>
+    </license>
+  </licenses>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.neo4j.app</groupId>
+      <artifactId>neo4j-server</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-enterprise</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.neo4j</groupId>
+      <artifactId>neo4j-causal-clustering-commercial</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-security-enterprise</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j.app</groupId>
+      <artifactId>neo4j-server-enterprise</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>annotations</artifactId>
+    </dependency>
+
+    <!-- Test dependencies -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-migrationsupport</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.surefire</groupId>
+      <artifactId>surefire-logger-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.hamcrest</groupId>
+        <artifactId>hamcrest-core</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.hamcrest</groupId>
+        <artifactId>hamcrest-library</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-common</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-kernel</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-security-enterprise</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-io</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-ha</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-metrics</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-bolt</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-security</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-logging</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j.app</groupId>
+      <artifactId>neo4j-server</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-client</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-shell</artifactId>
+      <version>${project.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-com</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.neo4j.app</groupId>
+      <artifactId>neo4j-server-enterprise</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+</project>
+
