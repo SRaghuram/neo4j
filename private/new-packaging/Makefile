@@ -6,13 +6,11 @@ VERSION := $(shell bin/extract-version-from-pom ../pom.xml)
 DEBVERSION := $(shell bin/convert-to-debian-version "$(VERSION)")
 RPMVERSION := $(shell bin/convert-to-rpm-version "$(VERSION)")
 
-ARTIFACT_C := ../../neo4j/packaging/standalone/target
-ARTIFACT_E := ../packaging/standalone/target
+ARTIFACT_C := ../../public/packaging/standalone/target
+ARTIFACT_E := ../../private/packaging/standalone/target
 TARBALL_C := $(ARTIFACT_C)/neo4j-community-$(VERSION)-unix.tar.gz
 TARBALL_E := $(ARTIFACT_E)/neo4j-enterprise-$(VERSION)-unix.tar.gz
 TARBALLS := $(TARBALL_C) $(TARBALL_E)
-COMMUNITY_LICENSE := ../../neo4j/community/LICENSE.txt
-COMMUNITY_POM := ../../neo4j/community/pom.xml
 OUT := out
 
 COMMON_FILES := $(shell find src/common -type f)
