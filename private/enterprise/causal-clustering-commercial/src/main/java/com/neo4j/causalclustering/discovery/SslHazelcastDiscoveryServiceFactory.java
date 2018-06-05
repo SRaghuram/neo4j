@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2002-2018 "Neo Technology,"
- * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.causalclustering.discovery;
@@ -22,7 +22,7 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
     private SslPolicy sslPolicy;
 
     @Override
-    public CoreTopologyService coreTopologyService(Config config, MemberId myself, JobScheduler jobScheduler,
+    public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
                                                    LogProvider logProvider, LogProvider userLogProvider, HostnameResolver hostnameResolver,
                                                    TopologyServiceRetryStrategy topologyServiceRetryStrategy )
     {
@@ -32,7 +32,7 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
     }
 
     @Override
-    public TopologyService topologyService(Config config, LogProvider logProvider, JobScheduler jobScheduler,
+    public TopologyService topologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
                                            MemberId myself, HostnameResolver hostnameResolver,
                                            TopologyServiceRetryStrategy topologyServiceRetryStrategy )
     {

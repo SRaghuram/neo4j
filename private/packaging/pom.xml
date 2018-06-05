@@ -39,6 +39,10 @@
     </license>
   </licenses>
 
+  <properties>
+    <license-text.header>../build/license-header.txt</license-text.header>
+  </properties>
+
   <build>
     <plugins>
       <plugin>

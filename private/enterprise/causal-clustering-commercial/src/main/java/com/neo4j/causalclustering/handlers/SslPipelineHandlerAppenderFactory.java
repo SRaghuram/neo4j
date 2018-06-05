@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2002-2018 "Neo Technology,"
- * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.causalclustering.handlers;
@@ -15,7 +15,7 @@ import org.neo4j.logging.LogProvider;
 
 public class SslPipelineHandlerAppenderFactory implements PipelineHandlerAppenderFactory
 {
-    public PipelineHandlerAppender create(Config config, Dependencies dependencies, LogProvider logProvider )
+    public PipelineHandlerAppender create( Config config, Dependencies dependencies, LogProvider logProvider )
     {
         return new SslPipelineHandlerAppender( dependencies.provideDependency( SslPolicyLoader.class ).get()
                 .getPolicy( config.get( CausalClusteringSettings.ssl_policy ) ) );

@@ -27,6 +27,10 @@
     </license>
   </licenses>
 
+  <properties>
+    <license-text.header>../../build/license-header.txt</license-text.header>
+  </properties>
+
   <build>
     <plugins>
       <plugin>
@@ -40,11 +44,18 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>com.mycila</groupId>
+        <groupId>org.neo4j.build.plugins</groupId>
         <artifactId>license-maven-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.neo4j.maven</groupId>
+            <artifactId>licenses</artifactId>
+            <version>${licensesVersion}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
-            <id>check-headers</id>
+            <id>check-licenses</id>
             <phase>none</phase>
           </execution>
         </executions>

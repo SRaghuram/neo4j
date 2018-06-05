@@ -8,7 +8,6 @@
     <relativePath>..</relativePath>
   </parent>
 
-  <groupId>com.neo4j.assembly</groupId>
   <artifactId>neo4j-enterprise-standalone</artifactId>
   <packaging>pom</packaging>
 
@@ -31,6 +30,7 @@
 
   <properties>
     <neo4j.mainClass>com.neo4j.server.enterprise.CommercialEntryPoint</neo4j.mainClass>
+    <license-text.header>../../../build/license-header.txt</license-text.header>
   </properties>
 
   <licenses>

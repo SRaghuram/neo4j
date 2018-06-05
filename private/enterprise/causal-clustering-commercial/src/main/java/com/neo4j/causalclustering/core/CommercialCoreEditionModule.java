@@ -1,18 +1,19 @@
 /*
- * Copyright (c) 2002-2018 "Neo Technology,"
- * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import com.neo4j.causalclustering.handlers.SslPipelineHandlerAppenderFactory;
+
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
 import org.neo4j.causalclustering.core.IdentityModule;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.ClusteringModule;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import org.neo4j.causalclustering.handlers.PipelineHandlerAppenderFactory;
 import org.neo4j.kernel.api.bolt.BoltConnectionTracker;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
@@ -50,7 +51,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
         EnterpriseEditionModule.setupEnterpriseSecurityModule( platformModule, procedures );
     }
 
-    protected ClusteringModule getClusteringModule(PlatformModule platformModule,
+    protected ClusteringModule getClusteringModule( PlatformModule platformModule,
                                                    DiscoveryServiceFactory discoveryServiceFactory,
                                                    ClusterStateDirectory clusterStateDirectory,
                                                    IdentityModule identityModule, Dependencies dependencies )
