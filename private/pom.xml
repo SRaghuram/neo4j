@@ -149,6 +149,9 @@
               <include>**/*.psd1</include>
               <include>**/*.bat</include>
             </includes>
+	    <excludes>
+              <exclude>**/cypher-shell/*</exclude>
+	    </excludes>
           </configuration>
           <executions>
             <execution>
