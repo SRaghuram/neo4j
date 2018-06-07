@@ -7,6 +7,7 @@ package com.neo4j.backup.impl;
 
 import com.neo4j.causalclustering.discovery.CommercialCluster;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -23,8 +24,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.IntSupplier;
@@ -50,11 +51,11 @@ import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.test.rule.fs.FileSystemRule;
-import org.neo4j.util.TestHelpers;
 
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.clusterDatabase;
 import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.createSomeData;
 import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.getBackupDbRepresentation;
@@ -537,35 +538,18 @@ public class EncryptedBackupIT
 
     private static void createConfigFile( File neo4J_home ) throws IOException
     {
-        File config = neo4J_home.toPath().resolve( "conf/neo4j.conf" ).toFile();
-        File backupPolicyLocation = neo4J_home.toPath()
-                .resolve( "certificates")
-                .resolve( "backup" )
-                .toFile();
-        Assert.assertTrue( backupPolicyLocation.mkdirs() );
-        List<String> lines = new ArrayList<>();
+        File config = neo4J_home.toPath().resolve( "conf" + File.separator + "neo4j.conf" ).toFile();
+        File backupPolicyLocation = neo4J_home.toPath().resolve( "certificates" ).resolve( "backup" ).toFile();
+        assertTrue( backupPolicyLocation.mkdirs() );
+        Properties properties = new Properties();
         SslPolicyConfig backupSslConfigGroup = new SslPolicyConfig( backupPolicyName );
-        lines.add( settingAsRaw( OnlineBackupSettings.ssl_policy, backupPolicyName ) );
-        lines.add( settingAsRaw( backupSslConfigGroup.base_directory, backupPolicyLocation ) );
-        Assert.assertTrue( config.getParentFile().mkdirs() );
-        writeToFile( config, lines );
-    }
+        properties.setProperty( OnlineBackupSettings.ssl_policy.name(), backupPolicyName );
+        properties.setProperty( backupSslConfigGroup.base_directory.name(), backupPolicyLocation.getAbsolutePath() );
+        assertTrue( config.getParentFile().mkdirs() );
 
-    private static <E> String settingAsRaw( Setting<E> setting, E value )
-    {
-        return String.format( "%s=%s", setting.name(), value );
-    }
-
-    private static void writeToFile( File file, List<String> lines ) throws IOException
-    {
-        String lineSeparator = System.getProperty( "line.separator" );
-        file.createNewFile();
-        try ( FileWriter fileWriter = new FileWriter( file ) )
+        try ( FileWriter fileWriter = new FileWriter( config ) )
         {
-            for ( String line : lines )
-            {
-                fileWriter.write( line + lineSeparator );
-            }
+            properties.store( fileWriter, StringUtils.EMPTY );
         }
     }
 
