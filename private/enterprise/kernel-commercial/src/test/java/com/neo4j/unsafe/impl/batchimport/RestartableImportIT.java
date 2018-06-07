@@ -63,7 +63,7 @@ public class RestartableImportIT
         do
         {
             process = startImportInSeparateProcess( storeDir );
-            long waitTime = max( time / 4, random.nextLong( time ) + time/20 * restartCount );
+            long waitTime = max( time / 4, random.nextLong( time ) + time / 20 * restartCount );
             process.waitFor( waitTime, TimeUnit.MILLISECONDS );
             boolean manuallyDestroyed = false;
             if ( process.isAlive() )

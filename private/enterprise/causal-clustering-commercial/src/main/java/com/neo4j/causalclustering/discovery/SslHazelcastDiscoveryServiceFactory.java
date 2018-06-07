@@ -22,7 +22,7 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
     private SslPolicy sslPolicy;
 
     @Override
-    public CoreTopologyService coreTopologyService(Config config, MemberId myself, JobScheduler jobScheduler,
+    public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
                                                    LogProvider logProvider, LogProvider userLogProvider, HostnameResolver hostnameResolver,
                                                    TopologyServiceRetryStrategy topologyServiceRetryStrategy )
     {
@@ -32,7 +32,7 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
     }
 
     @Override
-    public TopologyService topologyService(Config config, LogProvider logProvider, JobScheduler jobScheduler,
+    public TopologyService topologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
                                            MemberId myself, HostnameResolver hostnameResolver,
                                            TopologyServiceRetryStrategy topologyServiceRetryStrategy )
     {

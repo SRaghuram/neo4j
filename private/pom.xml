@@ -18,6 +18,7 @@
   <description>Neo4j Graph Database</description>
 
   <modules>
+    <module>build</module>
     <module>enterprise</module>
     <module>packaging</module>
   </modules>
@@ -34,40 +35,11 @@
   </licenses>
 
   <properties>
-    <license-text.header>build/license-header.txt</license-text.header>
+    <license-text.header>commercial-license-header.txt</license-text.header>
   </properties>
 
   <build>
     <plugins>
-      <plugin>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.17</version>
-        <configuration>
-          <configLocation>build/checkstyle.xml</configLocation>
-          <consoleOutput>true</consoleOutput>
-          <logViolationsToConsole>true</logViolationsToConsole>
-          <failsOnError>true</failsOnError>
-          <failOnViolation>true</failOnViolation>
-          <includeTestSourceDirectory>true</includeTestSourceDirectory>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>com.puppycrawl.tools</groupId>
-            <artifactId>checkstyle</artifactId>
-            <version>8.2</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <id>validate</id>
-            <phase>none</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
       <!-- Override parent configuration to only allow "com.neo4j" packages -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -88,21 +60,6 @@
           </rules>
           <fail>true</fail>
         </configuration>
-      </plugin>
-
-      <plugin>
-        <groupId>org.neo4j.build.plugins</groupId>
-        <artifactId>license-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>check-licenses</id>
-            <phase>none</phase>
-          </execution>
-          <execution>
-            <id>list-all-licenses-win</id>
-            <phase>none</phase>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
 
@@ -128,7 +85,7 @@
           <dependencies>
             <dependency>
               <groupId>com.neo4j.build</groupId>
-              <artifactId>licensecheck-commercial-config</artifactId>
+              <artifactId>resources</artifactId>
               <version>${project.version}</version>
             </dependency>
           </dependencies>
@@ -136,40 +93,10 @@
         <plugin>
           <groupId>com.mycila</groupId>
           <artifactId>license-maven-plugin</artifactId>
-          <version>3.0</version>
-          <configuration>
-            <header>license-header.txt</header>
-            <mapping>
-              <java>SLASHSTAR_STYLE</java>
-              <ps1>SCRIPT_STYLE</ps1>
-              <psm1>SCRIPT_STYLE</psm1>
-              <psd1>SCRIPT_STYLE</psd1>
-              <bat>BATCH</bat>
-            </mapping>
-            <includes>
-              <include>**/*.java</include>
-              <include>**/*.ps1</include>
-              <include>**/*.psm1</include>
-              <include>**/*.psd1</include>
-              <include>**/*.bat</include>
-            </includes>
-	    <excludes>
-              <exclude>**/cypher-shell/*</exclude>
-	    </excludes>
-          </configuration>
-          <executions>
-            <execution>
-              <id>check-headers</id>
-              <phase>compile</phase>
-              <goals>
-                <goal>check</goal>
-              </goals>
-            </execution>
-          </executions>
           <dependencies>
             <dependency>
               <groupId>com.neo4j.build</groupId>
-              <artifactId>licensecheck-commercial-config</artifactId>
+              <artifactId>resources</artifactId>
               <version>${project.version}</version>
             </dependency>
           </dependencies>
@@ -197,30 +124,5 @@
       </plugins>
     </pluginManagement>
   </build>
-
-  <profiles>
-    <!-- Only generate NOTICE and LICENSES files for projects with src/ directory -->
-    <profile>
-      <id>has-sources</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <file>
-          <exists>src</exists>
-        </file>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.neo4j.build.plugins</groupId>
-            <artifactId>licensing-maven-plugin</artifactId>
-          </plugin>
-          <plugin>
-            <groupId>com.mycila</groupId>
-            <artifactId>license-maven-plugin</artifactId>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 
 </project>

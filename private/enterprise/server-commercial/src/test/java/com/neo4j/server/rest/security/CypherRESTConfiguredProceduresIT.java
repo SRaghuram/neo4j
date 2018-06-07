@@ -29,7 +29,7 @@ public class CypherRESTConfiguredProceduresIT extends ConfiguredProceduresTestBa
     }
 
     @Override
-    public NeoInteractionLevel<com.neo4j.server.rest.security.RESTSubject> setUpNeoServer(Map<String, String> config ) throws Throwable
+    public NeoInteractionLevel<com.neo4j.server.rest.security.RESTSubject> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
         return new com.neo4j.server.rest.security.CypherRESTInteraction( config );
     }

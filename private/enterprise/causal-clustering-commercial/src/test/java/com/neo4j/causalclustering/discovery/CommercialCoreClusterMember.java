@@ -34,7 +34,7 @@ public class CommercialCoreClusterMember extends CoreClusterMember
                                         Map<String, String> extraParams,
                                         Map<String, IntFunction<String>> instanceExtraParams,
                                         String listenAddress,
-                                        String advertisedAddress)
+                                        String advertisedAddress )
     {
         super( serverId, discoveryPort, txPort, raftPort, boltPort, httpPort, backupPort, clusterSize, addresses,
                 discoveryServiceFactory, recordFormat, parentDir, extraParams, instanceExtraParams, listenAddress,

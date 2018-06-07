@@ -31,7 +31,7 @@ public class CommercialReadReplicaGraphDatabase extends ReadReplicaGraphDatabase
                                                DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId )
     {
         Function<PlatformModule,EditionModule> factory =
-                ( platformModule ) -> new CommercialReadReplicaEditionModule( platformModule,
+                platformModule -> new CommercialReadReplicaEditionModule( platformModule,
                         discoveryServiceFactory, memberId );
         new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config,
                 dependencies, this );

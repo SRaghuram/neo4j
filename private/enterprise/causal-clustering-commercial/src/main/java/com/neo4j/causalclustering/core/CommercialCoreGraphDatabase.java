@@ -31,7 +31,7 @@ public class CommercialCoreGraphDatabase extends CoreGraphDatabase
                                         DiscoveryServiceFactory discoveryServiceFactory )
     {
         Function<PlatformModule,EditionModule> factory =
-                ( platformModule ) -> new CommercialCoreEditionModule( platformModule, discoveryServiceFactory );
+                platformModule -> new CommercialCoreEditionModule( platformModule, discoveryServiceFactory );
         new GraphDatabaseFacadeFactory( DatabaseInfo.CORE, factory ).initFacade( storeDir, config, dependencies, this );
     }
 }

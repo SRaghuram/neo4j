@@ -123,7 +123,8 @@ public class BloomBackupIT
 
     private GraphDatabaseAPI getBackupDb( File dir )
     {
-        return (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir ).setConfig( BloomFulltextConfig.bloom_enabled, "true" ).newGraphDatabase();
+        return (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir ).setConfig( BloomFulltextConfig.bloom_enabled,
+                "true" ).newGraphDatabase();
     }
 
     private void setupIndicesAndInitialData()
