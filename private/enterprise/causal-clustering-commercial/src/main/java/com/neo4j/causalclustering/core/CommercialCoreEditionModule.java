@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2002-2018 "Neo Technology,"
- * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.causalclustering.core;
@@ -31,8 +31,7 @@ import org.neo4j.ssl.SslPolicy;
  */
 public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 {
-    CommercialCoreEditionModule( final PlatformModule platformModule,
-                                 final DiscoveryServiceFactory discoveryServiceFactory )
+    CommercialCoreEditionModule( final PlatformModule platformModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
         super( platformModule, discoveryServiceFactory );
     }
@@ -49,10 +48,8 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
         EnterpriseEditionModule.setupEnterpriseSecurityModule( platformModule, procedures );
     }
 
-    protected ClusteringModule getClusteringModule(PlatformModule platformModule,
-                                                   DiscoveryServiceFactory discoveryServiceFactory,
-                                                   ClusterStateDirectory clusterStateDirectory,
-                                                   IdentityModule identityModule, Dependencies dependencies )
+    protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
+            ClusterStateDirectory clusterStateDirectory, IdentityModule identityModule, Dependencies dependencies )
     {
         SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
@@ -62,8 +59,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
             ((SslHazelcastDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
 
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(),
-                platformModule, clusterStateDirectory.get() );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, clusterStateDirectory.get() );
     }
 
     @Override

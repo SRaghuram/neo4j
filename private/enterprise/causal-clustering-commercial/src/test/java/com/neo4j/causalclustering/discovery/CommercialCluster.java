@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2002-2018 "Neo Technology,"
- * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.causalclustering.discovery;
@@ -21,11 +21,11 @@ import org.neo4j.ports.allocation.PortAuthority;
 
 public class CommercialCluster extends Cluster
 {
-    public CommercialCluster(File parentDir, int noOfCoreMembers, int noOfReadReplicas,
+    public CommercialCluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas,
                              DiscoveryServiceFactory discoveryServiceFactory,
                              Map<String,String> coreParams, Map<String,IntFunction<String>> instanceCoreParams,
                              Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
-                             String recordFormat, IpFamily ipFamily, boolean useWildcard)
+                             String recordFormat, IpFamily ipFamily, boolean useWildcard )
     {
         super( parentDir, noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, coreParams, instanceCoreParams,
                 readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard );

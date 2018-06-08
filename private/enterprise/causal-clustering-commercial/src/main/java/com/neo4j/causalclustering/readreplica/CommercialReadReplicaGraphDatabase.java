@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2002-2018 "Neo Technology,"
- * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.causalclustering.readreplica;
@@ -31,7 +31,7 @@ public class CommercialReadReplicaGraphDatabase extends ReadReplicaGraphDatabase
                                                DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId )
     {
         Function<PlatformModule,EditionModule> factory =
-                ( platformModule ) -> new CommercialReadReplicaEditionModule( platformModule,
+                platformModule -> new CommercialReadReplicaEditionModule( platformModule,
                         discoveryServiceFactory, memberId );
         new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config,
                 dependencies, this );

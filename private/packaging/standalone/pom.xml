@@ -67,35 +67,6 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>com.mycila</groupId>
-        <artifactId>license-maven-plugin</artifactId>
-        <version>2.5</version>
-        <configuration>
-          <header>license-header.txt</header>
-          <properties>
-            <owner>Neo Technology,</owner>
-            <year>${project.inceptionYear}</year>
-          </properties>
-          <mapping>
-            <ps1>SCRIPT_STYLE</ps1>
-            <psm1>SCRIPT_STYLE</psm1>
-            <psd1>SCRIPT_STYLE</psd1>
-            <bat>BATCH</bat>
-          </mapping>
-          <includes>
-            <include>src/main/*</include>
-          </includes>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>compile</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <inherited>false</inherited>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>

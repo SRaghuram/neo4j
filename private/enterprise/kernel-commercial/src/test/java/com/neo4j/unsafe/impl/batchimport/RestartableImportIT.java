@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2002-2018 "Neo Technology,"
- * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.unsafe.impl.batchimport;
@@ -63,7 +63,7 @@ public class RestartableImportIT
         do
         {
             process = startImportInSeparateProcess( storeDir );
-            long waitTime = max( time / 4, random.nextLong( time ) + time/20 * restartCount );
+            long waitTime = max( time / 4, random.nextLong( time ) + time / 20 * restartCount );
             process.waitFor( waitTime, TimeUnit.MILLISECONDS );
             boolean manuallyDestroyed = false;
             if ( process.isAlive() )

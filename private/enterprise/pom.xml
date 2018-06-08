@@ -24,7 +24,6 @@
   </scm>
 
   <modules>
-    <module>licensecheck-commercial-config</module>
     <module>kernel-commercial</module>
     <module>bloom-addon</module>
     <module>causal-clustering-commercial</module>

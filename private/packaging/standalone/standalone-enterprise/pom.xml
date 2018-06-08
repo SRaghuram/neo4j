@@ -128,14 +128,14 @@
             <id>list-all-licenses</id>
             <configuration>
               <licensingRequirementFiles combine.children="append">
-                <licensingRequirementFile>licensing-requirements-browser.xml</licensingRequirementFile>
+                <licensingRequirementFile>licensing/licensing-requirements-browser.xml</licensingRequirementFile>
               </licensingRequirementFiles>
               <excludedGroups>^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1}|(com.neo4j){1}|(com.neo4j.app){1}|(com.neo4j.server.plugin){1}|(com.neo4j.assembly){1})$</excludedGroups>
 
               <thirdPartyLicensingFilename>${project.artifactId}-${neo4j.version}-NOTICE.txt</thirdPartyLicensingFilename>
               <prependText>commercial-notice.txt</prependText>
               <checkExistingNoticeFile combine.self="override" />
-              <listPrependText>list-prefix.txt</listPrependText>
+              <listPrependText>licensing/list-prefix.txt</listPrependText>
               <listReport>${project.artifactId}-${neo4j.version}-LICENSES.txt</listReport>
               <checkExistingLicensesFile>${project.basedir}/src/main/distribution/text/enterprise/LICENSES.txt</checkExistingLicensesFile>
             </configuration>

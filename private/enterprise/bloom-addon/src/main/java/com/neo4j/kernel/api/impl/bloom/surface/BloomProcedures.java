@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2002-2018 "Neo Technology,"
- * Network Engine for Objects in Lund AB [http://neotechnology.com]
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.kernel.api.impl.bloom.surface;
@@ -33,7 +33,8 @@ public class BloomProcedures
     @Context
     public FulltextProvider provider;
 
-    private static final Function<ScoreEntityIterator.ScoreEntry,EntityOutput> QUERY_RESULT_MAPPER = result -> new EntityOutput( result.entityId(), result.score() );
+    private static final Function<ScoreEntityIterator.ScoreEntry,EntityOutput> QUERY_RESULT_MAPPER =
+            result -> new EntityOutput( result.entityId(), result.score() );
 
     @Description( "Await the completion of any background index population or updates" )
     @Procedure( name = "bloom.awaitPopulation", mode = READ )
@@ -81,8 +82,10 @@ public class BloomProcedures
     @Procedure( name = "bloom.indexStatus", mode = READ )
     public Stream<StatusOutput> indexStatus()
     {
-        StatusOutput nodeIndexState = new StatusOutput( BloomKernelExtensionFactory.BLOOM_NODES, provider.getState( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES ) );
-        StatusOutput relationshipIndexState = new StatusOutput( BloomKernelExtensionFactory.BLOOM_RELATIONSHIPS, provider.getState( BloomKernelExtensionFactory.BLOOM_RELATIONSHIPS, FulltextIndexType.RELATIONSHIPS ) );
+        StatusOutput nodeIndexState = new StatusOutput( BloomKernelExtensionFactory.BLOOM_NODES,
+                provider.getState( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES ) );
+        StatusOutput relationshipIndexState = new StatusOutput( BloomKernelExtensionFactory.BLOOM_RELATIONSHIPS,
+                provider.getState( BloomKernelExtensionFactory.BLOOM_RELATIONSHIPS, FulltextIndexType.RELATIONSHIPS ) );
         return Stream.of( nodeIndexState, relationshipIndexState );
     }
 
