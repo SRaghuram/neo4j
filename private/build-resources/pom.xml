@@ -3,11 +3,11 @@
                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.neo4j.build</groupId>
-    <artifactId>resources</artifactId>
+    <groupId>com.neo4j.build</groupId>
+    <artifactId>build-resources-commercial</artifactId>
     <version>3.4.1-SNAPSHOT</version>
 
-    <name>Neo4j - Build resources</name>
+    <name>Neo4j - Commercial build resources</name>
 
     <build>
         <plugins>
