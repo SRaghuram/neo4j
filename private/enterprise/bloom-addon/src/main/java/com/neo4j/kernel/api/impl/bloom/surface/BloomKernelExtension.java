@@ -6,17 +6,17 @@
 package com.neo4j.kernel.api.impl.bloom.surface;
 
 import com.neo4j.kernel.api.impl.bloom.FulltextIndexType;
+import com.neo4j.kernel.api.impl.bloom.FulltextProvider;
 import com.neo4j.kernel.api.impl.bloom.FulltextProviderImpl;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.function.Supplier;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.AvailabilityGuard;
-import com.neo4j.kernel.api.impl.bloom.FulltextProvider;
-
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -65,10 +65,11 @@ class BloomKernelExtension extends LifecycleAdapter
         if ( config.get( BloomFulltextConfig.bloom_enabled ) )
         {
             String analyzer = config.get( BloomFulltextConfig.bloom_default_analyzer );
+            Duration refreshDelay = config.get( BloomFulltextConfig.bloom_minimum_refresh_delay );
 
             Log log = logService.getInternalLog( FulltextProviderImpl.class );
             provider = new FulltextProviderImpl( db, log, availabilityGuard, scheduler, transactionIdStore.get(),
-                    fileSystem, storeDir, analyzer );
+                    fileSystem, storeDir, analyzer, refreshDelay );
             provider.openIndex( BLOOM_NODES, FulltextIndexType.NODES );
             provider.openIndex( BLOOM_RELATIONSHIPS, FulltextIndexType.RELATIONSHIPS );
             provider.registerFileListing( fileListing.get() );

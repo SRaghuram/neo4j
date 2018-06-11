@@ -50,6 +50,7 @@ public class BloomBackupIT
                 .setConfig( online_backup_enabled,"true" )
                 .setConfig( online_backup_server, "127.0.0.1:" + backupPort )
                 .setConfig( BloomFulltextConfig.bloom_enabled, "true" )
+                .setConfig( BloomFulltextConfig.bloom_minimum_refresh_delay, "1s" )
                 .newGraphDatabase();
     }
 
@@ -123,8 +124,10 @@ public class BloomBackupIT
 
     private GraphDatabaseAPI getBackupDb( File dir )
     {
-        return (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir ).setConfig( BloomFulltextConfig.bloom_enabled,
-                "true" ).newGraphDatabase();
+        return (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir )
+                .setConfig( BloomFulltextConfig.bloom_enabled,"true" )
+                .setConfig( BloomFulltextConfig.bloom_minimum_refresh_delay, "1s" )
+                .newGraphDatabase();
     }
 
     private void setupIndicesAndInitialData()
@@ -145,7 +148,7 @@ public class BloomBackupIT
 
     private void verifyStandardData( GraphDatabaseService backedUpDb )
     {
-        backedUpDb.execute( BloomIT.AWAIT_POPULATION ).close();
+        backedUpDb.execute( BloomIT.AWAIT_REFRESH ).close();
         Result result = backedUpDb.execute( String.format( BloomIT.NODES, "\"integration\"" ) );
         assertTrue( result.hasNext() );
         assertEquals( 0L, result.next().get( BloomIT.ENTITYID ) );

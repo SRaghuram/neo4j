@@ -8,6 +8,7 @@ package com.neo4j.kernel.api.impl.bloom;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -72,9 +73,10 @@ public class FulltextProviderImpl implements FulltextProvider
      * @param fileSystem The filesystem to use.
      * @param storeDir Store directory of the database.
      * @param analyzerClassName The Lucene analyzer to use for the {@link LuceneFulltext} created by this factory.
+     * @param refreshDelay
      */
     public FulltextProviderImpl( GraphDatabaseService db, Log log, AvailabilityGuard availabilityGuard, JobScheduler scheduler,
-            TransactionIdStore transactionIdStore, FileSystemAbstraction fileSystem, File storeDir, String analyzerClassName )
+            TransactionIdStore transactionIdStore, FileSystemAbstraction fileSystem, File storeDir, String analyzerClassName, Duration refreshDelay )
     {
         this.db = db;
         this.log = log;
@@ -94,10 +96,24 @@ public class FulltextProviderImpl implements FulltextProvider
                 isAvailable = availabilityGuard.isAvailable( 100 );
             }
             while ( !isAvailable && !availabilityGuard.isShutdown() );
+            long flipTime = System.currentTimeMillis();
             while ( !closed )
             {
                 try
                 {
+                    long sleepTime = flipTime + refreshDelay.toMillis() - System.currentTimeMillis();
+                    if ( sleepTime > 0 )
+                    {
+                        Thread.sleep( sleepTime );
+                    }
+                }
+                catch ( InterruptedException e )
+                {
+                    return;
+                }
+                try
+                {
+                    flipTime = System.currentTimeMillis();
                     flip();
                 }
                 catch ( IOException e )

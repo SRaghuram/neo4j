@@ -76,7 +76,8 @@ public class BloomIT
     {
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
         builder = factory.newEmbeddedDatabaseBuilder( testDirectory.graphDbDir() )
-                         .setConfig( BloomFulltextConfig.bloom_enabled, "true" );
+                .setConfig( BloomFulltextConfig.bloom_enabled, "true" )
+                .setConfig( BloomFulltextConfig.bloom_minimum_refresh_delay, "1s" );
     }
 
     @After
@@ -312,7 +313,7 @@ public class BloomIT
 
         // Verify it's indexed exactly once
         db.execute( AWAIT_POPULATION ).close();
-        db.execute( AWAIT_REFRESH );
+        db.execute( AWAIT_REFRESH ).close();
         Result result = db.execute( String.format( NODES, "\"Jyllingevej\"") );
         assertTrue( result.hasNext() );
         assertEquals( nodeId, result.next().get( ENTITYID ) );
@@ -322,6 +323,7 @@ public class BloomIT
         db = getDb();
 
         db.execute( AWAIT_POPULATION ).close();
+        db.execute( AWAIT_REFRESH ).close();
         // Verify it's STILL indexed exactly once
         result = db.execute( String.format( NODES, "\"Jyllingevej\"") );
         assertTrue( result.hasNext() );

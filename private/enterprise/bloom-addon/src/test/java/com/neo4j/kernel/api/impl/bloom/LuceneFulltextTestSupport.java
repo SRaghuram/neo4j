@@ -11,6 +11,7 @@ import org.junit.Rule;
 
 import java.io.File;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -66,7 +67,7 @@ public class LuceneFulltextTestSupport
     protected FulltextProviderImpl createProvider()
     {
         return new FulltextProviderImpl( db, LOG, availabilityGuard, scheduler, transactionIdStore,
-                fs, storeDir, analyzer );
+                fs, storeDir, analyzer, Duration.ofSeconds( 1 ) );
     }
 
     protected long createNodeIndexableByPropertyValue( Object propertyValue )
