@@ -27,9 +27,9 @@ public class BloomFulltextConfig implements LoadableConfig
     @Internal
     static final Setting<Boolean> bloom_enabled = setting( "unsupported.dbms.bloom_enabled", BOOLEAN, FALSE );
 
-    @Description( "Minimum time between bloom index refreshes. Setting this to a low value will decrease performance." )
+    @Description( "Time between bloom index refreshes. Setting this to a low value will decrease performance." )
     @Internal
-    static final Setting<Duration> bloom_minimum_refresh_delay = setting( "unsupported.dbms.bloom_minimum_refresh_delay", Settings.DURATION, "24h" );
+    static final Setting<Duration> bloom_refresh_delay = setting( "unsupported.dbms.bloom_refresh_delay", Settings.DURATION, "24h" );
 
     @Description( "Define the analyzer to use for the bloom index. Expects the fully qualified classname of the " +
                   "analyzer to use" )

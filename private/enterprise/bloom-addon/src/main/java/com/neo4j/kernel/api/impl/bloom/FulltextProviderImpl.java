@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -96,24 +97,10 @@ public class FulltextProviderImpl implements FulltextProvider
                 isAvailable = availabilityGuard.isAvailable( 100 );
             }
             while ( !isAvailable && !availabilityGuard.isShutdown() );
-            long flipTime = System.currentTimeMillis();
             while ( !closed )
             {
                 try
                 {
-                    long sleepTime = flipTime + refreshDelay.toMillis() - System.currentTimeMillis();
-                    if ( sleepTime > 0 )
-                    {
-                        Thread.sleep( sleepTime );
-                    }
-                }
-                catch ( InterruptedException e )
-                {
-                    return;
-                }
-                try
-                {
-                    flipTime = System.currentTimeMillis();
                     flip();
                 }
                 catch ( IOException e )
@@ -121,7 +108,7 @@ public class FulltextProviderImpl implements FulltextProvider
                     log.error( "Unable to flip fulltext index", e );
                 }
             }
-        } );
+        }, refreshDelay.getSeconds(), TimeUnit.SECONDS );
     }
 
     private boolean matchesConfiguration( WritableFulltext index ) throws IOException

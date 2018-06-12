@@ -65,7 +65,7 @@ class BloomKernelExtension extends LifecycleAdapter
         if ( config.get( BloomFulltextConfig.bloom_enabled ) )
         {
             String analyzer = config.get( BloomFulltextConfig.bloom_default_analyzer );
-            Duration refreshDelay = config.get( BloomFulltextConfig.bloom_minimum_refresh_delay );
+            Duration refreshDelay = config.get( BloomFulltextConfig.bloom_refresh_delay );
 
             Log log = logService.getInternalLog( FulltextProviderImpl.class );
             provider = new FulltextProviderImpl( db, log, availabilityGuard, scheduler, transactionIdStore.get(),

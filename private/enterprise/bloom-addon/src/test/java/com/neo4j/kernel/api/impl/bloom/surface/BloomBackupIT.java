@@ -50,7 +50,7 @@ public class BloomBackupIT
                 .setConfig( online_backup_enabled,"true" )
                 .setConfig( online_backup_server, "127.0.0.1:" + backupPort )
                 .setConfig( BloomFulltextConfig.bloom_enabled, "true" )
-                .setConfig( BloomFulltextConfig.bloom_minimum_refresh_delay, "1s" )
+                .setConfig( BloomFulltextConfig.bloom_refresh_delay, "1s" )
                 .newGraphDatabase();
     }
 
@@ -126,7 +126,7 @@ public class BloomBackupIT
     {
         return (GraphDatabaseAPI) new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir )
                 .setConfig( BloomFulltextConfig.bloom_enabled,"true" )
-                .setConfig( BloomFulltextConfig.bloom_minimum_refresh_delay, "1s" )
+                .setConfig( BloomFulltextConfig.bloom_refresh_delay, "1s" )
                 .newGraphDatabase();
     }
 

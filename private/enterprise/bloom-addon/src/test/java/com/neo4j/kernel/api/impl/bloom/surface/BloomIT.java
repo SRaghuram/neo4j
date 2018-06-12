@@ -77,7 +77,7 @@ public class BloomIT
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
         builder = factory.newEmbeddedDatabaseBuilder( testDirectory.graphDbDir() )
                 .setConfig( BloomFulltextConfig.bloom_enabled, "true" )
-                .setConfig( BloomFulltextConfig.bloom_minimum_refresh_delay, "1s" );
+                .setConfig( BloomFulltextConfig.bloom_refresh_delay, "1s" );
     }
 
     @After
