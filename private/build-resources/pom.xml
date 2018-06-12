@@ -8,6 +8,35 @@
     <version>3.4.2-SNAPSHOT</version>
 
     <name>Neo4j - Commercial build resources</name>
+    <description>Build resources for commercial build.</description>
+    <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
+
+    <scm>
+        <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+        <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+        <url>https://github.com/neo4j/neo4j</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>neo4j</id>
+            <name>The Neo4j Team</name>
+            <url>https://neo4j.com/</url>
+            <organization>Neo4j Inc.</organization>
+            <organizationUrl>https://neo4j.com/</organizationUrl>
+        </developer>
+    </developers>
+
+    <licenses>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
+                Copyright (c) 2002-2018 "Neo4j,"
+                Neo4j Sweden AB [http://neo4j.com]
+                This file is a commercial add-on to Neo4j Enterprise Edition.
+            </comments>
+        </license>
+    </licenses>
 
     <build>
         <plugins>
