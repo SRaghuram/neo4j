@@ -5,13 +5,13 @@
   <parent>
     <groupId>org.neo4j</groupId>
     <artifactId>parent</artifactId>
-    <version>3.4.1-SNAPSHOT</version>
+    <version>3.4.2-SNAPSHOT</version>
     <relativePath>../public/pom.xml</relativePath>
   </parent>
 
   <groupId>com.neo4j</groupId>
   <artifactId>commercial-parent</artifactId>
-  <version>3.4.1-SNAPSHOT</version>
+  <version>3.4.2-SNAPSHOT</version>
 
   <packaging>pom</packaging>
   <name>Neo4j</name>
