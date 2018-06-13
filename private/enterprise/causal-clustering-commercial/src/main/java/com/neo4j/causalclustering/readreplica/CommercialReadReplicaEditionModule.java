@@ -17,6 +17,7 @@ import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
+import org.neo4j.kernel.configuration.ssl.TrustManagerFactoryProvider;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ssl.SslPolicy;
@@ -36,7 +37,7 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
     protected void configureDiscoveryService( DiscoveryServiceFactory discoveryServiceFactory, Dependencies dependencies,
                                               Config config, LogProvider logProvider )
     {
-        SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
+        SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, new TrustManagerFactoryProvider(), logProvider ) );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
 
         if ( discoveryServiceFactory instanceof SslHazelcastDiscoveryServiceFactory )

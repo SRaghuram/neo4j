@@ -12,6 +12,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -35,6 +36,7 @@ public class SecureClusterIT
 {
     @Rule
     public TestDirectory testDir = TestDirectory.testDirectory();
+
     @Rule
     public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
 
@@ -79,26 +81,16 @@ public class SecureClusterIT
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
             File homeDir = cluster.getCoreMemberById( core.serverId() ).homeDir();
-            File baseDir = new File( homeDir, "certificates/cluster" );
-            fsRule.mkdirs( new File( baseDir, "trusted" ) );
-            fsRule.mkdirs( new File( baseDir, "revoked" ) );
-
             int keyId = core.serverId();
-            SslResourceBuilder.caSignedKeyId( keyId )
-                    .trustSignedByCA().install( baseDir );
+            installKeyToInstance( homeDir, keyId );
         }
 
         // install the cryptographic objects for each read replica
         for ( ReadReplica replica : cluster.readReplicas() )
         {
-            File homeDir = cluster.getReadReplicaById( replica.serverId() ).homeDir();
-            File baseDir = new File( homeDir, "certificates/cluster" );
-            fsRule.mkdirs( new File( baseDir, "trusted" ) );
-            fsRule.mkdirs( new File( baseDir, "revoked" ) );
-
             int keyId = replica.serverId() + noOfCoreMembers;
-            SslResourceBuilder.caSignedKeyId( keyId )
-                    .trustSignedByCA().install( baseDir );
+            File homeDir = cluster.getReadReplicaById( replica.serverId() ).homeDir();
+            installKeyToInstance( homeDir, keyId );
         }
 
         // when
@@ -114,5 +106,14 @@ public class SecureClusterIT
         // then
         Cluster.dataMatchesEventually( leader, cluster.coreMembers() );
         Cluster.dataMatchesEventually( leader, cluster.readReplicas() );
+    }
+
+    private void installKeyToInstance( File homeDir, int keyId ) throws IOException
+    {
+        File baseDir = new File( homeDir, "certificates/cluster" );
+        fsRule.mkdirs( new File( baseDir, "trusted" ) );
+        fsRule.mkdirs( new File( baseDir, "revoked" ) );
+
+        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
     }
 }
