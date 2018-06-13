@@ -8,6 +8,7 @@ package com.neo4j.kernel.api.impl.bloom;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -72,9 +74,10 @@ public class FulltextProviderImpl implements FulltextProvider
      * @param fileSystem The filesystem to use.
      * @param storeDir Store directory of the database.
      * @param analyzerClassName The Lucene analyzer to use for the {@link LuceneFulltext} created by this factory.
+     * @param refreshDelay
      */
     public FulltextProviderImpl( GraphDatabaseService db, Log log, AvailabilityGuard availabilityGuard, JobScheduler scheduler,
-            TransactionIdStore transactionIdStore, FileSystemAbstraction fileSystem, File storeDir, String analyzerClassName )
+            TransactionIdStore transactionIdStore, FileSystemAbstraction fileSystem, File storeDir, String analyzerClassName, Duration refreshDelay )
     {
         this.db = db;
         this.log = log;
@@ -105,7 +108,7 @@ public class FulltextProviderImpl implements FulltextProvider
                     log.error( "Unable to flip fulltext index", e );
                 }
             }
-        } );
+        }, refreshDelay.getSeconds(), TimeUnit.SECONDS );
     }
 
     private boolean matchesConfiguration( WritableFulltext index ) throws IOException
