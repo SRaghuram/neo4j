@@ -45,7 +45,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     @Override
     public void setupSecurityModule( PlatformModule platformModule, Procedures procedures )
     {
-        EnterpriseEditionModule.setupEnterpriseSecurityModule( platformModule, procedures );
+        EnterpriseEditionModule.setupEnterpriseSecurityModule( this, platformModule, procedures );
     }
 
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
