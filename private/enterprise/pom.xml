@@ -25,6 +25,7 @@
 
   <modules>
     <module>kernel-commercial</module>
+    <module>fulltext-index</module>
     <module>causal-clustering-commercial</module>
     <module>server-commercial</module>
   </modules>
