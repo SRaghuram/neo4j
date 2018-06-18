@@ -96,10 +96,8 @@ public class BloomProcedures
             @Name( value = "fuzzy", defaultValue = "true" ) boolean fuzzy,
             @Name( value = "matchAll", defaultValue = "false" ) boolean matchAll ) throws Exception
     {
-        try ( ReadOnlyFulltext indexReader = provider.getReader( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES ) )
-        {
-            return queryAsStream( terms, indexReader, fuzzy, matchAll );
-        }
+        ReadOnlyFulltext indexReader = provider.getReader( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES );
+        return queryAsStream( terms, indexReader, fuzzy, matchAll );
     }
 
     @Description( "Query the Bloom fulltext index for relationships" )
@@ -109,10 +107,8 @@ public class BloomProcedures
             @Name( value = "fuzzy", defaultValue = "true" ) boolean fuzzy,
             @Name( value = "matchAll", defaultValue = "false" ) boolean matchAll ) throws Exception
     {
-        try ( ReadOnlyFulltext indexReader = provider.getReader( BloomKernelExtensionFactory.BLOOM_RELATIONSHIPS, FulltextIndexType.RELATIONSHIPS ) )
-        {
-            return queryAsStream( terms, indexReader, fuzzy, matchAll );
-        }
+        ReadOnlyFulltext indexReader = provider.getReader( BloomKernelExtensionFactory.BLOOM_RELATIONSHIPS, FulltextIndexType.RELATIONSHIPS );
+        return queryAsStream( terms, indexReader, fuzzy, matchAll );
     }
 
     private Stream<EntityOutput> queryAsStream( List<String> terms, ReadOnlyFulltext indexReader, boolean fuzzy, boolean matchAll )
@@ -127,7 +123,7 @@ public class BloomProcedures
         {
             resultIterator = indexReader.query( terms, matchAll );
         }
-        return resultIterator.stream().map( QUERY_RESULT_MAPPER );
+        return resultIterator.stream().map( QUERY_RESULT_MAPPER ).onClose( indexReader::close );
     }
 
     public static class EntityOutput
