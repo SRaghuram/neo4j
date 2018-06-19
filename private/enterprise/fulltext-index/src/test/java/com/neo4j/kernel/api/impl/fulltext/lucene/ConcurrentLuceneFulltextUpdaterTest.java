@@ -135,6 +135,7 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
                 SchemaWrite schemaWrite = transaction.schemaWrite();
                 schemaWrite.indexDrop( descriptor );
                 schemaWrite.indexCreate( newDescriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( "nodes" ) );
+                transaction.success();
             }
         };
     }

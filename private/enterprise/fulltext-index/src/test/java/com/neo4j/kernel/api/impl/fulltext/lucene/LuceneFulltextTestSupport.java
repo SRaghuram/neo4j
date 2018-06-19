@@ -201,6 +201,10 @@ public class LuceneFulltextTestSupport
     {
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
+            while ( tx.schemaRead().index( descriptor.schema() ) == IndexReference.NO_INDEX )
+            {
+                Thread.sleep( 100 );
+            }
             while ( tx.schemaRead().indexGetState( descriptor ) != InternalIndexState.ONLINE )
             {
                 Thread.sleep( 100 );

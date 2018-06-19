@@ -38,6 +38,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.SilentTokenNameLookup;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
+import org.neo4j.kernel.api.exceptions.schema.NoSuchIndexException;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
@@ -67,15 +68,14 @@ public class BloomProcedures
 
     @Description( "Await the completion of any background index population or updates" )
     @Procedure( name = "bloom.awaitPopulation", mode = READ )
-    public void awaitPopulation() throws IndexPopulationFailedKernelException
+    public void awaitPopulation() throws Exception
     {
         await( BLOOM_NODES );
         await( BLOOM_RELATIONSHIPS );
     }
 
-    private void await( String indexName ) throws IndexPopulationFailedKernelException
+    private void await( String indexName ) throws IndexPopulationFailedKernelException, InterruptedException
     {
-        //TODO This is here because the core api really doesn't play nicely with multi token schema yet.
         try
         {
             IndexReference index = tx.schemaRead().indexGetForName( indexName );
@@ -88,6 +88,7 @@ public class BloomProcedures
                     throw new IndexPopulationFailedKernelException( index.schema(), index.userDescription( lookup ),
                             "Population of index " + indexName + " has failed." );
                 }
+                Thread.sleep( 100 );
             }
         }
         catch ( IndexNotFoundKernelException ignore )
@@ -113,7 +114,14 @@ public class BloomProcedures
     @Procedure( name = "bloom.setIndexedNodePropertyKeys", mode = SCHEMA )
     public void setIndexedNodePropertyKeys( @Name( "propertyKeys" ) List<String> propertyKeys ) throws Exception
     {
-        tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( BLOOM_NODES ) );
+        try
+        {
+            tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( BLOOM_NODES ) );
+        }
+        catch ( NoSuchIndexException e )
+        {
+            //This is fine
+        }
         SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, new String[0], propertyKeys.toArray( new String[0] ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( BLOOM_NODES ) );
     }
@@ -122,7 +130,14 @@ public class BloomProcedures
     @Procedure( name = "bloom.setIndexedRelationshipPropertyKeys", mode = SCHEMA )
     public void setIndexedRelationshipPropertyKeys( @Name( "propertyKeys" ) List<String> propertyKeys ) throws Exception
     {
-        tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( BLOOM_RELATIONSHIPS ) );
+        try
+        {
+            tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( BLOOM_RELATIONSHIPS ) );
+        }
+        catch ( NoSuchIndexException e )
+        {
+            //This is fine
+        }
         SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.RELATIONSHIP, new String[0], propertyKeys.toArray( new String[0] ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( BLOOM_RELATIONSHIPS ) );
     }

@@ -95,6 +95,7 @@ public class BloomClusterIT
             db.execute( String.format( SET_REL_KEYS, "\"prop\"" ) );
             tx.success();
         } );
+        //TODO remove Thread.sleep
         Thread.sleep( 4000 );
 
         // then
@@ -128,6 +129,7 @@ public class BloomClusterIT
             relationship[0].setProperty( "prop", "They relate" );
             tx.success();
         } );
+        //TODO remove Thread.sleep
         Thread.sleep( 4000 );
 
         // then
@@ -161,6 +163,7 @@ public class BloomClusterIT
             relationship[0].setProperty( "prop", "They relate" );
             tx.success();
         } );
+        //TODO remove Thread.sleep
         Thread.sleep( 2000 );
 
 
@@ -176,6 +179,7 @@ public class BloomClusterIT
             db.execute( String.format( SET_REL_KEYS, "" ) );
             tx.success();
         } );
+        //TODO remove Thread.sleep
         Thread.sleep( 2000 );
         cluster.coreTx( ( db, tx ) ->
         {
@@ -199,6 +203,7 @@ public class BloomClusterIT
             db.execute( String.format( SET_REL_KEYS, "\"ata\", \"mata\", \"matt\"" ) );
             tx.success();
         } );
+        //TODO remove Thread.sleep
         Thread.sleep( 2000 );
 
         // then
