@@ -18,7 +18,7 @@ import org.neo4j.storageengine.api.EntityType;
 
 public interface FulltextAdapter
 {
-    String FIELD_ENTITY_ID = "__lucene__fulltext__addon__internal__id__";
+    String FIELD_ENTITY_ID = "__neo4j__lucene__fulltext__addon__internal__id__";
 
     Stream<String> propertyKeyStrings( IndexReference descriptor );
 

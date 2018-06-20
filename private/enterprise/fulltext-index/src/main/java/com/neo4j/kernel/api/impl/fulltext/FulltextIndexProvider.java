@@ -129,7 +129,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     {
         if ( Arrays.stream( properties ).anyMatch( prop -> prop.equals( FulltextAdapter.FIELD_ENTITY_ID ) ) )
         {
-            throw new BadSchemaException( "Unable to index the property " + FulltextAdapter.FIELD_ENTITY_ID );
+            throw new BadSchemaException( "Unable to index the property, the name is reserved for internal use " + FulltextAdapter.FIELD_ENTITY_ID );
         }
         int[] entityTokenIds;
         if ( type == EntityType.NODE )
