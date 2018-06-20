@@ -10,7 +10,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,7 +25,6 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
-import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EmbeddedDatabaseRule;
@@ -52,7 +50,7 @@ import static org.junit.Assert.fail;
 public class BloomQueryIT
 {
     private static final String PROP = "prop";
-    static final String NODES_PARAMETER = "CALL bloom.searchNodes($query, $fuzzy, $matchAll)";
+    private static final String NODES_PARAMETER = "CALL bloom.searchNodes($query, $fuzzy, $matchAll)";
 
     @Rule
     public DatabaseRule db = new EmbeddedDatabaseRule();
@@ -74,7 +72,7 @@ public class BloomQueryIT
     }
 
     @Test
-    public void exactQueryShouldBeExact() throws Exception
+    public void exactQueryShouldBeExact()
     {
         db.execute( String.format( SET_NODE_KEYS, "\"prop\"" ) );
         db.execute( String.format( SET_REL_KEYS, "\"prop\"" ) );
@@ -105,7 +103,7 @@ public class BloomQueryIT
     }
 
     @Test
-    public void matchAllQueryShouldMatchAll() throws Exception
+    public void matchAllQueryShouldMatchAll()
     {
         db.execute( String.format( SET_NODE_KEYS, "\"prop\"" ) );
         db.execute( String.format( SET_REL_KEYS, "\"prop\"" ) );
@@ -134,7 +132,7 @@ public class BloomQueryIT
     }
 
     @Test
-    public void exactMatchShouldScoreMuchBetterThatAlmostNotMatching() throws Exception
+    public void exactMatchShouldScoreMuchBetterThatAlmostNotMatching()
     {
         setIndexedNodeProperties( PROP );
 
@@ -159,7 +157,7 @@ public class BloomQueryIT
     }
 
     @Test
-    public void fuzzyQueryShouldBeFuzzy() throws Exception
+    public void fuzzyQueryShouldBeFuzzy()
     {
         setIndexedNodeProperties( PROP );
 
@@ -178,7 +176,7 @@ public class BloomQueryIT
     }
 
     @Test
-    public void fuzzyQueryShouldReturnExactMatchesFirst() throws Exception
+    public void fuzzyQueryShouldReturnExactMatchesFirst()
     {
         setIndexedNodeProperties( PROP );
 
@@ -191,7 +189,7 @@ public class BloomQueryIT
     }
 
     @Test
-    public void shouldReturnMatchesThatContainLuceneSyntaxCharacters() throws Exception
+    public void shouldReturnMatchesThatContainLuceneSyntaxCharacters()
     {
         setIndexedNodeProperties( PROP );
 
@@ -208,7 +206,7 @@ public class BloomQueryIT
         {
             setNodeProp( nodeId, PROP, "Hello" + elm + " How are you " + elm + "today?" );
 
-            try ( Transaction tx = db.beginTx() )
+            try ( Transaction ignore = db.beginTx() )
             {
                 assertQueryFindsNodeIds( "Hello" + elm, false, false, nodeId );
                 assertQueryFindsNodeIds( elm + "today", false, false, nodeId );
@@ -217,7 +215,7 @@ public class BloomQueryIT
     }
 
     @Test
-    public void exactMatchAllShouldOnlyReturnStuffThatMatchesAll() throws Exception
+    public void exactMatchAllShouldOnlyReturnStuffThatMatchesAll()
     {
         setIndexedNodeProperties( "first", "last" );
         long firstID;
@@ -249,7 +247,7 @@ public class BloomQueryIT
     }
 
     @Test
-    public void fuzzyMatchAllShouldOnlyReturnStuffThatKindaMatchesAll() throws Exception
+    public void fuzzyMatchAllShouldOnlyReturnStuffThatKindaMatchesAll()
     {
         setIndexedNodeProperties( "first", "last" );
         long firstID;
@@ -307,18 +305,17 @@ public class BloomQueryIT
         }
     }
 
-    private void assertQueryFindsNoNodes( String query, boolean fuzzy, boolean matchAll ) throws IOException, IndexNotFoundKernelException
+    private void assertQueryFindsNoNodes( String query, boolean fuzzy, boolean matchAll )
     {
         assertQueryFindsNodeIds( query, fuzzy, matchAll );
     }
 
-    private void assertQueryFindsNodeIds( String query, boolean fuzzy, boolean matchAll, long... ids ) throws IOException, IndexNotFoundKernelException
+    private void assertQueryFindsNodeIds( String query, boolean fuzzy, boolean matchAll, long... ids )
     {
         assertQueryFindsNodeIds( singletonList( query ), fuzzy, matchAll, ids );
     }
 
     private void assertQueryFindsNodeIds( Collection<String> query, boolean fuzzy, boolean matchAll, long... ids )
-            throws IOException, IndexNotFoundKernelException
     {
         try ( Result result = db.execute( NODES_PARAMETER, MapUtil.map( "query", query, "fuzzy", fuzzy, "matchAll", matchAll ) ) )
         {
