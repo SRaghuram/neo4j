@@ -1,21 +1,7 @@
 /*
- * Copyright (c) 2002-2018 "Neo Technology,"
- * Network Engine for Objects in Lund AB [http://neotechnology.com]
- *
- * This file is part of Neo4j.
- *
- * Neo4j is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.kernel.bloom;
 
@@ -99,10 +85,10 @@ public class BloomClusterIT
         Thread.sleep( 4000 );
 
         // then
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityid", cluster );
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
-        query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityid", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityId", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityId", cluster );
+        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityId", cluster );
+        query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityId", cluster );
 
     }
 
@@ -133,10 +119,10 @@ public class BloomClusterIT
         Thread.sleep( 4000 );
 
         // then
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityid", cluster );
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
-        query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityid", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityId", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityId", cluster );
+        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityId", cluster );
+        query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityId", cluster );
 
     }
 
@@ -168,10 +154,10 @@ public class BloomClusterIT
 
 
         // then
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityid", cluster );
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
-        query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityid", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityId", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityId", cluster );
+        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityId", cluster );
+        query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityId", cluster );
 
         cluster.coreTx( ( db, tx ) ->
         {
@@ -186,10 +172,10 @@ public class BloomClusterIT
             db.execute( AWAIT_POPULATION );
             tx.success();
         } );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityid", cluster );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
-        query( asList( ), String.format( RELS, "\"relate\"" ), "entityid", cluster );
+        query( asList( node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityId", cluster );
+        query( asList( node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityId", cluster );
+        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityId", cluster );
+        query( asList( ), String.format( RELS, "\"relate\"" ), "entityId", cluster );
 
     }
 
@@ -219,9 +205,9 @@ public class BloomClusterIT
 
     public void query( List<Object> expected, String query, String key, Collection<? extends ClusterMember> clusterMembers )
     {
-        for ( ClusterMember ClusterMember : clusterMembers )
+        for ( ClusterMember clusterMember : clusterMembers )
         {
-            Result result = ClusterMember.database().execute( query );
+            Result result = clusterMember.database().execute( query );
             Set<Object> results = new HashSet<>();
             while ( result.hasNext() )
             {
