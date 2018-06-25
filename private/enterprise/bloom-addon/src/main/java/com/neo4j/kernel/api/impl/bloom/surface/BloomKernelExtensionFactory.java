@@ -73,9 +73,8 @@ public class BloomKernelExtensionFactory extends KernelExtensionFactory<BloomKer
         LogService logService = dependencies.logService();
         AvailabilityGuard availabilityGuard = dependencies.availabilityGuard();
         JobScheduler scheduler = dependencies.scheduler();
-        Supplier<TransactionIdStore> transactionIdStore = dependencies::transactionIdStore;
         Supplier<NeoStoreFileListing> fileListing = dependencies::fileListing;
         return new BloomKernelExtension(
-                fs, storeDir, config, db, procedures, logService, availabilityGuard, scheduler, transactionIdStore, fileListing );
+                fs, storeDir, config, db, procedures, logService, availabilityGuard, scheduler, fileListing );
     }
 }

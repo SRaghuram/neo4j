@@ -52,7 +52,6 @@ public class LuceneFulltextTestSupport
     protected JobScheduler scheduler;
     protected FileSystemAbstraction fs;
     protected File storeDir;
-    private TransactionIdStore transactionIdStore;
 
     @Before
     public void setUp()
@@ -61,13 +60,11 @@ public class LuceneFulltextTestSupport
         scheduler = dbRule.resolveDependency( JobScheduler.class );
         fs = dbRule.resolveDependency( FileSystemAbstraction.class );
         storeDir = dbRule.getStoreDir();
-        transactionIdStore = dbRule.resolveDependency( TransactionIdStore.class );
     }
 
     protected FulltextProviderImpl createProvider()
     {
-        return new FulltextProviderImpl( db, LOG, availabilityGuard, scheduler, transactionIdStore,
-                fs, storeDir, analyzer, Duration.ofSeconds( 1 ) );
+        return new FulltextProviderImpl( db, LOG, availabilityGuard, scheduler, fs, storeDir, analyzer, Duration.ofSeconds( 1 ) );
     }
 
     protected long createNodeIndexableByPropertyValue( Object propertyValue )

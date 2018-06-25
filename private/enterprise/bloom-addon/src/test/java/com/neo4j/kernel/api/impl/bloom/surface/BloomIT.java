@@ -644,6 +644,21 @@ public class BloomIT
         assertEquals( "matt", result.next().get( "propertyKey" ) );
         assertEquals( "ata", result.next().get( "propertyKey" ) );
         assertFalse( result.hasNext() );
+
+        db.shutdown();
+        db = getDb();
+
+        result = db.execute( GET_NODE_KEYS );
+        assertEquals( "otherprop", result.next().get( "propertyKey" ) );
+        assertEquals( "prop", result.next().get( "propertyKey" ) );
+        assertEquals( "proppmatt", result.next().get( "propertyKey" ) );
+        assertFalse( result.hasNext() );
+
+        result = db.execute( GET_REL_KEYS );
+        assertEquals( "mata", result.next().get( "propertyKey" ) );
+        assertEquals( "matt", result.next().get( "propertyKey" ) );
+        assertEquals( "ata", result.next().get( "propertyKey" ) );
+        assertFalse( result.hasNext() );
     }
 
     @Test
@@ -656,6 +671,17 @@ public class BloomIT
         db.execute( AWAIT_POPULATION );
         Result result = db.execute( STATUS );
         Map<String,Object> output = result.next();
+        assertEquals( "ONLINE", output.get( "state" ) );
+        assertEquals( "bloomNodes", output.get( "name" ) );
+        output = result.next();
+        assertEquals( "ONLINE", output.get( "state" ) );
+        assertEquals( "bloomRelationships", output.get( "name" ) );
+        assertFalse( result.hasNext() );
+        db.shutdown();
+        db = getDb();
+        db.execute( AWAIT_POPULATION );
+        result = db.execute( STATUS );
+        output = result.next();
         assertEquals( "ONLINE", output.get( "state" ) );
         assertEquals( "bloomNodes", output.get( "name" ) );
         output = result.next();

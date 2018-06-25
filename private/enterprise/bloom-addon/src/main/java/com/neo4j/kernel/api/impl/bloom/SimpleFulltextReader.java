@@ -77,6 +77,7 @@ class SimpleFulltextReader implements ReadOnlyFulltext
         TopDocs docs = indexSearcher.search( new TermQuery( FulltextIndexConfiguration.TERM ), 1 );
         if ( docs.scoreDocs.length < 1 )
         {
+            System.err.println( "No config document found in the index." );
             return null;
         }
         return new FulltextIndexConfiguration( indexSearcher.doc( docs.scoreDocs[0].doc ) );

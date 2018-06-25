@@ -72,9 +72,9 @@ class WritableFulltext extends WritableAbstractDatabaseIndex<LuceneFulltext>
         return luceneIndex.getAnalyzerName();
     }
 
-    void saveConfiguration( long lastCommittedTransactionId ) throws IOException
+    void saveConfiguration() throws IOException
     {
-        luceneIndex.saveConfiguration( lastCommittedTransactionId );
+        luceneIndex.saveConfiguration( this );
     }
 
     InternalIndexState getState()

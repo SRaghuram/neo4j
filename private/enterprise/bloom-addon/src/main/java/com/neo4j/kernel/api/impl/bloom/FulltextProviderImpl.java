@@ -31,7 +31,6 @@ import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.AvailabilityGuard;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.state.NeoStoreFileListing;
 import org.neo4j.kernel.impl.util.MultiResource;
 import org.neo4j.logging.Log;
@@ -50,7 +49,6 @@ public class FulltextProviderImpl implements FulltextProvider
 
     private final GraphDatabaseService db;
     private final Log log;
-    private final TransactionIdStore transactionIdStore;
     private final Map<String,WritableFulltext>[] writableNodeIndices;
     private final Map<String,WritableFulltext>[] writableRelationshipIndices;
     private final FulltextUpdateApplier applier;
@@ -70,18 +68,16 @@ public class FulltextProviderImpl implements FulltextProvider
      * @param log For logging errors.
      * @param availabilityGuard Used for waiting with populating the index until the database is available.
      * @param scheduler For background work.
-     * @param transactionIdStore Used for checking if the store has had transactions applied to it, while the fulltext
      * @param fileSystem The filesystem to use.
      * @param storeDir Store directory of the database.
      * @param analyzerClassName The Lucene analyzer to use for the {@link LuceneFulltext} created by this factory.
      * @param refreshDelay
      */
     public FulltextProviderImpl( GraphDatabaseService db, Log log, AvailabilityGuard availabilityGuard, JobScheduler scheduler,
-            TransactionIdStore transactionIdStore, FileSystemAbstraction fileSystem, File storeDir, String analyzerClassName, Duration refreshDelay )
+            FileSystemAbstraction fileSystem, File storeDir, String analyzerClassName, Duration refreshDelay )
     {
         this.db = db;
         this.log = log;
-        this.transactionIdStore = transactionIdStore;
         JobScheduler jobScheduler = scheduler;
         applier = new FulltextUpdateApplier( log, availabilityGuard, scheduler );
         applier.start();
@@ -113,8 +109,7 @@ public class FulltextProviderImpl implements FulltextProvider
 
     private boolean matchesConfiguration( WritableFulltext index ) throws IOException
     {
-        long txId = transactionIdStore.getLastCommittedTransactionId();
-        FulltextIndexConfiguration currentConfig = new FulltextIndexConfiguration( index.getAnalyzerName(), index.getProperties(), txId );
+        FulltextIndexConfiguration currentConfig = new FulltextIndexConfiguration( index.getAnalyzerName(), index.getProperties() );
 
         FulltextIndexConfiguration storedConfig;
         try ( ReadOnlyFulltext indexReader = index.getIndexReader() )
@@ -185,6 +180,7 @@ public class FulltextProviderImpl implements FulltextProvider
                 {
                     writableFulltext.drop();
                     writableFulltext.open();
+                    writableFulltext.saveConfiguration();
                     if ( !writableFulltext.getProperties().isEmpty() )
                     {
                         applier.populateNodes( writableFulltext, db );
@@ -198,6 +194,7 @@ public class FulltextProviderImpl implements FulltextProvider
                 {
                     writableFulltext.drop();
                     writableFulltext.open();
+                    writableFulltext.saveConfiguration();
                     if ( !writableFulltext.getProperties().isEmpty() )
                     {
                         applier.populateRelationships( writableFulltext, db );
@@ -361,12 +358,14 @@ public class FulltextProviderImpl implements FulltextProvider
                 {
                     writableFulltext.drop();
                     writableFulltext.open();
+                    writableFulltext.saveConfiguration();
                     populations.add( applier.populateNodes( writableFulltext, db ) );
                 }
                 for ( WritableFulltext writableFulltext : writableRelationshipIndices[tentativeSide].values() )
                 {
                     writableFulltext.drop();
                     writableFulltext.open();
+                    writableFulltext.saveConfiguration();
                     populations.add( applier.populateRelationships( writableFulltext, db ) );
                 }
             }
@@ -399,7 +398,7 @@ public class FulltextProviderImpl implements FulltextProvider
                 // Save the last committed transaction, then drain the update queue to make sure that we have applied _at least_ the commits the config claims.
                 Lock listingLock = configurationLock.readLock();
                 listingLock.lock();
-                index.saveConfiguration( transactionIdStore.getLastCommittedTransactionId() );
+                index.saveConfiguration();
                 try
                 {
                     applier.writeBarrier().awaitCompletion();
@@ -494,7 +493,7 @@ public class FulltextProviderImpl implements FulltextProvider
         {
             try
             {
-                luceneFulltextIndex.saveConfiguration( transactionIdStore.getLastCommittedTransactionId() );
+                luceneFulltextIndex.saveConfiguration();
                 luceneFulltextIndex.close();
             }
             catch ( IOException e )
