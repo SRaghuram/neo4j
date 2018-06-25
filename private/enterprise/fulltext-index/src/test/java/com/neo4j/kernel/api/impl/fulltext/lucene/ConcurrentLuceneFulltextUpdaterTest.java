@@ -150,7 +150,6 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
         SchemaDescriptor newDescriptor = getNewDescriptor( entityTokens );
         IndexReference initialIndex = createInitialIndex( descriptor );
 
-
         Runnable aliceWork = work( nodesCreatedPerThread, () ->
                 db.getNodeById( createNodeIndexableByPropertyValue( "alice" ) ).addLabel( label ) );
         Runnable bobWork = work( nodesCreatedPerThread, () ->
@@ -167,7 +166,6 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
         SchemaDescriptor newDescriptor =
                 getNewDescriptor( entityTokens );
         IndexReference initialIndex = createInitialIndex( descriptor );
-
 
         Runnable aliceWork = work( nodesCreatedPerThread,
                 () -> db.execute( "create ({" + PROP + ": \"alice\"})" ).close() );
@@ -186,7 +184,6 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
         SchemaDescriptor newDescriptor = getNewDescriptor( entityTokens );
         IndexReference initialIndex = createInitialIndex( descriptor );
 
-
         Runnable aliceWork = work( nodesCreatedPerThread,
                 () -> db.execute( "create (:LABEL {" + PROP + ": \"alice\"})" ).close() );
         Runnable bobWork = work( nodesCreatedPerThread,
@@ -203,7 +200,6 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
         SchemaDescriptor newDescriptor =
                 getNewDescriptor( entityTokens );
         IndexReference initialIndex = createInitialIndex( descriptor );
-
 
         Runnable aliceWork = work( nodesCreatedPerThread,
                 () -> db.execute( "CYPHER 3.1 create ({" + PROP + ": \"alice\"})" ).close() );
@@ -222,7 +218,6 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
         SchemaDescriptor newDescriptor = getNewDescriptor( entityTokens );
         IndexReference initialIndex = createInitialIndex( descriptor );
 
-
         Runnable aliceWork = work( nodesCreatedPerThread,
                 () -> db.execute( "CYPHER 3.1 create (:LABEL {" + PROP + ": \"alice\"})" ).close() );
         Runnable bobWork = work( nodesCreatedPerThread,
@@ -239,7 +234,6 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
         SchemaDescriptor newDescriptor =
                 getNewDescriptor( entityTokens );
         IndexReference initialIndex = createInitialIndex( descriptor );
-
 
         Runnable aliceWork = work( nodesCreatedPerThread,
                 () -> db.execute( "CYPHER 2.3 create ({" + PROP + ": \"alice\"})" ).close() );
@@ -258,7 +252,6 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
         SchemaDescriptor newDescriptor = getNewDescriptor( entityTokens );
         IndexReference initialIndex = createInitialIndex( descriptor );
 
-
         Runnable aliceWork = work( nodesCreatedPerThread,
                 () -> db.execute( "CYPHER 2.3 create (:LABEL {" + PROP + ": \"alice\"})" ).close() );
         Runnable bobWork = work( nodesCreatedPerThread,
@@ -276,7 +269,6 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
                 getNewDescriptor( entityTokens );
         IndexReference initialIndex = createInitialIndex( descriptor );
 
-
         Runnable aliceWork = work( nodesCreatedPerThread,
                 () -> db.execute( "CYPHER 2.3 create ({" + PROP + ": \"alice\"})" ).close() );
         Runnable bobWork = work( nodesCreatedPerThread,
@@ -293,7 +285,6 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
         SchemaDescriptor descriptor = getExistingDescriptor( entityTokens );
         SchemaDescriptor newDescriptor = getNewDescriptor( entityTokens );
         IndexReference initialIndex = createInitialIndex( descriptor );
-
 
         Runnable aliceWork = work( nodesCreatedPerThread,
                 () -> db.execute( "CYPHER planner=rule create (:LABEL {" + PROP + ": \"alice\"})" ).close() );

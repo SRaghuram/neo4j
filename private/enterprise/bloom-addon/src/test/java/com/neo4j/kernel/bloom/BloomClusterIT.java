@@ -89,7 +89,6 @@ public class BloomClusterIT
         query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
         query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
         query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityid", cluster );
-
     }
 
     @Test
@@ -123,7 +122,6 @@ public class BloomClusterIT
         query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
         query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
         query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityid", cluster );
-
     }
 
     @Test
@@ -152,7 +150,6 @@ public class BloomClusterIT
         //TODO remove Thread.sleep
         Thread.sleep( 2000 );
 
-
         // then
         query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityid", cluster );
         query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
@@ -176,7 +173,6 @@ public class BloomClusterIT
         query( asList( node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
         query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
         query( asList( ), String.format( RELS, "\"relate\"" ), "entityId", cluster );
-
     }
 
     @Test

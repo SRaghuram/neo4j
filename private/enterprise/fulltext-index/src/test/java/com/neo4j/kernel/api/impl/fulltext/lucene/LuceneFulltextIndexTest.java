@@ -21,7 +21,6 @@ import static org.neo4j.storageengine.api.EntityType.RELATIONSHIP;
 
 public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
 {
-
     private static final String NODE_INDEX_NAME = "nodes";
 
     @Test
@@ -450,7 +449,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             createRelationshipIndexableByPropertyValue( firstNode, secondNode, "Hello. Hello again." );
             createRelationshipWithProperty( secondNode, firstNode, "prop2",
                     "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
-                            "cross between a zebra and any other equine: essentially, a zebra hybrid." );
+                    "cross between a zebra and any other equine: essentially, a zebra hybrid." );
 
             tx.success();
         }
@@ -509,10 +508,6 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             assertQueryFindsIds( "rels", "different", secondRelID );
         }
     }
-
-
-
-
 
     @Test
     public void shouldBeAbleToUpdateAndQueryAfterIndexChange() throws Exception
