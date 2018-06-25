@@ -586,7 +586,7 @@ public class BloomIT
         db.shutdown();
         builder.setConfig( BloomFulltextConfig.bloom_enabled, "true" );
         db = getDb();
-        db.execute( AWAIT_POPULATION ).close();
+        db.execute( AWAIT_REFRESH ).close();
 
         // Now we should be able to find the node that was added while the index was disabled.
         try ( Transaction ignore = db.beginTx() )

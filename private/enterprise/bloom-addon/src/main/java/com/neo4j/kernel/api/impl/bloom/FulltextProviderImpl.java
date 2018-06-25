@@ -17,12 +17,14 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.neo4j.concurrent.BinaryLatch;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Resource;
 import org.neo4j.graphdb.ResourceIterator;
@@ -56,6 +58,11 @@ public class FulltextProviderImpl implements FulltextProvider
     private final ReadWriteLock configurationLock;
     private static final JobScheduler.Group FLIPPER = new JobScheduler.Group( "FulltextIndexSideFlipper" );
     private final JobScheduler.JobHandle flipperJob;
+    private final AtomicReference<BinaryLatch> flipCompletionLatch = new AtomicReference<>();
+    private final BinaryLatch stoppedFlipperSignal = new BinaryLatch()
+    {
+        { release(); }
+    };
     private volatile boolean closed;
     private volatile int side;
     //Used in order to not give awaitFlip false positives.
@@ -322,35 +329,24 @@ public class FulltextProviderImpl implements FulltextProvider
     @Override
     public void awaitFlip()
     {
-        int startSide = tentativeSide;
-        synchronized ( this )
-        {
-            while ( startSide == tentativeSide || side != tentativeSide )
-            {
-                try
-                {
-                    wait();
-                }
-                catch ( InterruptedException e )
-                {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-            }
-        }
+        getOrInstallFlipCompletionLatch().await();
     }
 
     private void flip() throws IOException
     {
         configurationLock.writeLock().lock();
+
+        BinaryLatch completionLatch = getOrInstallFlipCompletionLatch();
+        if ( completionLatch == stoppedFlipperSignal )
+        {
+            configurationLock.writeLock().unlock();
+            return;
+        }
+
         try
         {
             List<AsyncFulltextIndexOperation> populations = new ArrayList<>();
-            synchronized ( this )
-            {
-                tentativeSide = side == A_SIDE ? B_SIDE : A_SIDE;
-                notifyAll();
-            }
+            tentativeSide = side == A_SIDE ? B_SIDE : A_SIDE;
             try
             {
                 applier.writeBarrier().awaitCompletion();
@@ -377,16 +373,36 @@ public class FulltextProviderImpl implements FulltextProvider
             {
                 population.awaitCompletion();
             }
-            synchronized ( this )
-            {
-                side = tentativeSide;
-                notifyAll();
-            }
+            side = tentativeSide;
         }
         catch ( ExecutionException e )
         {
             throw new IOException( "Unable to flip fulltext indexes", e );
         }
+        finally
+        {
+            completionLatch.release();
+            flipCompletionLatch.compareAndSet( completionLatch, null );
+        }
+    }
+
+    private BinaryLatch getOrInstallFlipCompletionLatch()
+    {
+        BinaryLatch completionLatch;
+        do
+        {
+            completionLatch = flipCompletionLatch.get();
+            if ( completionLatch != null )
+            {
+                break;
+            }
+            else
+            {
+                completionLatch = new BinaryLatch();
+            }
+        }
+        while ( flipCompletionLatch.compareAndSet( null, completionLatch ) );
+        return completionLatch;
     }
 
     private Resource snapshotStoreFiles( Collection<StoreFileMetadata> files ) throws IOException
@@ -480,14 +496,14 @@ public class FulltextProviderImpl implements FulltextProvider
     public void close()
     {
         closed = true;
-        try
+        flipperJob.cancel( false );
+
+        BinaryLatch completionLatch = flipCompletionLatch.getAndSet( stoppedFlipperSignal );
+        if ( completionLatch != null )
         {
-            flipperJob.waitTermination();
+            completionLatch.await();
         }
-        catch ( InterruptedException | ExecutionException e )
-        {
-            log.error( "Unable stop the fulltext index flipper", e );
-        }
+
         applier.stop();
         Consumer<WritableFulltext> fulltextCloser = luceneFulltextIndex ->
         {
