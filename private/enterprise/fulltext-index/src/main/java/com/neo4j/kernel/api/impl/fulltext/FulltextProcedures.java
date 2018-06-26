@@ -85,7 +85,7 @@ public class FulltextProcedures
     }
 
     @Description( "Create a node fulltext index for all labels and the given properties" )
-    @Procedure( name = "fulltext.createNodeIndex", mode = SCHEMA )
+    @Procedure( name = "fulltext.createAnyNodeLabelIndex", mode = SCHEMA )
     public void createNodeFulltextIndex( @Name( "indexName" ) String name, @Name( "propertyNames" ) List<String> properties )
             throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
@@ -102,7 +102,7 @@ public class FulltextProcedures
     }
 
     @Description( "Create a relationship fulltext index for all relationship types and the given properties" )
-    @Procedure( name = "fulltext.createRelationshipIndex", mode = SCHEMA )
+    @Procedure( name = "fulltext.createAnyRelationshipTypeIndex", mode = SCHEMA )
     public void createRelationshipFulltextIndex( @Name( "indexName" ) String name, @Name( "propertyNames" ) List<String> properties )
             throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
@@ -114,12 +114,13 @@ public class FulltextProcedures
     public void createRelationshipFulltextIndex( @Name( "indexName" ) String name, @Name( "relatoinshipTypes" ) List<String> reltypes,
             @Name( "propertyNames" ) List<String> properties ) throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
-        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, reltypes.toArray( new String[0] ), properties.toArray( new String[0] ) );
+        SchemaDescriptor schemaDescriptor =
+                accessor.schemaFor( EntityType.RELATIONSHIP, reltypes.toArray( new String[0] ), properties.toArray( new String[0] ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
     }
 
     @Description( "Drop the specified index" )
-    @Procedure( name = "fulltext.DropIndex", mode = SCHEMA )
+    @Procedure( name = "fulltext.dropIndex", mode = SCHEMA )
     public void dropIndex( @Name( "indexName" ) String name ) throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
         tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( name ) );

@@ -151,7 +151,8 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         FulltextIndexAccessor fulltextIndexAccessor = accessorsByName.get( indexName );
         if ( fulltextIndexAccessor == null )
         {
-            throw new IndexNotFoundKernelException( "The requested fulltext index could not be accessed. Perhaps population has not completed yet?" );
+            throw new IndexNotFoundKernelException(
+                    String.format( "The requested fulltext index with name %s could not be accessed. Perhaps population has not completed yet?", indexName ) );
         }
         try ( FulltextIndexReader fulltextIndexReader = fulltextIndexAccessor.newReader() )
         {
