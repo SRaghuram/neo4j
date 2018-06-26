@@ -100,6 +100,7 @@ public class BloomProcedures
     @Procedure( name = "bloom.setIndexedNodePropertyKeys", mode = SCHEMA )
     public void setIndexedNodePropertyKeys( @Name( "propertyKeys" ) List<String> propertyKeys ) throws Exception
     {
+        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, new String[0], propertyKeys.toArray( new String[0] ) );
         try
         {
             tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( BLOOM_NODES ) );
@@ -108,7 +109,6 @@ public class BloomProcedures
         {
             //This is fine
         }
-        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, new String[0], propertyKeys.toArray( new String[0] ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( BLOOM_NODES ) );
     }
 
@@ -116,6 +116,7 @@ public class BloomProcedures
     @Procedure( name = "bloom.setIndexedRelationshipPropertyKeys", mode = SCHEMA )
     public void setIndexedRelationshipPropertyKeys( @Name( "propertyKeys" ) List<String> propertyKeys ) throws Exception
     {
+        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.RELATIONSHIP, new String[0], propertyKeys.toArray( new String[0] ) );
         try
         {
             tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( BLOOM_RELATIONSHIPS ) );
@@ -124,7 +125,6 @@ public class BloomProcedures
         {
             //This is fine
         }
-        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.RELATIONSHIP, new String[0], propertyKeys.toArray( new String[0] ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( BLOOM_RELATIONSHIPS ) );
     }
 

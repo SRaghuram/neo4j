@@ -131,14 +131,14 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         {
             throw new BadSchemaException( "Unable to index the property, the name is reserved for internal use " + FulltextAdapter.FIELD_ENTITY_ID );
         }
-        int[] entityTokenIds;
+        int[] entityTokenIds = new int[entityTokens.length];
         if ( type == EntityType.NODE )
         {
-            entityTokenIds = Arrays.stream( entityTokens ).mapToInt( tokenHolders.labelTokens()::getOrCreateId ).toArray();
+            tokenHolders.labelTokens().getOrCreateIds( entityTokens, entityTokenIds );
         }
         else
         {
-            entityTokenIds = Arrays.stream( entityTokens ).mapToInt( tokenHolders.relationshipTypeTokens()::getOrCreateId ).toArray();
+            tokenHolders.relationshipTypeTokens().getOrCreateIds( entityTokens, entityTokenIds );
         }
         int[] propertyIds = Arrays.stream( properties ).mapToInt( tokenHolders.propertyKeyTokens()::getOrCreateId ).toArray();
 
