@@ -32,7 +32,6 @@ import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.ConstraintRule;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.transaction.command.Command.BaseCommand;
-import org.neo4j.kernel.impl.transaction.command.Command.Version;
 
 /**
  * Visits commands targeted towards the {@link NeoStores} and update corresponding stores.
@@ -181,12 +180,12 @@ public class NeoStoreTransactionApplier extends TransactionApplier.Adapter
     @Override
     public boolean visitNeoStoreCommand( Command.NeoStoreCommand command )
     {
-        neoStores.getMetaDataStore().setGraphNextProp( version.select( command ).getNextProp() );
+        neoStores.getMetaDataStore().setGraphNextProp( (version == Version.BEFORE ? command.getBefore() : command.getAfter()).getNextProp() );
         return false;
     }
 
     private <RECORD extends AbstractBaseRecord> void updateStore( RecordStore<RECORD> store, BaseCommand<RECORD> command )
     {
-        store.updateRecord( version.select( command ) );
+        store.updateRecord( (version == Version.BEFORE ? command.getBefore() : command.getAfter()) );
     }
 }
