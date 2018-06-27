@@ -83,6 +83,18 @@ InModuleScope Neo4j-Management {
         $prunsrv.args -join ' ' | Should Match ([regex]::Escape("//DS//$($global:mockServiceName)"))
       }
 
+      It "return //ES/xxx argument on service start" {
+        $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $serverObject -ForServerStart
+
+        $prunsrv.args -join ' ' | Should Match ([regex]::Escape("//ES//$($global:mockServiceName)"))
+      }
+
+      It "return //SS/xxx argument on service stop" {
+        $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $serverObject -ForServerStop
+
+        $prunsrv.args -join ' ' | Should Match ([regex]::Escape("//SS//$($global:mockServiceName)"))
+      }
+
       It "return //TS/xxx argument on service run console" {
         $prunsrv = Get-Neo4jPrunsrv -Neo4jServer $serverObject -ForConsole
 

@@ -27,9 +27,12 @@ InModuleScope Neo4j-Management {
     }
     # Mock Neo4j environment
     Mock Get-Neo4jEnv { $global:mockNeo4jHome } -ParameterFilter { $Name -eq 'NEO4J_HOME' }
+    Mock Confirm-JavaVersion { $true }
+    Mock Start-Process { throw "Should not call Start-Process mock" }
+    Mock Invoke-ExternalCommand { throw "Should not call Invoke-ExternalCommand mock" }
 
     Context "Missing service name in configuration files" {
-      Mock Stop-Service { }
+      Mock Invoke-ExternalCommand { }
 
       $serverObject = global:New-MockNeo4jInstall -WindowsService ''
 
@@ -38,15 +41,16 @@ InModuleScope Neo4j-Management {
       }
     }
 
-    Context "Stop service succesfully but didn't stop" {
-      Mock Stop-Service { throw "Called Stop-Service incorrectly"}
-      Mock Stop-Service -Verifiable { @{ Status = 'Stop Pending'} } -ParameterFilter { $Name -eq $global:mockServiceName}
+    Context "Stop service failed" {
+      Mock Get-Service { return 'service' }
+      Mock Invoke-ExternalCommand { throw "Called Stop-Service incorrectly"}
+      Mock Invoke-ExternalCommand -Verifiable { @{ exitCode = 1; capturedOutput = 'failed to stop' } } -ParameterFilter { $Command -like '*prunsrv*.exe' }
 
       $serverObject = global:New-MockNeo4jInstall
 
       $result = Stop-Neo4jServer -Neo4jServer $serverObject
-      It "result is 2" {
-        $result | Should Be 2
+      It "result is 1" {
+        $result | Should Be 1
       }
 
       It "calls verified mocks" {
@@ -55,8 +59,9 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Stop service succesfully" {
-      Mock Stop-Service { throw "Called Stop-Service incorrectly"}
-      Mock Stop-Service -Verifiable { @{ Status = 'Stopped'} } -ParameterFilter { $Name -eq $global:mockServiceName}
+      Mock Get-Service { return 'service' }
+      Mock Invoke-ExternalCommand { throw "Called Stop-Service incorrectly"}
+      Mock Invoke-ExternalCommand -Verifiable { @{ exitCode = 0 } } -ParameterFilter { $Command -like '*prunsrv*.exe' }
 
       $serverObject = global:New-MockNeo4jInstall
 

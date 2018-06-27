@@ -26,7 +26,9 @@ InModuleScope Neo4j-Management {
     }
     # Mock service and process handlers
     Mock Get-Service { @{ 'State' = 'Running' } } -ParameterFilter { $Name = $global:mockServiceName }
+    Mock Confirm-JavaVersion { $true }
     Mock Start-Process { throw "Should not call Start-Process mock" }
+    Mock Invoke-ExternalCommand { throw "Should not call Invoke-ExternalCommand mock" }
     Mock Stop-Service { $true } -ParameterFilter { $Name -eq $global:mockServiceName}
 
     Context "Missing service name in configuration files" {
@@ -54,7 +56,7 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Uninstall windows service successfully" {
-      Mock Start-Process { @{ 'ExitCode' = 0 } }
+      Mock Invoke-ExternalCommand { @{ 'exitCode' = 0 } }
 
       $serverObject = global:New-MockNeo4jInstall
 
@@ -66,8 +68,8 @@ InModuleScope Neo4j-Management {
     }
 
     Context "During uninstall, does not stop service if already stopped" {
-      Mock Get-Service { @{ 'State' = 'Stopped' } }
-      Mock Start-Process { @{ 'ExitCode' = 0 } }
+      Mock Get-Service { @{ 'Status' = 'Stopped' } }
+      Mock Invoke-ExternalCommand { @{ 'exitCode' = 0 } }
 
       $serverObject = global:New-MockNeo4jInstall
 

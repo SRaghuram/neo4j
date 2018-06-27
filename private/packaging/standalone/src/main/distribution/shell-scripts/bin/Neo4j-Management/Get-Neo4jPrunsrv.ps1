@@ -48,6 +48,12 @@ Function Get-Neo4jPrunsrv
     ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerUpdateInvoke')]
     [switch]$ForServerUpdate
 
+    ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerStartInvoke')]
+    [switch]$ForServerStart
+
+    ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ServerStopInvoke')]
+    [switch]$ForServerStop
+
     ,[Parameter(Mandatory=$true,ValueFromPipeline=$false,ParameterSetName='ConsoleInvoke')]
     [switch]$ForConsole
   )
@@ -90,7 +96,7 @@ Function Get-Neo4jPrunsrv
       "ServerUpdateInvoke" {
         $PrunArgs += @("`"//US//$($Name)`"")
       }
-      {$_ -in @("ServerInstallInvoke", "ServerUpdateInvoke")} {
+      {@("ServerInstallInvoke", "ServerUpdateInvoke") -Contains $_} {
 
         $JvmOptions = @()
 
@@ -156,6 +162,8 @@ Function Get-Neo4jPrunsrv
                        "`"--StartClass=$($serverMainClass)`"")
       }
       "ServerUninstallInvoke"   { $PrunArgs += @("`"//DS//$($Name)`"") }
+      "ServerStartInvoke"           { $PrunArgs += @("`"//ES//$($Name)`"") }
+      "ServerStopInvoke"           { $PrunArgs += @("`"//SS//$($Name)`"") }
       "ConsoleInvoke"           { $PrunArgs += @("`"//TS//$($Name)`"") }
       default {
         throw "Unknown ParameterSetName $($PsCmdlet.ParameterSetName)"

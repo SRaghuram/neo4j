@@ -27,7 +27,9 @@ InModuleScope Neo4j-Management {
     }
     # Mock Neo4j environment
     Mock Get-Neo4jEnv { $global:mockNeo4jHome } -ParameterFilter { $Name -eq 'NEO4J_HOME' }
+    Mock Confirm-JavaVersion { $true }
     Mock Start-Process { throw "Should not call Start-Process mock" }
+    Mock Invoke-ExternalCommand { throw "Should not call Invoke-ExternalCommand mock" }
 
     Context "Invalid or missing specified neo4j installation" {
       $serverObject = global:New-InvalidNeo4jInstall
@@ -50,7 +52,7 @@ InModuleScope Neo4j-Management {
 
     Context "Update service failure" {
       Mock Get-Service -Verifiable { return "Fake service" }
-      Mock Start-Process -Verifiable { throw "Error reconfiguring" }
+      Mock Invoke-ExternalCommand -Verifiable { throw "Error reconfiguring" }
       $serverObject = global:New-MockNeo4jInstall
 
       It "throws when update encounters an error" {
@@ -61,7 +63,7 @@ InModuleScope Neo4j-Management {
 
     Context "Update service success" {
       Mock Get-Service -Verifiable { return "Fake service" }
-      Mock Start-Process -Verifiable { @{'ExitCode' = 0} }
+      Mock Invoke-ExternalCommand -Verifiable { @{'exitCode' = 0} }
       $serverObject = global:New-MockNeo4jInstall
       $result = Update-Neo4jServer -Neo4jServer $serverObject
 

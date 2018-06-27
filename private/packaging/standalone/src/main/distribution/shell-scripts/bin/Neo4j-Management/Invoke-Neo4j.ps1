@@ -48,7 +48,7 @@ Function Invoke-Neo4j
 
   Process
   {
-    try 
+    try
     {
       $HelpText = "Usage: neo4j { console | start | stop | restart | status | install-service | uninstall-service | update-service } < -Verbose >"
 
@@ -65,11 +65,6 @@ Function Invoke-Neo4j
       Write-Verbose "Neo4j Server Type is '$($thisServer.ServerType)'"
       Write-Verbose "Neo4j Version is '$($thisServer.ServerVersion)'"
       Write-Verbose "Neo4j Database Mode is '$($thisServer.DatabaseMode)'"
-
-      # Check if we have administrative rights; If the current user's token contains the Administrators Group SID (S-1-5-32-544)
-      if (-not [bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match "S-1-5-32-544")) {
-        Write-Warning "This command does not appear to be running with administrative rights.  Some commands may fail e.g. Start/Stop"
-      }
 
       switch ($Command.Trim().ToLower())
       {
@@ -91,6 +86,7 @@ Function Invoke-Neo4j
         }
         "restart" {
           Write-Verbose "Restart command specified"
+
           $result = (Stop-Neo4jServer -Neo4jServer $thisServer -ErrorAction Stop)
           if ($result -ne 0) { Return $result}
           Return (Start-Neo4jServer -Service -Neo4jServer $thisServer -ErrorAction Stop)
@@ -112,8 +108,8 @@ Function Invoke-Neo4j
           Return [int](Update-Neo4jServer -Neo4jServer $thisServer -ErrorAction Stop)
         }
         default {
-          if ($Command -ne '') { Write-StdErr "Unknown command $Command" }
-          Write-StdErr $HelpText
+          if ($Command -ne '') { Write-Host "Unknown command $Command" }
+          Write-Host $HelpText
           Return 1
         }
       }
