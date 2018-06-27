@@ -230,8 +230,146 @@ public class FulltextProceduresTest
     {
         db = getDb();
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
-        expectedException.expectMessage( "existing index" );
+        expectedException.expectMessage( "already exists" );
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop3", "prop4" ) ) ).close();
+    }
+
+    @Test
+    public void indexConfigurationChangesAndTokenCreatesMustBePossibleInSameTransaction() throws Exception
+    {
+        db = getDb();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            // The property keys we ask for do not exist, so those tokens will have to be allocated.
+            // This test verifies that the locking required for the index modifications do not conflict with the
+            // locking required for the token allocation.
+            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "this" ) ) );
+            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "foo" ) ) );
+            db.execute( format( NODE_ANY_CREATE, "nodesB", array( "that" ) ) );
+            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsB", array( "bar" ) ) );
+        }
+    }
+
+    @Test
+    public void creatingLabelsAfterAnyTokenIndexModificationMustNotBlockForever() throws Exception
+    {
+        db = getDb();
+
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode();
+            nodeId = node.getId();
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "this" ) ) );
+            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "foo" ) ) );
+            Node node = db.getNodeById( nodeId );
+            expectedException.expect( RuntimeException.class );
+            node.addLabel( Label.label( "SOME_LABEL" ) );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void creatingRelTypesAfterAnyTokenIndexModificationMustNotBlockForever() throws Exception
+    {
+        db = getDb();
+
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode();
+            nodeId = node.getId();
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "this" ) ) );
+            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "foo" ) ) );
+            Node node = db.getNodeById( nodeId );
+            expectedException.expect( RuntimeException.class );
+            node.createRelationshipTo( node, RelationshipType.withName( "SOME_REL" ) );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void anyLabelTokenIndexModificationAfterCreatingLabelsAndRelationshipTypesMustNotBlockForever() throws Exception
+    {
+        db = getDb();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode();
+            node.addLabel( Label.label( "SOME_LABEL" ) );
+            node.createRelationshipTo( node, RelationshipType.withName( "SOME_REL" ) );
+            expectedException.expect( RuntimeException.class );
+            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "this" ) ) );
+        }
+    }
+
+    @Test
+    public void anyRelTypeTokenIndexModificationAfterCreatingLabelsAndRelationshipTypesMustNotBlockForever() throws Exception
+    {
+        db = getDb();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode();
+            node.addLabel( Label.label( "SOME_LABEL" ) );
+            node.createRelationshipTo( node, RelationshipType.withName( "SOME_REL" ) );
+            expectedException.expect( RuntimeException.class );
+            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "foo" ) ) );
+        }
+    }
+
+    @Test
+    public void creatingIndexesWhichImpliesTokenCreateMustNotBlockForever() throws Exception
+    {
+        db = getDb();
+
+        // In fact, there should be no conflict here at all, so there is no exception to expect.
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodesA", array( "SOME_LABEL" ), array( "prop" ) ) );
+            db.execute( format( RELATIONSHIP_CREATE, "relsA", array( "SOME_REL_TYPE" ), array( "prop" ) ) );
+            db.execute( format( NODE_CREATE, "nodesB", array( "SOME_OTHER_LABEL" ), array( "prop" ) ) );
+            db.execute( format( RELATIONSHIP_CREATE, "relsB", array( "SOME_OTHER_REL_TYPE" ), array( "prop" ) ) );
+        }
+    }
+
+    @Test
+    public void creatingAnyTokenIndexAndThenTokenIndexWhichImpliesLabelTokenCreateMustNotBlockForever() throws Exception
+    {
+        db = getDb();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "prop" ) ) );
+            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "prop" ) ) );
+            expectedException.expect( RuntimeException.class );
+            db.execute( format( NODE_CREATE, "nodesB", array( "SOME_LABEL" ), array( "prop" ) ) );
+        }
+    }
+
+    @Test
+    public void creatingAnyTokenIndexAndThenTokenIndexWhichImpliesRelTypeTokenCreateMustNotBlockForever() throws Exception
+    {
+        db = getDb();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "prop" ) ) );
+            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "prop" ) ) );
+            expectedException.expect( RuntimeException.class );
+            db.execute( format( RELATIONSHIP_CREATE, "relsB", array( "SOME_REL_TYPE" ), array( "prop" ) ) );
+        }
     }
 
     @Test

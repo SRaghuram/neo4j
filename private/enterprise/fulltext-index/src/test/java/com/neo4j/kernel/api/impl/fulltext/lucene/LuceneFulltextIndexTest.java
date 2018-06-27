@@ -22,6 +22,7 @@ import static org.neo4j.storageengine.api.EntityType.RELATIONSHIP;
 public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
 {
     private static final String NODE_INDEX_NAME = "nodes";
+    private static final String REL_INDEX_NAME = "rels";
 
     @Test
     public void shouldFindNodeWithString() throws Exception
@@ -30,7 +31,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -39,7 +41,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( Transaction tx = db.beginTx() )
         {
             firstID = createNodeIndexableByPropertyValue( "Hello. Hello again." );
-            secondID = createNodeIndexableByPropertyValue( "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
+            secondID = createNodeIndexableByPropertyValue(
+                    "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
                     "cross between a zebra and any other equine: essentially, a zebra hybrid." );
 
             tx.success();
@@ -61,7 +64,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -90,7 +94,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -119,7 +124,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -151,7 +157,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -161,7 +168,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( Transaction tx = db.beginTx() )
         {
             firstID = createNodeIndexableByPropertyValue( "Hello. Hello again." );
-            secondID = createNodeIndexableByPropertyValue( "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
+            secondID = createNodeIndexableByPropertyValue(
+                    "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
                     "cross between a zebra and any other equine: essentially, a zebra hybrid." );
 
             tx.success();
@@ -193,7 +201,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -203,7 +212,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( Transaction tx = db.beginTx() )
         {
             firstID = createNodeIndexableByPropertyValue( "Hello. Hello again." );
-            secondID = createNodeIndexableByPropertyValue( "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
+            secondID = createNodeIndexableByPropertyValue(
+                    "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
                     "cross between a zebra and any other equine: essentially, a zebra hybrid." );
 
             tx.success();
@@ -233,7 +243,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], "prop", "prop2" );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -243,7 +254,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( Transaction tx = db.beginTx() )
         {
             firstID = createNodeIndexableByPropertyValue( "Hello. Hello again." );
-            secondID = createNodeIndexableByPropertyValue( "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
+            secondID = createNodeIndexableByPropertyValue(
+                    "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
                     "cross between a zebra and any other equine: essentially, a zebra hybrid." );
             thirdID = createNodeIndexableByPropertyValue( "Hello. Hello again." );
 
@@ -286,7 +298,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -318,7 +331,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], "prop", "prop2" );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -352,7 +366,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], "first", "last" );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -393,8 +408,10 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference relsIndex;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            nodesIndex = tx.schemaWrite().indexCreate( nodes, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
-            relsIndex = tx.schemaWrite().indexCreate( rels, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( "rels" ) );
+            nodesIndex = tx.schemaWrite().indexCreate( nodes, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
+            relsIndex = tx.schemaWrite().indexCreate( rels, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( REL_INDEX_NAME ) );
             tx.success();
         }
         await( nodesIndex );
@@ -406,7 +423,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( Transaction tx = db.beginTx() )
         {
             firstNodeID = createNodeIndexableByPropertyValue( "Hello. Hello again." );
-            secondNodeID = createNodeIndexableByPropertyValue( "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
+            secondNodeID = createNodeIndexableByPropertyValue(
+                    "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
                     "cross between a zebra and any other equine: essentially, a zebra hybrid." );
             firstRelID = createRelationshipIndexableByPropertyValue( firstNodeID, secondNodeID, "Hello. Hello again." );
             secondRelID = createRelationshipIndexableByPropertyValue( secondNodeID, firstNodeID, "And now, something completely different" );
@@ -420,9 +438,9 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             assertQueryFindsIds( NODE_INDEX_NAME, "zebra", secondNodeID );
             assertQueryFindsNothing( NODE_INDEX_NAME, "different" );
 
-            assertQueryFindsIds( "rels", "hello", firstRelID );
-            assertQueryFindsNothing( "rels", "zebra" );
-            assertQueryFindsIds( "rels", "different", secondRelID );
+            assertQueryFindsIds( REL_INDEX_NAME, "hello", firstRelID );
+            assertQueryFindsNothing( REL_INDEX_NAME, "zebra" );
+            assertQueryFindsIds( REL_INDEX_NAME, "different", secondRelID );
         }
     }
 
@@ -435,8 +453,10 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference relsIndex;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            nodesIndex = tx.schemaWrite().indexCreate( nodes, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
-            relsIndex = tx.schemaWrite().indexCreate( rels, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( "rels" ) );
+            nodesIndex = tx.schemaWrite().indexCreate( nodes, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
+            relsIndex = tx.schemaWrite().indexCreate( rels, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( REL_INDEX_NAME ) );
             tx.success();
         }
         await( nodesIndex );
@@ -444,7 +464,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( Transaction tx = db.beginTx() )
         {
             long firstNode = createNodeIndexableByPropertyValue( "Hello. Hello again." );
-            long secondNode = createNodeWithProperty( "prop2", "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
+            long secondNode = createNodeWithProperty( "prop2",
+                    "A zebroid (also zedonk, zorse, zebra mule, zonkey, and zebmule) is the offspring of any " +
                     "cross between a zebra and any other equine: essentially, a zebra hybrid." );
             createRelationshipIndexableByPropertyValue( firstNode, secondNode, "Hello. Hello again." );
             createRelationshipWithProperty( secondNode, firstNode, "prop2",
@@ -456,7 +477,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( Transaction tx = db.beginTx() )
         {
             assertQueryFindsNothing( NODE_INDEX_NAME, "zebra" );
-            assertQueryFindsNothing( "rels", "zebra" );
+            assertQueryFindsNothing( REL_INDEX_NAME, "zebra" );
         }
     }
 
@@ -489,8 +510,10 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference relsIndex;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            nodesIndex = tx.schemaWrite().indexCreate( nodes, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
-            relsIndex = tx.schemaWrite().indexCreate( rels, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( "rels" ) );
+            nodesIndex = tx.schemaWrite().indexCreate( nodes, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
+            relsIndex = tx.schemaWrite().indexCreate( rels, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( REL_INDEX_NAME ) );
             tx.success();
         }
         await( nodesIndex );
@@ -502,10 +525,10 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             assertQueryFindsNothing( NODE_INDEX_NAME, "goodbye" );
             assertQueryFindsNothing( NODE_INDEX_NAME, "different" );
 
-            assertQueryFindsNothing( "rels", "hello" );
-            assertQueryFindsNothing( "rels", "string" );
-            assertQueryFindsIds( "rels", "goodbye", firstRelID );
-            assertQueryFindsIds( "rels", "different", secondRelID );
+            assertQueryFindsNothing( REL_INDEX_NAME, "hello" );
+            assertQueryFindsNothing( REL_INDEX_NAME, "string" );
+            assertQueryFindsIds( REL_INDEX_NAME, "goodbye", firstRelID );
+            assertQueryFindsIds( REL_INDEX_NAME, "different", secondRelID );
         }
     }
 
@@ -516,7 +539,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -545,7 +569,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         {
             SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], "prop2" );
             tx.schemaWrite().indexDrop( index );
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -566,13 +591,14 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
     }
 
     @Test
-    public void shouldBeAbleToDropAndReaddIndex() throws Exception
+    public void shouldBeAbleToDropAndReadIndex() throws Exception
     {
         SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
@@ -595,7 +621,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         }
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( NODE_INDEX_NAME ) );
+            index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
+                    Optional.of( NODE_INDEX_NAME ) );
             tx.success();
         }
         await( index );
