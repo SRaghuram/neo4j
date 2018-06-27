@@ -22,8 +22,8 @@ import org.neo4j.kernel.api.impl.index.collector.DocValuesCollector;
 import org.neo4j.kernel.api.impl.index.partition.PartitionSearcher;
 import org.neo4j.kernel.api.impl.schema.reader.IndexReaderCloseException;
 
-import static java.util.stream.Collectors.joining;
 import static com.neo4j.kernel.api.impl.bloom.FulltextProvider.FIELD_ENTITY_ID;
+import static java.util.stream.Collectors.joining;
 
 /**
  * Lucene index reader that is able to read/sample a single partition of a partitioned Lucene index.
@@ -75,11 +75,6 @@ class SimpleFulltextReader implements ReadOnlyFulltext
     {
         IndexSearcher indexSearcher = getIndexSearcher();
         TopDocs docs = indexSearcher.search( new TermQuery( FulltextIndexConfiguration.TERM ), 1 );
-        if ( docs.scoreDocs.length < 1 )
-        {
-            System.err.println( "No config document found in the index." );
-            return null;
-        }
         return new FulltextIndexConfiguration( indexSearcher.doc( docs.scoreDocs[0].doc ) );
     }
 

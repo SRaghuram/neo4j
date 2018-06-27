@@ -68,10 +68,6 @@ class FulltextFactory
         LuceneIndexStorageBuilder storageBuilder = LuceneIndexStorageBuilder.create();
         storageBuilder.withFileSystem( fileSystem ).withIndexFolder( indexRootFolder );
         PartitionedIndexStorage storage = storageBuilder.build();
-        if ( properties.isEmpty() )
-        {
-            new Exception( "All started and no properties makes bloom a sad index." ).printStackTrace();
-        }
         return new LuceneFulltext( storage, partitionFactory, properties, analyzer, identifier, type );
     }
 
