@@ -48,10 +48,6 @@ class LuceneFulltext extends AbstractLuceneIndex
     {
         this( indexStorage, partitionFactory, Collections.EMPTY_SET, analyzer, identifier, type );
         this.properties = readProperties();
-        if ( properties.isEmpty() )
-        {
-            new Exception( "All started and no properties makes bloom a sad index." ).printStackTrace();
-        }
         state = InternalIndexState.ONLINE;
     }
 
