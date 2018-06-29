@@ -118,6 +118,7 @@ public class FulltextProviderImpl implements FulltextProvider
 
     private boolean matchesConfiguration( WritableFulltext index ) throws IOException
     {
+        index.maybeRefreshBlocking();
         FulltextIndexConfiguration currentConfig = new FulltextIndexConfiguration( index.getAnalyzerName(), index.getProperties() );
 
         FulltextIndexConfiguration storedConfig;
@@ -276,7 +277,7 @@ public class FulltextProviderImpl implements FulltextProvider
                         "It is not possible to index property keys starting with " + LUCENE_FULLTEXT_ADDON_PREFIX );
             }
             Set<String> currentProperties = getProperties( identifier, type );
-            if ( !currentProperties.containsAll( propertyKeys ) || !propertyKeys.containsAll( currentProperties ) )
+            if ( !currentProperties.equals( propertyKeys ) )
             {
                 drop( identifier, type );
                 createIndex( identifier, type, propertyKeys );

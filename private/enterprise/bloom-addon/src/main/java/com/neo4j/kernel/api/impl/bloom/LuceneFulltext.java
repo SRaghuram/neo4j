@@ -146,6 +146,8 @@ class LuceneFulltext extends AbstractLuceneIndex
         String analyzerName = analyzer.getClass().getCanonicalName();
         FulltextIndexConfiguration config = new FulltextIndexConfiguration( analyzerName, properties );
         writer.updateDocument( FulltextIndexConfiguration.TERM, config.asDocument() );
+        writableFulltext.flush();
+        writableFulltext.maybeRefreshBlocking();
     }
 
     String getAnalyzerName()

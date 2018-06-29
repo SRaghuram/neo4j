@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import org.neo4j.concurrent.BinaryLatch;
@@ -41,13 +42,16 @@ class FulltextUpdateApplier extends LifecycleAdapter
     private final Log log;
     private final AvailabilityGuard availabilityGuard;
     private final JobScheduler scheduler;
-    private JobScheduler.JobHandle workerThread;
+    // This 'stopped' boolean is important for being able to halt a startup process; to stop before we're fully started.
+    private final AtomicBoolean stopped;
+    private volatile JobScheduler.JobHandle workerThread;
 
     FulltextUpdateApplier( Log log, AvailabilityGuard availabilityGuard, JobScheduler scheduler )
     {
         this.log = log;
         this.availabilityGuard = availabilityGuard;
         this.scheduler = scheduler;
+        stopped = new AtomicBoolean();
         workQueue = new LinkedBlockingQueue<>();
     }
 
@@ -141,12 +145,14 @@ class FulltextUpdateApplier extends LifecycleAdapter
         {
             throw new IllegalStateException( APPLIER_THREAD_NAME + " already started." );
         }
-        workerThread = scheduler.schedule( UPDATE_APPLIER, new ApplierWorker( workQueue, log, availabilityGuard ) );
+        ApplierWorker applierWorker = new ApplierWorker( workQueue, log, availabilityGuard, stopped );
+        workerThread = scheduler.schedule( UPDATE_APPLIER, applierWorker );
     }
 
     @Override
     public void stop()
     {
+        stopped.set( true );
         boolean enqueued;
         do
         {
@@ -210,13 +216,15 @@ class FulltextUpdateApplier extends LifecycleAdapter
         private LinkedBlockingQueue<FulltextIndexUpdate> workQueue;
         private final Log log;
         private final AvailabilityGuard availabilityGuard;
+        private final AtomicBoolean stopped;
 
         ApplierWorker( LinkedBlockingQueue<FulltextIndexUpdate> workQueue, Log log,
-                       AvailabilityGuard availabilityGuard )
+                       AvailabilityGuard availabilityGuard, AtomicBoolean stopped )
         {
             this.workQueue = workQueue;
             this.log = log;
             this.availabilityGuard = availabilityGuard;
+            this.stopped = stopped;
         }
 
         @Override
@@ -248,7 +256,7 @@ class FulltextUpdateApplier extends LifecycleAdapter
             {
                 isAvailable = availabilityGuard.isAvailable( 100 );
             }
-            while ( !isAvailable && !availabilityGuard.isShutdown() );
+            while ( !isAvailable && !availabilityGuard.isShutdown() && !stopped.get() );
         }
 
         private FulltextIndexUpdate drainQueueAndApplyUpdates(

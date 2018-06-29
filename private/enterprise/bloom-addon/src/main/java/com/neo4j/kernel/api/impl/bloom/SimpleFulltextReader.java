@@ -75,6 +75,10 @@ class SimpleFulltextReader implements ReadOnlyFulltext
     {
         IndexSearcher indexSearcher = getIndexSearcher();
         TopDocs docs = indexSearcher.search( new TermQuery( FulltextIndexConfiguration.TERM ), 1 );
+        if ( docs.scoreDocs.length < 1 )
+        {
+            return null;
+        }
         return new FulltextIndexConfiguration( indexSearcher.doc( docs.scoreDocs[0].doc ) );
     }
 
