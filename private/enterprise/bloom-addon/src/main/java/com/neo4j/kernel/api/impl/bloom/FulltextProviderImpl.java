@@ -46,6 +46,7 @@ import static org.neo4j.kernel.impl.transaction.state.NeoStoreFileListing.getSna
  */
 public class FulltextProviderImpl implements FulltextProvider
 {
+    private static final BinaryLatch STOPPED_FLIPPER_SIGNAL = new FlipperStopSignal();
     private static final int A_SIDE = 0;
     private static final int B_SIDE = 1;
 
@@ -59,10 +60,6 @@ public class FulltextProviderImpl implements FulltextProvider
     private static final JobScheduler.Group FLIPPER = new JobScheduler.Group( "FulltextIndexSideFlipper" );
     private final JobScheduler.JobHandle flipperJob;
     private final AtomicReference<BinaryLatch> flipCompletionLatch = new AtomicReference<>();
-    private final BinaryLatch stoppedFlipperSignal = new BinaryLatch()
-    {
-        { release(); }
-    };
     private volatile boolean closed;
     private volatile int side;
     //Used in order to not give awaitFlip false positives.
@@ -337,7 +334,7 @@ public class FulltextProviderImpl implements FulltextProvider
         configurationLock.writeLock().lock();
 
         BinaryLatch completionLatch = getOrInstallFlipCompletionLatch();
-        if ( completionLatch == stoppedFlipperSignal )
+        if ( completionLatch == STOPPED_FLIPPER_SIGNAL )
         {
             configurationLock.writeLock().unlock();
             return;
@@ -498,7 +495,7 @@ public class FulltextProviderImpl implements FulltextProvider
         closed = true;
         flipperJob.cancel( false );
 
-        BinaryLatch completionLatch = flipCompletionLatch.getAndSet( stoppedFlipperSignal );
+        BinaryLatch completionLatch = flipCompletionLatch.getAndSet( STOPPED_FLIPPER_SIGNAL );
         if ( completionLatch != null )
         {
             completionLatch.await();
@@ -522,4 +519,5 @@ public class FulltextProviderImpl implements FulltextProvider
         writableRelationshipIndices[A_SIDE].values().forEach( fulltextCloser );
         writableRelationshipIndices[B_SIDE].values().forEach( fulltextCloser );
     }
+
 }
