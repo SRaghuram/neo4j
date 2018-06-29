@@ -9,7 +9,6 @@ import org.apache.lucene.document.Document;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -17,19 +16,14 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 
-import org.neo4j.collection.primitive.PrimitiveLongObjectMap;
 import org.neo4j.concurrent.BinaryLatch;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.event.PropertyEntry;
-import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.kernel.AvailabilityGuard;
 import org.neo4j.kernel.api.impl.schema.writer.PartitionedIndexWriter;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -57,67 +51,6 @@ class FulltextUpdateApplier extends LifecycleAdapter
         workQueue = new LinkedBlockingQueue<>();
     }
 
-    <E extends Entity> AsyncFulltextIndexOperation updatePropertyData(
-            PrimitiveLongObjectMap<Map<String,Object>> state, WritableFulltext index ) throws IOException
-    {
-        FulltextIndexUpdate update = new FulltextIndexUpdate( index, () ->
-        {
-            PartitionedIndexWriter indexWriter = index.getIndexWriter();
-            state.visitEntries( ( entityId, value ) ->
-            {
-                Set<String> indexedProperties = index.getProperties();
-                if ( !Collections.disjoint( indexedProperties, value.keySet() ) )
-                {
-                    Stream<Map.Entry<String,Object>> entryStream = value.entrySet().stream();
-                    Predicate<Map.Entry<String,Object>> relevantForIndex =
-                            entry -> indexedProperties.contains( entry.getKey() );
-                    Map<String,Object> allProperties = entryStream.filter( relevantForIndex )
-                            .collect( CollectorsUtil.entriesToMap() );
-
-                    if ( !allProperties.isEmpty() )
-                    {
-                        updateDocument( indexWriter, entityId, allProperties );
-                    }
-                }
-                return false;
-            } );
-        } );
-
-        enqueueUpdate( update );
-        return update;
-    }
-
-    private static void updateDocument(
-            PartitionedIndexWriter indexWriter, long entityId, Map<String,Object> properties ) throws IOException
-    {
-        Document document = LuceneFulltextDocumentStructure.documentRepresentingProperties( entityId, properties );
-        indexWriter.updateDocument( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( entityId ), document );
-    }
-
-    <E extends Entity> AsyncFulltextIndexOperation removePropertyData(
-            Iterable<PropertyEntry<E>> propertyEntries, PrimitiveLongObjectMap<Map<String,Object>> state, WritableFulltext index )
-            throws IOException
-    {
-        FulltextIndexUpdate update = new FulltextIndexUpdate( index, () ->
-        {
-            for ( PropertyEntry<E> propertyEntry : propertyEntries )
-            {
-                if ( index.getProperties().contains( propertyEntry.key() ) )
-                {
-                    long entityId = propertyEntry.entity().getId();
-                    Map<String,Object> allProperties = state.get( entityId );
-                    if ( allProperties == null || allProperties.isEmpty() )
-                    {
-                        index.getIndexWriter().deleteDocuments( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( entityId ) );
-                    }
-                }
-            }
-        } );
-
-        enqueueUpdate( update );
-        return update;
-    }
-
     AsyncFulltextIndexOperation writeBarrier() throws IOException
     {
         FulltextIndexUpdate barrier = new FulltextIndexUpdate( null, ThrowingAction.noop() );
@@ -125,15 +58,10 @@ class FulltextUpdateApplier extends LifecycleAdapter
         return barrier;
     }
 
-    AsyncFulltextIndexOperation populateNodes( WritableFulltext index, GraphDatabaseService db ) throws IOException
-    {
-        return enqueuePopulateIndex( index, db, db::getAllNodes );
-    }
-
-    AsyncFulltextIndexOperation populateRelationships( WritableFulltext index, GraphDatabaseService db )
+    AsyncFulltextIndexOperation populate( FulltextIndexType indexType, GraphDatabaseService db, WritableFulltext index )
             throws IOException
     {
-        return enqueuePopulateIndex( index, db, db::getAllRelationships );
+        return enqueuePopulateIndex( index, db, indexType.entityIterator( db ) );
     }
 
     private AsyncFulltextIndexOperation enqueuePopulateIndex(
@@ -167,6 +95,7 @@ class FulltextUpdateApplier extends LifecycleAdapter
                     }
                 }
                 indexWriter.addDocuments( documents.size(), reifyDocuments( documents ) );
+                index.maybeRefreshBlocking();
                 index.setPopulated();
             }
             catch ( Throwable th )

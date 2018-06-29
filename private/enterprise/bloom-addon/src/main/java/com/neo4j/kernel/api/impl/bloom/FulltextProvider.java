@@ -7,7 +7,6 @@ package com.neo4j.kernel.api.impl.bloom;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.List;
 import java.util.Set;
 
 import org.neo4j.internal.kernel.api.InternalIndexState;
@@ -32,7 +31,7 @@ public interface FulltextProvider extends AutoCloseable
         }
 
         @Override
-        public void createIndex( String identifier, FulltextIndexType type, List<String> properties )
+        public void createIndex( String identifier, FulltextIndexType type, Set<String> properties )
         {
             throw noProvider();
         }
@@ -56,7 +55,7 @@ public interface FulltextProvider extends AutoCloseable
         }
 
         @Override
-        public void changeIndexedProperties( String identifier, FulltextIndexType type, List<String> propertyKeys )
+        public void changeIndexedProperties( String identifier, FulltextIndexType type, Set<String> propertyKeys )
         {
             throw noProvider();
         }
@@ -100,7 +99,7 @@ public interface FulltextProvider extends AutoCloseable
 
     void openIndex( String identifier, FulltextIndexType type ) throws IOException;
 
-    void createIndex( String identifier, FulltextIndexType type, List<String> properties ) throws IOException;
+    void createIndex( String identifier, FulltextIndexType type, Set<String> properties ) throws IOException;
 
     /**
      * Returns a reader for the specified index.
@@ -116,7 +115,7 @@ public interface FulltextProvider extends AutoCloseable
 
     InternalIndexState getState( String identifier, FulltextIndexType type );
 
-    void changeIndexedProperties( String identifier, FulltextIndexType type, List<String> propertyKeys ) throws IOException, InvalidArgumentsException;
+    void changeIndexedProperties( String identifier, FulltextIndexType type, Set<String> propertyKeys ) throws IOException, InvalidArgumentsException;
 
     void registerFileListing( NeoStoreFileListing fileListing );
 
