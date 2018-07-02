@@ -470,7 +470,8 @@ public class BloomIT
             } );
             th.start();
             th.join();
-            db.execute( AWAIT_REFRESH );
+            db.execute( AWAIT_REFRESH ).close();
+            db.execute( AWAIT_REFRESH ).close();
 
             try ( Result result = db.execute( String.format( NODES, "\"Langelinie\"") ) )
             {
