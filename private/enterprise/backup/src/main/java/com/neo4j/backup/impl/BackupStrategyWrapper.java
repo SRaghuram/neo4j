@@ -99,7 +99,6 @@ class BackupStrategyWrapper
         {
             backupStrategy.performIncrementalBackup( backupLayout, address );
             performRecovery( config, backupLayout );
-            clearIdFiles( backupLayout );
             return true;
         }
         catch ( Exception e )
@@ -144,7 +143,6 @@ class BackupStrategyWrapper
         backupStrategy.performFullBackup( backupLayout, address );
 
         performRecovery( onlineBackupContext.getConfig(), backupLayout );
-        clearIdFiles( backupLayout );
 
         if ( backupToATemporaryLocation )
         {
@@ -158,18 +156,6 @@ class BackupStrategyWrapper
         try
         {
             Recovery.performRecovery( fs, pageCache, config, backupLayout );
-        }
-        catch ( IOException e )
-        {
-            throw new BackupExecutionException( e );
-        }
-    }
-
-    private void clearIdFiles( DatabaseLayout databaseLayout ) throws BackupExecutionException
-    {
-        try
-        {
-            backupCopyService.clearIdFiles( databaseLayout );
         }
         catch ( IOException e )
         {

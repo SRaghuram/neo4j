@@ -1500,7 +1500,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (n:Awesome) WHERE n.prop1 > 44 AND exists(n.prop2) RETURN n",
-      executeBefore = createMe, expectedDifferentResults = Configs.InterpretedAndSlotted,
+      executeBefore = createMe,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(range,exists)")
@@ -1528,7 +1528,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (n:Awesome) WHERE n.prop1 = 45 AND n.prop2 STARTS WITH 'h' RETURN n",
-      executeBefore = createMe, expectedDifferentResults = Configs.InterpretedAndSlotted,
+      executeBefore = createMe,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)")

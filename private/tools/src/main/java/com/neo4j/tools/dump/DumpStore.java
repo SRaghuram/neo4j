@@ -40,6 +40,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.token.TokenHolders;
 
 import static java.lang.Long.parseLong;
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
@@ -88,7 +89,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
               JobScheduler scheduler = createInitialisedScheduler();
               PageCache pageCache = createPageCache( fs, scheduler ) )
         {
-            final DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs );
+            final DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, pageCache, immediate() );
             Function<File,StoreFactory> createStoreFactory = file -> new StoreFactory( DatabaseLayout.of( file.getParentFile() ),
                     Config.defaults(), idGeneratorFactory, pageCache, fs, logProvider() );
 

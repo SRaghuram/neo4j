@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.state.machines.id;
 import com.neo4j.causalclustering.error_handling.Panicker;
 
 import java.io.File;
+import java.nio.file.OpenOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.LongSupplier;
@@ -15,8 +16,6 @@ import java.util.function.LongSupplier;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
-import org.neo4j.internal.id.configuration.IdTypeConfiguration;
-import org.neo4j.internal.id.configuration.IdTypeConfigurationProvider;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 
@@ -27,42 +26,30 @@ public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory
     private final ReplicatedIdRangeAcquirer idRangeAcquirer;
     private final LogProvider logProvider;
     private final Panicker panicker;
-    private IdTypeConfigurationProvider idTypeConfigurationProvider;
 
-    public ReplicatedIdGeneratorFactory( FileSystemAbstraction fs, ReplicatedIdRangeAcquirer idRangeAcquirer,
-            LogProvider logProvider, IdTypeConfigurationProvider idTypeConfigurationProvider, Panicker panicker )
+    public ReplicatedIdGeneratorFactory( FileSystemAbstraction fs, ReplicatedIdRangeAcquirer idRangeAcquirer, LogProvider logProvider, Panicker panicker )
     {
         this.fs = fs;
         this.idRangeAcquirer = idRangeAcquirer;
         this.logProvider = logProvider;
-        this.idTypeConfigurationProvider = idTypeConfigurationProvider;
         this.panicker = panicker;
     }
 
     @Override
-    public IdGenerator open( File file, IdType idType, LongSupplier highId, long maxId )
+    public IdGenerator open( File fileName, IdType idType, LongSupplier highIdScanner, long maxId, OpenOption... openOptions )
     {
-        IdTypeConfiguration idTypeConfiguration = idTypeConfigurationProvider.getIdTypeConfiguration( idType );
-        return openGenerator( file, idTypeConfiguration.getGrabSize(), idType, highId, maxId, idTypeConfiguration.allowAggressiveReuse() );
+        return openGenerator( fileName, idType, highIdScanner, maxId );
     }
 
-    @Override
-    public IdGenerator open( File fileName, int grabSize, IdType idType, LongSupplier highId, long maxId )
-    {
-        IdTypeConfiguration idTypeConfiguration = idTypeConfigurationProvider.getIdTypeConfiguration( idType );
-        return openGenerator( fileName, grabSize, idType, highId, maxId, idTypeConfiguration.allowAggressiveReuse() );
-    }
-
-    private IdGenerator openGenerator( File file, int grabSize, IdType idType, LongSupplier highId, long maxId, boolean aggressiveReuse )
+    private IdGenerator openGenerator( File file, IdType idType, LongSupplier highId, long maxId )
     {
         ReplicatedIdGenerator other = generators.get( idType );
         if ( other != null )
         {
             other.close();
         }
-        ReplicatedIdGenerator replicatedIdGenerator = new ReplicatedIdGenerator( fs, file, idType, highId,
-                idRangeAcquirer, logProvider, grabSize, aggressiveReuse, panicker );
 
+        ReplicatedIdGenerator replicatedIdGenerator = new ReplicatedIdGenerator( fs, file, idType, highId, idRangeAcquirer, logProvider, panicker );
         generators.put( idType, replicatedIdGenerator);
         return replicatedIdGenerator;
     }
@@ -74,8 +61,9 @@ public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory
     }
 
     @Override
-    public void create( File fileName, long highId, boolean throwIfFileExists )
+    public IdGenerator create( File fileName, IdType idType, long highId, boolean throwIfFileExists, long maxId, OpenOption... openOptions )
     {
         ReplicatedIdGenerator.createGenerator( fs, fileName, highId, throwIfFileExists );
+        return openGenerator( fileName, idType, () -> highId, maxId );
     }
 }

@@ -6,7 +6,6 @@
 package com.neo4j;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
@@ -20,6 +19,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.OpenOption;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
@@ -49,10 +49,10 @@ import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
-import org.neo4j.internal.id.IdRange;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.api.transaction.monitor.KernelTransactionMonitor;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
@@ -62,6 +62,7 @@ import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.database.SimpleGraphFactory;
 import org.neo4j.server.web.HttpHeaderUtils;
 import org.neo4j.test.rule.CleanupRule;
+import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 import org.neo4j.test.server.HTTP;
@@ -75,6 +76,7 @@ import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_timeout;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionNotFound;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
@@ -87,6 +89,9 @@ public class TransactionGuardIT
 
     @Rule
     public final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
+
+    @Rule
+    public final PageCacheRule pageCacheRule = new PageCacheRule();
 
     private static final String BOLT_CONNECTOR_KEY = "bolt";
 
@@ -515,29 +520,28 @@ public class TransactionGuardIT
 
     private GraphDatabaseAPI startCustomDatabase( File storeDir, Map<Setting<?>,String> configMap )
     {
-        configMap.put( GraphDatabaseSettings.record_id_batch_size, "1" );
-
         // Inject IdContextFactory
         Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( createIdContextFactory( configMap, fileSystemRule.get() ) );
+        PageCache pageCache = pageCacheRule.getPageCache( fileSystemRule );
+        dependencies.satisfyDependencies( createIdContextFactory( configMap, fileSystemRule, pageCache ) );
 
         DatabaseManagementServiceBuilder databaseBuilder =
                 new TestCommercialDatabaseManagementServiceBuilder( storeDir ).setClock( fakeClock ).setExternalDependencies( dependencies ).setFileSystem(
-                        fileSystemRule.get() ).impermanent();
+                        fileSystemRule ).impermanent();
         configMap.forEach( databaseBuilder::setConfig );
 
         customManagementService = databaseBuilder.build();
         return (GraphDatabaseAPI) customManagementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private IdContextFactory createIdContextFactory( Map<Setting<?>,String> configMap, FileSystemAbstraction fileSystem )
+    private IdContextFactory createIdContextFactory( Map<Setting<?>,String> configMap, FileSystemAbstraction fileSystem, PageCache pageCache )
     {
         Config config = Config.defaults();
         configMap.forEach( config::augment );
 
-        return IdContextFactoryBuilder.of( new CommercialIdTypeConfigurationProvider( config ), JobSchedulerFactory.createScheduler() )
+        return IdContextFactoryBuilder.of( JobSchedulerFactory.createScheduler() )
                 .withIdGenerationFactoryProvider(
-                        any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem ) ) )
+                        any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem, pageCache, immediate() ) ) )
                 .build();
     }
 
@@ -617,21 +621,15 @@ public class TransactionGuardIT
         }
 
         @Override
-        public IdGenerator open( File filename, IdType idType, LongSupplier highIdSupplier, long maxId )
+        public IdGenerator open( File filename, IdType idType, LongSupplier highIdSupplier, long maxId, OpenOption... openOptions )
         {
-            return delegate.open( filename, idType, highIdSupplier, maxId );
+            return new TerminationIdGenerator( delegate.open( filename, idType, highIdSupplier, maxId ) );
         }
 
         @Override
-        public IdGenerator open( File filename, int grabSize, IdType idType, LongSupplier highIdSupplier, long maxId )
+        public IdGenerator create( File filename, IdType idType, long highId, boolean throwIfFileExists, long maxId, OpenOption... openOptions )
         {
-            return new TerminationIdGenerator( delegate.open( filename, grabSize, idType, highIdSupplier, maxId ) );
-        }
-
-        @Override
-        public void create( File filename, long highId, boolean throwIfFileExists )
-        {
-            delegate.create( filename, highId, throwIfFileExists );
+            return new TerminationIdGenerator( delegate.create( filename, idType, highId, throwIfFileExists, maxId, openOptions ) );
         }
 
         @Override
@@ -641,75 +639,18 @@ public class TransactionGuardIT
         }
     }
 
-    private final class TerminationIdGenerator implements IdGenerator
+    private final class TerminationIdGenerator extends IdGenerator.Delegate
     {
-
-        private final IdGenerator delegate;
-
         TerminationIdGenerator( IdGenerator delegate )
         {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public IdRange nextIdBatch( int size )
-        {
-            return delegate.nextIdBatch( size );
-        }
-
-        @Override
-        public void setHighId( long id )
-        {
-            delegate.setHighId( id );
-        }
-
-        @Override
-        public long getHighId()
-        {
-            return delegate.getHighId();
-        }
-
-        @Override
-        public long getHighestPossibleIdInUse()
-        {
-            return delegate.getHighestPossibleIdInUse();
-        }
-
-        @Override
-        public void freeId( long id )
-        {
-            delegate.freeId( id );
-        }
-
-        @Override
-        public void close()
-        {
-            delegate.close();
-        }
-
-        @Override
-        public long getNumberOfIdsInUse()
-        {
-            return delegate.getNumberOfIdsInUse();
-        }
-
-        @Override
-        public long getDefragCount()
-        {
-            return delegate.getDefragCount();
-        }
-
-        @Override
-        public void delete()
-        {
-            delegate.delete();
+            super( delegate );
         }
 
         @Override
         public long nextId()
         {
             getIdInjectionFunction.tickAndCheck();
-            return delegate.nextId();
+            return super.nextId();
         }
     }
 }

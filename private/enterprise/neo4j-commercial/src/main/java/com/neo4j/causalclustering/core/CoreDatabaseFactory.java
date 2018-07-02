@@ -80,7 +80,6 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.TransactionEventService;
-import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -105,7 +104,6 @@ import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
-import org.neo4j.internal.id.configuration.IdTypeConfigurationProvider;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
@@ -183,7 +181,6 @@ class CoreDatabaseFactory
 
     private final PageCursorTracerSupplier cursorTracerSupplier;
     private final Map<IdType,Integer> allocationSizes;
-    private final CommercialIdTypeConfigurationProvider idTypeConfigurationProvider;
     private final RecoveryFacade recoveryFacade;
     private final Outbound<AdvertisedSocketAddress,Message> raftSender;
     private final TransactionEventService txEventService;
@@ -222,7 +219,6 @@ class CoreDatabaseFactory
         this.allocationSizes = getIdTypeAllocationSizeFromConfig( config );
 
         this.cursorTracerSupplier = globalModule.getTracers().getPageCursorTracerSupplier();
-        this.idTypeConfigurationProvider = new CommercialIdTypeConfigurationProvider( config );
     }
 
     CoreRaftContext createRaftContext( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
@@ -453,8 +449,8 @@ class CoreDatabaseFactory
                 myIdentity, debugLog );
         BooleanSupplier idReuse = new IdReusabilityCondition( commandIndexTracker, raftMachine, myIdentity );
         Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = id -> createIdGeneratorFactory(
-                fileSystem, debugLog, idTypeConfigurationProvider, idRangeAcquirer );
-        IdContextFactory idContextFactory = IdContextFactoryBuilder.of( idTypeConfigurationProvider, jobScheduler ).withIdGenerationFactoryProvider(
+                fileSystem, debugLog, idRangeAcquirer );
+        IdContextFactory idContextFactory = IdContextFactoryBuilder.of( jobScheduler ).withIdGenerationFactoryProvider(
                 idGeneratorProvider ).withFactoryWrapper( generator -> new FreeIdFilteredIdGeneratorFactory( generator, idReuse ) ).build();
         return idContextFactory.createIdContext( databaseId );
     }
@@ -494,9 +490,9 @@ class CoreDatabaseFactory
     }
 
     private IdGeneratorFactory createIdGeneratorFactory( FileSystemAbstraction fileSystem, final LogProvider logProvider,
-            IdTypeConfigurationProvider idTypeConfigurationProvider, ReplicatedIdRangeAcquirer idRangeAcquirer )
+            ReplicatedIdRangeAcquirer idRangeAcquirer )
     {
-        return new ReplicatedIdGeneratorFactory( fileSystem, idRangeAcquirer, logProvider, idTypeConfigurationProvider, panicService );
+        return new ReplicatedIdGeneratorFactory( fileSystem, idRangeAcquirer, logProvider, panicService );
     }
 
     private Locks createLockManager( final Config config, Clock clock, final LogService logging, final Replicator replicator, MemberId myself,

@@ -30,7 +30,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -398,91 +397,6 @@ class BackupStrategyWrapperTest
         inOrder.verify( backupCopyService ).moveBackupLocation( databaseBackupDir, availableOldBackupLocation );
         // 3) move new backup from a temporary directory to the specified directory
         inOrder.verify( backupCopyService ).moveBackupLocation( availableFreshBackupLocation, databaseBackupDir );
-    }
-
-    @Test
-    void idFilesAreClearedAfterIncrementalBackup() throws Exception
-    {
-        // given backup exists
-        when( backupCopyService.backupExists( any() ) ).thenReturn( true );
-
-        // and
-        incrementalBackupIsSuccessful( true );
-
-        // and
-        onlineBackupContext = newBackupContext( false );
-
-        // when
-        backupWrapper.doBackup( onlineBackupContext );
-
-        // then
-        verify( backupCopyService ).clearIdFiles( any() );
-    }
-
-    @Test
-    void idFilesAreNotClearedWhenIncrementalNotSuccessful() throws Exception
-    {
-        // given backup exists
-        when( backupCopyService.backupExists( any() ) ).thenReturn( true );
-
-        // and incremental is not successful
-        incrementalBackupIsSuccessful( false );
-
-        // and
-        onlineBackupContext = newBackupContext( false );
-
-        // when backups are performed
-        assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
-
-        // then do not
-        verify( backupCopyService, never() ).clearIdFiles( any() );
-    }
-
-    @Test
-    void idFilesAreClearedWhenFullBackupIsSuccessful() throws Exception
-    {
-        // given a backup doesn't exist
-        when( backupCopyService.backupExists( any() ) ).thenReturn( false );
-
-        // and
-        fallbackToFullPasses();
-        onlineBackupContext = newBackupContext( true );
-
-        // when
-        backupWrapper.doBackup( onlineBackupContext );
-
-        // then
-        verify( backupCopyService ).clearIdFiles( any() );
-    }
-
-    @Test
-    void idFilesAreNotClearedWhenFullBackupIsNotSuccessful() throws Exception
-    {
-        // given a backup doesn't exist
-        when( backupCopyService.backupExists( any() ) ).thenReturn( false );
-
-        // and
-        bothBackupsFail();
-        onlineBackupContext = newBackupContext( true );
-
-        // when
-        assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
-
-        // then
-        verify( backupCopyService, never() ).clearIdFiles( any() );
-    }
-
-    @Test
-    void backupFailsWhenUnableToClearIdFiles() throws Exception
-    {
-        IOException ioError = new IOException( "Id file can't be cleared" );
-        doThrow( ioError ).when( backupCopyService ).clearIdFiles( any( DatabaseLayout.class ) );
-        fallbackToFullPasses();
-
-        BackupExecutionException error = assertThrows( BackupExecutionException.class,
-                () -> backupWrapper.doBackup( onlineBackupContext = newBackupContext( true ) ) );
-
-        assertSame( ioError, error.getCause() );
     }
 
     @Test

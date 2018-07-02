@@ -13,7 +13,6 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGenerator;
@@ -31,8 +30,6 @@ public class RaftIdReuseIT
             .withNumberOfCoreMembers( 3 )
             // increased to decrease likelihood of unnecessary leadership changes
             .withSharedCoreParam( CausalClusteringSettings.leader_election_timeout, "2s" )
-            // need to be 1 in order for the reuse count to be deterministic
-            .withSharedCoreParam( GraphDatabaseSettings.record_id_batch_size, Integer.toString( 1 ) )
             .withNumberOfReadReplicas( 0 );
     private Cluster cluster;
 

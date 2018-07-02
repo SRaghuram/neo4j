@@ -46,7 +46,6 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.neo4j.configuration.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_min_replan_interval;
-import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
 
 @CommercialDbmsExtension( configurationCallback = "configure" )
 class DatabaseMetricsExtensionIT
@@ -70,7 +69,6 @@ class DatabaseMetricsExtensionIT
         builder.setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
         builder.setConfig( check_point_interval_time, "100ms" );
         builder.setConfig( MetricsSettings.graphiteInterval, "1s" );
-        builder.setConfig( record_id_batch_size, "1" );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 

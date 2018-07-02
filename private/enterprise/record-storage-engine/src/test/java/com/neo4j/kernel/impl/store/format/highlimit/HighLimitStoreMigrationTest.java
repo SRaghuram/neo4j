@@ -38,6 +38,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 
 @PageCacheExtension
@@ -104,14 +105,14 @@ class HighLimitStoreMigrationTest
     {
         File store = databaseLayout.schemaStore();
         File idFile = databaseLayout.idSchemaStore();
-        DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem );
+        DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, pageCache, immediate() );
         NullLogProvider logProvider = NullLogProvider.getInstance();
         RecordFormats recordFormats = HighLimitV3_0_0.RECORD_FORMATS;
         Config config = Config.defaults();
         IdType idType = IdType.SCHEMA;
         try ( SchemaStore35 schemaStore35 = new SchemaStore35( store, idFile, config, idType, idGeneratorFactory, pageCache, logProvider, recordFormats ) )
         {
-            schemaStore35.checkAndLoadStorage( true );
+            schemaStore35.initialise( true );
         }
     }
 }

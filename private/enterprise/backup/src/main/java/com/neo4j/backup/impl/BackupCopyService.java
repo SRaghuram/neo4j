@@ -17,8 +17,6 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.neo4j.internal.helpers.Exceptions;
-import org.neo4j.internal.id.IdGeneratorImpl;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.Log;
@@ -61,31 +59,6 @@ class BackupCopyService
         catch ( IOException e )
         {
             throw new IOException( "Failed to rename backup directory from " + oldLocation + " to " + newLocation, e );
-        }
-    }
-
-    void clearIdFiles( DatabaseLayout databaseLayout ) throws IOException
-    {
-        IOException exception = null;
-        for ( File file : databaseLayout.idFiles() )
-        {
-            try
-            {
-                if ( fs.fileExists( file ) )
-                {
-                    long highId = IdGeneratorImpl.readHighId( fs, file );
-                    fs.deleteFile( file );
-                    IdGeneratorImpl.createGenerator( fs, file, highId, true );
-                }
-            }
-            catch ( IOException e )
-            {
-                exception = Exceptions.chain( exception, e );
-            }
-        }
-        if ( exception != null )
-        {
-            throw exception;
         }
     }
 

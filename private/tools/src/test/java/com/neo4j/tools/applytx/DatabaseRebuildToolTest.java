@@ -195,7 +195,6 @@ class DatabaseRebuildToolTest
     {
         DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
-                .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" )
                 .build();
         GraphDatabaseService db = managementService.database( databaseLayout.getDatabaseName() );
         Node[] nodes = new Node[10];

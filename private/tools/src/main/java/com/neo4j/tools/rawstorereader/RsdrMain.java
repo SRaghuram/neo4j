@@ -37,6 +37,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.string.HexString;
 
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
@@ -97,7 +98,7 @@ public class RsdrMain
     private static StoreFactory openStore( FileSystemAbstraction fileSystem, File storeDir, Config config,
             PageCache pageCache )
     {
-        IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem );
+        IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, pageCache, immediate() );
         NullLogProvider logProvider = NullLogProvider.getInstance();
         return new StoreFactory( DatabaseLayout.of( storeDir ), config, idGeneratorFactory, pageCache, fileSystem, logProvider );
     }

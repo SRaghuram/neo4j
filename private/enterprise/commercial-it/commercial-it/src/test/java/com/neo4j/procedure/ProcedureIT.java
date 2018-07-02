@@ -80,7 +80,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.plugin_dir;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted;
-import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.asList;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
@@ -108,8 +107,7 @@ public class ProcedureIT
         new JarBuilder().createJarFor( plugins.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         managementService = new TestCommercialDatabaseManagementServiceBuilder().impermanent()
-                .setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).setConfig(
-                        record_id_batch_size, "1" ).build();
+                .setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
         onCloseCalled = new boolean[2];
     }

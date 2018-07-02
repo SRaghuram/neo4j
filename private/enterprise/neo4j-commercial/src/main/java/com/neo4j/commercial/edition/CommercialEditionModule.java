@@ -16,7 +16,6 @@ import com.neo4j.dbms.database.CommercialMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
-import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
@@ -85,10 +84,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     @Override
     protected IdContextFactory createIdContextFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem )
     {
-        return IdContextFactoryBuilder.of( new CommercialIdTypeConfigurationProvider( globalModule.getGlobalConfig() ),
-                globalModule.getJobScheduler() )
-                .withFileSystem( fileSystem )
-                .build();
+        return IdContextFactoryBuilder.of( globalModule.getJobScheduler() ).withFileSystem( fileSystem ).withPageCache( globalModule.getPageCache() ).build();
     }
 
     @Override

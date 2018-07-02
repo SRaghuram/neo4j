@@ -49,7 +49,6 @@ import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState.INITIAL_LOCK_TOKEN;
-import static java.lang.Integer.parseInt;
 import static java.util.Optional.of;
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -65,7 +64,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_RO
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
@@ -328,7 +326,7 @@ class RaftBootstrapperIT
         assertEquals( INITIAL_LOCK_TOKEN, lockTokenState );
 
         assertThat( idAllocationState.firstUnallocated( IdType.NODE ),
-                allOf( greaterThanOrEqualTo( (long) nodeCount ), lessThanOrEqualTo( (long) nodeCount + recordIdBatchSize() ) ) );
+                allOf( greaterThanOrEqualTo( (long) nodeCount ), lessThanOrEqualTo( (long) nodeCount ) ) );
     }
 
     private void verifyDatabase( DatabaseLayout databaseLayout, PageCache pageCache, Config config ) throws IOException
@@ -342,11 +340,6 @@ class RaftBootstrapperIT
 
         long lastCommittedIndex = lastCommittedIndexFinder.getLastCommittedIndex();
         assertEquals( -1, lastCommittedIndex );
-    }
-
-    private int recordIdBatchSize()
-    {
-        return parseInt( record_id_batch_size.getDefaultValue() );
     }
 
     private LogFiles buildLogFiles( DatabaseLayout databaseLayout ) throws IOException

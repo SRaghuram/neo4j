@@ -35,6 +35,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.token.TokenHolders;
 
 import static com.neo4j.tools.dump.SimpleSchemaRuleCache.token;
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.kernel.api.TokenRead.ANY_RELATIONSHIP_TYPE;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
@@ -68,7 +69,7 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
             if ( fs.isDirectory( path ) )
             {
                 DatabaseLayout databaseLayout = DatabaseLayout.of( path );
-                StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs ),
+                StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, pages, immediate() ),
                         pages, fs, logProvider );
                 CountsTracker counts = new ReadOnlyCountsTracker( logProvider, fs, pages, config, databaseLayout );
                 life.add( counts );

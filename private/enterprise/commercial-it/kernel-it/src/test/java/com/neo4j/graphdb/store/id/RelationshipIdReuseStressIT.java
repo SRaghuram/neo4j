@@ -5,7 +5,6 @@
  */
 package com.neo4j.graphdb.store.id;
 
-import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
@@ -37,25 +36,17 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestDatabaseManagementServiceBuilder;
-import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 
 import static java.lang.System.currentTimeMillis;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@CommercialDbmsExtension( configurationCallback = "configure" )
+@CommercialDbmsExtension
 class RelationshipIdReuseStressIT
 {
     @Inject
     private GraphDatabaseAPI embeddedDatabase;
-
-    @ExtensionCallback
-    static void configure( TestDatabaseManagementServiceBuilder builder )
-    {
-        builder.setConfig( CommercialEditionSettings.idTypesToReuse, IdType.RELATIONSHIP.name() );
-    }
 
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 

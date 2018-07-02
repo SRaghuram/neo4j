@@ -5,13 +5,11 @@
  */
 package com.neo4j.graphdb.store.id;
 
-import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -21,10 +19,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.id.IdController;
-import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestDatabaseManagementServiceBuilder;
-import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -32,7 +27,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-@CommercialDbmsExtension( configurationCallback = "configure" )
+@CommercialDbmsExtension
 class IdReuseTest
 {
     @Inject
@@ -40,15 +35,8 @@ class IdReuseTest
     @Inject
     private GraphDatabaseAPI db;
 
-    @ExtensionCallback
-    static void configure( TestDatabaseManagementServiceBuilder builder )
-    {
-        builder.setConfig( CommercialEditionSettings.idTypesToReuse, IdType.NODE + "," + IdType.RELATIONSHIP );
-        builder.setConfig( GraphDatabaseSettings.record_id_batch_size, "1" );
-    }
-
     @Test
-    void shouldReuseNodeIdsFromRolledBackTransaction() throws Exception
+    void shouldReuseNodeIdsFromRolledBackTransaction()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -74,7 +62,7 @@ class IdReuseTest
     }
 
     @Test
-    void shouldReuseRelationshipIdsFromRolledBackTransaction() throws Exception
+    void shouldReuseRelationshipIdsFromRolledBackTransaction()
     {
         // Given
         Node node1;

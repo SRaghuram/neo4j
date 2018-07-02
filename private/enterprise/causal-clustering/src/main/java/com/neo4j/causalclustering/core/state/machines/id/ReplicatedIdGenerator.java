@@ -17,6 +17,7 @@ import org.neo4j.internal.id.IdRange;
 import org.neo4j.internal.id.IdRangeIterator;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -36,14 +37,14 @@ class ReplicatedIdGenerator implements IdGenerator
     private final ReentrantLock idContainerLock = new ReentrantLock();
 
     ReplicatedIdGenerator( FileSystemAbstraction fs, File file, IdType idType, LongSupplier highId, ReplicatedIdRangeAcquirer acquirer, LogProvider logProvider,
-            int grabSize, boolean aggressiveReuse, Panicker panicker )
+            Panicker panicker )
     {
         this.idType = idType;
         this.highId = highId.getAsLong();
         this.acquirer = acquirer;
         this.log = logProvider.getLog( getClass() );
         this.panicker = panicker;
-        idContainer = new IdContainer( fs, file, grabSize, aggressiveReuse );
+        idContainer = new IdContainer( fs, file, 1024, false );
         idContainer.init();
     }
 
@@ -73,6 +74,30 @@ class ReplicatedIdGenerator implements IdGenerator
         {
             idContainerLock.unlock();
         }
+    }
+
+    @Override
+    public void deleteId( long id )
+    {
+        throw new UnsupportedOperationException( "Not implemented yet" );
+    }
+
+    @Override
+    public void markIdAsUsed( long id )
+    {
+        throw new UnsupportedOperationException( "Not implemented yet" );
+    }
+
+    @Override
+    public ReuseMarker reuseMarker()
+    {
+        throw new UnsupportedOperationException( "Not implemented yet" );
+    }
+
+    @Override
+    public CommitMarker commitMarker()
+    {
+        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override
@@ -160,17 +185,19 @@ class ReplicatedIdGenerator implements IdGenerator
     }
 
     @Override
-    public void delete()
+    public void start()
+    {   // Nothing to do
+    }
+
+    @Override
+    public void checkpoint( IOLimiter ioLimiter )
     {
-        idContainerLock.lock();
-        try
-        {
-            idContainer.delete();
-        }
-        finally
-        {
-            idContainerLock.unlock();
-        }
+        throw new UnsupportedOperationException( "Not implemented yet" );
+    }
+
+    @Override
+    public void maintenance()
+    {   // Nothing to do
     }
 
     @Override

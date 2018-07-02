@@ -33,6 +33,7 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
@@ -106,7 +107,7 @@ public abstract class DumpStoreChain<RECORD extends AbstractBaseRecord>
         try ( DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
               PageCache pageCache = createPageCache( fs, createInitialisedScheduler() ) )
         {
-            DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs );
+            DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, pageCache, immediate() );
             Config config = Config.defaults();
             StoreFactory storeFactory = new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, fs,
                     logProvider() );

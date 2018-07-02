@@ -58,7 +58,6 @@ import org.neo4j.internal.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
-import org.neo4j.internal.id.IdGeneratorImpl;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -1022,7 +1021,6 @@ class BackupIT
         for ( File idFile : databaseLayout.idFiles() )
         {
             assertTrue( idFile.exists(), "Missing id file " + idFile );
-            assertTrue( IdGeneratorImpl.readHighId( fs, idFile ) > 0, "Id file " + idFile + " had 0 highId" );
         }
     }
 

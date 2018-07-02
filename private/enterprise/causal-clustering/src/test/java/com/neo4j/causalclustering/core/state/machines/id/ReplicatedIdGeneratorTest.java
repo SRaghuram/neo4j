@@ -278,6 +278,6 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
 
     private ReplicatedIdGenerator getReplicatedIdGenerator( int grabSize, long l, ReplicatedIdRangeAcquirer replicatedIdRangeAcquirer )
     {
-        return new ReplicatedIdGenerator( fs, file, IdType.NODE, () -> l, replicatedIdRangeAcquirer, logProvider, grabSize, true, panicker );
+        return new ReplicatedIdGenerator( fs, file, IdType.NODE, () -> l, replicatedIdRangeAcquirer, logProvider, panicker );
     }
 }

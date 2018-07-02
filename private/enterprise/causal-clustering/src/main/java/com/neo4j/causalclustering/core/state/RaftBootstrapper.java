@@ -49,6 +49,7 @@ import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
 import static java.lang.System.currentTimeMillis;
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.id.IdType.ARRAY_BLOCK;
 import static org.neo4j.internal.id.IdType.LABEL_TOKEN;
 import static org.neo4j.internal.id.IdType.LABEL_TOKEN_NAME;
@@ -241,7 +242,7 @@ public class RaftBootstrapper
      */
     private IdAllocationState deriveIdAllocationState( DatabaseLayout layout )
     {
-        DefaultIdGeneratorFactory factory = new DefaultIdGeneratorFactory( fs );
+        DefaultIdGeneratorFactory factory = new DefaultIdGeneratorFactory( fs, pageCache, immediate() );
 
         long[] highIds = new long[]{
                 getHighId( factory, NODE, layout.idNodeStore() ),

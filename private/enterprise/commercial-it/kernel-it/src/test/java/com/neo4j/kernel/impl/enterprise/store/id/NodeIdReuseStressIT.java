@@ -5,7 +5,6 @@
  */
 package com.neo4j.kernel.impl.enterprise.store.id;
 
-import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,14 +17,11 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.id.IdController;
-import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.Race;
-import org.neo4j.test.TestDatabaseManagementServiceBuilder;
-import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -33,7 +29,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThan;
 
-@CommercialDbmsExtension( configurationCallback = "configure" )
+@CommercialDbmsExtension
 class NodeIdReuseStressIT
 {
     private static final int CONTESTANTS_COUNT = 12;
@@ -42,12 +38,6 @@ class NodeIdReuseStressIT
 
     @Inject
     private GraphDatabaseService db;
-
-    @ExtensionCallback
-    static void configure( TestDatabaseManagementServiceBuilder builder )
-    {
-        builder.setConfig( CommercialEditionSettings.idTypesToReuse, IdType.NODE.name() );
-    }
 
     @BeforeEach
     void verifyParams()

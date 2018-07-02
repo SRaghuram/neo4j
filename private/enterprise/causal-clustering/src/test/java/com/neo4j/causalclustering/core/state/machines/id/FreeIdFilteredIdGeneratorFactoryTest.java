@@ -47,11 +47,10 @@ public class FreeIdFilteredIdGeneratorFactoryTest
         IdType idType = IdType.NODE;
         long highId = 1L;
         long maxId = 10L;
-        int grabSize = 5;
         LongSupplier highIdSupplier = () -> highId;
-        IdGenerator idGenerator = filteredGenerator.open( file, grabSize, idType, highIdSupplier, maxId );
+        IdGenerator idGenerator = filteredGenerator.open( file, idType, highIdSupplier, maxId );
 
-        verify( idGeneratorFactory ).open( file, grabSize, idType, highIdSupplier, maxId );
+        verify( idGeneratorFactory ).open( file, idType, highIdSupplier, maxId );
         assertThat( idGenerator, instanceOf( FreeIdFilteredIdGenerator.class ) );
     }
 

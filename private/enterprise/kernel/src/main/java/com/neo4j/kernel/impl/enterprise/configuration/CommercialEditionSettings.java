@@ -5,19 +5,14 @@
  */
 package com.neo4j.kernel.impl.enterprise.configuration;
 
-import java.util.List;
-
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.Internal;
 import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.internal.id.IdType;
 
 import static org.neo4j.configuration.Settings.LONG;
 import static org.neo4j.configuration.Settings.STRING;
-import static org.neo4j.configuration.Settings.list;
-import static org.neo4j.configuration.Settings.optionsIgnoreCase;
 import static org.neo4j.configuration.Settings.optionsObeyCase;
 import static org.neo4j.configuration.Settings.setting;
 
@@ -28,12 +23,6 @@ import static org.neo4j.configuration.Settings.setting;
 public class CommercialEditionSettings implements LoadableConfig
 {
     public static final String COMMERCIAL_SECURITY_MODULE_ID = "commercial-security-module";
-
-    @Description( "Specified names of id types (comma separated) that should be reused. " +
-                  "Currently only 'node' and 'relationship' types are supported. " )
-    public static final Setting<List<IdType>> idTypesToReuse = setting(
-            "dbms.ids.reuse.types.override", list( ",", optionsIgnoreCase( IdType.NODE, IdType.RELATIONSHIP ) ),
-            String.join( ",", IdType.RELATIONSHIP.name(), IdType.NODE.name() ) );
 
     @Description( "The maximum number of databases." )
     public static final Setting<Long> maxNumberOfDatabases = setting( "dbms.max_databases", LONG, "100" );

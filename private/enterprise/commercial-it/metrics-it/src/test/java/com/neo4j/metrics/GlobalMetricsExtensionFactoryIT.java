@@ -71,7 +71,6 @@ class GlobalMetricsExtensionFactoryIT
         builder.setConfig( MetricsSettings.csvPath, outputPath.getAbsolutePath() );
         builder.setConfig( GraphDatabaseSettings.check_point_interval_time, "100ms" );
         builder.setConfig( MetricsSettings.graphiteInterval, "1s" );
-        builder.setConfig( GraphDatabaseSettings.record_id_batch_size, "1" );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 

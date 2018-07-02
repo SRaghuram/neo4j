@@ -104,6 +104,6 @@ public class ReplicatedIdRangeAcquirerTest
         ReplicatedIdRangeAcquirer acquirer = new ReplicatedIdRangeAcquirer( new TestDatabaseIdRepository().defaultDatabase(), replicator,
                 idAllocationStateMachine, allocationSizes, member, NullLogProvider.getInstance() );
 
-        return new ReplicatedIdGenerator( fs, file, IdType.ARRAY_BLOCK, () -> initialHighId, acquirer, NullLogProvider.getInstance(), 10, true, panicker );
+        return new ReplicatedIdGenerator( fs, file, IdType.ARRAY_BLOCK, () -> initialHighId, acquirer, NullLogProvider.getInstance(), panicker );
     }
 }

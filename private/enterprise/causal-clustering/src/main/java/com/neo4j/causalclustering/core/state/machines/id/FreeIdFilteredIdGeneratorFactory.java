@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.state.machines.id;
 
 import java.io.File;
+import java.nio.file.OpenOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
@@ -28,28 +29,18 @@ public class FreeIdFilteredIdGeneratorFactory implements IdGeneratorFactory
     }
 
     @Override
-    public IdGenerator open( File filename, IdType idType, LongSupplier highId, long maxId )
+    public IdGenerator open( File filename, IdType idType, LongSupplier highIdScanner, long maxId, OpenOption... openOptions )
     {
         FreeIdFilteredIdGenerator freeIdFilteredIdGenerator =
-                new FreeIdFilteredIdGenerator( delegate.open( filename, idType, highId, maxId ), freeIdCondition );
+                new FreeIdFilteredIdGenerator( delegate.open( filename, idType, highIdScanner, maxId ), freeIdCondition );
         delegatedGenerator.put( idType, freeIdFilteredIdGenerator );
         return freeIdFilteredIdGenerator;
     }
 
     @Override
-    public IdGenerator open( File filename, int grabSize, IdType idType, LongSupplier highId, long maxId )
+    public IdGenerator create( File filename, IdType idType, long highId, boolean throwIfFileExists, long maxId, OpenOption... openOptions )
     {
-        FreeIdFilteredIdGenerator freeIdFilteredIdGenerator =
-                new FreeIdFilteredIdGenerator( delegate.open( filename, grabSize, idType, highId, maxId ),
-                        freeIdCondition );
-        delegatedGenerator.put( idType, freeIdFilteredIdGenerator );
-        return freeIdFilteredIdGenerator;
-    }
-
-    @Override
-    public void create( File filename, long highId, boolean throwIfFileExists )
-    {
-        delegate.create( filename, highId, throwIfFileExists );
+        return delegate.create( filename, idType, highId, throwIfFileExists, maxId, openOptions );
     }
 
     @Override
