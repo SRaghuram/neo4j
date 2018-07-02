@@ -39,13 +39,11 @@ class BloomKernelExtension extends LifecycleAdapter
     private final LogService logService;
     private final AvailabilityGuard availabilityGuard;
     private final JobScheduler scheduler;
-    private final Supplier<TransactionIdStore> transactionIdStore;
     private final Supplier<NeoStoreFileListing> fileListing;
     private FulltextProvider provider;
 
     BloomKernelExtension( FileSystemAbstraction fileSystem, File storeDir, Config config, GraphDatabaseService db, Procedures procedures, LogService logService,
-            AvailabilityGuard availabilityGuard, JobScheduler scheduler, Supplier<TransactionIdStore> transactionIdStore,
-            Supplier<NeoStoreFileListing> fileListing )
+            AvailabilityGuard availabilityGuard, JobScheduler scheduler, Supplier<NeoStoreFileListing> fileListing )
     {
         this.storeDir = storeDir;
         this.config = config;
@@ -55,7 +53,6 @@ class BloomKernelExtension extends LifecycleAdapter
         this.logService = logService;
         this.availabilityGuard = availabilityGuard;
         this.scheduler = scheduler;
-        this.transactionIdStore = transactionIdStore;
         this.fileListing = fileListing;
     }
 
@@ -68,7 +65,7 @@ class BloomKernelExtension extends LifecycleAdapter
             Duration refreshDelay = config.get( BloomFulltextConfig.bloom_refresh_delay );
 
             Log log = logService.getInternalLog( FulltextProviderImpl.class );
-            provider = new FulltextProviderImpl( db, log, availabilityGuard, scheduler, transactionIdStore.get(),
+            provider = new FulltextProviderImpl( db, log, availabilityGuard, scheduler,
                     fileSystem, storeDir, analyzer, refreshDelay );
             provider.openIndex( BLOOM_NODES, FulltextIndexType.NODES );
             provider.openIndex( BLOOM_RELATIONSHIPS, FulltextIndexType.RELATIONSHIPS );

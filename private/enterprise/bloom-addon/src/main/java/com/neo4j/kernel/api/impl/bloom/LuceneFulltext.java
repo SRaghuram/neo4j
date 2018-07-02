@@ -48,6 +48,7 @@ class LuceneFulltext extends AbstractLuceneIndex
     {
         this( indexStorage, partitionFactory, Collections.EMPTY_SET, analyzer, identifier, type );
         this.properties = readProperties();
+        state = InternalIndexState.ONLINE;
     }
 
     private Set<String> readProperties() throws IOException
@@ -139,12 +140,14 @@ class LuceneFulltext extends AbstractLuceneIndex
         return new PartitionedFulltextReader( searchers, properties.toArray( new String[0] ), analyzer );
     }
 
-    void saveConfiguration( long txId ) throws IOException
+    void saveConfiguration( WritableFulltext writableFulltext ) throws IOException
     {
-        PartitionedIndexWriter writer = getIndexWriter( new WritableFulltext( this ) );
+        PartitionedIndexWriter writer = getIndexWriter( writableFulltext );
         String analyzerName = analyzer.getClass().getCanonicalName();
-        FulltextIndexConfiguration config = new FulltextIndexConfiguration( analyzerName, properties, txId );
+        FulltextIndexConfiguration config = new FulltextIndexConfiguration( analyzerName, properties );
         writer.updateDocument( FulltextIndexConfiguration.TERM, config.asDocument() );
+        writableFulltext.flush();
+        writableFulltext.maybeRefreshBlocking();
     }
 
     String getAnalyzerName()

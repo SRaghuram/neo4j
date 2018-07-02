@@ -12,7 +12,7 @@ import org.junit.Test;
 
 import org.neo4j.graphdb.Transaction;
 
-import static java.util.Collections.singletonList;
+import static java.util.Collections.singleton;
 
 public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
 {
@@ -25,7 +25,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         analyzer = ENGLISH;
         try ( FulltextProvider provider = createProvider() )
         {
-            provider.createIndex( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES, singletonList( "prop" ) );
+            provider.createIndex( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES, singleton( "prop" ) );
 
             long id;
             try ( Transaction tx = db.beginTx() )
@@ -54,7 +54,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         analyzer = SWEDISH;
         try ( FulltextProvider provider = createProvider() )
         {
-            provider.createIndex( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES, singletonList( "prop" ) );
+            provider.createIndex( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES, singleton( "prop" ) );
 
             long id;
             try ( Transaction tx = db.beginTx() )
@@ -85,7 +85,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         analyzer = ENGLISH;
         try ( FulltextProvider provider = createProvider() )
         {
-            provider.createIndex( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES, singletonList( "prop" ) );
+            provider.createIndex( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES, singleton( "prop" ) );
 
             try ( Transaction tx = db.beginTx() )
             {
@@ -110,7 +110,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         analyzer = SWEDISH;
         try ( FulltextProvider provider = createProvider() )
         {
-            provider.createIndex( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES, singletonList( "prop" ) );
+            provider.createIndex( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES, singleton( "prop" ) );
             provider.awaitPopulation();
             provider.awaitFlip();
             try ( ReadOnlyFulltext reader = provider.getReader( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES ) )

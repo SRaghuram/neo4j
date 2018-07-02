@@ -6,12 +6,9 @@
 package com.neo4j.kernel.api.impl.bloom;
 
 import org.apache.lucene.document.Document;
-import org.eclipse.collections.api.map.primitive.LongObjectMap;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -19,17 +16,14 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.event.PropertyEntry;
-import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.kernel.AvailabilityGuard;
 import org.neo4j.kernel.api.impl.schema.writer.PartitionedIndexWriter;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -38,7 +32,6 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static com.neo4j.kernel.api.impl.bloom.LuceneFulltextDocumentStructure.documentRepresentingProperties;
-import static com.neo4j.kernel.api.impl.bloom.LuceneFulltextDocumentStructure.newTermForChangeOrRemove;
 
 class FulltextUpdateApplier extends LifecycleAdapter
 {
@@ -51,80 +44,17 @@ class FulltextUpdateApplier extends LifecycleAdapter
     private final Log log;
     private final AvailabilityGuard availabilityGuard;
     private final JobScheduler scheduler;
-    private JobScheduler.JobHandle workerThread;
+    // This 'stopped' boolean is important for being able to halt a startup process; to stop before we're fully started.
+    private final AtomicBoolean stopped;
+    private volatile JobScheduler.JobHandle workerThread;
 
     FulltextUpdateApplier( Log log, AvailabilityGuard availabilityGuard, JobScheduler scheduler )
     {
         this.log = log;
         this.availabilityGuard = availabilityGuard;
         this.scheduler = scheduler;
+        stopped = new AtomicBoolean();
         workQueue = new LinkedBlockingQueue<>();
-    }
-
-    <E extends Entity> AsyncFulltextIndexOperation updatePropertyData(
-            LongObjectMap<Map<String, Object>> state, WritableFulltext index ) throws IOException
-    {
-        FulltextIndexUpdate update = new FulltextIndexUpdate( index, () ->
-        {
-            PartitionedIndexWriter indexWriter = index.getIndexWriter();
-            state.forEachKeyValue( ( entityId, value ) ->
-            {
-                Set<String> indexedProperties = index.getProperties();
-                if ( !Collections.disjoint( indexedProperties, value.keySet() ) )
-                {
-                    Stream<Map.Entry<String,Object>> entryStream = value.entrySet().stream();
-                    Predicate<Map.Entry<String,Object>> relevantForIndex =
-                            entry -> indexedProperties.contains( entry.getKey() );
-                    Map<String,Object> allProperties = entryStream.filter( relevantForIndex )
-                            .collect( CollectorsUtil.entriesToMap() );
-
-                    if ( !allProperties.isEmpty() )
-                    {
-                        updateDocument( indexWriter, entityId, allProperties );
-                    }
-                }
-            } );
-        } );
-
-        enqueueUpdate( update );
-        return update;
-    }
-
-    private static void updateDocument( PartitionedIndexWriter indexWriter, long entityId, Map<String, Object> properties )
-    {
-        Document document = documentRepresentingProperties( entityId, properties );
-        try
-        {
-            indexWriter.updateDocument( newTermForChangeOrRemove( entityId ), document );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
-    }
-
-    <E extends Entity> AsyncFulltextIndexOperation removePropertyData(
-            Iterable<PropertyEntry<E>> propertyEntries, LongObjectMap<Map<String, Object>> state, WritableFulltext index )
-            throws IOException
-    {
-        FulltextIndexUpdate update = new FulltextIndexUpdate( index, () ->
-        {
-            for ( PropertyEntry<E> propertyEntry : propertyEntries )
-            {
-                if ( index.getProperties().contains( propertyEntry.key() ) )
-                {
-                    long entityId = propertyEntry.entity().getId();
-                    Map<String,Object> allProperties = state.get( entityId );
-                    if ( allProperties == null || allProperties.isEmpty() )
-                    {
-                        index.getIndexWriter().deleteDocuments( newTermForChangeOrRemove( entityId ) );
-                    }
-                }
-            }
-        } );
-
-        enqueueUpdate( update );
-        return update;
     }
 
     AsyncFulltextIndexOperation writeBarrier() throws IOException
@@ -134,15 +64,10 @@ class FulltextUpdateApplier extends LifecycleAdapter
         return barrier;
     }
 
-    AsyncFulltextIndexOperation populateNodes( WritableFulltext index, GraphDatabaseService db ) throws IOException
-    {
-        return enqueuePopulateIndex( index, db, db::getAllNodes );
-    }
-
-    AsyncFulltextIndexOperation populateRelationships( WritableFulltext index, GraphDatabaseService db )
+    AsyncFulltextIndexOperation populate( FulltextIndexType indexType, GraphDatabaseService db, WritableFulltext index )
             throws IOException
     {
-        return enqueuePopulateIndex( index, db, db::getAllRelationships );
+        return enqueuePopulateIndex( index, db, indexType.entityIterator( db ) );
     }
 
     private AsyncFulltextIndexOperation enqueuePopulateIndex(
@@ -176,6 +101,7 @@ class FulltextUpdateApplier extends LifecycleAdapter
                     }
                 }
                 indexWriter.addDocuments( documents.size(), reifyDocuments( documents ) );
+                index.maybeRefreshBlocking();
                 index.setPopulated();
             }
             catch ( Throwable th )
@@ -221,12 +147,14 @@ class FulltextUpdateApplier extends LifecycleAdapter
         {
             throw new IllegalStateException( APPLIER_THREAD_NAME + " already started." );
         }
-        workerThread = scheduler.schedule( UPDATE_APPLIER, new ApplierWorker( workQueue, log, availabilityGuard ) );
+        ApplierWorker applierWorker = new ApplierWorker( workQueue, log, availabilityGuard, stopped );
+        workerThread = scheduler.schedule( UPDATE_APPLIER, applierWorker );
     }
 
     @Override
     public void stop()
     {
+        stopped.set( true );
         boolean enqueued;
         do
         {
@@ -290,13 +218,15 @@ class FulltextUpdateApplier extends LifecycleAdapter
         private LinkedBlockingQueue<FulltextIndexUpdate> workQueue;
         private final Log log;
         private final AvailabilityGuard availabilityGuard;
+        private final AtomicBoolean stopped;
 
         ApplierWorker( LinkedBlockingQueue<FulltextIndexUpdate> workQueue, Log log,
-                AvailabilityGuard availabilityGuard )
+                AvailabilityGuard availabilityGuard, AtomicBoolean stopped )
         {
             this.workQueue = workQueue;
             this.log = log;
             this.availabilityGuard = availabilityGuard;
+            this.stopped = stopped;
         }
 
         @Override
@@ -328,7 +258,7 @@ class FulltextUpdateApplier extends LifecycleAdapter
             {
                 isAvailable = availabilityGuard.isAvailable( 100 );
             }
-            while ( !isAvailable && !availabilityGuard.isShutdown() );
+            while ( !isAvailable && !availabilityGuard.isShutdown() && !stopped.get() );
         }
 
         private FulltextIndexUpdate drainQueueAndApplyUpdates(

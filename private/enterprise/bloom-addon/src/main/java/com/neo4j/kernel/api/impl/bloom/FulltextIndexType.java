@@ -5,6 +5,12 @@
  */
 package com.neo4j.kernel.api.impl.bloom;
 
+import java.util.function.Supplier;
+
+import org.neo4j.graphdb.Entity;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.ResourceIterable;
+
 /**
  * Fulltext index type.
  */
@@ -12,6 +18,12 @@ public enum FulltextIndexType
 {
     NODES
             {
+                @Override
+                public Supplier<ResourceIterable<? extends Entity>> entityIterator( GraphDatabaseService db )
+                {
+                    return db::getAllNodes;
+                }
+
                 @Override
                 public String toString()
                 {
@@ -21,9 +33,17 @@ public enum FulltextIndexType
     RELATIONSHIPS
             {
                 @Override
+                public Supplier<ResourceIterable<? extends Entity>> entityIterator( GraphDatabaseService db )
+                {
+                    return db::getAllRelationships;
+                }
+
+                @Override
                 public String toString()
                 {
                     return "Relationships";
                 }
-            }
+            };
+
+    public abstract Supplier<ResourceIterable<? extends Entity>> entityIterator( GraphDatabaseService db );
 }

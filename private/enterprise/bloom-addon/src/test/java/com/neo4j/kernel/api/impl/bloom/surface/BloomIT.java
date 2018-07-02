@@ -32,6 +32,7 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
@@ -77,7 +78,8 @@ public class BloomIT
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
         builder = factory.newEmbeddedDatabaseBuilder( testDirectory.graphDbDir() )
                 .setConfig( BloomFulltextConfig.bloom_enabled, "true" )
-                .setConfig( BloomFulltextConfig.bloom_refresh_delay, "1s" );
+                .setConfig( BloomFulltextConfig.bloom_refresh_delay, "1s" )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 
     @After
@@ -470,7 +472,8 @@ public class BloomIT
             } );
             th.start();
             th.join();
-            db.execute( AWAIT_REFRESH );
+            db.execute( AWAIT_REFRESH ).close();
+            db.execute( AWAIT_REFRESH ).close();
 
             try ( Result result = db.execute( String.format( NODES, "\"Langelinie\"") ) )
             {
@@ -586,7 +589,7 @@ public class BloomIT
         db.shutdown();
         builder.setConfig( BloomFulltextConfig.bloom_enabled, "true" );
         db = getDb();
-        db.execute( AWAIT_POPULATION ).close();
+        db.execute( AWAIT_REFRESH ).close();
 
         // Now we should be able to find the node that was added while the index was disabled.
         try ( Transaction ignore = db.beginTx() )
@@ -644,6 +647,21 @@ public class BloomIT
         assertEquals( "matt", result.next().get( "propertyKey" ) );
         assertEquals( "ata", result.next().get( "propertyKey" ) );
         assertFalse( result.hasNext() );
+
+        db.shutdown();
+        db = getDb();
+
+        result = db.execute( GET_NODE_KEYS );
+        assertEquals( "otherprop", result.next().get( "propertyKey" ) );
+        assertEquals( "prop", result.next().get( "propertyKey" ) );
+        assertEquals( "proppmatt", result.next().get( "propertyKey" ) );
+        assertFalse( result.hasNext() );
+
+        result = db.execute( GET_REL_KEYS );
+        assertEquals( "mata", result.next().get( "propertyKey" ) );
+        assertEquals( "matt", result.next().get( "propertyKey" ) );
+        assertEquals( "ata", result.next().get( "propertyKey" ) );
+        assertFalse( result.hasNext() );
     }
 
     @Test
@@ -656,6 +674,17 @@ public class BloomIT
         db.execute( AWAIT_POPULATION );
         Result result = db.execute( STATUS );
         Map<String,Object> output = result.next();
+        assertEquals( "ONLINE", output.get( "state" ) );
+        assertEquals( "bloomNodes", output.get( "name" ) );
+        output = result.next();
+        assertEquals( "ONLINE", output.get( "state" ) );
+        assertEquals( "bloomRelationships", output.get( "name" ) );
+        assertFalse( result.hasNext() );
+        db.shutdown();
+        db = getDb();
+        db.execute( AWAIT_POPULATION );
+        result = db.execute( STATUS );
+        output = result.next();
         assertEquals( "ONLINE", output.get( "state" ) );
         assertEquals( "bloomNodes", output.get( "name" ) );
         output = result.next();

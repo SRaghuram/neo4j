@@ -56,30 +56,13 @@ public class FulltextUpdateApplierTest
     }
 
     @Test
-    public void exceptionsDuringIndexUpdateMustPropagateToTheCaller() throws Exception
-    {
-        startApplier();
-        AsyncFulltextIndexOperation op = applier.updatePropertyData( null, null );
-
-        try
-        {
-            op.awaitCompletion();
-            fail( "awaitCompletion should have thrown" );
-        }
-        catch ( ExecutionException e )
-        {
-            assertThat( e.getCause(), is( instanceOf( NullPointerException.class ) ) );
-        }
-    }
-
-    @Test
     public void exceptionsDuringNodePopulationMustBeLoggedAndMarkTheIndexAsFailed() throws Exception
     {
         startApplier();
         LuceneFulltext index = new StubLuceneFulltext();
         GraphDatabaseService db = new StubGraphDatabaseService();
         WritableFulltext writableFulltext = new WritableFulltext( index );
-        AsyncFulltextIndexOperation op = applier.populateNodes( writableFulltext, db );
+        AsyncFulltextIndexOperation op = applier.populate( FulltextIndexType.NODES, db, writableFulltext );
 
         try
         {
@@ -100,7 +83,7 @@ public class FulltextUpdateApplierTest
         LuceneFulltext index = new StubLuceneFulltext();
         GraphDatabaseService db = new StubGraphDatabaseService();
         WritableFulltext writableFulltext = new WritableFulltext( index );
-        AsyncFulltextIndexOperation op = applier.populateRelationships( writableFulltext, db );
+        AsyncFulltextIndexOperation op = applier.populate( FulltextIndexType.RELATIONSHIPS, db, writableFulltext );
 
         try
         {
