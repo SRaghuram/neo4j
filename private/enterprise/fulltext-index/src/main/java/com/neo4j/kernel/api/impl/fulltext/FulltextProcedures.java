@@ -61,7 +61,7 @@ public class FulltextProcedures
             if ( state == InternalIndexState.FAILED )
             {
                 TokenNameLookup lookup = new SilentTokenNameLookup( tx.tokenRead() );
-                throw new IndexPopulationFailedKernelException( index.schema(), index.userDescription( lookup ),
+                throw new IndexPopulationFailedKernelException( index.userDescription( lookup ),
                         "Population of index " + name + " has failed." );
             }
             try
@@ -97,7 +97,8 @@ public class FulltextProcedures
     public void createNodeFulltextIndex( @Name( "indexName" ) String name, @Name( "labels" ) List<String> labels,
             @Name( "propertyNames" ) List<String> properties ) throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
-        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, labels.toArray( new String[0] ), properties.toArray( new String[0] ) );
+        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, labels.toArray( new String[0] ),
+                Optional.empty(), properties.toArray( new String[0] ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
     }
 
@@ -115,7 +116,7 @@ public class FulltextProcedures
             @Name( "propertyNames" ) List<String> properties ) throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
         SchemaDescriptor schemaDescriptor =
-                accessor.schemaFor( EntityType.RELATIONSHIP, reltypes.toArray( new String[0] ), properties.toArray( new String[0] ) );
+                accessor.schemaFor( EntityType.RELATIONSHIP, reltypes.toArray( new String[0] ), Optional.empty(), properties.toArray( new String[0] ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
     }
 

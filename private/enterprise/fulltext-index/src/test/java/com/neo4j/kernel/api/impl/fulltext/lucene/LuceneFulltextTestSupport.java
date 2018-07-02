@@ -32,6 +32,7 @@ import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.impl.api.KernelImpl;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.index.IndexProviderMap;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EmbeddedDatabaseRule;
 import org.neo4j.test.rule.RepeatRule;
@@ -48,7 +49,8 @@ public class LuceneFulltextTestSupport
     protected static final RelationshipType RELTYPE = RelationshipType.withName( "type" );
     public static final String PROP = "prop";
 
-    public DatabaseRule db = new EmbeddedDatabaseRule();
+    public DatabaseRule db = new EmbeddedDatabaseRule()
+            .withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
     public RepeatRule repeatRule = createRepeatRule();
     @Rule
     public RuleChain rules = RuleChain.outerRule( repeatRule ).around( db );

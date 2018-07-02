@@ -6,7 +6,6 @@
 package com.neo4j.kernel.api.impl.fulltext.lucene;
 
 import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
-import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.IndexWriterConfig;
 
 import org.neo4j.function.Factory;
@@ -19,14 +18,12 @@ import org.neo4j.kernel.configuration.Config;
 public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextIndexBuilder>
 {
     private final FulltextIndexDescriptor descriptor;
-    private final Analyzer analyzer;
-    private Factory<IndexWriterConfig> writerConfigFactory = IndexWriterConfigs::standard;
+    private boolean populating;
 
-    private FulltextIndexBuilder( FulltextIndexDescriptor descriptor, Config config, Analyzer analyzer )
+    private FulltextIndexBuilder( FulltextIndexDescriptor descriptor, Config config )
     {
         super( config );
         this.descriptor = descriptor;
-        this.analyzer = analyzer;
     }
 
     /**
@@ -35,20 +32,20 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
      * @param descriptor The descriptor for this index
      * @return new FulltextIndexBuilder
      */
-    public static FulltextIndexBuilder create( FulltextIndexDescriptor descriptor, Config config, Analyzer analyzer )
+    public static FulltextIndexBuilder create( FulltextIndexDescriptor descriptor, Config config )
     {
-        return new FulltextIndexBuilder( descriptor, config, analyzer );
+        return new FulltextIndexBuilder( descriptor, config );
     }
 
     /**
-     * Specify {@link Factory} of lucene {@link IndexWriterConfig} to create {@link org.apache.lucene.index.IndexWriter}s.
-     *
-     * @param writerConfigFactory the supplier of writer configs
-     * @return index builder
+     * Whether to create the index in a {@link IndexWriterConfigs#population() populating} mode, if {@code true}, or
+     * in a {@link IndexWriterConfigs#standard() standard} mode, if {@code false}.
+     * @param isPopulating {@code true} if the index should be created in a populating mode.
+     * @return this index builder.
      */
-    public FulltextIndexBuilder withWriterConfig( Factory<IndexWriterConfig> writerConfigFactory )
+    public FulltextIndexBuilder withPopulatingMode( boolean isPopulating )
     {
-        this.writerConfigFactory = writerConfigFactory;
+        this.populating = isPopulating;
         return this;
     }
 
@@ -61,12 +58,20 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
     {
         if ( isReadOnly() )
         {
-
-            return new ReadOnlyFulltextIndex( storageBuilder.build(), new ReadOnlyIndexPartitionFactory(), analyzer, descriptor );
+            return new ReadOnlyFulltextIndex( storageBuilder.build(), new ReadOnlyIndexPartitionFactory(), descriptor );
         }
         else
         {
-            return new WritableFulltextIndex( storageBuilder.build(), new WritableIndexPartitionFactory( writerConfigFactory ), analyzer, descriptor );
+            Factory<IndexWriterConfig> writerConfigFactory;
+            if ( populating )
+            {
+                writerConfigFactory = () -> IndexWriterConfigs.population( descriptor.analyzer() );
+            }
+            else
+            {
+                writerConfigFactory = () -> IndexWriterConfigs.standard( descriptor.analyzer() );
+            }
+            return new WritableFulltextIndex( storageBuilder.build(), new WritableIndexPartitionFactory( writerConfigFactory ), descriptor );
         }
     }
 }

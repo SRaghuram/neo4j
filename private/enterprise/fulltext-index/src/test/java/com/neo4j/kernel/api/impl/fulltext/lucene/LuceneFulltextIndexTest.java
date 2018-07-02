@@ -30,7 +30,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -63,7 +63,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -93,7 +93,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -123,7 +123,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -156,7 +156,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -200,7 +200,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -242,7 +242,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], "prop", "prop2" );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), "prop", "prop2" );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -297,7 +297,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -330,7 +330,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], "prop", "prop2" );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), "prop", "prop2" );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -365,7 +365,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], "first", "last" );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), "first", "last" );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -402,8 +402,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
     @Test
     public void shouldDifferentiateNodesAndRelationships() throws Exception
     {
-        SchemaDescriptor nodes = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-        SchemaDescriptor rels = fulltextAdapter.schemaFor( RELATIONSHIP, new String[0], PROP );
+        SchemaDescriptor nodes = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
+        SchemaDescriptor rels = fulltextAdapter.schemaFor( RELATIONSHIP, new String[0], Optional.empty(), PROP );
         IndexReference nodesIndex;
         IndexReference relsIndex;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
@@ -447,8 +447,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
     @Test
     public void shouldNotReturnNonMatches() throws Exception
     {
-        SchemaDescriptor nodes = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-        SchemaDescriptor rels = fulltextAdapter.schemaFor( RELATIONSHIP, new String[0], PROP );
+        SchemaDescriptor nodes = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
+        SchemaDescriptor rels = fulltextAdapter.schemaFor( RELATIONSHIP, new String[0], Optional.empty(), PROP );
         IndexReference nodesIndex;
         IndexReference relsIndex;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
@@ -504,8 +504,8 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        SchemaDescriptor nodes = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
-        SchemaDescriptor rels = fulltextAdapter.schemaFor( RELATIONSHIP, new String[0], PROP );
+        SchemaDescriptor nodes = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
+        SchemaDescriptor rels = fulltextAdapter.schemaFor( RELATIONSHIP, new String[0], Optional.empty(), PROP );
         IndexReference nodesIndex;
         IndexReference relsIndex;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
@@ -538,7 +538,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
             tx.success();
@@ -567,7 +567,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
 
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {
-            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], "prop2" );
+            SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), "prop2" );
             tx.schemaWrite().indexDrop( index );
             index = tx.schemaWrite().indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
                     Optional.of( NODE_INDEX_NAME ) );
@@ -593,7 +593,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
     @Test
     public void shouldBeAbleToDropAndReadIndex() throws Exception
     {
-        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
         IndexReference index;
         try ( KernelTransactionImplementation tx = getKernelTransaction() )
         {

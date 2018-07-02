@@ -51,12 +51,12 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
 
     private SchemaDescriptor getNewDescriptor( String[] entityTokens ) throws InvalidArgumentsException
     {
-        return fulltextAdapter.schemaFor( NODE, entityTokens, "otherProp" );
+        return fulltextAdapter.schemaFor( NODE, entityTokens, Optional.empty(), "otherProp" );
     }
 
     private SchemaDescriptor getExistingDescriptor( String[] entityTokens ) throws InvalidArgumentsException
     {
-        return fulltextAdapter.schemaFor( NODE, entityTokens, PROP );
+        return fulltextAdapter.schemaFor( NODE, entityTokens, Optional.empty(), PROP );
     }
 
     private IndexReference createInitialIndex( SchemaDescriptor descriptor ) throws Exception

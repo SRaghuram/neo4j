@@ -31,6 +31,7 @@ import org.neo4j.kernel.api.schema.index.IndexDescriptor;
 import org.neo4j.kernel.impl.api.KernelImpl;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.index.IndexProviderMap;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EmbeddedDatabaseRule;
@@ -47,7 +48,8 @@ public class FulltextIndexProviderTest
 {
     private static final String NAME = "fulltext";
     @Rule
-    public DatabaseRule db = new EmbeddedDatabaseRule();
+    public DatabaseRule db = new EmbeddedDatabaseRule()
+            .withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
 
     private Node node1;
     private Node node2;

@@ -9,6 +9,7 @@ import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
 import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.neo4j.internal.kernel.api.IndexReference;
@@ -22,7 +23,8 @@ public interface FulltextAdapter
 
     Stream<String> propertyKeyStrings( IndexReference descriptor );
 
-    SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, String... properties );
+    SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, Optional<String> analyzerOverride,
+                                String... properties );
 
     ScoreEntityIterator query( String indexName, String queryString ) throws IOException, IndexNotFoundKernelException, ParseException;
 }

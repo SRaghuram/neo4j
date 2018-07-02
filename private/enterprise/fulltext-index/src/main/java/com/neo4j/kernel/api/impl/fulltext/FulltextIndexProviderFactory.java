@@ -6,10 +6,12 @@
 package com.neo4j.kernel.api.impl.fulltext;
 
 import java.io.File;
+import java.util.function.Supplier;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.IndexProvider;
@@ -32,6 +34,17 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
     private static final int PRIORITY = 0;
     public static final IndexProvider.Descriptor DESCRIPTOR = new IndexProvider.Descriptor( KEY, "1.0" );
 
+    public interface Dependencies
+    {
+        Config getConfig();
+
+        FileSystemAbstraction fileSystem();
+
+        NeoStoreDataSource neoStoreDataSource();
+
+        Procedures procedures();
+    }
+
     public FulltextIndexProviderFactory()
     {
         super( ExtensionType.DATABASE, KEY );
@@ -51,23 +64,20 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         FileSystemAbstraction fileSystemAbstraction = dependencies.fileSystem();
         DirectoryFactory directoryFactory = directoryFactory( ephemeral, fileSystemAbstraction );
         OperationalMode operationalMode = context.databaseInfo().operationalMode;
+        NeoStoreDataSource neoStoreDataSource = dependencies.neoStoreDataSource();
+        IndexDirectoryStructure.Factory directoryStructureFactory = subProviderDirectoryStructure( context.storeDir() );
+        Supplier<TokenHolders> tokenHoldersSupplier = dataSourceDependency( neoStoreDataSource, TokenHolders.class );
 
-        FulltextIndexProvider provider =
-                new FulltextIndexProvider( DESCRIPTOR, PRIORITY, subProviderDirectoryStructure( context.storeDir() ), fileSystemAbstraction, config,
-                        dependencies.tokenHolders(), directoryFactory, operationalMode );
+        FulltextIndexProvider provider = new FulltextIndexProvider(
+                DESCRIPTOR, PRIORITY, directoryStructureFactory, fileSystemAbstraction, config, tokenHoldersSupplier,
+                directoryFactory, operationalMode );
         dependencies.procedures().registerComponent( FulltextAdapter.class, procContext -> provider, true );
 
         return provider;
     }
 
-    public interface Dependencies
+    private static <T> Supplier<T> dataSourceDependency( NeoStoreDataSource neoStoreDataSource, Class<T> clazz )
     {
-        Config getConfig();
-
-        FileSystemAbstraction fileSystem();
-
-        TokenHolders tokenHolders();
-
-        Procedures procedures();
+        return () -> neoStoreDataSource.getDependencyResolver().resolveDependency( clazz );
     }
 }

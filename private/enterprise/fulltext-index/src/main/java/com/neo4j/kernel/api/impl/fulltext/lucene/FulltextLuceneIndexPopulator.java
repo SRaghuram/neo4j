@@ -11,6 +11,7 @@ import org.apache.lucene.document.Document;
 import java.io.IOException;
 import java.util.Collection;
 
+import org.neo4j.function.ThrowingAction;
 import org.neo4j.kernel.api.impl.schema.populator.LuceneIndexPopulator;
 import org.neo4j.kernel.api.index.IndexEntryUpdate;
 import org.neo4j.kernel.api.index.IndexUpdater;
@@ -20,11 +21,21 @@ import org.neo4j.storageengine.api.schema.IndexSample;
 public class FulltextLuceneIndexPopulator extends LuceneIndexPopulator<FulltextIndex>
 {
     private final FulltextIndexDescriptor descriptor;
+    private final ThrowingAction<IOException> descriptorCreateAction;
 
-    public FulltextLuceneIndexPopulator( FulltextIndexDescriptor descriptor, FulltextIndex luceneFulltext )
+    public FulltextLuceneIndexPopulator( FulltextIndexDescriptor descriptor, FulltextIndex luceneFulltext,
+                                         ThrowingAction<IOException> descriptorCreateAction )
     {
         super( luceneFulltext );
         this.descriptor = descriptor;
+        this.descriptorCreateAction = descriptorCreateAction;
+    }
+
+    @Override
+    public void create() throws IOException
+    {
+        super.create();
+        descriptorCreateAction.apply();
     }
 
     @Override

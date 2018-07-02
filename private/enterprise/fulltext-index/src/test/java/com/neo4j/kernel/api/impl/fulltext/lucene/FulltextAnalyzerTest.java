@@ -32,7 +32,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
     {
         applySetting( FulltextConfig.fulltext_default_analyzer, ENGLISH );
 
-        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
         IndexReference nodes;
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
@@ -67,7 +67,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
     public void shouldBeAbleToSpecifySwedishAnalyzer() throws Exception
     {
         applySetting( FulltextConfig.fulltext_default_analyzer, SWEDISH );
-        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
         IndexReference nodes;
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
@@ -87,7 +87,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( "nodes", "and", id );
             assertQueryFindsIds( "nodes", "in", id );
@@ -99,12 +99,12 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
     }
 
     @Test
-    public void shouldReindexNodesWhenAnalyzerIsChanged() throws Exception
+    public void shouldNotReindexNodesWhenDefaultAnalyzerIsChanged() throws Exception
     {
         long firstID;
         long secondID;
         applySetting( FulltextConfig.fulltext_default_analyzer, ENGLISH );
-        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], PROP );
+        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
         IndexReference nodes;
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
@@ -123,9 +123,8 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
-
             assertQueryFindsNothing( "nodes", "and" );
             assertQueryFindsNothing( "nodes", "in" );
             assertQueryFindsNothing( "nodes", "the" );
@@ -139,12 +138,13 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         {
             SchemaRead schemaRead = transaction.schemaRead();
             await( schemaRead.indexGetForName( "nodes" ) );
-            assertQueryFindsIds( "nodes", "and", firstID );
-            assertQueryFindsIds( "nodes", "in", firstID );
-            assertQueryFindsIds( "nodes", "the", firstID );
-            assertQueryFindsNothing( "nodes", "en" );
-            assertQueryFindsNothing( "nodes", "och" );
-            assertQueryFindsNothing( "nodes", "ett" );
+            // These results should be exactly the same as before the configuration change and restart.
+            assertQueryFindsNothing( "nodes", "and" );
+            assertQueryFindsNothing( "nodes", "in" );
+            assertQueryFindsNothing( "nodes", "the" );
+            assertQueryFindsIds( "nodes", "en", secondID );
+            assertQueryFindsIds( "nodes", "och", secondID );
+            assertQueryFindsIds( "nodes", "ett", secondID );
         }
     }
 }

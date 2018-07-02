@@ -28,10 +28,10 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
     private final EntityType type;
     private Collection<String> properties;
 
-    LuceneFulltextIndex( PartitionedIndexStorage storage, IndexPartitionFactory partitionFactory, Analyzer analyzer, FulltextIndexDescriptor descriptor )
+    LuceneFulltextIndex( PartitionedIndexStorage storage, IndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor )
     {
         super( storage, partitionFactory, descriptor );
-        this.analyzer = analyzer;
+        this.analyzer = descriptor.analyzer();
         this.identifier = descriptor.getName();
         this.type = descriptor.schema().entityType();
         this.properties = descriptor.propertyNames();

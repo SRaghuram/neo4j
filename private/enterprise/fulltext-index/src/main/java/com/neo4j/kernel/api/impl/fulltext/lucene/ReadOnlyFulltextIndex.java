@@ -6,7 +6,6 @@
 package com.neo4j.kernel.api.impl.fulltext.lucene;
 
 import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
-import org.apache.lucene.analysis.Analyzer;
 
 import org.neo4j.kernel.api.impl.index.ReadOnlyAbstractDatabaseIndex;
 import org.neo4j.kernel.api.impl.index.partition.IndexPartitionFactory;
@@ -14,8 +13,8 @@ import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
 
 class ReadOnlyFulltextIndex extends ReadOnlyAbstractDatabaseIndex<LuceneFulltextIndex,FulltextIndexReader> implements FulltextIndex
 {
-    ReadOnlyFulltextIndex( PartitionedIndexStorage storage, IndexPartitionFactory partitionFactory, Analyzer analyzer, FulltextIndexDescriptor descriptor )
+    ReadOnlyFulltextIndex( PartitionedIndexStorage storage, IndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor )
     {
-        super( new LuceneFulltextIndex( storage, partitionFactory, analyzer, descriptor ) );
+        super( new LuceneFulltextIndex( storage, partitionFactory, descriptor ) );
     }
 }

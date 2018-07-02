@@ -25,6 +25,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EmbeddedDatabaseRule;
@@ -53,7 +54,8 @@ public class BloomQueryIT
     private static final String NODES_PARAMETER = "CALL bloom.searchNodes($query, $fuzzy, $matchAll)";
 
     @Rule
-    public DatabaseRule db = new EmbeddedDatabaseRule();
+    public DatabaseRule db = new EmbeddedDatabaseRule()
+            .withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
 
     @Before
     public void before() throws KernelException

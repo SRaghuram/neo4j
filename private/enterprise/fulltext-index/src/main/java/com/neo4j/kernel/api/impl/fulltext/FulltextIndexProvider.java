@@ -11,22 +11,23 @@ import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexBuilder;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextLuceneIndexPopulator;
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
-import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
+import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndexProvider;
-import org.neo4j.kernel.api.impl.index.IndexWriterConfigs;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
 import org.neo4j.kernel.api.index.IndexAccessor;
@@ -36,7 +37,9 @@ import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema.index.StoreIndexDescriptor;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
+import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.storageengine.api.EntityType;
 
@@ -46,13 +49,12 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     private final FileSystemAbstraction fileSystem;
     private final Map<String,FulltextIndexAccessor> accessorsByName;
     private final Config config;
-    private final TokenHolders tokenHolders;
+    private final Supplier<TokenHolders> tokenHolders;
     private final OperationalMode operationalMode;
-    private final Analyzer analyzer;
-    private final String analyzerClassName;
+    private final String defaultAnalyzerClassName;
 
     FulltextIndexProvider( Descriptor descriptor, int priority, IndexDirectoryStructure.Factory directoryStructureFactory, FileSystemAbstraction fileSystem,
-            Config config, TokenHolders tokenHolders, DirectoryFactory directoryFactory, OperationalMode operationalMode )
+            Config config, Supplier<TokenHolders> tokenHolders, DirectoryFactory directoryFactory, OperationalMode operationalMode )
     {
         super( descriptor, priority, directoryStructureFactory, config, operationalMode, fileSystem, directoryFactory );
         this.fileSystem = fileSystem;
@@ -60,8 +62,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         this.tokenHolders = tokenHolders;
         this.operationalMode = operationalMode;
 
-        analyzerClassName = config.get( FulltextConfig.fulltext_default_analyzer );
-        this.analyzer = getAnalyzer( analyzerClassName );
+        defaultAnalyzerClassName = config.get( FulltextConfig.fulltext_default_analyzer );
         accessorsByName = new HashMap<>();
     }
 
@@ -74,11 +75,6 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         {
             return InternalIndexState.FAILED;
         }
-        //TODO METADAT/ANALYZER
-//        if ( !descriptor.analyzer().equals( analyzerClassName ) )
-//        {
-//            return InternalIndexState.POPULATING;
-//        }
         try
         {
             return indexIsOnline( indexStorage, descriptor ) ? InternalIndexState.ONLINE : InternalIndexState.POPULATING;
@@ -92,25 +88,40 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     @Override
     public IndexPopulator getPopulator( StoreIndexDescriptor descriptor, IndexSamplingConfig samplingConfig )
     {
-        FulltextIndexDescriptor fulltextIndexDescriptor = new FulltextIndexDescriptor( descriptor, tokenHolders.propertyKeyTokens(), analyzerClassName );
-        FulltextIndex fulltextIndex = FulltextIndexBuilder.create( fulltextIndexDescriptor, config, analyzer ).withFileSystem( fileSystem ).withOperationalMode(
-                operationalMode ).withIndexStorage( getIndexStorage( descriptor.getId() ) )
-                .withWriterConfig( () -> IndexWriterConfigs.population( analyzer ) )
+        TokenHolders tokens = tokenHolders.get();
+        PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
+        FulltextIndexDescriptor fulltextIndexDescriptor = new FulltextIndexDescriptor(
+                descriptor, defaultAnalyzerClassName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
+        FulltextIndex fulltextIndex = FulltextIndexBuilder
+                .create( fulltextIndexDescriptor, config )
+                .withFileSystem( fileSystem )
+                .withOperationalMode( operationalMode )
+                .withIndexStorage( indexStorage )
+                .withPopulatingMode( true )
                 .build();
         if ( fulltextIndex.isReadOnly() )
         {
             throw new UnsupportedOperationException( "Can't create populator for read only index" );
         }
-        return new FulltextLuceneIndexPopulator( fulltextIndexDescriptor, fulltextIndex );
+        return new FulltextLuceneIndexPopulator( fulltextIndexDescriptor, fulltextIndex,
+                () -> fulltextIndexDescriptor.saveIndexSettings( indexStorage, fileSystem ) );
     }
 
     @Override
     public IndexAccessor getOnlineAccessor( StoreIndexDescriptor descriptor, IndexSamplingConfig samplingConfig ) throws IOException
     {
-        FulltextIndexDescriptor fulltextIndexDescriptor = new FulltextIndexDescriptor( descriptor, tokenHolders.propertyKeyTokens(), analyzerClassName );
-        FulltextIndex fulltextIndex = FulltextIndexBuilder.create( fulltextIndexDescriptor, config, analyzer ).withFileSystem( fileSystem ).withOperationalMode(
-                operationalMode ).withIndexStorage( getIndexStorage( descriptor.getId() ) ).withWriterConfig(
-                () -> IndexWriterConfigs.standard( analyzer ) ).build();
+        TokenHolders tokens = tokenHolders.get();
+        PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
+
+        FulltextIndexDescriptor fulltextIndexDescriptor = new FulltextIndexDescriptor(
+                descriptor, defaultAnalyzerClassName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
+        FulltextIndex fulltextIndex = FulltextIndexBuilder
+                .create( fulltextIndexDescriptor, config )
+                .withFileSystem( fileSystem )
+                .withOperationalMode( operationalMode )
+                .withIndexStorage( indexStorage )
+                .withPopulatingMode( false )
+                .build();
         fulltextIndex.open();
 
         FulltextIndexAccessor fulltextIndexAccessor = new FulltextIndexAccessor( fulltextIndex, fulltextIndexDescriptor );
@@ -121,12 +132,31 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     @Override
     public Stream<String> propertyKeyStrings( IndexReference index )
     {
-        return Arrays.stream( index.schema().getPropertyIds() ).mapToObj( id -> tokenHolders.propertyKeyTokens().getTokenByIdOrNull( id ).name() );
+        TokenHolders tokens = tokenHolders.get();
+        TokenHolder propertyKeyTokens = tokens.propertyKeyTokens();
+        int[] propertyKeyIds = index.schema().getPropertyIds();
+        String[] propertyNames = new String[propertyKeyIds.length];
+        for ( int i = 0; i < propertyKeyIds.length; i++ )
+        {
+            int propertyKeyId = propertyKeyIds[i];
+            try
+            {
+                propertyNames[i] = propertyKeyTokens.getTokenById( propertyKeyId ).name();
+            }
+            catch ( TokenNotFoundException e )
+            {
+                throw new IllegalStateException( "Property key id not found.",
+                        new PropertyKeyIdNotFoundKernelException( propertyKeyId, e ) );
+            }
+        }
+        return Stream.of( propertyNames );
     }
 
     @Override
-    public SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, String... properties )
+    public SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, Optional<String> analyzerOverride,
+                                       String... properties )
     {
+        TokenHolders tokens = tokenHolders.get();
         if ( Arrays.stream( properties ).anyMatch( prop -> prop.equals( FulltextAdapter.FIELD_ENTITY_ID ) ) )
         {
             throw new BadSchemaException( "Unable to index the property, the name is reserved for internal use " + FulltextAdapter.FIELD_ENTITY_ID );
@@ -134,15 +164,16 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         int[] entityTokenIds = new int[entityTokens.length];
         if ( type == EntityType.NODE )
         {
-            tokenHolders.labelTokens().getOrCreateIds( entityTokens, entityTokenIds );
+            tokens.labelTokens().getOrCreateIds( entityTokens, entityTokenIds );
         }
         else
         {
-            tokenHolders.relationshipTypeTokens().getOrCreateIds( entityTokens, entityTokenIds );
+            tokens.relationshipTypeTokens().getOrCreateIds( entityTokens, entityTokenIds );
         }
-        int[] propertyIds = Arrays.stream( properties ).mapToInt( tokenHolders.propertyKeyTokens()::getOrCreateId ).toArray();
+        int[] propertyIds = Arrays.stream( properties ).mapToInt( tokens.propertyKeyTokens()::getOrCreateId ).toArray();
 
-        return SchemaDescriptorFactory.multiToken( entityTokenIds, type, propertyIds );
+        SchemaDescriptor schema = SchemaDescriptorFactory.multiToken( entityTokenIds, type, propertyIds );
+        return new FulltextSchemaDescriptor( schema, analyzerOverride.orElse( defaultAnalyzerClassName ) );
     }
 
     @Override
@@ -165,20 +196,5 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         {
             super( message );
         }
-    }
-
-    private Analyzer getAnalyzer( String analyzerClassName )
-    {
-        Analyzer analyzer;
-        try
-        {
-            Class configuredAnalyzer = Class.forName( analyzerClassName );
-            analyzer = (Analyzer) configuredAnalyzer.newInstance();
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( "Could not create the configured analyzer", e );
-        }
-        return analyzer;
     }
 }

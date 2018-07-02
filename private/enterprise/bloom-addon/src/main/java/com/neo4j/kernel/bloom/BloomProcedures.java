@@ -71,8 +71,8 @@ public class BloomProcedures
                 if ( state == InternalIndexState.FAILED )
                 {
                     TokenNameLookup lookup = new SilentTokenNameLookup( tx.tokenRead() );
-                    throw new IndexPopulationFailedKernelException( index.schema(), index.userDescription( lookup ),
-                            "Population of index " + indexName + " has failed." );
+                    throw new IndexPopulationFailedKernelException( index.userDescription( lookup ) + " (" + indexName + ")",
+                            "internal index population failure." );
                 }
                 Thread.sleep( 100 );
             }
@@ -100,7 +100,7 @@ public class BloomProcedures
     @Procedure( name = "bloom.setIndexedNodePropertyKeys", mode = SCHEMA )
     public void setIndexedNodePropertyKeys( @Name( "propertyKeys" ) List<String> propertyKeys ) throws Exception
     {
-        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, new String[0], propertyKeys.toArray( new String[0] ) );
+        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, new String[0], Optional.empty(), propertyKeys.toArray( new String[0] ) );
         try
         {
             tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( BLOOM_NODES ) );
@@ -116,7 +116,8 @@ public class BloomProcedures
     @Procedure( name = "bloom.setIndexedRelationshipPropertyKeys", mode = SCHEMA )
     public void setIndexedRelationshipPropertyKeys( @Name( "propertyKeys" ) List<String> propertyKeys ) throws Exception
     {
-        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.RELATIONSHIP, new String[0], propertyKeys.toArray( new String[0] ) );
+        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.RELATIONSHIP, new String[0],
+                Optional.empty(), propertyKeys.toArray( new String[0] ) );
         try
         {
             tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( BLOOM_RELATIONSHIPS ) );
