@@ -14,6 +14,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.AvailabilityGuard;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -31,7 +32,6 @@ import org.neo4j.scheduler.JobScheduler;
 @Service.Implementation( KernelExtensionFactory.class )
 public class BloomKernelExtensionFactory extends KernelExtensionFactory<BloomKernelExtensionFactory.Dependencies>
 {
-
     public static final String SERVICE_NAME = "bloom";
     public static final String BLOOM_RELATIONSHIPS = "bloomRelationships";
     public static final String BLOOM_NODES = "bloomNodes";
@@ -57,7 +57,7 @@ public class BloomKernelExtensionFactory extends KernelExtensionFactory<BloomKer
 
     public BloomKernelExtensionFactory()
     {
-        super( SERVICE_NAME );
+        super( ExtensionType.DATABASE, SERVICE_NAME );
     }
 
     @Override
