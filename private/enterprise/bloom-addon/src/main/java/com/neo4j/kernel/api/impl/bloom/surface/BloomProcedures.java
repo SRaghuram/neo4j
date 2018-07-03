@@ -11,6 +11,7 @@ import com.neo4j.kernel.api.impl.bloom.ReadOnlyFulltext;
 import com.neo4j.kernel.api.impl.bloom.ScoreEntityIterator;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -68,14 +69,16 @@ public class BloomProcedures
     @Procedure( name = "bloom.setIndexedNodePropertyKeys", mode = SCHEMA )
     public void setIndexedNodePropertyKeys( @Name( "propertyKeys" ) List<String> propertyKeys ) throws Exception
     {
-        provider.changeIndexedProperties( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES, propertyKeys );
+        provider.changeIndexedProperties( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES,
+                new HashSet<>( propertyKeys ) );
     }
 
     @Description( "Set the relationship property keys to index" )
     @Procedure( name = "bloom.setIndexedRelationshipPropertyKeys", mode = SCHEMA )
     public void setIndexedRelationshipPropertyKeys( @Name( "propertyKeys" ) List<String> propertyKeys ) throws Exception
     {
-        provider.changeIndexedProperties( BloomKernelExtensionFactory.BLOOM_RELATIONSHIPS, FulltextIndexType.RELATIONSHIPS, propertyKeys );
+        provider.changeIndexedProperties( BloomKernelExtensionFactory.BLOOM_RELATIONSHIPS, FulltextIndexType.RELATIONSHIPS,
+                new HashSet<>( propertyKeys ) );
     }
 
     @Description( "Check the status of the Bloom fulltext index add-on" )
@@ -96,10 +99,8 @@ public class BloomProcedures
             @Name( value = "fuzzy", defaultValue = "true" ) boolean fuzzy,
             @Name( value = "matchAll", defaultValue = "false" ) boolean matchAll ) throws Exception
     {
-        try ( ReadOnlyFulltext indexReader = provider.getReader( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES ) )
-        {
-            return queryAsStream( terms, indexReader, fuzzy, matchAll );
-        }
+        ReadOnlyFulltext indexReader = provider.getReader( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES );
+        return queryAsStream( terms, indexReader, fuzzy, matchAll );
     }
 
     @Description( "Query the Bloom fulltext index for relationships" )
@@ -109,10 +110,8 @@ public class BloomProcedures
             @Name( value = "fuzzy", defaultValue = "true" ) boolean fuzzy,
             @Name( value = "matchAll", defaultValue = "false" ) boolean matchAll ) throws Exception
     {
-        try ( ReadOnlyFulltext indexReader = provider.getReader( BloomKernelExtensionFactory.BLOOM_RELATIONSHIPS, FulltextIndexType.RELATIONSHIPS ) )
-        {
-            return queryAsStream( terms, indexReader, fuzzy, matchAll );
-        }
+        ReadOnlyFulltext indexReader = provider.getReader( BloomKernelExtensionFactory.BLOOM_RELATIONSHIPS, FulltextIndexType.RELATIONSHIPS );
+        return queryAsStream( terms, indexReader, fuzzy, matchAll );
     }
 
     private Stream<EntityOutput> queryAsStream( List<String> terms, ReadOnlyFulltext indexReader, boolean fuzzy, boolean matchAll )
@@ -127,7 +126,7 @@ public class BloomProcedures
         {
             resultIterator = indexReader.query( terms, matchAll );
         }
-        return resultIterator.stream().map( QUERY_RESULT_MAPPER );
+        return resultIterator.stream().map( QUERY_RESULT_MAPPER ).onClose( indexReader::close );
     }
 
     public static class EntityOutput

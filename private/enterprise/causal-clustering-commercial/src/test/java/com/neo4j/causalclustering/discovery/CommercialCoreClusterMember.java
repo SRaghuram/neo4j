@@ -14,8 +14,8 @@ import java.util.function.IntFunction;
 
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.GraphDatabaseDependencies;
 
 public class CommercialCoreClusterMember extends CoreClusterMember
 {

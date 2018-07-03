@@ -100,7 +100,6 @@
       <excludes>
         <exclude>*:pom:*</exclude>
         <exclude>org.neo4j:neo4j-enterprise:jar</exclude>
-        <exclude>org.neo4j:neo4j</exclude>
       </excludes>
     </dependencySet>
     <dependencySet>

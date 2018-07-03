@@ -23,7 +23,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.AvailabilityGuard;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
@@ -42,7 +42,9 @@ public class LuceneFulltextTestSupport
     protected static final Log LOG = NullLog.getInstance();
 
     @Rule
-    public DatabaseRule dbRule = new EmbeddedDatabaseRule().startLazily();
+    public DatabaseRule dbRule = new EmbeddedDatabaseRule()
+            .withSetting( OnlineBackupSettings.online_backup_enabled, "false" )
+            .startLazily();
 
     protected static final RelationshipType RELTYPE = RelationshipType.withName( "type" );
 
@@ -52,7 +54,6 @@ public class LuceneFulltextTestSupport
     protected JobScheduler scheduler;
     protected FileSystemAbstraction fs;
     protected File storeDir;
-    private TransactionIdStore transactionIdStore;
 
     @Before
     public void setUp()
@@ -61,13 +62,11 @@ public class LuceneFulltextTestSupport
         scheduler = dbRule.resolveDependency( JobScheduler.class );
         fs = dbRule.resolveDependency( FileSystemAbstraction.class );
         storeDir = dbRule.getStoreDir();
-        transactionIdStore = dbRule.resolveDependency( TransactionIdStore.class );
     }
 
     protected FulltextProviderImpl createProvider()
     {
-        return new FulltextProviderImpl( db, LOG, availabilityGuard, scheduler, transactionIdStore,
-                fs, storeDir, analyzer, Duration.ofSeconds( 1 ) );
+        return new FulltextProviderImpl( db, LOG, availabilityGuard, scheduler, fs, storeDir, analyzer, Duration.ofSeconds( 1 ) );
     }
 
     protected long createNodeIndexableByPropertyValue( Object propertyValue )

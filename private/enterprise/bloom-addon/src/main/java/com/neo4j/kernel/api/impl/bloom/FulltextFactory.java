@@ -10,7 +10,7 @@ import org.apache.lucene.index.IndexWriterConfig;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
+import java.util.Set;
 
 import org.neo4j.function.Factory;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -24,7 +24,7 @@ import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
  */
 class FulltextFactory
 {
-    public static final String INDEX_DIR = "bloom_fts";
+    private static final String INDEX_DIR = "bloom_fts";
     private final FileSystemAbstraction fileSystem;
     private final WritableIndexPartitionFactory partitionFactory;
     private final File indexDir;
@@ -36,7 +36,6 @@ class FulltextFactory
      * @param fileSystem The filesystem to use.
      * @param storeDir Store directory of the database.
      * @param analyzerClassName The Lucene analyzer to use for the {@link LuceneFulltext} created by this factory.
-     * @throws IOException
      */
     FulltextFactory( FileSystemAbstraction fileSystem, File storeDir, String analyzerClassName )
     {
@@ -62,18 +61,18 @@ class FulltextFactory
         return analyzer;
     }
 
-    LuceneFulltext createFulltextIndex( String identifier, int side, FulltextIndexType type, List<String> properties )
+    LuceneFulltext createFulltextIndex( String identifier, IndexSide side, FulltextIndexType type, Set<String> properties )
     {
-        File indexRootFolder = new File( indexDir, identifier + side );
+        File indexRootFolder = new File( indexDir, identifier + side.ordinal() );
         LuceneIndexStorageBuilder storageBuilder = LuceneIndexStorageBuilder.create();
         storageBuilder.withFileSystem( fileSystem ).withIndexFolder( indexRootFolder );
         PartitionedIndexStorage storage = storageBuilder.build();
         return new LuceneFulltext( storage, partitionFactory, properties, analyzer, identifier, type );
     }
 
-    LuceneFulltext openFulltextIndex( String identifier, int side, FulltextIndexType type ) throws IOException
+    LuceneFulltext openFulltextIndex( String identifier, IndexSide side, FulltextIndexType type ) throws IOException
     {
-        File indexRootFolder = new File( indexDir, identifier + side );
+        File indexRootFolder = new File( indexDir, identifier + side.ordinal() );
         LuceneIndexStorageBuilder storageBuilder = LuceneIndexStorageBuilder.create();
         storageBuilder.withFileSystem( fileSystem ).withIndexFolder( indexRootFolder );
         PartitionedIndexStorage storage = storageBuilder.build();

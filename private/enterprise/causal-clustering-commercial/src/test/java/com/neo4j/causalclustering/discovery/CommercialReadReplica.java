@@ -14,11 +14,9 @@ import java.util.function.IntFunction;
 
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.GraphDatabaseDependencies;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
-
 
 public class CommercialReadReplica extends ReadReplica
 {
