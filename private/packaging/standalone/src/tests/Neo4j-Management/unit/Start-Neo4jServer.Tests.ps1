@@ -5,9 +5,9 @@
 #
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.", ".")
+$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.",".")
 $common = Join-Path (Split-Path -Parent $here) 'Common.ps1'
-. $common
+.$common
 
 Import-Module "$src\Neo4j-Management.psm1"
 
@@ -18,7 +18,7 @@ InModuleScope Neo4j-Management {
     #  Mock Java environment
     $javaHome = global:New-MockJavaHome
     Mock Get-Neo4jEnv { $javaHome } -ParameterFilter { $Name -eq 'JAVA_HOME' }
-    Mock Set-Neo4jEnv { }
+    Mock Set-Neo4jEnv {}
     Mock Test-Path { $false } -ParameterFilter {
       $Path -like 'Registry::*\JavaSoft\Java Runtime Environment'
     }
@@ -45,7 +45,7 @@ InModuleScope Neo4j-Management {
 
     # Windows Service Tests
     Context "Missing service name in configuration files" {
-      Mock Start-Service { }
+      Mock Start-Service {}
 
       $serverObject = global:New-MockNeo4jInstall -WindowsService ''
 
@@ -92,15 +92,15 @@ InModuleScope Neo4j-Management {
 
     # Console Tests
     Context "Start as a process and missing Java" {
-      Mock Get-Java { }
-      Mock Start-Process { }
+      Mock Get-Java {}
+      Mock Start-Process {}
 
       $serverObject = (New-Object -TypeName PSCustomObject -Property @{
-        'Home' =  'TestDrive:\some-dir-that-doesnt-exist';
-        'ServerVersion' = '3.0';
-        'ServerType' = 'Enterprise';
-        'DatabaseMode' = '';
-      })
+          'Home' = 'TestDrive:\some-dir-that-doesnt-exist';
+          'ServerVersion' = '3.0';
+          'ServerType' = 'Enterprise';
+          'DatabaseMode' = '';
+        })
       It "throws error if missing Java" {
         { Start-Neo4jServer -Console -Neo4jServer $serverObject -ErrorAction Stop } | Should Throw
       }

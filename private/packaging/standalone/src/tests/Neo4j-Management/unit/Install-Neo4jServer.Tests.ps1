@@ -5,9 +5,9 @@
 #
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.", ".")
+$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.",".")
 $common = Join-Path (Split-Path -Parent $here) 'Common.ps1'
-. $common
+.$common
 
 Import-Module "$src\Neo4j-Management.psm1"
 
@@ -18,7 +18,7 @@ InModuleScope Neo4j-Management {
     #  Mock Java environment
     $javaHome = global:New-MockJavaHome
     Mock Get-Neo4jEnv { $javaHome } -ParameterFilter { $Name -eq 'JAVA_HOME' }
-    Mock Set-Neo4jEnv { }
+    Mock Set-Neo4jEnv {}
     Mock Test-Path { $false } -ParameterFilter {
       $Path -like 'Registry::*\JavaSoft\Java Runtime Environment'
     }
@@ -34,7 +34,7 @@ InModuleScope Neo4j-Management {
       $serverObject = global:New-InvalidNeo4jInstall
 
       It "return throw if invalid or missing neo4j directory" {
-        { Install-Neo4jServer -Neo4jServer $serverObject  -ErrorAction Stop }  | Should Throw
+        { Install-Neo4jServer -Neo4jServer $serverObject -ErrorAction Stop } | Should Throw
       }
     }
 
@@ -42,7 +42,7 @@ InModuleScope Neo4j-Management {
       $serverObject = global:New-MockNeo4jInstall -WindowsService ''
 
       It "return throw if invalid or missing service name" {
-        { Install-Neo4jServer -Neo4jServer $serverObject  -ErrorAction Stop }  | Should Throw
+        { Install-Neo4jServer -Neo4jServer $serverObject -ErrorAction Stop } | Should Throw
       }
     }
 
@@ -79,7 +79,7 @@ InModuleScope Neo4j-Management {
 
     Context "Installs windows service with success" {
       Mock Get-Service { return $null }
-      Mock Invoke-ExternalCommand -Verifiable { @{ 'exitCode' = 0} }
+      Mock Invoke-ExternalCommand -Verifiable { @{ 'exitCode' = 0 } }
 
       $serverObject = global:New-MockNeo4jInstall
 

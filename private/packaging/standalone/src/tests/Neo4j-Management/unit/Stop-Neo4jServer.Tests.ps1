@@ -5,9 +5,9 @@
 #
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.", ".")
+$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.",".")
 $common = Join-Path (Split-Path -Parent $here) 'Common.ps1'
-. $common
+.$common
 
 Import-Module "$src\Neo4j-Management.psm1"
 
@@ -18,7 +18,7 @@ InModuleScope Neo4j-Management {
     #  Mock Java environment
     $javaHome = global:New-MockJavaHome
     Mock Get-Neo4jEnv { $javaHome } -ParameterFilter { $Name -eq 'JAVA_HOME' }
-    Mock Set-Neo4jEnv { }
+    Mock Set-Neo4jEnv {}
     Mock Test-Path { $false } -ParameterFilter {
       $Path -like 'Registry::*\JavaSoft\Java Runtime Environment'
     }
@@ -32,7 +32,7 @@ InModuleScope Neo4j-Management {
     Mock Invoke-ExternalCommand { throw "Should not call Invoke-ExternalCommand mock" }
 
     Context "Missing service name in configuration files" {
-      Mock Invoke-ExternalCommand { }
+      Mock Invoke-ExternalCommand {}
 
       $serverObject = global:New-MockNeo4jInstall -WindowsService ''
 
@@ -43,7 +43,7 @@ InModuleScope Neo4j-Management {
 
     Context "Stop service failed" {
       Mock Get-Service { return 'service' }
-      Mock Invoke-ExternalCommand { throw "Called Stop-Service incorrectly"}
+      Mock Invoke-ExternalCommand { throw "Called Stop-Service incorrectly" }
       Mock Invoke-ExternalCommand -Verifiable { @{ exitCode = 1; capturedOutput = 'failed to stop' } } -ParameterFilter { $Command -like '*prunsrv*.exe' }
 
       $serverObject = global:New-MockNeo4jInstall
@@ -60,7 +60,7 @@ InModuleScope Neo4j-Management {
 
     Context "Stop service succesfully" {
       Mock Get-Service { return 'service' }
-      Mock Invoke-ExternalCommand { throw "Called Stop-Service incorrectly"}
+      Mock Invoke-ExternalCommand { throw "Called Stop-Service incorrectly" }
       Mock Invoke-ExternalCommand -Verifiable { @{ exitCode = 0 } } -ParameterFilter { $Command -like '*prunsrv*.exe' }
 
       $serverObject = global:New-MockNeo4jInstall
