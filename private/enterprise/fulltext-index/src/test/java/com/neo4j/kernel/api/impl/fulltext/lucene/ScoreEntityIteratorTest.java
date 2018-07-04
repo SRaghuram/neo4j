@@ -16,7 +16,6 @@ import static org.junit.Assert.assertTrue;
 
 public class ScoreEntityIteratorTest
 {
-
     @Test
     public void concatShouldReturnOrderedResults()
     {
@@ -74,7 +73,7 @@ public class ScoreEntityIteratorTest
 
     private ScoreEntityIterator iteratorOf( ScoreEntityIterator.ScoreEntry[] input )
     {
-        return new ScoreEntityIterator( null )
+        return new ScoreEntityIterator( null, null )
         {
             Iterator<ScoreEntry> entries = Arrays.asList( input ).iterator();
 

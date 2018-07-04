@@ -52,7 +52,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsNothing( "nodes", "and" );
             assertQueryFindsNothing( "nodes", "in" );

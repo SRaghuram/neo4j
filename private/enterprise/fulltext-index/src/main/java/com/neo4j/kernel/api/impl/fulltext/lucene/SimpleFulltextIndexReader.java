@@ -15,6 +15,7 @@ import org.apache.lucene.search.Sort;
 import java.io.IOException;
 
 import org.neo4j.kernel.api.impl.index.collector.DocValuesCollector;
+import org.neo4j.kernel.api.impl.index.collector.ValuesIterator;
 import org.neo4j.kernel.api.impl.index.partition.PartitionSearcher;
 import org.neo4j.kernel.api.impl.schema.reader.IndexReaderCloseException;
 
@@ -65,7 +66,9 @@ class SimpleFulltextIndexReader extends FulltextIndexReader
         {
             DocValuesCollector docValuesCollector = new DocValuesCollector( true );
             getIndexSearcher().search( query, docValuesCollector );
-            return new ScoreEntityIterator( docValuesCollector.getSortedValuesIterator( FIELD_ENTITY_ID, Sort.RELEVANCE ) );
+            ValuesIterator sortedValuesIterator =
+                    docValuesCollector.getSortedValuesIterator( FIELD_ENTITY_ID, Sort.RELEVANCE );
+            return new ScoreEntityIterator( sortedValuesIterator, this::close );
         }
         catch ( IOException e )
         {

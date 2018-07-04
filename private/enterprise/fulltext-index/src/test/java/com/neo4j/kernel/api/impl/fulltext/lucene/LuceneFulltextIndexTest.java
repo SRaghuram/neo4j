@@ -48,7 +48,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "hello", firstID );
             assertQueryFindsIds( NODE_INDEX_NAME, "zebra", secondID );
@@ -80,7 +80,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "1", firstID );
             assertQueryFindsIds( NODE_INDEX_NAME, "234", secondID );
@@ -110,7 +110,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "true", firstID );
             assertQueryFindsIds( NODE_INDEX_NAME, "false", secondID );
@@ -142,7 +142,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "live", firstID );
             assertQueryFindsIds( NODE_INDEX_NAME, "27", secondID );
@@ -182,7 +182,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsNothing( NODE_INDEX_NAME, "hello" );
             assertQueryFindsNothing( NODE_INDEX_NAME, "zebra" );
@@ -227,7 +227,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsNothing( NODE_INDEX_NAME, "hello" );
             assertQueryFindsNothing( NODE_INDEX_NAME, "zebra" );
@@ -282,7 +282,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "hello", secondID );
             assertQueryFindsNothing( NODE_INDEX_NAME, "zebra" );
@@ -317,7 +317,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "hello", firstID );
             assertQueryFindsNothing( NODE_INDEX_NAME, "zebra" );
@@ -353,7 +353,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "tomtar Karl", firstID, secondID, thirdID );
         }
@@ -393,7 +393,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIdsInOrder( NODE_INDEX_NAME, "Tom Hanks", fourthID, thirdID, firstID, secondID );
         }
@@ -432,7 +432,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "hello", firstNodeID );
             assertQueryFindsIds( NODE_INDEX_NAME, "zebra", secondNodeID );
@@ -474,7 +474,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
 
             tx.success();
         }
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsNothing( NODE_INDEX_NAME, "zebra" );
             assertQueryFindsNothing( REL_INDEX_NAME, "zebra" );
@@ -518,7 +518,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         }
         await( nodesIndex );
         await( relsIndex );
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "hello", firstNodeID );
             assertQueryFindsIds( NODE_INDEX_NAME, "string", secondNodeID );
@@ -560,7 +560,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "thing zebra", firstID, thirdID );
         }
@@ -584,7 +584,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "thing zebra", firstID, secondID, fourthID );
         }
@@ -627,7 +627,7 @@ public class LuceneFulltextIndexTest extends LuceneFulltextTestSupport
         }
         await( index );
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             assertQueryFindsIds( NODE_INDEX_NAME, "thing zebra", firstID, secondID );
         }

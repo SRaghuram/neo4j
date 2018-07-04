@@ -5,6 +5,8 @@
  */
 package com.neo4j.kernel.bloom;
 
+import org.eclipse.collections.api.set.primitive.MutableLongSet;
+import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -13,16 +15,19 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.neo4j.causalclustering.discovery.Cluster;
 import org.neo4j.causalclustering.discovery.ClusterMember;
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.test.causalclustering.ClusterRule;
 
 import static com.neo4j.kernel.bloom.BloomIT.AWAIT_POPULATION;
@@ -32,7 +37,10 @@ import static com.neo4j.kernel.bloom.BloomIT.NODES;
 import static com.neo4j.kernel.bloom.BloomIT.RELS;
 import static com.neo4j.kernel.bloom.BloomIT.SET_NODE_KEYS;
 import static com.neo4j.kernel.bloom.BloomIT.SET_REL_KEYS;
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -40,7 +48,10 @@ import static org.junit.Assert.assertTrue;
 public class BloomClusterIT
 {
     @Rule
-    public final ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 ).withTimeout( 1000, SECONDS );
+    public final ClusterRule clusterRule = new ClusterRule()
+            .withNumberOfCoreMembers( 3 )
+            .withNumberOfReadReplicas( 1 )
+            .withTimeout( 1000, SECONDS );
 
     private Cluster cluster;
 
@@ -77,18 +88,17 @@ public class BloomClusterIT
         } );
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( String.format( SET_NODE_KEYS, "\"prop\", \"otherprop\"" ) );
-            db.execute( String.format( SET_REL_KEYS, "\"prop\"" ) );
+            db.execute( format( SET_NODE_KEYS, "\"prop\", \"otherprop\"" ) );
+            db.execute( format( SET_REL_KEYS, "\"prop\"" ) );
             tx.success();
         } );
-        //TODO remove Thread.sleep
-        Thread.sleep( 4000 );
+        awaitCatchup( cluster );
 
         // then
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityid", cluster );
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
-        query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityid", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), format( NODES, "\"integration\"" ), "entityid", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), format( NODES, "\"test\"" ), "entityid", cluster );
+        query( singletonList( node2[0].getId() ), format( NODES, "\"related\"" ), "entityid", cluster );
+        query( singletonList( relationship[0].getId() ), format( RELS, "\"relate\"" ), "entityid", cluster );
     }
 
     @Test
@@ -100,8 +110,8 @@ public class BloomClusterIT
         final Relationship[] relationship = new Relationship[1];
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( String.format( SET_NODE_KEYS, "\"prop\", \"otherprop\"" ) );
-            db.execute( String.format( SET_REL_KEYS, "\"prop\"" ) );
+            db.execute( format( SET_NODE_KEYS, "\"prop\", \"otherprop\"" ) );
+            db.execute( format( SET_REL_KEYS, "\"prop\"" ) );
             tx.success();
         } );
         cluster.coreTx( ( db, tx ) ->
@@ -114,14 +124,13 @@ public class BloomClusterIT
             relationship[0].setProperty( "prop", "They relate" );
             tx.success();
         } );
-        //TODO remove Thread.sleep
-        Thread.sleep( 4000 );
+        awaitCatchup( cluster );
 
         // then
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityid", cluster );
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
-        query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityid", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), format( NODES, "\"integration\"" ), "entityid", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), format( NODES, "\"test\"" ), "entityid", cluster );
+        query( singletonList( node2[0].getId() ), format( NODES, "\"related\"" ), "entityid", cluster );
+        query( singletonList( relationship[0].getId() ), format( RELS, "\"relate\"" ), "entityid", cluster );
     }
 
     @Test
@@ -133,8 +142,8 @@ public class BloomClusterIT
         final Relationship[] relationship = new Relationship[1];
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( String.format( SET_NODE_KEYS, "\"prop\", \"otherprop\"" ) );
-            db.execute( String.format( SET_REL_KEYS, "\"prop\"" ) );
+            db.execute( format( SET_NODE_KEYS, "\"prop\", \"otherprop\"" ) );
+            db.execute( format( SET_REL_KEYS, "\"prop\"" ) );
             tx.success();
         } );
         cluster.coreTx( ( db, tx ) ->
@@ -147,32 +156,26 @@ public class BloomClusterIT
             relationship[0].setProperty( "prop", "They relate" );
             tx.success();
         } );
-        //TODO remove Thread.sleep
-        Thread.sleep( 2000 );
+        awaitCatchup( cluster );
 
         // then
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityid", cluster );
-        query( asList( node1[0].getId(), node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
-        query( asList( relationship[0].getId() ), String.format( RELS, "\"relate\"" ), "entityid", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), format( NODES, "\"integration\"" ), "entityid", cluster );
+        query( asList( node1[0].getId(), node2[0].getId() ), format( NODES, "\"test\"" ), "entityid", cluster );
+        query( singletonList( node2[0].getId() ), format( NODES, "\"related\"" ), "entityid", cluster );
+        query( singletonList( relationship[0].getId() ), format( RELS, "\"relate\"" ), "entityid", cluster );
 
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( String.format( SET_NODE_KEYS, "\"otherprop\"" ) );
-            db.execute( String.format( SET_REL_KEYS, "" ) );
+            db.execute( format( SET_NODE_KEYS, "\"otherprop\"" ) );
+            db.execute( format( SET_REL_KEYS, "" ) );
             tx.success();
         } );
-        //TODO remove Thread.sleep
-        Thread.sleep( 2000 );
-        cluster.coreTx( ( db, tx ) ->
-        {
-            db.execute( AWAIT_POPULATION );
-            tx.success();
-        } );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"integration\"" ), "entityid", cluster );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"test\"" ), "entityid", cluster );
-        query( asList( node2[0].getId() ), String.format( NODES, "\"related\"" ), "entityid", cluster );
-        query( asList( ), String.format( RELS, "\"relate\"" ), "entityId", cluster );
+        awaitCatchup( cluster );
+
+        query( singletonList( node2[0].getId() ), format( NODES, "\"integration\"" ), "entityid", cluster );
+        query( singletonList( node2[0].getId() ), format( NODES, "\"test\"" ), "entityid", cluster );
+        query( singletonList( node2[0].getId() ), format( NODES, "\"related\"" ), "entityid", cluster );
+        query( emptyList(), format( RELS, "\"relate\"" ), "entityId", cluster );
     }
 
     @Test
@@ -181,25 +184,46 @@ public class BloomClusterIT
         // when
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( String.format( SET_NODE_KEYS, "\"prop\", \"otherprop\", \"proppmatt\"" ) );
-            db.execute( String.format( SET_REL_KEYS, "\"ata\", \"mata\", \"matt\"" ) );
+            db.execute( format( SET_NODE_KEYS, "\"prop\", \"otherprop\", \"proppmatt\"" ) );
+            db.execute( format( SET_REL_KEYS, "\"ata\", \"mata\", \"matt\"" ) );
             tx.success();
         } );
-        //TODO remove Thread.sleep
-        Thread.sleep( 2000 );
+        awaitCatchup( cluster );
 
         // then
         query( asList( "prop", "otherprop", "proppmatt" ), GET_NODE_KEYS, "propertyKey", cluster );
         query( asList( "ata", "mata", "matt" ), GET_REL_KEYS, "propertyKey", cluster );
     }
 
-    public void query( List<Object> expected, String query, String key, Cluster cluster )
+    private void awaitCatchup( Cluster cluster ) throws InterruptedException
+    {
+        MutableLongSet appliedTransactions = new LongHashSet();
+        Consumer<ClusterMember> awaitPopulationAndCollectionAppliedTransactionId = member ->
+        {
+            member.database().execute( AWAIT_POPULATION );
+            DependencyResolver dependencyResolver = member.database().getDependencyResolver();
+            TransactionIdStore transactionIdStore = dependencyResolver.resolveDependency( TransactionIdStore.class );
+            appliedTransactions.add( transactionIdStore.getLastClosedTransactionId() );
+        };
+        do
+        {
+            appliedTransactions.clear();
+            Thread.sleep( 25 );
+            Collection<CoreClusterMember> cores = cluster.coreMembers();
+            Collection<ReadReplica> readReplicas = cluster.readReplicas();
+            cores.forEach( awaitPopulationAndCollectionAppliedTransactionId );
+            readReplicas.forEach( awaitPopulationAndCollectionAppliedTransactionId );
+        }
+        while ( appliedTransactions.size() != 1 );
+    }
+
+    private void query( List<Object> expected, String query, String key, Cluster cluster ) throws Exception
     {
         query( expected, query, key, cluster.coreMembers() );
         query( expected, query, key, cluster.readReplicas() );
     }
 
-    public void query( List<Object> expected, String query, String key, Collection<? extends ClusterMember> clusterMembers )
+    private void query( List<Object> expected, String query, String key, Collection<? extends ClusterMember> clusterMembers ) throws Exception
     {
         for ( ClusterMember clusterMember : clusterMembers )
         {
@@ -209,7 +233,7 @@ public class BloomClusterIT
             {
                 results.add( result.next().get( key ) );
             }
-            String errorMessage = errorMessage( results, expected );
+            String errorMessage = errorMessage( results, expected ) + " (" + clusterMember + ", leader is " +  cluster.awaitLeader() + ") query = " + query;
             assertEquals( errorMessage, expected.size(), results.size() );
             int i = 0;
             while ( !results.isEmpty() )
@@ -221,6 +245,6 @@ public class BloomClusterIT
 
     private String errorMessage( Set<Object> actual, List<Object> expected )
     {
-        return String.format( "Query results differ from expected, expected %s but got %s", expected, actual );
+        return format( "Query results differ from expected, expected %s but got %s", expected, actual );
     }
 }

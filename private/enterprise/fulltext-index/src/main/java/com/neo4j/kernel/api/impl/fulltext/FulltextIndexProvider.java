@@ -183,12 +183,11 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         if ( fulltextIndexAccessor == null )
         {
             throw new IndexNotFoundKernelException(
-                    String.format( "The requested fulltext index with name %s could not be accessed. Perhaps population has not completed yet?", indexName ) );
+                    "The requested fulltext index with name '" + indexName +
+                    "' could not be accessed. Perhaps population has not completed yet?" );
         }
-        try ( FulltextIndexReader fulltextIndexReader = fulltextIndexAccessor.newReader() )
-        {
-            return fulltextIndexReader.query( queryString );
-        }
+        FulltextIndexReader fulltextIndexReader = fulltextIndexAccessor.newReader();
+        return fulltextIndexReader.query( queryString );
     }
     private class BadSchemaException extends IllegalArgumentException
     {

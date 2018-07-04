@@ -11,6 +11,7 @@ import org.apache.lucene.queryparser.classic.ParseException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -37,19 +38,21 @@ import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.SCHEMA;
 
 /**
- * Procedures for querying the bloom fulltext addon.
+ * Procedures for querying the Fulltext indexes.
  */
 public class FulltextProcedures
 {
     @Context
     public KernelTransaction tx;
 
+    @SuppressWarnings( "WeakerAccess" )
     @Context
     public FulltextAdapter accessor;
 
     private static final Function<ScoreEntityIterator.ScoreEntry,EntityOutput> QUERY_RESULT_MAPPER =
             result -> new EntityOutput( result.entityId(), result.score() );
 
+    // TODO use `db.awaitIndex` instead.
     @Description( "Await the completion of any background index population for the given index" )
     @Procedure( name = "fulltext.awaitPopulation", mode = READ )
     public void awaitPopulation( @Name( "indexName" ) String name ) throws IndexPopulationFailedKernelException, IndexNotFoundKernelException
@@ -76,6 +79,7 @@ public class FulltextProcedures
         }
     }
 
+    // TODO remove or make this the same output as what `db.indexes` gives.
     @Description( "Returns the schema for the given index" )
     @Procedure( name = "fulltext.getIndexSchema", mode = READ )
     public Stream<SchemaOutput> getIndexSchema( @Name( "indexName" ) String name )
@@ -86,16 +90,23 @@ public class FulltextProcedures
 
     @Description( "Create a node fulltext index for all labels and the given properties" )
     @Procedure( name = "fulltext.createAnyNodeLabelIndex", mode = SCHEMA )
-    public void createNodeFulltextIndex( @Name( "indexName" ) String name, @Name( "propertyNames" ) List<String> properties )
+    public void createAnyNodeFulltextIndex(
+            @Name( "indexName" ) String name,
+            @Name( "propertyNames" ) List<String> properties,
+            @Name( value = "config", defaultValue = "") Map<String,String> config )
             throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
-        createNodeFulltextIndex( name, Collections.emptyList(), properties );
+        createNodeFulltextIndex( name, Collections.emptyList(), properties, config );
     }
 
     @Description( "Create a node fulltext index for the given labels and properties" )
     @Procedure( name = "fulltext.createNodeIndex", mode = SCHEMA )
-    public void createNodeFulltextIndex( @Name( "indexName" ) String name, @Name( "labels" ) List<String> labels,
-            @Name( "propertyNames" ) List<String> properties ) throws InvalidTransactionTypeKernelException, SchemaKernelException
+    public void createNodeFulltextIndex(
+            @Name( "indexName" ) String name,
+            @Name( "labels" ) List<String> labels,
+            @Name( "propertyNames" ) List<String> properties,
+            @Name( value = "config", defaultValue = "") Map<String,String> config )
+            throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
         SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, labels.toArray( new String[0] ),
                 Optional.empty(), properties.toArray( new String[0] ) );
@@ -104,16 +115,23 @@ public class FulltextProcedures
 
     @Description( "Create a relationship fulltext index for all relationship types and the given properties" )
     @Procedure( name = "fulltext.createAnyRelationshipTypeIndex", mode = SCHEMA )
-    public void createRelationshipFulltextIndex( @Name( "indexName" ) String name, @Name( "propertyNames" ) List<String> properties )
+    public void createAnyRelationshipFulltextIndex(
+            @Name( "indexName" ) String name,
+            @Name( "propertyNames" ) List<String> properties,
+            @Name( value = "config", defaultValue = "") Map<String,String> config )
             throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
-        createRelationshipFulltextIndex( name, Collections.emptyList(), properties );
+        createRelationshipFulltextIndex( name, Collections.emptyList(), properties, config );
     }
 
     @Description( "Create a relationship fulltext index for the given relationship types and properties" )
     @Procedure( name = "fulltext.createRelationshipIndex", mode = SCHEMA )
-    public void createRelationshipFulltextIndex( @Name( "indexName" ) String name, @Name( "relatoinshipTypes" ) List<String> reltypes,
-            @Name( "propertyNames" ) List<String> properties ) throws InvalidTransactionTypeKernelException, SchemaKernelException
+    public void createRelationshipFulltextIndex(
+            @Name( "indexName" ) String name,
+            @Name( "relatoinshipTypes" ) List<String> reltypes,
+            @Name( "propertyNames" ) List<String> properties,
+            @Name( value = "config", defaultValue = "") Map<String,String> config )
+            throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
         SchemaDescriptor schemaDescriptor =
                 accessor.schemaFor( EntityType.RELATIONSHIP, reltypes.toArray( new String[0] ), Optional.empty(), properties.toArray( new String[0] ) );
@@ -127,6 +145,7 @@ public class FulltextProcedures
         tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( name ) );
     }
 
+    // TODO create a `db.indexStatus` procedure instead.
     @Description( "Check the status specified index" )
     @Procedure( name = "fulltext.indexStatus", mode = READ )
     public Stream<StatusOutput> indexStatus( @Name( "indexName" ) String name ) throws IndexNotFoundKernelException
@@ -141,11 +160,11 @@ public class FulltextProcedures
     public Stream<EntityOutput> queryFulltext( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
             throws ParseException, IndexNotFoundKernelException, IOException
     {
-
         ScoreEntityIterator resultIterator = accessor.query( name, query );
         return resultIterator.stream().map( QUERY_RESULT_MAPPER );
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class EntityOutput
     {
         public final long entityId;

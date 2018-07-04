@@ -41,17 +41,17 @@ import static org.junit.Assert.assertTrue;
 
 public class FulltextProceduresTest
 {
-    static final String AWAIT_POPULATION = "CALL fulltext.awaitPopulation(\"%s\")";
-    static final String GET_SCHEMA = "CALL fulltext.getIndexSchema(\"%s\")";
-    static final String NODE_CREATE = "CALL fulltext.createNodeIndex(\"%s\", %s, %s )";
-    static final String NODE_ANY_CREATE = "CALL fulltext.createAnyNodeLabelIndex(\"%s\", %s)";
-    static final String RELATIONSHIP_CREATE = "CALL fulltext.createRelationshipIndex(\"%s\", %s, %s)";
-    static final String RELATIONSHIP_ANY_CREATE = "CALL fulltext.createAnyRelationshipTypeIndex(\"%s\", %s)";
-    static final String DROP = "CALL fulltext.dropIndex(\"%s\")";
-    static final String STATUS = "CALL fulltext.indexStatus(\"%s\")";
-    static final String QUERY = "CALL fulltext.query(\"%s\", \"%s\")";
-    static final String ENTITYID = "entityId";
-    static final String SCORE = "score";
+    private static final String AWAIT_POPULATION = "CALL fulltext.awaitPopulation(\"%s\")";
+    private static final String GET_SCHEMA = "CALL fulltext.getIndexSchema(\"%s\")";
+    private static final String NODE_CREATE = "CALL fulltext.createNodeIndex(\"%s\", %s, %s )";
+    private static final String NODE_ANY_CREATE = "CALL fulltext.createAnyNodeLabelIndex(\"%s\", %s)";
+    private static final String RELATIONSHIP_CREATE = "CALL fulltext.createRelationshipIndex(\"%s\", %s, %s)";
+    private static final String RELATIONSHIP_ANY_CREATE = "CALL fulltext.createAnyRelationshipTypeIndex(\"%s\", %s)";
+    private static final String DROP = "CALL fulltext.dropIndex(\"%s\")";
+    private static final String STATUS = "CALL fulltext.indexStatus(\"%s\")";
+    private static final String QUERY = "CALL fulltext.query(\"%s\", \"%s\")";
+    private static final String ENTITYID = "entityId";
+    private static final String SCORE = "score";
 
     @Rule
     public final DefaultFileSystemRule fs = new DefaultFileSystemRule();
@@ -241,7 +241,7 @@ public class FulltextProceduresTest
     {
         db = getDb();
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             // The property keys we ask for do not exist, so those tokens will have to be allocated.
             // This test verifies that the locking required for the index modifications do not conflict with the
@@ -306,7 +306,7 @@ public class FulltextProceduresTest
     {
         db = getDb();
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             Node node = db.createNode();
             node.addLabel( Label.label( "SOME_LABEL" ) );
@@ -321,7 +321,7 @@ public class FulltextProceduresTest
     {
         db = getDb();
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             Node node = db.createNode();
             node.addLabel( Label.label( "SOME_LABEL" ) );
@@ -337,7 +337,7 @@ public class FulltextProceduresTest
         db = getDb();
 
         // In fact, there should be no conflict here at all, so there is no exception to expect.
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             db.execute( format( NODE_CREATE, "nodesA", array( "SOME_LABEL" ), array( "prop" ) ) );
             db.execute( format( RELATIONSHIP_CREATE, "relsA", array( "SOME_REL_TYPE" ), array( "prop" ) ) );
@@ -351,7 +351,7 @@ public class FulltextProceduresTest
     {
         db = getDb();
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             db.execute( format( NODE_ANY_CREATE, "nodesA", array( "prop" ) ) );
             db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "prop" ) ) );
@@ -365,7 +365,7 @@ public class FulltextProceduresTest
     {
         db = getDb();
 
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             db.execute( format( NODE_ANY_CREATE, "nodesA", array( "prop" ) ) );
             db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "prop" ) ) );
@@ -382,7 +382,7 @@ public class FulltextProceduresTest
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
         db.execute( format( RELATIONSHIP_ANY_CREATE, "rel-any", array( "prop1", "prop2" ) ) ).close();
         db.execute( format( RELATIONSHIP_CREATE, "rel", array( "Reltype1", "Reltype2" ), array( "prop1", "prop2" ) ) ).close();
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             db.execute( format( AWAIT_POPULATION, "node-any" ) ).close();
             db.execute( format( AWAIT_POPULATION, "node" ) ).close();

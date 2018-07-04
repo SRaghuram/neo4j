@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
+import org.neo4j.internal.kernel.api.schema.SchemaUtil;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndex;
 import org.neo4j.kernel.api.impl.index.partition.AbstractIndexPartition;
 import org.neo4j.kernel.api.impl.index.partition.IndexPartitionFactory;
@@ -63,6 +64,19 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
     {
         return Objects.hash( identifier, type );
     }
+
+    @Override
+    public String toString()
+    {
+        return "LuceneFulltextIndex{" +
+               "analyzer=" + analyzer.getClass().getSimpleName() +
+               ", identifier='" + identifier + '\'' +
+               ", type=" + type +
+               ", properties=" + properties +
+               ", descriptor=" + descriptor.userDescription( SchemaUtil.idTokenNameLookup ) +
+               '}';
+    }
+
 
     @Override
     protected FulltextIndexReader createSimpleReader( List<AbstractIndexPartition> partitions ) throws IOException

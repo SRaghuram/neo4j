@@ -17,4 +17,10 @@ class WritableFulltextIndex extends WritableAbstractDatabaseIndex<LuceneFulltext
     {
         super( new LuceneFulltextIndex( storage, partitionFactory, descriptor ) );
     }
+
+    @Override
+    public String toString()
+    {
+        return luceneIndex.toString();
+    }
 }

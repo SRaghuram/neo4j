@@ -20,36 +20,13 @@ import org.neo4j.kernel.api.impl.index.collector.ValuesIterator;
  */
 public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEntry>
 {
-    private static final ScoreEntityIterator EMPTY = new ScoreEntityIterator()
-    {
-        @Override
-        public Stream<ScoreEntry> stream()
-        {
-            return Stream.empty();
-        }
-
-        @Override
-        public boolean hasNext()
-        {
-            return false;
-        }
-
-        @Override
-        public ScoreEntry next()
-        {
-            throw new NoSuchElementException( "The iterator is exhausted" );
-        }
-    };
     private final ValuesIterator iterator;
+    private Runnable closeAction;
 
-    ScoreEntityIterator( ValuesIterator sortedValuesIterator )
+    ScoreEntityIterator( ValuesIterator sortedValuesIterator, Runnable closeAction )
     {
         this.iterator = sortedValuesIterator;
-    }
-
-    private ScoreEntityIterator()
-    {
-        this.iterator = null;
+        this.closeAction = closeAction;
     }
 
     public Stream<ScoreEntry> stream()
@@ -60,7 +37,13 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
     @Override
     public boolean hasNext()
     {
-        return iterator.hasNext();
+        boolean hasNext = iterator.hasNext();
+        if ( !hasNext && closeAction != null )
+        {
+            closeAction.run();
+            closeAction = null;
+        }
+        return hasNext;
     }
 
     @Override
@@ -82,14 +65,9 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
      * @param iterators to concatenate
      * @return a {@link ScoreEntityIterator} that iterates over all of the elements in all of the given iterators
      */
-    public static ScoreEntityIterator concat( List<ScoreEntityIterator> iterators )
+    static ScoreEntityIterator concat( List<ScoreEntityIterator> iterators )
     {
         return new ConcatenatingScoreEntityIterator( iterators );
-    }
-
-    public static ScoreEntityIterator emptyIterator()
-    {
-        return EMPTY;
     }
 
     private static class ConcatenatingScoreEntityIterator extends ScoreEntityIterator
@@ -101,6 +79,7 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
 
         ConcatenatingScoreEntityIterator( List<? extends ScoreEntityIterator> iterators )
         {
+            super( null, null );
             this.iterators = iterators;
             this.buffer = new ScoreEntry[iterators.size()];
         }
