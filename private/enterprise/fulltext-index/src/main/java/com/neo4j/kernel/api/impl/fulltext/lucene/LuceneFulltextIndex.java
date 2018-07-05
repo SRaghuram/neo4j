@@ -77,7 +77,6 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
                '}';
     }
 
-
     @Override
     protected FulltextIndexReader createSimpleReader( List<AbstractIndexPartition> partitions ) throws IOException
     {

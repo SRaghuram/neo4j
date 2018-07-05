@@ -5,6 +5,10 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
+import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextAnalyzerTest;
+import org.eclipse.collections.api.iterator.MutableLongIterator;
+import org.eclipse.collections.api.set.primitive.MutableLongSet;
+import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -14,8 +18,10 @@ import org.junit.rules.ExpectedException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.LongFunction;
 import java.util.stream.Collectors;
 
+import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -38,6 +44,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class FulltextProceduresTest
 {
@@ -375,6 +382,96 @@ public class FulltextProceduresTest
     }
 
     @Test
+    public void creatingIndexWithSpecificAnalyzerMustUseThatAnalyzerForPopulationUpdatingAndQuerying() throws Exception
+    {
+        db = getDb();
+        LongHashSet noResults = new LongHashSet();
+        LongHashSet swedishNodes = new LongHashSet();
+        LongHashSet englishNodes = new LongHashSet();
+        LongHashSet swedishRels = new LongHashSet();
+        LongHashSet englishRels = new LongHashSet();
+
+        Label label = Label.label( "LABEL" );
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        String prop = "prop";
+        String labelledSwedishNodes = "labelledSwedishNodes";
+        String typedSwedishRelationships = "typedSwedishRelationships";
+        String anySwedishNodes = "anySwedishNodes";
+        String anySwedishRelationships = "anySwedishRelationships";
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            // Nodes and relationships picked up by index population.
+            Node nodeA = db.createNode( label );
+            nodeA.setProperty( prop, "En apa och en tomte bodde i ett hus." );
+            swedishNodes.add( nodeA.getId() );
+            Node nodeB = db.createNode( label );
+            nodeB.setProperty( prop, "Hello and hello again, in the end." );
+            englishNodes.add( nodeB.getId() );
+            Relationship relA = nodeA.createRelationshipTo( nodeB, relType );
+            relA.setProperty( prop, "En apa och en tomte bodde i ett hus." );
+            swedishRels.add( relA.getId() );
+            Relationship relB = nodeB.createRelationshipTo( nodeA, relType );
+            relB.setProperty( prop, "Hello and hello again, in the end." );
+            englishRels.add( relB.getId() );
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            String lbl = array( label.name() );
+            String rel = array( relType.name() );
+            String props = array( prop );
+            String swedish = props + ", {analyzer: '" + FulltextAnalyzerTest.SWEDISH + "'}";
+            db.execute( format( NODE_CREATE, labelledSwedishNodes, lbl, swedish ) ).close();
+            db.execute( format( RELATIONSHIP_CREATE, typedSwedishRelationships, rel, swedish ) ).close();
+            db.execute( format( NODE_ANY_CREATE, anySwedishNodes, swedish ) ).close();
+            db.execute( format( RELATIONSHIP_ANY_CREATE, anySwedishRelationships, swedish ) ).close();
+            tx.success();
+        }
+        try ( Transaction ignore = db.beginTx() )
+        {
+            db.execute( format( AWAIT_POPULATION, labelledSwedishNodes ) );
+            db.execute( format( AWAIT_POPULATION, typedSwedishRelationships ) );
+            db.execute( format( AWAIT_POPULATION, anySwedishNodes ) );
+            db.execute( format( AWAIT_POPULATION, anySwedishRelationships ) );
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            // Nodes and relationships picked up by index updates.
+            Node nodeC = db.createNode( label );
+            nodeC.setProperty( prop, "En apa och en tomte bodde i ett hus." );
+            swedishNodes.add( nodeC.getId() );
+            Node nodeD = db.createNode( label );
+            nodeD.setProperty( prop, "Hello and hello again, in the end." );
+            englishNodes.add( nodeD.getId() );
+            Relationship relC = nodeC.createRelationshipTo( nodeD, relType );
+            relC.setProperty( prop, "En apa och en tomte bodde i ett hus." );
+            swedishRels.add( relC.getId() );
+            Relationship relD = nodeD.createRelationshipTo( nodeC, relType );
+            relD.setProperty( prop, "Hello and hello again, in the end." );
+            englishRels.add( relD.getId() );
+            tx.success();
+        }
+        try ( Transaction ignore = db.beginTx() )
+        {
+            assertQueryFindsIds( db, db::getNodeById, labelledSwedishNodes, "and", englishNodes ); // english word
+            // swedish stop word (ignored by swedish analyzer, and not among the english nodes)
+            assertQueryFindsIds( db, db::getNodeById, labelledSwedishNodes, "ett", noResults );
+            assertQueryFindsIds( db, db::getNodeById, labelledSwedishNodes, "apa", swedishNodes ); // swedish word
+            assertQueryFindsIds( db, db::getNodeById, anySwedishNodes, "and", englishNodes ); // and so on for the rest of the tests...
+            assertQueryFindsIds( db, db::getNodeById, anySwedishNodes, "ett", noResults );
+            assertQueryFindsIds( db, db::getNodeById, anySwedishNodes, "apa", swedishNodes );
+
+            assertQueryFindsIds( db, db::getRelationshipById, typedSwedishRelationships, "and", englishRels );
+            assertQueryFindsIds( db, db::getRelationshipById, typedSwedishRelationships, "ett", noResults );
+            assertQueryFindsIds( db, db::getRelationshipById, typedSwedishRelationships, "apa", swedishRels );
+            assertQueryFindsIds( db, db::getRelationshipById, anySwedishRelationships, "and", englishRels );
+            assertQueryFindsIds( db, db::getRelationshipById, anySwedishRelationships, "ett", noResults );
+            assertQueryFindsIds( db, db::getRelationshipById, anySwedishRelationships, "apa", swedishRels );
+        }
+    }
+
+    @Test
     public void queryFulltext() throws Exception
     {
         db = getDb();
@@ -438,6 +535,59 @@ public class FulltextProceduresTest
             num++;
         }
         assertEquals( "Number of results differ from expected", ids.length, num );
+    }
+
+    private void assertQueryFindsIds(
+            GraphDatabaseService db, LongFunction<Entity> getEntity, String index, String query, LongHashSet ids )
+    {
+        ids = new LongHashSet( ids ); // Create a defensive copy, because we're going to modify this instance.
+        long[] expectedIds = ids.toArray();
+        MutableLongSet actualIds = new LongHashSet();
+        Result result = db.execute( format( QUERY, index, query ) );
+        Double score = Double.MAX_VALUE;
+        while ( result.hasNext() )
+        {
+            Map entry = result.next();
+            Long nextId = (Long) entry.get( ENTITYID );
+            Double nextScore = (Double) entry.get( SCORE );
+            assertThat( nextScore, lessThanOrEqualTo( score ) );
+            score = nextScore;
+            actualIds.add( nextId );
+            if ( !ids.remove( nextId ) )
+            {
+                String msg = "This id was not expected: " + nextId;
+                failQuery( getEntity, index, query, ids, expectedIds, actualIds, msg );
+            }
+        }
+        if ( !ids.isEmpty() )
+        {
+            String msg = "Not all expected ids were found: " + ids;
+            failQuery( getEntity, index, query, ids, expectedIds, actualIds, msg );
+        }
+    }
+
+    private void failQuery( LongFunction<Entity> getEntity, String index, String query, MutableLongSet ids,
+                            long[] expectedIds, MutableLongSet actualIds, String msg )
+    {
+        StringBuilder message = new StringBuilder( msg ).append( '\n' );
+        MutableLongIterator itr = ids.longIterator();
+        while ( itr.hasNext() )
+        {
+            long id = itr.next();
+            Entity entity = getEntity.apply( id );
+            message.append( '\t' ).append( entity ).append( entity.getAllProperties() ).append( '\n' );
+        }
+        message.append( "for query: '" ).append( query ).append( "'\nin index: " ).append( index ).append( '\n' );
+        message.append( "all expected ids: " ).append( Arrays.toString( expectedIds ) ).append( '\n' );
+        message.append( "actual ids: " ).append( actualIds );
+        itr = actualIds.longIterator();
+        while ( itr.hasNext() )
+        {
+            long id = itr.next();
+            Entity entity = getEntity.apply( id );
+            message.append( "\n\t" ).append( entity ).append( entity.getAllProperties() );
+        }
+        fail( message.toString() );
     }
 
     private String array( String... args )
