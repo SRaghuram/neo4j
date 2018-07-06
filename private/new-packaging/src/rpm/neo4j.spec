@@ -8,7 +8,7 @@ License: ${LICENSE}
 URL: http://neo4j.org/
 #Source: https://github.com/neo4j/neo4j/archive/%{version}.tar.gz
 
-Requires: java-1.8.0-headless, cypher-shell
+Requires: cypher-shell, jre >= 1.8
 
 BuildArch:      noarch
 
