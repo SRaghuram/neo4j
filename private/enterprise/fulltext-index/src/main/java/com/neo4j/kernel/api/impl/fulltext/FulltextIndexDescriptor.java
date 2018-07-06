@@ -13,6 +13,7 @@ import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -92,6 +93,11 @@ public class FulltextIndexDescriptor extends StoreIndexDescriptor
         File settingsFile = new File( indexStorage.getIndexFolder(), INDEX_SETTINGS_FILE );
         Properties settings = new Properties();
         settings.setProperty( SETTING_ANALYZER, analyzer.getClass().getName() );
+        settings.setProperty( "_propertyNames", propertyNames.toString() );
+        settings.setProperty( "_propertyIds", Arrays.toString( properties() ) );
+        settings.setProperty( "_name", name() );
+        settings.setProperty( "_schema_entityType", schema().entityType().name() );
+        settings.setProperty( "_schema_entityTokenIds", Arrays.toString( schema().getEntityTokenIds() ) );
         try ( StoreChannel channel = fs.create( settingsFile );
               Writer writer = fs.openAsWriter( settingsFile, StandardCharsets.UTF_8, false ) )
         {

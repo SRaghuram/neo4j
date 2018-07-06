@@ -177,7 +177,7 @@ public class FulltextProcedures
     public Stream<EntityOutput> queryFulltext( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
             throws ParseException, IndexNotFoundKernelException, IOException
     {
-        ScoreEntityIterator resultIterator = accessor.query( name, query );
+        ScoreEntityIterator resultIterator = accessor.query( tx, name, query );
         return resultIterator.stream().map( QUERY_RESULT_MAPPER );
     }
 

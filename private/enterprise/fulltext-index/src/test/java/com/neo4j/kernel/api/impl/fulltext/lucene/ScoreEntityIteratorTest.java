@@ -73,7 +73,7 @@ public class ScoreEntityIteratorTest
 
     private ScoreEntityIterator iteratorOf( ScoreEntityIterator.ScoreEntry[] input )
     {
-        return new ScoreEntityIterator( null, null )
+        return new ScoreEntityIterator( null )
         {
             Iterator<ScoreEntry> entries = Arrays.asList( input ).iterator();
 

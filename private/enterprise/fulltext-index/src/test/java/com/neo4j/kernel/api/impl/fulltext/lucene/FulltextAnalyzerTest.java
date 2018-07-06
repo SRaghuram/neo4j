@@ -18,6 +18,7 @@ import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 
 import static org.neo4j.storageengine.api.EntityType.NODE;
@@ -52,14 +53,15 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            assertQueryFindsNothing( "nodes", "and" );
-            assertQueryFindsNothing( "nodes", "in" );
-            assertQueryFindsNothing( "nodes", "the" );
-            assertQueryFindsIds( "nodes", "en", id );
-            assertQueryFindsIds( "nodes", "och", id );
-            assertQueryFindsIds( "nodes", "ett", id );
+            KernelTransaction ktx = kernelTransaction( tx );
+            assertQueryFindsNothing( ktx, "nodes", "and" );
+            assertQueryFindsNothing( ktx, "nodes", "in" );
+            assertQueryFindsNothing( ktx, "nodes", "the" );
+            assertQueryFindsIds( ktx, "nodes", "en", id );
+            assertQueryFindsIds( ktx, "nodes", "och", id );
+            assertQueryFindsIds( ktx, "nodes", "ett", id );
         }
     }
 
@@ -87,14 +89,15 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            assertQueryFindsIds( "nodes", "and", id );
-            assertQueryFindsIds( "nodes", "in", id );
-            assertQueryFindsIds( "nodes", "the", id );
-            assertQueryFindsNothing( "nodes", "en" );
-            assertQueryFindsNothing( "nodes", "och" );
-            assertQueryFindsNothing( "nodes", "ett" );
+            KernelTransaction ktx = kernelTransaction( tx );
+            assertQueryFindsIds( ktx, "nodes", "and", id );
+            assertQueryFindsIds( ktx, "nodes", "in", id );
+            assertQueryFindsIds( ktx, "nodes", "the", id );
+            assertQueryFindsNothing( ktx, "nodes", "en" );
+            assertQueryFindsNothing( ktx, "nodes", "och" );
+            assertQueryFindsNothing( ktx, "nodes", "ett" );
         }
     }
 
@@ -123,28 +126,29 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
             tx.success();
         }
 
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            assertQueryFindsNothing( "nodes", "and" );
-            assertQueryFindsNothing( "nodes", "in" );
-            assertQueryFindsNothing( "nodes", "the" );
-            assertQueryFindsIds( "nodes", "en", secondID );
-            assertQueryFindsIds( "nodes", "och", secondID );
-            assertQueryFindsIds( "nodes", "ett", secondID );
+            KernelTransaction ktx = kernelTransaction( tx );
+            assertQueryFindsNothing( ktx, "nodes", "and" );
+            assertQueryFindsNothing( ktx, "nodes", "in" );
+            assertQueryFindsNothing( ktx, "nodes", "the" );
+            assertQueryFindsIds( ktx, "nodes", "en", secondID );
+            assertQueryFindsIds( ktx, "nodes", "och", secondID );
+            assertQueryFindsIds( ktx, "nodes", "ett", secondID );
         }
 
         applySetting( FulltextConfig.fulltext_default_analyzer, SWEDISH );
-        try ( KernelTransactionImplementation transaction = getKernelTransaction() )
+        try ( KernelTransactionImplementation ktx = getKernelTransaction() )
         {
-            SchemaRead schemaRead = transaction.schemaRead();
+            SchemaRead schemaRead = ktx.schemaRead();
             await( schemaRead.indexGetForName( "nodes" ) );
             // These results should be exactly the same as before the configuration change and restart.
-            assertQueryFindsNothing( "nodes", "and" );
-            assertQueryFindsNothing( "nodes", "in" );
-            assertQueryFindsNothing( "nodes", "the" );
-            assertQueryFindsIds( "nodes", "en", secondID );
-            assertQueryFindsIds( "nodes", "och", secondID );
-            assertQueryFindsIds( "nodes", "ett", secondID );
+            assertQueryFindsNothing( ktx, "nodes", "and" );
+            assertQueryFindsNothing( ktx, "nodes", "in" );
+            assertQueryFindsNothing( ktx, "nodes", "the" );
+            assertQueryFindsIds( ktx, "nodes", "en", secondID );
+            assertQueryFindsIds( ktx, "nodes", "och", secondID );
+            assertQueryFindsIds( ktx, "nodes", "ett", secondID );
         }
     }
 }

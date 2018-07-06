@@ -13,6 +13,7 @@ import org.junit.Rule;
 import org.junit.rules.RuleChain;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -28,15 +29,19 @@ import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.impl.api.KernelImpl;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.index.IndexProviderMap;
+import org.neo4j.kernel.impl.coreapi.TopLevelTransaction;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EmbeddedDatabaseRule;
 import org.neo4j.test.rule.RepeatRule;
 
+import static java.lang.String.format;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -119,20 +124,29 @@ public class LuceneFulltextTestSupport
         return relationship.getId();
     }
 
-    void assertQueryFindsNothing( String indexName, String query ) throws IOException, IndexNotFoundKernelException, ParseException
+    public static KernelTransaction kernelTransaction( Transaction tx ) throws Exception
     {
-        assertQueryFindsIds( indexName, query );
+        assertThat( tx, instanceOf( TopLevelTransaction.class ) );
+        Field transactionField = TopLevelTransaction.class.getDeclaredField( "transaction" );
+        transactionField.setAccessible( true );
+        return (KernelTransaction) transactionField.get( tx );
     }
 
-    void assertQueryFindsIds( String indexName, String query, long... ids ) throws IOException, IndexNotFoundKernelException, ParseException
+    void assertQueryFindsNothing( KernelTransaction ktx, String indexName, String query ) throws Exception
     {
-        ScoreEntityIterator result = fulltextAdapter.query( indexName, query );
+        assertQueryFindsIds( ktx, indexName, query );
+    }
+
+    void assertQueryFindsIds( KernelTransaction ktx, String indexName, String query, long... ids ) throws Exception
+    {
+        ScoreEntityIterator result = fulltextAdapter.query( ktx, indexName, query );
         assertQueryResultsMatch( result, ids );
     }
 
-    void assertQueryFindsIdsInOrder( String indexName, String query, long... ids ) throws IOException, IndexNotFoundKernelException, ParseException
+    void assertQueryFindsIdsInOrder( KernelTransaction ktx, String indexName, String query,
+                                     long... ids ) throws IOException, IndexNotFoundKernelException, ParseException
     {
-        ScoreEntityIterator result = fulltextAdapter.query( indexName, query );
+        ScoreEntityIterator result = fulltextAdapter.query( ktx, indexName, query );
         assertQueryResultsMatchInOrder( result, ids );
     }
 
@@ -142,7 +156,8 @@ public class LuceneFulltextTestSupport
         while ( result.hasNext() )
         {
             long next = result.next().entityId();
-            assertTrue( String.format( "Result returned node id %d, expected one of %s", next, Arrays.toString( ids ) ), set.remove( next ) );
+            assertTrue( format( "Result returned node id %d, expected one of %s",
+                    next, Arrays.toString( ids ) ), set.remove( next ) );
         }
         if ( !set.isEmpty() )
         {
@@ -164,7 +179,7 @@ public class LuceneFulltextTestSupport
             float nextScore = scoredResult.score();
             assertThat( nextScore, lessThanOrEqualTo( score ) );
             score = nextScore;
-            assertEquals( String.format( "Result returned node id %d, expected %d", nextId, ids[num] ), ids[num], nextId );
+            assertEquals( format( "Result returned node id %d, expected %d", nextId, ids[num] ), ids[num], nextId );
             num++;
         }
         assertEquals( "Number of results differ from expected", ids.length, num );

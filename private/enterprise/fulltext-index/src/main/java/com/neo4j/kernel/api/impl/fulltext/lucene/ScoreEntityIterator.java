@@ -21,12 +21,10 @@ import org.neo4j.kernel.api.impl.index.collector.ValuesIterator;
 public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEntry>
 {
     private final ValuesIterator iterator;
-    private Runnable closeAction;
 
-    ScoreEntityIterator( ValuesIterator sortedValuesIterator, Runnable closeAction )
+    ScoreEntityIterator( ValuesIterator sortedValuesIterator )
     {
         this.iterator = sortedValuesIterator;
-        this.closeAction = closeAction;
     }
 
     public Stream<ScoreEntry> stream()
@@ -37,13 +35,7 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
     @Override
     public boolean hasNext()
     {
-        boolean hasNext = iterator.hasNext();
-        if ( !hasNext && closeAction != null )
-        {
-            closeAction.run();
-            closeAction = null;
-        }
-        return hasNext;
+        return iterator.hasNext();
     }
 
     @Override
@@ -79,7 +71,7 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
 
         ConcatenatingScoreEntityIterator( List<? extends ScoreEntityIterator> iterators )
         {
-            super( null, null );
+            super( null );
             this.iterators = iterators;
             this.buffer = new ScoreEntry[iterators.size()];
         }

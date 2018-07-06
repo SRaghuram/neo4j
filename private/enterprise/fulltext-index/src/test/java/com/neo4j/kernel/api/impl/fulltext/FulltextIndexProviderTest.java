@@ -5,8 +5,8 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
+import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextTestSupport;
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
-import org.apache.lucene.queryparser.classic.ParseException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,6 +25,7 @@ import org.neo4j.internal.kernel.api.exceptions.InvalidTransactionTypeKernelExce
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.schema.MultiTokenSchemaDescriptor;
 import org.neo4j.kernel.api.schema.index.IndexDescriptor;
@@ -223,21 +224,22 @@ public class FulltextIndexProviderTest
         return secondNodeId;
     }
 
-    private void verifyNodeData( FulltextIndexProvider provider, long thirdNodeid ) throws IndexNotFoundKernelException, ParseException
+    private void verifyNodeData( FulltextIndexProvider provider, long thirdNodeid ) throws Exception
     {
-        try ( Transaction transaction = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            ScoreEntityIterator result = provider.query( "fulltext", "value" );
+            KernelTransaction ktx = LuceneFulltextTestSupport.kernelTransaction( tx );
+            ScoreEntityIterator result = provider.query( ktx, "fulltext", "value" );
             assertTrue( result.hasNext() );
             assertEquals( 0L, result.next().entityId() );
             assertFalse( result.hasNext() );
 
-            result = provider.query( "fulltext", "villa" );
+            result = provider.query( ktx, "fulltext", "villa" );
             assertTrue( result.hasNext() );
             assertEquals( thirdNodeid, result.next().entityId() );
             assertFalse( result.hasNext() );
 
-            result = provider.query( "fulltext", "value3" );
+            result = provider.query( ktx, "fulltext", "value3" );
             PrimitiveLongSet ids = Primitive.longSet();
             ids.add( 0L );
             ids.add( thirdNodeid );
@@ -246,37 +248,38 @@ public class FulltextIndexProviderTest
             assertTrue( result.hasNext() );
             assertTrue( ids.remove( result.next().entityId() ) );
             assertFalse( result.hasNext() );
-            transaction.success();
+            tx.success();
         }
     }
 
-    private void verifyRelationshipData( FulltextIndexProvider provider, long secondRelId ) throws IndexNotFoundKernelException, ParseException
+    private void verifyRelationshipData( FulltextIndexProvider provider, long secondRelId ) throws Exception
     {
-        try ( Transaction transaction = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            ScoreEntityIterator result = provider.query( "fulltext", "valuuu" );
+            KernelTransaction ktx = LuceneFulltextTestSupport.kernelTransaction( tx );
+            ScoreEntityIterator result = provider.query( ktx, "fulltext", "valuuu" );
             assertTrue( result.hasNext() );
             assertEquals( 0L, result.next().entityId() );
             assertFalse( result.hasNext() );
 
-            result = provider.query( "fulltext", "villa" );
+            result = provider.query( ktx, "fulltext", "villa" );
             assertTrue( result.hasNext() );
             assertEquals( secondRelId, result.next().entityId() );
             assertFalse( result.hasNext() );
 
-            result = provider.query( "fulltext", "value3" );
+            result = provider.query( ktx, "fulltext", "value3" );
             assertTrue( result.hasNext() );
             assertEquals( 0L, result.next().entityId() );
             assertTrue( result.hasNext() );
             assertEquals( secondRelId, result.next().entityId() );
             assertFalse( result.hasNext() );
-            transaction.success();
+            tx.success();
         }
     }
 
     private void await( IndexReference descriptor ) throws IndexNotFoundKernelException
     {
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction ignore = db.beginTx() )
         {
             while ( getKernelTransaction().schemaRead().indexGetState( descriptor ) != InternalIndexState.ONLINE )
             {

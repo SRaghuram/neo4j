@@ -68,7 +68,7 @@ class SimpleFulltextIndexReader extends FulltextIndexReader
             getIndexSearcher().search( query, docValuesCollector );
             ValuesIterator sortedValuesIterator =
                     docValuesCollector.getSortedValuesIterator( FIELD_ENTITY_ID, Sort.RELEVANCE );
-            return new ScoreEntityIterator( sortedValuesIterator, this::close );
+            return new ScoreEntityIterator( sortedValuesIterator );
         }
         catch ( IOException e )
         {

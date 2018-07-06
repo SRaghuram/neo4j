@@ -17,6 +17,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
@@ -81,11 +82,12 @@ public class ConcurrentLuceneFulltextUpdaterTest extends LuceneFulltextTestSuppo
         race.go();
         Thread.sleep( 100 );
         await( IndexDescriptorFactory.forSchema( newDescriptor, Optional.of( "nodes" ), FulltextIndexProviderFactory.DESCRIPTOR ) );
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            ScoreEntityIterator bob = fulltextAdapter.query( "nodes", "bob" );
+            KernelTransaction ktx = kernelTransaction( tx );
+            ScoreEntityIterator bob = fulltextAdapter.query( ktx, "nodes", "bob" );
             assertEquals( bobThreads * nodesCreatedPerThread, bob.stream().count() );
-            ScoreEntityIterator alice = fulltextAdapter.query( "nodes", "alice" );
+            ScoreEntityIterator alice = fulltextAdapter.query( ktx, "nodes", "alice" );
             assertEquals( 0, alice.stream().count() );
         }
     }

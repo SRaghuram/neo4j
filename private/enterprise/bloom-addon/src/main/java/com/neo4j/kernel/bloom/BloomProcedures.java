@@ -197,7 +197,7 @@ public class BloomProcedures
             throws IOException, IndexNotFoundKernelException, ParseException
     {
         String query = BloomQueryHelper.createQuery( terms, fuzzy, matchAll );
-        ScoreEntityIterator resultIterator = accessor.query( indexName, query );
+        ScoreEntityIterator resultIterator = accessor.query( tx, indexName, query );
         return resultIterator.stream().map( QUERY_RESULT_MAPPER );
     }
 

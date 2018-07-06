@@ -26,6 +26,7 @@ import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndexProvider;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
@@ -41,7 +42,9 @@ import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.factory.OperationalMode;
+import org.neo4j.kernel.impl.newapi.AllStoreHolder;
 import org.neo4j.storageengine.api.EntityType;
+import org.neo4j.storageengine.api.schema.IndexReader;
 
 class FulltextIndexProvider extends AbstractLuceneIndexProvider implements FulltextAdapter
 {
@@ -177,7 +180,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     }
 
     @Override
-    public ScoreEntityIterator query( String indexName, String queryString ) throws IndexNotFoundKernelException, ParseException
+    public ScoreEntityIterator query( KernelTransaction ktx, String indexName, String queryString ) throws IndexNotFoundKernelException, ParseException
     {
         FulltextIndexAccessor fulltextIndexAccessor = accessorsByName.get( indexName );
         if ( fulltextIndexAccessor == null )
@@ -186,7 +189,10 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
                     "The requested fulltext index with name '" + indexName +
                     "' could not be accessed. Perhaps population has not completed yet?" );
         }
-        FulltextIndexReader fulltextIndexReader = fulltextIndexAccessor.newReader();
+        AllStoreHolder allStoreHolder = (AllStoreHolder) ktx.dataRead();
+        IndexReference indexReference = ktx.schemaRead().indexGetForName( indexName );
+        IndexReader indexReader = allStoreHolder.indexReader( indexReference, false );
+        FulltextIndexReader fulltextIndexReader = (FulltextIndexReader) indexReader;
         return fulltextIndexReader.query( queryString );
     }
     private class BadSchemaException extends IllegalArgumentException
