@@ -23,7 +23,6 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.AvailabilityGuard;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
@@ -64,7 +63,8 @@ public class LuceneFulltextTestSupport
 
     protected FulltextProviderImpl createProvider()
     {
-        return new FulltextProviderImpl( db, LOG, availabilityGuard, scheduler, fs, storeDir, analyzer, Duration.ofSeconds( 1 ) );
+        Duration refreshDelay = Duration.ofMillis( 10 );
+        return new FulltextProviderImpl( db, LOG, availabilityGuard, scheduler, fs, storeDir, analyzer, refreshDelay );
     }
 
     protected long createNodeIndexableByPropertyValue( Object propertyValue )
@@ -178,5 +178,13 @@ public class LuceneFulltextTestSupport
             node.setProperty( propertyKey, value );
             tx.success();
         }
+    }
+
+    protected void awaitFlip( FulltextProvider provider )
+    {
+        // We await two flips because the first await might catch an on-going flip, which could race with prior data
+        // updating transactions. Waiting through two flips ensures we got a clean refresh.
+        provider.awaitFlip();
+        provider.awaitFlip();
     }
 }

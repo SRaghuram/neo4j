@@ -147,6 +147,14 @@ class FulltextUpdateApplier extends LifecycleAdapter
         }
         ApplierWorker applierWorker = new ApplierWorker( workQueue, log, availabilityGuard, stopped );
         workerThread = scheduler.schedule( UPDATE_APPLIER, applierWorker );
+        try
+        {
+            writeBarrier().awaitCompletion(); // Wait for the applier thread to be fully started, before proceeding,
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( "Failed to start fulltext applier thread.", e );
+        }
     }
 
     @Override

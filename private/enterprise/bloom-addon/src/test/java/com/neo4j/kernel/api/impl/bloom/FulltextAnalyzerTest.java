@@ -35,7 +35,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
 
                 tx.success();
             }
-            provider.awaitFlip();
+            awaitFlip( provider );
             try ( ReadOnlyFulltext reader = provider.getReader( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES ) )
             {
                 assertExactQueryFindsNothing( reader, "and" );
@@ -64,7 +64,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
 
                 tx.success();
             }
-            provider.awaitFlip();
+            awaitFlip( provider );
             try ( ReadOnlyFulltext reader = provider.getReader( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES ) )
             {
                 assertExactQueryFindsIds( reader, "and", false, id );
@@ -94,7 +94,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
 
                 tx.success();
             }
-            provider.awaitFlip();
+            awaitFlip( provider );
             try ( ReadOnlyFulltext reader = provider.getReader( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES ) )
             {
 
@@ -112,7 +112,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         {
             provider.createIndex( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES, singleton( "prop" ) );
             provider.awaitPopulation();
-            provider.awaitFlip();
+            awaitFlip( provider );
             try ( ReadOnlyFulltext reader = provider.getReader( BloomKernelExtensionFactory.BLOOM_NODES, FulltextIndexType.NODES ) )
             {
                 assertExactQueryFindsIds( reader, "and",  false, firstID );

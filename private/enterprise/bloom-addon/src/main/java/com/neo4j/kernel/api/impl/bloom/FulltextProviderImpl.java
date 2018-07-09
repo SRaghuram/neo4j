@@ -494,28 +494,38 @@ public class FulltextProviderImpl implements FulltextProvider
     public void close()
     {
         closed = true;
-        flipperJob.cancel( false );
-
-        BinaryLatch completionLatch = flipCompletionLatch.getAndSet( STOPPED_FLIPPER_SIGNAL );
-        if ( completionLatch != null )
+        configurationLock.writeLock().lock();
+        try
         {
-            completionLatch.await();
-        }
-
-        applier.stop();
-        Consumer<WritableFulltext> fulltextCloser = luceneFulltextIndex ->
-        {
+            flipperJob.cancel( false );
+            flipCompletionLatch.getAndSet( STOPPED_FLIPPER_SIGNAL );
             try
             {
-                luceneFulltextIndex.saveConfiguration();
-                luceneFulltextIndex.close();
+                awaitPopulation();
             }
-            catch ( IOException e )
+            catch ( Exception e )
             {
-                log.error( "Unable to close fulltext index.", e );
+                log.warn( "Failed to wait for fulltext index applier to finish, before closing.", e );
             }
-        };
-        allIndexes().forEach( fulltextCloser );
+            applier.stop();
+            Consumer<WritableFulltext> fulltextCloser = luceneFulltextIndex ->
+            {
+                try
+                {
+                    luceneFulltextIndex.saveConfiguration();
+                    luceneFulltextIndex.close();
+                }
+                catch ( IOException e )
+                {
+                    log.error( "Unable to close fulltext index.", e );
+                }
+            };
+            allIndexes().forEach( fulltextCloser );
+        }
+        finally
+        {
+            configurationLock.writeLock().unlock();
+        }
     }
 
     private Stream<WritableFulltext> allIndexes()
