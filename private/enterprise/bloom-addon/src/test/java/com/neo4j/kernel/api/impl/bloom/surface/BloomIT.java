@@ -77,7 +77,7 @@ public class BloomIT
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
         builder = factory.newEmbeddedDatabaseBuilder( testDirectory.graphDbDir() )
                 .setConfig( BloomFulltextConfig.bloom_enabled, "true" )
-                .setConfig( BloomFulltextConfig.bloom_refresh_delay, "1s" );
+                .setConfig( BloomFulltextConfig.bloom_refresh_delay, "100ms" );
     }
 
     @After
@@ -96,6 +96,13 @@ public class BloomIT
         return db;
     }
 
+    private void awaitIndexRefresh()
+    {
+        db.execute( AWAIT_REFRESH ).close();
+        // Await the refresh twice, because the first refresh might have been racing with prior data updates.
+        db.execute( AWAIT_REFRESH ).close();
+    }
+
     @Test
     public void shouldPopulateAndQueryIndexes() throws Exception
     {
@@ -112,7 +119,7 @@ public class BloomIT
             relationship.setProperty( "relprop", "They relate" );
             transaction.success();
         }
-        db.execute( AWAIT_REFRESH );
+        awaitIndexRefresh();
 
         Result result = db.execute( String.format( NODES, "\"integration\"") );
         assertTrue( result.hasNext() );
@@ -142,7 +149,7 @@ public class BloomIT
             relationship.setProperty( "prop", "They relate" );
             transaction.success();
         }
-        db.execute( AWAIT_REFRESH );
+        awaitIndexRefresh();
 
         Result result = db.execute( String.format( NODES_ADVANCED, "\"integration\"", false, false ) );
         assertEquals( 0L, result.next().get( ENTITYID ) );
@@ -174,7 +181,7 @@ public class BloomIT
             relationship.setProperty( "prop", "They relate" );
             transaction.success();
         }
-        db.execute( AWAIT_REFRESH );
+        awaitIndexRefresh();
 
         Result result = db.execute( String.format( NODES_ADVANCED, "\"integration\", \"related\"", false, true ) );
         assertEquals( 1L, result.next().get( ENTITYID ) );
@@ -200,7 +207,7 @@ public class BloomIT
             node2.setProperty( "prop", "tase" );
             transaction.success();
         }
-        db.execute( AWAIT_REFRESH );
+        awaitIndexRefresh();
         Result result = db.execute( String.format( NODES, "\"integration\", \"test\", \"involves\", \"scoring\", \"needs\", \"sentence\"" ) );
         assertTrue( result.hasNext() );
         Map<String,Object> firstResult = result.next();
@@ -225,7 +232,7 @@ public class BloomIT
             node2.setProperty( "prop", "tase" );
             transaction.success();
         }
-        db.execute( AWAIT_REFRESH );
+        awaitIndexRefresh();
 
         Result result = db.execute( String.format( NODES, "\"integration test involves scoring needs sentence\"" ) );
         assertTrue( result.hasNext() );
@@ -252,7 +259,7 @@ public class BloomIT
             node2.setProperty( "prop", "There is a sentance" );
             transaction.success();
         }
-        db.execute( AWAIT_REFRESH );
+        awaitIndexRefresh();
 
         Result result = db.execute( String.format( NODES, "\"is\"") );
         assertEquals( 1L, result.next().get( ENTITYID ) );
@@ -313,7 +320,7 @@ public class BloomIT
 
         // Verify it's indexed exactly once
         db.execute( AWAIT_POPULATION ).close();
-        db.execute( AWAIT_REFRESH ).close();
+        awaitIndexRefresh();
         Result result = db.execute( String.format( NODES, "\"Jyllingevej\"") );
         assertTrue( result.hasNext() );
         assertEquals( nodeId, result.next().get( ENTITYID ) );
@@ -323,7 +330,7 @@ public class BloomIT
         db = getDb();
 
         db.execute( AWAIT_POPULATION ).close();
-        db.execute( AWAIT_REFRESH ).close();
+        awaitIndexRefresh();
         // Verify it's STILL indexed exactly once
         result = db.execute( String.format( NODES, "\"Jyllingevej\"") );
         assertTrue( result.hasNext() );
@@ -347,14 +354,14 @@ public class BloomIT
         }
 
         // Verify it's indexed exactly once
-        db.execute( AWAIT_REFRESH ).close();
+        awaitIndexRefresh();
         Result result = db.execute( String.format( NODES, "\"Jyllingevej\"" ) );
         assertTrue( result.hasNext() );
         assertEquals( nodeId, result.next().get( ENTITYID ) );
         assertFalse( result.hasNext() );
         db.execute( String.format( SET_NODE_KEYS, "" ) );
 
-        db.execute( AWAIT_REFRESH ).close();
+        awaitIndexRefresh();
         // Verify it's nowhere to be found now
         result = db.execute( String.format( NODES, "\"Jyllingevej\"" ) );
         assertFalse( result.hasNext() );
@@ -451,7 +458,7 @@ public class BloomIT
             db.createNode().setProperty( "prop", "Langelinie Pavillinen" );
             tx.success();
         }
-        db.execute( AWAIT_REFRESH );
+        awaitIndexRefresh();
 
         try ( Transaction ignore = db.beginTx() )
         {
@@ -470,8 +477,7 @@ public class BloomIT
             } );
             th.start();
             th.join();
-            db.execute( AWAIT_REFRESH ).close();
-            db.execute( AWAIT_REFRESH ).close();
+            awaitIndexRefresh();
 
             try ( Result result = db.execute( String.format( NODES, "\"Langelinie\"") ) )
             {
@@ -527,7 +533,7 @@ public class BloomIT
 
             tx.success();
         }
-        db.execute( AWAIT_REFRESH );
+        awaitIndexRefresh();
         try ( Transaction ignore = db.beginTx() )
         {
             try ( Result result = db.execute( String.format( NODES_ADVANCED, "\"and\"", false, false ) ) )
@@ -587,7 +593,7 @@ public class BloomIT
         db.shutdown();
         builder.setConfig( BloomFulltextConfig.bloom_enabled, "true" );
         db = getDb();
-        db.execute( AWAIT_REFRESH ).close();
+        awaitIndexRefresh();
 
         // Now we should be able to find the node that was added while the index was disabled.
         try ( Transaction ignore = db.beginTx() )
@@ -615,7 +621,7 @@ public class BloomIT
             db.createNode().setProperty( "prop", "Hello and hello again." );
             tx.success();
         }
-        db.execute( AWAIT_REFRESH );
+        awaitIndexRefresh();
 
         try ( Transaction ignore = db.beginTx() )
         {
