@@ -96,11 +96,16 @@ public class BloomIT
         return db;
     }
 
-    private void awaitIndexRefresh()
+    static void awaitRefresh( GraphDatabaseService db )
     {
         db.execute( AWAIT_REFRESH ).close();
         // Await the refresh twice, because the first refresh might have been racing with prior data updates.
         db.execute( AWAIT_REFRESH ).close();
+    }
+
+    private void awaitIndexRefresh()
+    {
+        awaitRefresh( db );
     }
 
     @Test
@@ -131,6 +136,35 @@ public class BloomIT
         assertTrue( result.hasNext() );
         assertEquals( 0L, result.next().get( ENTITYID ) );
         assertFalse( result.hasNext() );
+    }
+
+    @Test
+    public void resultStreamsMustHaveIdempotentClose() throws Exception
+    {
+        db = getDb();
+        db.execute( String.format( SET_NODE_KEYS, "\"prop\", \"relprop\"" ) );
+        long nodeId;
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Node node = db.createNode();
+            node.setProperty( "prop", "This is a integration test." );
+            nodeId = node.getId();
+            transaction.success();
+        }
+        awaitIndexRefresh();
+        Result result = db.execute( String.format( NODES, "\"integration\"") );
+        // The result should be automatically closed when exhausted.
+        assertEquals( nodeId, result.next().get( ENTITYID ) );
+        result.close(); // This should strictly not be necessary, but it should be allowed.
+        result.close(); // Likewise this. The 'close' method should be idempotent. Harmless to call multiple times.
+
+        result = db.execute( String.format( NODES, "\"integration\"") );
+        result.close();
+        result.close(); // This must still work even if we don't consume the result.
+
+        result = db.execute( String.format( NODES, "\"matches nothing\"") );
+        result.close();
+        result.close();
     }
 
     @Test

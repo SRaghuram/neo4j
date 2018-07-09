@@ -25,6 +25,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.kernel.api.impl.bloom.surface.BloomIT.awaitRefresh;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -50,7 +51,7 @@ public class BloomBackupIT
                 .setConfig( online_backup_enabled,"true" )
                 .setConfig( online_backup_server, "127.0.0.1:" + backupPort )
                 .setConfig( BloomFulltextConfig.bloom_enabled, "true" )
-                .setConfig( BloomFulltextConfig.bloom_refresh_delay, "1s" )
+                .setConfig( BloomFulltextConfig.bloom_refresh_delay, "100ms" )
                 .newGraphDatabase();
     }
 
@@ -59,7 +60,7 @@ public class BloomBackupIT
     {
         registerProcedures( db );
         setupIndicesAndInitialData();
-        db.execute( BloomIT.AWAIT_REFRESH );
+        awaitRefresh( db );
 
         File backupDir = new File( db.getStoreDir().getParentFile(), "backup" );
         OnlineBackup.from( "127.0.0.1", backupPort ).backup( backupDir );
@@ -76,7 +77,7 @@ public class BloomBackupIT
     {
         registerProcedures( db );
         setupIndicesAndInitialData();
-        db.execute( BloomIT.AWAIT_REFRESH );
+        awaitRefresh( db );
 
         // Full backup
         File backupDir = new File( db.getStoreDir().getParentFile(), "backup" );
@@ -99,7 +100,7 @@ public class BloomBackupIT
             additionalRelId = relationship.getId();
             transaction.success();
         }
-        db.execute( BloomIT.AWAIT_REFRESH );
+        awaitRefresh( db );
 
         //Incremental backup
         OnlineBackup.from( "127.0.0.1", backupPort ).backup( backupDir );
@@ -148,7 +149,7 @@ public class BloomBackupIT
 
     private void verifyStandardData( GraphDatabaseService backedUpDb )
     {
-        backedUpDb.execute( BloomIT.AWAIT_REFRESH ).close();
+        awaitRefresh( backedUpDb );
         Result result = backedUpDb.execute( String.format( BloomIT.NODES, "\"integration\"" ) );
         assertTrue( result.hasNext() );
         assertEquals( 0L, result.next().get( BloomIT.ENTITYID ) );
