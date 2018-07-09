@@ -92,7 +92,7 @@ public class RestartImportFromSpecificStatesTest
     private BatchImporter importer( ExecutionMonitor monitor )
     {
         return BatchImporterFactory.withHighestPriority().instantiate(
-              directory.absolutePath(), fs, null, DEFAULT, NullLogService.getInstance(), monitor,
+              directory.graphDbDir(), fs, null, DEFAULT, NullLogService.getInstance(), monitor,
               EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR );
     }
 

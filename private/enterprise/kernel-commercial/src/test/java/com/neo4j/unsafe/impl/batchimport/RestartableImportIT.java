@@ -24,6 +24,7 @@ import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
+import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -52,8 +53,9 @@ public class RestartableImportIT
     public void shouldFinishDespiteUnfairShutdowns() throws Exception
     {
         File storeDir = directory.directory( "db" );
+        File databaseDirectory = new File( storeDir, DataSourceManager.DEFAULT_DATABASE_NAME );
         long startTime = System.currentTimeMillis();
-        int timeMeasuringImportExitCode = startImportInSeparateProcess( storeDir ).waitFor();
+        int timeMeasuringImportExitCode = startImportInSeparateProcess( databaseDirectory ).waitFor();
         long time = System.currentTimeMillis() - startTime;
         assertEquals( 0, timeMeasuringImportExitCode );
         fs.deleteRecursively( storeDir );
@@ -62,7 +64,7 @@ public class RestartableImportIT
         int restartCount = 0;
         do
         {
-            process = startImportInSeparateProcess( storeDir );
+            process = startImportInSeparateProcess( databaseDirectory );
             long waitTime = max( time / 4, random.nextLong( time ) + time / 20 * restartCount );
             process.waitFor( waitTime, TimeUnit.MILLISECONDS );
             boolean manuallyDestroyed = false;
@@ -92,10 +94,10 @@ public class RestartableImportIT
         }
     }
 
-    private Process startImportInSeparateProcess( File storeDir ) throws IOException
+    private Process startImportInSeparateProcess( File databaseDirectory ) throws IOException
     {
         ProcessBuilder pb = new ProcessBuilder( ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(),
-                getClass().getCanonicalName(), storeDir.getPath(), Long.toString( random.seed() ) );
+                getClass().getCanonicalName(), databaseDirectory.getPath(), Long.toString( random.seed() ) );
         File wd = new File( "target/test-classes" ).getAbsoluteFile();
         Files.createDirectories( wd.toPath() );
         pb.directory( wd );
@@ -119,10 +121,7 @@ public class RestartableImportIT
         }
         catch ( IllegalStateException e )
         {
-            if ( e.getMessage().contains( "already contains data, cannot do import here" ) )
-            {   // In this test, this exception is OK
-            }
-            else
+            if ( !e.getMessage().contains( "already contains data, cannot do import here" ) )
             {
                 throw e;
             }
