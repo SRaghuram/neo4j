@@ -60,7 +60,6 @@ public class FulltextProviderImpl implements FulltextProvider
     private final ReadWriteLock configurationLock;
     private final JobScheduler.JobHandle flipperJob;
     private final AtomicReference<BinaryLatch> flipCompletionLatch = new AtomicReference<>();
-    private volatile boolean closed;
     private volatile IndexSide side;
 
     /**
@@ -94,15 +93,9 @@ public class FulltextProviderImpl implements FulltextProvider
             writableIndices.put( indexType, writableIndexSideMap );
         }
         configurationLock = new ReentrantReadWriteLock( true );
-        flipperJob = scheduler.schedule( FLIPPER, () ->
+        flipperJob = scheduler.scheduleRecurring( FLIPPER, () ->
         {
-            boolean isAvailable;
-            do
-            {
-                isAvailable = availabilityGuard.isAvailable( 100 );
-            }
-            while ( !isAvailable && !availabilityGuard.isShutdown() );
-            while ( !closed )
+            if ( availabilityGuard.isAvailable() )
             {
                 try
                 {
@@ -113,7 +106,7 @@ public class FulltextProviderImpl implements FulltextProvider
                     log.error( "Unable to flip fulltext index", e );
                 }
             }
-        }, refreshDelay.getSeconds(), TimeUnit.SECONDS );
+        }, refreshDelay.toMillis(), refreshDelay.toMillis(), TimeUnit.MILLISECONDS );
     }
 
     private boolean matchesConfiguration( WritableFulltext index ) throws IOException
@@ -493,7 +486,6 @@ public class FulltextProviderImpl implements FulltextProvider
     @Override
     public void close()
     {
-        closed = true;
         configurationLock.writeLock().lock();
         try
         {
