@@ -523,9 +523,12 @@ public class BloomIT
     @Test
     public void shouldNotBeAbleToStartWithIllegalPropertyKey() throws Exception
     {
-        expectedException.expectMessage( "It is not possible to index property keys starting with __lucene__fulltext__addon__" );
         db = getDb();
-        db.execute( String.format( SET_NODE_KEYS, "\"prop\", \"" + FulltextProvider.FIELD_ENTITY_ID + "\", \"hello\"" ) );
+        try ( Transaction ignore = db.beginTx() )
+        {
+            expectedException.expectMessage( "It is not possible to index property keys starting with __lucene__fulltext__addon__" );
+            db.execute( String.format( SET_NODE_KEYS, "\"prop\", \"" + FulltextProvider.FIELD_ENTITY_ID + "\", \"hello\"" ) );
+        }
     }
 
     @Test
@@ -746,6 +749,9 @@ public class BloomIT
         db = getDb();
         expectedException.expect( QueryExecutionException.class );
         expectedException.expectMessage( "enabled" );
-        db.execute( AWAIT_POPULATION );
+        try ( Transaction ignore = db.beginTx() )
+        {
+            db.execute( AWAIT_POPULATION );
+        }
     }
 }

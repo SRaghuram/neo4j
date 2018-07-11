@@ -359,7 +359,7 @@ public class FulltextProviderImpl implements FulltextProvider
                 completionLatch = new BinaryLatch();
             }
         }
-        while ( flipCompletionLatch.compareAndSet( null, completionLatch ) );
+        while ( !flipCompletionLatch.compareAndSet( null, completionLatch ) );
         return completionLatch;
     }
 

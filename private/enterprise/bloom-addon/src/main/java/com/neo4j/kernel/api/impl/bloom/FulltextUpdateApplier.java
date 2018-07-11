@@ -42,6 +42,7 @@ class FulltextUpdateApplier extends LifecycleAdapter
     private final Log log;
     private final AvailabilityGuard availabilityGuard;
     private final JobScheduler scheduler;
+    private final BinaryLatch applierThreadStartedLatch;
     // This 'stopped' boolean is important for being able to halt a startup process; to stop before we're fully started.
     private final AtomicBoolean stopped;
     private volatile JobScheduler.JobHandle workerThread;
@@ -53,6 +54,7 @@ class FulltextUpdateApplier extends LifecycleAdapter
         this.scheduler = scheduler;
         stopped = new AtomicBoolean();
         workQueue = new LinkedBlockingQueue<>();
+        applierThreadStartedLatch = new BinaryLatch();
     }
 
     AsyncFulltextIndexOperation writeBarrier() throws IOException
@@ -145,16 +147,10 @@ class FulltextUpdateApplier extends LifecycleAdapter
         {
             throw new IllegalStateException( APPLIER_THREAD_NAME + " already started." );
         }
-        ApplierWorker applierWorker = new ApplierWorker( workQueue, log, availabilityGuard, stopped );
+        ApplierWorker applierWorker = new ApplierWorker(
+                workQueue, log, availabilityGuard, stopped, applierThreadStartedLatch );
         workerThread = scheduler.schedule( UPDATE_APPLIER, applierWorker );
-        try
-        {
-            writeBarrier().awaitCompletion(); // Wait for the applier thread to be fully started, before proceeding,
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( "Failed to start fulltext applier thread.", e );
-        }
+        applierThreadStartedLatch.await(); // Wait for the applier thread to be fully started, before proceeding,
     }
 
     @Override
@@ -225,20 +221,24 @@ class FulltextUpdateApplier extends LifecycleAdapter
         private final Log log;
         private final AvailabilityGuard availabilityGuard;
         private final AtomicBoolean stopped;
+        private final BinaryLatch startLatch;
 
         ApplierWorker( LinkedBlockingQueue<FulltextIndexUpdate> workQueue, Log log,
-                       AvailabilityGuard availabilityGuard, AtomicBoolean stopped )
+                       AvailabilityGuard availabilityGuard, AtomicBoolean stopped,
+                       BinaryLatch startLatch )
         {
             this.workQueue = workQueue;
             this.log = log;
             this.availabilityGuard = availabilityGuard;
             this.stopped = stopped;
+            this.startLatch = startLatch;
         }
 
         @Override
         public void run()
         {
             Thread.currentThread().setName( APPLIER_THREAD_NAME );
+            startLatch.release();
             waitForDatabaseToBeAvailable();
             Set<WritableFulltext> refreshableSet = new HashSet<>();
             List<BinaryLatch> latches = new ArrayList<>();
