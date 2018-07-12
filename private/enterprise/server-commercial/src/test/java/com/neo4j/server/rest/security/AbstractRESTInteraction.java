@@ -149,7 +149,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     @Override
     public RESTSubject login( String username, String password ) throws Exception
     {
-        String principalCredentials = basicAuthHeader( username, password );
+        String principalCredentials = HTTP.basicAuthHeader( username, password );
         return new RESTSubject( username, password, principalCredentials );
     }
 
@@ -161,7 +161,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     @Override
     public void updateAuthToken( RESTSubject subject, String username, String password )
     {
-        subject.principalCredentials = basicAuthHeader( username, password );
+        subject.principalCredentials = HTTP.basicAuthHeader( username, password );
     }
 
     @Override
