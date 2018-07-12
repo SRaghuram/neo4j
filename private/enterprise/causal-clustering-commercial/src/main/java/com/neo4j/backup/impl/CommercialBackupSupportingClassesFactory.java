@@ -12,7 +12,6 @@ import org.neo4j.backup.impl.BackupSupportingClassesFactory;
 import org.neo4j.causalclustering.handlers.PipelineWrapper;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
-import org.neo4j.kernel.configuration.ssl.TrustManagerFactoryProvider;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.util.Dependencies;
 
@@ -28,7 +27,7 @@ public class CommercialBackupSupportingClassesFactory extends BackupSupportingCl
     {
         SecurePipelineFactory factory = new SecurePipelineFactory();
         Dependencies deps = new Dependencies();
-        deps.satisfyDependencies( SslPolicyLoader.create( config, new TrustManagerFactoryProvider(), logProvider ) );
+        deps.satisfyDependencies( SslPolicyLoader.create( config, logProvider ) );
         return factory.forClient( config, deps, logProvider, OnlineBackupSettings.ssl_policy );
     }
 }

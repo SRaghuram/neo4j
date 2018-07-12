@@ -20,7 +20,6 @@ import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
-import org.neo4j.kernel.configuration.ssl.TrustManagerFactoryProvider;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.util.Dependencies;
@@ -46,7 +45,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
             ClusterStateDirectory clusterStateDirectory, IdentityModule identityModule, Dependencies dependencies, File databaseDirectory )
     {
-        SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, new TrustManagerFactoryProvider(), logProvider ) );
+        SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
 
         if ( discoveryServiceFactory instanceof SslHazelcastDiscoveryServiceFactory )
