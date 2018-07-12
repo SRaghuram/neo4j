@@ -166,31 +166,17 @@ public class BloomProcedures
     @Description( "Query the Bloom fulltext index for nodes" )
     @Procedure( name = "bloom.searchNodes", mode = READ )
     public Stream<EntityOutput> bloomFulltextNodes( @Name( "terms" ) List<String> terms, @Name( value = "fuzzy", defaultValue = "true" ) boolean fuzzy,
-            @Name( value = "matchAll", defaultValue = "false" ) boolean matchAll ) throws ParseException
+            @Name( value = "matchAll", defaultValue = "false" ) boolean matchAll ) throws Exception
     {
-        try
-        {
-            return queryAsStream( terms, BLOOM_NODES, fuzzy, matchAll );
-        }
-        catch ( IOException | IndexNotFoundKernelException e )
-        {
-            return Stream.empty();
-        }
+        return queryAsStream( terms, BLOOM_NODES, fuzzy, matchAll );
     }
 
     @Description( "Query the Bloom fulltext index for relationships" )
     @Procedure( name = "bloom.searchRelationships", mode = READ )
     public Stream<EntityOutput> bloomFulltextRelationships( @Name( "terms" ) List<String> terms, @Name( value = "fuzzy", defaultValue = "true" ) boolean fuzzy,
-            @Name( value = "matchAll", defaultValue = "false" ) boolean matchAll ) throws ParseException
+            @Name( value = "matchAll", defaultValue = "false" ) boolean matchAll ) throws Exception
     {
-        try
-        {
-            return queryAsStream( terms, BLOOM_RELATIONSHIPS, fuzzy, matchAll );
-        }
-        catch ( IOException | IndexNotFoundKernelException e )
-        {
-            return Stream.empty();
-        }
+        return queryAsStream( terms, BLOOM_RELATIONSHIPS, fuzzy, matchAll );
     }
 
     private Stream<EntityOutput> queryAsStream( List<String> terms, String indexName, boolean fuzzy, boolean matchAll )

@@ -472,7 +472,7 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void queryFulltext() throws Exception
+    public void queryShouldFindDataAddedInLaterTransactions() throws Exception
     {
         db = getDb();
         db.execute( format( NODE_ANY_CREATE, "node-any", array( "prop1", "prop2" ) ) ).close();
@@ -517,6 +517,42 @@ public class FulltextProceduresTest
         assertQueryFindsIds( db, "rel-any", "zebra horse", horseRelId, loopId );
         assertQueryFindsIds( db, "rel", "horse", horseRelId );
         assertQueryFindsIds( db, "rel", "horse zebra", horseRelId );
+    }
+
+    @Test
+    public void queryShouldFindDataAddedInIndexPopulation() throws Exception
+    {
+        // when
+        Label label = Label.label( "LABEL" );
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        Node node1;
+        Node node2;
+        Relationship relationship;
+        db = getDb();
+        try ( Transaction tx = db.beginTx() )
+        {
+            node1 = db.createNode( label );
+            node1.setProperty( "prop", "This is a integration test." );
+            node2 = db.createNode( label );
+            node2.setProperty( "otherprop", "This is a related integration test" );
+            relationship = node1.createRelationshipTo( node2, relType );
+            relationship.setProperty( "prop", "They relate" );
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "node", array( label.name() ), array( "prop", "otherprop" ) ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( "prop" ) ) );
+            tx.success();
+        }
+        db.execute( format( AWAIT_POPULATION, "node" ) ).close();
+        db.execute( format( AWAIT_POPULATION, "rel" ) ).close();
+
+        // then
+        assertQueryFindsIds( db, "node", "integration", node1.getId(), node2.getId() );
+        assertQueryFindsIds( db, "node", "test", node1.getId(), node2.getId() );
+        assertQueryFindsIds( db, "node", "related", node2.getId() );
+        assertQueryFindsIds( db, "rel", "relate", relationship.getId() );
     }
 
     private void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )

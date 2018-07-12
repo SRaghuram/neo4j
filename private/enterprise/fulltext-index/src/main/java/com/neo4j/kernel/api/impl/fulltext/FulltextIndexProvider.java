@@ -15,8 +15,6 @@ import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -50,7 +48,6 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
 {
 
     private final FileSystemAbstraction fileSystem;
-    private final Map<String,FulltextIndexAccessor> accessorsByName;
     private final Config config;
     private final Supplier<TokenHolders> tokenHolders;
     private final OperationalMode operationalMode;
@@ -66,7 +63,6 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         this.operationalMode = operationalMode;
 
         defaultAnalyzerClassName = config.get( FulltextConfig.fulltext_default_analyzer );
-        accessorsByName = new HashMap<>();
     }
 
     @Override
@@ -127,9 +123,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
                 .build();
         fulltextIndex.open();
 
-        FulltextIndexAccessor fulltextIndexAccessor = new FulltextIndexAccessor( fulltextIndex, fulltextIndexDescriptor );
-        accessorsByName.put( descriptor.getName(), fulltextIndexAccessor );
-        return fulltextIndexAccessor;
+        return new FulltextIndexAccessor( fulltextIndex, fulltextIndexDescriptor );
     }
 
     @Override
@@ -182,19 +176,13 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     @Override
     public ScoreEntityIterator query( KernelTransaction ktx, String indexName, String queryString ) throws IndexNotFoundKernelException, ParseException
     {
-        FulltextIndexAccessor fulltextIndexAccessor = accessorsByName.get( indexName );
-        if ( fulltextIndexAccessor == null )
-        {
-            throw new IndexNotFoundKernelException(
-                    "The requested fulltext index with name '" + indexName +
-                    "' could not be accessed. Perhaps population has not completed yet?" );
-        }
         AllStoreHolder allStoreHolder = (AllStoreHolder) ktx.dataRead();
         IndexReference indexReference = ktx.schemaRead().indexGetForName( indexName );
         IndexReader indexReader = allStoreHolder.indexReader( indexReference, false );
         FulltextIndexReader fulltextIndexReader = (FulltextIndexReader) indexReader;
         return fulltextIndexReader.query( queryString );
     }
+
     private class BadSchemaException extends IllegalArgumentException
     {
         BadSchemaException( String message )
