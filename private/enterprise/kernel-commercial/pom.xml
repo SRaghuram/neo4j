@@ -3,13 +3,13 @@
   <parent>
     <groupId>com.neo4j</groupId>
     <artifactId>commercial-parent</artifactId>
-    <version>3.4.4-SNAPSHOT</version>
+    <version>3.4.5-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <artifactId>neo4j-kernel-commercial</artifactId>
-  <version>3.4.4-SNAPSHOT</version>
+  <version>3.4.5-SNAPSHOT</version>
 
   <name>Neo4j - Commercial Parts of Graph Database Kernel</name>
   <description>Commercial Parts of Graph Database Kernel.</description>
