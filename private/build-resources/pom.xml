@@ -5,7 +5,7 @@
 
     <groupId>com.neo4j.build</groupId>
     <artifactId>build-resources-commercial</artifactId>
-    <version>3.4.5-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
 
     <name>Neo4j - Commercial build resources</name>
     <description>Build resources for commercial build.</description>
