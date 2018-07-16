@@ -11,6 +11,7 @@ import java.io.IOException;
 
 import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndexAccessor;
+import org.neo4j.kernel.api.impl.index.DatabaseIndex;
 import org.neo4j.kernel.api.index.NodePropertyAccessor;
 import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
 import org.neo4j.values.storable.Value;
@@ -18,11 +19,11 @@ import org.neo4j.values.storable.Value;
 import static com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure.documentRepresentingProperties;
 import static com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure.newTermForChangeOrRemove;
 
-public class FulltextIndexAccessor extends AbstractLuceneIndexAccessor<FulltextIndexReader,FulltextIndex>
+public class FulltextIndexAccessor extends AbstractLuceneIndexAccessor<FulltextIndexReader,DatabaseIndex<FulltextIndexReader>>
 {
     private final FulltextIndexDescriptor descriptor;
 
-    public FulltextIndexAccessor( FulltextIndex luceneIndex, FulltextIndexDescriptor descriptor )
+    public FulltextIndexAccessor(DatabaseIndex<FulltextIndexReader> luceneIndex, FulltextIndexDescriptor descriptor )
     {
         super( luceneIndex, descriptor );
         this.descriptor = descriptor;

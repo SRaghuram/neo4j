@@ -5,7 +5,6 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndex;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexAccessor;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexBuilder;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
@@ -27,6 +26,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndexProvider;
+import org.neo4j.kernel.api.impl.index.DatabaseIndex;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
 import org.neo4j.kernel.api.index.IndexAccessor;
@@ -91,7 +91,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
         FulltextIndexDescriptor fulltextIndexDescriptor = new FulltextIndexDescriptor(
                 descriptor, defaultAnalyzerClassName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
-        FulltextIndex fulltextIndex = FulltextIndexBuilder
+        DatabaseIndex<FulltextIndexReader> fulltextIndex = FulltextIndexBuilder
                 .create( fulltextIndexDescriptor, config )
                 .withFileSystem( fileSystem )
                 .withOperationalMode( operationalMode )
@@ -114,7 +114,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
 
         FulltextIndexDescriptor fulltextIndexDescriptor = new FulltextIndexDescriptor(
                 descriptor, defaultAnalyzerClassName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
-        FulltextIndex fulltextIndex = FulltextIndexBuilder
+        DatabaseIndex<FulltextIndexReader> fulltextIndex = FulltextIndexBuilder
                 .create( fulltextIndexDescriptor, config )
                 .withFileSystem( fileSystem )
                 .withOperationalMode( operationalMode )
