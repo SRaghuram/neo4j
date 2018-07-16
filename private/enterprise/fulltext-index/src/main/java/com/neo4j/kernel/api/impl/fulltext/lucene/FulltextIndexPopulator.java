@@ -18,13 +18,13 @@ import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.NodePropertyAccessor;
 import org.neo4j.storageengine.api.schema.IndexSample;
 
-public class FulltextLuceneIndexPopulator extends LuceneIndexPopulator<FulltextIndex>
+public class FulltextIndexPopulator extends LuceneIndexPopulator<FulltextIndex>
 {
     private final FulltextIndexDescriptor descriptor;
     private final ThrowingAction<IOException> descriptorCreateAction;
 
-    public FulltextLuceneIndexPopulator( FulltextIndexDescriptor descriptor, FulltextIndex luceneFulltext,
-                                         ThrowingAction<IOException> descriptorCreateAction )
+    public FulltextIndexPopulator( FulltextIndexDescriptor descriptor, FulltextIndex luceneFulltext,
+                                  ThrowingAction<IOException> descriptorCreateAction )
     {
         super( luceneFulltext );
         this.descriptor = descriptor;

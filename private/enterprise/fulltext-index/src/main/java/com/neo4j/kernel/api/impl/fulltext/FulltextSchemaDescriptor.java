@@ -12,12 +12,12 @@ import org.neo4j.internal.kernel.api.schema.SchemaProcessor;
 import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.storageengine.api.lock.ResourceType;
 
-public class FulltextSchemaDescriptor implements SchemaDescriptor
+class FulltextSchemaDescriptor implements SchemaDescriptor
 {
     private final SchemaDescriptor schema;
     private final String analyzerClassName;
 
-    public FulltextSchemaDescriptor( SchemaDescriptor schema, String analyzerClassName )
+    FulltextSchemaDescriptor( SchemaDescriptor schema, String analyzerClassName )
     {
         this.schema = schema;
         this.analyzerClassName = analyzerClassName;
@@ -111,7 +111,7 @@ public class FulltextSchemaDescriptor implements SchemaDescriptor
         return schema.equals( obj );
     }
 
-    public String getAnalyzerClassName()
+    String getAnalyzerClassName()
     {
         return analyzerClassName;
     }

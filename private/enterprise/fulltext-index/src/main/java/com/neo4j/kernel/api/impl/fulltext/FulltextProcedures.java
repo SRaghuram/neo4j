@@ -54,7 +54,7 @@ public class FulltextProcedures
             result -> new EntityOutput( result.entityId(), result.score() );
 
     // TODO use `db.awaitIndex` instead.
-    @Description( "Await the completion of any background index population for the given index" )
+    @Description( "Await the completion of any background index population for the given index." )
     @Procedure( name = "fulltext.awaitPopulation", mode = READ )
     public void awaitPopulation( @Name( "indexName" ) String name ) throws IndexPopulationFailedKernelException, IndexNotFoundKernelException
     {
@@ -81,7 +81,7 @@ public class FulltextProcedures
     }
 
     // TODO remove or make this the same output as what `db.indexes` gives.
-    @Description( "Returns the schema for the given index" )
+    @Description( "Returns the schema for the given index." )
     @Procedure( name = "fulltext.getIndexSchema", mode = READ )
     public Stream<SchemaOutput> getIndexSchema( @Name( "indexName" ) String name )
     {
@@ -143,7 +143,7 @@ public class FulltextProcedures
     @Procedure( name = "fulltext.createRelationshipIndex", mode = SCHEMA )
     public void createRelationshipFulltextIndex(
             @Name( "indexName" ) String name,
-            @Name( "relatoinshipTypes" ) List<String> reltypes,
+            @Name( "relationshipTypes" ) List<String> reltypes,
             @Name( "propertyNames" ) List<String> properties,
             @Name( value = "config", defaultValue = "" ) Map<String,String> config )
             throws InvalidTransactionTypeKernelException, SchemaKernelException
@@ -155,7 +155,7 @@ public class FulltextProcedures
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
     }
 
-    @Description( "Drop the specified index" )
+    @Description( "Drop the specified index." )
     @Procedure( name = "fulltext.dropIndex", mode = SCHEMA )
     public void dropIndex( @Name( "indexName" ) String name ) throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
@@ -163,7 +163,7 @@ public class FulltextProcedures
     }
 
     // TODO create a `db.indexStatus` procedure instead.
-    @Description( "Check the status specified index" )
+    @Description( "Check the status specified index." )
     @Procedure( name = "fulltext.indexStatus", mode = READ )
     public Stream<StatusOutput> indexStatus( @Name( "indexName" ) String name ) throws IndexNotFoundKernelException
     {

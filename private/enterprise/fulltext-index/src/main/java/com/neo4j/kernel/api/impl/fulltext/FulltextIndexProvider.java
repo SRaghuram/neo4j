@@ -9,7 +9,7 @@ import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndex;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexAccessor;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexBuilder;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
-import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextLuceneIndexPopulator;
+import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexPopulator;
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
 import org.apache.lucene.queryparser.classic.ParseException;
 
@@ -102,7 +102,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         {
             throw new UnsupportedOperationException( "Can't create populator for read only index" );
         }
-        return new FulltextLuceneIndexPopulator( fulltextIndexDescriptor, fulltextIndex,
+        return new FulltextIndexPopulator( fulltextIndexDescriptor, fulltextIndex,
                 () -> fulltextIndexDescriptor.saveIndexSettings( indexStorage, fileSystem ) );
     }
 
