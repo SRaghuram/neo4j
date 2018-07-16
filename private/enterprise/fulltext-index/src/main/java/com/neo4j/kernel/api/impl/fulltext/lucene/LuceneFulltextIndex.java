@@ -39,33 +39,6 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
     }
 
     @Override
-    public boolean equals( Object o )
-    {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-
-        LuceneFulltextIndex that = (LuceneFulltextIndex) o;
-
-        if ( !identifier.equals( that.identifier ) )
-        {
-            return false;
-        }
-        return type == that.type;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash( identifier, type );
-    }
-
-    @Override
     public String toString()
     {
         return "LuceneFulltextIndex{" +

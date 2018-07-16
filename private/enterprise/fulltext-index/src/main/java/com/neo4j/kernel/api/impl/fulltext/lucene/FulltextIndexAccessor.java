@@ -23,7 +23,7 @@ public class FulltextIndexAccessor extends AbstractLuceneIndexAccessor<FulltextI
 {
     private final FulltextIndexDescriptor descriptor;
 
-    public FulltextIndexAccessor(DatabaseIndex<FulltextIndexReader> luceneIndex, FulltextIndexDescriptor descriptor )
+    public FulltextIndexAccessor( DatabaseIndex<FulltextIndexReader> luceneIndex, FulltextIndexDescriptor descriptor )
     {
         super( luceneIndex, descriptor );
         this.descriptor = descriptor;
