@@ -34,7 +34,7 @@ public class CommercialReadReplica extends ReadReplica
     @Override
     public void start()
     {
-        database = new CommercialReadReplicaGraphDatabase( storeDir, config(),
+        database = new CommercialReadReplicaGraphDatabase( databasesDirectory, config(),
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory,
                 memberId() );
     }
