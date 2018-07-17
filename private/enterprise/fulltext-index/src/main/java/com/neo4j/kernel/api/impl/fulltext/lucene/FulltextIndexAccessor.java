@@ -8,6 +8,7 @@ package com.neo4j.kernel.api.impl.fulltext.lucene;
 import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndexAccessor;
@@ -56,27 +57,55 @@ public class FulltextIndexAccessor extends AbstractLuceneIndexAccessor<FulltextI
         }
 
         @Override
-        protected void addIdempotent( long nodeId, Value[] values ) throws IOException
+        protected void addIdempotent( long nodeId, Value[] values )
         {
-            writer.updateDocument( newTermForChangeOrRemove( nodeId ), documentRepresentingProperties( nodeId, descriptor.propertyNames(), values ) );
+            try
+            {
+                writer.updateDocument( newTermForChangeOrRemove( nodeId ), documentRepresentingProperties( nodeId, descriptor.propertyNames(), values ) );
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
         }
 
         @Override
-        protected void add( long nodeId, Value[] values ) throws IOException
+        protected void add( long nodeId, Value[] values )
         {
-            writer.addDocument( documentRepresentingProperties( nodeId, descriptor.propertyNames(), values ) );
+            try
+            {
+                writer.addDocument( documentRepresentingProperties( nodeId, descriptor.propertyNames(), values ) );
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
         }
 
         @Override
-        protected void change( long nodeId, Value[] values ) throws IOException
+        protected void change( long nodeId, Value[] values )
         {
-            writer.updateDocument( newTermForChangeOrRemove( nodeId ), documentRepresentingProperties( nodeId, descriptor.propertyNames(), values ) );
+            try
+            {
+                writer.updateDocument( newTermForChangeOrRemove( nodeId ), documentRepresentingProperties( nodeId, descriptor.propertyNames(), values ) );
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
         }
 
         @Override
-        protected void remove( long nodeId ) throws IOException
+        protected void remove( long nodeId )
         {
-            writer.deleteDocuments( newTermForChangeOrRemove( nodeId ) );
+            try
+            {
+                writer.deleteDocuments( newTermForChangeOrRemove( nodeId ) );
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
         }
     }
 }

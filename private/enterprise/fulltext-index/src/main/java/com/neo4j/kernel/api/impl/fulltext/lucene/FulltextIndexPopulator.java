@@ -9,6 +9,7 @@ import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
 import org.apache.lucene.document.Document;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Collection;
 
 import org.neo4j.function.ThrowingAction;
@@ -33,16 +34,30 @@ public class FulltextIndexPopulator extends LuceneIndexPopulator<DatabaseIndex<F
     }
 
     @Override
-    public void create() throws IOException
+    public void create()
     {
         super.create();
-        descriptorCreateAction.apply();
+        try
+        {
+            descriptorCreateAction.apply();
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     @Override
-    public void add( Collection<? extends IndexEntryUpdate<?>> updates ) throws IOException
+    public void add( Collection<? extends IndexEntryUpdate<?>> updates )
     {
-        luceneIndex.getIndexWriter().addDocuments( updates.size(), () -> updates.stream().map( this::updateAsDocument ).iterator() );
+        try
+        {
+            luceneIndex.getIndexWriter().addDocuments( updates.size(), () -> updates.stream().map( this::updateAsDocument ).iterator() );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     @Override
@@ -77,27 +92,33 @@ public class FulltextIndexPopulator extends LuceneIndexPopulator<DatabaseIndex<F
     private class PopulatingFulltextIndexUpdater implements IndexUpdater
     {
         @Override
-        public void process( IndexEntryUpdate<?> update ) throws IOException
+        public void process( IndexEntryUpdate<?> update )
         {
             assert update.indexKey().schema().equals( descriptor.schema() );
-
-            switch ( update.updateMode() )
+            try
             {
-            case ADDED:
-                long nodeId = update.getEntityId();
-                luceneIndex.getIndexWriter().updateDocument( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( nodeId ),
-                        LuceneFulltextDocumentStructure.documentRepresentingProperties( nodeId, descriptor.propertyNames(), update.values() ) );
+                switch ( update.updateMode() )
+                {
+                case ADDED:
+                    long nodeId = update.getEntityId();
+                    luceneIndex.getIndexWriter().updateDocument( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( nodeId ),
+                            LuceneFulltextDocumentStructure.documentRepresentingProperties( nodeId, descriptor.propertyNames(), update.values() ) );
 
-            case CHANGED:
-                long nodeId1 = update.getEntityId();
-                luceneIndex.getIndexWriter().updateDocument( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( nodeId1 ),
-                        LuceneFulltextDocumentStructure.documentRepresentingProperties( nodeId1, descriptor.propertyNames(), update.values() ) );
-                break;
-            case REMOVED:
-                luceneIndex.getIndexWriter().deleteDocuments( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( update.getEntityId() ) );
-                break;
-            default:
-                throw new UnsupportedOperationException();
+                case CHANGED:
+                    long nodeId1 = update.getEntityId();
+                    luceneIndex.getIndexWriter().updateDocument( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( nodeId1 ),
+                            LuceneFulltextDocumentStructure.documentRepresentingProperties( nodeId1, descriptor.propertyNames(), update.values() ) );
+                    break;
+                case REMOVED:
+                    luceneIndex.getIndexWriter().deleteDocuments( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( update.getEntityId() ) );
+                    break;
+                default:
+                    throw new UnsupportedOperationException();
+                }
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
             }
         }
 
