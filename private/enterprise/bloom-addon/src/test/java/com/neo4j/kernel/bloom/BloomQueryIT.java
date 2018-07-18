@@ -61,7 +61,6 @@ public class BloomQueryIT
     public void before() throws KernelException
     {
         db.ensureStarted();
-        db.getDependencyResolver().resolveDependency( Procedures.class ).registerProcedure( BloomProcedures.class );
     }
 
     @After

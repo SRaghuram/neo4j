@@ -10,6 +10,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
+import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
@@ -20,8 +21,10 @@ import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.factory.OperationalMode;
+import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.logging.Log;
 
 import static org.neo4j.kernel.api.impl.index.LuceneKernelExtensions.directoryFactory;
 import static org.neo4j.kernel.api.index.IndexDirectoryStructure.directoriesByProvider;
@@ -43,6 +46,8 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         NeoStoreDataSource neoStoreDataSource();
 
         Procedures procedures();
+
+        LogService getLogService();
     }
 
     public FulltextIndexProviderFactory()
@@ -67,11 +72,21 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         NeoStoreDataSource neoStoreDataSource = dependencies.neoStoreDataSource();
         IndexDirectoryStructure.Factory directoryStructureFactory = subProviderDirectoryStructure( context.storeDir() );
         Supplier<TokenHolders> tokenHoldersSupplier = dataSourceDependency( neoStoreDataSource, TokenHolders.class );
+        Log log = dependencies.getLogService().getInternalLog( FulltextIndexProvider.class );
 
         FulltextIndexProvider provider = new FulltextIndexProvider(
                 DESCRIPTOR, PRIORITY, directoryStructureFactory, fileSystemAbstraction, config, tokenHoldersSupplier,
                 directoryFactory, operationalMode );
         dependencies.procedures().registerComponent( FulltextAdapter.class, procContext -> provider, true );
+        try
+        {
+            dependencies.procedures().registerProcedure( FulltextProcedures.class );
+        }
+        catch ( KernelException e )
+        {
+            log.error( "Failed to register the fulltext index procedures. The fulltext index provider will be loaded and updated like normal, " +
+                    "but it might not be possible to query any fulltext indexes.", e );
+        }
 
         return provider;
     }

@@ -55,21 +55,25 @@ public class FulltextIndexAccessor extends AbstractLuceneIndexAccessor<FulltextI
             super( idempotent, refresh );
         }
 
+        @Override
         protected void addIdempotent( long nodeId, Value[] values ) throws IOException
         {
             writer.updateDocument( newTermForChangeOrRemove( nodeId ), documentRepresentingProperties( nodeId, descriptor.propertyNames(), values ) );
         }
 
+        @Override
         protected void add( long nodeId, Value[] values ) throws IOException
         {
             writer.addDocument( documentRepresentingProperties( nodeId, descriptor.propertyNames(), values ) );
         }
 
+        @Override
         protected void change( long nodeId, Value[] values ) throws IOException
         {
             writer.updateDocument( newTermForChangeOrRemove( nodeId ), documentRepresentingProperties( nodeId, descriptor.propertyNames(), values ) );
         }
 
+        @Override
         protected void remove( long nodeId ) throws IOException
         {
             writer.deleteDocuments( newTermForChangeOrRemove( nodeId ) );

@@ -9,11 +9,11 @@ import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextAnalyzerTest;
 import org.eclipse.collections.api.iterator.MutableLongIterator;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.RuleChain;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,10 +31,8 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.neo4j.kernel.impl.proc.Procedures;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
@@ -48,24 +46,25 @@ import static org.junit.Assert.fail;
 
 public class FulltextProceduresTest
 {
-    private static final String AWAIT_POPULATION = "CALL fulltext.awaitPopulation(\"%s\")";
-    private static final String GET_SCHEMA = "CALL fulltext.getIndexSchema(\"%s\")";
-    private static final String NODE_CREATE = "CALL fulltext.createNodeIndex(\"%s\", %s, %s )";
-    private static final String NODE_ANY_CREATE = "CALL fulltext.createAnyNodeLabelIndex(\"%s\", %s)";
-    private static final String RELATIONSHIP_CREATE = "CALL fulltext.createRelationshipIndex(\"%s\", %s, %s)";
-    private static final String RELATIONSHIP_ANY_CREATE = "CALL fulltext.createAnyRelationshipTypeIndex(\"%s\", %s)";
-    private static final String DROP = "CALL fulltext.dropIndex(\"%s\")";
-    private static final String STATUS = "CALL fulltext.indexStatus(\"%s\")";
-    private static final String QUERY = "CALL fulltext.query(\"%s\", \"%s\")";
-    private static final String ENTITYID = "entityId";
-    private static final String SCORE = "score";
+    static final String AWAIT_POPULATION = "CALL fulltext.awaitPopulation(\"%s\")";
+    static final String GET_SCHEMA = "CALL fulltext.getIndexSchema(\"%s\")";
+    static final String NODE_CREATE = "CALL fulltext.createNodeIndex(\"%s\", %s, %s )";
+    static final String NODE_ANY_CREATE = "CALL fulltext.createAnyNodeLabelIndex(\"%s\", %s)";
+    static final String RELATIONSHIP_CREATE = "CALL fulltext.createRelationshipIndex(\"%s\", %s, %s)";
+    static final String RELATIONSHIP_ANY_CREATE = "CALL fulltext.createAnyRelationshipTypeIndex(\"%s\", %s)";
+    static final String DROP = "CALL fulltext.dropIndex(\"%s\")";
+    static final String STATUS = "CALL fulltext.indexStatus(\"%s\")";
+    static final String QUERY = "CALL fulltext.query(\"%s\", \"%s\")";
+    static final String ENTITYID = "entityId";
+    static final String SCORE = "score";
+
+    private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
+    private final TestDirectory testDirectory = TestDirectory.testDirectory();
+    private final ExpectedException expectedException = ExpectedException.none();
+    private final CleanupRule cleanup = new CleanupRule();
 
     @Rule
-    public final DefaultFileSystemRule fs = new DefaultFileSystemRule();
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
-    @Rule
-    public final ExpectedException expectedException = ExpectedException.none();
+    public final RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( expectedException ).around( cleanup );
 
     private GraphDatabaseService db;
     private GraphDatabaseBuilder builder;
@@ -75,29 +74,18 @@ public class FulltextProceduresTest
     {
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
         builder = factory.newEmbeddedDatabaseBuilder( testDirectory.graphDbDir() );
-    }
-
-    @After
-    public void after()
-    {
-        if ( db != null )
-        {
-            db.shutdown();
-        }
-    }
-
-    private GraphDatabaseService getDb() throws KernelException
-    {
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
-        GraphDatabaseService db = builder.newGraphDatabase();
-        ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( Procedures.class ).registerProcedure( FulltextProcedures.class );
-        return db;
+    }
+
+    private GraphDatabaseService createDatabase()
+    {
+        return cleanup.add( builder.newGraphDatabase() );
     }
 
     @Test
-    public void createNodeFulltextIndex() throws Exception
+    public void createNodeFulltextIndex()
     {
-        db = getDb();
+        db = createDatabase();
         db.execute( format( NODE_CREATE, "test-index", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
         Result result = db.execute( format( GET_SCHEMA, "test-index" ) );
         assertTrue( result.hasNext() );
@@ -109,7 +97,7 @@ public class FulltextProceduresTest
         assertEquals( "ONLINE", result.next().get( "state" ) );
         assertFalse( result.hasNext() );
         db.shutdown();
-        db = getDb();
+        db = createDatabase();
         result = db.execute( format( GET_SCHEMA, "test-index" ) );
         assertTrue( result.hasNext() );
         assertEquals( "NODE:Label1, Label2(prop1, prop2)", result.next().get( "schema" ) );
@@ -121,9 +109,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void createAnyNodeFulltextIndex() throws Exception
+    public void createAnyNodeFulltextIndex()
     {
-        db = getDb();
+        db = createDatabase();
         db.execute( format( NODE_ANY_CREATE, "test-index", array( "prop1", "prop2" ) ) ).close();
         Result result = db.execute( format( GET_SCHEMA, "test-index" ) );
         assertTrue( result.hasNext() );
@@ -135,7 +123,7 @@ public class FulltextProceduresTest
         assertEquals( "ONLINE", result.next().get( "state" ) );
         assertFalse( result.hasNext() );
         db.shutdown();
-        db = getDb();
+        db = createDatabase();
         result = db.execute( format( GET_SCHEMA, "test-index" ) );
         assertTrue( result.hasNext() );
         assertEquals( "NODE:(prop1, prop2)", result.next().get( "schema" ) );
@@ -147,9 +135,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void createRelationshipFulltextIndex() throws Exception
+    public void createRelationshipFulltextIndex()
     {
-        db = getDb();
+        db = createDatabase();
         db.execute( format( RELATIONSHIP_CREATE, "test-index", array( "Reltype1", "Reltype2" ), array( "prop1", "prop2" ) ) ).close();
         Result result = db.execute( format( GET_SCHEMA, "test-index" ) );
         assertTrue( result.hasNext() );
@@ -161,7 +149,7 @@ public class FulltextProceduresTest
         assertEquals( "ONLINE", result.next().get( "state" ) );
         assertFalse( result.hasNext() );
         db.shutdown();
-        db = getDb();
+        db = createDatabase();
         result = db.execute( format( GET_SCHEMA, "test-index" ) );
         assertTrue( result.hasNext() );
         assertEquals( "RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", result.next().get( "schema" ) );
@@ -173,9 +161,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void createAnyRelationshipFulltextIndex() throws Exception
+    public void createAnyRelationshipFulltextIndex()
     {
-        db = getDb();
+        db = createDatabase();
         db.execute( format( RELATIONSHIP_ANY_CREATE, "test-index", array( "prop1", "prop2" ) ) ).close();
         Result result = db.execute( format( GET_SCHEMA, "test-index" ) );
         assertTrue( result.hasNext() );
@@ -187,7 +175,7 @@ public class FulltextProceduresTest
         assertEquals( "ONLINE", result.next().get( "state" ) );
         assertFalse( result.hasNext() );
         db.shutdown();
-        db = getDb();
+        db = createDatabase();
         result = db.execute( format( GET_SCHEMA, "test-index" ) );
         assertTrue( result.hasNext() );
         assertEquals( "RELATIONSHIP:(prop1, prop2)", result.next().get( "schema" ) );
@@ -199,9 +187,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void dropIndex() throws Exception
+    public void dropIndex()
     {
-        db = getDb();
+        db = createDatabase();
         db.execute( format( NODE_ANY_CREATE, "node-any", array( "prop1", "prop2" ) ) ).close();
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
         db.execute( format( RELATIONSHIP_ANY_CREATE, "rel-any", array( "prop1", "prop2" ) ) ).close();
@@ -235,18 +223,18 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void shouldNotBeAbleToCreateTwoIndexesWithSameName() throws Exception
+    public void shouldNotBeAbleToCreateTwoIndexesWithSameName()
     {
-        db = getDb();
+        db = createDatabase();
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
         expectedException.expectMessage( "already exists" );
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop3", "prop4" ) ) ).close();
     }
 
     @Test
-    public void indexConfigurationChangesAndTokenCreatesMustBePossibleInSameTransaction() throws Exception
+    public void indexConfigurationChangesAndTokenCreatesMustBePossibleInSameTransaction()
     {
-        db = getDb();
+        db = createDatabase();
 
         try ( Transaction ignore = db.beginTx() )
         {
@@ -261,9 +249,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void creatingLabelsAfterAnyTokenIndexModificationMustNotBlockForever() throws Exception
+    public void creatingLabelsAfterAnyTokenIndexModificationMustNotBlockForever()
     {
-        db = getDb();
+        db = createDatabase();
 
         long nodeId;
         try ( Transaction tx = db.beginTx() )
@@ -285,9 +273,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void creatingRelTypesAfterAnyTokenIndexModificationMustNotBlockForever() throws Exception
+    public void creatingRelTypesAfterAnyTokenIndexModificationMustNotBlockForever()
     {
-        db = getDb();
+        db = createDatabase();
 
         long nodeId;
         try ( Transaction tx = db.beginTx() )
@@ -309,9 +297,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void anyLabelTokenIndexModificationAfterCreatingLabelsAndRelationshipTypesMustNotBlockForever() throws Exception
+    public void anyLabelTokenIndexModificationAfterCreatingLabelsAndRelationshipTypesMustNotBlockForever()
     {
-        db = getDb();
+        db = createDatabase();
 
         try ( Transaction ignore = db.beginTx() )
         {
@@ -324,9 +312,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void anyRelTypeTokenIndexModificationAfterCreatingLabelsAndRelationshipTypesMustNotBlockForever() throws Exception
+    public void anyRelTypeTokenIndexModificationAfterCreatingLabelsAndRelationshipTypesMustNotBlockForever()
     {
-        db = getDb();
+        db = createDatabase();
 
         try ( Transaction ignore = db.beginTx() )
         {
@@ -339,9 +327,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void creatingIndexesWhichImpliesTokenCreateMustNotBlockForever() throws Exception
+    public void creatingIndexesWhichImpliesTokenCreateMustNotBlockForever()
     {
-        db = getDb();
+        db = createDatabase();
 
         // In fact, there should be no conflict here at all, so there is no exception to expect.
         try ( Transaction ignore = db.beginTx() )
@@ -354,9 +342,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void creatingAnyTokenIndexAndThenTokenIndexWhichImpliesLabelTokenCreateMustNotBlockForever() throws Exception
+    public void creatingAnyTokenIndexAndThenTokenIndexWhichImpliesLabelTokenCreateMustNotBlockForever()
     {
-        db = getDb();
+        db = createDatabase();
 
         try ( Transaction ignore = db.beginTx() )
         {
@@ -368,9 +356,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void creatingAnyTokenIndexAndThenTokenIndexWhichImpliesRelTypeTokenCreateMustNotBlockForever() throws Exception
+    public void creatingAnyTokenIndexAndThenTokenIndexWhichImpliesRelTypeTokenCreateMustNotBlockForever()
     {
-        db = getDb();
+        db = createDatabase();
 
         try ( Transaction ignore = db.beginTx() )
         {
@@ -382,9 +370,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void creatingIndexWithSpecificAnalyzerMustUseThatAnalyzerForPopulationUpdatingAndQuerying() throws Exception
+    public void creatingIndexWithSpecificAnalyzerMustUseThatAnalyzerForPopulationUpdatingAndQuerying()
     {
-        db = getDb();
+        db = createDatabase();
         LongHashSet noResults = new LongHashSet();
         LongHashSet swedishNodes = new LongHashSet();
         LongHashSet englishNodes = new LongHashSet();
@@ -472,9 +460,9 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void queryShouldFindDataAddedInLaterTransactions() throws Exception
+    public void queryShouldFindDataAddedInLaterTransactions()
     {
-        db = getDb();
+        db = createDatabase();
         db.execute( format( NODE_ANY_CREATE, "node-any", array( "prop1", "prop2" ) ) ).close();
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
         db.execute( format( RELATIONSHIP_ANY_CREATE, "rel-any", array( "prop1", "prop2" ) ) ).close();
@@ -520,7 +508,7 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void queryShouldFindDataAddedInIndexPopulation() throws Exception
+    public void queryShouldFindDataAddedInIndexPopulation()
     {
         // when
         Label label = Label.label( "LABEL" );
@@ -528,7 +516,7 @@ public class FulltextProceduresTest
         Node node1;
         Node node2;
         Relationship relationship;
-        db = getDb();
+        db = createDatabase();
         try ( Transaction tx = db.beginTx() )
         {
             node1 = db.createNode( label );
@@ -626,7 +614,7 @@ public class FulltextProceduresTest
         fail( message.toString() );
     }
 
-    private String array( String... args )
+    static String array( String... args )
     {
         return Arrays.stream( args ).map( s -> "\"" + s + "\"" ).collect( Collectors.joining( ", ", "[", "]" ) );
     }
