@@ -153,6 +153,15 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     public SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, Optional<String> analyzerOverride,
                                        String... properties )
     {
+        if ( entityTokens.length == 0 )
+        {
+            throw new BadSchemaException(
+                    "At least one " + ( type == EntityType.NODE ? "label" : "relationship type" ) + " must be specified when creating a fulltext index." );
+        }
+        if ( properties.length == 0 )
+        {
+            throw new BadSchemaException( "At least one property name must be specified when creating a fulltext index." );
+        }
         TokenHolders tokens = tokenHolders.get();
         if ( Arrays.stream( properties ).anyMatch( prop -> prop.equals( FulltextAdapter.FIELD_ENTITY_ID ) ) )
         {

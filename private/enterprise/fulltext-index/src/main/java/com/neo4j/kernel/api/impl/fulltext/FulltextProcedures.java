@@ -89,20 +89,6 @@ public class FulltextProcedures
         return Stream.of( new SchemaOutput( tx.schemaRead().indexGetForName( name ).schema().userDescription( lookup ) ) );
     }
 
-    @Description( "Create a node fulltext index for all labels and the given properties. " +
-                  "The optional 'config' map parameter can be used to supply settings to the index. " +
-                  "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
-                  "when indexing and querying." )
-    @Procedure( name = "db.index.fulltext.createAnyNodeLabelIndex", mode = SCHEMA )
-    public void createAnyNodeFulltextIndex(
-            @Name( "indexName" ) String name,
-            @Name( "propertyNames" ) List<String> properties,
-            @Name( value = "config", defaultValue = "" ) Map<String,String> config )
-            throws InvalidTransactionTypeKernelException, SchemaKernelException
-    {
-        createNodeFulltextIndex( name, Collections.emptyList(), properties, config );
-    }
-
     @Description( "Create a node fulltext index for the given labels and properties " +
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
                   "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
@@ -120,20 +106,6 @@ public class FulltextProcedures
                 EntityType.NODE, labels.toArray( new String[0] ), analyzerOverride,
                 properties.toArray( new String[0] ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
-    }
-
-    @Description( "Create a relationship fulltext index for all relationship types and the given properties " +
-                  "The optional 'config' map parameter can be used to supply settings to the index. " +
-                  "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
-                  "when indexing and querying." )
-    @Procedure( name = "db.index.fulltext.createAnyRelationshipTypeIndex", mode = SCHEMA )
-    public void createAnyRelationshipFulltextIndex(
-            @Name( "indexName" ) String name,
-            @Name( "propertyNames" ) List<String> properties,
-            @Name( value = "config", defaultValue = "" ) Map<String,String> config )
-            throws InvalidTransactionTypeKernelException, SchemaKernelException
-    {
-        createRelationshipFulltextIndex( name, Collections.emptyList(), properties, config );
     }
 
     @Description( "Create a relationship fulltext index for the given relationship types and properties " +

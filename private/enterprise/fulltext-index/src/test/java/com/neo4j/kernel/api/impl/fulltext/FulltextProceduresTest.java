@@ -25,6 +25,7 @@ import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
@@ -49,9 +50,7 @@ public class FulltextProceduresTest
     static final String AWAIT_POPULATION = "CALL db.index.fulltext.awaitPopulation(\"%s\")";
     static final String GET_SCHEMA = "CALL db.index.fulltext.getIndexSchema(\"%s\")";
     static final String NODE_CREATE = "CALL db.index.fulltext.createNodeIndex(\"%s\", %s, %s )";
-    static final String NODE_ANY_CREATE = "CALL db.index.fulltext.createAnyNodeLabelIndex(\"%s\", %s)";
     static final String RELATIONSHIP_CREATE = "CALL db.index.fulltext.createRelationshipIndex(\"%s\", %s, %s)";
-    static final String RELATIONSHIP_ANY_CREATE = "CALL db.index.fulltext.createAnyRelationshipTypeIndex(\"%s\", %s)";
     static final String DROP = "CALL db.index.fulltext.dropIndex(\"%s\")";
     static final String STATUS = "CALL db.index.fulltext.indexStatus(\"%s\")";
     static final String QUERY = "CALL db.index.fulltext.query(\"%s\", \"%s\")";
@@ -109,32 +108,6 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void createAnyNodeFulltextIndex()
-    {
-        db = createDatabase();
-        db.execute( format( NODE_ANY_CREATE, "test-index", array( "prop1", "prop2" ) ) ).close();
-        Result result = db.execute( format( GET_SCHEMA, "test-index" ) );
-        assertTrue( result.hasNext() );
-        assertEquals( "NODE:(prop1, prop2)", result.next().get( "schema" ) );
-        assertFalse( result.hasNext() );
-        db.execute( format( AWAIT_POPULATION, "test-index" ) ).close();
-        result = db.execute( format( STATUS, "test-index" ) );
-        assertTrue( result.hasNext() );
-        assertEquals( "ONLINE", result.next().get( "state" ) );
-        assertFalse( result.hasNext() );
-        db.shutdown();
-        db = createDatabase();
-        result = db.execute( format( GET_SCHEMA, "test-index" ) );
-        assertTrue( result.hasNext() );
-        assertEquals( "NODE:(prop1, prop2)", result.next().get( "schema" ) );
-        assertFalse( result.hasNext() );
-        result = db.execute( format( STATUS, "test-index" ) );
-        assertTrue( result.hasNext() );
-        assertEquals( "ONLINE", result.next().get( "state" ) );
-        assertFalse( result.hasNext() );
-    }
-
-    @Test
     public void createRelationshipFulltextIndex()
     {
         db = createDatabase();
@@ -161,38 +134,10 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void createAnyRelationshipFulltextIndex()
-    {
-        db = createDatabase();
-        db.execute( format( RELATIONSHIP_ANY_CREATE, "test-index", array( "prop1", "prop2" ) ) ).close();
-        Result result = db.execute( format( GET_SCHEMA, "test-index" ) );
-        assertTrue( result.hasNext() );
-        assertEquals( "RELATIONSHIP:(prop1, prop2)", result.next().get( "schema" ) );
-        assertFalse( result.hasNext() );
-        db.execute( format( AWAIT_POPULATION, "test-index" ) ).close();
-        result = db.execute( format( STATUS, "test-index" ) );
-        assertTrue( result.hasNext() );
-        assertEquals( "ONLINE", result.next().get( "state" ) );
-        assertFalse( result.hasNext() );
-        db.shutdown();
-        db = createDatabase();
-        result = db.execute( format( GET_SCHEMA, "test-index" ) );
-        assertTrue( result.hasNext() );
-        assertEquals( "RELATIONSHIP:(prop1, prop2)", result.next().get( "schema" ) );
-        assertFalse( result.hasNext() );
-        result = db.execute( format( STATUS, "test-index" ) );
-        assertTrue( result.hasNext() );
-        assertEquals( "ONLINE", result.next().get( "state" ) );
-        assertFalse( result.hasNext() );
-    }
-
-    @Test
     public void dropIndex()
     {
         db = createDatabase();
-        db.execute( format( NODE_ANY_CREATE, "node-any", array( "prop1", "prop2" ) ) ).close();
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
-        db.execute( format( RELATIONSHIP_ANY_CREATE, "rel-any", array( "prop1", "prop2" ) ) ).close();
         db.execute( format( RELATIONSHIP_CREATE, "rel", array( "Reltype1", "Reltype2" ), array( "prop1", "prop2" ) ) ).close();
         Map<String,String> indexes = new HashMap<>();
         db.execute( "call db.indexes" ).forEachRemaining( m -> indexes.put( (String) m.get( "indexName" ), (String) m.get( "description" ) ) );
@@ -208,22 +153,10 @@ public class FulltextProceduresTest
         newIndexes.clear();
         db.execute( "call db.indexes" ).forEachRemaining( m -> newIndexes.put( (String) m.get( "indexName" ), (String) m.get( "description" ) ) );
         assertEquals( indexes, newIndexes );
-
-        db.execute( format( DROP, "rel-any" ) );
-        indexes.remove( "rel-any" );
-        newIndexes.clear();
-        db.execute( "call db.indexes" ).forEachRemaining( m -> newIndexes.put( (String) m.get( "indexName" ), (String) m.get( "description" ) ) );
-        assertEquals( indexes, newIndexes );
-
-        db.execute( format( DROP, "node-any" ) );
-        indexes.remove( "node-any" );
-        newIndexes.clear();
-        db.execute( "call db.indexes" ).forEachRemaining( m -> newIndexes.put( (String) m.get( "indexName" ), (String) m.get( "description" ) ) );
-        assertEquals( indexes, newIndexes );
     }
 
     @Test
-    public void shouldNotBeAbleToCreateTwoIndexesWithSameName()
+    public void mustNotBeAbleToCreateTwoIndexesWithSameName()
     {
         db = createDatabase();
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
@@ -232,98 +165,35 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void indexConfigurationChangesAndTokenCreatesMustBePossibleInSameTransaction()
+    public void nodeIndexesMustHaveLabels()
     {
         db = createDatabase();
-
-        try ( Transaction ignore = db.beginTx() )
-        {
-            // The property keys we ask for do not exist, so those tokens will have to be allocated.
-            // This test verifies that the locking required for the index modifications do not conflict with the
-            // locking required for the token allocation.
-            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "this" ) ) );
-            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "foo" ) ) );
-            db.execute( format( NODE_ANY_CREATE, "nodesB", array( "that" ) ) );
-            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsB", array( "bar" ) ) );
-        }
+        expectedException.expect( QueryExecutionException.class );
+        db.execute( format( NODE_CREATE, "nodeIndex", array(), array( "prop" ) ) ).close();
     }
 
     @Test
-    public void creatingLabelsAfterAnyTokenIndexModificationMustNotBlockForever()
+    public void relationshipIndexesMustHaveRelationshipTypes()
     {
         db = createDatabase();
-
-        long nodeId;
-        try ( Transaction tx = db.beginTx() )
-        {
-            Node node = db.createNode();
-            nodeId = node.getId();
-            tx.success();
-        }
-
-        try ( Transaction tx = db.beginTx() )
-        {
-            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "this" ) ) );
-            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "foo" ) ) );
-            Node node = db.getNodeById( nodeId );
-            expectedException.expect( RuntimeException.class );
-            node.addLabel( Label.label( "SOME_LABEL" ) );
-            tx.success();
-        }
+        expectedException.expect( QueryExecutionException.class );
+        db.execute( format( RELATIONSHIP_CREATE, "relIndex", array(), array( "prop" ) ) );
     }
 
     @Test
-    public void creatingRelTypesAfterAnyTokenIndexModificationMustNotBlockForever()
+    public void nodeIndexesMustHaveProperties()
     {
         db = createDatabase();
-
-        long nodeId;
-        try ( Transaction tx = db.beginTx() )
-        {
-            Node node = db.createNode();
-            nodeId = node.getId();
-            tx.success();
-        }
-
-        try ( Transaction tx = db.beginTx() )
-        {
-            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "this" ) ) );
-            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "foo" ) ) );
-            Node node = db.getNodeById( nodeId );
-            expectedException.expect( RuntimeException.class );
-            node.createRelationshipTo( node, RelationshipType.withName( "SOME_REL" ) );
-            tx.success();
-        }
+        expectedException.expect( QueryExecutionException.class );
+        db.execute( format( NODE_CREATE, "nodeIndex", array( "Label" ), array() ) ).close();
     }
 
     @Test
-    public void anyLabelTokenIndexModificationAfterCreatingLabelsAndRelationshipTypesMustNotBlockForever()
+    public void relationshipIndexesMustHaveProperties()
     {
         db = createDatabase();
-
-        try ( Transaction ignore = db.beginTx() )
-        {
-            Node node = db.createNode();
-            node.addLabel( Label.label( "SOME_LABEL" ) );
-            node.createRelationshipTo( node, RelationshipType.withName( "SOME_REL" ) );
-            expectedException.expect( RuntimeException.class );
-            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "this" ) ) );
-        }
-    }
-
-    @Test
-    public void anyRelTypeTokenIndexModificationAfterCreatingLabelsAndRelationshipTypesMustNotBlockForever()
-    {
-        db = createDatabase();
-
-        try ( Transaction ignore = db.beginTx() )
-        {
-            Node node = db.createNode();
-            node.addLabel( Label.label( "SOME_LABEL" ) );
-            node.createRelationshipTo( node, RelationshipType.withName( "SOME_REL" ) );
-            expectedException.expect( RuntimeException.class );
-            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "foo" ) ) );
-        }
+        expectedException.expect( QueryExecutionException.class );
+        db.execute( format( RELATIONSHIP_CREATE, "relIndex", array( "RELTYPE" ), array() ) );
     }
 
     @Test
@@ -331,41 +201,15 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
 
-        // In fact, there should be no conflict here at all, so there is no exception to expect.
         try ( Transaction ignore = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodesA", array( "SOME_LABEL" ), array( "prop" ) ) );
-            db.execute( format( RELATIONSHIP_CREATE, "relsA", array( "SOME_REL_TYPE" ), array( "prop" ) ) );
-            db.execute( format( NODE_CREATE, "nodesB", array( "SOME_OTHER_LABEL" ), array( "prop" ) ) );
-            db.execute( format( RELATIONSHIP_CREATE, "relsB", array( "SOME_OTHER_REL_TYPE" ), array( "prop" ) ) );
-        }
-    }
-
-    @Test
-    public void creatingAnyTokenIndexAndThenTokenIndexWhichImpliesLabelTokenCreateMustNotBlockForever()
-    {
-        db = createDatabase();
-
-        try ( Transaction ignore = db.beginTx() )
-        {
-            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "prop" ) ) );
-            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "prop" ) ) );
-            expectedException.expect( RuntimeException.class );
-            db.execute( format( NODE_CREATE, "nodesB", array( "SOME_LABEL" ), array( "prop" ) ) );
-        }
-    }
-
-    @Test
-    public void creatingAnyTokenIndexAndThenTokenIndexWhichImpliesRelTypeTokenCreateMustNotBlockForever()
-    {
-        db = createDatabase();
-
-        try ( Transaction ignore = db.beginTx() )
-        {
-            db.execute( format( NODE_ANY_CREATE, "nodesA", array( "prop" ) ) );
-            db.execute( format( RELATIONSHIP_ANY_CREATE, "relsA", array( "prop" ) ) );
-            expectedException.expect( RuntimeException.class );
-            db.execute( format( RELATIONSHIP_CREATE, "relsB", array( "SOME_REL_TYPE" ), array( "prop" ) ) );
+            // The property keys and labels we ask for do not exist, so those tokens will have to be allocated.
+            // This test verifies that the locking required for the index modifications do not conflict with the
+            // locking required for the token allocation.
+            db.execute( format( NODE_CREATE, "nodesA", array( "SOME_LABEL" ), array( "this" ) ) );
+            db.execute( format( RELATIONSHIP_CREATE, "relsA", array( "SOME_REL_TYPE" ), array( "foo" ) ) );
+            db.execute( format( NODE_CREATE, "nodesB", array( "SOME_OTHER_LABEL" ), array( "that" ) ) );
+            db.execute( format( RELATIONSHIP_CREATE, "relsB", array( "SOME_OTHER_REL_TYPE" ), array( "bar" ) ) );
         }
     }
 
@@ -384,8 +228,6 @@ public class FulltextProceduresTest
         String prop = "prop";
         String labelledSwedishNodes = "labelledSwedishNodes";
         String typedSwedishRelationships = "typedSwedishRelationships";
-        String anySwedishNodes = "anySwedishNodes";
-        String anySwedishRelationships = "anySwedishRelationships";
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -412,16 +254,12 @@ public class FulltextProceduresTest
             String swedish = props + ", {analyzer: '" + FulltextAnalyzerTest.SWEDISH + "'}";
             db.execute( format( NODE_CREATE, labelledSwedishNodes, lbl, swedish ) ).close();
             db.execute( format( RELATIONSHIP_CREATE, typedSwedishRelationships, rel, swedish ) ).close();
-            db.execute( format( NODE_ANY_CREATE, anySwedishNodes, swedish ) ).close();
-            db.execute( format( RELATIONSHIP_ANY_CREATE, anySwedishRelationships, swedish ) ).close();
             tx.success();
         }
         try ( Transaction ignore = db.beginTx() )
         {
             db.execute( format( AWAIT_POPULATION, labelledSwedishNodes ) );
             db.execute( format( AWAIT_POPULATION, typedSwedishRelationships ) );
-            db.execute( format( AWAIT_POPULATION, anySwedishNodes ) );
-            db.execute( format( AWAIT_POPULATION, anySwedishRelationships ) );
         }
         try ( Transaction tx = db.beginTx() )
         {
@@ -446,16 +284,10 @@ public class FulltextProceduresTest
             // swedish stop word (ignored by swedish analyzer, and not among the english nodes)
             assertQueryFindsIds( db, db::getNodeById, labelledSwedishNodes, "ett", noResults );
             assertQueryFindsIds( db, db::getNodeById, labelledSwedishNodes, "apa", swedishNodes ); // swedish word
-            assertQueryFindsIds( db, db::getNodeById, anySwedishNodes, "and", englishNodes ); // and so on for the rest of the tests...
-            assertQueryFindsIds( db, db::getNodeById, anySwedishNodes, "ett", noResults );
-            assertQueryFindsIds( db, db::getNodeById, anySwedishNodes, "apa", swedishNodes );
 
             assertQueryFindsIds( db, db::getRelationshipById, typedSwedishRelationships, "and", englishRels );
             assertQueryFindsIds( db, db::getRelationshipById, typedSwedishRelationships, "ett", noResults );
             assertQueryFindsIds( db, db::getRelationshipById, typedSwedishRelationships, "apa", swedishRels );
-            assertQueryFindsIds( db, db::getRelationshipById, anySwedishRelationships, "and", englishRels );
-            assertQueryFindsIds( db, db::getRelationshipById, anySwedishRelationships, "ett", noResults );
-            assertQueryFindsIds( db, db::getRelationshipById, anySwedishRelationships, "apa", swedishRels );
         }
     }
 
@@ -463,20 +295,14 @@ public class FulltextProceduresTest
     public void queryShouldFindDataAddedInLaterTransactions()
     {
         db = createDatabase();
-        db.execute( format( NODE_ANY_CREATE, "node-any", array( "prop1", "prop2" ) ) ).close();
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
-        db.execute( format( RELATIONSHIP_ANY_CREATE, "rel-any", array( "prop1", "prop2" ) ) ).close();
         db.execute( format( RELATIONSHIP_CREATE, "rel", array( "Reltype1", "Reltype2" ), array( "prop1", "prop2" ) ) ).close();
         try ( Transaction ignore = db.beginTx() )
         {
-            db.execute( format( AWAIT_POPULATION, "node-any" ) ).close();
             db.execute( format( AWAIT_POPULATION, "node" ) ).close();
-            db.execute( format( AWAIT_POPULATION, "rel-any" ) ).close();
             db.execute( format( AWAIT_POPULATION, "node" ) ).close();
         }
-        long zebraId;
         long horseId;
-        long loopId;
         long horseRelId;
         try ( Transaction tx = db.beginTx() )
         {
@@ -490,19 +316,13 @@ public class FulltextProceduresTest
             Relationship loop = horse.createRelationshipTo( horse, RelationshipType.withName( "loop" ) );
             loop.setProperty( "prop2", "zebra" );
 
-            zebraId = zebra.getId();
             horseId = horse.getId();
             horseRelId = horseRel.getId();
-            loopId = loop.getId();
             tx.success();
         }
-        assertQueryFindsIds( db, "node-any", "zebra", zebraId );
-        assertQueryFindsIds( db, "node-any", "zebra horse", zebraId, horseId );
         assertQueryFindsIds( db, "node", "horse", horseId );
         assertQueryFindsIds( db, "node", "horse zebra", horseId );
 
-        assertQueryFindsIds( db, "rel-any", "zebra", loopId );
-        assertQueryFindsIds( db, "rel-any", "zebra horse", horseRelId, loopId );
         assertQueryFindsIds( db, "rel", "horse", horseRelId );
         assertQueryFindsIds( db, "rel", "horse zebra", horseRelId );
     }
