@@ -42,7 +42,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.graphdb.Label.label;
-import static org.neo4j.internal.kernel.api.schema.SchemaDescriptor.ANY_ENTITY_TOKEN;
 import static org.neo4j.kernel.api.schema.SchemaDescriptorFactory.multiToken;
 
 public class FulltextIndexProviderTest
@@ -155,21 +154,6 @@ public class FulltextIndexProviderTest
         db.restartDatabase( DatabaseRule.RestartAction.EMPTY );
         provider = (FulltextIndexProvider) db.resolveDependency( IndexProviderMap.class ).lookup( DESCRIPTOR );
         verifyRelationshipData( provider, secondRelId );
-    }
-
-    @Test
-    public void noLabelIsAnyLabel() throws Exception
-    {
-        IndexReference fulltextIndexDescriptor;
-        FulltextIndexProvider provider = (FulltextIndexProvider) db.resolveDependency( IndexProviderMap.class ).lookup( DESCRIPTOR );
-        fulltextIndexDescriptor = createIndex( ANY_ENTITY_TOKEN, new int[]{0, 1, 2, 3} );
-        await( fulltextIndexDescriptor );
-        long thirdNodeId;
-        thirdNodeId = createTheThirdNode();
-        verifyNodeData( provider, thirdNodeId );
-        db.restartDatabase( DatabaseRule.RestartAction.EMPTY );
-        provider = (FulltextIndexProvider) db.resolveDependency( IndexProviderMap.class ).lookup( DESCRIPTOR );
-        verifyNodeData( provider, thirdNodeId );
     }
 
     private KernelTransactionImplementation getKernelTransaction()
