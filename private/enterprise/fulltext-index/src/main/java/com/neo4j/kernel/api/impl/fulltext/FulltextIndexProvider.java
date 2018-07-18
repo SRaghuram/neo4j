@@ -89,7 +89,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     {
         TokenHolders tokens = tokenHolders.get();
         PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
-        FulltextIndexDescriptor fulltextIndexDescriptor = new FulltextIndexDescriptor(
+        FulltextIndexDescriptor fulltextIndexDescriptor = FulltextIndexSettings.readOrInitialiseDescriptor(
                 descriptor, defaultAnalyzerClassName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
         DatabaseIndex<FulltextIndexReader> fulltextIndex = FulltextIndexBuilder
                 .create( fulltextIndexDescriptor, config )
@@ -103,7 +103,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
             throw new UnsupportedOperationException( "Can't create populator for read only index" );
         }
         return new FulltextIndexPopulator( fulltextIndexDescriptor, fulltextIndex,
-                () -> fulltextIndexDescriptor.saveIndexSettings( indexStorage, fileSystem ) );
+                () -> FulltextIndexSettings.saveFulltextIndexSettings( fulltextIndexDescriptor, indexStorage, fileSystem ) );
     }
 
     @Override
@@ -112,7 +112,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         TokenHolders tokens = tokenHolders.get();
         PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
 
-        FulltextIndexDescriptor fulltextIndexDescriptor = new FulltextIndexDescriptor(
+        FulltextIndexDescriptor fulltextIndexDescriptor = FulltextIndexSettings.readOrInitialiseDescriptor(
                 descriptor, defaultAnalyzerClassName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
         DatabaseIndex<FulltextIndexReader> fulltextIndex = FulltextIndexBuilder
                 .create( fulltextIndexDescriptor, config )
