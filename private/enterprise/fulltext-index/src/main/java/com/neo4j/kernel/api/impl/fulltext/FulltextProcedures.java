@@ -54,8 +54,8 @@ public class FulltextProcedures
             result -> new EntityOutput( result.entityId(), result.score() );
 
     // TODO use `db.awaitIndex` instead.
-    @Description( "Await the completion of any background index population for the given index." )
-    @Procedure( name = "fulltext.awaitPopulation", mode = READ )
+    @Description( "Await the completion of any background index population for the given named index." )
+    @Procedure( name = "db.index.fulltext.awaitPopulation", mode = READ )
     public void awaitPopulation( @Name( "indexName" ) String name ) throws IndexPopulationFailedKernelException, IndexNotFoundKernelException
     {
         IndexReference index = tx.schemaRead().indexGetForName( name );
@@ -82,7 +82,7 @@ public class FulltextProcedures
 
     // TODO remove or make this the same output as what `db.indexes` gives.
     @Description( "Returns the schema for the given index." )
-    @Procedure( name = "fulltext.getIndexSchema", mode = READ )
+    @Procedure( name = "db.index.fulltext.getIndexSchema", mode = READ )
     public Stream<SchemaOutput> getIndexSchema( @Name( "indexName" ) String name )
     {
         TokenNameLookup lookup = new SilentTokenNameLookup( tx.tokenRead() );
@@ -93,7 +93,7 @@ public class FulltextProcedures
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
                   "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
                   "when indexing and querying." )
-    @Procedure( name = "fulltext.createAnyNodeLabelIndex", mode = SCHEMA )
+    @Procedure( name = "db.index.fulltext.createAnyNodeLabelIndex", mode = SCHEMA )
     public void createAnyNodeFulltextIndex(
             @Name( "indexName" ) String name,
             @Name( "propertyNames" ) List<String> properties,
@@ -107,7 +107,7 @@ public class FulltextProcedures
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
                   "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
                   "when indexing and querying." )
-    @Procedure( name = "fulltext.createNodeIndex", mode = SCHEMA )
+    @Procedure( name = "db.index.fulltext.createNodeIndex", mode = SCHEMA )
     public void createNodeFulltextIndex(
             @Name( "indexName" ) String name,
             @Name( "labels" ) List<String> labels,
@@ -126,7 +126,7 @@ public class FulltextProcedures
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
                   "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
                   "when indexing and querying." )
-    @Procedure( name = "fulltext.createAnyRelationshipTypeIndex", mode = SCHEMA )
+    @Procedure( name = "db.index.fulltext.createAnyRelationshipTypeIndex", mode = SCHEMA )
     public void createAnyRelationshipFulltextIndex(
             @Name( "indexName" ) String name,
             @Name( "propertyNames" ) List<String> properties,
@@ -140,7 +140,7 @@ public class FulltextProcedures
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
                   "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
                   "when indexing and querying." )
-    @Procedure( name = "fulltext.createRelationshipIndex", mode = SCHEMA )
+    @Procedure( name = "db.index.fulltext.createRelationshipIndex", mode = SCHEMA )
     public void createRelationshipFulltextIndex(
             @Name( "indexName" ) String name,
             @Name( "relationshipTypes" ) List<String> reltypes,
@@ -156,7 +156,7 @@ public class FulltextProcedures
     }
 
     @Description( "Drop the specified index." )
-    @Procedure( name = "fulltext.dropIndex", mode = SCHEMA )
+    @Procedure( name = "db.index.fulltext.dropIndex", mode = SCHEMA )
     public void dropIndex( @Name( "indexName" ) String name ) throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
         tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( name ) );
@@ -164,7 +164,7 @@ public class FulltextProcedures
 
     // TODO create a `db.indexStatus` procedure instead.
     @Description( "Check the status specified index." )
-    @Procedure( name = "fulltext.indexStatus", mode = READ )
+    @Procedure( name = "db.index.fulltext.indexStatus", mode = READ )
     public Stream<StatusOutput> indexStatus( @Name( "indexName" ) String name ) throws IndexNotFoundKernelException
     {
         SchemaRead readOperations = tx.schemaRead();
@@ -173,7 +173,7 @@ public class FulltextProcedures
     }
 
     @Description( "Query the given fulltext index. Returns ids and lucene query score, ordered by score." )
-    @Procedure( name = "fulltext.query", mode = READ )
+    @Procedure( name = "db.index.fulltext.query", mode = READ )
     public Stream<EntityOutput> queryFulltext( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
             throws ParseException, IndexNotFoundKernelException, IOException
     {

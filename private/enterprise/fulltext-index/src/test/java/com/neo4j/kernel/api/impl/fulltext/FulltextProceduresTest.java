@@ -46,15 +46,15 @@ import static org.junit.Assert.fail;
 
 public class FulltextProceduresTest
 {
-    static final String AWAIT_POPULATION = "CALL fulltext.awaitPopulation(\"%s\")";
-    static final String GET_SCHEMA = "CALL fulltext.getIndexSchema(\"%s\")";
-    static final String NODE_CREATE = "CALL fulltext.createNodeIndex(\"%s\", %s, %s )";
-    static final String NODE_ANY_CREATE = "CALL fulltext.createAnyNodeLabelIndex(\"%s\", %s)";
-    static final String RELATIONSHIP_CREATE = "CALL fulltext.createRelationshipIndex(\"%s\", %s, %s)";
-    static final String RELATIONSHIP_ANY_CREATE = "CALL fulltext.createAnyRelationshipTypeIndex(\"%s\", %s)";
-    static final String DROP = "CALL fulltext.dropIndex(\"%s\")";
-    static final String STATUS = "CALL fulltext.indexStatus(\"%s\")";
-    static final String QUERY = "CALL fulltext.query(\"%s\", \"%s\")";
+    static final String AWAIT_POPULATION = "CALL db.index.fulltext.awaitPopulation(\"%s\")";
+    static final String GET_SCHEMA = "CALL db.index.fulltext.getIndexSchema(\"%s\")";
+    static final String NODE_CREATE = "CALL db.index.fulltext.createNodeIndex(\"%s\", %s, %s )";
+    static final String NODE_ANY_CREATE = "CALL db.index.fulltext.createAnyNodeLabelIndex(\"%s\", %s)";
+    static final String RELATIONSHIP_CREATE = "CALL db.index.fulltext.createRelationshipIndex(\"%s\", %s, %s)";
+    static final String RELATIONSHIP_ANY_CREATE = "CALL db.index.fulltext.createAnyRelationshipTypeIndex(\"%s\", %s)";
+    static final String DROP = "CALL db.index.fulltext.dropIndex(\"%s\")";
+    static final String STATUS = "CALL db.index.fulltext.indexStatus(\"%s\")";
+    static final String QUERY = "CALL db.index.fulltext.query(\"%s\", \"%s\")";
     static final String ENTITYID = "entityId";
     static final String SCORE = "score";
 
