@@ -24,7 +24,6 @@ import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -53,7 +52,7 @@ public class RestartableImportIT
     public void shouldFinishDespiteUnfairShutdowns() throws Exception
     {
         File storeDir = directory.directory( "db" );
-        File databaseDirectory = new File( storeDir, DataSourceManager.DEFAULT_DATABASE_NAME );
+        File databaseDirectory = directory.databaseDir( storeDir );
         long startTime = System.currentTimeMillis();
         int timeMeasuringImportExitCode = startImportInSeparateProcess( databaseDirectory ).waitFor();
         long time = System.currentTimeMillis() - startTime;
