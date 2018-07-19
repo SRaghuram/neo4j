@@ -23,6 +23,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.rule.CleanupRule;
@@ -67,7 +68,7 @@ public class FulltextIndexBackupIT
     {
         backupPort = PortAuthority.allocatePort();
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
-        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( dir.graphDbDir() );
+        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( dir.storeDir() );
         builder.setConfig( online_backup_enabled, "true" );
         builder.setConfig( online_backup_server, "127.0.0.1:" + backupPort );
         db = (GraphDatabaseAPI) builder.newGraphDatabase();
@@ -79,7 +80,7 @@ public class FulltextIndexBackupIT
     {
         initializeTestData();
         verifyData( db );
-        File backup = dir.cleanDirectory( "backup" );
+        File backup = dir.storeDir( "backup" );
         OnlineBackup.from( "127.0.0.1", backupPort ).backup( backup );
         db.shutdown();
 
@@ -161,7 +162,7 @@ public class FulltextIndexBackupIT
         awaitPopulation( db );
     }
 
-    private void awaitPopulation( GraphDatabaseAPI db )
+    private static void awaitPopulation( GraphDatabaseAPI db )
     {
         try ( Transaction tx = db.beginTx() )
         {
@@ -171,9 +172,13 @@ public class FulltextIndexBackupIT
         }
     }
 
-    private GraphDatabaseAPI startBackupDatabase( File backupDir )
+    private GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        return (GraphDatabaseAPI) cleanup.add( new GraphDatabaseFactory().newEmbeddedDatabase( backupDir ) );
+        String databaseName = backupDatabaseDir.getName();
+        return (GraphDatabaseAPI) cleanup.add( new GraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( backupDatabaseDir.getParentFile() )
+                .setConfig( GraphDatabaseSettings.active_database, databaseName )
+                .newGraphDatabase() );
     }
 
     private void verifyData( GraphDatabaseAPI db )

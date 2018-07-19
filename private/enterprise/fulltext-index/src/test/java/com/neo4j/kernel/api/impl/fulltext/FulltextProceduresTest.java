@@ -72,7 +72,7 @@ public class FulltextProceduresTest
     public void before()
     {
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
-        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.graphDbDir() );
+        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 
@@ -363,7 +363,7 @@ public class FulltextProceduresTest
         assertQueryFindsIds( db, "rel", "relate", relationship.getId() );
     }
 
-    private void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )
+    private static void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )
     {
         Result result = db.execute( format( QUERY, index, query ) );
         int num = 0;
@@ -381,8 +381,7 @@ public class FulltextProceduresTest
         assertEquals( "Number of results differ from expected", ids.length, num );
     }
 
-    private void assertQueryFindsIds(
-            GraphDatabaseService db, LongFunction<Entity> getEntity, String index, String query, LongHashSet ids )
+    private static void assertQueryFindsIds( GraphDatabaseService db, LongFunction<Entity> getEntity, String index, String query, LongHashSet ids )
     {
         ids = new LongHashSet( ids ); // Create a defensive copy, because we're going to modify this instance.
         long[] expectedIds = ids.toArray();
@@ -410,8 +409,8 @@ public class FulltextProceduresTest
         }
     }
 
-    private void failQuery( LongFunction<Entity> getEntity, String index, String query, MutableLongSet ids,
-                            long[] expectedIds, MutableLongSet actualIds, String msg )
+    private static void failQuery( LongFunction<Entity> getEntity, String index, String query, MutableLongSet ids, long[] expectedIds, MutableLongSet actualIds,
+            String msg )
     {
         StringBuilder message = new StringBuilder( msg ).append( '\n' );
         MutableLongIterator itr = ids.longIterator();

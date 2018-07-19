@@ -5,7 +5,6 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,7 +60,7 @@ public class FulltextIndexConsistencyCheckIT
     public void before()
     {
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
-        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.graphDbDir() );
+        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 
@@ -133,9 +132,8 @@ public class FulltextIndexConsistencyCheckIT
         Config config = Config.defaults();
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService( new Date() );
         ConsistencyFlags checkConsistencyConfig = new ConsistencyFlags( config );
-        ConsistencyCheckService.Result result =
-                consistencyCheckService.runFullConsistencyCheck( testDirectory.graphDbDir(), config, ProgressMonitorFactory.NONE, NullLogProvider.getInstance(),
-                        true, checkConsistencyConfig );
+        ConsistencyCheckService.Result result = consistencyCheckService.runFullConsistencyCheck( testDirectory.databaseDir(), config,
+                ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), true, checkConsistencyConfig );
         assertTrue( result.isSuccessful() );
     }
 }

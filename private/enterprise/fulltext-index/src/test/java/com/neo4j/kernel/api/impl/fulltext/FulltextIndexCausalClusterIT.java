@@ -16,11 +16,9 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.discovery.Cluster;
 import org.neo4j.causalclustering.discovery.ClusterMember;
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
@@ -204,7 +202,7 @@ public class FulltextIndexCausalClusterIT
         }
     }
 
-    private String errorMessage( Set<Long> actual, List<Long> expected )
+    private static String errorMessage( Set<Long> actual, List<Long> expected )
     {
         return format( "Query results differ from expected, expected %s but got %s", expected, actual );
     }

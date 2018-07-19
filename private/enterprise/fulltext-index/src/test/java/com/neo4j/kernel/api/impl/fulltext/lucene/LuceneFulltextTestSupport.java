@@ -151,7 +151,7 @@ public class LuceneFulltextTestSupport
         assertQueryResultsMatchInOrder( result, ids );
     }
 
-    private void assertQueryResultsMatch( ScoreEntityIterator result, long[] ids )
+    private static void assertQueryResultsMatch( ScoreEntityIterator result, long[] ids )
     {
         PrimitiveLongSet set = PrimitiveLongCollections.setOf( ids );
         while ( result.hasNext() )
@@ -167,7 +167,7 @@ public class LuceneFulltextTestSupport
         }
     }
 
-    private void assertQueryResultsMatchInOrder( ScoreEntityIterator result, long[] ids )
+    private static void assertQueryResultsMatchInOrder( ScoreEntityIterator result, long[] ids )
     {
         int num = 0;
         float score = Float.MAX_VALUE;
