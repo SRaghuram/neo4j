@@ -33,13 +33,12 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
     {
         applySetting( FulltextConfig.fulltext_default_analyzer, ENGLISH );
 
-        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
+        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[]{LABEL.name()}, Optional.empty(), PROP );
         IndexReference nodes;
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
             SchemaWrite schemaWrite = transaction.schemaWrite();
-            nodes = schemaWrite.indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
-                    Optional.of( "nodes" ) );
+            nodes = schemaWrite.indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( "nodes" ) );
             transaction.success();
         }
         await( nodes );
@@ -47,8 +46,8 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         long id;
         try ( Transaction tx = db.beginTx() )
         {
-            createNodeIndexableByPropertyValue( "Hello and hello again, in the end." );
-            id = createNodeIndexableByPropertyValue( "En apa och en tomte bodde i ett hus." );
+            createNodeIndexableByPropertyValue( LABEL, "Hello and hello again, in the end." );
+            id = createNodeIndexableByPropertyValue( LABEL, "En apa och en tomte bodde i ett hus." );
 
             tx.success();
         }
@@ -69,13 +68,12 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
     public void shouldBeAbleToSpecifySwedishAnalyzer() throws Exception
     {
         applySetting( FulltextConfig.fulltext_default_analyzer, SWEDISH );
-        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
+        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[]{LABEL.name()}, Optional.empty(), PROP );
         IndexReference nodes;
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
             SchemaWrite schemaWrite = transaction.schemaWrite();
-            nodes = schemaWrite.indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
-                    Optional.of( "nodes" ) );
+            nodes = schemaWrite.indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( "nodes" ) );
             transaction.success();
         }
         await( nodes );
@@ -83,8 +81,8 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         long id;
         try ( Transaction tx = db.beginTx() )
         {
-            id = createNodeIndexableByPropertyValue( "Hello and hello again, in the end." );
-            createNodeIndexableByPropertyValue( "En apa och en tomte bodde i ett hus." );
+            id = createNodeIndexableByPropertyValue( LABEL, "Hello and hello again, in the end." );
+            createNodeIndexableByPropertyValue( LABEL, "En apa och en tomte bodde i ett hus." );
 
             tx.success();
         }
@@ -107,21 +105,20 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         long firstID;
         long secondID;
         applySetting( FulltextConfig.fulltext_default_analyzer, ENGLISH );
-        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[0], Optional.empty(), PROP );
+        SchemaDescriptor descriptor = fulltextAdapter.schemaFor( NODE, new String[]{LABEL.name()}, Optional.empty(), PROP );
         IndexReference nodes;
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
             SchemaWrite schemaWrite = transaction.schemaWrite();
-            nodes = schemaWrite.indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ),
-                    Optional.of( "nodes" ) );
+            nodes = schemaWrite.indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( "nodes" ) );
             transaction.success();
         }
         await( nodes );
 
         try ( Transaction tx = db.beginTx() )
         {
-            firstID = createNodeIndexableByPropertyValue( "Hello and hello again, in the end." );
-            secondID = createNodeIndexableByPropertyValue( "En apa och en tomte bodde i ett hus." );
+            firstID = createNodeIndexableByPropertyValue( LABEL, "Hello and hello again, in the end." );
+            secondID = createNodeIndexableByPropertyValue( LABEL, "En apa och en tomte bodde i ett hus." );
 
             tx.success();
         }

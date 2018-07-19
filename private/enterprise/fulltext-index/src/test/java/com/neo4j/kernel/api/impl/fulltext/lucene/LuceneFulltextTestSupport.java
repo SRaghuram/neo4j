@@ -20,6 +20,7 @@ import java.util.List;
 
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongSet;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
@@ -50,17 +51,17 @@ import static org.junit.Assert.fail;
 
 public class LuceneFulltextTestSupport
 {
+    static final Label LABEL = Label.label( "LABEL" );
+    static final RelationshipType RELTYPE = RelationshipType.withName( "type" );
+    static final String PROP = "prop";
 
-    protected static final RelationshipType RELTYPE = RelationshipType.withName( "type" );
-    public static final String PROP = "prop";
+    DatabaseRule db = new EmbeddedDatabaseRule().withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
+    private RepeatRule repeatRule = createRepeatRule();
 
-    public DatabaseRule db = new EmbeddedDatabaseRule()
-            .withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
-    public RepeatRule repeatRule = createRepeatRule();
     @Rule
     public RuleChain rules = RuleChain.outerRule( repeatRule ).around( db );
 
-    protected FulltextAdapter fulltextAdapter;
+    FulltextAdapter fulltextAdapter;
 
     protected RepeatRule createRepeatRule()
     {
@@ -73,14 +74,14 @@ public class LuceneFulltextTestSupport
         fulltextAdapter = getAccessor();
     }
 
-    public void applySetting( Setting<String> setting, String value ) throws IOException
+    void applySetting( Setting<String> setting, String value ) throws IOException
     {
         db.restartDatabase( setting.name(), value );
         db.ensureStarted();
         fulltextAdapter = getAccessor();
     }
 
-    public KernelTransactionImplementation getKernelTransaction()
+    KernelTransactionImplementation getKernelTransaction()
     {
         try
         {
@@ -98,14 +99,14 @@ public class LuceneFulltextTestSupport
         return (FulltextAdapter) db.resolveDependency( IndexProviderMap.class ).lookup( FulltextIndexProviderFactory.DESCRIPTOR );
     }
 
-    long createNodeIndexableByPropertyValue( Object propertyValue )
+    long createNodeIndexableByPropertyValue( Label label, Object propertyValue )
     {
-        return createNodeWithProperty( PROP, propertyValue );
+        return createNodeWithProperty( label, PROP, propertyValue );
     }
 
-    long createNodeWithProperty( String propertyKey, Object propertyValue )
+    long createNodeWithProperty( Label label, String propertyKey, Object propertyValue )
     {
-        Node node = db.createNode();
+        Node node = db.createNode( label );
         node.setProperty( propertyKey, propertyValue );
         return node.getId();
     }
@@ -143,8 +144,8 @@ public class LuceneFulltextTestSupport
         assertQueryResultsMatch( result, ids );
     }
 
-    void assertQueryFindsIdsInOrder( KernelTransaction ktx, String indexName, String query,
-                                     long... ids ) throws IOException, IndexNotFoundKernelException, ParseException
+    void assertQueryFindsIdsInOrder( KernelTransaction ktx, String indexName, String query, long... ids )
+            throws IOException, IndexNotFoundKernelException, ParseException
     {
         ScoreEntityIterator result = fulltextAdapter.query( ktx, indexName, query );
         assertQueryResultsMatchInOrder( result, ids );
@@ -156,15 +157,13 @@ public class LuceneFulltextTestSupport
         while ( result.hasNext() )
         {
             long next = result.next().entityId();
-            assertTrue( format( "Result returned node id %d, expected one of %s",
-                    next, Arrays.toString( ids ) ), set.remove( next ) );
+            assertTrue( format( "Result returned node id %d, expected one of %s", next, Arrays.toString( ids ) ), set.remove( next ) );
         }
         if ( !set.isEmpty() )
         {
             List<Long> list = new ArrayList<>();
             set.visitKeys( k -> !list.add( k ) );
-            fail( "Number of results differ from expected. " + set.size() +
-                  " IDs were not found in the result: " + list );
+            fail( "Number of results differ from expected. " + set.size() + " IDs were not found in the result: " + list );
         }
     }
 
