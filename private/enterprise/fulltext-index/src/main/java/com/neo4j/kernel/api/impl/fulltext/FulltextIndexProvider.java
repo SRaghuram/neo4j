@@ -14,13 +14,11 @@ import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Optional;
+import java.util.Properties;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
-import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -36,9 +34,7 @@ import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema.index.StoreIndexDescriptor;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
-import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
-import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.newapi.AllStoreHolder;
 import org.neo4j.storageengine.api.EntityType;
@@ -127,31 +123,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     }
 
     @Override
-    public Stream<String> propertyKeyStrings( IndexReference index )
-    {
-        TokenHolders tokens = tokenHolders.get();
-        TokenHolder propertyKeyTokens = tokens.propertyKeyTokens();
-        int[] propertyKeyIds = index.schema().getPropertyIds();
-        String[] propertyNames = new String[propertyKeyIds.length];
-        for ( int i = 0; i < propertyKeyIds.length; i++ )
-        {
-            int propertyKeyId = propertyKeyIds[i];
-            try
-            {
-                propertyNames[i] = propertyKeyTokens.getTokenById( propertyKeyId ).name();
-            }
-            catch ( TokenNotFoundException e )
-            {
-                throw new IllegalStateException( "Property key id not found.",
-                        new PropertyKeyIdNotFoundKernelException( propertyKeyId, e ) );
-            }
-        }
-        return Stream.of( propertyNames );
-    }
-
-    @Override
-    public SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, Optional<String> analyzerOverride,
-                                       String... properties )
+    public SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, Properties settings, String... properties )
     {
         if ( entityTokens.length == 0 )
         {
@@ -179,7 +151,11 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         int[] propertyIds = Arrays.stream( properties ).mapToInt( tokens.propertyKeyTokens()::getOrCreateId ).toArray();
 
         SchemaDescriptor schema = SchemaDescriptorFactory.multiToken( entityTokenIds, type, propertyIds );
-        return new FulltextSchemaDescriptor( schema, analyzerOverride.orElse( defaultAnalyzerClassName ) );
+        if ( !settings.containsKey( FulltextIndexSettings.SETTING_ANALYZER ) )
+        {
+            settings.put( FulltextIndexSettings.SETTING_ANALYZER, defaultAnalyzerClassName );
+        }
+        return new FulltextSchemaDescriptor( schema, settings );
     }
 
     @Override

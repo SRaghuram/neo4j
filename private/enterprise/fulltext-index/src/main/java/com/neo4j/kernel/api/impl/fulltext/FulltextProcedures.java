@@ -9,10 +9,10 @@ import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
 import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -34,6 +34,7 @@ import org.neo4j.procedure.Procedure;
 import org.neo4j.storageengine.api.EntityType;
 
 import static com.neo4j.kernel.api.impl.fulltext.FulltextIndexProviderFactory.DESCRIPTOR;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextIndexSettings.SETTING_ANALYZER;
 import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.SCHEMA;
 
@@ -42,7 +43,8 @@ import static org.neo4j.procedure.Mode.SCHEMA;
  */
 public class FulltextProcedures
 {
-    private static final String INDEX_CONFIG_ANALYZER = "analyzer";
+    private static final String[] EMPTY_STRING_ARRAY = new String[0];
+
     @Context
     public KernelTransaction tx;
 
@@ -91,7 +93,7 @@ public class FulltextProcedures
 
     @Description( "Create a node fulltext index for the given labels and properties " +
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
-                  "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
+                  "Supported settings are '" + SETTING_ANALYZER + "', for specifying what analyzer class to use " +
                   "when indexing and querying." )
     @Procedure( name = "db.index.fulltext.createNodeIndex", mode = SCHEMA )
     public void createNodeFulltextIndex(
@@ -101,16 +103,20 @@ public class FulltextProcedures
             @Name( value = "config", defaultValue = "" ) Map<String,String> config )
             throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
-        Optional<String> analyzerOverride = Optional.ofNullable( config.get( INDEX_CONFIG_ANALYZER ) );
-        SchemaDescriptor schemaDescriptor = accessor.schemaFor(
-                EntityType.NODE, labels.toArray( new String[0] ), analyzerOverride,
-                properties.toArray( new String[0] ) );
+        Properties settings = new Properties();
+        settings.putAll( config );
+        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, stringArray( labels ), settings, stringArray( properties ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
+    }
+
+    private String[] stringArray( List<String> strings )
+    {
+        return strings.toArray( EMPTY_STRING_ARRAY );
     }
 
     @Description( "Create a relationship fulltext index for the given relationship types and properties " +
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
-                  "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
+                  "Supported settings are '" + SETTING_ANALYZER + "', for specifying what analyzer class to use " +
                   "when indexing and querying." )
     @Procedure( name = "db.index.fulltext.createRelationshipIndex", mode = SCHEMA )
     public void createRelationshipFulltextIndex(
@@ -120,10 +126,9 @@ public class FulltextProcedures
             @Name( value = "config", defaultValue = "" ) Map<String,String> config )
             throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
-        Optional<String> analyzerOverride = Optional.ofNullable( config.get( INDEX_CONFIG_ANALYZER ) );
-        SchemaDescriptor schemaDescriptor = accessor.schemaFor(
-                EntityType.RELATIONSHIP, reltypes.toArray( new String[0] ), analyzerOverride,
-                properties.toArray( new String[0] ) );
+        Properties settings = new Properties();
+        settings.putAll( config );
+        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.RELATIONSHIP, stringArray( reltypes ), settings, stringArray( properties ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
     }
 

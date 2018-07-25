@@ -17,6 +17,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 import org.neo4j.collection.primitive.PrimitiveLongCollections;
 import org.neo4j.collection.primitive.PrimitiveLongSet;
@@ -61,6 +62,7 @@ public class LuceneFulltextTestSupport
     @Rule
     public RuleChain rules = RuleChain.outerRule( repeatRule ).around( db );
 
+    Properties settings;
     FulltextAdapter fulltextAdapter;
 
     protected RepeatRule createRepeatRule()
@@ -71,6 +73,7 @@ public class LuceneFulltextTestSupport
     @Before
     public void setUp()
     {
+        settings = new Properties();
         fulltextAdapter = getAccessor();
     }
 

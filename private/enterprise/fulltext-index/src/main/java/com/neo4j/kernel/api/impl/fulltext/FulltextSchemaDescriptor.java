@@ -5,6 +5,8 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
+import java.util.Properties;
+
 import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.internal.kernel.api.schema.SchemaComputer;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
@@ -15,12 +17,12 @@ import org.neo4j.storageengine.api.lock.ResourceType;
 class FulltextSchemaDescriptor implements SchemaDescriptor
 {
     private final SchemaDescriptor schema;
-    private final String analyzerClassName;
+    private final Properties settings;
 
-    FulltextSchemaDescriptor( SchemaDescriptor schema, String analyzerClassName )
+    FulltextSchemaDescriptor( SchemaDescriptor schema, Properties settings )
     {
         this.schema = schema;
-        this.analyzerClassName = analyzerClassName;
+        this.settings = settings;
     }
 
     @Override
@@ -111,8 +113,8 @@ class FulltextSchemaDescriptor implements SchemaDescriptor
         return schema.equals( obj );
     }
 
-    String getAnalyzerClassName()
+    Properties getSettings()
     {
-        return analyzerClassName;
+        return settings;
     }
 }

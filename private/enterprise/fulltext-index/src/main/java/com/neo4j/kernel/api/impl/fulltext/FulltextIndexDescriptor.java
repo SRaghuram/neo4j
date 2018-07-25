@@ -16,12 +16,14 @@ public class FulltextIndexDescriptor extends StoreIndexDescriptor
 {
     private final Set<String> propertyNames;
     private final Analyzer analyzer;
+    private final boolean eventuallyConsistent;
 
-    FulltextIndexDescriptor( StoreIndexDescriptor descriptor, Set<String> propertyNames, Analyzer analyzer )
+    FulltextIndexDescriptor( StoreIndexDescriptor descriptor, Set<String> propertyNames, Analyzer analyzer, boolean eventuallyConsistent )
     {
         super( descriptor );
         this.propertyNames = propertyNames;
         this.analyzer = analyzer;
+        this.eventuallyConsistent = eventuallyConsistent;
     }
 
     public Collection<String> propertyNames()
@@ -32,5 +34,10 @@ public class FulltextIndexDescriptor extends StoreIndexDescriptor
     public Analyzer analyzer()
     {
         return analyzer;
+    }
+
+    public boolean isEventuallyConsistent()
+    {
+        return eventuallyConsistent;
     }
 }
