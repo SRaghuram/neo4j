@@ -19,8 +19,6 @@ import org.neo4j.kernel.api.impl.index.collector.ValuesIterator;
 import org.neo4j.kernel.api.impl.index.partition.PartitionSearcher;
 import org.neo4j.kernel.api.impl.schema.reader.IndexReaderCloseException;
 
-import static com.neo4j.kernel.api.impl.fulltext.FulltextAdapter.FIELD_ENTITY_ID;
-
 /**
  * Lucene index reader that is able to read/sample a single partition of a partitioned Lucene index.
  *
@@ -67,7 +65,7 @@ class SimpleFulltextIndexReader extends FulltextIndexReader
             DocValuesCollector docValuesCollector = new DocValuesCollector( true );
             getIndexSearcher().search( query, docValuesCollector );
             ValuesIterator sortedValuesIterator =
-                    docValuesCollector.getSortedValuesIterator( FIELD_ENTITY_ID, Sort.RELEVANCE );
+                    docValuesCollector.getSortedValuesIterator( LuceneFulltextDocumentStructure.FIELD_ENTITY_ID, Sort.RELEVANCE );
             return new ScoreEntityIterator( sortedValuesIterator );
         }
         catch ( IOException e )

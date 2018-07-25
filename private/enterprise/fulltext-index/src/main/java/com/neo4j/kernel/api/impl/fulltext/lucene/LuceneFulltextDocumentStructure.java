@@ -5,7 +5,6 @@
  */
 package com.neo4j.kernel.api.impl.fulltext.lucene;
 
-import com.neo4j.kernel.api.impl.fulltext.FulltextAdapter;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.NumericDocValuesField;
@@ -23,6 +22,8 @@ import static org.apache.lucene.document.Field.Store.NO;
 
 public class LuceneFulltextDocumentStructure
 {
+    public static final String FIELD_ENTITY_ID = "__neo4j__lucene__fulltext__index__internal__id__";
+
     private static final ThreadLocal<DocWithId> perThreadDocument = ThreadLocal.withInitial( DocWithId::new );
 
     private LuceneFulltextDocumentStructure()
@@ -36,7 +37,7 @@ public class LuceneFulltextDocumentStructure
         return doc;
     }
 
-    public static Document documentRepresentingProperties( long id, Collection<String> propertyNames, Value[] values )
+    static Document documentRepresentingProperties( long id, Collection<String> propertyNames, Value[] values )
     {
         DocWithId document = reuseDocument( id );
         document.setValues( propertyNames, values );
@@ -46,19 +47,17 @@ public class LuceneFulltextDocumentStructure
     private static Field encodeValueField( String propertyKey, Value value )
     {
         String stringValue = value.prettyPrint();
-
-        TextField field = new TextField( propertyKey, stringValue, NO );
-        return field;
+        return new TextField( propertyKey, stringValue, NO );
     }
 
-    public static long getNodeId( Document from )
+    static long getNodeId( Document from )
     {
-        return Long.parseLong( from.get( FulltextAdapter.FIELD_ENTITY_ID ) );
+        return Long.parseLong( from.get( FIELD_ENTITY_ID ) );
     }
 
-    public static Term newTermForChangeOrRemove( long id )
+    static Term newTermForChangeOrRemove( long id )
     {
-        return new Term( FulltextAdapter.FIELD_ENTITY_ID, "" + id );
+        return new Term( FIELD_ENTITY_ID, "" + id );
     }
 
     private static class DocWithId
@@ -70,8 +69,8 @@ public class LuceneFulltextDocumentStructure
 
         private DocWithId()
         {
-            idField = new StringField( FulltextAdapter.FIELD_ENTITY_ID, "", NO );
-            idValueField = new NumericDocValuesField( FulltextAdapter.FIELD_ENTITY_ID, 0L );
+            idField = new StringField( FIELD_ENTITY_ID, "", NO );
+            idValueField = new NumericDocValuesField( FIELD_ENTITY_ID, 0L );
             document = new Document();
             document.add( idField );
             document.add( idValueField );
@@ -105,7 +104,7 @@ public class LuceneFulltextDocumentStructure
             {
                 IndexableField field = it.next();
                 String fieldName = field.name();
-                if ( !fieldName.equals( FulltextAdapter.FIELD_ENTITY_ID ) )
+                if ( !fieldName.equals( FIELD_ENTITY_ID ) )
                 {
                     it.remove();
                 }

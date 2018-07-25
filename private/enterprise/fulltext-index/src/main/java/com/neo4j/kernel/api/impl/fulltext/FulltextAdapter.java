@@ -18,8 +18,6 @@ import org.neo4j.storageengine.api.EntityType;
 
 public interface FulltextAdapter
 {
-    String FIELD_ENTITY_ID = "__neo4j__lucene__fulltext__addon__internal__id__";
-
     SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, Properties settings, String... properties );
 
     ScoreEntityIterator query( KernelTransaction tx, String indexName, String queryString ) throws IOException, IndexNotFoundKernelException, ParseException;

@@ -9,6 +9,7 @@ import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexAccessor;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexBuilder;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexPopulator;
+import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure;
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
 import org.apache.lucene.queryparser.classic.ParseException;
 
@@ -135,9 +136,10 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
             throw new BadSchemaException( "At least one property name must be specified when creating a fulltext index." );
         }
         TokenHolders tokens = tokenHolders.get();
-        if ( Arrays.stream( properties ).anyMatch( prop -> prop.equals( FulltextAdapter.FIELD_ENTITY_ID ) ) )
+        if ( Arrays.stream( properties ).anyMatch( prop -> prop.equals( LuceneFulltextDocumentStructure.FIELD_ENTITY_ID ) ) )
         {
-            throw new BadSchemaException( "Unable to index the property, the name is reserved for internal use " + FulltextAdapter.FIELD_ENTITY_ID );
+            throw new BadSchemaException( "Unable to index the property, the name is reserved for internal use " +
+                    LuceneFulltextDocumentStructure.FIELD_ENTITY_ID );
         }
         int[] entityTokenIds = new int[entityTokens.length];
         if ( type == EntityType.NODE )
