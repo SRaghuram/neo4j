@@ -70,7 +70,7 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         DirectoryFactory directoryFactory = directoryFactory( ephemeral, fileSystemAbstraction );
         OperationalMode operationalMode = context.databaseInfo().operationalMode;
         NeoStoreDataSource neoStoreDataSource = dependencies.neoStoreDataSource();
-        IndexDirectoryStructure.Factory directoryStructureFactory = subProviderDirectoryStructure( context.contextDirectory() );
+        IndexDirectoryStructure.Factory directoryStructureFactory = subProviderDirectoryStructure( context.directory() );
         Supplier<TokenHolders> tokenHoldersSupplier = dataSourceDependency( neoStoreDataSource, TokenHolders.class );
         Log log = dependencies.getLogService().getInternalLog( FulltextIndexProvider.class );
 
