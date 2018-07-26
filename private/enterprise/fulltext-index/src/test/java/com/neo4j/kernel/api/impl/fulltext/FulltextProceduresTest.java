@@ -18,6 +18,10 @@ import org.junit.rules.RuleChain;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongFunction;
 import java.util.stream.Collectors;
@@ -37,6 +41,7 @@ import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.util.concurrent.BinaryLatch;
 
 import static java.lang.String.format;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -459,6 +464,119 @@ public class FulltextProceduresTest
         db.execute( AWAIT_REFRESH ).close();
         assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
         assertQueryFindsIds( db, db::getRelationshipById, "rel", "bla", relIds );
+    }
+
+    @Test
+    public void eventuallyConsistentIndexMustPopulateWithExistingDataWhenCreated()
+    {
+        Label label = Label.label( "LABEL" );
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        String prop = "prop";
+        String value = "bla bla";
+        String eventuallyConsistent = ", {eventually_consistent: 'true'}";
+        db = createDatabase();
+
+        int entityCount = 200;
+        LongHashSet nodeIds = new LongHashSet();
+        LongHashSet relIds = new LongHashSet();
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( int i = 0; i < entityCount; i++ )
+            {
+                Node node = db.createNode( label );
+                node.setProperty( prop, value );
+                Relationship rel = node.createRelationshipTo( node, relType );
+                rel.setProperty( prop, value );
+                nodeIds.add( node.getId() );
+                relIds. add( rel.getId() );
+            }
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "node", array( label.name() ), array( prop ) + eventuallyConsistent ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( prop ) + eventuallyConsistent ) );
+            tx.success();
+        }
+
+        db.execute( format( AWAIT_POPULATION, "node" ) ).close();
+        db.execute( format( AWAIT_POPULATION, "rel" ) ).close();
+        assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
+        assertQueryFindsIds( db, db::getRelationshipById, "rel", "bla", relIds );
+    }
+
+    @Test
+    public void concurrentPopulationAndUpdatesToAnEventuallyConsistentIndexMustEventuallyResultInCorrectIndexState() throws Exception
+    {
+        Label label = Label.label( "LABEL" );
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        String prop = "prop";
+        String oldValue = "red";
+        String newValue = "green";
+        String eventuallyConsistent = ", {eventually_consistent: 'true'}";
+        db = createDatabase();
+
+        int entityCount = 200;
+        LongHashSet nodeIds = new LongHashSet();
+        LongHashSet relIds = new LongHashSet();
+
+        // First we create the nodes and relationships with the property value "red".
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( int i = 0; i < entityCount; i++ )
+            {
+                Node node = db.createNode( label );
+                node.setProperty( prop, oldValue );
+                Relationship rel = node.createRelationshipTo( node, relType );
+                rel.setProperty( prop, oldValue );
+                nodeIds.add( node.getId() );
+                relIds. add( rel.getId() );
+            }
+            tx.success();
+        }
+
+        // Then, in two concurrent transactions, we create our indexes AND change all the property values to "green".
+        CountDownLatch readyLatch = new CountDownLatch( 2 );
+        BinaryLatch startLatch = new BinaryLatch();
+        Runnable createIndexes = () ->
+        {
+            readyLatch.countDown();
+            startLatch.await();
+            try ( Transaction tx = db.beginTx() )
+            {
+                db.execute( format( NODE_CREATE, "node", array( label.name() ), array( prop ) + eventuallyConsistent ) );
+                db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( prop ) + eventuallyConsistent ) );
+                tx.success();
+            }
+        };
+        Runnable makeAllEntitiesGreen = () ->
+        {
+            try ( Transaction tx = db.beginTx() )
+            {
+                // Prepare our transaction state first.
+                nodeIds.forEach( nodeId -> db.getNodeById( nodeId ).setProperty( prop, newValue ) );
+                relIds.forEach( relId -> db.getRelationshipById( relId ).setProperty( prop, newValue ) );
+                tx.success();
+                // Okay, NOW we're ready to race!
+                readyLatch.countDown();
+                startLatch.await();
+            }
+        };
+        ExecutorService executor = cleanup.add( Executors.newFixedThreadPool( 2 ) );
+        Future<?> future1 = executor.submit( createIndexes );
+        Future<?> future2 = executor.submit( makeAllEntitiesGreen );
+        readyLatch.await();
+        startLatch.release();
+
+        // Finally, when everything has settled down, we should see that all of the nodes and relationships are indexed with the value "green".
+        future1.get();
+        future2.get();
+        db.execute( format( AWAIT_POPULATION, "node" ) ).close();
+        db.execute( format( AWAIT_POPULATION, "rel" ) ).close();
+        db.execute( AWAIT_REFRESH ).close();
+        assertQueryFindsIds( db, db::getNodeById, "node", newValue, nodeIds );
+        assertQueryFindsIds( db, db::getRelationshipById, "rel", newValue, relIds );
     }
 
     private static void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )
