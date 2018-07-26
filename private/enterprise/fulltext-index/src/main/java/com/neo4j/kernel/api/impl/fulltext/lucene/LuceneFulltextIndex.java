@@ -12,7 +12,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 
 import org.neo4j.internal.kernel.api.schema.SchemaUtil;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndex;
@@ -49,6 +48,8 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
                ", descriptor=" + descriptor.userDescription( SchemaUtil.idTokenNameLookup ) +
                '}';
     }
+
+    // TODO maybe we want to do all of the eventually-consistent specific things in here?
 
     @Override
     protected FulltextIndexReader createSimpleReader( List<AbstractIndexPartition> partitions ) throws IOException

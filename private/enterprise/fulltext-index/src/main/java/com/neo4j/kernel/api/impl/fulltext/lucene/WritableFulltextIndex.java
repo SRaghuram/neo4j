@@ -6,6 +6,9 @@
 package com.neo4j.kernel.api.impl.fulltext.lucene;
 
 import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
+import com.neo4j.kernel.api.impl.fulltext.IndexUpdateSink;
+
+import java.io.IOException;
 
 import org.neo4j.kernel.api.impl.index.WritableAbstractDatabaseIndex;
 import org.neo4j.kernel.api.impl.index.partition.WritableIndexPartitionFactory;
@@ -13,14 +16,38 @@ import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
 
 class WritableFulltextIndex extends WritableAbstractDatabaseIndex<LuceneFulltextIndex,FulltextIndexReader>
 {
-    WritableFulltextIndex( PartitionedIndexStorage storage, WritableIndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor )
+    private final IndexUpdateSink indexUpdateSink;
+
+    WritableFulltextIndex( PartitionedIndexStorage storage, WritableIndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor,
+            IndexUpdateSink indexUpdateSink )
     {
         super( new LuceneFulltextIndex( storage, partitionFactory, descriptor ) );
+        this.indexUpdateSink = indexUpdateSink;
     }
 
     @Override
     public String toString()
     {
         return luceneIndex.toString();
+    }
+
+    @Override
+    protected void commitLockedFlush() throws IOException
+    {
+        if ( indexUpdateSink != null )
+        {
+            indexUpdateSink.awaitUpdateApplication();
+        }
+        super.commitLockedFlush();
+    }
+
+    @Override
+    protected void commitLockedClose() throws IOException
+    {
+        if ( indexUpdateSink != null )
+        {
+            indexUpdateSink.awaitUpdateApplication();
+        }
+        super.commitLockedClose();
     }
 }

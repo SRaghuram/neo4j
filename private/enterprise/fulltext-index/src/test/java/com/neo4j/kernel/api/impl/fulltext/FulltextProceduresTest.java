@@ -18,6 +18,7 @@ import org.junit.rules.RuleChain;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.LongFunction;
 import java.util.stream.Collectors;
 
@@ -48,6 +49,7 @@ import static org.junit.Assert.fail;
 public class FulltextProceduresTest
 {
     static final String AWAIT_POPULATION = "CALL db.index.fulltext.awaitPopulation(\"%s\")";
+    static final String AWAIT_REFRESH = "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()";
     static final String GET_SCHEMA = "CALL db.index.fulltext.getIndexSchema(\"%s\")";
     static final String NODE_CREATE = "CALL db.index.fulltext.createNodeIndex(\"%s\", %s, %s )";
     static final String RELATIONSHIP_CREATE = "CALL db.index.fulltext.createRelationshipIndex(\"%s\", %s, %s)";
@@ -361,6 +363,102 @@ public class FulltextProceduresTest
         assertQueryFindsIds( db, "node", "test", node1.getId(), node2.getId() );
         assertQueryFindsIds( db, "node", "related", node2.getId() );
         assertQueryFindsIds( db, "rel", "relate", relationship.getId() );
+    }
+
+    @Test
+    public void updatesToEventuallyConsistentIndexMustEventuallyBecomeVisible()
+    {
+        Label label = Label.label( "LABEL" );
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        String prop = "prop";
+        String value = "bla bla";
+        String eventuallyConsistent = ", {eventually_consistent: 'true'}";
+        db = createDatabase();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "node", array( label.name() ), array( prop ) + eventuallyConsistent ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( prop ) + eventuallyConsistent ) );
+            tx.success();
+        }
+
+        int entityCount = 200;
+        LongHashSet nodeIds = new LongHashSet();
+        LongHashSet relIds = new LongHashSet();
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( int i = 0; i < entityCount; i++ )
+            {
+                Node node = db.createNode( label );
+                node.setProperty( prop, value );
+                Relationship rel = node.createRelationshipTo( node, relType );
+                rel.setProperty( prop, value );
+                nodeIds.add( node.getId() );
+                relIds. add( rel.getId() );
+            }
+            tx.success();
+        }
+
+        // Assert that we can observe our updates wihin 5 seconds from now. We have, after all, already committed the transaction.
+        long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis( 5 );
+        boolean success = false;
+        do
+        {
+            try
+            {
+                assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
+                assertQueryFindsIds( db, db::getRelationshipById, "rel", "bla", relIds );
+                success = true;
+            }
+            catch ( Throwable throwable )
+            {
+                if ( deadline <= System.currentTimeMillis() )
+                {
+                    // We're past the deadline. This test is not successful.
+                    throw throwable;
+                }
+            }
+        }
+        while ( !success );
+    }
+
+    @Test
+    public void updatesToEventuallyConsistentIndexMustBecomeVisibleAfterAwaitRefresh()
+    {
+        Label label = Label.label( "LABEL" );
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        String prop = "prop";
+        String value = "bla bla";
+        String eventuallyConsistent = ", {eventually_consistent: 'true'}";
+        db = createDatabase();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "node", array( label.name() ), array( prop ) + eventuallyConsistent ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( prop ) + eventuallyConsistent ) );
+            tx.success();
+        }
+
+        int entityCount = 200;
+        LongHashSet nodeIds = new LongHashSet();
+        LongHashSet relIds = new LongHashSet();
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( int i = 0; i < entityCount; i++ )
+            {
+                Node node = db.createNode( label );
+                node.setProperty( prop, value );
+                Relationship rel = node.createRelationshipTo( node, relType );
+                rel.setProperty( prop, value );
+                nodeIds.add( node.getId() );
+                relIds. add( rel.getId() );
+            }
+            tx.success();
+        }
+
+        db.execute( AWAIT_REFRESH ).close();
+        assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
+        assertQueryFindsIds( db, db::getRelationshipById, "rel", "bla", relIds );
     }
 
     private static void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )

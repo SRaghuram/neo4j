@@ -6,6 +6,7 @@
 package com.neo4j.kernel.api.impl.fulltext.lucene;
 
 import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
+import com.neo4j.kernel.api.impl.fulltext.IndexUpdateSink;
 import org.apache.lucene.index.IndexWriterConfig;
 
 import org.neo4j.function.Factory;
@@ -55,7 +56,7 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
      *
      * @return lucene schema index
      */
-    public DatabaseIndex<FulltextIndexReader> build()
+    public DatabaseIndex<FulltextIndexReader> build( IndexUpdateSink indexUpdateSink )
     {
         if ( isReadOnly() )
         {
@@ -72,7 +73,8 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
             {
                 writerConfigFactory = () -> IndexWriterConfigs.standard( descriptor.analyzer() );
             }
-            return new WritableFulltextIndex( storageBuilder.build(), new WritableIndexPartitionFactory( writerConfigFactory ), descriptor );
+            WritableIndexPartitionFactory partitionFactory = new WritableIndexPartitionFactory( writerConfigFactory );
+            return new WritableFulltextIndex( storageBuilder.build(), partitionFactory, descriptor, indexUpdateSink );
         }
     }
 }

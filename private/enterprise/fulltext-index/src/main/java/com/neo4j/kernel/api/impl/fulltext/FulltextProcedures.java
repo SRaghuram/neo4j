@@ -82,6 +82,13 @@ public class FulltextProcedures
         }
     }
 
+    @Description( "Wait for the updates from recently committed transactions to be applied to any eventually-consistent fulltext indexes." )
+    @Procedure( name = "db.index.fulltext.awaitEventuallyConsistentIndexRefresh", mode = READ )
+    public void awaitRefresh()
+    {
+        accessor.awaitRefresh();
+    }
+
     // TODO remove or make this the same output as what `db.indexes` gives.
     @Description( "Returns the schema for the given index." )
     @Procedure( name = "db.index.fulltext.getIndexSchema", mode = READ )

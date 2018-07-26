@@ -6,6 +6,7 @@
 package com.neo4j.kernel.api.impl.fulltext.lucene;
 
 import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
+import com.neo4j.kernel.api.impl.fulltext.IndexUpdateSink;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -13,6 +14,7 @@ import java.io.UncheckedIOException;
 import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndexAccessor;
 import org.neo4j.kernel.api.impl.index.DatabaseIndex;
+import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.NodePropertyAccessor;
 import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
 import org.neo4j.values.storable.Value;
@@ -22,18 +24,35 @@ import static com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentSt
 
 public class FulltextIndexAccessor extends AbstractLuceneIndexAccessor<FulltextIndexReader,DatabaseIndex<FulltextIndexReader>>
 {
+    private final IndexUpdateSink indexUpdateSink;
     private final FulltextIndexDescriptor descriptor;
 
-    public FulltextIndexAccessor( DatabaseIndex<FulltextIndexReader> luceneIndex, FulltextIndexDescriptor descriptor )
+    public FulltextIndexAccessor( IndexUpdateSink indexUpdateSink, DatabaseIndex<FulltextIndexReader> luceneIndex, FulltextIndexDescriptor descriptor )
     {
         super( luceneIndex, descriptor );
+        this.indexUpdateSink = indexUpdateSink;
         this.descriptor = descriptor;
     }
 
     @Override
-    public FulltextIndexUpdater getIndexUpdater( IndexUpdateMode mode )
+    public IndexUpdater getIndexUpdater( IndexUpdateMode mode )
     {
-        return new FulltextIndexUpdater( mode.requiresIdempotency(), mode.requiresRefresh() );
+        IndexUpdater indexUpdater = new FulltextIndexUpdater( mode.requiresIdempotency(), mode.requiresRefresh() );
+        if ( mode == IndexUpdateMode.ONLINE && descriptor.isEventuallyConsistent() )
+        {
+            indexUpdater = new EventuallyConsistentIndexUpdater( luceneIndex, indexUpdater, indexUpdateSink );
+        }
+        return indexUpdater;
+    }
+
+    @Override
+    public void close()
+    {
+        if ( descriptor.isEventuallyConsistent() )
+        {
+            indexUpdateSink.awaitUpdateApplication();
+        }
+        super.close();
     }
 
     @Override
@@ -50,7 +69,6 @@ public class FulltextIndexAccessor extends AbstractLuceneIndexAccessor<FulltextI
 
     private class FulltextIndexUpdater extends AbstractLuceneIndexUpdater
     {
-
         private FulltextIndexUpdater( boolean idempotent, boolean refresh )
         {
             super( idempotent, refresh );

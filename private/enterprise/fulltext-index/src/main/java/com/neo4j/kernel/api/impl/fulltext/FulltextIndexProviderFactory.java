@@ -25,6 +25,7 @@ import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.logging.Log;
+import org.neo4j.scheduler.JobScheduler;
 
 import static org.neo4j.kernel.api.impl.index.LuceneKernelExtensions.directoryFactory;
 import static org.neo4j.kernel.api.index.IndexDirectoryStructure.directoriesByProvider;
@@ -42,6 +43,8 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         Config getConfig();
 
         FileSystemAbstraction fileSystem();
+
+        JobScheduler scheduler();
 
         NeoStoreDataSource neoStoreDataSource();
 
@@ -69,6 +72,7 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         FileSystemAbstraction fileSystemAbstraction = dependencies.fileSystem();
         DirectoryFactory directoryFactory = directoryFactory( ephemeral, fileSystemAbstraction );
         OperationalMode operationalMode = context.databaseInfo().operationalMode;
+        JobScheduler scheduler = dependencies.scheduler();
         NeoStoreDataSource neoStoreDataSource = dependencies.neoStoreDataSource();
         IndexDirectoryStructure.Factory directoryStructureFactory = subProviderDirectoryStructure( context.directory() );
         Supplier<TokenHolders> tokenHoldersSupplier = dataSourceDependency( neoStoreDataSource, TokenHolders.class );
@@ -76,7 +80,7 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
 
         FulltextIndexProvider provider = new FulltextIndexProvider(
                 DESCRIPTOR, PRIORITY, directoryStructureFactory, fileSystemAbstraction, config, tokenHoldersSupplier,
-                directoryFactory, operationalMode );
+                directoryFactory, operationalMode, scheduler );
         dependencies.procedures().registerComponent( FulltextAdapter.class, procContext -> provider, true );
         try
         {

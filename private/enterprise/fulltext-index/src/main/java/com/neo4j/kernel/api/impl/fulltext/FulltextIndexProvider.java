@@ -38,6 +38,7 @@ import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.newapi.AllStoreHolder;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.storageengine.api.schema.IndexReader;
 
@@ -49,9 +50,10 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     private final Supplier<TokenHolders> tokenHolders;
     private final OperationalMode operationalMode;
     private final String defaultAnalyzerClassName;
+    private final IndexUpdateSink indexUpdateSink;
 
     FulltextIndexProvider( Descriptor descriptor, int priority, IndexDirectoryStructure.Factory directoryStructureFactory, FileSystemAbstraction fileSystem,
-            Config config, Supplier<TokenHolders> tokenHolders, DirectoryFactory directoryFactory, OperationalMode operationalMode )
+            Config config, Supplier<TokenHolders> tokenHolders, DirectoryFactory directoryFactory, OperationalMode operationalMode, JobScheduler scheduler )
     {
         super( descriptor, priority, directoryStructureFactory, config, operationalMode, fileSystem, directoryFactory );
         this.fileSystem = fileSystem;
@@ -60,6 +62,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         this.operationalMode = operationalMode;
 
         defaultAnalyzerClassName = config.get( FulltextConfig.fulltext_default_analyzer );
+        this.indexUpdateSink = new IndexUpdateSink( scheduler );
     }
 
     @Override
@@ -94,7 +97,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
                 .withOperationalMode( operationalMode )
                 .withIndexStorage( indexStorage )
                 .withPopulatingMode( true )
-                .build();
+                .build( null );
         if ( fulltextIndex.isReadOnly() )
         {
             throw new UnsupportedOperationException( "Can't create populator for read only index" );
@@ -117,10 +120,10 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
                 .withOperationalMode( operationalMode )
                 .withIndexStorage( indexStorage )
                 .withPopulatingMode( false )
-                .build();
+                .build( fulltextIndexDescriptor.isEventuallyConsistent() ? indexUpdateSink : null );
         fulltextIndex.open();
 
-        return new FulltextIndexAccessor( fulltextIndex, fulltextIndexDescriptor );
+        return new FulltextIndexAccessor( indexUpdateSink, fulltextIndex, fulltextIndexDescriptor );
     }
 
     @Override
@@ -170,11 +173,9 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         return fulltextIndexReader.query( queryString );
     }
 
-    private class BadSchemaException extends IllegalArgumentException
+    @Override
+    public void awaitRefresh()
     {
-        BadSchemaException( String message )
-        {
-            super( message );
-        }
+        indexUpdateSink.awaitUpdateApplication();
     }
 }
