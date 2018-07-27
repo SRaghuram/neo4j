@@ -76,7 +76,7 @@ public class FulltextIndexBackupIT
     }
 
     @Test
-    public void fulltextIndexesMustBeTransferredInBackup() throws Exception
+    public void fulltextIndexesMustBeTransferredInBackup()
     {
         initializeTestData();
         verifyData( db );
@@ -137,6 +137,7 @@ public class FulltextIndexBackupIT
 
     // TODO test that creation and dropping of fulltext indexes is applied through incremental backup.
     // TODO test that custom analyzer configurations are applied through incremental backup.
+    // TODO test that the eventually_consistent setting is transferred through incremental backup.
 
     private void initializeTestData()
     {

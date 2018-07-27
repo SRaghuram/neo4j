@@ -35,6 +35,7 @@ import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.test.causalclustering.ClusterRule;
 
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_POPULATION;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_REFRESH;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.ENTITYID;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY;
@@ -49,9 +50,14 @@ public class FulltextIndexCausalClusterIT
     private static final Label LABEL = Label.label( "LABEL" );
     private static final String PROP = "prop";
     private static final String PROP2 = "otherprop";
+    // The "ec_prop" property is added because the EC indexes cannot have exactly the same entity-token/property-token sets as the non-EC indexes:
+    private static final String EC_PROP = "ec_prop";
     private static final RelationshipType REL = RelationshipType.withName( "REL" );
     private static final String NODE_INDEX = "nodeIndex";
     private static final String REL_INDEX = "relIndex";
+    private static final String NODE_INDEX_EC = "nodeIndexEventuallyConsistent";
+    private static final String REL_INDEX_EC = "relIndexEventuallyConsistent";
+    private static final String EVENTUALLY_CONSISTENT_SETTING = ", {" + FulltextIndexSettings.SETTING_EVENTUALLY_CONSISTENT + ": 'true'}";
 
     @Rule
     public ClusterRule clusterRule = new ClusterRule()
@@ -76,10 +82,13 @@ public class FulltextIndexCausalClusterIT
         {
             Node node1 = db.createNode( LABEL );
             node1.setProperty( PROP, "This is an integration test." );
+            node1.setProperty( EC_PROP, true );
             Node node2 = db.createNode( LABEL );
             node2.setProperty( PROP2, "This is a related integration test." );
+            node2.setProperty( EC_PROP, true );
             Relationship rel = node1.createRelationshipTo( node2, REL );
             rel.setProperty( PROP, "They relate" );
+            rel.setProperty( EC_PROP, true );
             nodeId1 = node1.getId();
             nodeId2 = node2.getId();
             relId1 = rel.getId();
@@ -89,15 +98,21 @@ public class FulltextIndexCausalClusterIT
         {
             db.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ) ) ).close();
             db.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
+            db.execute( format( NODE_CREATE, NODE_INDEX_EC, array( LABEL.name() ), array( PROP, PROP2, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) ).close();
+            db.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, array( REL.name() ), array( PROP, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) ).close();
             tx.success();
         } );
 
         awaitCatchup();
 
         verifyIndexContents( NODE_INDEX, "integration", nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "integration", nodeId1, nodeId2 );
         verifyIndexContents( NODE_INDEX, "test", nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "test", nodeId1, nodeId2 );
         verifyIndexContents( NODE_INDEX, "related", nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "related", nodeId2 );
         verifyIndexContents( REL_INDEX, "relate", relId1 );
+        verifyIndexContents( REL_INDEX_EC, "relate", relId1 );
     }
 
     @Test
@@ -107,6 +122,8 @@ public class FulltextIndexCausalClusterIT
         {
             db.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ) ) ).close();
             db.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
+            db.execute( format( NODE_CREATE, NODE_INDEX_EC, array( LABEL.name() ), array( PROP, PROP2, EC_PROP ) ) ).close();
+            db.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, array( REL.name() ), array( PROP, EC_PROP ) ) ).close();
             tx.success();
         } );
 
@@ -116,10 +133,13 @@ public class FulltextIndexCausalClusterIT
         {
             Node node1 = db.createNode( LABEL );
             node1.setProperty( PROP, "This is an integration test." );
+            node1.setProperty( EC_PROP, true );
             Node node2 = db.createNode( LABEL );
             node2.setProperty( PROP2, "This is a related integration test." );
+            node2.setProperty( EC_PROP, true );
             Relationship rel = node1.createRelationshipTo( node2, REL );
             rel.setProperty( PROP, "They relate" );
+            rel.setProperty( EC_PROP, true );
             nodeId1 = node1.getId();
             nodeId2 = node2.getId();
             relId1 = rel.getId();
@@ -129,10 +149,17 @@ public class FulltextIndexCausalClusterIT
         awaitCatchup();
 
         verifyIndexContents( NODE_INDEX, "integration", nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "integration", nodeId1, nodeId2 );
         verifyIndexContents( NODE_INDEX, "test", nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "test", nodeId1, nodeId2 );
         verifyIndexContents( NODE_INDEX, "related", nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "related", nodeId2 );
         verifyIndexContents( REL_INDEX, "relate", relId1 );
+        verifyIndexContents( REL_INDEX_EC, "relate", relId1 );
     }
+
+    // TODO analyzer setting must be replicates to all cluster members
+    // TODO eventually_consistent setting must be replicated to all cluster members.
 
     private void awaitCatchup() throws InterruptedException
     {
@@ -141,8 +168,11 @@ public class FulltextIndexCausalClusterIT
         {
             try
             {
-                member.database().execute( format( AWAIT_POPULATION, NODE_INDEX ) );
-                member.database().execute( format( AWAIT_POPULATION, REL_INDEX ) );
+                member.database().execute( format( AWAIT_POPULATION, NODE_INDEX ) ).close();
+                member.database().execute( format( AWAIT_POPULATION, NODE_INDEX_EC ) ).close();
+                member.database().execute( format( AWAIT_POPULATION, REL_INDEX ) ).close();
+                member.database().execute( format( AWAIT_POPULATION, REL_INDEX_EC ) ).close();
+                member.database().execute( AWAIT_REFRESH ).close();
                 DependencyResolver dependencyResolver = member.database().getDependencyResolver();
                 TransactionIdStore transactionIdStore = dependencyResolver.resolveDependency( TransactionIdStore.class );
                 appliedTransactions.add( transactionIdStore.getLastClosedTransactionId() );
