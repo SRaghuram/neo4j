@@ -64,7 +64,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
 
         defaultAnalyzerClassName = config.get( FulltextConfig.fulltext_default_analyzer );
         defaultEventuallyConsistentSetting = Boolean.toString( config.get( FulltextConfig.eventually_consistent ) );
-        this.indexUpdateSink = new IndexUpdateSink( scheduler );
+        indexUpdateSink = new IndexUpdateSink( scheduler, config.get( FulltextConfig.eventually_consistent_index_update_queue_max_length ) );
     }
 
     @Override

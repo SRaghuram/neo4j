@@ -26,10 +26,10 @@ public class IndexUpdateSink
     private final JobScheduler scheduler;
     private final Semaphore updateQueueLimit;
 
-    IndexUpdateSink( JobScheduler scheduler )
+    IndexUpdateSink( JobScheduler scheduler, int eventuallyConsistentUpdateQueueLimit )
     {
         this.scheduler = scheduler;
-        updateQueueLimit = new Semaphore( 100 ); // TODO make a configuration setting.
+        updateQueueLimit = new Semaphore( eventuallyConsistentUpdateQueueLimit );
     }
 
     public void enqueueUpdate( DatabaseIndex<? extends IndexReader> index, IndexUpdater indexUpdater, IndexEntryUpdate<?> update )
