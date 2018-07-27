@@ -31,22 +31,20 @@ class ServerClassNameTest
     @Test
     void shouldMaintainNamingOfCommunityNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
     {
-        assertEquals( getErrorMessage( CommunityNeoServer.class ), "communityneoserver",
-                CommunityNeoServer.class.getSimpleName().toLowerCase() );
+        assertEquals( "communityneoserver", CommunityNeoServer.class.getSimpleName().toLowerCase(), getErrorMessage( CommunityNeoServer.class ) );
     }
 
     @Test
     void shouldMaintainNamingOfEnterpriseNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
     {
-        assertEquals( getErrorMessage( OpenEnterpriseNeoServer.class ), "openenterpriseneoserver",
-                OpenEnterpriseNeoServer.class.getSimpleName().toLowerCase() );
+        assertEquals( "openenterpriseneoserver", OpenEnterpriseNeoServer.class.getSimpleName().toLowerCase(),
+                getErrorMessage( OpenEnterpriseNeoServer.class ) );
     }
 
     @Test
     void shouldMaintainNamingOfCommercialNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
     {
-        assertEquals( getErrorMessage( CommercialNeoServer.class ), "commercialneoserver",
-                CommercialNeoServer.class.getSimpleName().toLowerCase() );
+        assertEquals( "commercialneoserver", CommercialNeoServer.class.getSimpleName().toLowerCase(), getErrorMessage( CommercialNeoServer.class ) );
     }
 
     private static String getErrorMessage( Class<? extends AbstractNeoServer> neoServerClass )
