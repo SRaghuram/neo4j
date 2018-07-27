@@ -8,16 +8,22 @@ package com.neo4j.kernel.api.impl.fulltext;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.kernel.configuration.Settings;
 
+import static org.neo4j.kernel.configuration.Settings.BOOLEAN;
 import static org.neo4j.kernel.configuration.Settings.STRING;
 import static org.neo4j.kernel.configuration.Settings.setting;
 
 /**
- * Configuration parameters for the fulltext index.
+ * Configuration settings for the fulltext index.
  */
 public class FulltextConfig implements LoadableConfig
 {
-    @Description( "Define the analyzer to use for the fulltext index. Expects the fully qualified classname of the analyzer to use." )
-    public static final Setting<String> fulltext_default_analyzer =
-            setting( "dbms.fulltext_default_analyzer", STRING, "org.apache.lucene.analysis.standard.StandardAnalyzer" );
+    private static final String DEFAULT_ANALYZER = org.apache.lucene.analysis.standard.StandardAnalyzer.class.getName();
+
+    @Description( "The fully qualified class name for the analyzer that the fulltext indexes should use by default." )
+    public static final Setting<String> fulltext_default_analyzer = setting( "dbms.index.fulltext.default_analyzer", STRING, DEFAULT_ANALYZER );
+
+    @Description( "Whether or not fulltext indexes should be eventually consistent by default or not." )
+    public static final Setting<Boolean> eventually_consistent = setting( "dbms.index.fulltext.eventually_consistent", BOOLEAN, Settings.FALSE );
 }

@@ -37,7 +37,11 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -72,7 +76,7 @@ public class FulltextProceduresTest
     @Rule
     public final RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( expectedException ).around( cleanup );
 
-    private GraphDatabaseService db;
+    private GraphDatabaseAPI db;
     private GraphDatabaseBuilder builder;
 
     @Before
@@ -83,9 +87,9 @@ public class FulltextProceduresTest
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 
-    private GraphDatabaseService createDatabase()
+    private GraphDatabaseAPI createDatabase()
     {
-        return cleanup.add( builder.newGraphDatabase() );
+        return (GraphDatabaseAPI) cleanup.add( builder.newGraphDatabase() );
     }
 
     @Test
@@ -579,6 +583,63 @@ public class FulltextProceduresTest
         assertQueryFindsIds( db, db::getRelationshipById, "rel", newValue, relIds );
     }
 
+    @Test
+    public void fulltextIndexesMustBeEventuallyConsistentByDefaultWhenThisIsConfigured() throws InterruptedException
+    {
+        builder.setConfig( FulltextConfig.eventually_consistent, Settings.TRUE );
+        db = createDatabase();
+
+        Label label = Label.label( "LABEL" );
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "node", array( label.name() ), array( "prop", "otherprop" ) ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( "prop" ) ) );
+            tx.success();
+        }
+        db.execute( format( AWAIT_POPULATION, "node" ) ).close();
+        db.execute( format( AWAIT_POPULATION, "rel" ) ).close();
+
+        // Prevent index updates from being applied to eventually consistent indexes.
+        BinaryLatch indexUpdateBlocker = new BinaryLatch();
+        db.getDependencyResolver().resolveDependency( JobScheduler.class ).schedule( Group.INDEX_UPDATING, indexUpdateBlocker::await );
+
+        LongHashSet nodeIds = new LongHashSet();
+        long relId;
+        try
+        {
+            try ( Transaction tx = db.beginTx() )
+            {
+                Node node1 = db.createNode( label );
+                node1.setProperty( "prop", "bla bla" );
+                Node node2 = db.createNode( label );
+                node2.setProperty( "otherprop", "bla bla" );
+                Relationship relationship = node1.createRelationshipTo( node2, relType );
+                relationship.setProperty( "prop", "bla bla" );
+                nodeIds.add( node1.getId() );
+                nodeIds.add( node2.getId() );
+                relId = relationship.getId();
+                tx.success();
+            }
+
+            // Index updates are still blocked for eventually consistent indexes, so we should not find anything at this point.
+            assertQueryFindsIds( db, db::getNodeById, "node", "bla", new LongHashSet() );
+            assertQueryFindsIds( db, db::getRelationshipById, "rel", "bla", new LongHashSet() );
+        }
+        finally
+        {
+            // Uncork the eventually consistent fulltext index updates.
+            Thread.sleep( 10 );
+            indexUpdateBlocker.release();
+        }
+        // And wait for them to apply.
+        db.execute( AWAIT_REFRESH );
+
+        // Now we should see our data.
+        assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
+        assertQueryFindsIds( db, "rel", "bla", relId );
+    }
+
     private static void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )
     {
         Result result = db.execute( format( QUERY, index, query ) );
@@ -625,8 +686,8 @@ public class FulltextProceduresTest
         }
     }
 
-    private static void failQuery( LongFunction<Entity> getEntity, String index, String query, MutableLongSet ids, long[] expectedIds, MutableLongSet actualIds,
-            String msg )
+    private static void failQuery(
+            LongFunction<Entity> getEntity, String index, String query, MutableLongSet ids, long[] expectedIds, MutableLongSet actualIds, String msg )
     {
         StringBuilder message = new StringBuilder( msg ).append( '\n' );
         MutableLongIterator itr = ids.longIterator();

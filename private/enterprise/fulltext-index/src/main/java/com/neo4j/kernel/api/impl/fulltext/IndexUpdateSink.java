@@ -37,7 +37,6 @@ public class IndexUpdateSink
         updateQueueLimit.acquireUninterruptibly();
         Runnable eventualUpdate = () ->
         {
-
             try
             {
                 indexUpdater.process( update );

@@ -50,6 +50,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     private final Supplier<TokenHolders> tokenHolders;
     private final OperationalMode operationalMode;
     private final String defaultAnalyzerClassName;
+    private final String defaultEventuallyConsistentSetting;
     private final IndexUpdateSink indexUpdateSink;
 
     FulltextIndexProvider( Descriptor descriptor, int priority, IndexDirectoryStructure.Factory directoryStructureFactory, FileSystemAbstraction fileSystem,
@@ -62,6 +63,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         this.operationalMode = operationalMode;
 
         defaultAnalyzerClassName = config.get( FulltextConfig.fulltext_default_analyzer );
+        defaultEventuallyConsistentSetting = Boolean.toString( config.get( FulltextConfig.eventually_consistent ) );
         this.indexUpdateSink = new IndexUpdateSink( scheduler );
     }
 
@@ -159,6 +161,10 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         if ( !settings.containsKey( FulltextIndexSettings.SETTING_ANALYZER ) )
         {
             settings.put( FulltextIndexSettings.SETTING_ANALYZER, defaultAnalyzerClassName );
+        }
+        if ( !settings.containsKey( FulltextIndexSettings.SETTING_EVENTUALLY_CONSISTENT ) )
+        {
+            settings.put( FulltextIndexSettings.SETTING_EVENTUALLY_CONSISTENT, defaultEventuallyConsistentSetting );
         }
         return new FulltextSchemaDescriptor( schema, settings );
     }

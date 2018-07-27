@@ -38,7 +38,7 @@ public class FulltextIndexAccessor extends AbstractLuceneIndexAccessor<FulltextI
     public IndexUpdater getIndexUpdater( IndexUpdateMode mode )
     {
         IndexUpdater indexUpdater = new FulltextIndexUpdater( mode.requiresIdempotency(), mode.requiresRefresh() );
-        if ( mode == IndexUpdateMode.ONLINE && descriptor.isEventuallyConsistent() )
+        if ( descriptor.isEventuallyConsistent() )
         {
             indexUpdater = new EventuallyConsistentIndexUpdater( luceneIndex, indexUpdater, indexUpdateSink );
         }
