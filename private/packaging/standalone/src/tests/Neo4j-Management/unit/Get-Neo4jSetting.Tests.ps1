@@ -5,9 +5,9 @@
 #
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.", ".")
+$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.",".")
 $common = Join-Path (Split-Path -Parent $here) 'Common.ps1'
-. $common
+.$common
 
 Import-Module "$src\Neo4j-Management.psm1"
 
@@ -36,7 +36,7 @@ InModuleScope Neo4j-Management {
 
       It "ignore the missing file" {
         $result.Name | Should Be "setting"
-        $result.Value | Should Be "value"
+        $result.value | Should Be "value"
       }
     }
 
@@ -60,9 +60,9 @@ InModuleScope Neo4j-Management {
       $result | ForEach-Object -Process {
         $setting = $_
         switch ($setting.Name) {
-          'setting1' { $neo4jServerProperties = ($setting.ConfigurationFile -eq 'neo4j.conf') -and ($setting.IsDefault -eq $false) -and ($setting.Value -eq 'value1') }
-          'setting2' { $neo4jWrapper =          ($setting.ConfigurationFile -eq 'neo4j-wrapper.conf') -and ($setting.IsDefault -eq $false) -and ($setting.Value -eq 'value2') }
-          default { $unknownSetting = $true}
+          'setting1' { $neo4jServerProperties = ($setting.ConfigurationFile -eq 'neo4j.conf') -and ($setting.IsDefault -eq $false) -and ($setting.value -eq 'value1') }
+          'setting2' { $neo4jWrapper = ($setting.ConfigurationFile -eq 'neo4j-wrapper.conf') -and ($setting.IsDefault -eq $false) -and ($setting.value -eq 'value2') }
+          default { $unknownSetting = $true }
         }
       }
 
@@ -101,17 +101,17 @@ InModuleScope Neo4j-Management {
         ($singleSetting -ne $null) | Should Be $true
       }
       It "returns a string for single settings" {
-        $singleSetting.Value.GetType().ToString() | Should Be "System.String"
+        $singleSetting.value.GetType().ToString() | Should Be "System.String"
       }
 
       It "returns multiple settings" {
         ($multiSetting -ne $null) | Should Be $true
       }
       It "returns an object array for multiple settings" {
-        $multiSetting.Value.GetType().ToString() | Should Be "System.Object[]"
+        $multiSetting.value.GetType().ToString() | Should Be "System.Object[]"
       }
       It "returns an object array for multiple settings with the correct size" {
-        $multiSetting.Value.Count | Should Be 3
+        $multiSetting.value.Count | Should Be 3
       }
     }
   }

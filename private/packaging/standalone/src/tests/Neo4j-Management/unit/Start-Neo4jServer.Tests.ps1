@@ -5,9 +5,9 @@
 #
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.", ".")
+$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.",".")
 $common = Join-Path (Split-Path -Parent $here) 'Common.ps1'
-. $common
+.$common
 
 Import-Module "$src\Neo4j-Management.psm1"
 
@@ -18,7 +18,7 @@ InModuleScope Neo4j-Management {
     #  Mock Java environment
     $javaHome = global:New-MockJavaHome
     Mock Get-Neo4jEnv { $javaHome } -ParameterFilter { $Name -eq 'JAVA_HOME' }
-    Mock Set-Neo4jEnv { }
+    Mock Set-Neo4jEnv {}
     Mock Test-Path { $false } -ParameterFilter {
       $Path -like 'Registry::*\JavaSoft\Java Runtime Environment'
     }
@@ -27,7 +27,9 @@ InModuleScope Neo4j-Management {
     }
     # Mock Neo4j environment
     Mock Get-Neo4jEnv { $global:mockNeo4jHome } -ParameterFilter { $Name -eq 'NEO4J_HOME' }
+    Mock Confirm-JavaVersion { $true }
     Mock Start-Process { throw "Should not call Start-Process mock" }
+    Mock Invoke-ExternalCommand { throw "Should not call Invoke-ExternalCommand mock" }
 
     Context "Invalid or missing specified neo4j installation" {
       $serverObject = global:New-InvalidNeo4jInstall
@@ -43,7 +45,7 @@ InModuleScope Neo4j-Management {
 
     # Windows Service Tests
     Context "Missing service name in configuration files" {
-      Mock Start-Service { }
+      Mock Start-Service {}
 
       $serverObject = global:New-MockNeo4jInstall -WindowsService ''
 
@@ -52,16 +54,17 @@ InModuleScope Neo4j-Management {
       }
     }
 
-    Context "Start service succesfully but not running" {
-      Mock Start-Service { throw "Wrong Service name" }
-      Mock Start-Service -Verifiable { @{ Status = 'Start Pending'} } -ParameterFilter { $Name -eq $global:mockServiceName }
+    Context "Start service failed" {
+      Mock Get-Service { return 'service' }
+      Mock Invoke-ExternalCommand { throw "Should not invoke" }
+      Mock Invoke-ExternalCommand -Verifiable { @{ exitCode = 1; capturedOutput = 'failed to start' } } -ParameterFilter { $Command -like '*prunsrv*.exe' }
 
       $serverObject = global:New-MockNeo4jInstall
 
       $result = Start-Neo4jServer -Service -Neo4jServer $serverObject
 
-      It "result is 2" {
-        $result | Should Be 2
+      It "result is 1" {
+        $result | Should Be 1
       }
 
       It "calls verified mocks" {
@@ -70,8 +73,9 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Start service succesfully" {
-      Mock Start-Service { throw "Wrong Service name" }
-      Mock Start-Service -Verifiable { @{ Status = 'Running'} } -ParameterFilter { $Name -eq $global:mockServiceName }
+      Mock Get-Service { return 'service' }
+      Mock Invoke-ExternalCommand { throw "Should not invoke" }
+      Mock Invoke-ExternalCommand -Verifiable { @{ exitCode = 0 } } -ParameterFilter { $Command -like '*prunsrv*.exe' }
 
       $serverObject = global:New-MockNeo4jInstall
 
@@ -88,15 +92,15 @@ InModuleScope Neo4j-Management {
 
     # Console Tests
     Context "Start as a process and missing Java" {
-      Mock Get-Java { }
-      Mock Start-Process { }
+      Mock Get-Java {}
+      Mock Start-Process {}
 
       $serverObject = (New-Object -TypeName PSCustomObject -Property @{
-        'Home' =  'TestDrive:\some-dir-that-doesnt-exist';
-        'ServerVersion' = '3.0';
-        'ServerType' = 'Enterprise';
-        'DatabaseMode' = '';
-      })
+          'Home' = 'TestDrive:\some-dir-that-doesnt-exist';
+          'ServerVersion' = '3.0';
+          'ServerType' = 'Enterprise';
+          'DatabaseMode' = '';
+        })
       It "throws error if missing Java" {
         { Start-Neo4jServer -Console -Neo4jServer $serverObject -ErrorAction Stop } | Should Throw
       }
