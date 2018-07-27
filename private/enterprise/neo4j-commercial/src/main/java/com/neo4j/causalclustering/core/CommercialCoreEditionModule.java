@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
+import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.io.File;
 
@@ -17,12 +18,15 @@ import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.ClusteringModule;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.util.Dependencies;
+import org.neo4j.logging.Logger;
 import org.neo4j.ssl.SslPolicy;
 
 /**
@@ -54,6 +58,13 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
         }
 
         return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, clusterStateDirectory.get(), databaseDirectory );
+    }
+
+    @Override
+    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, PlatformModule platform, EditionModule edition,
+            Procedures procedures, Logger msgLog )
+    {
+        return new MultiDatabaseManager( platform, edition, procedures, msgLog, graphDatabaseFacade );
     }
 
     @Override

@@ -6,9 +6,8 @@
 package com.neo4j.backup.impl;
 
 import com.neo4j.causalclustering.handlers.SslClientPipelineWrapper;
-import com.neo4j.causalclustering.handlers.SslServerPipelineWrapper;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.backup.impl.BackupModule;
 import org.neo4j.causalclustering.handlers.PipelineWrapper;
@@ -16,20 +15,20 @@ import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class CommercialBackupSupportingClassesFactoryTest
+class CommercialBackupSupportingClassesFactoryTest
 {
-    CommercialBackupSupportingClassesFactory subject;
+    private CommercialBackupSupportingClassesFactory subject;
 
-    BackupModule backupModule = mock( BackupModule.class );
+    private final BackupModule backupModule = mock( BackupModule.class );
 
-    OutsideWorld outsideWorld = mock( OutsideWorld.class );
+    private final OutsideWorld outsideWorld = mock( OutsideWorld.class );
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         when( backupModule.getOutsideWorld() ).thenReturn( outsideWorld );
         when( backupModule.getLogProvider() ).thenReturn( NullLogProvider.getInstance() );
@@ -37,7 +36,7 @@ public class CommercialBackupSupportingClassesFactoryTest
     }
 
     @Test
-    public void commercialFactoryReturnsSslProviders()
+    void commercialFactoryReturnsSslProviders()
     {
         Config config = Config.defaults();
         PipelineWrapper appender = subject.createPipelineWrapper( config );

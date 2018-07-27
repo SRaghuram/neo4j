@@ -49,6 +49,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-commercial</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j.app</groupId>
             <artifactId>neo4j-server</artifactId>
             <version>${project.version}</version>
@@ -59,11 +64,6 @@
             <version>${project.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-causal-clustering-commercial</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <dependency>
             <groupId>org.neo4j</groupId>

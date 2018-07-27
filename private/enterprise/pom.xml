@@ -28,6 +28,7 @@
     <module>fulltext-index</module>
     <module>causal-clustering-commercial</module>
     <module>server-commercial</module>
+    <module>neo4j-commercial</module>
   </modules>
 
   <licenses>

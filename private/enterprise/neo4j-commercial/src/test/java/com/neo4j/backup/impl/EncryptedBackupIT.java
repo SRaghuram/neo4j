@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.discovery.CommercialCluster;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -31,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.IntSupplier;
 
 import org.neo4j.backup.impl.OnlineBackupCommandBuilder;
+import org.neo4j.backup.impl.OnlineBackupCommandCcIT;
 import org.neo4j.backup.impl.SelectedBackupProtocol;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
@@ -38,7 +39,6 @@ import org.neo4j.causalclustering.discovery.Cluster;
 import org.neo4j.causalclustering.discovery.ClusterMember;
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.IpFamily;
-import org.neo4j.causalclustering.discovery.ReadReplica;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.graphdb.config.Setting;
@@ -58,8 +58,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.clusterDatabase;
 import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.createSomeData;
-import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.getBackupDbRepresentation;
+import static org.neo4j.causalclustering.discovery.Cluster.dataMatchesEventually;
 
+@Ignore
 public class EncryptedBackupIT
 {
     @Rule
@@ -115,7 +116,7 @@ public class EncryptedBackupIT
 
         // when the cluster is populated with more data
         createSomeData( cluster );
-        Cluster.dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), cluster.coreMembers() );
+        dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), cluster.coreMembers() );
 
         // then an incremental backup is successful on that cluster
         exitCode = backupClient.getAsInt();
@@ -145,7 +146,7 @@ public class EncryptedBackupIT
 
         // when the cluster is populated with more data
         createSomeData( cluster );
-        Cluster.dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), cluster.coreMembers() );
+        dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), cluster.coreMembers() );
 
         // then an incremental backup is successful on that cluster
         exitCode = backupClient.getAsInt();
@@ -171,7 +172,7 @@ public class EncryptedBackupIT
         int exitCode = backupClient.getAsInt();
 
         // then backup isn't possible because missing cert
-        Assert.assertEquals( 1, exitCode );
+        assertEquals( 1, exitCode );
     }
 
     @Test
@@ -190,7 +191,7 @@ public class EncryptedBackupIT
         int exitCode = backupClient.getAsInt();
 
         // then
-        Assert.assertEquals( 1, exitCode );
+        assertEquals( 1, exitCode );
     }
 
     @Test
@@ -209,7 +210,7 @@ public class EncryptedBackupIT
         int exitCode = backupClient.getAsInt();
 
         // then
-        Assert.assertEquals( 0, exitCode );
+        assertEquals( 0, exitCode );
         backupDataMatchesDatabase( cluster, backupHome, backupName );
     }
 
@@ -229,7 +230,7 @@ public class EncryptedBackupIT
         int exitCode = backupClient.getAsInt();
 
         // then
-        Assert.assertEquals( 1, exitCode );
+        assertEquals( 1, exitCode );
     }
 
     @Test
@@ -430,10 +431,8 @@ public class EncryptedBackupIT
         int noOfCoreMembers = 3;
         int noOfReadReplicas = 3;
 
-        Cluster cluster =
-                new CommercialCluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, new SslHazelcastDiscoveryServiceFactory(), emptyMap(),
-                        emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
-        return cluster;
+        return new CommercialCluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, new SslHazelcastDiscoveryServiceFactory(), emptyMap(),
+                emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
     }
 
     private IntSupplier backupClientWithoutEncryption( Setting addressSetting ) throws IOException, TimeoutException
@@ -501,7 +500,7 @@ public class EncryptedBackupIT
         {
             try
             {
-                Cluster.dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), allMembers( cluster ) );
+                dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), allMembers( cluster ) );
                 return runBackupSameJvm( backupHome, backupName, selectedNodeAddress );
             }
             catch ( CommandFailed e )
@@ -516,7 +515,7 @@ public class EncryptedBackupIT
         };
     }
 
-    private void exchangeBackupClientKeyWithCluster( Cluster cluster, File backupHome, String targetPolicyName ) throws IOException
+    private static void exchangeBackupClientKeyWithCluster( Cluster cluster, File backupHome, String targetPolicyName ) throws IOException
     {
         // Copy backup cert to cluster trusted and copy cluster keys to backup
         for ( ClusterMember clusterMember : allMembers( cluster ) )
@@ -574,7 +573,7 @@ public class EncryptedBackupIT
     /**
      * It is necessary to run from the same jvm due to being dependant on ssl which is commercial only
      */
-    private int runBackupSameJvm( File neo4jHome, String backupName, String host ) throws CommandFailed, IncorrectUsage
+    private static int runBackupSameJvm( File neo4jHome, String backupName, String host ) throws CommandFailed, IncorrectUsage
     {
         return new OnlineBackupCommandBuilder().withSelectedBackupStrategy( SelectedBackupProtocol.CATCHUP ).withHost( host ).backup( neo4jHome, backupName )
                ? 0 : 1;
@@ -582,7 +581,8 @@ public class EncryptedBackupIT
 
     private static void backupDataMatchesDatabase( Cluster cluster, File backupDir, String backupName )
     {
-        assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( backupName, backupDir ) );
+        assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ),
+                OnlineBackupCommandCcIT.getBackupDbRepresentation( backupName, backupDir ) );
     }
 
     // ---------------------- New functionality
@@ -602,7 +602,7 @@ public class EncryptedBackupIT
         }
     }
 
-    private void configureClusterConfigEncryptedCluster( Cluster cluster )
+    private static void configureClusterConfigEncryptedCluster( Cluster cluster )
     {
         for ( ClusterMember clusterMember : allMembers( cluster ) )
         {
@@ -612,7 +612,7 @@ public class EncryptedBackupIT
         }
     }
 
-    private void configureClusterConfigEncryptedBackup( Cluster cluster )
+    private static void configureClusterConfigEncryptedBackup( Cluster cluster )
     {
         for ( ClusterMember clusterMember : allMembers( cluster ) )
         {
@@ -652,10 +652,10 @@ public class EncryptedBackupIT
     {
         if ( clusterMember instanceof CoreClusterMember )
         {
-            return ((CoreClusterMember) clusterMember).serverId();
+            return clusterMember.serverId();
         }
         int numberOfCores = 3;
-        return ((ReadReplica) clusterMember).serverId() + numberOfCores;
+        return clusterMember.serverId() + numberOfCores;
     }
 
     private void prepareCoreToHaveKeys( ClusterMember member, int keyId, String policyName ) throws IOException
@@ -665,7 +665,7 @@ public class EncryptedBackupIT
         createSslInParent( policyDir, keyId );
     }
 
-    private File createPolicyDirectories( FileSystemRule fsRule, File homeDir, String policyName ) throws IOException
+    private static File createPolicyDirectories( FileSystemRule fsRule, File homeDir, String policyName ) throws IOException
     {
         File policyDir = new File( homeDir, "certificates/" + policyName );
         fsRule.mkdirs( new File( policyDir, "trusted" ) );
@@ -673,17 +673,18 @@ public class EncryptedBackupIT
         return policyDir;
     }
 
-    private void createSslInParent( File policyDir, int keyId ) throws IOException
+    private static void createSslInParent( File policyDir, int keyId ) throws IOException
     {
         SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( policyDir );
     }
 
-    private void copySslToPolicyTrustedDirectory( File sourceHome, File targetHome, String policyName, String targetFileName ) throws IOException
+    private static void copySslToPolicyTrustedDirectory( File sourceHome, File targetHome, String policyName, String targetFileName ) throws IOException
     {
         copySslToPolicyTrustedDirectory( sourceHome, targetHome, policyName, policyName, targetFileName );
     }
 
-    private void copySslToPolicyTrustedDirectory( File sourceHome, File targetHome, String sourcePolicyName, String targetPolicyName, String targetFileName )
+    private static void copySslToPolicyTrustedDirectory( File sourceHome, File targetHome, String sourcePolicyName, String targetPolicyName,
+            String targetFileName )
             throws IOException
     {
         Path sourcePublicKey = Paths.get( sourceHome.getPath(), "certificates", sourcePolicyName, publicKeyName );
