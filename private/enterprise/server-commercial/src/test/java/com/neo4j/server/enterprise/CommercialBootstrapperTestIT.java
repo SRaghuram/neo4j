@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.enterprise;
 
+import com.neo4j.commercial.edition.CommercialGraphDatabase;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -70,6 +71,7 @@ public class CommercialBootstrapperTestIT extends BaseBootstrapperTestIT
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );
         assertEventually( "Server was not started", bootstrapper::isRunning, is( true ), 1, TimeUnit.MINUTES );
+        assertTrue( bootstrapper.getServer().getDatabase().getGraph() instanceof CommercialGraphDatabase );
     }
 
     @Test

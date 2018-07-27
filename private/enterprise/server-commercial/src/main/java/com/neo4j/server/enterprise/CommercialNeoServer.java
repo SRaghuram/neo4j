@@ -7,6 +7,7 @@ package com.neo4j.server.enterprise;
 
 import com.neo4j.causalclustering.core.CommercialCoreGraphDatabase;
 import com.neo4j.causalclustering.readreplica.CommercialReadReplicaGraphDatabase;
+import com.neo4j.commercial.edition.CommercialGraphDatabase;
 
 import java.io.File;
 
@@ -23,16 +24,22 @@ import static org.neo4j.server.database.LifecycleManagingDatabase.lifecycleManag
 
 public class CommercialNeoServer extends OpenEnterpriseNeoServer
 {
-    private static final GraphFactory CORE_FACTORY = ( config, dependencies ) ->
+    private static final GraphFactory COMMERCIAL_CORE_FACTORY = ( config, dependencies ) ->
     {
         File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
         return new CommercialCoreGraphDatabase( storeDir, config, dependencies );
     };
 
-    private static final GraphFactory READ_REPLICA_FACTORY = ( config, dependencies ) ->
+    private static final GraphFactory COMMERCIAL_READ_REPLICA_FACTORY = ( config, dependencies ) ->
     {
         File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
         return new CommercialReadReplicaGraphDatabase( storeDir, config, dependencies );
+    };
+
+    private static final GraphFactory COMMERCIAL_ENTERPRISE_FACTORY = ( config, dependencies ) ->
+    {
+        File storeDir = config.get( GraphDatabaseSettings.database_path );
+        return new CommercialGraphDatabase( storeDir, config, dependencies );
     };
 
     public CommercialNeoServer( Config config, Dependencies dependencies, LogProvider logProvider )
@@ -47,9 +54,11 @@ public class CommercialNeoServer extends OpenEnterpriseNeoServer
         switch ( mode )
         {
         case CORE:
-            return lifecycleManagingDatabase( CORE_FACTORY );
+            return lifecycleManagingDatabase( COMMERCIAL_CORE_FACTORY );
         case READ_REPLICA:
-            return lifecycleManagingDatabase( READ_REPLICA_FACTORY );
+            return lifecycleManagingDatabase( COMMERCIAL_READ_REPLICA_FACTORY );
+        case SINGLE:
+            return lifecycleManagingDatabase( COMMERCIAL_ENTERPRISE_FACTORY );
         default:
             return OpenEnterpriseNeoServer.createDbFactory( config );
         }

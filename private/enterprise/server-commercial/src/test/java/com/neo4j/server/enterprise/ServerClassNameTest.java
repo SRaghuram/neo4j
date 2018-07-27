@@ -30,7 +30,6 @@ public class ServerClassNameTest
 {
     @Test
     public void shouldMaintainNamingOfCommunityNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
-            throws Exception
     {
         assertEquals( getErrorMessage( CommunityNeoServer.class ), "communityneoserver",
                 CommunityNeoServer.class.getSimpleName().toLowerCase() );
@@ -38,7 +37,6 @@ public class ServerClassNameTest
 
     @Test
     public void shouldMaintainNamingOfEnterpriseNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
-            throws Exception
     {
         assertEquals( getErrorMessage( OpenEnterpriseNeoServer.class ), "openenterpriseneoserver",
                 OpenEnterpriseNeoServer.class.getSimpleName().toLowerCase() );
@@ -46,13 +44,12 @@ public class ServerClassNameTest
 
     @Test
     public void shouldMaintainNamingOfCommercialNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
-            throws Exception
     {
         assertEquals( getErrorMessage( CommercialNeoServer.class ), "commercialneoserver",
                 CommercialNeoServer.class.getSimpleName().toLowerCase() );
     }
 
-    private String getErrorMessage( Class<? extends AbstractNeoServer> neoServerClass )
+    private static String getErrorMessage( Class<? extends AbstractNeoServer> neoServerClass )
     {
         return "The " + neoServerClass.getSimpleName() + " class appears to have been renamed. There is a strict " +
                 "dependency from the REST API VersionAndEditionService on the name of that class. If you want " +

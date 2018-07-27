@@ -5,28 +5,22 @@
  */
 package com.neo4j.dmbs.database;
 
-import com.neo4j.causalclustering.discovery.CommercialCluster;
-import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
-import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -38,22 +32,17 @@ class MultiDatabaseManagerIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
-    private CommercialCluster cluster;
 
     @BeforeEach
-    void setUp() throws TimeoutException, ExecutionException, InterruptedException
+    void setUp()
     {
-        //TODO:replace with commercial enterprise db instance as soon as it will be available
-        cluster = new CommercialCluster( testDirectory.absolutePath(), 3, 0, new SslHazelcastDiscoveryServiceFactory(), emptyMap(), emptyMap(), emptyMap(),
-                emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
-        cluster.start();
-        database = cluster.awaitLeader().database();
+        database = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.storeDir() );
     }
 
     @AfterEach
     void tearDown()
     {
-        cluster.shutdown();
+        database.shutdown();
     }
 
     @Test

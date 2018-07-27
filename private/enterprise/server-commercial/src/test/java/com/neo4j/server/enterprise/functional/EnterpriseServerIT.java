@@ -138,7 +138,7 @@ public class EnterpriseServerIT
         }
     }
 
-    private String getHaEndpoint( NeoServer server )
+    private static String getHaEndpoint( NeoServer server )
     {
         return server.baseUri().toString() + "db/manage/server/ha";
     }

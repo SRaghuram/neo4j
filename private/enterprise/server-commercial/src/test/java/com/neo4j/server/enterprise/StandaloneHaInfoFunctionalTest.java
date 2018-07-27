@@ -52,7 +52,7 @@ public class StandaloneHaInfoFunctionalTest
     }
 
     @Test
-    public void testHaDiscoveryOnStandaloneReturns403() throws Exception
+    public void testHaDiscoveryOnStandaloneReturns403()
     {
         FunctionalTestHelper helper = new FunctionalTestHelper( server );
 
@@ -60,13 +60,8 @@ public class StandaloneHaInfoFunctionalTest
         assertEquals( SC_FORBIDDEN, response.getStatus() );
     }
 
-    private String getBasePath( FunctionalTestHelper helper )
-    {
-        return helper.managementUri() + "/" + BASE_PATH;
-    }
-
     @Test
-    public void testIsMasterOnStandaloneReturns403() throws Exception
+    public void testIsMasterOnStandaloneReturns403()
     {
         FunctionalTestHelper helper = new FunctionalTestHelper( server );
 
@@ -75,7 +70,7 @@ public class StandaloneHaInfoFunctionalTest
     }
 
     @Test
-    public void testIsSlaveOnStandaloneReturns403() throws Exception
+    public void testIsSlaveOnStandaloneReturns403()
     {
         FunctionalTestHelper helper = new FunctionalTestHelper( server );
 
@@ -93,5 +88,10 @@ public class StandaloneHaInfoFunctionalTest
         Map<String, Object> map = JsonHelper.jsonToMap( response.getEntity() );
 
        assertEquals( 2, ((Map) map.get( "services" )).size() );
+    }
+
+    private static String getBasePath( FunctionalTestHelper helper )
+    {
+        return helper.managementUri() + "/" + BASE_PATH;
     }
 }
