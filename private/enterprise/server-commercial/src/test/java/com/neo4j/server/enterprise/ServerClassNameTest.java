@@ -5,13 +5,13 @@
  */
 package com.neo4j.server.enterprise;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.enterprise.OpenEnterpriseNeoServer;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The classes that extend AbstractNeoServer are currently known to be:
@@ -26,24 +26,24 @@ import static org.junit.Assert.assertEquals;
  * it lives in neo4j-enterprise because otherwise the CommunityNeoServer
  * and EnterpriseNeoServer would not be visible.
  */
-public class ServerClassNameTest
+class ServerClassNameTest
 {
     @Test
-    public void shouldMaintainNamingOfCommunityNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
+    void shouldMaintainNamingOfCommunityNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
     {
         assertEquals( getErrorMessage( CommunityNeoServer.class ), "communityneoserver",
                 CommunityNeoServer.class.getSimpleName().toLowerCase() );
     }
 
     @Test
-    public void shouldMaintainNamingOfEnterpriseNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
+    void shouldMaintainNamingOfEnterpriseNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
     {
         assertEquals( getErrorMessage( OpenEnterpriseNeoServer.class ), "openenterpriseneoserver",
                 OpenEnterpriseNeoServer.class.getSimpleName().toLowerCase() );
     }
 
     @Test
-    public void shouldMaintainNamingOfCommercialNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
+    void shouldMaintainNamingOfCommercialNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
     {
         assertEquals( getErrorMessage( CommercialNeoServer.class ), "commercialneoserver",
                 CommercialNeoServer.class.getSimpleName().toLowerCase() );

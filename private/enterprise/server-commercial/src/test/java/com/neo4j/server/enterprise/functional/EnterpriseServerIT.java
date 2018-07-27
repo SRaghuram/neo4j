@@ -8,42 +8,43 @@ package com.neo4j.server.enterprise.functional;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.server.NeoServer;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.cluster.ClusterSettings.cluster_server;
 import static org.neo4j.cluster.ClusterSettings.initial_hosts;
 import static org.neo4j.cluster.ClusterSettings.server_id;
 import static org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.mode;
 
-public class EnterpriseServerIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class EnterpriseServerIT
 {
-    @Rule
-    public final TemporaryFolder folder = new TemporaryFolder();
-    @Rule
-    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void shouldBeAbleToStartInHAMode() throws Throwable
+    void shouldBeAbleToStartInHAMode() throws Throwable
     {
         // Given
         int clusterPort = PortAuthority.allocatePort();
         NeoServer server = CommercialServerBuilder.serverOnRandomPorts()
-                .usingDataDir( folder.getRoot().getAbsolutePath() )
+                .usingDataDir( testDirectory.directory().getAbsolutePath() )
                 .withProperty( mode.name(), "HA" )
                 .withProperty( server_id.name(), "1" )
                 .withProperty( cluster_server.name(), ":" + clusterPort )
@@ -71,13 +72,13 @@ public class EnterpriseServerIT
     }
 
     @Test
-    public void shouldRequireAuthorizationForHAStatusEndpoints() throws Exception
+    void shouldRequireAuthorizationForHAStatusEndpoints() throws Exception
     {
         // Given
         int clusterPort = PortAuthority.allocatePort();
         NeoServer server = CommercialServerBuilder.serverOnRandomPorts()
                 .withProperty( GraphDatabaseSettings.auth_enabled.name(), "true" )
-                .usingDataDir( folder.getRoot().getAbsolutePath() )
+                .usingDataDir( testDirectory.directory().getAbsolutePath() )
                 .withProperty( mode.name(), "HA" )
                 .withProperty( server_id.name(), "1" )
                 .withProperty( cluster_server.name(), ":" + clusterPort )
@@ -104,14 +105,14 @@ public class EnterpriseServerIT
     }
 
     @Test
-    public void shouldAllowDisablingAuthorizationOnHAStatusEndpoints() throws Exception
+    void shouldAllowDisablingAuthorizationOnHAStatusEndpoints() throws Exception
     {
         // Given
         int clusterPort = PortAuthority.allocatePort();
         NeoServer server = CommercialServerBuilder.serverOnRandomPorts()
                 .withProperty( GraphDatabaseSettings.auth_enabled.name(), "true" )
                 .withProperty( HaSettings.ha_status_auth_enabled.name(), "false" )
-                .usingDataDir( folder.getRoot().getAbsolutePath() )
+                .usingDataDir( testDirectory.directory().getAbsolutePath() )
                 .withProperty( mode.name(), "HA" )
                 .withProperty( server_id.name(), "1" )
                 .withProperty( cluster_server.name(), ":" + clusterPort )

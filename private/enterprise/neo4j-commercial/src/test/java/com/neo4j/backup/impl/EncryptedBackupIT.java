@@ -8,11 +8,10 @@ package com.neo4j.backup.impl;
 import com.neo4j.causalclustering.discovery.CommercialCluster;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -42,33 +41,34 @@ import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.DbRepresentation;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
-import org.neo4j.test.rule.fs.FileSystemRule;
 
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.clusterDatabase;
 import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.createSomeData;
 import static org.neo4j.causalclustering.discovery.Cluster.dataMatchesEventually;
 
-@Ignore
-public class EncryptedBackupIT
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class EncryptedBackupIT
 {
-    @Rule
-    public TestDirectory testDir = TestDirectory.testDirectory();
-    @Rule
-    public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    @Rule
-    public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
+    @Inject
+    private TestDirectory testDir;
+    @Inject
+    private DefaultFileSystemAbstraction fs;
 
     private Cluster cluster;
 
@@ -80,15 +80,15 @@ public class EncryptedBackupIT
     private File backupHome;
     private String backupName;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         backupHome = testDir.directory( "backupNeo4jHome" );
         backupName = "encryptedBackup";
     }
 
-    @After
-    public void cleanup()
+    @AfterEach
+    void cleanup()
     {
         if ( cluster != null )
         {
@@ -97,7 +97,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void backupsArePossibleFromEncryptedCluster() throws Exception
+    void backupsArePossibleFromEncryptedCluster() throws Exception
     {
         // given there exists an encrypted cluster
         cluster = aCluster();
@@ -127,7 +127,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void encryptedBackupsArePossibleFromBackupPort() throws Exception
+    void encryptedBackupsArePossibleFromBackupPort() throws Exception
     {
         // given there exists an encrypted cluster with exposed backup port
         cluster = aCluster();
@@ -157,7 +157,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void noPolicyAgainstBackupPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void noPolicyAgainstBackupPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         // given backup port has ssl
         cluster = aCluster();
@@ -176,7 +176,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void txPolicyAgainstBackupPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void txPolicyAgainstBackupPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         // given backup port has ssl
         cluster = aCluster();
@@ -195,7 +195,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void backupPolicyAgainstBackupPortWithSslPasses() throws IOException, TimeoutException, ExecutionException, InterruptedException
+    void backupPolicyAgainstBackupPortWithSslPasses() throws IOException, TimeoutException, ExecutionException, InterruptedException
     {
         // given backup port has ssl
         cluster = aCluster();
@@ -215,7 +215,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void noPolicyAgainstTxPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void noPolicyAgainstTxPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         // given backup port has ssl
         cluster = aCluster();
@@ -234,7 +234,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void txPolicyAgainstTxPortWithSslPasses() throws IOException, TimeoutException, ExecutionException, InterruptedException
+    void txPolicyAgainstTxPortWithSslPasses() throws IOException, TimeoutException, ExecutionException, InterruptedException
     {
         // given
         cluster = aCluster();
@@ -254,7 +254,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void backupPolicyAgainstTxPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void backupPolicyAgainstTxPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         cluster = aCluster();
         setupClusterWithEncryption( cluster, true, true );
@@ -272,7 +272,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void noPolicyAgainstUnencryptedBackupWorks() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void noPolicyAgainstUnencryptedBackupWorks() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         cluster = aCluster();
         setupClusterWithEncryption( cluster, true, false );
@@ -290,7 +290,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void noPolicyAgainstUnencryptedTxPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void noPolicyAgainstUnencryptedTxPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         cluster = aCluster();
         setupClusterWithEncryption( cluster, false, true );
@@ -309,7 +309,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void backupPolicyAgainstReplicaTxPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void backupPolicyAgainstReplicaTxPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         // given
         cluster = aCluster();
@@ -328,7 +328,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void backupPolicyAgainstReplicaBackupPortWithSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void backupPolicyAgainstReplicaBackupPortWithSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         // given
         cluster = aCluster();
@@ -348,7 +348,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void txPolicyAgainstReplicaBackupPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void txPolicyAgainstReplicaBackupPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         // given
         cluster = aCluster();
@@ -367,7 +367,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void txPolicyAgainstReplicaTxPortWithSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void txPolicyAgainstReplicaTxPortWithSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         // given
         cluster = aCluster();
@@ -387,7 +387,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void noPolicyAgainstReplicaBackupWithoutSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void noPolicyAgainstReplicaBackupWithoutSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         // given
         cluster = aCluster();
@@ -407,7 +407,7 @@ public class EncryptedBackupIT
     }
 
     @Test
-    public void noPolicyAgainstReplicaTxWithoutSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
+    void noPolicyAgainstReplicaTxWithoutSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         // given
         cluster = aCluster();
@@ -531,7 +531,7 @@ public class EncryptedBackupIT
         createConfigFile( neo4J_home );
         File certificatesLocation = neo4J_home.toPath().resolve( "certificates" ).resolve( backupPolicyName ).toFile();
         certificatesLocation.mkdirs();
-        installSsl( fsRule, certificatesLocation, keyId );
+        installSsl( fs, certificatesLocation, keyId );
         copySslToPolicyTrustedDirectory( neo4J_home, neo4J_home, backupPolicyName, "backup-key-copy.crt" );
     }
 
@@ -552,10 +552,10 @@ public class EncryptedBackupIT
         }
     }
 
-    private static void installSsl( FileSystemRule fsRule, File baseDir, int keyId ) throws IOException
+    private static void installSsl( FileSystemAbstraction fs, File baseDir, int keyId ) throws IOException
     {
-        fsRule.mkdirs( new File( baseDir, "trusted" ) );
-        fsRule.mkdirs( new File( baseDir, "revoked" ) );
+        fs.mkdirs( new File( baseDir, "trusted" ) );
+        fs.mkdirs( new File( baseDir, "revoked" ) );
         SslResourceBuilder sslResourceBuilder = SslResourceBuilder.selfSignedKeyId( keyId );
         trustInGroup( sslResourceBuilder, keyId ).install( baseDir );
     }
@@ -661,15 +661,15 @@ public class EncryptedBackupIT
     private void prepareCoreToHaveKeys( ClusterMember member, int keyId, String policyName ) throws IOException
     {
         File homeDir = member.homeDir();
-        File policyDir = createPolicyDirectories( fsRule, homeDir, policyName );
+        File policyDir = createPolicyDirectories( fs, homeDir, policyName );
         createSslInParent( policyDir, keyId );
     }
 
-    private static File createPolicyDirectories( FileSystemRule fsRule, File homeDir, String policyName ) throws IOException
+    private static File createPolicyDirectories( FileSystemAbstraction fs, File homeDir, String policyName ) throws IOException
     {
         File policyDir = new File( homeDir, "certificates/" + policyName );
-        fsRule.mkdirs( new File( policyDir, "trusted" ) );
-        fsRule.mkdirs( new File( policyDir, "revoked" ) );
+        fs.mkdirs( new File( policyDir, "trusted" ) );
+        fs.mkdirs( new File( policyDir, "revoked" ) );
         return policyDir;
     }
 

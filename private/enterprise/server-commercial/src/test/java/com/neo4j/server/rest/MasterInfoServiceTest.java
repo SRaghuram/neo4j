@@ -5,21 +5,21 @@
  */
 package com.neo4j.server.rest;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.server.rest.MasterInfoService;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class MasterInfoServiceTest
+class MasterInfoServiceTest
 {
     @Test
-    public void masterShouldRespond200AndTrueWhenMaster() throws Exception
+    void masterShouldRespond200AndTrueWhenMaster() throws Exception
     {
         // given
         HighlyAvailableGraphDatabase database = mock( HighlyAvailableGraphDatabase.class );
@@ -36,7 +36,7 @@ public class MasterInfoServiceTest
     }
 
     @Test
-    public void masterShouldRespond404AndFalseWhenSlave() throws Exception
+    void masterShouldRespond404AndFalseWhenSlave() throws Exception
     {
         // given
         HighlyAvailableGraphDatabase database = mock( HighlyAvailableGraphDatabase.class );
@@ -53,7 +53,7 @@ public class MasterInfoServiceTest
     }
 
     @Test
-    public void masterShouldRespond404AndUNKNOWNWhenUnknown() throws Exception
+    void masterShouldRespond404AndUNKNOWNWhenUnknown() throws Exception
     {
         // given
         HighlyAvailableGraphDatabase database = mock( HighlyAvailableGraphDatabase.class );
@@ -70,7 +70,7 @@ public class MasterInfoServiceTest
     }
 
     @Test
-    public void slaveShouldRespond200AndTrueWhenSlave() throws Exception
+    void slaveShouldRespond200AndTrueWhenSlave() throws Exception
     {
         // given
         HighlyAvailableGraphDatabase database = mock( HighlyAvailableGraphDatabase.class );
@@ -87,7 +87,7 @@ public class MasterInfoServiceTest
     }
 
     @Test
-    public void slaveShouldRespond404AndFalseWhenMaster() throws Exception
+    void slaveShouldRespond404AndFalseWhenMaster() throws Exception
     {
         // given
         HighlyAvailableGraphDatabase database = mock( HighlyAvailableGraphDatabase.class );
@@ -104,7 +104,7 @@ public class MasterInfoServiceTest
     }
 
     @Test
-    public void slaveShouldRespond404AndUNKNOWNWhenUnknown() throws Exception
+    void slaveShouldRespond404AndUNKNOWNWhenUnknown() throws Exception
     {
         // given
         HighlyAvailableGraphDatabase database = mock( HighlyAvailableGraphDatabase.class );
@@ -121,7 +121,7 @@ public class MasterInfoServiceTest
     }
 
     @Test
-    public void shouldReportMasterAsGenerallyAvailableForTransactionProcessing() throws Exception
+    void shouldReportMasterAsGenerallyAvailableForTransactionProcessing() throws Exception
     {
         // given
         HighlyAvailableGraphDatabase database = mock( HighlyAvailableGraphDatabase.class );
@@ -138,7 +138,7 @@ public class MasterInfoServiceTest
     }
 
     @Test
-    public void shouldReportSlaveAsGenerallyAvailableForTransactionProcessing() throws Exception
+    void shouldReportSlaveAsGenerallyAvailableForTransactionProcessing() throws Exception
     {
         // given
         HighlyAvailableGraphDatabase database = mock( HighlyAvailableGraphDatabase.class );
@@ -155,7 +155,7 @@ public class MasterInfoServiceTest
     }
 
     @Test
-    public void shouldReportNonMasterOrSlaveAsUnavailableForTransactionProcessing() throws Exception
+    void shouldReportNonMasterOrSlaveAsUnavailableForTransactionProcessing() throws Exception
     {
         // given
         HighlyAvailableGraphDatabase database = mock( HighlyAvailableGraphDatabase.class );

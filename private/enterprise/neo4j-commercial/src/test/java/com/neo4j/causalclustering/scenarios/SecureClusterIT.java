@@ -7,9 +7,9 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.discovery.CommercialCluster;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,32 +21,32 @@ import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.discovery.ReadReplica;
 import org.neo4j.graphdb.Node;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ssl.SslResourceBuilder;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static java.util.Collections.emptyMap;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-public class SecureClusterIT
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class SecureClusterIT
 {
-    @Rule
-    public TestDirectory testDir = TestDirectory.testDirectory();
-
-    @Rule
-    public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-
-    @Rule
-    public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
+    @Inject
+    private TestDirectory testDir;
+    @Inject
+    private DefaultFileSystemAbstraction fs;
 
     private CommercialCluster cluster;
 
-    @After
-    public void cleanup() throws Exception
+    @AfterEach
+    void cleanup()
     {
         if ( cluster != null )
         {
@@ -55,7 +55,7 @@ public class SecureClusterIT
     }
 
     @Test
-    public void shouldReplicateInSecureCluster() throws Exception
+    void shouldReplicateInSecureCluster() throws Exception
     {
         // given
         String sslPolicyName = "cluster";
@@ -111,8 +111,8 @@ public class SecureClusterIT
     private void installKeyToInstance( File homeDir, int keyId ) throws IOException
     {
         File baseDir = new File( homeDir, "certificates/cluster" );
-        fsRule.mkdirs( new File( baseDir, "trusted" ) );
-        fsRule.mkdirs( new File( baseDir, "revoked" ) );
+        fs.mkdirs( new File( baseDir, "trusted" ) );
+        fs.mkdirs( new File( baseDir, "revoked" ) );
 
         SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
     }
