@@ -49,8 +49,6 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
                '}';
     }
 
-    // TODO maybe we want to do all of the eventually-consistent specific things in here?
-
     @Override
     protected FulltextIndexReader createSimpleReader( List<AbstractIndexPartition> partitions ) throws IOException
     {
