@@ -38,7 +38,7 @@ public class CommercialNeoServer extends OpenEnterpriseNeoServer
 
     private static final GraphFactory COMMERCIAL_ENTERPRISE_FACTORY = ( config, dependencies ) ->
     {
-        File storeDir = config.get( GraphDatabaseSettings.database_path );
+        File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
         return new CommercialGraphDatabase( storeDir, config, dependencies );
     };
 
