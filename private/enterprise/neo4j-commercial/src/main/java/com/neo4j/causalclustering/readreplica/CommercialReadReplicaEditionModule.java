@@ -58,6 +58,13 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
     }
 
     @Override
+    public void createDatabases( DatabaseManager databaseManager, Config config )
+    {
+        super.createDatabases( databaseManager, config );
+        databaseManager.createDatabase( MultiDatabaseManager.SYSTEM_DB_NAME );
+    }
+
+    @Override
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
         return new SecurePipelineFactory();

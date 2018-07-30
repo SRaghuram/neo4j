@@ -21,6 +21,7 @@ import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -65,6 +66,13 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
             Procedures procedures, Logger msgLog )
     {
         return new MultiDatabaseManager( platform, edition, procedures, msgLog, graphDatabaseFacade );
+    }
+
+    @Override
+    public void createDatabases( DatabaseManager databaseManager, Config config )
+    {
+        super.createDatabases( databaseManager, config );
+        databaseManager.createDatabase( MultiDatabaseManager.SYSTEM_DB_NAME );
     }
 
     @Override

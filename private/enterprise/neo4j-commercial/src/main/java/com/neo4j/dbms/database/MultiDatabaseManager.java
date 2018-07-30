@@ -22,6 +22,8 @@ import org.neo4j.logging.Logger;
 
 public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseManager
 {
+    public static final String SYSTEM_DB_NAME = "system.db";
+
     private final CopyOnWriteHashMap<String, GraphDatabaseFacade> databaseMap = new CopyOnWriteHashMap<>();
     private final PlatformModule platform;
     private final EditionModule edition;
@@ -46,6 +48,7 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         DataSourceModule dataSource = new DataSourceModule( name, platform, edition, procedures, facade );
         ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, msgLog, edition.coreAPIAvailabilityGuard );
         facade.init( spi, dataSource.threadToTransactionBridge, platform.config, dataSource.tokenHolders );
+        platform.dataSourceManager.register( dataSource.neoStoreDataSource );
         databaseMap.put( name, facade );
         return facade;
     }
