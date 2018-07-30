@@ -27,6 +27,8 @@ import org.neo4j.server.ServerBootstrapper;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.test.rule.CleanupRule;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -71,7 +73,7 @@ public class CommercialBootstrapperTestIT extends BaseBootstrapperTestIT
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );
         assertEventually( "Server was not started", bootstrapper::isRunning, is( true ), 1, TimeUnit.MINUTES );
-        assertTrue( bootstrapper.getServer().getDatabase().getGraph() instanceof CommercialGraphDatabase );
+        assertThat( bootstrapper.getServer().getDatabase().getGraph(), instanceOf( CommercialGraphDatabase.class ) );
     }
 
     @Test
