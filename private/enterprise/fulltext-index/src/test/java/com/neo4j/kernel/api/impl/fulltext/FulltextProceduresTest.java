@@ -640,7 +640,7 @@ public class FulltextProceduresTest
         assertQueryFindsIds( db, "rel", "bla", relId );
     }
 
-    private static void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )
+    static void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )
     {
         Result result = db.execute( format( QUERY, index, query ) );
         int num = 0;
@@ -658,7 +658,7 @@ public class FulltextProceduresTest
         assertEquals( "Number of results differ from expected", ids.length, num );
     }
 
-    private static void assertQueryFindsIds( GraphDatabaseService db, LongFunction<Entity> getEntity, String index, String query, LongHashSet ids )
+    static void assertQueryFindsIds( GraphDatabaseService db, LongFunction<Entity> getEntity, String index, String query, LongHashSet ids )
     {
         ids = new LongHashSet( ids ); // Create a defensive copy, because we're going to modify this instance.
         long[] expectedIds = ids.toArray();
