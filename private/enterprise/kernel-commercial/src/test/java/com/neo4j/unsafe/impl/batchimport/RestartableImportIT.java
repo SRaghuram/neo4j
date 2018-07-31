@@ -48,7 +48,7 @@ public class RestartableImportIT
     @Rule
     public final RuleChain rules = RuleChain.outerRule( random ).around( fs ).around( directory );
 
-    @Test( timeout = 100_000 )
+    @Test( timeout = 300_000 )
     public void shouldFinishDespiteUnfairShutdowns() throws Exception
     {
         File storeDir = directory.directory( "db" );
