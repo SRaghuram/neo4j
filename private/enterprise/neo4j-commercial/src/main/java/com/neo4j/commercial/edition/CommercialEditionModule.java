@@ -8,6 +8,7 @@ package com.neo4j.commercial.edition;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.Config;
@@ -33,7 +34,12 @@ class CommercialEditionModule extends EnterpriseEditionModule
     @Override
     public void createDatabases( DatabaseManager databaseManager, Config config )
     {
-        super.createDatabases( databaseManager, config );
-        databaseManager.createDatabase( MultiDatabaseManager.SYSTEM_DB_NAME );
+        GraphDatabaseFacade systemFacade = databaseManager.createDatabase( MultiDatabaseManager.SYSTEM_DB_NAME );
+        createConfiguredDatabases( databaseManager, systemFacade, config );
+    }
+
+    private static void createConfiguredDatabases( DatabaseManager databaseManager, GraphDatabaseFacade systemFacade, Config config )
+    {
+        databaseManager.createDatabase( config.get( GraphDatabaseSettings.active_database ) );
     }
 }

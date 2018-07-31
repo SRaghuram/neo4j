@@ -15,6 +15,7 @@ import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.readreplica.EnterpriseReadReplicaEditionModule;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.Config;
@@ -60,13 +61,18 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
     @Override
     public void createDatabases( DatabaseManager databaseManager, Config config )
     {
-        super.createDatabases( databaseManager, config );
-        databaseManager.createDatabase( MultiDatabaseManager.SYSTEM_DB_NAME );
+        GraphDatabaseFacade systemFacade = databaseManager.createDatabase( MultiDatabaseManager.SYSTEM_DB_NAME );
+        createConfiguredDatabases( databaseManager, systemFacade, config );
     }
 
     @Override
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
         return new SecurePipelineFactory();
+    }
+
+    private static void createConfiguredDatabases( DatabaseManager databaseManager, GraphDatabaseFacade systemFacade, Config config )
+    {
+        databaseManager.createDatabase( config.get( GraphDatabaseSettings.active_database ) );
     }
 }
