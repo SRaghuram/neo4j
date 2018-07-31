@@ -50,7 +50,7 @@ SCRIPTNAME=/etc/init.d/${NAME}
 # Debian distros and SUSE
 has_lsb_init()
 {
-  test -f "/lib/lsb/init-functions"
+  test -f "/lib/lsb/init-functions" && [ $(grep -c status_of_proc /lib/lsb/init-functions) -gt 0 ] && [ $(grep -c start-stop-daemon /lib/lsb/init-functions) -gt 0 ]
 }
 
 # RedHat/Centos distros
