@@ -33,9 +33,11 @@ import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Type;
 import org.neo4j.values.storable.Value;
 
+import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput.bareboneNodeHeader;
 import static org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput.bareboneRelationshipHeader;
 
@@ -140,7 +142,11 @@ public class SimpleRandomizedInput implements Input
                 }
                 actualRelationshipCount++;
             }
-            assertTrue( expectedRelationshipData.isEmpty() );
+            if ( !expectedRelationshipData.isEmpty() )
+            {
+                fail( format( "Imported db is missing %d/%d relationships: %s", expectedRelationshipData.size(), relationshipCount,
+                        expectedRelationshipData ) );
+            }
 
             long actualNodeCount = 0;
             for ( Node node : db.getAllNodes() )
@@ -148,7 +154,10 @@ public class SimpleRandomizedInput implements Input
                 assertTrue( expectedNodeData.remove( node.getProperty( ID_KEY ) ) != null );
                 actualNodeCount++;
             }
-            assertTrue( expectedNodeData.isEmpty() );
+            if ( !expectedNodeData.isEmpty() )
+            {
+                fail( format( "Imported db is missing %d/%d nodes: %s", expectedNodeData.size(), nodeCount, expectedNodeData ) );
+            }
             assertEquals( nodeCount, actualNodeCount );
             assertEquals( relationshipCount, actualRelationshipCount );
             tx.success();
