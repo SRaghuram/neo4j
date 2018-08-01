@@ -49,7 +49,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     private final Config config;
     private final Supplier<TokenHolders> tokenHolders;
     private final OperationalMode operationalMode;
-    private final String defaultAnalyzerClassName;
+    private final String defaultAnalyzerName;
     private final String defaultEventuallyConsistentSetting;
     private final IndexUpdateSink indexUpdateSink;
 
@@ -62,7 +62,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         this.tokenHolders = tokenHolders;
         this.operationalMode = operationalMode;
 
-        defaultAnalyzerClassName = config.get( FulltextConfig.fulltext_default_analyzer );
+        defaultAnalyzerName = config.get( FulltextConfig.fulltext_default_analyzer );
         defaultEventuallyConsistentSetting = Boolean.toString( config.get( FulltextConfig.eventually_consistent ) );
         indexUpdateSink = new IndexUpdateSink( scheduler, config.get( FulltextConfig.eventually_consistent_index_update_queue_max_length ) );
     }
@@ -92,7 +92,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         TokenHolders tokens = tokenHolders.get();
         PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
         FulltextIndexDescriptor fulltextIndexDescriptor = FulltextIndexSettings.readOrInitialiseDescriptor(
-                descriptor, defaultAnalyzerClassName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
+                descriptor, defaultAnalyzerName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
         DatabaseIndex<FulltextIndexReader> fulltextIndex = FulltextIndexBuilder
                 .create( fulltextIndexDescriptor, config )
                 .withFileSystem( fileSystem )
@@ -115,7 +115,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
 
         FulltextIndexDescriptor fulltextIndexDescriptor = FulltextIndexSettings.readOrInitialiseDescriptor(
-                descriptor, defaultAnalyzerClassName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
+                descriptor, defaultAnalyzerName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
         DatabaseIndex<FulltextIndexReader> fulltextIndex = FulltextIndexBuilder
                 .create( fulltextIndexDescriptor, config )
                 .withFileSystem( fileSystem )
@@ -160,7 +160,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         SchemaDescriptor schema = SchemaDescriptorFactory.multiToken( entityTokenIds, type, propertyIds );
         if ( !settings.containsKey( FulltextIndexSettings.SETTING_ANALYZER ) )
         {
-            settings.put( FulltextIndexSettings.SETTING_ANALYZER, defaultAnalyzerClassName );
+            settings.put( FulltextIndexSettings.SETTING_ANALYZER, defaultAnalyzerName );
         }
         if ( !settings.containsKey( FulltextIndexSettings.SETTING_EVENTUALLY_CONSISTENT ) )
         {

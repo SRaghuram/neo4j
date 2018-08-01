@@ -25,8 +25,8 @@ import static org.neo4j.storageengine.api.EntityType.NODE;
 
 public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
 {
-    public static final String ENGLISH = EnglishAnalyzer.class.getCanonicalName();
-    public static final String SWEDISH = SwedishAnalyzer.class.getCanonicalName();
+    public static final String ENGLISH = "english";
+    public static final String SWEDISH = "swedish";
 
     @Test
     public void shouldBeAbleToSpecifyEnglishAnalyzer() throws Exception

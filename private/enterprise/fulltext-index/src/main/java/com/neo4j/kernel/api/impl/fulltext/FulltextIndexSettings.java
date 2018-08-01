@@ -5,6 +5,7 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
+import com.neo4j.kernel.api.impl.fulltext.lucene.analyzer.AnalyzerProvider;
 import org.apache.lucene.analysis.Analyzer;
 
 import java.io.File;
@@ -29,11 +30,11 @@ import org.neo4j.kernel.impl.core.TokenNotFoundException;
 
 class FulltextIndexSettings
 {
-    static final String INDEX_SETTINGS_FILE = "fulltext-index.properties";
+    private static final String INDEX_SETTINGS_FILE = "fulltext-index.properties";
     static final String SETTING_ANALYZER = "analyzer";
     static final String SETTING_EVENTUALLY_CONSISTENT = "eventually_consistent";
 
-    static FulltextIndexDescriptor readOrInitialiseDescriptor( StoreIndexDescriptor descriptor, String defaultAnalyzerClassName,
+    static FulltextIndexDescriptor readOrInitialiseDescriptor( StoreIndexDescriptor descriptor, String defaultAnalyzerName,
             TokenHolder propertyKeyTokenHolder, PartitionedIndexStorage indexStorage, FileSystemAbstraction fileSystem )
     {
         Properties settings = new Properties();
@@ -44,8 +45,8 @@ class FulltextIndexSettings
         }
         loadPersistedSettings( settings, indexStorage, fileSystem );
         boolean eventuallyConsistent = Boolean.parseBoolean( settings.getProperty( SETTING_EVENTUALLY_CONSISTENT ) );
-        String analyzerClassName = settings.getProperty( SETTING_ANALYZER, defaultAnalyzerClassName );
-        Analyzer analyzer = createAnalyzer( analyzerClassName );
+        String analyzerName = settings.getProperty( SETTING_ANALYZER, defaultAnalyzerName );
+        Analyzer analyzer = createAnalyzer( analyzerName );
         Set<String> names = new HashSet<>();
         for ( int propertyKeyId : descriptor.schema().getPropertyIds() )
         {
@@ -60,7 +61,7 @@ class FulltextIndexSettings
             }
         }
         Set<String> propertyNames = Collections.unmodifiableSet( names );
-        return new FulltextIndexDescriptor( descriptor, propertyNames, analyzer, eventuallyConsistent );
+        return new FulltextIndexDescriptor( descriptor, propertyNames, analyzer, analyzerName, eventuallyConsistent );
     }
 
     private static void loadPersistedSettings( Properties settings, PartitionedIndexStorage indexStorage, FileSystemAbstraction fs )
@@ -79,19 +80,17 @@ class FulltextIndexSettings
         }
     }
 
-    private static Analyzer createAnalyzer( String analyzerClassName )
+    private static Analyzer createAnalyzer( String analyzerName )
     {
-        Analyzer analyzer;
         try
         {
-            Class configuredAnalyzer = Class.forName( analyzerClassName );
-            analyzer = (Analyzer) configuredAnalyzer.newInstance();
+            AnalyzerProvider provider = AnalyzerProvider.getProviderByName( analyzerName );
+            return provider.createAnalyzer();
         }
         catch ( Exception e )
         {
-            throw new RuntimeException( "Could not create fulltext analyzer: " + analyzerClassName, e );
+            throw new RuntimeException( "Could not create fulltext analyzer: " + analyzerName, e );
         }
-        return analyzer;
     }
 
     static void saveFulltextIndexSettings( FulltextIndexDescriptor descriptor, PartitionedIndexStorage indexStorage, FileSystemAbstraction fs )
@@ -100,7 +99,7 @@ class FulltextIndexSettings
         File settingsFile = new File( indexStorage.getIndexFolder(), INDEX_SETTINGS_FILE );
         Properties settings = new Properties();
         settings.getProperty( SETTING_EVENTUALLY_CONSISTENT, Boolean.toString( descriptor.isEventuallyConsistent() ) );
-        settings.setProperty( SETTING_ANALYZER, descriptor.analyzer().getClass().getName() );
+        settings.setProperty( SETTING_ANALYZER, descriptor.analyzerName() );
         settings.setProperty( "_propertyNames", descriptor.propertyNames().toString() );
         settings.setProperty( "_propertyIds", Arrays.toString( descriptor.properties() ) );
         settings.setProperty( "_name", descriptor.name() );
