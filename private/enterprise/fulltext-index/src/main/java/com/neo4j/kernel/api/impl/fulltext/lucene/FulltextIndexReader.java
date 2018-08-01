@@ -46,7 +46,7 @@ public abstract class FulltextIndexReader implements IndexReader
     }
 
     @Override
-    public void query( IndexProgressor.NodeValueClient client, IndexOrder indexOrder, IndexQuery... query ) throws IndexNotApplicableKernelException
+    public void query( IndexProgressor.NodeValueClient client, IndexOrder indexOrder, boolean needsValues, IndexQuery... query ) throws IndexNotApplicableKernelException
     {
         throw new IndexNotApplicableKernelException( "Fulltext indexes does not support IndexQuery queries" );
     }
