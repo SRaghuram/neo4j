@@ -34,7 +34,7 @@ class CommercialEditionModule extends EnterpriseEditionModule
     @Override
     public void createDatabases( DatabaseManager databaseManager, Config config )
     {
-        GraphDatabaseFacade systemFacade = databaseManager.createDatabase( MultiDatabaseManager.SYSTEM_DB_NAME );
+        GraphDatabaseFacade systemFacade = null; //databaseManager.createDatabase( MultiDatabaseManager.SYSTEM_DB_NAME );
         createConfiguredDatabases( databaseManager, systemFacade, config );
     }
 
