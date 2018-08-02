@@ -82,6 +82,13 @@ public class FulltextProcedures
         }
     }
 
+    @Description( "List the available analyzers that the fulltext indexes can be configured with." )
+    @Procedure( name = "db.index.fulltext.listAvailableAnalyzers", mode = READ )
+    public Stream<AvailableAnalyzer> listAvailableAnalyzers()
+    {
+        return accessor.listAvailableAnalyzers().map( AvailableAnalyzer::new );
+    }
+
     @Description( "Wait for the updates from recently committed transactions to be applied to any eventually-consistent fulltext indexes." )
     @Procedure( name = "db.index.fulltext.awaitEventuallyConsistentIndexRefresh", mode = READ )
     public void awaitRefresh()
@@ -216,6 +223,16 @@ public class FulltextProcedures
             default:
                 throw new IllegalArgumentException( String.format( "Illegal index state %s", internalIndexState ) );
             }
+        }
+    }
+
+    public static class AvailableAnalyzer
+    {
+        public final String analyzer;
+
+        AvailableAnalyzer( String analyzer )
+        {
+            this.analyzer = analyzer;
         }
     }
 }

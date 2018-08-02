@@ -11,12 +11,15 @@ import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexPopulator;
 import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure;
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
+import com.neo4j.kernel.api.impl.fulltext.lucene.analyzer.AnalyzerProvider;
 import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
@@ -183,5 +186,13 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     public void awaitRefresh()
     {
         indexUpdateSink.awaitUpdateApplication();
+    }
+
+    @Override
+    public Stream<String> listAvailableAnalyzers()
+    {
+        Iterable<AnalyzerProvider> providers = AnalyzerProvider.load( AnalyzerProvider.class );
+        Stream<AnalyzerProvider> stream = StreamSupport.stream( providers.spliterator(), false );
+        return stream.flatMap( provider -> StreamSupport.stream( provider.getKeys().spliterator(), false ) );
     }
 }

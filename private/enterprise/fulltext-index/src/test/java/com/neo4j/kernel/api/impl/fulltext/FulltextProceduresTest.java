@@ -17,7 +17,9 @@ import org.junit.rules.RuleChain;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,6 +35,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
@@ -48,6 +51,9 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static java.lang.String.format;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -65,6 +71,7 @@ public class FulltextProceduresTest
     static final String DROP = "CALL db.index.fulltext.dropIndex(\"%s\")";
     static final String STATUS = "CALL db.index.fulltext.indexStatus(\"%s\")";
     static final String QUERY = "CALL db.index.fulltext.query(\"%s\", \"%s\")";
+    static final String LIST_AVAILABLE_ANALYZERS = "CALL db.index.fulltext.listAvailableAnalyzers()";
     static final String ENTITYID = "entityId";
     static final String SCORE = "score";
 
@@ -638,6 +645,28 @@ public class FulltextProceduresTest
         // Now we should see our data.
         assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
         assertQueryFindsIds( db, "rel", "bla", relId );
+    }
+
+    @Test
+    public void mustBeAbleToListAvailableAnalyzers()
+    {
+        db = createDatabase();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Set<String> analyzers = new HashSet<>();
+            try ( ResourceIterator<String> iterator = db.execute( LIST_AVAILABLE_ANALYZERS ).columnAs( "analyzer" ) )
+            {
+                while ( iterator.hasNext() )
+                {
+                    analyzers.add( iterator.next() );
+                }
+            }
+            assertThat( analyzers, hasItem( "english" ) );
+            assertThat( analyzers, hasItem( "swedish" ) );
+            assertThat( analyzers, hasItem( "standard" ) );
+            tx.success();
+        }
     }
 
     static void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )
