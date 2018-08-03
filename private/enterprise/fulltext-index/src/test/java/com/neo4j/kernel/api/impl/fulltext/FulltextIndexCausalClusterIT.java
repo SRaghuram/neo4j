@@ -57,7 +57,7 @@ public class FulltextIndexCausalClusterIT
     private static final String REL_INDEX = "relIndex";
     private static final String NODE_INDEX_EC = "nodeIndexEventuallyConsistent";
     private static final String REL_INDEX_EC = "relIndexEventuallyConsistent";
-    private static final String EVENTUALLY_CONSISTENT_SETTING = ", {" + FulltextIndexSettings.SETTING_EVENTUALLY_CONSISTENT + ": 'true'}";
+    private static final String EVENTUALLY_CONSISTENT_SETTING = ", {" + FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT + ": 'true'}";
 
     @Rule
     public ClusterRule clusterRule = new ClusterRule()

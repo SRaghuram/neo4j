@@ -17,12 +17,12 @@ import org.neo4j.storageengine.api.lock.ResourceType;
 class FulltextSchemaDescriptor implements SchemaDescriptor
 {
     private final SchemaDescriptor schema;
-    private final Properties settings;
+    private final Properties indexConfiguration;
 
-    FulltextSchemaDescriptor( SchemaDescriptor schema, Properties settings )
+    FulltextSchemaDescriptor( SchemaDescriptor schema, Properties indexConfiguration )
     {
         this.schema = schema;
-        this.settings = settings;
+        this.indexConfiguration = indexConfiguration;
     }
 
     @Override
@@ -113,8 +113,8 @@ class FulltextSchemaDescriptor implements SchemaDescriptor
         return schema.equals( obj );
     }
 
-    Properties getSettings()
+    Properties getIndexConfiguration()
     {
-        return settings;
+        return indexConfiguration;
     }
 }

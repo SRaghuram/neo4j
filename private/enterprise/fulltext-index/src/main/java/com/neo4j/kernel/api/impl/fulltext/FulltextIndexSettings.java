@@ -30,22 +30,22 @@ import org.neo4j.kernel.impl.core.TokenNotFoundException;
 
 class FulltextIndexSettings
 {
-    private static final String INDEX_SETTINGS_FILE = "fulltext-index.properties";
-    static final String SETTING_ANALYZER = "analyzer";
-    static final String SETTING_EVENTUALLY_CONSISTENT = "eventually_consistent";
+    private static final String INDEX_CONFIG_FILE = "fulltext-index.properties";
+    static final String INDEX_CONFIG_ANALYZER = "analyzer";
+    static final String INDEX_CONFIG_EVENTUALLY_CONSISTENT = "eventually_consistent";
 
     static FulltextIndexDescriptor readOrInitialiseDescriptor( StoreIndexDescriptor descriptor, String defaultAnalyzerName,
             TokenHolder propertyKeyTokenHolder, PartitionedIndexStorage indexStorage, FileSystemAbstraction fileSystem )
     {
-        Properties settings = new Properties();
+        Properties indexConfiguration = new Properties();
         if ( descriptor.schema() instanceof FulltextSchemaDescriptor )
         {
             FulltextSchemaDescriptor schema = (FulltextSchemaDescriptor) descriptor.schema();
-            settings.putAll( schema.getSettings() );
+            indexConfiguration.putAll( schema.getIndexConfiguration() );
         }
-        loadPersistedSettings( settings, indexStorage, fileSystem );
-        boolean eventuallyConsistent = Boolean.parseBoolean( settings.getProperty( SETTING_EVENTUALLY_CONSISTENT ) );
-        String analyzerName = settings.getProperty( SETTING_ANALYZER, defaultAnalyzerName );
+        loadPersistedSettings( indexConfiguration, indexStorage, fileSystem );
+        boolean eventuallyConsistent = Boolean.parseBoolean( indexConfiguration.getProperty( INDEX_CONFIG_EVENTUALLY_CONSISTENT ) );
+        String analyzerName = indexConfiguration.getProperty( INDEX_CONFIG_ANALYZER, defaultAnalyzerName );
         Analyzer analyzer = createAnalyzer( analyzerName );
         Set<String> names = new HashSet<>();
         for ( int propertyKeyId : descriptor.schema().getPropertyIds() )
@@ -66,7 +66,7 @@ class FulltextIndexSettings
 
     private static void loadPersistedSettings( Properties settings, PartitionedIndexStorage indexStorage, FileSystemAbstraction fs )
     {
-        File settingsFile = new File( indexStorage.getIndexFolder(), INDEX_SETTINGS_FILE );
+        File settingsFile = new File( indexStorage.getIndexFolder(), INDEX_CONFIG_FILE );
         if ( fs.fileExists( settingsFile ) )
         {
             try ( Reader reader = fs.openAsReader( settingsFile, StandardCharsets.UTF_8 ) )
@@ -96,17 +96,17 @@ class FulltextIndexSettings
     static void saveFulltextIndexSettings( FulltextIndexDescriptor descriptor, PartitionedIndexStorage indexStorage, FileSystemAbstraction fs )
             throws IOException
     {
-        File settingsFile = new File( indexStorage.getIndexFolder(), INDEX_SETTINGS_FILE );
+        File indexConfigFile = new File( indexStorage.getIndexFolder(), INDEX_CONFIG_FILE );
         Properties settings = new Properties();
-        settings.getProperty( SETTING_EVENTUALLY_CONSISTENT, Boolean.toString( descriptor.isEventuallyConsistent() ) );
-        settings.setProperty( SETTING_ANALYZER, descriptor.analyzerName() );
+        settings.getProperty( INDEX_CONFIG_EVENTUALLY_CONSISTENT, Boolean.toString( descriptor.isEventuallyConsistent() ) );
+        settings.setProperty( INDEX_CONFIG_ANALYZER, descriptor.analyzerName() );
         settings.setProperty( "_propertyNames", descriptor.propertyNames().toString() );
         settings.setProperty( "_propertyIds", Arrays.toString( descriptor.properties() ) );
         settings.setProperty( "_name", descriptor.name() );
         settings.setProperty( "_schema_entityType", descriptor.schema().entityType().name() );
         settings.setProperty( "_schema_entityTokenIds", Arrays.toString( descriptor.schema().getEntityTokenIds() ) );
-        try ( StoreChannel channel = fs.create( settingsFile );
-                Writer writer = fs.openAsWriter( settingsFile, StandardCharsets.UTF_8, false ) )
+        try ( StoreChannel channel = fs.create( indexConfigFile );
+                Writer writer = fs.openAsWriter( indexConfigFile, StandardCharsets.UTF_8, false ) )
         {
             settings.store( writer, "Auto-generated file. Do not modify!" );
             writer.flush();

@@ -135,7 +135,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     }
 
     @Override
-    public SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, Properties settings, String... properties )
+    public SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, Properties indexConfiguration, String... properties )
     {
         if ( entityTokens.length == 0 )
         {
@@ -164,15 +164,15 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         int[] propertyIds = Arrays.stream( properties ).mapToInt( tokens.propertyKeyTokens()::getOrCreateId ).toArray();
 
         SchemaDescriptor schema = SchemaDescriptorFactory.multiToken( entityTokenIds, type, propertyIds );
-        if ( !settings.containsKey( FulltextIndexSettings.SETTING_ANALYZER ) )
+        if ( !indexConfiguration.containsKey( FulltextIndexSettings.INDEX_CONFIG_ANALYZER ) )
         {
-            settings.put( FulltextIndexSettings.SETTING_ANALYZER, defaultAnalyzerName );
+            indexConfiguration.put( FulltextIndexSettings.INDEX_CONFIG_ANALYZER, defaultAnalyzerName );
         }
-        if ( !settings.containsKey( FulltextIndexSettings.SETTING_EVENTUALLY_CONSISTENT ) )
+        if ( !indexConfiguration.containsKey( FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT ) )
         {
-            settings.put( FulltextIndexSettings.SETTING_EVENTUALLY_CONSISTENT, defaultEventuallyConsistentSetting );
+            indexConfiguration.put( FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT, defaultEventuallyConsistentSetting );
         }
-        return new FulltextSchemaDescriptor( schema, settings );
+        return new FulltextSchemaDescriptor( schema, indexConfiguration );
     }
 
     @Override

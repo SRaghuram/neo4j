@@ -19,7 +19,7 @@ import org.neo4j.storageengine.api.EntityType;
 
 public interface FulltextAdapter
 {
-    SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, Properties settings, String... properties );
+    SchemaDescriptor schemaFor( EntityType type, String[] entityTokens, Properties indexConfiguration, String... properties );
 
     ScoreEntityIterator query( KernelTransaction tx, String indexName, String queryString ) throws IOException, IndexNotFoundKernelException, ParseException;
 

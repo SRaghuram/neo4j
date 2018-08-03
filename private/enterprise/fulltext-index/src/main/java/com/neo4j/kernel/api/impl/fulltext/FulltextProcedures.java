@@ -35,8 +35,8 @@ import org.neo4j.procedure.Procedure;
 import org.neo4j.storageengine.api.EntityType;
 
 import static com.neo4j.kernel.api.impl.fulltext.FulltextIndexProviderFactory.DESCRIPTOR;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextIndexSettings.SETTING_ANALYZER;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextIndexSettings.SETTING_EVENTUALLY_CONSISTENT;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextIndexSettings.INDEX_CONFIG_ANALYZER;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT;
 import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.SCHEMA;
 
@@ -108,21 +108,21 @@ public class FulltextProcedures
     @Description( "Create a node fulltext index for the given labels and properties " +
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
                   "Note: index specific settings are currently experimental, and might not replicated correctly in a cluster, or during backup. " +
-                  "Supported settings are '" + SETTING_ANALYZER + "', for specifying what analyzer class to use " +
+                  "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
                   "when indexing and querying, as a fully qualified classn ame. " +
-                  "And '" + SETTING_EVENTUALLY_CONSISTENT + "' which can be set to 'true' to make this index eventually consistent, " +
+                  "And '" + INDEX_CONFIG_EVENTUALLY_CONSISTENT + "' which can be set to 'true' to make this index eventually consistent, " +
                   "such that updates from committing transactions are applied in a background thread." )
     @Procedure( name = "db.index.fulltext.createNodeIndex", mode = SCHEMA )
     public void createNodeFulltextIndex(
             @Name( "indexName" ) String name,
             @Name( "labels" ) List<String> labels,
             @Name( "propertyNames" ) List<String> properties,
-            @Name( value = "config", defaultValue = "" ) Map<String,String> config )
+            @Name( value = "config", defaultValue = "" ) Map<String,String> indexConfigurationMap )
             throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
-        Properties settings = new Properties();
-        settings.putAll( config );
-        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, stringArray( labels ), settings, stringArray( properties ) );
+        Properties indexConfiguration = new Properties();
+        indexConfiguration.putAll( indexConfigurationMap );
+        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, stringArray( labels ), indexConfiguration, stringArray( properties ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
     }
 
@@ -134,9 +134,9 @@ public class FulltextProcedures
     @Description( "Create a relationship fulltext index for the given relationship types and properties " +
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
                   "Note: index specific settings are currently experimental, and might not replicated correctly in a cluster, or during backup. " +
-                  "Supported settings are '" + SETTING_ANALYZER + "', for specifying what analyzer class to use " +
+                  "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
                   "when indexing and querying, as a fully qualified classn ame. " +
-                  "And '" + SETTING_EVENTUALLY_CONSISTENT + "' which can be set to 'true' to make this index eventually consistent, " +
+                  "And '" + INDEX_CONFIG_EVENTUALLY_CONSISTENT + "' which can be set to 'true' to make this index eventually consistent, " +
                   "such that updates from committing transactions are applied in a background thread." )
     @Procedure( name = "db.index.fulltext.createRelationshipIndex", mode = SCHEMA )
     public void createRelationshipFulltextIndex(
