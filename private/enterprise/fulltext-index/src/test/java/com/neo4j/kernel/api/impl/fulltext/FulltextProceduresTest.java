@@ -14,6 +14,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
+import org.junit.rules.Timeout;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -47,6 +48,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.VerboseTimeout;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.util.concurrent.BinaryLatch;
 
@@ -75,13 +77,14 @@ public class FulltextProceduresTest
     static final String ENTITYID = "entityId";
     static final String SCORE = "score";
 
+    private final Timeout timeout = VerboseTimeout.builder().withTimeout( 1, TimeUnit.MINUTES ).build();
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final ExpectedException expectedException = ExpectedException.none();
     private final CleanupRule cleanup = new CleanupRule();
 
     @Rule
-    public final RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( expectedException ).around( cleanup );
+    public final RuleChain rules = RuleChain.outerRule( timeout ).around( fs ).around( testDirectory ).around( expectedException ).around( cleanup );
 
     private GraphDatabaseAPI db;
     private GraphDatabaseBuilder builder;
@@ -415,8 +418,8 @@ public class FulltextProceduresTest
             tx.success();
         }
 
-        // Assert that we can observe our updates wihin 5 seconds from now. We have, after all, already committed the transaction.
-        long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis( 5 );
+        // Assert that we can observe our updates within 20 seconds from now. We have, after all, already committed the transaction.
+        long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis( 20 );
         boolean success = false;
         do
         {

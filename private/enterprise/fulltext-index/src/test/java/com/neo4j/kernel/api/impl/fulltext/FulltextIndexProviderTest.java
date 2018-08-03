@@ -12,6 +12,7 @@ import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -42,6 +43,7 @@ import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EmbeddedDatabaseRule;
+import org.neo4j.test.rule.VerboseTimeout;
 
 import static com.neo4j.kernel.api.impl.fulltext.FulltextIndexProviderFactory.DESCRIPTOR;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
@@ -61,9 +63,12 @@ import static org.neo4j.kernel.api.schema.SchemaDescriptorFactory.multiToken;
 public class FulltextIndexProviderTest
 {
     private static final String NAME = "fulltext";
+
     @Rule
-    public DatabaseRule db = new EmbeddedDatabaseRule()
-            .withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
+    public Timeout timeout = VerboseTimeout.builder().withTimeout( 1, TimeUnit.MINUTES ).build();
+
+    @Rule
+    public DatabaseRule db = new EmbeddedDatabaseRule().withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
 
     private Node node1;
     private Node node2;
