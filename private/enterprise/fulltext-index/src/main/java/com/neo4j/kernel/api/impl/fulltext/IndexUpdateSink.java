@@ -62,17 +62,15 @@ public class IndexUpdateSink
         }
     }
 
-    private void markAsFailed( DatabaseIndex<? extends IndexReader> index, IndexEntryConflictException conflict )
+    private static void markAsFailed( DatabaseIndex<? extends IndexReader> index, IndexEntryConflictException conflict )
     {
         try
         {
             index.markAsFailed( conflict.getMessage() );
-            conflict.printStackTrace();
         }
         catch ( IOException ioe )
         {
             ioe.addSuppressed( conflict );
-            ioe.printStackTrace();
             throw new UncheckedIOException( ioe );
         }
     }

@@ -6,6 +6,7 @@
 package com.neo4j.kernel.api.impl.fulltext;
 
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
@@ -44,8 +45,6 @@ import static org.neo4j.procedure.Mode.SCHEMA;
  */
 public class FulltextProcedures
 {
-    private static final String[] EMPTY_STRING_ARRAY = new String[0];
-
     @Context
     public KernelTransaction tx;
 
@@ -122,7 +121,7 @@ public class FulltextProcedures
 
     private String[] stringArray( List<String> strings )
     {
-        return strings.toArray( EMPTY_STRING_ARRAY );
+        return strings.toArray( ArrayUtils.EMPTY_STRING_ARRAY );
     }
 
     @Description( "Create a relationship fulltext index for the given relationship types and properties " +
