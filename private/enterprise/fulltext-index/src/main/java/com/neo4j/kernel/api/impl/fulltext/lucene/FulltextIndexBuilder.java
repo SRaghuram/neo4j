@@ -7,6 +7,7 @@ package com.neo4j.kernel.api.impl.fulltext.lucene;
 
 import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
 import com.neo4j.kernel.api.impl.fulltext.IndexUpdateSink;
+import com.neo4j.kernel.api.impl.fulltext.NullIndexUpdateSink;
 import org.apache.lucene.index.IndexWriterConfig;
 
 import org.neo4j.function.Factory;
@@ -21,6 +22,7 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
 {
     private final FulltextIndexDescriptor descriptor;
     private boolean populating;
+    private IndexUpdateSink indexUpdateSink = NullIndexUpdateSink.INSTANCE;
 
     private FulltextIndexBuilder( FulltextIndexDescriptor descriptor, Config config )
     {
@@ -51,12 +53,18 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
         return this;
     }
 
+    public FulltextIndexBuilder withIndexUpdateSink( IndexUpdateSink indexUpdateSink )
+    {
+        this.indexUpdateSink = indexUpdateSink;
+        return this;
+    }
+
     /**
      * Build lucene schema index with specified configuration
      *
      * @return lucene schema index
      */
-    public DatabaseIndex<FulltextIndexReader> build( IndexUpdateSink indexUpdateSink )
+    public DatabaseIndex<FulltextIndexReader> build()
     {
         if ( isReadOnly() )
         {

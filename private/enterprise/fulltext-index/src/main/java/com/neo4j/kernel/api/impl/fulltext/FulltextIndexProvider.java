@@ -102,7 +102,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
                 .withOperationalMode( operationalMode )
                 .withIndexStorage( indexStorage )
                 .withPopulatingMode( true )
-                .build( null );
+                .build();
         if ( fulltextIndex.isReadOnly() )
         {
             throw new UnsupportedOperationException( "Can't create populator for read only index" );
@@ -119,13 +119,16 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
 
         FulltextIndexDescriptor fulltextIndexDescriptor = FulltextIndexSettings.readOrInitialiseDescriptor(
                 descriptor, defaultAnalyzerName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
-        DatabaseIndex<FulltextIndexReader> fulltextIndex = FulltextIndexBuilder
-                .create( fulltextIndexDescriptor, config )
+        FulltextIndexBuilder fulltextIndexBuilder = FulltextIndexBuilder.create( fulltextIndexDescriptor, config )
                 .withFileSystem( fileSystem )
                 .withOperationalMode( operationalMode )
                 .withIndexStorage( indexStorage )
-                .withPopulatingMode( false )
-                .build( fulltextIndexDescriptor.isEventuallyConsistent() ? indexUpdateSink : null );
+                .withPopulatingMode( false );
+        if ( fulltextIndexDescriptor.isEventuallyConsistent() )
+        {
+            fulltextIndexBuilder = fulltextIndexBuilder.withIndexUpdateSink( indexUpdateSink );
+        }
+        DatabaseIndex<FulltextIndexReader> fulltextIndex = fulltextIndexBuilder.build();
         fulltextIndex.open();
 
         return new FulltextIndexAccessor( indexUpdateSink, fulltextIndex, fulltextIndexDescriptor );

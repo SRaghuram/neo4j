@@ -34,20 +34,14 @@ class WritableFulltextIndex extends WritableAbstractDatabaseIndex<LuceneFulltext
     @Override
     protected void commitLockedFlush() throws IOException
     {
-        if ( indexUpdateSink != null )
-        {
-            indexUpdateSink.awaitUpdateApplication();
-        }
+        indexUpdateSink.awaitUpdateApplication();
         super.commitLockedFlush();
     }
 
     @Override
     protected void commitLockedClose() throws IOException
     {
-        if ( indexUpdateSink != null )
-        {
-            indexUpdateSink.awaitUpdateApplication();
-        }
+        indexUpdateSink.awaitUpdateApplication();
         super.commitLockedClose();
     }
 }
