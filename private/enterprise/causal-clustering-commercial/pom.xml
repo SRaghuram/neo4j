@@ -21,7 +21,7 @@
 
     <properties>
         <moduleName>com.neo4j.causalclustering.commercial</moduleName>
-        <akka.version>2.5.13</akka.version>
+        <akka.version>2.5.14</akka.version>
     </properties>
 
     <licenses>
