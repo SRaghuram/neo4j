@@ -17,7 +17,6 @@ import java.util.Properties;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.TokenNameLookup;
@@ -27,7 +26,6 @@ import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.SilentTokenNameLookup;
-import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
@@ -54,33 +52,6 @@ public class FulltextProcedures
 
     private static final Function<ScoreEntityIterator.ScoreEntry,EntityOutput> QUERY_RESULT_MAPPER =
             result -> new EntityOutput( result.entityId(), result.score() );
-
-    // TODO use `db.awaitIndex` instead.
-    @Description( "Await the completion of any background index population for the given named index." )
-    @Procedure( name = "db.index.fulltext.awaitPopulation", mode = READ )
-    public void awaitPopulation( @Name( "indexName" ) String name ) throws IndexPopulationFailedKernelException, IndexNotFoundKernelException
-    {
-        IndexReference index = tx.schemaRead().indexGetForName( name );
-        InternalIndexState state;
-        while ( (state = tx.schemaRead().indexGetState( index )) != InternalIndexState.ONLINE )
-        {
-            if ( state == InternalIndexState.FAILED )
-            {
-                TokenNameLookup lookup = new SilentTokenNameLookup( tx.tokenRead() );
-                throw new IndexPopulationFailedKernelException( index.userDescription( lookup ),
-                        "Population of index " + name + " has failed." );
-            }
-            try
-            {
-                Thread.sleep( 100 );
-            }
-            catch ( InterruptedException e )
-            {
-                Thread.currentThread().interrupt();
-                return;
-            }
-        }
-    }
 
     @Description( "List the available analyzers that the fulltext indexes can be configured with." )
     @Procedure( name = "db.index.fulltext.listAvailableAnalyzers", mode = READ )

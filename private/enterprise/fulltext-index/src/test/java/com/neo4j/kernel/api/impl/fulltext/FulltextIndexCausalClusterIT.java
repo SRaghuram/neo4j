@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -27,14 +28,16 @@ import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.causalclustering.ClusterRule;
 
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_POPULATION;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_REFRESH;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.ENTITYID;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
@@ -166,14 +169,12 @@ public class FulltextIndexCausalClusterIT
         MutableLongSet appliedTransactions = new LongHashSet();
         Consumer<ClusterMember> awaitPopulationAndCollectionAppliedTransactionId = member ->
         {
-            try
+            GraphDatabaseAPI db = member.database();
+            try ( Transaction ignore = db.beginTx() )
             {
-                member.database().execute( format( AWAIT_POPULATION, NODE_INDEX ) ).close();
-                member.database().execute( format( AWAIT_POPULATION, NODE_INDEX_EC ) ).close();
-                member.database().execute( format( AWAIT_POPULATION, REL_INDEX ) ).close();
-                member.database().execute( format( AWAIT_POPULATION, REL_INDEX_EC ) ).close();
-                member.database().execute( AWAIT_REFRESH ).close();
-                DependencyResolver dependencyResolver = member.database().getDependencyResolver();
+                db.schema().awaitIndexesOnline( 20, TimeUnit.SECONDS );
+                db.execute( AWAIT_REFRESH ).close();
+                DependencyResolver dependencyResolver = db.getDependencyResolver();
                 TransactionIdStore transactionIdStore = dependencyResolver.resolveDependency( TransactionIdStore.class );
                 appliedTransactions.add( transactionIdStore.getLastClosedTransactionId() );
             }
@@ -186,6 +187,18 @@ public class FulltextIndexCausalClusterIT
                     appliedTransactions.add( -1L );
                     appliedTransactions.add( -2L );
                 }
+            }
+            catch ( NotFoundException nfe )
+            {
+                // This can happen due to a race inside `db.schema().awaitIndexesOnline`, where the list of indexes are provided by the SchemaCache, which is
+                // updated during command application in commit, but the index status is then fetched from the IndexMap, which is updated when the applier is
+                // closed during commit (which comes later in the commit process than command application). So we are told by the SchemaCache that an index
+                // exists, but we are then also told by the IndexMap that the index does not exist, hence this NotFoundException. Normally, these two are
+                // protected by the schema locks that are taken on index create and index status check. However, those locks are 1) incorrectly managed around
+                // index population, and 2) those locks are NOT TAKEN in Causal Cluster command replication!
+                // So we need to anticipate this, and if the race happens, we simply have to try again. But yeah, it needs to be fixed properly at some point.
+                appliedTransactions.add( -1L );
+                appliedTransactions.add( -2L );
             }
         };
         do

@@ -53,8 +53,6 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static java.lang.String.format;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
@@ -65,7 +63,6 @@ import static org.junit.Assert.fail;
 
 public class FulltextProceduresTest
 {
-    static final String AWAIT_POPULATION = "CALL db.index.fulltext.awaitPopulation(\"%s\")";
     static final String AWAIT_REFRESH = "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()";
     static final String GET_SCHEMA = "CALL db.index.fulltext.getIndexSchema(\"%s\")";
     static final String NODE_CREATE = "CALL db.index.fulltext.createNodeIndex(\"%s\", %s, %s )";
@@ -97,11 +94,6 @@ public class FulltextProceduresTest
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 
-    private GraphDatabaseAPI createDatabase()
-    {
-        return (GraphDatabaseAPI) cleanup.add( builder.newGraphDatabase() );
-    }
-
     @Test
     public void createNodeFulltextIndex()
     {
@@ -111,7 +103,7 @@ public class FulltextProceduresTest
         assertTrue( result.hasNext() );
         assertEquals( "NODE:Label1, Label2(prop1, prop2)", result.next().get( "schema" ) );
         assertFalse( result.hasNext() );
-        db.execute( format( AWAIT_POPULATION, "test-index" ) ).close();
+        awaitIndexesOnline();
         result = db.execute( format( STATUS, "test-index" ) );
         assertTrue( result.hasNext() );
         assertEquals( "ONLINE", result.next().get( "state" ) );
@@ -137,7 +129,7 @@ public class FulltextProceduresTest
         assertTrue( result.hasNext() );
         assertEquals( "RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", result.next().get( "schema" ) );
         assertFalse( result.hasNext() );
-        db.execute( format( AWAIT_POPULATION, "test-index" ) ).close();
+        awaitIndexesOnline();
         result = db.execute( format( STATUS, "test-index" ) );
         assertTrue( result.hasNext() );
         assertEquals( "ONLINE", result.next().get( "state" ) );
@@ -277,11 +269,7 @@ public class FulltextProceduresTest
             db.execute( format( RELATIONSHIP_CREATE, typedSwedishRelationships, rel, swedish ) ).close();
             tx.success();
         }
-        try ( Transaction ignore = db.beginTx() )
-        {
-            db.execute( format( AWAIT_POPULATION, labelledSwedishNodes ) );
-            db.execute( format( AWAIT_POPULATION, typedSwedishRelationships ) );
-        }
+        awaitIndexesOnline();
         try ( Transaction tx = db.beginTx() )
         {
             // Nodes and relationships picked up by index updates.
@@ -318,11 +306,7 @@ public class FulltextProceduresTest
         db = createDatabase();
         db.execute( format( NODE_CREATE, "node", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
         db.execute( format( RELATIONSHIP_CREATE, "rel", array( "Reltype1", "Reltype2" ), array( "prop1", "prop2" ) ) ).close();
-        try ( Transaction ignore = db.beginTx() )
-        {
-            db.execute( format( AWAIT_POPULATION, "node" ) ).close();
-            db.execute( format( AWAIT_POPULATION, "node" ) ).close();
-        }
+        awaitIndexesOnline();
         long horseId;
         long horseRelId;
         try ( Transaction tx = db.beginTx() )
@@ -374,8 +358,7 @@ public class FulltextProceduresTest
             db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( "prop" ) ) );
             tx.success();
         }
-        db.execute( format( AWAIT_POPULATION, "node" ) ).close();
-        db.execute( format( AWAIT_POPULATION, "rel" ) ).close();
+        awaitIndexesOnline();
 
         // then
         assertQueryFindsIds( db, "node", "integration", node1.getId(), node2.getId() );
@@ -514,8 +497,7 @@ public class FulltextProceduresTest
             tx.success();
         }
 
-        db.execute( format( AWAIT_POPULATION, "node" ) ).close();
-        db.execute( format( AWAIT_POPULATION, "rel" ) ).close();
+        awaitIndexesOnline();
         assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
         assertQueryFindsIds( db, db::getRelationshipById, "rel", "bla", relIds );
     }
@@ -586,8 +568,7 @@ public class FulltextProceduresTest
         // Finally, when everything has settled down, we should see that all of the nodes and relationships are indexed with the value "green".
         future1.get();
         future2.get();
-        db.execute( format( AWAIT_POPULATION, "node" ) ).close();
-        db.execute( format( AWAIT_POPULATION, "rel" ) ).close();
+        awaitIndexesOnline();
         db.execute( AWAIT_REFRESH ).close();
         assertQueryFindsIds( db, db::getNodeById, "node", newValue, nodeIds );
         assertQueryFindsIds( db, db::getRelationshipById, "rel", newValue, relIds );
@@ -607,8 +588,7 @@ public class FulltextProceduresTest
             db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( "prop" ) ) );
             tx.success();
         }
-        db.execute( format( AWAIT_POPULATION, "node" ) ).close();
-        db.execute( format( AWAIT_POPULATION, "rel" ) ).close();
+        awaitIndexesOnline();
 
         // Prevent index updates from being applied to eventually consistent indexes.
         BinaryLatch indexUpdateBlocker = new BinaryLatch();
@@ -672,22 +652,40 @@ public class FulltextProceduresTest
         }
     }
 
+    private GraphDatabaseAPI createDatabase()
+    {
+        return (GraphDatabaseAPI) cleanup.add( builder.newGraphDatabase() );
+    }
+
+    private void awaitIndexesOnline()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+            tx.success();
+        }
+    }
+
     static void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )
     {
-        Result result = db.execute( format( QUERY, index, query ) );
-        int num = 0;
-        Double score = Double.MAX_VALUE;
-        while ( result.hasNext() )
+        try ( Transaction tx = db.beginTx() )
         {
-            Map entry = result.next();
-            Long nextId = (Long) entry.get( ENTITYID );
-            Double nextScore = (Double) entry.get( SCORE );
-            assertThat( nextScore, lessThanOrEqualTo( score ) );
-            score = nextScore;
-            assertEquals( String.format( "Result returned id %d, expected %d", nextId, ids[num] ), ids[num], nextId.longValue() );
-            num++;
+            Result result = db.execute( format( QUERY, index, query ) );
+            int num = 0;
+            Double score = Double.MAX_VALUE;
+            while ( result.hasNext() )
+            {
+                Map entry = result.next();
+                Long nextId = (Long) entry.get( ENTITYID );
+                Double nextScore = (Double) entry.get( SCORE );
+                assertThat( nextScore, lessThanOrEqualTo( score ) );
+                score = nextScore;
+                assertEquals( String.format( "Result returned id %d, expected %d", nextId, ids[num] ), ids[num], nextId.longValue() );
+                num++;
+            }
+            assertEquals( "Number of results differ from expected", ids.length, num );
+            tx.success();
         }
-        assertEquals( "Number of results differ from expected", ids.length, num );
     }
 
     static void assertQueryFindsIds( GraphDatabaseService db, LongFunction<Entity> getEntity, String index, String query, LongHashSet ids )
@@ -695,26 +693,30 @@ public class FulltextProceduresTest
         ids = new LongHashSet( ids ); // Create a defensive copy, because we're going to modify this instance.
         long[] expectedIds = ids.toArray();
         MutableLongSet actualIds = new LongHashSet();
-        Result result = db.execute( format( QUERY, index, query ) );
-        Double score = Double.MAX_VALUE;
-        while ( result.hasNext() )
+        try ( Transaction tx = db.beginTx() )
         {
-            Map entry = result.next();
-            Long nextId = (Long) entry.get( ENTITYID );
-            Double nextScore = (Double) entry.get( SCORE );
-            assertThat( nextScore, lessThanOrEqualTo( score ) );
-            score = nextScore;
-            actualIds.add( nextId );
-            if ( !ids.remove( nextId ) )
+            Result result = db.execute( format( QUERY, index, query ) );
+            Double score = Double.MAX_VALUE;
+            while ( result.hasNext() )
             {
-                String msg = "This id was not expected: " + nextId;
+                Map entry = result.next();
+                Long nextId = (Long) entry.get( ENTITYID );
+                Double nextScore = (Double) entry.get( SCORE );
+                assertThat( nextScore, lessThanOrEqualTo( score ) );
+                score = nextScore;
+                actualIds.add( nextId );
+                if ( !ids.remove( nextId ) )
+                {
+                    String msg = "This id was not expected: " + nextId;
+                    failQuery( getEntity, index, query, ids, expectedIds, actualIds, msg );
+                }
+            }
+            if ( !ids.isEmpty() )
+            {
+                String msg = "Not all expected ids were found: " + ids;
                 failQuery( getEntity, index, query, ids, expectedIds, actualIds, msg );
             }
-        }
-        if ( !ids.isEmpty() )
-        {
-            String msg = "Not all expected ids were found: " + ids;
-            failQuery( getEntity, index, query, ids, expectedIds, actualIds, msg );
+            tx.success();
         }
     }
 

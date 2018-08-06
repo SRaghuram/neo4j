@@ -12,6 +12,7 @@ import org.junit.rules.RuleChain;
 
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.neo4j.backup.OnlineBackup;
@@ -30,7 +31,6 @@ import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_POPULATION;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.ENTITYID;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY;
@@ -167,8 +167,7 @@ public class FulltextIndexBackupIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( AWAIT_POPULATION, NODE_INDEX ) ).close();
-            db.execute( format( AWAIT_POPULATION, REL_INDEX ) ).close();
+            db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
             tx.success();
         }
     }

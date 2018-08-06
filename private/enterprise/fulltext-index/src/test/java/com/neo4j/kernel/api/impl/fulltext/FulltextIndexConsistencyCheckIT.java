@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -36,7 +37,6 @@ import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_POPULATION;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
@@ -116,14 +116,7 @@ public class FulltextIndexConsistencyCheckIT
 
         try ( Transaction tx = db.beginTx() )
         {
-            for ( int i = 1; i < labels.length; i++ )
-            {
-                db.execute( format( AWAIT_POPULATION, "nodes" + i ) ).close();
-            }
-            for ( int i = 1; i < relTypes.length; i++ )
-            {
-                db.execute( format( AWAIT_POPULATION, "rels" + i ) ).close();
-            }
+            db.schema().awaitIndexesOnline( 20, TimeUnit.SECONDS );
             tx.success();
         }
 
