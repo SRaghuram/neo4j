@@ -111,8 +111,8 @@ public class FulltextProcedures
     }
 
     @Description( "Drop the specified index." )
-    @Procedure( name = "db.index.fulltext.dropIndex", mode = SCHEMA )
-    public void dropIndex( @Name( "indexName" ) String name ) throws InvalidTransactionTypeKernelException, SchemaKernelException
+    @Procedure( name = "db.index.fulltext.drop", mode = SCHEMA )
+    public void drop( @Name( "indexName" ) String name ) throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
         tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( name ) );
     }
