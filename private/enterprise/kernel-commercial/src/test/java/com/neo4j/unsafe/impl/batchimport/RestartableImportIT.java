@@ -20,6 +20,7 @@ import java.util.zip.ZipOutputStream;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
@@ -113,7 +114,7 @@ public class RestartableImportIT
     {
         try
         {
-            BatchImporterFactory.withHighestPriority().instantiate( new File( args[0] ), new DefaultFileSystemAbstraction(),
+            BatchImporterFactory.withHighestPriority().instantiate( new DatabaseLayout( new File( args[0] ) ), new DefaultFileSystemAbstraction(),
                     null, DEFAULT, NullLogService.getInstance(),
                     ExecutionMonitors.invisible(), EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR ).doImport(
                     input( Long.parseLong( args[1] ) ) );

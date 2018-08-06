@@ -17,6 +17,7 @@ import java.util.Set;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.LogService;
@@ -65,7 +66,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private static final String STATE_DEFRAGMENT = "defragment";
 
     private final PageCache externalPageCache;
-    private final File storeDir;
+    private final File databaseDirectory;
     private final FileSystemAbstraction fileSystem;
     private final Configuration config;
     private final LogService logService;
@@ -76,12 +77,12 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private final RelationshipTypeDistributionStorage dataStatisticsStorage;
     private final Monitor monitor;
 
-    public RestartableParallelBatchImporter( File storeDir, FileSystemAbstraction fileSystem, PageCache externalPageCache,
+    public RestartableParallelBatchImporter( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             Configuration config, LogService logService, ExecutionMonitor executionMonitor,
             AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, Monitor monitor )
     {
         this.externalPageCache = externalPageCache;
-        this.storeDir = storeDir;
+        this.databaseDirectory = databaseLayout.databaseDirectory();
         this.fileSystem = fileSystem;
         this.config = config;
         this.logService = logService;
@@ -91,18 +92,18 @@ public class RestartableParallelBatchImporter implements BatchImporter
         this.additionalInitialIds = additionalInitialIds;
         this.monitor = monitor;
         this.dataStatisticsStorage = new RelationshipTypeDistributionStorage( fileSystem,
-                new File( storeDir, FILE_NAME_RELATIONSHIP_DISTRIBUTION ) );
+                new File( databaseDirectory, FILE_NAME_RELATIONSHIP_DISTRIBUTION ) );
     }
 
     @Override
     public void doImport( Input input ) throws IOException
     {
-        try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, storeDir, externalPageCache, recordFormats,
+        try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, databaseDirectory, externalPageCache, recordFormats,
                       config, logService, additionalInitialIds, dbConfig );
-              ImportLogic logic = new ImportLogic( storeDir, fileSystem, store, config, logService,
+              ImportLogic logic = new ImportLogic( databaseDirectory, fileSystem, store, config, logService,
                       executionMonitor, recordFormats, monitor ) )
         {
-            StateStorage stateStore = new StateStorage( fileSystem, new File( storeDir, FILE_NAME_STATE ) );
+            StateStorage stateStore = new StateStorage( fileSystem, new File( databaseDirectory, FILE_NAME_STATE ) );
 
             PrefetchingIterator<State> states = initializeStates( logic );
             Pair<String,byte[]> previousState = stateStore.get();

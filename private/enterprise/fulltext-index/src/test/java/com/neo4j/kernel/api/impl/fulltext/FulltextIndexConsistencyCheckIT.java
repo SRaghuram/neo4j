@@ -125,7 +125,7 @@ public class FulltextIndexConsistencyCheckIT
         Config config = Config.defaults();
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService( new Date() );
         ConsistencyFlags checkConsistencyConfig = new ConsistencyFlags( config );
-        ConsistencyCheckService.Result result = consistencyCheckService.runFullConsistencyCheck( testDirectory.databaseDir(), config,
+        ConsistencyCheckService.Result result = consistencyCheckService.runFullConsistencyCheck( testDirectory.databaseLayout(), config,
                 ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), true, checkConsistencyConfig );
         assertTrue( result.isSuccessful() );
     }

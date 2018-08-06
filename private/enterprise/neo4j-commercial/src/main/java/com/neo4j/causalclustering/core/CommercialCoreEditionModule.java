@@ -10,8 +10,6 @@ import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 
-import java.io.File;
-
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
 import org.neo4j.causalclustering.core.IdentityModule;
@@ -23,6 +21,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
@@ -50,7 +49,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 
     @Override
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
-            ClusterStateDirectory clusterStateDirectory, IdentityModule identityModule, Dependencies dependencies, File databaseDirectory )
+            ClusterStateDirectory clusterStateDirectory, IdentityModule identityModule, Dependencies dependencies, DatabaseLayout databaseLayout )
     {
         SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
@@ -60,7 +59,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
             ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
 
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, clusterStateDirectory.get(), databaseDirectory );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, clusterStateDirectory.get(), databaseLayout );
     }
 
     @Override
