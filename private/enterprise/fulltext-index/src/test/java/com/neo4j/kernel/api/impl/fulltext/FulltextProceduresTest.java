@@ -53,6 +53,7 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
@@ -64,7 +65,7 @@ import static org.junit.Assert.fail;
 public class FulltextProceduresTest
 {
     static final String AWAIT_REFRESH = "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()";
-    static final String GET_SCHEMA = "CALL db.index.fulltext.getIndexSchema(\"%s\")";
+    static final String DB_INDEXES = "CALL db.indexes";
     static final String NODE_CREATE = "CALL db.index.fulltext.createNodeIndex(\"%s\", %s, %s )";
     static final String RELATIONSHIP_CREATE = "CALL db.index.fulltext.createRelationshipIndex(\"%s\", %s, %s)";
     static final String DROP = "CALL db.index.fulltext.dropIndex(\"%s\")";
@@ -99,10 +100,15 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
         db.execute( format( NODE_CREATE, "test-index", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
-        Result result = db.execute( format( GET_SCHEMA, "test-index" ) );
+        Result result = db.execute( DB_INDEXES );
         assertTrue( result.hasNext() );
-        assertEquals( "NODE:Label1, Label2(prop1, prop2)", result.next().get( "schema" ) );
+        Map<String,Object> row = result.next();
+        assertEquals( "INDEX ON NODE:Label1, Label2(prop1, prop2)", row.get( "description" ) );
+        assertEquals( asList( "Label1", "Label2" ), row.get( "tokenNames" ) );
+        assertEquals( asList( "prop1", "prop2" ), row.get( "properties" ) );
+        assertEquals( "test-index", row.get( "indexName" ) );
         assertFalse( result.hasNext() );
+        result.close();
         awaitIndexesOnline();
         result = db.execute( format( STATUS, "test-index" ) );
         assertTrue( result.hasNext() );
@@ -110,9 +116,9 @@ public class FulltextProceduresTest
         assertFalse( result.hasNext() );
         db.shutdown();
         db = createDatabase();
-        result = db.execute( format( GET_SCHEMA, "test-index" ) );
+        result = db.execute( DB_INDEXES );
         assertTrue( result.hasNext() );
-        assertEquals( "NODE:Label1, Label2(prop1, prop2)", result.next().get( "schema" ) );
+        assertEquals( "INDEX ON NODE:Label1, Label2(prop1, prop2)", result.next().get( "description" ) );
         assertFalse( result.hasNext() );
         result = db.execute( format( STATUS, "test-index" ) );
         assertTrue( result.hasNext() );
@@ -125,10 +131,15 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
         db.execute( format( RELATIONSHIP_CREATE, "test-index", array( "Reltype1", "Reltype2" ), array( "prop1", "prop2" ) ) ).close();
-        Result result = db.execute( format( GET_SCHEMA, "test-index" ) );
+        Result result = db.execute( DB_INDEXES );
         assertTrue( result.hasNext() );
-        assertEquals( "RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", result.next().get( "schema" ) );
+        Map<String,Object> row = result.next();
+        assertEquals( "INDEX ON RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", row.get( "description" ) );
+        assertEquals( asList( "Reltype1", "Reltype2" ), row.get( "tokenNames" ) );
+        assertEquals( asList( "prop1", "prop2" ), row.get( "properties" ) );
+        assertEquals( "test-index", row.get( "indexName" ) );
         assertFalse( result.hasNext() );
+        result.close();
         awaitIndexesOnline();
         result = db.execute( format( STATUS, "test-index" ) );
         assertTrue( result.hasNext() );
@@ -136,9 +147,9 @@ public class FulltextProceduresTest
         assertFalse( result.hasNext() );
         db.shutdown();
         db = createDatabase();
-        result = db.execute( format( GET_SCHEMA, "test-index" ) );
+        result = db.execute( DB_INDEXES );
         assertTrue( result.hasNext() );
-        assertEquals( "RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", result.next().get( "schema" ) );
+        assertEquals( "INDEX ON RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", result.next().get( "description" ) );
         assertFalse( result.hasNext() );
         result = db.execute( format( STATUS, "test-index" ) );
         assertTrue( result.hasNext() );

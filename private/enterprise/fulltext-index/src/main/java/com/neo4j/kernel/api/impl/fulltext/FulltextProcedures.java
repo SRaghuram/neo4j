@@ -67,15 +67,6 @@ public class FulltextProcedures
         accessor.awaitRefresh();
     }
 
-    // TODO remove or make this the same output as what `db.indexes` gives.
-    @Description( "Returns the schema for the given index." )
-    @Procedure( name = "db.index.fulltext.getIndexSchema", mode = READ )
-    public Stream<SchemaOutput> getIndexSchema( @Name( "indexName" ) String name )
-    {
-        TokenNameLookup lookup = new SilentTokenNameLookup( tx.tokenRead() );
-        return Stream.of( new SchemaOutput( tx.schemaRead().indexGetForName( name ).schema().userDescription( lookup ) ) );
-    }
-
     @Description( "Create a node fulltext index for the given labels and properties " +
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
                   "Note: index specific settings are currently experimental, and might not replicated correctly in a cluster, or during backup. " +
@@ -159,16 +150,6 @@ public class FulltextProcedures
         {
             this.entityId = entityId;
             this.score = score;
-        }
-    }
-
-    public static class SchemaOutput
-    {
-        public final String schema;
-
-        SchemaOutput( String schema )
-        {
-            this.schema = schema;
         }
     }
 
