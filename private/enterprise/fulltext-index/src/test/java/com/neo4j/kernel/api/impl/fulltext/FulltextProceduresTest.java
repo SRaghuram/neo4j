@@ -69,7 +69,6 @@ public class FulltextProceduresTest
     static final String NODE_CREATE = "CALL db.index.fulltext.createNodeIndex(\"%s\", %s, %s )";
     static final String RELATIONSHIP_CREATE = "CALL db.index.fulltext.createRelationshipIndex(\"%s\", %s, %s)";
     static final String DROP = "CALL db.index.fulltext.dropIndex(\"%s\")";
-    static final String STATUS = "CALL db.index.fulltext.indexStatus(\"%s\")";
     static final String QUERY = "CALL db.index.fulltext.query(\"%s\", \"%s\")";
     static final String LIST_AVAILABLE_ANALYZERS = "CALL db.index.fulltext.listAvailableAnalyzers()";
     static final String ENTITYID = "entityId";
@@ -110,19 +109,19 @@ public class FulltextProceduresTest
         assertFalse( result.hasNext() );
         result.close();
         awaitIndexesOnline();
-        result = db.execute( format( STATUS, "test-index" ) );
+        result = db.execute( DB_INDEXES );
         assertTrue( result.hasNext() );
         assertEquals( "ONLINE", result.next().get( "state" ) );
         assertFalse( result.hasNext() );
+        result.close();
         db.shutdown();
         db = createDatabase();
         result = db.execute( DB_INDEXES );
         assertTrue( result.hasNext() );
-        assertEquals( "INDEX ON NODE:Label1, Label2(prop1, prop2)", result.next().get( "description" ) );
+        row = result.next();
+        assertEquals( "INDEX ON NODE:Label1, Label2(prop1, prop2)", row.get( "description" ) );
+        assertEquals( "ONLINE", row.get( "state" ) );
         assertFalse( result.hasNext() );
-        result = db.execute( format( STATUS, "test-index" ) );
-        assertTrue( result.hasNext() );
-        assertEquals( "ONLINE", result.next().get( "state" ) );
         assertFalse( result.hasNext() );
     }
 
@@ -141,19 +140,19 @@ public class FulltextProceduresTest
         assertFalse( result.hasNext() );
         result.close();
         awaitIndexesOnline();
-        result = db.execute( format( STATUS, "test-index" ) );
+        result = db.execute( DB_INDEXES );
         assertTrue( result.hasNext() );
         assertEquals( "ONLINE", result.next().get( "state" ) );
         assertFalse( result.hasNext() );
+        result.close();
         db.shutdown();
         db = createDatabase();
         result = db.execute( DB_INDEXES );
         assertTrue( result.hasNext() );
-        assertEquals( "INDEX ON RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", result.next().get( "description" ) );
+        row = result.next();
+        assertEquals( "INDEX ON RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", row.get( "description" ) );
+        assertEquals( "ONLINE", row.get( "state" ) );
         assertFalse( result.hasNext() );
-        result = db.execute( format( STATUS, "test-index" ) );
-        assertTrue( result.hasNext() );
-        assertEquals( "ONLINE", result.next().get( "state" ) );
         assertFalse( result.hasNext() );
     }
 

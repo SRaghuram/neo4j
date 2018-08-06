@@ -17,15 +17,11 @@ import java.util.Properties;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import org.neo4j.internal.kernel.api.InternalIndexState;
-import org.neo4j.internal.kernel.api.SchemaRead;
-import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.internal.kernel.api.exceptions.InvalidTransactionTypeKernelException;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.SilentTokenNameLookup;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
@@ -121,16 +117,6 @@ public class FulltextProcedures
         tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( name ) );
     }
 
-    // TODO create a `db.indexStatus` procedure instead.
-    @Description( "Check the status specified index." )
-    @Procedure( name = "db.index.fulltext.indexStatus", mode = READ )
-    public Stream<StatusOutput> indexStatus( @Name( "indexName" ) String name ) throws IndexNotFoundKernelException
-    {
-        SchemaRead readOperations = tx.schemaRead();
-        InternalIndexState internalNodeIndexState = readOperations.indexGetState( readOperations.indexGetForName( name ) );
-        return Stream.of( new StatusOutput( name, internalNodeIndexState ) );
-    }
-
     @Description( "Query the given fulltext index. Returns ids and lucene query score, ordered by score." )
     @Procedure( name = "db.index.fulltext.query", mode = READ )
     public Stream<EntityOutput> queryFulltext( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
@@ -150,31 +136,6 @@ public class FulltextProcedures
         {
             this.entityId = entityId;
             this.score = score;
-        }
-    }
-
-    public static class StatusOutput
-    {
-        public final String name;
-        public final String state;
-
-        StatusOutput( String name, InternalIndexState internalIndexState )
-        {
-            this.name = name;
-            switch ( internalIndexState )
-            {
-            case POPULATING:
-                state = "POPULATING";
-                break;
-            case ONLINE:
-                state = "ONLINE";
-                break;
-            case FAILED:
-                state = "FAILED";
-                break;
-            default:
-                throw new IllegalArgumentException( String.format( "Illegal index state %s", internalIndexState ) );
-            }
         }
     }
 
