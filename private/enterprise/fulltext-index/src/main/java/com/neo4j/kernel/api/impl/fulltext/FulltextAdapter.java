@@ -12,9 +12,9 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.stream.Stream;
 
+import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.exceptions.index.IndexNotFoundKernelException;
 import org.neo4j.storageengine.api.EntityType;
 
 public interface FulltextAdapter
