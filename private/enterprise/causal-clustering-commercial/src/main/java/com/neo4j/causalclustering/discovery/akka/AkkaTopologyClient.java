@@ -143,4 +143,10 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     {
         return topologyState.allCoreRoles();
     }
+
+    @Override
+    public MemberId myself()
+    {
+        return myself;
+    }
 }
