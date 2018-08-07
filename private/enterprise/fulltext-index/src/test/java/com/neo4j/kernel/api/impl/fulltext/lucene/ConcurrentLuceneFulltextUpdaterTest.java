@@ -18,8 +18,8 @@ import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.schema.index.IndexDescriptorFactory;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
+import org.neo4j.storageengine.api.schema.IndexDescriptorFactory;
 import org.neo4j.test.Race;
 import org.neo4j.test.rule.RepeatRule;
 

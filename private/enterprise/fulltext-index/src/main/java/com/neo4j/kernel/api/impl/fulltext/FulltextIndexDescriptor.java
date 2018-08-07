@@ -10,7 +10,7 @@ import org.apache.lucene.analysis.Analyzer;
 import java.util.Collection;
 import java.util.Set;
 
-import org.neo4j.kernel.api.schema.index.StoreIndexDescriptor;
+import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 
 public class FulltextIndexDescriptor extends StoreIndexDescriptor
 {
