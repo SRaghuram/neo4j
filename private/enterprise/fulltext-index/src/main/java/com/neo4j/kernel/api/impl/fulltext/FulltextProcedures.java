@@ -14,9 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.exceptions.InvalidTransactionTypeKernelException;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
@@ -37,17 +40,17 @@ import static org.neo4j.procedure.Mode.SCHEMA;
 /**
  * Procedures for querying the Fulltext indexes.
  */
+@SuppressWarnings( "WeakerAccess" )
 public class FulltextProcedures
 {
     @Context
     public KernelTransaction tx;
 
-    @SuppressWarnings( "WeakerAccess" )
+    @Context
+    public GraphDatabaseService db;
+
     @Context
     public FulltextAdapter accessor;
-
-    private static final Function<ScoreEntityIterator.ScoreEntry,EntityOutput> QUERY_RESULT_MAPPER =
-            result -> new EntityOutput( result.entityId(), result.score() );
 
     @Description( "List the available analyzers that the fulltext indexes can be configured with." )
     @Procedure( name = "db.index.fulltext.listAvailableAnalyzers", mode = READ )
@@ -117,29 +120,85 @@ public class FulltextProcedures
         tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( name ) );
     }
 
-    @Description( "Query the given fulltext index. Returns ids and lucene query score, ordered by score." )
+    @Description( "Query the given fulltext index. Returns the ids of matching enttities (be they nodes or relationships) and their lucene query score, " +
+            "ordered by score." )
     @Procedure( name = "db.index.fulltext.query", mode = READ )
-    public Stream<EntityOutput> queryFulltext( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
+    public Stream<EntityIdOutput> queryFulltext( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
             throws ParseException, IndexNotFoundKernelException, IOException
     {
         ScoreEntityIterator resultIterator = accessor.query( tx, name, query );
-        return resultIterator.stream().map( QUERY_RESULT_MAPPER );
+        return resultIterator.stream().map( result -> new EntityIdOutput( result.entityId(), result.score() ) );
     }
 
-    @SuppressWarnings( "WeakerAccess" )
-    public static class EntityOutput
+    @Description( "Query the given fulltext index. Returns the matching nodes and their lucene query score, ordered by score." )
+    @Procedure( name = "db.index.fulltext.queryNodes", mode = READ )
+    public Stream<NodeOutput> queryFulltextForNodes( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
+            throws ParseException, IndexNotFoundKernelException, IOException
+    {
+        IndexReference indexReference = tx.schemaRead().indexGetForName( name );
+        EntityType entityType = indexReference.schema().entityType();
+        if ( entityType != EntityType.NODE )
+        {
+            throw new IllegalArgumentException( "The '" + name + "' index (" + indexReference + ") is an index on " + entityType +
+                    ", so it cannot be queried for nodes." );
+        }
+        ScoreEntityIterator resultIterator = accessor.query( tx, name, query );
+        return resultIterator.stream().map( result -> new NodeOutput( db.getNodeById( result.entityId() ), result.score() ) );
+    }
+
+    @Description( "Query the given fulltext index. Returns the matching relationships and their lucene query score, ordered by score." )
+    @Procedure( name = "db.index.fulltext.queryRelationships", mode = READ )
+    public Stream<RelationshipOutput> queryFulltextForRelationships( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
+            throws ParseException, IndexNotFoundKernelException, IOException
+    {
+        IndexReference indexReference = tx.schemaRead().indexGetForName( name );
+        EntityType entityType = indexReference.schema().entityType();
+        if ( entityType != EntityType.RELATIONSHIP )
+        {
+            throw new IllegalArgumentException( "The '" + name + "' index (" + indexReference + ") is an index on " + entityType +
+                    ", so it cannot be queried for relationships." );
+        }
+        ScoreEntityIterator resultIterator = accessor.query( tx, name, query );
+        return resultIterator.stream().map( result -> new RelationshipOutput( db.getRelationshipById( result.entityId() ), result.score() ) );
+    }
+
+    public static final class EntityIdOutput
     {
         public final long entityId;
         public final double score;
 
-        EntityOutput( long entityId, float score )
+        EntityIdOutput( long entityId, float score )
         {
             this.entityId = entityId;
             this.score = score;
         }
     }
 
-    public static class AvailableAnalyzer
+    public static final class NodeOutput
+    {
+        public final Node node;
+        public final double score;
+
+        protected NodeOutput( Node node, double score )
+        {
+            this.node = node;
+            this.score = score;
+        }
+    }
+
+    public static final class RelationshipOutput
+    {
+        public final Relationship relationship;
+        public final double score;
+
+        public RelationshipOutput( Relationship relationship, double score )
+        {
+            this.relationship = relationship;
+            this.score = score;
+        }
+    }
+
+    public static final class AvailableAnalyzer
     {
         public final String analyzer;
 

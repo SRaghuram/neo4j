@@ -55,6 +55,7 @@ import org.neo4j.util.concurrent.BinaryLatch;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -67,13 +68,15 @@ public class FulltextProceduresTest
     private static final String DB_INDEXES = "CALL db.indexes";
     private static final String DROP = "CALL db.index.fulltext.drop(\"%s\")";
     private static final String LIST_AVAILABLE_ANALYZERS = "CALL db.index.fulltext.listAvailableAnalyzers()";
+    private static final String QUERY_NODES = "CALL db.index.fulltext.queryNodes(\"%s\", \"%s\")";
+    private static final String QUERY_RELS = "CALL db.index.fulltext.queryRelationships(\"%s\", \"%s\")";
     static final String AWAIT_REFRESH = "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()";
     static final String NODE_CREATE = "CALL db.index.fulltext.createNodeIndex(\"%s\", %s, %s )";
     static final String RELATIONSHIP_CREATE = "CALL db.index.fulltext.createRelationshipIndex(\"%s\", %s, %s)";
     static final String QUERY = "CALL db.index.fulltext.query(\"%s\", \"%s\")";
 
+    private static final String SCORE = "score";
     static final String ENTITYID = "entityId";
-    static final String SCORE = "score";
 
     private final Timeout timeout = VerboseTimeout.builder().withTimeout( 1, TimeUnit.MINUTES ).build();
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
@@ -659,6 +662,127 @@ public class FulltextProceduresTest
             assertThat( analyzers, hasItem( "english" ) );
             assertThat( analyzers, hasItem( "swedish" ) );
             assertThat( analyzers, hasItem( "standard" ) );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryNodesMustThrowWhenQueryingRelationshipIndex()
+    {
+        db = createDatabase();
+
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+
+        awaitIndexesOnline();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            expectedException.expect( Exception.class );
+            db.execute( format( QUERY_NODES, "rels", "bla bla" ) ).close();
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryRelationshipsMustThrowWhenQueryingNodeIndex()
+    {
+        db = createDatabase();
+
+        Label label = Label.label( "Label" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+
+        awaitIndexesOnline();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            expectedException.expect( Exception.class );
+            db.execute( format( QUERY_RELS, "nodes", "bla bla" ) ).close();
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryNodesMustFindSameNodeIdsAndScoreAsQuery()
+    {
+        db = createDatabase();
+
+        Label label = Label.label( "Label" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        awaitIndexesOnline();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.createNode( label ).setProperty( "prop", "yadda bla bla yadda" );
+            db.createNode( label ).setProperty( "prop", "blim blim bla yadda" );
+            db.createNode( label ).setProperty( "prop", "blue green bla grim fandango" );
+            db.createNode( label ).setProperty( "prop", "bubbles balloon bla bla bla bubblegum" );
+            db.createNode( label ).setProperty( "prop", "bada bing bada bla bada boom" );
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Result expected = db.execute( format( QUERY, "nodes", "bla" ) );
+            Result actual = db.execute( format( QUERY_NODES, "nodes", "bla " ) );
+            while ( expected.hasNext() )
+            {
+                assertTrue( actual.hasNext() );
+                Map<String,Object> expectedRow = expected.next();
+                Map<String,Object> actualRow = actual.next();
+                assertThat( actualRow.get( SCORE ), is( expectedRow.get( SCORE ) ) );
+                assertThat( ((Node) actualRow.get( "node" )).getId(), is( expectedRow.get( ENTITYID ) ) );
+            }
+            assertFalse( actual.hasNext() );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryRelationshipsMustFindSameNodeIdsAndScoreAsQuery()
+    {
+        db = createDatabase();
+
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        awaitIndexesOnline();
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode();
+            node.createRelationshipTo( node, relType ).setProperty( "prop", "yadda bla bla yadda" );
+            node.createRelationshipTo( node, relType ).setProperty( "prop", "blim blim bla yadda" );
+            node.createRelationshipTo( node, relType ).setProperty( "prop", "blue green bla grim fandango" );
+            node.createRelationshipTo( node, relType ).setProperty( "prop", "bubbles balloon bla bla bla bubblegum" );
+            node.createRelationshipTo( node, relType ).setProperty( "prop", "bada bing bada bla bada boom" );
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Result expected = db.execute( format( QUERY, "rels", "bla" ) );
+            Result actual = db.execute( format( QUERY_RELS, "rels", "bla " ) );
+            while ( expected.hasNext() )
+            {
+                assertTrue( actual.hasNext() );
+                Map<String,Object> expectedRow = expected.next();
+                Map<String,Object> actualRow = actual.next();
+                assertThat( actualRow.get( SCORE ), is( expectedRow.get( SCORE ) ) );
+                assertThat( ((Relationship) actualRow.get( "relationship" )).getId(), is( expectedRow.get( ENTITYID ) ) );
+            }
+            assertFalse( actual.hasNext() );
             tx.success();
         }
     }
