@@ -7,8 +7,8 @@ package com.neo4j.kernel.api.impl.fulltext;
 
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexAccessor;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexBuilder;
-import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexPopulator;
+import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
 import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure;
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
 import com.neo4j.kernel.api.impl.fulltext.lucene.analyzer.AnalyzerProvider;
@@ -23,6 +23,7 @@ import java.util.stream.StreamSupport;
 
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
+import org.neo4j.internal.kernel.api.schema.IndexProviderDescriptor;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -56,8 +57,9 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     private final String defaultEventuallyConsistentSetting;
     private final IndexUpdateSink indexUpdateSink;
 
-    FulltextIndexProvider( Descriptor descriptor, int priority, IndexDirectoryStructure.Factory directoryStructureFactory, FileSystemAbstraction fileSystem,
-            Config config, Supplier<TokenHolders> tokenHolders, DirectoryFactory directoryFactory, OperationalMode operationalMode, JobScheduler scheduler )
+    FulltextIndexProvider( IndexProviderDescriptor descriptor, int priority, IndexDirectoryStructure.Factory directoryStructureFactory,
+            FileSystemAbstraction fileSystem, Config config, Supplier<TokenHolders> tokenHolders, DirectoryFactory directoryFactory,
+            OperationalMode operationalMode, JobScheduler scheduler )
     {
         super( descriptor, priority, directoryStructureFactory, config, operationalMode, fileSystem, directoryFactory );
         this.fileSystem = fileSystem;
