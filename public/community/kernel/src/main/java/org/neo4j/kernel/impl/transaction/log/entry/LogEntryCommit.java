@@ -19,9 +19,9 @@
  */
 package org.neo4j.kernel.impl.transaction.log.entry;
 
-import java.util.TimeZone;
-
 import org.neo4j.helpers.Format;
+
+import java.util.TimeZone;
 
 import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryByteCodes.TX_COMMIT;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryVersion.CURRENT;

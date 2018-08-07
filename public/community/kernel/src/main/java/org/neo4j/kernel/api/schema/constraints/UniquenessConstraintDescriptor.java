@@ -21,12 +21,13 @@ package org.neo4j.kernel.api.schema.constraints;
 
 
 import org.neo4j.internal.kernel.api.schema.LabelSchemaDescriptor;
+import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
 
 public class UniquenessConstraintDescriptor extends IndexBackedConstraintDescriptor
 {
     UniquenessConstraintDescriptor( LabelSchemaDescriptor schema )
     {
-        super( Type.UNIQUE, schema );
+        super( ConstraintDescriptor.Type.UNIQUE, schema );
     }
 
     @Override

@@ -19,8 +19,6 @@
  */
 package org.neo4j.kernel.impl.transaction;
 
-import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.storageengine.api.CommandStream;
 
 /**

@@ -19,7 +19,7 @@
  */
 package org.neo4j.storageengine.api;
 
-import org.neo4j.kernel.impl.newapi.RelationshipReferenceEncoding;
+//import org.neo4j.kernel.impl.newapi.RelationshipReferenceEncoding;
 
 public interface StorageRelationshipGroupCursor extends AutoCloseable
 {

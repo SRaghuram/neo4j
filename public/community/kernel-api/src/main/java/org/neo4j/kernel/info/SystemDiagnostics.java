@@ -51,7 +51,7 @@ import org.neo4j.io.os.OsBeanUtil;
 import org.neo4j.logging.Logger;
 
 import static java.net.NetworkInterface.getNetworkInterfaces;
-import static org.neo4j.helpers.Format.bytes;
+import org.neo4j.helpers.Format;
 
 enum SystemDiagnostics implements DiagnosticsProvider
 {
@@ -72,9 +72,9 @@ enum SystemDiagnostics implements DiagnosticsProvider
         @Override
         void dump( Logger logger )
         {
-            logger.log( "Free  memory: " + bytes( Runtime.getRuntime().freeMemory() ) );
-            logger.log( "Total memory: " + bytes( Runtime.getRuntime().totalMemory() ) );
-            logger.log( "Max   memory: " + bytes( Runtime.getRuntime().maxMemory() ) );
+            logger.log( "Free  memory: " + Format.bytes( Runtime.getRuntime().freeMemory() ) );
+            logger.log( "Total memory: " + Format.bytes( Runtime.getRuntime().totalMemory() ) );
+            logger.log( "Max   memory: " + Format.bytes( Runtime.getRuntime().maxMemory() ) );
             for ( GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans() )
             {
                 logger.log( "Garbage Collector: " + gc.getName() + ": " + Arrays.toString( gc.getMemoryPoolNames() ) );
@@ -83,9 +83,9 @@ enum SystemDiagnostics implements DiagnosticsProvider
             {
                 MemoryUsage usage = pool.getUsage();
                 logger.log( String.format( "Memory Pool: %s (%s): committed=%s, used=%s, max=%s, threshold=%s",
-                        pool.getName(), pool.getType(), usage == null ? "?" : bytes( usage.getCommitted() ),
-                        usage == null ? "?" : bytes( usage.getUsed() ), usage == null ? "?" : bytes( usage.getMax() ),
-                        pool.isUsageThresholdSupported() ? bytes( pool.getUsageThreshold() ) : "?" ) );
+                        pool.getName(), pool.getType(), usage == null ? "?" : Format.bytes( usage.getCommitted() ),
+                        usage == null ? "?" : Format.bytes( usage.getUsed() ), usage == null ? "?" : Format.bytes( usage.getMax() ),
+                        pool.isUsageThresholdSupported() ? Format.bytes( pool.getUsageThreshold() ) : "?" ) );
             }
         }
     },
@@ -386,7 +386,7 @@ enum SystemDiagnostics implements DiagnosticsProvider
     {
         if ( value != OsBeanUtil.VALUE_UNAVAILABLE )
         {
-            logger.log( message + bytes( value ) );
+            logger.log( message + Format.bytes( value ) );
         }
     }
 

@@ -21,7 +21,7 @@ package org.neo4j.kernel.api.schema.index;
 
 import org.neo4j.internal.kernel.api.IndexCapability;
 import org.neo4j.kernel.impl.api.index.IndexProviderMap;
-import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
+//import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.storageengine.api.schema.SchemaRule;
 
 import static org.neo4j.internal.kernel.api.schema.SchemaUtil.idTokenNameLookup;

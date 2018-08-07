@@ -17,30 +17,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.storageengine.impl.recordstorage.id;
+package org.neo4j.kernel.impl.transaction.command;
 
-
-import java.util.function.Supplier;
-
-//import org.neo4j.kernel.impl.api.KernelTransactionsSnapshot;
-import org.neo4j.kernel.lifecycle.Lifecycle;
-
-/**
- * Represent abstraction that responsible for any id related operations on a storage engine level: buffering,
- * maintenance, clearing, resetting, generation.
- */
-public interface IdController<T> extends Lifecycle
+public enum Version
 {
-
-    /**
-     * Clear underlying id generation infrastructure (clear buffer of ids to reuse, reset buffers, etc.)
-     */
-    void clear();
-
-    /**
-     * Perform ids related maintenance.
-     */
-    void maintenance();
-
-    void initialize( Supplier<T> transactionsSnapshotSupplier );
+         /**
+         * The "before" version of a command's record. I.e. the record how it looked before changes took place.
+         */
+        BEFORE,
+        /**
+         * The "after" version of a command's record. I.e. the record how it looks after changes took place.
+         */
+        AFTER;
 }

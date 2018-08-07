@@ -19,10 +19,10 @@
  */
 package org.neo4j.storageengine.api;
 
-import org.neo4j.kernel.impl.transaction.command.Command.Version;
+import org.neo4j.kernel.impl.transaction.command.Version;
 
-import static org.neo4j.kernel.impl.transaction.command.Command.Version.AFTER;
-import static org.neo4j.kernel.impl.transaction.command.Command.Version.BEFORE;
+import static org.neo4j.kernel.impl.transaction.command.Version.AFTER;
+import static org.neo4j.kernel.impl.transaction.command.Version.BEFORE;
 
 /**
  * Mode of {@link StorageEngine#apply(CommandsToApply, TransactionApplicationMode) applying transactions}.
@@ -41,7 +41,7 @@ public enum TransactionApplicationMode
             false, // cache invalidation not needed since cache can be updated
             false, // no extra care in terms of idempotency needs to be taken
             true,  // include all stores
-            AFTER
+            Version.AFTER
             ),
 
     /**
@@ -54,7 +54,7 @@ public enum TransactionApplicationMode
             true,  // cache invalidation needed since not enough information available to update cache
             false, // no extra care in terms of idempotency needs to be taken
             true,  // include all stores
-            AFTER
+            Version.AFTER
             ),
 
     /**
@@ -67,7 +67,7 @@ public enum TransactionApplicationMode
             false, // during recovery there's not really a cache to invalidate so don't bother
             true,  // extra care needs to be taken to ensure idempotency since this transaction may have been applied previously
             true,  // include all stores
-            AFTER
+            Version.AFTER
             ),
 
     /**
@@ -81,7 +81,7 @@ public enum TransactionApplicationMode
             false, // cache invalidation not needed because this is for the initial reverse recovery
             true,  // extra care in terms of idempotency needs to be taken
             false, // only apply to neo store
-            BEFORE
+            Version.BEFORE
             );
 
     private final boolean needsHighIdTracking;

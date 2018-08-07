@@ -23,7 +23,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.kernel.impl.storemigration.participant.AbstractStoreMigrationParticipant;
-import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
+//import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
 import org.neo4j.kernel.impl.util.monitoring.ProgressReporter;
 
 public interface StoreMigrationParticipant

@@ -27,7 +27,6 @@ import org.neo4j.kernel.impl.core.CacheAccessBackDoor;
 import org.neo4j.kernel.impl.locking.LockGroup;
 import org.neo4j.kernel.impl.locking.LockService;
 import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.transaction.command.Command.Version;
 import org.neo4j.storageengine.api.CommandsToApply;
 
 /**

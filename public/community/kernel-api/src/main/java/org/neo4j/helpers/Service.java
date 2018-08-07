@@ -152,13 +152,13 @@ public abstract class Service
     /**
      * Load all implementations of a Service.
      *
-     * @param <T> the type of the Service
+     * @param <T3> the type of the Service
      * @param type the type of the Service to load
      * @return all registered implementations of the Service
      */
-    public static <T> Iterable<T> load( Class<T> type )
+    public static <T3> Iterable<T3> load(Class<T3> type )
     {
-        Iterable<T> loader;
+        Iterable<T3> loader;
         if ( null != (loader = java6Loader( type )) )
         {
             return loader;
@@ -265,50 +265,57 @@ public abstract class Service
         return keys.hashCode();
     }
 
-    private static <T> Iterable<T> filterExceptions( final Iterable<T> iterable )
+    private static <T0> Iterable<T0> filterExceptions(final Iterable<T0> iterable )
     {
-        return () -> new PrefetchingIterator<T>()
+        return new Iterable<T0>()
         {
-            private final Iterator<T> iterator = iterable.iterator();
-
             @Override
-            protected T fetchNextOrNull()
+            public Iterator<T0> iterator()
             {
-                while ( iterator.hasNext() )
+                return new PrefetchingIterator<T0>()
                 {
-                    try
+                    final Iterator<T0> iterator = iterable.iterator();
+
+                    @Override
+                    protected T0 fetchNextOrNull()
                     {
-                        return iterator.next();
-                    }
-                    catch ( Throwable e )
-                    {
-                        if ( printServiceLoaderStackTraces )
+                        while ( iterator.hasNext() )
                         {
-                            e.printStackTrace();
+                            try
+                            {
+                                return iterator.next();
+                            }
+                            catch ( Throwable e )
+                            {
+                                if ( printServiceLoaderStackTraces )
+                                {
+                                    e.printStackTrace();
+                                }
+                            }
                         }
+                        return null;
                     }
-                }
-                return null;
+                };
             }
         };
     }
 
-    private static <T> Iterable<T> java6Loader( Class<T> type )
+    private static <T2> Iterable<T2> java6Loader(Class<T2> type )
     {
         try
         {
-            HashMap<String,T> services = new HashMap<>();
+            HashMap<String, T2> services = new HashMap<>();
             ClassLoader currentCL = Service.class.getClassLoader();
             ClassLoader contextCL = Thread.currentThread().getContextClassLoader();
 
-            Iterable<T> contextClassLoaderServices = ServiceLoader.load( type, contextCL );
+            Iterable<T2> contextClassLoaderServices = ServiceLoader.load( type, contextCL );
 
             if ( currentCL != contextCL )
             {
                 // JBoss 7 does not export content of META-INF/services to context
                 // class loader, so this call adds implementations defined in Neo4j
                 // libraries from the same module.
-                Iterable<T> currentClassLoaderServices = ServiceLoader.load( type, currentCL );
+                Iterable<T2> currentClassLoaderServices = ServiceLoader.load( type, currentCL );
                 // Combine services loaded by both context and module class loaders.
                 // Service instances compared by full class name ( we cannot use
                 // equals for instances or classes because they can came from
@@ -331,9 +338,9 @@ public abstract class Service
         }
     }
 
-    private static <T> void putAllInstancesToMap( Iterable<T> services, Map<String,T> servicesMap )
+    private static <T1> void putAllInstancesToMap(Iterable<T1> services, Map<String, T1> servicesMap )
     {
-        for ( T instance : filterExceptions( services ) )
+        for ( T1 instance : filterExceptions( services ) )
         {
             if ( null != instance )
             {

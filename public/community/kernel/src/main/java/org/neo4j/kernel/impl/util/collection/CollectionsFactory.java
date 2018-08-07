@@ -22,7 +22,6 @@ package org.neo4j.kernel.impl.util.collection;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 
-import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.util.diffsets.MutableLongDiffSetsImpl;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.values.storable.Value;
