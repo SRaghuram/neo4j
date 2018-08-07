@@ -6,6 +6,9 @@
 package com.neo4j.kernel.api.impl.fulltext;
 
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextAnalyzerTest;
+import org.apache.lucene.queryparser.flexible.standard.QueryParserUtil;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
 import org.eclipse.collections.api.iterator.MutableLongIterator;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
@@ -16,9 +19,11 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
 import org.junit.rules.Timeout;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -51,6 +56,9 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.VerboseTimeout;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.util.concurrent.BinaryLatch;
+import org.neo4j.values.storable.RandomValues;
+import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.ValueGroup;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -787,6 +795,196 @@ public class FulltextProceduresTest
         }
     }
 
+    @Test
+    public void fulltextIndexMustIgnoreNonStringPropertiesForUpdate()
+    {
+        db = createDatabase();
+
+        Label label = Label.label( "Label" );
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+
+        awaitIndexesOnline();
+
+        List<Value> values = generateRandomNonStringValues( 1000 );
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( Value value : values )
+            {
+                Node node = db.createNode( label );
+                Object propertyValue = value.asObject();
+                node.setProperty( "prop", propertyValue );
+                node.createRelationshipTo( node, relType ).setProperty( "prop", propertyValue );
+            }
+            tx.success();
+        }
+
+        for ( Value value : values )
+        {
+            String fulltextQuery = quoteValueForQuery( value );
+            String cypherQuery = format( QUERY, "nodes", fulltextQuery );
+            Result nodes = null;
+            try
+            {
+                nodes = db.execute( cypherQuery );
+            }
+            catch ( QueryExecutionException e )
+            {
+                throw new AssertionError( "Failed to execute query: " + cypherQuery + " based on value " + value.prettyPrint(), e );
+            }
+            if ( nodes.hasNext() )
+            {
+                fail( "did not expect to find any nodes, but found at least: " + nodes.next() );
+            }
+            nodes.close();
+            Result relationships = db.execute( format( QUERY, "rels", fulltextQuery ) );
+            if ( relationships.hasNext() )
+            {
+                fail( "did not expect to find any relationships, but found at least: " + relationships.next() );
+            }
+            relationships.close();
+        }
+    }
+
+    @Test
+    public void fulltextIndexMustIgnoreNonStringPropertiesForPopulation()
+    {
+        db = createDatabase();
+
+        Label label = Label.label( "Label" );
+        RelationshipType relType = RelationshipType.withName( "REL" );
+
+        List<Value> values = generateRandomNonStringValues( 1000 );
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( Value value : values )
+            {
+                Node node = db.createNode( label );
+                Object propertyValue = value.asObject();
+                node.setProperty( "prop", propertyValue );
+                node.createRelationshipTo( node, relType ).setProperty( "prop", propertyValue );
+            }
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+
+        awaitIndexesOnline();
+
+        for ( Value value : values )
+        {
+            String fulltextQuery = quoteValueForQuery( value );
+            String cypherQuery = format( QUERY, "nodes", fulltextQuery );
+            Result nodes = null;
+            try
+            {
+                nodes = db.execute( cypherQuery );
+            }
+            catch ( QueryExecutionException e )
+            {
+                throw new AssertionError( "Failed to execute query: " + cypherQuery + " based on value " + value.prettyPrint(), e );
+            }
+            if ( nodes.hasNext() )
+            {
+                fail( "did not expect to find any nodes, but found at least: " + nodes.next() );
+            }
+            nodes.close();
+            Result relationships = db.execute( format( QUERY, "rels", fulltextQuery ) );
+            if ( relationships.hasNext() )
+            {
+                fail( "did not expect to find any relationships, but found at least: " + relationships.next() );
+            }
+            relationships.close();
+        }
+    }
+
+    @Test
+    public void entitiesMustBeRemovedFromFulltextIndexWhenPropertyValuesChangeAwayFromText()
+    {
+        db = createDatabase();
+
+        Label label = Label.label( "Label" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( label );
+            nodeId = node.getId();
+            node.setProperty( "prop", "bla bla" );
+            tx.success();
+        }
+
+        awaitIndexesOnline();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.getNodeById( nodeId );
+            node.setProperty( "prop", 42 );
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Result result = db.execute( format( QUERY_NODES, "nodes", "bla" ) );
+            assertFalse( result.hasNext() );
+            result.close();
+            tx.success();
+        }
+    }
+
+    @Test
+    public void entitiesMustBeAddedToFulltextIndexWhenPropertyValuesChangeToText()
+    {
+        db = createDatabase();
+
+        Label label = Label.label( "Label" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( label );
+            node.setProperty( "prop", 42 );
+            nodeId = node.getId();
+            tx.success();
+        }
+
+        awaitIndexesOnline();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.getNodeById( nodeId );
+            node.setProperty( "prop", "bla bla" );
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertQueryFindsIds( db, "nodes", "bla", nodeId );
+            tx.success();
+        }
+    }
+
+    // todo same thing as above, but with multi-property indexes as well.
+
     private GraphDatabaseAPI createDatabase()
     {
         return (GraphDatabaseAPI) cleanup.add( builder.newGraphDatabase() );
@@ -882,5 +1080,27 @@ public class FulltextProceduresTest
     static String array( String... args )
     {
         return Arrays.stream( args ).map( s -> "\"" + s + "\"" ).collect( Collectors.joining( ", ", "[", "]" ) );
+    }
+
+    private List<Value> generateRandomNonStringValues( int valuesToGenerate )
+    {
+        RandomValues generator = RandomValues.create();
+        List<Value> values = new ArrayList<>( valuesToGenerate );
+        for ( int i = 0; i < valuesToGenerate; i++ )
+        {
+            Value value;
+            do
+            {
+                value = generator.nextValue();
+            }
+            while ( value.valueGroup() == ValueGroup.TEXT );
+            values.add( value );
+        }
+        return values;
+    }
+
+    private String quoteValueForQuery( Value value )
+    {
+        return QueryParserUtil.escape( value.prettyPrint() ).replace( "\\", "\\\\" ).replace( "\"", "\\\"" );
     }
 }

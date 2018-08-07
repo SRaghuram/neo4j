@@ -16,7 +16,9 @@ import org.apache.lucene.index.Term;
 import java.util.Collection;
 import java.util.Iterator;
 
+import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.ValueGroup;
 
 import static org.apache.lucene.document.Field.Store.NO;
 
@@ -46,7 +48,8 @@ public class LuceneFulltextDocumentStructure
 
     private static Field encodeValueField( String propertyKey, Value value )
     {
-        String stringValue = value.prettyPrint();
+        TextValue textValue = (TextValue) value;
+        String stringValue = textValue.stringValue();
         return new TextField( propertyKey, stringValue, NO );
     }
 
@@ -89,7 +92,7 @@ public class LuceneFulltextDocumentStructure
             for ( String name : names )
             {
                 Value value = values[i++];
-                if ( value != null )
+                if ( value != null && value.valueGroup() == ValueGroup.TEXT )
                 {
                     Field field = encodeValueField( name, value );
                     document.add( field );

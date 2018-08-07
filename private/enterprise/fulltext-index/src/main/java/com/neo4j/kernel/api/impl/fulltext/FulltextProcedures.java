@@ -123,7 +123,7 @@ public class FulltextProcedures
     @Description( "Query the given fulltext index. Returns the ids of matching enttities (be they nodes or relationships) and their lucene query score, " +
             "ordered by score." )
     @Procedure( name = "db.index.fulltext.query", mode = READ )
-    public Stream<EntityIdOutput> queryFulltext( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
+    public Stream<EntityIdOutput> queryFulltext( @Name( "indexName" ) String name, @Name( "queryString" ) String query )
             throws ParseException, IndexNotFoundKernelException, IOException
     {
         ScoreEntityIterator resultIterator = accessor.query( tx, name, query );
@@ -132,7 +132,7 @@ public class FulltextProcedures
 
     @Description( "Query the given fulltext index. Returns the matching nodes and their lucene query score, ordered by score." )
     @Procedure( name = "db.index.fulltext.queryNodes", mode = READ )
-    public Stream<NodeOutput> queryFulltextForNodes( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
+    public Stream<NodeOutput> queryFulltextForNodes( @Name( "indexName" ) String name, @Name( "queryString" ) String query )
             throws ParseException, IndexNotFoundKernelException, IOException
     {
         IndexReference indexReference = tx.schemaRead().indexGetForName( name );
@@ -148,7 +148,7 @@ public class FulltextProcedures
 
     @Description( "Query the given fulltext index. Returns the matching relationships and their lucene query score, ordered by score." )
     @Procedure( name = "db.index.fulltext.queryRelationships", mode = READ )
-    public Stream<RelationshipOutput> queryFulltextForRelationships( @Name( "indexName" ) String name, @Name( "luceneQuery" ) String query )
+    public Stream<RelationshipOutput> queryFulltextForRelationships( @Name( "indexName" ) String name, @Name( "queryString" ) String query )
             throws ParseException, IndexNotFoundKernelException, IOException
     {
         IndexReference indexReference = tx.schemaRead().indexGetForName( name );
