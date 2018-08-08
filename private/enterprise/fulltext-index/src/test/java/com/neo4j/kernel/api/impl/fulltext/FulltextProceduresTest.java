@@ -983,7 +983,83 @@ public class FulltextProceduresTest
         }
     }
 
-    // todo same thing as above, but with multi-property indexes as well.
+    @Test
+    public void propertiesMustBeRemovedFromFulltextIndexWhenTheirValueTypeChangesAwayFromText()
+    {
+        db = createDatabase();
+
+        Label label = Label.label( "Label" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop1", "prop2" ) ) ).close();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( label );
+            nodeId = node.getId();
+            node.setProperty( "prop1", "foo" );
+            node.setProperty( "prop2", "bar" );
+            tx.success();
+        }
+
+        awaitIndexesOnline();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.getNodeById( nodeId );
+            node.setProperty( "prop2", 42 );
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertQueryFindsIds( db, "nodes", "foo", nodeId );
+            Result result = db.execute( format( QUERY_NODES, "nodes", "bar" ) );
+            assertFalse( result.hasNext() );
+            result.close();
+            tx.success();
+        }
+    }
+
+    @Test
+    public void propertiesMustBeAddedToFulltextIndexWhenTheirValueTypeChangesToText()
+    {
+        db = createDatabase();
+
+        Label label = Label.label( "Label" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop1", "prop2" ) ) ).close();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( label );
+            nodeId = node.getId();
+            node.setProperty( "prop1", "foo" );
+            node.setProperty( "prop2", 42 );
+            tx.success();
+        }
+
+        awaitIndexesOnline();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.getNodeById( nodeId );
+            node.setProperty( "prop2", "bar" );
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertQueryFindsIds( db, "nodes", "foo", nodeId );
+            assertQueryFindsIds( db, "nodes", "bar", nodeId );
+            tx.success();
+        }
+    }
 
     private GraphDatabaseAPI createDatabase()
     {
