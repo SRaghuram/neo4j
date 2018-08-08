@@ -14,6 +14,11 @@ import org.neo4j.helpers.Service;
 @Service.Implementation( AnalyzerProvider.class )
 public class CJK extends AnalyzerProvider
 {
+    public CJK()
+    {
+        super( "cjk" );
+    }
+
     @Override
     public Analyzer createAnalyzer()
     {

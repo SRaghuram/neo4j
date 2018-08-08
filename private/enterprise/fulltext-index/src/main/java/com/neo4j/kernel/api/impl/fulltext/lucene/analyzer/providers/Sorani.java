@@ -14,6 +14,11 @@ import org.neo4j.helpers.Service;
 @Service.Implementation( AnalyzerProvider.class )
 public class Sorani extends AnalyzerProvider
 {
+    public Sorani()
+    {
+        super( "sorani" );
+    }
+
     @Override
     public Analyzer createAnalyzer()
     {

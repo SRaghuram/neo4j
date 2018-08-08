@@ -14,6 +14,11 @@ import org.neo4j.helpers.Service;
 @Service.Implementation( AnalyzerProvider.class )
 public class Catalan extends AnalyzerProvider
 {
+    public Catalan()
+    {
+        super( "catalan" );
+    }
+
     @Override
     public Analyzer createAnalyzer()
     {

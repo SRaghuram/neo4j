@@ -14,6 +14,11 @@ import org.neo4j.helpers.Service;
 @Service.Implementation( AnalyzerProvider.class )
 public class Whitespace extends AnalyzerProvider
 {
+    public Whitespace()
+    {
+        super( "whitespace" );
+    }
+
     @Override
     public Analyzer createAnalyzer()
     {

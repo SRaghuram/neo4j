@@ -14,6 +14,11 @@ import org.neo4j.helpers.Service;
 @Service.Implementation( AnalyzerProvider.class )
 public class Thai extends AnalyzerProvider
 {
+    public Thai()
+    {
+        super( "thai" );
+    }
+
     @Override
     public Analyzer createAnalyzer()
     {

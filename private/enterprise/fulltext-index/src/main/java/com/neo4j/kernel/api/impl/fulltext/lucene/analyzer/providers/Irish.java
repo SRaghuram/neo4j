@@ -14,6 +14,11 @@ import org.neo4j.helpers.Service;
 @Service.Implementation( AnalyzerProvider.class )
 public class Irish extends AnalyzerProvider
 {
+    public Irish()
+    {
+        super( "irish" );
+    }
+
     @Override
     public Analyzer createAnalyzer()
     {

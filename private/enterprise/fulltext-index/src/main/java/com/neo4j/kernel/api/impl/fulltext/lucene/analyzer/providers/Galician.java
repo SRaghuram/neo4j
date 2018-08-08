@@ -14,6 +14,11 @@ import org.neo4j.helpers.Service;
 @Service.Implementation( AnalyzerProvider.class )
 public class Galician extends AnalyzerProvider
 {
+    public Galician()
+    {
+        super( "galician" );
+    }
+
     @Override
     public Analyzer createAnalyzer()
     {

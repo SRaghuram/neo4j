@@ -21,15 +21,6 @@ public abstract class AnalyzerProvider extends Service
         super( analyzerName, alternativeNames );
     }
 
-    /**
-     * Derive the analyzer name from the class name.
-     * @see Service#Service()
-     */
-    public AnalyzerProvider()
-    {
-        super();
-    }
-
     public static AnalyzerProvider getProviderByName( String analyzerName ) throws NoSuchElementException
     {
         return Service.load( AnalyzerProvider.class, analyzerName );

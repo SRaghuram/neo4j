@@ -14,6 +14,11 @@ import org.neo4j.helpers.Service;
 @Service.Implementation( AnalyzerProvider.class )
 public class Russian extends AnalyzerProvider
 {
+    public Russian()
+    {
+        super( "russian" );
+    }
+
     @Override
     public Analyzer createAnalyzer()
     {

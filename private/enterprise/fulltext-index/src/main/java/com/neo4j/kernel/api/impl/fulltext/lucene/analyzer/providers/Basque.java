@@ -14,6 +14,11 @@ import org.neo4j.helpers.Service;
 @Service.Implementation( AnalyzerProvider.class )
 public class Basque extends AnalyzerProvider
 {
+    public Basque()
+    {
+        super( "basque" );
+    }
+
     @Override
     public Analyzer createAnalyzer()
     {

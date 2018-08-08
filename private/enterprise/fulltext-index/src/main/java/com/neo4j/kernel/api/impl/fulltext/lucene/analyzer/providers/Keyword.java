@@ -14,6 +14,11 @@ import org.neo4j.helpers.Service;
 @Service.Implementation( AnalyzerProvider.class )
 public class Keyword extends AnalyzerProvider
 {
+    public Keyword()
+    {
+        super( "keyword" );
+    }
+
     @Override
     public Analyzer createAnalyzer()
     {
