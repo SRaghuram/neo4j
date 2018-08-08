@@ -7,14 +7,12 @@ package com.neo4j.kernel.api.impl.fulltext;
 
 import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextTestSupport;
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
-import org.bouncycastle.asn1.teletrust.TeleTrusTNamedCurves;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 

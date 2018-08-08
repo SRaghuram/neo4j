@@ -147,7 +147,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
             throw new BadSchemaException( "At least one property name must be specified when creating a fulltext index." );
         }
         TokenHolders tokens = tokenHolders.get();
-        if ( Arrays.stream( properties ).anyMatch( prop -> prop.equals( LuceneFulltextDocumentStructure.FIELD_ENTITY_ID ) ) )
+        if ( Arrays.asList( properties ).contains( LuceneFulltextDocumentStructure.FIELD_ENTITY_ID ) )
         {
             throw new BadSchemaException( "Unable to index the property, the name is reserved for internal use " +
                     LuceneFulltextDocumentStructure.FIELD_ENTITY_ID );
@@ -164,14 +164,8 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         int[] propertyIds = Arrays.stream( properties ).mapToInt( tokens.propertyKeyTokens()::getOrCreateId ).toArray();
 
         SchemaDescriptor schema = SchemaDescriptorFactory.multiToken( entityTokenIds, type, propertyIds );
-        if ( !indexConfiguration.containsKey( FulltextIndexSettings.INDEX_CONFIG_ANALYZER ) )
-        {
-            indexConfiguration.put( FulltextIndexSettings.INDEX_CONFIG_ANALYZER, defaultAnalyzerName );
-        }
-        if ( !indexConfiguration.containsKey( FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT ) )
-        {
-            indexConfiguration.put( FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT, defaultEventuallyConsistentSetting );
-        }
+        indexConfiguration.putIfAbsent( FulltextIndexSettings.INDEX_CONFIG_ANALYZER, defaultAnalyzerName );
+        indexConfiguration.putIfAbsent( FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT, defaultEventuallyConsistentSetting );
         return new FulltextSchemaDescriptor( schema, indexConfiguration );
     }
 

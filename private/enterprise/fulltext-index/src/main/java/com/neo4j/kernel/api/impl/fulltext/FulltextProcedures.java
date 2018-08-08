@@ -108,8 +108,8 @@ public class FulltextProcedures
     @Description( "Create a node fulltext index for the given labels and properties " +
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
                   "Note: index specific settings are currently experimental, and might not replicated correctly in a cluster, or during backup. " +
-                  "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
-                  "when indexing and querying, as a fully qualified classn ame. " +
+                  "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer to use " +
+                  "when indexing and querying. Use the `db.index.fulltext.listAvailableAnalyzers` procedure to see what options are available. " +
                   "And '" + INDEX_CONFIG_EVENTUALLY_CONSISTENT + "' which can be set to 'true' to make this index eventually consistent, " +
                   "such that updates from committing transactions are applied in a background thread." )
     @Procedure( name = "db.index.fulltext.createNodeIndex", mode = SCHEMA )
@@ -134,8 +134,8 @@ public class FulltextProcedures
     @Description( "Create a relationship fulltext index for the given relationship types and properties " +
                   "The optional 'config' map parameter can be used to supply settings to the index. " +
                   "Note: index specific settings are currently experimental, and might not replicated correctly in a cluster, or during backup. " +
-                  "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer class to use " +
-                  "when indexing and querying, as a fully qualified classn ame. " +
+                  "Supported settings are '" + INDEX_CONFIG_ANALYZER + "', for specifying what analyzer to use " +
+                  "when indexing and querying. Use the `db.index.fulltext.listAvailableAnalyzers` procedure to see what options are available. " +
                   "And '" + INDEX_CONFIG_EVENTUALLY_CONSISTENT + "' which can be set to 'true' to make this index eventually consistent, " +
                   "such that updates from committing transactions are applied in a background thread." )
     @Procedure( name = "db.index.fulltext.createRelationshipIndex", mode = SCHEMA )
