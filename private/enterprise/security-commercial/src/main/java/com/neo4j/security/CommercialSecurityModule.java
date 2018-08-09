@@ -6,6 +6,7 @@
 package com.neo4j.security;
 
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -17,6 +18,7 @@ import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
 import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
+import org.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 @Service.Implementation( SecurityModule.class )
@@ -56,6 +58,8 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
     {
         return new SystemGraphRealm(
+                new SystemGraphExecutor( databaseManager, config.get( GraphDatabaseSettings.active_database ) ),
+                new SecureHasher(),
                 new BasicPasswordPolicy(),
                 createAuthenticationStrategy( config ),
                 config.get( SecuritySettings.native_authentication_enabled ),
