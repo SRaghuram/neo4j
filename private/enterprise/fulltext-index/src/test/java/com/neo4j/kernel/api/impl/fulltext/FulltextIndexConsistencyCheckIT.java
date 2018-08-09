@@ -60,7 +60,7 @@ public class FulltextIndexConsistencyCheckIT
     public void before()
     {
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
-        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 

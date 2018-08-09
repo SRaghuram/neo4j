@@ -246,7 +246,7 @@ public class RestartableParallelBatchImporterIT
         importer( invisible() ).doImport( input );
 
         // then
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.databaseDir() );
         try
         {
             input.verify( db );
