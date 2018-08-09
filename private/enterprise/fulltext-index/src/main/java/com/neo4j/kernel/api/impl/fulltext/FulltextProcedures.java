@@ -102,14 +102,14 @@ public class FulltextProcedures
     @Procedure( name = "db.index.fulltext.createRelationshipIndex", mode = SCHEMA )
     public void createRelationshipFulltextIndex(
             @Name( "indexName" ) String name,
-            @Name( "relationshipTypes" ) List<String> reltypes,
+            @Name( "relationshipTypes" ) List<String> relTypes,
             @Name( "propertyNames" ) List<String> properties,
             @Name( value = "config", defaultValue = "" ) Map<String,String> config )
             throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
         Properties settings = new Properties();
         settings.putAll( config );
-        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.RELATIONSHIP, stringArray( reltypes ), settings, stringArray( properties ) );
+        SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.RELATIONSHIP, stringArray( relTypes ), settings, stringArray( properties ) );
         tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
     }
 
@@ -120,7 +120,7 @@ public class FulltextProcedures
         tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( name ) );
     }
 
-    @Description( "Query the given fulltext index. Returns the ids of matching enttities (be they nodes or relationships) and their lucene query score, " +
+    @Description( "Query the given fulltext index. Returns the ids of matching entities (be they nodes or relationships) and their lucene query score, " +
             "ordered by score." )
     @Procedure( name = "db.index.fulltext.query", mode = READ )
     public Stream<EntityIdOutput> queryFulltext( @Name( "indexName" ) String name, @Name( "queryString" ) String query )
