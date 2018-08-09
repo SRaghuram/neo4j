@@ -1,26 +1,9 @@
 /*
  * Copyright (c) 2002-2018 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j Enterprise Edition. The included source
- * code can be redistributed and/or modified under the terms of the
- * GNU AFFERO GENERAL PUBLIC LICENSE Version 3
- * (http://www.fsf.org/licensing/licenses/agpl-3.0.html) with the
- * Commons Clause, as found in the associated LICENSE.txt file.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * Neo4j object code can be licensed independently from the source
- * under separate terms from the AGPL. Inquiries can be directed to:
- * licensing@neo4j.com
- *
- * More information is also available at:
- * https://neo4j.com/licensing/
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.server.security.enterprise.auth;
+package com.neo4j.security;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -29,7 +12,6 @@ import org.junit.rules.ExpectedException;
 
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
@@ -38,13 +20,11 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class EnterpriseSecurityModuleTest
+public class CommercialSecurityModuleTest
 {
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -65,7 +45,7 @@ public class EnterpriseSecurityModuleTest
         thrown.expectMessage( "Illegal configuration: No valid auth provider is active." );
 
         // When
-        new EnterpriseSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
@@ -82,7 +62,7 @@ public class EnterpriseSecurityModuleTest
         thrown.expectMessage( "Illegal configuration: All authentication providers are disabled." );
 
         // When
-        new EnterpriseSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
@@ -99,7 +79,7 @@ public class EnterpriseSecurityModuleTest
         thrown.expectMessage( "Illegal configuration: All authorization providers are disabled." );
 
         // When
-        new EnterpriseSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
@@ -117,7 +97,7 @@ public class EnterpriseSecurityModuleTest
                                 "but both authentication and authorization are disabled." );
 
         // When
-        new EnterpriseSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
@@ -138,7 +118,7 @@ public class EnterpriseSecurityModuleTest
                 "Illegal configuration: Failed to load auth plugin 'plugin-IllConfiguredAuthorizationPlugin'." );
 
         // When
-        new EnterpriseSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
@@ -154,64 +134,48 @@ public class EnterpriseSecurityModuleTest
         );
 
         // When
-        new EnterpriseSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
-    public void shouldNotFailWithPropertyLevelPermissions()
+    public void shouldNotFailNativeWithNativeGraph()
     {
+        // Given
         nativeAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
+
         authProviders(
                 SecuritySettings.NATIVE_REALM_NAME
         );
 
-        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
-        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( "smith=alias" );
+        when( config.get( SecuritySettings.native_graph_enabled ) ).thenReturn( true );
 
-        new EnterpriseSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), null, null );
+        // When
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
-    public void shouldFailOnIllegalPropertyLevelPermissions()
+    public void shouldFailNativeGraphWithoutNative()
     {
-        nativeAuth( true, true );
-        ldapAuth( false, false );
+        // Given
+        nativeAuth( false, false );
+        ldapAuth( true, true );
         pluginAuth( false, false );
+
         authProviders(
-                SecuritySettings.NATIVE_REALM_NAME
+                SecuritySettings.LDAP_REALM_NAME
         );
 
-        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
-        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( "smithmalias" );
+        when( config.get( SecuritySettings.native_graph_enabled ) ).thenReturn( true );
 
+        // Then
         thrown.expect( IllegalArgumentException.class );
         thrown.expectMessage(
-                "Illegal configuration: Property level authorization is enabled but there is a error in the permissions mapping." );
+                "Illegal configuration: Native graph enabled but native auth provider is not configured." );
 
-        new EnterpriseSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), null, null );
-    }
-
-    @Test
-    public void shouldParsePropertyLevelPermissions()
-    {
-        nativeAuth( true, true );
-        ldapAuth( false, false );
-        pluginAuth( false, false );
-        authProviders(
-                SecuritySettings.NATIVE_REALM_NAME
-        );
-
-        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
-        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn(
-                "smith = alias;merovingian=alias ,location;\n abel=alias,\t\thasSilver" );
-
-        EnterpriseSecurityModule.SecurityConfig securityConfig = new EnterpriseSecurityModule.SecurityConfig( config );
-        securityConfig.validate();
-        assertThat( securityConfig.propertyBlacklist.get( "smith" ), equalTo( Collections.singletonList( "alias" ) ) );
-        assertThat( securityConfig.propertyBlacklist.get( "merovingian" ), equalTo( Arrays.asList( "alias", "location" ) ) );
-        assertThat( securityConfig.propertyBlacklist.get( "abel" ), equalTo( Arrays.asList( "alias", "hasSilver" ) ) );
+        // When
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     // --------- HELPERS ----------
