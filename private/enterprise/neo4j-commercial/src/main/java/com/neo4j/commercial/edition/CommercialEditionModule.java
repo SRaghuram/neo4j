@@ -6,6 +6,7 @@
 package com.neo4j.commercial.edition;
 
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -15,13 +16,18 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.transaction.TransactionMonitor;
+import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.logging.Logger;
 
 class CommercialEditionModule extends EnterpriseEditionModule
 {
+    private final GlobalTransactionStats globalTransactionStats;
+
     CommercialEditionModule( PlatformModule platformModule )
     {
         super( platformModule );
+        globalTransactionStats = new GlobalTransactionStats();
     }
 
     @Override
@@ -41,5 +47,17 @@ class CommercialEditionModule extends EnterpriseEditionModule
     private static void createConfiguredDatabases( DatabaseManager databaseManager, GraphDatabaseFacade systemFacade, Config config )
     {
         databaseManager.createDatabase( config.get( GraphDatabaseSettings.active_database ) );
+    }
+
+    @Override
+    public TransactionMonitor createTransactionMonitor()
+    {
+        return globalTransactionStats.createDatabaseTransactionMonitor();
+    }
+
+    @Override
+    public TransactionCounters globalTransactionCounter()
+    {
+        return globalTransactionStats;
     }
 }

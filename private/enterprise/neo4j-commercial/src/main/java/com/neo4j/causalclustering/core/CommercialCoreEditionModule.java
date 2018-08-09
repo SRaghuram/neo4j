@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 
 import java.io.File;
 
@@ -27,6 +28,8 @@ import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.transaction.TransactionMonitor;
+import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.Logger;
 import org.neo4j.ssl.SslPolicy;
@@ -37,9 +40,12 @@ import org.neo4j.ssl.SslPolicy;
  */
 public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 {
+    private final GlobalTransactionStats globalTransactionStats;
+
     CommercialCoreEditionModule( final PlatformModule platformModule, final SslDiscoveryServiceFactory discoveryServiceFactory )
     {
         super( platformModule, discoveryServiceFactory );
+        this.globalTransactionStats = new GlobalTransactionStats();
     }
 
     @Override
@@ -86,5 +92,17 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     private static void createConfiguredDatabases( DatabaseManager databaseManager, GraphDatabaseFacade systemFacade, Config config )
     {
         databaseManager.createDatabase( config.get( GraphDatabaseSettings.active_database ) );
+    }
+
+    @Override
+    public TransactionMonitor createTransactionMonitor()
+    {
+        return globalTransactionStats.createDatabaseTransactionMonitor();
+    }
+
+    @Override
+    public TransactionCounters globalTransactionCounter()
+    {
+        return globalTransactionStats;
     }
 }
