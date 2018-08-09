@@ -19,6 +19,11 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
 import org.junit.rules.Timeout;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -829,7 +834,7 @@ public class FulltextProceduresTest
         {
             String fulltextQuery = quoteValueForQuery( value );
             String cypherQuery = format( QUERY, "nodes", fulltextQuery );
-            Result nodes = null;
+            Result nodes;
             try
             {
                 nodes = db.execute( cypherQuery );
@@ -886,7 +891,7 @@ public class FulltextProceduresTest
         {
             String fulltextQuery = quoteValueForQuery( value );
             String cypherQuery = format( QUERY, "nodes", fulltextQuery );
-            Result nodes = null;
+            Result nodes;
             try
             {
                 nodes = db.execute( cypherQuery );
@@ -1057,6 +1062,82 @@ public class FulltextProceduresTest
         {
             assertQueryFindsIds( db, "nodes", "foo", nodeId );
             assertQueryFindsIds( db, "nodes", "bar", nodeId );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void mustBeAbleToIndexHugeTextPropertiesInIndexUpdates() throws Exception
+    {
+        String meditationes;
+        try ( BufferedReader reader = new BufferedReader( new InputStreamReader(
+                getClass().getResourceAsStream( "/meditationes--rene-descartes--public-domain.txt" ), StandardCharsets.UTF_8 ) ) )
+        {
+            meditationes = reader.lines().collect( Collectors.joining( "\n" ) );
+        }
+
+        db = createDatabase();
+
+        Label label = Label.label( "Book" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "books", array( label.name() ), array( "title", "author", "contents" ) ) ).close();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( label );
+            nodeId = node.getId();
+            node.setProperty( "title", "Meditationes de prima philosophia" );
+            node.setProperty( "author", "René Descartes" );
+            node.setProperty( "contents", meditationes );
+            tx.success();
+        }
+
+        awaitIndexesOnline();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertQueryFindsIds( db, "books", "impellit scriptum offerendum", nodeId );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void mustBeAbleToIndexHugeTextPropertiesInIndexPopulation() throws Exception
+    {
+        String meditationes;
+        try ( BufferedReader reader = new BufferedReader( new InputStreamReader(
+                getClass().getResourceAsStream( "/meditationes--rene-descartes--public-domain.txt" ), StandardCharsets.UTF_8 ) ) )
+        {
+            meditationes = reader.lines().collect( Collectors.joining( "\n" ) );
+        }
+
+        db = createDatabase();
+
+        Label label = Label.label( "Book" );
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( label );
+            nodeId = node.getId();
+            node.setProperty( "title", "Meditationes de prima philosophia" );
+            node.setProperty( "author", "René Descartes" );
+            node.setProperty( "contents", meditationes );
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "books", array( label.name() ), array( "title", "author", "contents" ) ) ).close();
+            tx.success();
+        }
+
+        awaitIndexesOnline();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertQueryFindsIds( db, "books", "impellit scriptum offerendum", nodeId );
             tx.success();
         }
     }
