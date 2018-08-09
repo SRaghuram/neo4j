@@ -43,12 +43,6 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     }
 
     @Override
-    public void setupSecurityModule( PlatformModule platformModule, Procedures procedures )
-    {
-        EnterpriseEditionModule.setupEnterpriseSecurityModule( this, platformModule, procedures );
-    }
-
-    @Override
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
             ClusterStateDirectory clusterStateDirectory, IdentityModule identityModule, Dependencies dependencies, File databaseDirectory )
     {
@@ -86,5 +80,12 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     private static void createConfiguredDatabases( DatabaseManager databaseManager, GraphDatabaseFacade systemFacade, Config config )
     {
         databaseManager.createDatabase( config.get( GraphDatabaseSettings.active_database ) );
+    }
+
+    @Override
+    public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
+    {
+        //TODO: change to commercial security module here when ready
+        EnterpriseEditionModule.createEnterpriseSecurityModule( this, platformModule, procedures );
     }
 }
