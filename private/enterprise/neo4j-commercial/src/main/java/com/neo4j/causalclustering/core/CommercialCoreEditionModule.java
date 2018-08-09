@@ -49,12 +49,6 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     }
 
     @Override
-    public void setupSecurityModule( PlatformModule platformModule, Procedures procedures )
-    {
-        EnterpriseEditionModule.setupEnterpriseSecurityModule( this, platformModule, procedures );
-    }
-
-    @Override
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
             ClusterStateDirectory clusterStateDirectory, IdentityModule identityModule, Dependencies dependencies, File databaseDirectory )
     {
@@ -104,5 +98,12 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     public TransactionCounters globalTransactionCounter()
     {
         return globalTransactionStats;
+    }
+
+    @Override
+    public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
+    {
+        //TODO: change to commercial security module here when ready
+        EnterpriseEditionModule.createEnterpriseSecurityModule( this, platformModule, procedures );
     }
 }
