@@ -13,11 +13,11 @@ import org.apache.shiro.authc.DisabledAccountException;
 import org.apache.shiro.authc.ExcessiveAttemptsException;
 import org.apache.shiro.authc.IncorrectCredentialsException;
 import org.apache.shiro.authc.UnknownAccountException;
-import org.apache.shiro.authc.credential.AllowAllCredentialsMatcher;
 import org.apache.shiro.authc.pam.UnsupportedTokenException;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.cache.Cache;
+import org.apache.shiro.crypto.hash.SimpleHash;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.SimplePrincipalCollection;
@@ -101,11 +101,9 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         this.authenticationEnabled = authenticationEnabled;
         this.authorizationEnabled = authorizationEnabled;
         this.systemGraphExecutor = systemGraphExecutor;
-        //setAuthenticationCachingEnabled( true );
-        setAuthenticationCachingEnabled( false ); // TODO: Enable this after switching to use secureHasher for hashing credentials
+        setAuthenticationCachingEnabled( true );
         setAuthorizationCachingEnabled( true );
-        //setCredentialsMatcher( secureHasher.getHashedCredentialsMatcher() );
-        setCredentialsMatcher( new AllowAllCredentialsMatcher() ); // TODO: Switch to secureHasher.getHashedCredentialsMatcher()
+        setCredentialsMatcher( secureHasher.getHashedCredentialsMatcher() );
         setRolePermissionResolver( PredefinedRolesBuilder.rolePermissionResolver );
     }
 
@@ -222,12 +220,12 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             result = AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
         }
 
-        // NOTE: We do not cache the authentication info using the Shiro cache manager,
-        // so all authentication request will go through this method.
-        // Hence the credentials matcher is set to AllowAllCredentialsMatcher,
-        // and we do not need to store hashed credentials in the AuthenticationInfo.
-        // TODO: Do not forget to remove the comment above once we have switched to use SecureHasher for credentials and enabled authentication caching
-        return new ShiroAuthenticationInfo( user.name(), getName() /* Realm name */, result );
+        // Extract the hashed credentials so that it can be cached in the authentication cache
+        SystemGraphCredential existingCredentials = (SystemGraphCredential) user.credentials();
+        SimpleHash hashedCredentials = existingCredentials.hashedCredentials();
+
+        return new ShiroAuthenticationInfo( user.name(), hashedCredentials.getBytes(),
+                hashedCredentials.getSalt(), getName() /* Realm name */, result );
     }
 
     @Override
@@ -478,7 +476,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         assertValidUsername( username );
         passwordPolicy.validatePassword( initialPassword );
 
-        Credential credential = Credential.forPassword( initialPassword );
+        Credential credential = createCredentialForPassword( initialPassword );
         User user = new User.Builder()
                 .withName( username )
                 .withCredentials( credential )
@@ -495,7 +493,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         String query = "CREATE (u:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})";
         Map<String,Object> params =
                 MapUtil.map( "name", user.name(),
-                        "credentials", serialization.serialize( user.credentials() ),
+                        "credentials", SystemGraphCredential.serialize( (SystemGraphCredential) user.credentials() ),
                         "passwordChangeRequired", user.passwordChangeRequired(),
                         "suspended", user.hasFlag( IS_SUSPENDED ) );
         systemGraphExecutor.executeQueryWithConstraint( query, params,
@@ -525,7 +523,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         final QueryResult.QueryResultVisitor<FormatException> resultVisitor = row ->
         {
             AnyValue[] fields = row.fields();
-            Credential credential = serialization.deserializeCredentials( ((TextValue) fields[0]).stringValue(), 0 );
+            Credential credential = SystemGraphCredential.deserialize( ((TextValue) fields[0]).stringValue(), secureHasher );
             boolean requirePasswordChange = ((BooleanValue) fields[1]).booleanValue();
             boolean suspended = ((BooleanValue) fields[2]).booleanValue();
 
@@ -584,7 +582,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             throw new InvalidArgumentsException( "Old password and new password cannot be the same." );
         }
 
-        String newCredentials = serialization.serialize( Credential.forPassword( password ) );
+        String newCredentials = SystemGraphCredential.serialize( createCredentialForPassword( password ) );
 
         String query = "MATCH (u:User {name: $name}) SET u.credentials = $credentials, " +
                 "u.passwordChangeRequired = $passwordChangeRequired RETURN u.name";
@@ -746,6 +744,12 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     {
         String query = "MATCH (r:Role) RETURN count(r)";
         return systemGraphExecutor.executeQueryLong( query );
+    }
+
+    private SystemGraphCredential createCredentialForPassword( String password )
+    {
+        SimpleHash hash = secureHasher.hash( password.getBytes() );
+        return new SystemGraphCredential( secureHasher, hash );
     }
 
     // Allow all ascii from '!' to '~', apart from ',' and ':' which are used as separators in flat file
