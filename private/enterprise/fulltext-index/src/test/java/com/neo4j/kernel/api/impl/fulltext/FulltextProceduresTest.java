@@ -467,6 +467,7 @@ public class FulltextProceduresTest
             db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( prop ) + eventuallyConsistent ) );
             tx.success();
         }
+        awaitIndexesOnline();
 
         int entityCount = 200;
         LongHashSet nodeIds = new LongHashSet();
