@@ -114,7 +114,7 @@ public class RestartableImportIT
     {
         try
         {
-            BatchImporterFactory.withHighestPriority().instantiate( new DatabaseLayout( new File( args[0] ) ), new DefaultFileSystemAbstraction(),
+            BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.of( new File( args[0] ) ), new DefaultFileSystemAbstraction(),
                     null, DEFAULT, NullLogService.getInstance(),
                     ExecutionMonitors.invisible(), EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR ).doImport(
                     input( Long.parseLong( args[1] ) ) );
