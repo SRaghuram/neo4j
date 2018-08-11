@@ -83,7 +83,7 @@ public class RestartableImportIT
             restartCount++;
         }
         while ( process.exitValue() != 0 );
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( storeDir );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
         try
         {
             input( random.seed() ).verify( db );

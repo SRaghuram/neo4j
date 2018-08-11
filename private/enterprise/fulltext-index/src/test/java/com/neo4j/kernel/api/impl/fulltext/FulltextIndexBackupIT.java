@@ -24,7 +24,6 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.rule.CleanupRule;
@@ -50,15 +49,15 @@ public class FulltextIndexBackupIT
     private static final String NODE_INDEX = "nodeIndex";
     private static final String REL_INDEX = "relIndex";
 
-    private SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    private TestDirectory dir = TestDirectory.testDirectory();
-    private CleanupRule cleanup = new CleanupRule();
+    private final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    private final TestDirectory dir = TestDirectory.testDirectory();
+    private final CleanupRule cleanup = new CleanupRule();
     private long nodeId1;
     private long nodeId2;
     private long relId1;
 
     @Rule
-    public RuleChain rules = RuleChain.outerRule( suppressOutput ).around( dir ).around( cleanup );
+    public final RuleChain rules = RuleChain.outerRule( suppressOutput ).around( dir ).around( cleanup );
 
     private int backupPort;
     private GraphDatabaseAPI db;
@@ -92,7 +91,7 @@ public class FulltextIndexBackupIT
     public void fulltextIndexesMustBeUpdatedByIncrementalBackup() throws Exception
     {
         initializeTestData();
-        File backup  = dir.cleanDirectory( "backup" );
+        File backup  = dir.databaseDir( "backup" );
         OnlineBackup.from( "127.0.0.1", backupPort ).backup( backup );
 
         long nodeId3;
@@ -174,10 +173,8 @@ public class FulltextIndexBackupIT
 
     private GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        String databaseName = backupDatabaseDir.getName();
         return (GraphDatabaseAPI) cleanup.add( new GraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( backupDatabaseDir.getParentFile() )
-                .setConfig( GraphDatabaseSettings.active_database, databaseName )
+                .newEmbeddedDatabaseBuilder( backupDatabaseDir )
                 .newGraphDatabase() );
     }
 

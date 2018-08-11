@@ -98,7 +98,7 @@ public class RestartImportFromSpecificStatesTest
 
     private void verifyDb( SimpleRandomizedInput input ) throws IOException
     {
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.absolutePath() );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.databaseDir() );
         try
         {
             input.verify( db );
