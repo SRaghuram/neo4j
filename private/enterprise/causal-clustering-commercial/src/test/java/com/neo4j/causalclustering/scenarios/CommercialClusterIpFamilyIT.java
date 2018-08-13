@@ -26,7 +26,7 @@ public class CommercialClusterIpFamilyIT extends BaseClusterIpFamilyIT
     {
         return Arrays.asList( new Object[][]{
                 {CommercialDiscoveryServiceType.AKKA, IPV4, false},
-//                {CommercialDiscoveryServiceType.AKKA, IPV6, false},
+                {CommercialDiscoveryServiceType.AKKA, IPV6, false},
 
                 {CommercialDiscoveryServiceType.AKKA, IPV4, true},
                 {CommercialDiscoveryServiceType.AKKA, IPV6, true}
