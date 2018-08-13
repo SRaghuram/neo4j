@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka;
+package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
 import akka.actor.AbstractActorWithTimers;
 import akka.actor.ActorRef;
@@ -11,6 +11,7 @@ import akka.actor.Props;
 import akka.cluster.client.ClusterClient;
 import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
+import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 
 import java.util.Map;
 
@@ -29,14 +30,15 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     private static final String TARGET_PATH = "/user/" + ReadReplicatorTopologyActor.NAME;
     private static final String REFRESH = "topology refresh";
 
-    static Props props( MemberId myself, SourceQueueWithComplete<CoreTopology> coreTopologySink, SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink,
-            SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink, ActorRef clusterClient, Config config, LogProvider logProvider )
+    public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopology> coreTopologySink,
+            SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink, ActorRef clusterClient,
+            Config config, LogProvider logProvider )
     {
         return Props.create( ClientTopologyActor.class,
                 () -> new ClientTopologyActor( myself, coreTopologySink, rrTopologySink, discoverySink, clusterClient, config, logProvider ) );
     }
 
-    static final String NAME = "cc-client-topology-actor";
+    public static final String NAME = "cc-client-topology-actor";
 
     private final MemberId myself;
     private final SourceQueueWithComplete<CoreTopology> coreTopologySink;
@@ -65,7 +67,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
                 .match( CoreTopology.class, coreTopologySink::offer )
                 .match( ReadReplicaTopology.class, rrTopologySink::offer )
                 .match( Refresh.class, ignored -> sendInfo() )
-                .match( DatabaseLeaderInfoMessage.class, msg -> discoverySink.offer( msg.leaders() ) )
+                .match( LeaderInfoDirectoryMessage.class, msg -> discoverySink.offer( msg.leaders() ) )
                 .build();
     }
 

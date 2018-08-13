@@ -3,10 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka;
+package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
 import akka.actor.ActorRef;
 import akka.cluster.client.ClusterClient;
+import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
 
 import java.util.Objects;
 

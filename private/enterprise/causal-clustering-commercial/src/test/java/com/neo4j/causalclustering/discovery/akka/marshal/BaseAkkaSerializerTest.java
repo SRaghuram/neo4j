@@ -23,9 +23,9 @@ import java.util.UUID;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.TestTopology;
-import com.neo4j.causalclustering.discovery.akka.CoreServerInfoForMemberId;
-import com.neo4j.causalclustering.discovery.akka.ReadReplicaInfoMessage;
-import com.neo4j.causalclustering.discovery.akka.ReadReplicaRemovalMessage;
+import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaInfoMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 
@@ -87,7 +87,7 @@ public class BaseAkkaSerializerTest
             new Object[]{new ReadReplicaRemovalMessage( system.provider().resolveActorRef( actorPath + 2 ) ),
                     new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem)system )},
             new Object[]{ReadReplicaTopologyMarshalTest.generate(), new ReadReplicaTopologySerializer()},
-            new Object[]{DatabaseLeaderInfoMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()}
+            new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()}
         );
     }
 

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import akka.actor.ExtendedActorSystem;
 
-import com.neo4j.causalclustering.discovery.akka.ReadReplicaRemovalMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 
 public class ReadReplicaRemovalMessageSerializer extends BaseAkkaSerializer<ReadReplicaRemovalMessage>
 {

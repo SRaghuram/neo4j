@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
-import com.neo4j.causalclustering.discovery.akka.DatabaseLeaderInfoMessage;
+import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 
-public class DatabaseLeaderInfoMessageSerializer extends BaseAkkaSerializer<DatabaseLeaderInfoMessage>
+public class DatabaseLeaderInfoMessageSerializer extends BaseAkkaSerializer<LeaderInfoDirectoryMessage>
 {
     protected DatabaseLeaderInfoMessageSerializer()
     {

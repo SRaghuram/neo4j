@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka;
+package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.cluster.ddata.LWWMap;
 
@@ -15,6 +15,9 @@ import javax.annotation.Nullable;
 
 import org.neo4j.causalclustering.identity.ClusterId;
 
+/**
+ * Sent from discovery service to this Neo4J instance
+ */
 public class ClusterIdDirectoryMessage
 {
     public static final ClusterIdDirectoryMessage EMPTY = new ClusterIdDirectoryMessage( Collections.emptyMap() );

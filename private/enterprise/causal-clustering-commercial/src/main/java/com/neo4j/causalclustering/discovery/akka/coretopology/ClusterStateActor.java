@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka;
+package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
@@ -27,7 +27,7 @@ public class ClusterStateActor extends AbstractActor
     private final Cluster cluster;
     private final ActorRef topologyActor;
     private final Log log;
-    private ClusterView clusterView = ClusterView.EMPTY;
+    private ClusterViewMessage clusterView = ClusterViewMessage.EMPTY;
 
     static Props props( Cluster cluster, ActorRef topologyActor, LogProvider logProvider )
     {
@@ -58,7 +58,7 @@ public class ClusterStateActor extends AbstractActor
     {
         return ReceiveBuilder.create()
                 .match( ClusterEvent.CurrentClusterState.class, event -> {
-                    clusterView = new ClusterView( event );
+                    clusterView = new ClusterViewMessage( event );
                     log.debug( "Akka initial cluster state %s", event );
                     sendClusterView();
                 } ).match( ClusterEvent.ReachableMember.class, event ->

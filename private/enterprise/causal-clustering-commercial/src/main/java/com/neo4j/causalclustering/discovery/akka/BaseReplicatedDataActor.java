@@ -12,23 +12,25 @@ import akka.cluster.ddata.Key;
 import akka.cluster.ddata.ReplicatedData;
 import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
+import scala.concurrent.duration.FiniteDuration;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static com.neo4j.causalclustering.discovery.akka.CoreTopologyActor.METADATA_CONSISTENCY;
-
 public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractActor
 {
-    final Cluster cluster;
-    final ActorRef replicator;
-    final Key<T> key;
-    final Supplier<T> emptyData;
-    T data;
-    final Log log;
+    private static final Replicator.WriteConsistency METADATA_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
+
+    protected final Cluster cluster;
+    protected final ActorRef replicator;
+    protected final Key<T> key;
+    protected final Supplier<T> emptyData;
+    protected T data;
+    protected final Log log;
 
     protected BaseReplicatedDataActor( Cluster cluster, ActorRef replicator, Key<T> key, Supplier<T> emptyData, LogProvider logProvider )
     {

@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka
+package com.neo4j.causalclustering.discovery.akka.directory
 
 import java.util
 import java.util.{Collections, UUID}
@@ -14,6 +14,7 @@ import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
+import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink}
 import org.neo4j.causalclustering.core.consensus.LeaderInfo
 import org.neo4j.causalclustering.identity.MemberId
 import org.neo4j.logging.NullLogProvider
@@ -27,7 +28,7 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     "update replicated data on receipt of leader info message" in new Fixture {
       Given("leader info update")
-      val event = new LeaderInfoForDatabase(newLeaderInfo, "dbName")
+      val event = new LeaderInfoSettingMessage(newLeaderInfo, "dbName")
 
       When("message received")
       replicatedDataActorRef ! event
@@ -50,11 +51,11 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
       replicatedDataActorRef ! Replicator.Changed(dataKey)(update2)
 
       Then("first update sent to read replicas")
-      rrActor.expectMsg(defaultWaitTime, new DatabaseLeaderInfoMessage(update1.getEntries()))
+      rrActor.expectMsg(defaultWaitTime, new LeaderInfoDirectoryMessage(update1.getEntries()))
 
       And("merged updates sent to read replicas")
       val merged = update1.merge(update2)
-      rrActor.expectMsg(defaultWaitTime, new DatabaseLeaderInfoMessage(merged.getEntries()))
+      rrActor.expectMsg(defaultWaitTime, new LeaderInfoDirectoryMessage(merged.getEntries()))
 
       And("merged updates sent to outside world")
       awaitAssert(actualLeaderPerDb shouldBe merged.getEntries())

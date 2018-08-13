@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka
+package com.neo4j.causalclustering.discovery.akka.coretopology
 
 import java.util
 import java.util.{Collections, UUID}
@@ -15,10 +15,10 @@ import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
+import com.neo4j.causalclustering.discovery.akka._
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.neo4j.causalclustering.core.consensus.LeaderInfo
 import org.neo4j.causalclustering.discovery._
 import org.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.neo4j.kernel.configuration.Config
@@ -66,8 +66,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
         "cluster view updated" in new Fixture {
           Given("a cluster view")
           val members = new util.TreeSet[Member](Member.ordering)
-          members.add(ClusterViewTest.createMember(1, MemberStatus.Up))
-          val clusterView = new ClusterView(false, members, Collections.emptySet() )
+          members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
+          val clusterView = new ClusterViewMessage(false, members, Collections.emptySet() )
 
           When("cluster view received")
           topologyActorRef ! clusterView
@@ -82,8 +82,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
         "cluster id updated without change in cluster membership" in new Fixture {
           Given("cluster view in known state")
           val members = new util.TreeSet[Member](Member.ordering)
-          members.add(ClusterViewTest.createMember(1, MemberStatus.Up))
-          val clusterView = new ClusterView(false, members, Collections.emptySet() )
+          members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
+          val clusterView = new ClusterViewMessage(false, members, Collections.emptySet() )
           val nullClusterIdTopology = new CoreTopology(null, expectedCoreTopology.canBeBootstrapped, expectedCoreTopology.members())
           Mockito.when(topologyBuilder.buildCoreTopology(any(), any(), any()))
               .thenReturn(nullClusterIdTopology)
@@ -104,14 +104,14 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
       "not update topology" when {
         "core topology has not changed" in new Fixture {
           Given("actor has a known topology")
-          topologyActorRef ! ClusterView.EMPTY
+          topologyActorRef ! ClusterViewMessage.EMPTY
           awaitExpectedCoreTopology()
 
           And("received state is reset")
           actualCoreTopology = CoreTopology.EMPTY
 
           When("generate a new topology with same members")
-          topologyActorRef ! ClusterView.EMPTY
+          topologyActorRef ! ClusterViewMessage.EMPTY
 
           Then("no further topology changes")
           awaitNoChangeToCoreTopology()
@@ -149,15 +149,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
     val replicatorProbe = TestProbe("replicator")
 
-    val memberDataKey =
-      LWWMapKey[UniqueAddress, CoreServerInfoForMemberId](MetadataActor.MEMBER_DATA_KEY)
+    val memberDataKey = LWWMapKey[UniqueAddress, CoreServerInfoForMemberId](MetadataActor.MEMBER_DATA_KEY)
     val clusterIdKey = LWWMapKey[String, ClusterId](ClusterIdActor.CLUSTER_ID_PER_DB_KEY)
-    val leaderInfoKey = LWWMapKey[String, LeaderInfo](DirectoryActor.PER_DB_LEADER_KEY)
-    val replicatorKeys = List(
-      memberDataKey,
-      clusterIdKey,
-      leaderInfoKey
-    )
 
     val topologyBuilder = mock[TopologyBuilder]
     val expectedCoreTopology = new CoreTopology(

@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka;
+package com.neo4j.causalclustering.discovery.akka.directory;
 
 import java.util.Collections;
 import java.util.Map;
@@ -11,13 +11,16 @@ import java.util.Objects;
 
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 
-public class DatabaseLeaderInfoMessage
+/**
+ * Sent from discovery service to this Neo4J instance
+ */
+public class LeaderInfoDirectoryMessage
 {
-    public static DatabaseLeaderInfoMessage EMPTY = new DatabaseLeaderInfoMessage( Collections.emptyMap() );
+    public static LeaderInfoDirectoryMessage EMPTY = new LeaderInfoDirectoryMessage( Collections.emptyMap() );
 
     private final Map<String,LeaderInfo> leaders;
 
-    public DatabaseLeaderInfoMessage( Map<String,LeaderInfo> leaders )
+    public LeaderInfoDirectoryMessage( Map<String,LeaderInfo> leaders )
     {
         this.leaders = Collections.unmodifiableMap( leaders );
     }
@@ -30,7 +33,7 @@ public class DatabaseLeaderInfoMessage
     @Override
     public String toString()
     {
-        return "DatabaseLeaderInfoMessage{" + "leaders=" + leaders + '}';
+        return "LeaderInfoDirectoryMessage{" + "leaders=" + leaders + '}';
     }
 
     @Override
@@ -44,7 +47,7 @@ public class DatabaseLeaderInfoMessage
         {
             return false;
         }
-        DatabaseLeaderInfoMessage that = (DatabaseLeaderInfoMessage) o;
+        LeaderInfoDirectoryMessage that = (LeaderInfoDirectoryMessage) o;
         return Objects.equals( leaders, that.leaders );
     }
 

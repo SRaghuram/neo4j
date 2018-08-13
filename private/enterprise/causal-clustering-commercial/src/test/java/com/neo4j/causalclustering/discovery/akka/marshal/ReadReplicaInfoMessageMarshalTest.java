@@ -14,7 +14,7 @@ import org.junit.BeforeClass;
 import java.util.UUID;
 
 import org.neo4j.causalclustering.discovery.TestTopology;
-import com.neo4j.causalclustering.discovery.akka.ReadReplicaInfoMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaInfoMessage;
 import org.neo4j.causalclustering.identity.MemberId;
 
 public class ReadReplicaInfoMessageMarshalTest extends BaseMarshalTest<ReadReplicaInfoMessage>

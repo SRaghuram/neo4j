@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
-import com.neo4j.causalclustering.discovery.akka.CoreServerInfoForMemberId;
+import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
 
 public class CoreServerInfoForMemberIdSerializer extends BaseAkkaSerializer<CoreServerInfoForMemberId>
 {

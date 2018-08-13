@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import java.util.UUID;
 
 import org.neo4j.causalclustering.discovery.TestTopology;
-import com.neo4j.causalclustering.discovery.akka.CoreServerInfoForMemberId;
+import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
 import org.neo4j.causalclustering.identity.MemberId;
 
 public class CoreServerInfoForMemberIdMarshalTest extends BaseMarshalTest<CoreServerInfoForMemberId>

@@ -3,13 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka
+package com.neo4j.causalclustering.discovery.akka.coretopology
 
 import java.util.UUID
 
 import akka.actor.ActorRef
 import akka.cluster.ddata.{Key, LWWMap, LWWMapKey, Replicator}
 import akka.testkit.TestProbe
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.neo4j.causalclustering.identity.ClusterId
 import org.neo4j.logging.NullLogProvider
 
@@ -20,7 +21,7 @@ class ClusterIdActorIT extends BaseAkkaIT("ClusterIdActorTest") {
 
     "update replicator with cluster ID from this core server" in new Fixture {
       When("send cluster ID locally")
-      replicatedDataActorRef ! new ClusterIdForDatabase(new ClusterId(UUID.randomUUID()), "dbName")
+      replicatedDataActorRef ! new ClusterIdSettingMessage(new ClusterId(UUID.randomUUID()), "dbName")
 
       Then("update metadata")
       expectReplicatorUpdates(replicator, dataKey)

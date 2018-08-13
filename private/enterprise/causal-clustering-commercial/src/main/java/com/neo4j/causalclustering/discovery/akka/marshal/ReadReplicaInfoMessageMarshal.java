@@ -12,7 +12,7 @@ import java.io.IOException;
 
 import org.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import org.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.akka.ReadReplicaInfoMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaInfoMessage;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.messaging.EndOfStreamException;
 import org.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;

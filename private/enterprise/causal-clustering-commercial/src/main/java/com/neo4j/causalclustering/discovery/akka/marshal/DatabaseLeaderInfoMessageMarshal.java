@@ -11,19 +11,19 @@ import java.util.Map;
 
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import com.neo4j.causalclustering.discovery.akka.DatabaseLeaderInfoMessage;
+import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import org.neo4j.causalclustering.messaging.EndOfStreamException;
 import org.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import org.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import org.neo4j.storageengine.api.ReadableChannel;
 import org.neo4j.storageengine.api.WritableChannel;
 
-public class DatabaseLeaderInfoMessageMarshal extends SafeChannelMarshal<DatabaseLeaderInfoMessage>
+public class DatabaseLeaderInfoMessageMarshal extends SafeChannelMarshal<LeaderInfoDirectoryMessage>
 {
     private final ChannelMarshal<LeaderInfo> leaderInfoMarshal = new LeaderInfoMarshal();
 
     @Override
-    protected DatabaseLeaderInfoMessage unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
+    protected LeaderInfoDirectoryMessage unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
         int size = channel.getInt();
         HashMap<String,LeaderInfo> leaders = new HashMap<>( size );
@@ -33,14 +33,14 @@ public class DatabaseLeaderInfoMessageMarshal extends SafeChannelMarshal<Databas
             LeaderInfo leaderInfo = leaderInfoMarshal.unmarshal( channel );
             leaders.put( database, leaderInfo );
         }
-        return new DatabaseLeaderInfoMessage( leaders );
+        return new LeaderInfoDirectoryMessage( leaders );
     }
 
     @Override
-    public void marshal( DatabaseLeaderInfoMessage databaseLeaderInfoMessage, WritableChannel channel ) throws IOException
+    public void marshal( LeaderInfoDirectoryMessage leaderInfoDirectoryMessage, WritableChannel channel ) throws IOException
     {
-        channel.putInt( databaseLeaderInfoMessage.leaders().size() );
-        for ( Map.Entry<String,LeaderInfo> entry : databaseLeaderInfoMessage.leaders().entrySet() )
+        channel.putInt( leaderInfoDirectoryMessage.leaders().size() );
+        for ( Map.Entry<String,LeaderInfo> entry : leaderInfoDirectoryMessage.leaders().entrySet() )
         {
             String database = entry.getKey();
             LeaderInfo leaderInfo = entry.getValue();

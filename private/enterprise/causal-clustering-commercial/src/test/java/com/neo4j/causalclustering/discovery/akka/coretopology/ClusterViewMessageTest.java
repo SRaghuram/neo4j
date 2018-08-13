@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka;
+package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.actor.Address;
 import akka.cluster.Member;
@@ -28,7 +28,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertThat;
 
-public class ClusterViewTest
+public class ClusterViewMessageTest
 {
     @BeforeClass
     public static void setUp() throws NoSuchMethodException
@@ -64,7 +64,7 @@ public class ClusterViewTest
     public void shouldHaveEmptyAvailableMembersIfNoMembers()
     {
         // given
-        ClusterView clusterView = ClusterView.EMPTY;
+        ClusterViewMessage clusterView = ClusterViewMessage.EMPTY;
 
         // then
         assertThat( clusterView.availableMembers(), StreamMatchers.empty() );
@@ -74,7 +74,7 @@ public class ClusterViewTest
     public void shouldIncludeAllMembersInAvailableIfAllReachableAndUp()
     {
         // given
-        ClusterView clusterView = createClusterViewWithMembers( MemberStatus.up() );
+        ClusterViewMessage clusterView = createClusterViewWithMembers( MemberStatus.up() );
         UniqueAddress[] members = clusterView.members().stream().map( Member::uniqueAddress ).toArray( UniqueAddress[]::new );
 
         // then
@@ -85,7 +85,7 @@ public class ClusterViewTest
     public void shouldIncludeAllMembersInAvailableIfAllReachableAndWeaklyUp()
     {
         // given
-        ClusterView clusterView = createClusterViewWithMembers( MemberStatus.weaklyUp() );
+        ClusterViewMessage clusterView = createClusterViewWithMembers( MemberStatus.weaklyUp() );
         UniqueAddress[] members = clusterView.members().stream().map( Member::uniqueAddress ).toArray( UniqueAddress[]::new );
 
         // then
@@ -96,7 +96,7 @@ public class ClusterViewTest
     public void shouldExcludeFromAvailableUnreachableMembers()
     {
         // given
-        ClusterView clusterView = createClusterViewWithMembers( MemberStatus.up() );
+        ClusterViewMessage clusterView = createClusterViewWithMembers( MemberStatus.up() );
         int numberUnreachable = 2;
         int limit = numberUnreachable;
         for ( Member member : clusterView.members() )
@@ -125,7 +125,7 @@ public class ClusterViewTest
         members.addAll( membersOfAllStatuses );
 
         // when
-        ClusterView clusterView = new ClusterView( false, members, Collections.emptySet() );
+        ClusterViewMessage clusterView = new ClusterViewMessage( false, members, Collections.emptySet() );
 
         // then
         assertThat( clusterView.members(), Matchers.hasSize( 2 ) );
@@ -136,7 +136,7 @@ public class ClusterViewTest
     public void shouldNotIncludeNonUpMembersWhenAdding()
     {
         // given
-        ClusterView clusterView = ClusterView.EMPTY;
+        ClusterViewMessage clusterView = ClusterViewMessage.EMPTY;
 
         // when
         for ( Member member : membersOfAllStatuses )
@@ -156,11 +156,11 @@ public class ClusterViewTest
         Member member = createMember( 1, MemberStatus.joining() );
         TreeSet<Member> members = new TreeSet<>( Member.ordering() );
         members.add( member );
-        ClusterView clusterView = new ClusterView( false, members, Collections.emptySet() );
+        ClusterViewMessage clusterView = new ClusterViewMessage( false, members, Collections.emptySet() );
         Member memberUp = new Member( member.uniqueAddress(), member.upNumber(), MemberStatus.up(), roles );
 
         // when
-        ClusterView modifiedClusterView = clusterView.withMember( memberUp );
+        ClusterViewMessage modifiedClusterView = clusterView.withMember( memberUp );
 
         // then
         assertThat( modifiedClusterView.members(), Matchers.contains( memberUp ) );
@@ -173,11 +173,11 @@ public class ClusterViewTest
         Member member = createMember( 1, MemberStatus.weaklyUp() );
         TreeSet<Member> members = new TreeSet<>( Member.ordering() );
         members.add( member );
-        ClusterView clusterView = new ClusterView( false, members, Collections.emptySet() );
+        ClusterViewMessage clusterView = new ClusterViewMessage( false, members, Collections.emptySet() );
         Member memberUp = new Member( member.uniqueAddress(), member.upNumber(), MemberStatus.up(), roles );
 
         // when
-        ClusterView modifiedClusterView = clusterView.withMember( memberUp );
+        ClusterViewMessage modifiedClusterView = clusterView.withMember( memberUp );
 
         // then
         assertThat( modifiedClusterView.members(), Matchers.contains( memberUp ) );
@@ -185,13 +185,13 @@ public class ClusterViewTest
         assertThat( returnedMember.map( Member::status ), OptionalMatchers.contains( Matchers.equalTo( MemberStatus.up() ) ) );
     }
 
-    private ClusterView createClusterViewWithMembers( MemberStatus status )
+    private ClusterViewMessage createClusterViewWithMembers( MemberStatus status )
     {
         SortedSet<Member> members = IntStream.range( 0, 5 )
                 .mapToObj( port -> createMember( port, status ) )
                 .collect( Collectors.toCollection( () -> new TreeSet<>( Member.ordering() ) ) );
 
-        return new ClusterView( false, members, Collections.emptySet() );
+        return new ClusterViewMessage( false, members, Collections.emptySet() );
     }
 
     public static Member createMember( int port, MemberStatus status )

@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka;
+package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.cluster.UniqueAddress;
 
@@ -22,20 +22,20 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-class TopologyBuilder
+public class TopologyBuilder
 {
     private final Config config;
     private final Log log;
     private final UniqueAddress uniqueAddress;
 
-    TopologyBuilder( Config config, UniqueAddress uniqueAddress, LogProvider logProvider )
+    public TopologyBuilder( Config config, UniqueAddress uniqueAddress, LogProvider logProvider )
     {
         this.config = config;
         this.uniqueAddress = uniqueAddress;
         this.log = logProvider.getLog( getClass() );
     }
 
-    CoreTopology buildCoreTopology( @Nullable ClusterId clusterId, ClusterView cluster, MetadataMessage memberData )
+    CoreTopology buildCoreTopology( @Nullable ClusterId clusterId, ClusterViewMessage cluster, MetadataMessage memberData )
     {
 
         log.debug( "Building new view of Topology from actor %s, cluster state is: %s, metadata is %s", uniqueAddress, cluster, memberData );
@@ -49,14 +49,14 @@ class TopologyBuilder
         return newCoreTopology;
     }
 
-    private Stream<CoreServerInfoForMemberId> getCoreInfos( ClusterView cluster, MetadataMessage memberData )
+    private Stream<CoreServerInfoForMemberId> getCoreInfos( ClusterViewMessage cluster, MetadataMessage memberData )
     {
          return cluster
                  .availableMembers()
                  .flatMap( memberData::getStream );
     }
 
-    private boolean canBeBootstrapped( ClusterView cluster, MetadataMessage memberData )
+    private boolean canBeBootstrapped( ClusterViewMessage cluster, MetadataMessage memberData )
     {
         boolean iDoNotRefuseToBeLeader = !config.get( CausalClusteringSettings.refuse_to_be_leader );
         boolean clusterHasConverged = cluster.converged();
@@ -66,7 +66,7 @@ class TopologyBuilder
         return iDoNotRefuseToBeLeader && clusterHasConverged  && iAmFirstPotentialLeader;
     }
 
-    private Boolean iAmFirstPotentialLeader( ClusterView cluster, MetadataMessage memberData, String dbName )
+    private Boolean iAmFirstPotentialLeader( ClusterViewMessage cluster, MetadataMessage memberData, String dbName )
     {
         // Ensure consistent view of "first" member across cluster
         Optional<UniqueAddress> firstPotentialLeader = cluster.availableMembers()

@@ -11,7 +11,7 @@ import akka.testkit.javadsl.TestKit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-import com.neo4j.causalclustering.discovery.akka.ReadReplicaRemovalMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 
 public class ReadReplicaRemovalMarshalTest extends BaseMarshalTest<ReadReplicaRemovalMessage>
 {

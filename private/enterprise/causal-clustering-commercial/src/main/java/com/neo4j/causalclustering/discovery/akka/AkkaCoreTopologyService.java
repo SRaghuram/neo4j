@@ -10,6 +10,13 @@ import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.client.ClusterClientReceptionist;
 import akka.stream.javadsl.SourceQueueWithComplete;
+import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSettingMessage;
+import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
+import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
+import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
+import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicatorTopologyActor;
+import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 
 import java.util.Map;
 import java.util.Optional;
@@ -21,7 +28,6 @@ import org.neo4j.causalclustering.discovery.HostnameResolver;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.causalclustering.discovery.RoleInfo;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
-import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -130,7 +136,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         if ( coreTopologyActorRef.isPresent() )
         {
             ActorRef actor = coreTopologyActorRef.get();
-            actor.tell( new ClusterIdForDatabase( clusterId, dbName ), ActorRef.noSender() );
+            actor.tell( new ClusterIdSettingMessage( clusterId, dbName ), ActorRef.noSender() );
             return true;
         }
         else
@@ -142,13 +148,13 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     @Override
     public void setLeader0( LeaderInfo leaderInfo, String dbName )
     {
-        directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoForDatabase( leaderInfo, dbName ), ActorRef.noSender() ) );
+        directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, dbName ), ActorRef.noSender() ) );
     }
 
     @Override
     public void handleStepDown0( long term, String dbName )
     {
-        directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoForDatabase( leaderInfo.stepDown(), dbName ), ActorRef.noSender() ) );
+        directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo.stepDown(), dbName ), ActorRef.noSender() ) );
     }
 
     @Override

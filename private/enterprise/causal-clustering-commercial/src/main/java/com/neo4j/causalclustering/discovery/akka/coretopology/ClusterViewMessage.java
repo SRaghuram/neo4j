@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka;
+package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.cluster.ClusterEvent;
 import akka.cluster.Member;
@@ -23,20 +23,20 @@ import org.neo4j.util.VisibleForTesting;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Collections.unmodifiableSortedSet;
 
-public class ClusterView
+public class ClusterViewMessage
 {
     private final boolean converged;
     private final SortedSet<Member> members;
     private final Set<Member> unreachable;
 
-    public static final ClusterView EMPTY = new ClusterView();
+    public static final ClusterViewMessage EMPTY = new ClusterViewMessage();
 
-    private ClusterView()
+    private ClusterViewMessage()
     {
         this( false, unmodifiableSortedSet( new TreeSet<>( Member.ordering() ) ), unmodifiableSet( new HashSet<>() ) );
     }
 
-    public ClusterView( ClusterEvent.CurrentClusterState clusterState )
+    public ClusterViewMessage( ClusterEvent.CurrentClusterState clusterState )
     {
         this( clusterState.leader().isDefined(), membersFrom( clusterState ), clusterState.getUnreachable() );
     }
@@ -49,7 +49,7 @@ public class ClusterView
     }
 
     @VisibleForTesting
-    ClusterView( boolean converged, SortedSet<Member> members, Set<Member> unreachable )
+    ClusterViewMessage( boolean converged, SortedSet<Member> members, Set<Member> unreachable )
     {
         this.converged = converged;
         TreeSet<Member> upMembers = members.stream()
@@ -64,9 +64,9 @@ public class ClusterView
         return converged;
     }
 
-    public ClusterView withConverged( boolean converged )
+    public ClusterViewMessage withConverged( boolean converged )
     {
-        return new ClusterView( converged, members, unreachable );
+        return new ClusterViewMessage( converged, members, unreachable );
     }
 
     @VisibleForTesting
@@ -75,35 +75,35 @@ public class ClusterView
         return members;
     }
 
-    public ClusterView withMember( Member member )
+    public ClusterViewMessage withMember( Member member )
     {
         TreeSet<Member> tempMembers = new TreeSet<>( Member.ordering() );
         tempMembers.addAll( members );
         tempMembers.remove( member ); // To update
         tempMembers.add( member );
-        return new ClusterView( converged, tempMembers, unreachable );
+        return new ClusterViewMessage( converged, tempMembers, unreachable );
     }
 
-    public ClusterView withoutMember( Member member )
+    public ClusterViewMessage withoutMember( Member member )
     {
         TreeSet<Member> tempMembers = new TreeSet<>( Member.ordering() );
         tempMembers.addAll( members );
         tempMembers.remove( member );
-        return new ClusterView( converged, tempMembers, unreachable );
+        return new ClusterViewMessage( converged, tempMembers, unreachable );
     }
 
-    public ClusterView withUnreachable( Member member )
+    public ClusterViewMessage withUnreachable( Member member )
     {
         Set<Member> tempUnreachable = new HashSet<>( unreachable );
         tempUnreachable.add( member );
-        return new ClusterView( converged, members, tempUnreachable );
+        return new ClusterViewMessage( converged, members, tempUnreachable );
     }
 
-    public ClusterView withoutUnreachable( Member member )
+    public ClusterViewMessage withoutUnreachable( Member member )
     {
         Set<Member> tempUnreachable = new HashSet<>( unreachable );
         tempUnreachable.remove( member );
-        return new ClusterView( converged, members, tempUnreachable );
+        return new ClusterViewMessage( converged, members, tempUnreachable );
     }
 
     public Stream<UniqueAddress> availableMembers()
@@ -129,7 +129,7 @@ public class ClusterView
         {
             return false;
         }
-        ClusterView that = (ClusterView) o;
+        ClusterViewMessage that = (ClusterViewMessage) o;
         return converged == that.converged && Objects.equals( members, that.members ) && Objects.equals( unreachable, that.unreachable );
     }
 
@@ -143,6 +143,6 @@ public class ClusterView
     @Override
     public String toString()
     {
-        return "ClusterView{" + "converged=" + converged + ", members=" + members + ", unreachable=" + unreachable + '}';
+        return "ClusterViewMessage{" + "converged=" + converged + ", members=" + members + ", unreachable=" + unreachable + '}';
     }
 }

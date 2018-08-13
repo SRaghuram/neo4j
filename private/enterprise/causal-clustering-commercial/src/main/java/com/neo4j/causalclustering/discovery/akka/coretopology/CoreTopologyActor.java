@@ -3,18 +3,15 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka;
+package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
-import akka.cluster.ddata.Replicator;
 import akka.stream.javadsl.SourceQueueWithComplete;
-import scala.concurrent.duration.FiniteDuration;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.CoreTopology;
@@ -25,22 +22,14 @@ import org.neo4j.logging.LogProvider;
 
 public class CoreTopologyActor extends AbstractActor
 {
-    static Props props( MemberId myself,
-            SourceQueueWithComplete<CoreTopology> topologyUpdateSink,
-            ActorRef rrTopologyActor,
-            ActorRef replicator,
-            Cluster cluster,
-            TopologyBuilder topologyBuilder,
-            Config config,
-            LogProvider logProvider )
+    public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopology> topologyUpdateSink, ActorRef rrTopologyActor, ActorRef replicator,
+            Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
     {
         return Props.create( CoreTopologyActor.class,
                 () -> new CoreTopologyActor( myself, topologyUpdateSink, rrTopologyActor, replicator, cluster, topologyBuilder, config, logProvider ) );
     }
 
     public static final String NAME = "cc-core-topology-actor";
-
-    static final Replicator.WriteConsistency METADATA_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
 
     private final SourceQueueWithComplete<CoreTopology> topologyUpdateSink;
     private final TopologyBuilder topologyBuilder;
@@ -54,7 +43,7 @@ public class CoreTopologyActor extends AbstractActor
     // Topology component data
     private MetadataMessage memberData;
     private ClusterIdDirectoryMessage clusterIdPerDb;
-    private ClusterView clusterView;
+    private ClusterViewMessage clusterView;
 
     private CoreTopology coreTopology;
 
@@ -74,7 +63,7 @@ public class CoreTopologyActor extends AbstractActor
         this.clusterIdPerDb = ClusterIdDirectoryMessage.EMPTY;
         this.databaseName = config.get( CausalClusteringSettings.database );
         this.log = logProvider.getLog( getClass() );
-        this.clusterView = ClusterView.EMPTY;
+        this.clusterView = ClusterViewMessage.EMPTY;
         this.coreTopology = CoreTopology.EMPTY;
 
         // Children, who will be sending messages to us
@@ -86,7 +75,7 @@ public class CoreTopologyActor extends AbstractActor
     @Override
     public Receive createReceive()
     {
-        return receiveBuilder().match( ClusterView.class, event -> {
+        return receiveBuilder().match( ClusterViewMessage.class, event -> {
             clusterView = event;
             buildTopology();
         } ).match( MetadataMessage.class, message -> {
@@ -95,7 +84,7 @@ public class CoreTopologyActor extends AbstractActor
         } ).match( ClusterIdDirectoryMessage.class, message -> {
             clusterIdPerDb = message;
             buildTopology();
-        } ).match( ClusterIdForDatabase.class, message -> {
+        } ).match( ClusterIdSettingMessage.class, message -> {
             clusterIdActor.forward( message, context() );
         } ).build();
     }

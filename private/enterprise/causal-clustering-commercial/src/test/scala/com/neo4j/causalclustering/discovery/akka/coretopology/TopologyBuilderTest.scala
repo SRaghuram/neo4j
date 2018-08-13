@@ -3,14 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka
+package com.neo4j.causalclustering.discovery.akka.coretopology
 
 import java.util.UUID
 
 import akka.actor
 import akka.cluster.ClusterEvent.CurrentClusterState
-import akka.cluster.{Cluster, Member, MemberStatus, UniqueAddress}
 import akka.cluster.ddata.LWWMap
+import akka.cluster.{Cluster, Member, MemberStatus, UniqueAddress}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
 import org.neo4j.causalclustering.core.consensus.LeaderInfo
@@ -22,8 +22,8 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
-import scala.collection.immutable.TreeSet
 import scala.collection.JavaConverters._
+import scala.collection.immutable.TreeSet
 import scala.compat.java8.OptionConverters._
 
 @RunWith(classOf[JUnitRunner])
@@ -43,7 +43,7 @@ class TopologyBuilderTest
       }
 
       "missing all members" in new Fixture {
-        val emptyClusterState = ClusterView.EMPTY
+        val emptyClusterState = ClusterViewMessage.EMPTY
         val topology = topologyBuilder().buildCoreTopology(clusterId, emptyClusterState, memberMetaData(3))
         topology.members() shouldBe empty
       }
@@ -132,14 +132,14 @@ class TopologyBuilderTest
     def topologyBuilder(self: UniqueAddress = uniqueAddressStream.head, config: Config = Config.defaults) =
       new TopologyBuilder(config, self, NullLogProvider.getInstance())
 
-    def clusterState(numMembers: Int, numUnreachable: Int = 0): ClusterView = {
+    def clusterState(numMembers: Int, numUnreachable: Int = 0): ClusterViewMessage = {
       require(numMembers >= numUnreachable)
       val members = memberMocks.take(numMembers)
       val unreachableMembers = members.take(numUnreachable)
       val memberSet = TreeSet(members:_*)
       val unreachableMemberSet = Set(unreachableMembers:_*)
       val leader = memberSet.diff(unreachableMemberSet).headOption.map(_.address)
-      new ClusterView( CurrentClusterState(memberSet, unreachableMemberSet, Set.empty, leader) )
+      new ClusterViewMessage( CurrentClusterState(memberSet, unreachableMemberSet, Set.empty, leader) )
     }
 
     def memberMetaData(n: Int, from: Int = 0, refusesToBeLeader: Int => Boolean = _ => false ): MetadataMessage = {

@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka
+package com.neo4j.causalclustering.discovery.akka.coretopology
 
 import java.util.UUID
 
@@ -11,6 +11,7 @@ import akka.actor.Address
 import akka.cluster.UniqueAddress
 import akka.cluster.ddata.{LWWMap, LWWMapKey, Replicator}
 import akka.testkit.TestProbe
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.neo4j.causalclustering.discovery.TestTopology
 import org.neo4j.causalclustering.identity.MemberId
 import org.neo4j.kernel.configuration.Config

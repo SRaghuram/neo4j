@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka;
+package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
@@ -24,6 +24,7 @@ import akka.cluster.ddata.ReplicatedData;
 import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
+import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import scala.concurrent.duration.FiniteDuration;
 
 import java.util.Arrays;
@@ -65,9 +66,9 @@ public class ReadReplicatorTopologyActor extends AbstractActor
     private ORSet<ActorRef> reachableClients;
 
     private final List<Key<?>> keys;
-    private DatabaseLeaderInfoMessage databaseLeaderInfo = DatabaseLeaderInfoMessage.EMPTY;
+    private LeaderInfoDirectoryMessage databaseLeaderInfo = LeaderInfoDirectoryMessage.EMPTY;
 
-    static Props props( SourceQueueWithComplete<ReadReplicaTopology> topologySink, Cluster cluster, ActorRef replicator,
+    public static Props props( SourceQueueWithComplete<ReadReplicaTopology> topologySink, Cluster cluster, ActorRef replicator,
             ClusterClientReceptionist receptionist, LogProvider logProvider )
     {
         return Props.create( ReadReplicatorTopologyActor.class,
@@ -184,7 +185,7 @@ public class ReadReplicatorTopologyActor extends AbstractActor
             log.debug( "Sending coreTopology to read replicas" );
             this.coreTopology = topology;
             myTopologyClients().forEach( rrActorRef -> rrActorRef.tell( topology, getSelf() ) );
-        } ).match( DatabaseLeaderInfoMessage.class, msg -> {
+        } ).match( LeaderInfoDirectoryMessage.class, msg -> {
             log.debug( "Sending database leaders to read replicas" );
             this.databaseLeaderInfo = msg;
             myTopologyClients().forEach( client -> client.tell( msg, getSelf() ) );

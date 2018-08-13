@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery.akka
+package com.neo4j.causalclustering.discovery.akka.coretopology
 
 import java.util
 import java.util.Collections
@@ -12,6 +12,7 @@ import akka.actor.Address
 import akka.cluster.ClusterEvent.{ClusterDomainEvent, UnreachableMember}
 import akka.cluster.{Cluster, ClusterEvent, Member, MemberStatus}
 import akka.testkit.TestProbe
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.verify
 import org.neo4j.helpers.collection.Iterators
@@ -54,7 +55,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
     }
     "receiving cluster messages" should {
       "send updated cluster view" when {
-        val upMembers = Seq.tabulate(3)(port => ClusterViewTest.createMember(port, MemberStatus.up))
+        val upMembers = Seq.tabulate(3)(port => ClusterViewMessageTest.createMember(port, MemberStatus.up))
         val upAsSet = SortedSet[Member]() ++ upMembers
         val upAsJavaSet =
         {
@@ -70,14 +71,14 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
           When("event sent")
           clusterStateRef ! event
 
-          Then("receive ClusterView")
-          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterView(false, upAsJavaSet, Collections.emptySet()))
+          Then("receive ClusterViewMessage")
+          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterViewMessage(false, upAsJavaSet, Collections.emptySet()))
         }
         "member unreachable event" in new Fixture {
           Given("An initial actor state")
           val initialEvent = ClusterEvent.CurrentClusterState(members = upAsSet)
           clusterStateRef ! initialEvent
-          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterView(false, upAsJavaSet, Collections.emptySet()))
+          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterViewMessage(false, upAsJavaSet, Collections.emptySet()))
 
           And("an unreachable member event")
           val unreachableEvent = ClusterEvent.UnreachableMember(upMembers.head)
@@ -85,14 +86,14 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
           When("event sent")
           clusterStateRef ! unreachableEvent
 
-          Then("receive ClusterView with unreachable member")
-          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterView(false, upAsJavaSet, Iterators.asSet(upMembers.head)))
+          Then("receive ClusterViewMessage with unreachable member")
+          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterViewMessage(false, upAsJavaSet, Iterators.asSet(upMembers.head)))
         }
         "member reachable event" in new Fixture {
           Given("An initial actor state with an unreachable member")
           val initialEvent = ClusterEvent.CurrentClusterState(members = upAsSet, unreachable = Set(upMembers.head))
           clusterStateRef ! initialEvent
-          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterView(false, upAsJavaSet, Iterators.asSet(upMembers.head)))
+          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterViewMessage(false, upAsJavaSet, Iterators.asSet(upMembers.head)))
 
           And("a reachable member event")
           val reachableEvent = ClusterEvent.ReachableMember(upMembers.head)
@@ -100,39 +101,39 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
           When("event sent")
           clusterStateRef ! reachableEvent
 
-          Then("receive ClusterView with unreachable member removed")
-          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterView(false, upAsJavaSet, Collections.emptySet()))
+          Then("receive ClusterViewMessage with unreachable member removed")
+          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterViewMessage(false, upAsJavaSet, Collections.emptySet()))
         }
         "member up event" in new Fixture {
           Given("member up event")
-          val member = ClusterViewTest.createMember(99, MemberStatus.up)
+          val member = ClusterViewMessageTest.createMember(99, MemberStatus.up)
           val event = ClusterEvent.MemberUp(member)
 
           When("event sent")
           clusterStateRef ! event
 
-          Then("receive ClusterView with additional member")
-          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterView(false, Iterators.asSortedSet(Member.ordering, member), Collections.emptySet()))
+          Then("receive ClusterViewMessage with additional member")
+          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterViewMessage(false, Iterators.asSortedSet(Member.ordering, member), Collections.emptySet()))
         }
         "member weakly up event" in new Fixture {
           Given("member up event")
-          val member = ClusterViewTest.createMember(99, MemberStatus.weaklyUp)
+          val member = ClusterViewMessageTest.createMember(99, MemberStatus.weaklyUp)
           val event = ClusterEvent.MemberWeaklyUp(member)
 
           When("event sent")
           clusterStateRef ! event
 
-          Then("receive ClusterView with additional member")
-          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterView(false, Iterators.asSortedSet(Member.ordering, member), Collections.emptySet()))
+          Then("receive ClusterViewMessage with additional member")
+          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterViewMessage(false, Iterators.asSortedSet(Member.ordering, member), Collections.emptySet()))
         }
         "member removed event" in new Fixture {
           Given("A member")
-          val member = ClusterViewTest.createMember(99, MemberStatus.up)
+          val member = ClusterViewMessageTest.createMember(99, MemberStatus.up)
 
           And("an initial state with member")
           val initialEvent = ClusterEvent.MemberUp(member)
           clusterStateRef ! initialEvent
-          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterView(false, Iterators.asSortedSet(Member.ordering, member), Collections.emptySet()))
+          coreTopologyProbe.expectMsg(max = defaultWaitTime, new ClusterViewMessage(false, Iterators.asSortedSet(Member.ordering, member), Collections.emptySet()))
 
           And("a remove event")
           val event = ClusterEvent.MemberRemoved(member.copy(MemberStatus.removed), MemberStatus.up)
@@ -140,8 +141,8 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
           When("event sent")
           clusterStateRef ! event
 
-          Then("receive a ClusterView without that member")
-          coreTopologyProbe.expectMsg(max = defaultWaitTime, ClusterView.EMPTY)
+          Then("receive a ClusterViewMessage without that member")
+          coreTopologyProbe.expectMsg(max = defaultWaitTime, ClusterViewMessage.EMPTY)
         }
         "leader changed event" in new Fixture {
           Given("A leader change event with a leader")
@@ -150,8 +151,8 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
           When("Event sent")
           clusterStateRef ! event
 
-          Then("Receive ClusterView with converged set")
-          coreTopologyProbe.expectMsg(max = defaultWaitTime, ClusterView.EMPTY.withConverged(true))
+          Then("Receive ClusterViewMessage with converged set")
+          coreTopologyProbe.expectMsg(max = defaultWaitTime, ClusterViewMessage.EMPTY.withConverged(true))
         }
       }
     }

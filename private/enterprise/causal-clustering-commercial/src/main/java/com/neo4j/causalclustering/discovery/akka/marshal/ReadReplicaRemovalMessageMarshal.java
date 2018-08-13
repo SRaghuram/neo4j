@@ -11,7 +11,7 @@ import akka.actor.ExtendedActorSystem;
 import java.io.IOException;
 
 import org.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import com.neo4j.causalclustering.discovery.akka.ReadReplicaRemovalMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import org.neo4j.causalclustering.messaging.EndOfStreamException;
 import org.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import org.neo4j.storageengine.api.ReadableChannel;
