@@ -23,13 +23,13 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 @Service.Implementation( SecurityModule.class )
 public class CommercialSecurityModule extends EnterpriseSecurityModule
 {
+    // This will be need as an input to the NativeGraphRealm later to be able to handle transactions
+    private static DatabaseManager databaseManager;
+
     public CommercialSecurityModule()
     {
         super( "commercial-security-module" );
     }
-
-    // This will be need as an input to the NativeGraphRealm later to be able to handle transactions
-    private static DatabaseManager databaseManager;
 
     @Override
     public void setup( Dependencies dependencies ) throws KernelException
