@@ -20,7 +20,6 @@ import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
-import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.util.Dependencies;
@@ -75,12 +74,5 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
     private static void createConfiguredDatabases( DatabaseManager databaseManager, GraphDatabaseFacade systemFacade, Config config )
     {
         databaseManager.createDatabase( config.get( GraphDatabaseSettings.active_database ) );
-    }
-
-    @Override
-    public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
-    {
-        //TODO: change to commercial security module here when ready
-        EnterpriseEditionModule.createEnterpriseSecurityModule( this, platformModule, procedures );
     }
 }
