@@ -31,24 +31,6 @@ public class CommercialSecurityModuleTest
     private Config config;
     private LogProvider mockLogProvider;
 
-    @Before
-    public void setup()
-    {
-        config = mock( Config.class );
-        mockLogProvider = mock( LogProvider.class );
-        Log mockLog = mock( Log.class );
-        when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
-        when( mockLog.isDebugEnabled() ).thenReturn( true );
-        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false );
-        when( config.get( SecuritySettings.native_graph_enabled ) ).thenReturn( false );
-        when( config.get( SecuritySettings.auth_cache_ttl ) ).thenReturn( Duration.ZERO );
-        when( config.get( SecuritySettings.auth_cache_max_capacity ) ).thenReturn( 10 );
-        when( config.get( SecuritySettings.auth_cache_use_ttl ) ).thenReturn( true );
-        when( config.get( SecuritySettings.security_log_successful_authentication ) ).thenReturn( false );
-        when( config.get( GraphDatabaseSettings.auth_max_failed_attempts ) ).thenReturn( 3 );
-        when( config.get( GraphDatabaseSettings.auth_lock_time ) ).thenReturn( Duration.ofSeconds( 5 ) );
-    }
-
     @Test
     public void shouldFailOnIllegalRealmNameConfiguration()
     {
@@ -197,6 +179,24 @@ public class CommercialSecurityModuleTest
     }
 
     // --------- HELPERS ----------
+
+    @Before
+    public void setup()
+    {
+        config = mock( Config.class );
+        mockLogProvider = mock( LogProvider.class );
+        Log mockLog = mock( Log.class );
+        when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
+        when( mockLog.isDebugEnabled() ).thenReturn( true );
+        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false );
+        when( config.get( SecuritySettings.native_graph_enabled ) ).thenReturn( false );
+        when( config.get( SecuritySettings.auth_cache_ttl ) ).thenReturn( Duration.ZERO );
+        when( config.get( SecuritySettings.auth_cache_max_capacity ) ).thenReturn( 10 );
+        when( config.get( SecuritySettings.auth_cache_use_ttl ) ).thenReturn( true );
+        when( config.get( SecuritySettings.security_log_successful_authentication ) ).thenReturn( false );
+        when( config.get( GraphDatabaseSettings.auth_max_failed_attempts ) ).thenReturn( 3 );
+        when( config.get( GraphDatabaseSettings.auth_lock_time ) ).thenReturn( Duration.ofSeconds( 5 ) );
+    }
 
     private void nativeAuth( boolean authn, boolean authr )
     {
