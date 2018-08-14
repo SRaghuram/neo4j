@@ -5,8 +5,10 @@
  */
 package com.neo4j.security;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -18,19 +20,19 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class CommercialSecurityModuleTest
+public class CommercialSecurityModuleTest
 {
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
     private Config config;
     private LogProvider mockLogProvider;
 
-    @BeforeEach
-    void setup()
+    @Before
+    public void setup()
     {
         config = mock( Config.class );
         mockLogProvider = mock( LogProvider.class );
@@ -48,7 +50,7 @@ class CommercialSecurityModuleTest
     }
 
     @Test
-    void shouldFailOnIllegalRealmNameConfiguration()
+    public void shouldFailOnIllegalRealmNameConfiguration()
     {
         // Given
         nativeAuth( true, true );
@@ -57,11 +59,15 @@ class CommercialSecurityModuleTest
         authProviders( "this-realm-does-not-exist" );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: No valid auth provider is active." );
+        thrown.expect( IllegalArgumentException.class );
+        thrown.expectMessage( "Illegal configuration: No valid auth provider is active." );
+
+        // When
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
-    void shouldFailOnNoAuthenticationMechanism()
+    public void shouldFailOnNoAuthenticationMechanism()
     {
         // Given
         nativeAuth( false, true );
@@ -70,11 +76,15 @@ class CommercialSecurityModuleTest
         authProviders( SecuritySettings.NATIVE_REALM_NAME );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: All authentication providers are disabled." );
+        thrown.expect( IllegalArgumentException.class );
+        thrown.expectMessage( "Illegal configuration: All authentication providers are disabled." );
+
+        // When
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
-    void shouldFailOnNoAuthorizationMechanism()
+    public void shouldFailOnNoAuthorizationMechanism()
     {
         // Given
         nativeAuth( true, false );
@@ -83,11 +93,15 @@ class CommercialSecurityModuleTest
         authProviders( SecuritySettings.NATIVE_REALM_NAME );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: All authorization providers are disabled." );
+        thrown.expect( IllegalArgumentException.class );
+        thrown.expectMessage( "Illegal configuration: All authorization providers are disabled." );
+
+        // When
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
-    void shouldFailOnIllegalAdvancedRealmConfiguration()
+    public void shouldFailOnIllegalAdvancedRealmConfiguration()
     {
         // Given
         nativeAuth( false, false );
@@ -96,12 +110,16 @@ class CommercialSecurityModuleTest
         authProviders( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: Native auth provider configured, " +
-                "but both authentication and authorization are disabled." );
+        thrown.expect( IllegalArgumentException.class );
+        thrown.expectMessage( "Illegal configuration: Native auth provider configured, " +
+                                "but both authentication and authorization are disabled." );
+
+        // When
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
-    void shouldFailOnNotLoadedPluginAuthProvider()
+    public void shouldFailOnNotLoadedPluginAuthProvider()
     {
         // Given
         nativeAuth( false, false );
@@ -113,11 +131,16 @@ class CommercialSecurityModuleTest
         );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: Failed to load auth plugin 'plugin-IllConfiguredAuthorizationPlugin'." );
+        thrown.expect( IllegalArgumentException.class );
+        thrown.expectMessage(
+                "Illegal configuration: Failed to load auth plugin 'plugin-IllConfiguredAuthorizationPlugin'." );
+
+        // When
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
-    void shouldNotFailNativeWithPluginAuthorizationProvider()
+    public void shouldNotFailNativeWithPluginAuthorizationProvider()
     {
         // Given
         nativeAuth( true, true );
@@ -128,12 +151,12 @@ class CommercialSecurityModuleTest
                 SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthorizationPlugin"
         );
 
-        // Then
-        assertSuccess();
+        // When
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
-    void shouldNotFailNativeWithNativeGraph()
+    public void shouldNotFailNativeWithNativeGraph()
     {
         // Given
         nativeAuth( true, true );
@@ -146,12 +169,12 @@ class CommercialSecurityModuleTest
 
         when( config.get( SecuritySettings.native_graph_enabled ) ).thenReturn( true );
 
-        // Then
-        assertSuccess();
+        // When
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     @Test
-    void shouldFailNativeGraphWithoutNative()
+    public void shouldFailNativeGraphWithoutNative()
     {
         // Given
         nativeAuth( false, false );
@@ -165,7 +188,12 @@ class CommercialSecurityModuleTest
         when( config.get( SecuritySettings.native_graph_enabled ) ).thenReturn( true );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: Native graph enabled but native auth provider is not configured." );
+        thrown.expect( IllegalArgumentException.class );
+        thrown.expectMessage(
+                "Illegal configuration: Native graph enabled but native auth provider is not configured." );
+
+        // When
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
     }
 
     // --------- HELPERS ----------
@@ -191,17 +219,5 @@ class CommercialSecurityModuleTest
     private void authProviders( String... authProviders )
     {
         when( config.get( SecuritySettings.auth_providers ) ).thenReturn( Arrays.asList( authProviders ) );
-    }
-
-    private void assertSuccess()
-    {
-        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null );
-    }
-
-    private void assertIllegalArgumentException( String errorMsg )
-    {
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null ) );
-        assertEquals( e.getMessage(), errorMsg );
     }
 }
