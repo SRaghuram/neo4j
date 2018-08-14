@@ -11,10 +11,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
-import org.neo4j.kernel.api.security.SecurityModule;
-import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -44,31 +41,5 @@ class CommercialEditionModule extends EnterpriseEditionModule
     private static void createConfiguredDatabases( DatabaseManager databaseManager, GraphDatabaseFacade systemFacade, Config config )
     {
         databaseManager.createDatabase( config.get( GraphDatabaseSettings.active_database ) );
-    }
-
-    @Override
-    public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
-    {
-        CommercialEditionModule.createCommercialSecurityModule( this, platformModule, procedures );
-    }
-
-    private static void createCommercialSecurityModule( EditionModule editionModule, PlatformModule platformModule, Procedures procedures )
-    {
-        if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
-        {
-            SecurityModule securityModule = setupSecurityModule( platformModule,
-                    platformModule.logging.getUserLog( EnterpriseEditionModule.class ),
-                    procedures, "commercial-security-module" );
-            editionModule.authManager = securityModule.authManager();
-            editionModule.userManagerSupplier = securityModule.userManagerSupplier();
-            platformModule.life.add( securityModule );
-        }
-        else
-        {
-            editionModule.authManager = EnterpriseAuthManager.NO_AUTH;
-            editionModule.userManagerSupplier = UserManagerSupplier.NO_AUTH;
-            platformModule.life.add( platformModule.dependencies.satisfyDependency( editionModule.authManager ) );
-            platformModule.life.add( platformModule.dependencies.satisfyDependency( editionModule.userManagerSupplier ) );
-        }
     }
 }
