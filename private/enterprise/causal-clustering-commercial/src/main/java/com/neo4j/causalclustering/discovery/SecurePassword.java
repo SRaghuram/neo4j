@@ -11,12 +11,16 @@ import java.util.Arrays;
 public class SecurePassword implements AutoCloseable
 {
     private final char[] password;
+    private static final int lowerBound = ' ';
+    private static final int upperBound = '~';
+    private static final int range = upperBound - lowerBound;
+
     public SecurePassword( int length, SecureRandom random )
     {
         password = new char[length];
         for ( int i = 0; i < password.length; i++ )
         {
-            password[i] = (char) random.nextInt( Character.MAX_VALUE + 1 );
+            password[i] = (char) (random.nextInt( range ) + lowerBound); // Some keystores (PKCS12 on Oracle JDK 10) check for printable ASCII range
         }
     }
 
