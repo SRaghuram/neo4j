@@ -67,7 +67,7 @@ class CommercialEditionModule extends EnterpriseEditionModule
     @Override
     public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
     {
-        CommercialEditionModule.createCommercialSecurityModule( this, platformModule, procedures );
+        createCommercialSecurityModule( this, platformModule, procedures );
     }
 
     private static void createCommercialSecurityModule( EditionModule editionModule, PlatformModule platformModule, Procedures procedures )
