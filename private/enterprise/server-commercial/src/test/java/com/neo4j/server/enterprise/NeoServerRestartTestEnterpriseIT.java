@@ -16,6 +16,7 @@ import org.neo4j.server.helpers.CommunityServerBuilder;
 
 public class NeoServerRestartTestEnterpriseIT extends NeoServerRestartTestIT
 {
+    @Override
     protected NeoServer getNeoServer( String customPageSwapperName ) throws IOException
     {
         CommunityServerBuilder builder = CommercialServerBuilder.serverOnRandomPorts()

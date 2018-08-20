@@ -30,6 +30,7 @@ public class CommercialCluster extends Cluster<SslDiscoveryServiceFactory>
                 readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard );
     }
 
+    @Override
     protected CoreClusterMember createCoreClusterMember( int serverId,
                                                        int discoveryPort,
                                                        int clusterSize,

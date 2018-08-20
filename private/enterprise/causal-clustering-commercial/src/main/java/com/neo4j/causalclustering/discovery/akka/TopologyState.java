@@ -50,6 +50,7 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
         this.callback = listener;
     }
 
+    @Override
     public void onTopologyUpdate( CoreTopology newCoreTopology )
     {
         TopologyDifference diff = this.coreTopology.difference( newCoreTopology );

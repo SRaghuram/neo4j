@@ -16,6 +16,7 @@ import org.neo4j.ssl.SslPolicy;
 
 public class SecurePipelineFactory implements DuplexPipelineWrapperFactory
 {
+    @Override
     public PipelineWrapper forServer( Config config, Dependencies dependencies, LogProvider logProvider, Setting<String> policyName )
     {
         SslPolicy policy = getSslPolicy( config, dependencies, policyName );
