@@ -8,7 +8,6 @@ package com.neo4j.kernel.impl.transaction.stats;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.ToLongFunction;
 
-import org.neo4j.kernel.impl.transaction.TransactionMonitor;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 
@@ -104,7 +103,7 @@ public class GlobalTransactionStats implements TransactionCounters
         return sumCounters( TransactionCounters::getNumberOfRolledBackWriteTransactions );
     }
 
-    public TransactionMonitor createDatabaseTransactionMonitor()
+    public DatabaseTransactionStats createDatabaseTransactionMonitor()
     {
         DatabaseTransactionStats transactionStats = new DatabaseTransactionStats();
         databasesCounters.add( transactionStats );
