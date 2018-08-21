@@ -6,7 +6,10 @@
 package com.neo4j.commercial.edition;
 
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
+
+import java.time.Clock;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -14,10 +17,13 @@ import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
+import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
@@ -31,6 +37,7 @@ class CommercialEditionModule extends EnterpriseEditionModule
     {
         super( platformModule );
         globalTransactionStats = new GlobalTransactionStats();
+        globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( platformModule.clock, platformModule.logging );
     }
 
     @Override
@@ -62,6 +69,16 @@ class CommercialEditionModule extends EnterpriseEditionModule
     public TransactionCounters globalTransactionCounter()
     {
         return globalTransactionStats;
+    }
+
+    public AvailabilityGuard getGlobalAvailabilityGuard( Clock clock, LogService logService )
+    {
+        return globalAvailabilityGuard;
+    }
+
+    public DatabaseAvailabilityGuard createDatabaseAvailabilityGuard( String databaseName, Clock clock, LogService logService )
+    {
+        return ((CompositeDatabaseAvailabilityGuard) globalAvailabilityGuard).createDatabaseAvailabilityGuard( databaseName );
     }
 
     @Override

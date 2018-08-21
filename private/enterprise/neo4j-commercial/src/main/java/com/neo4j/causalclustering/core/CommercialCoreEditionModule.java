@@ -8,7 +8,10 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
+
+import java.time.Clock;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
@@ -22,10 +25,13 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
@@ -45,6 +51,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     {
         super( platformModule, discoveryServiceFactory );
         this.globalTransactionStats = new GlobalTransactionStats();
+        this.globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( platformModule.clock, platformModule.logging );
     }
 
     @Override
@@ -97,6 +104,18 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     public TransactionCounters globalTransactionCounter()
     {
         return globalTransactionStats;
+    }
+
+    @Override
+    public AvailabilityGuard getGlobalAvailabilityGuard( Clock clock, LogService logService )
+    {
+        return globalAvailabilityGuard;
+    }
+
+    @Override
+    public DatabaseAvailabilityGuard createDatabaseAvailabilityGuard( String databaseName, Clock clock, LogService logService )
+    {
+        return ((CompositeDatabaseAvailabilityGuard) globalAvailabilityGuard).createDatabaseAvailabilityGuard( databaseName );
     }
 
     @Override
