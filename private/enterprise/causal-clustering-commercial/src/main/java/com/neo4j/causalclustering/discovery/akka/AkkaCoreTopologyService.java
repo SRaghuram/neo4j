@@ -46,6 +46,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final HostnameResolver hostnameResolver;
     private final TopologyServiceRetryStrategy retryStrategy;
     private final TopologyState topologyState;
+    private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
 
     public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, JobScheduler jobScheduler,
             LogProvider logProvider, LogProvider userLogProvider, HostnameResolver hostnameResolver, TopologyServiceRetryStrategy retryStrategy )
@@ -146,15 +147,22 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void setLeader0( LeaderInfo leaderInfo, String dbName )
+    public LeaderInfo getLeader()
     {
-        directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, dbName ), ActorRef.noSender() ) );
+        return leaderInfo;
     }
 
     @Override
-    public void handleStepDown0( long term, String dbName )
+    public void setLeader0( LeaderInfo leaderInfo )
     {
-        directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo.stepDown(), dbName ), ActorRef.noSender() ) );
+        this.leaderInfo = leaderInfo;
+        directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, localDBName() ), ActorRef.noSender() ) );
+    }
+
+    @Override
+    public void handleStepDown0( LeaderInfo steppingDown )
+    {
+        setLeader0( steppingDown );
     }
 
     @Override
