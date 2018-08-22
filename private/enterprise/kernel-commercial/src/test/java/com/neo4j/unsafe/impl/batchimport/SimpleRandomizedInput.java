@@ -151,7 +151,7 @@ public class SimpleRandomizedInput implements Input
             long actualNodeCount = 0;
             for ( Node node : db.getAllNodes() )
             {
-                assertTrue( expectedNodeData.remove( node.getProperty( ID_KEY ) ) != null );
+                assertNotNull( expectedNodeData.remove( node.getProperty( ID_KEY ) ) );
                 actualNodeCount++;
             }
             if ( !expectedNodeData.isEmpty() )
