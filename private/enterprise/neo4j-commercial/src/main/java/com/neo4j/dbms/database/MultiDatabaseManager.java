@@ -46,8 +46,8 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     {
         GraphDatabaseFacade facade = DatabaseManager.DEFAULT_DATABASE_NAME.equals( name ) ? graphDatabaseFacade : new GraphDatabaseFacade();
         DataSourceModule dataSource = new DataSourceModule( name, platform, edition, procedures, facade );
-        ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, msgLog, dataSource.coreAPIAvailabilityGuard );
-        facade.init( spi, platform.threadToTransactionBridge, platform.config, dataSource.neoStoreDataSource.getTokenHolders() );
+        ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, msgLog, dataSource.coreAPIAvailabilityGuard, edition.threadToTransactionBridge );
+        facade.init( spi, edition.threadToTransactionBridge, platform.config, dataSource.neoStoreDataSource.getTokenHolders() );
         platform.dataSourceManager.register( dataSource.neoStoreDataSource );
         databaseMap.put( name, facade );
         return facade;
