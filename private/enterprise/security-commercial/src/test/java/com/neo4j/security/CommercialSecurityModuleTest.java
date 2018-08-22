@@ -38,7 +38,6 @@ class CommercialSecurityModuleTest
         when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
         when( mockLog.isDebugEnabled() ).thenReturn( true );
         when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false );
-        when( config.get( SecuritySettings.native_graph_enabled ) ).thenReturn( false );
         when( config.get( SecuritySettings.auth_cache_ttl ) ).thenReturn( Duration.ZERO );
         when( config.get( SecuritySettings.auth_cache_max_capacity ) ).thenReturn( 10 );
         when( config.get( SecuritySettings.auth_cache_use_ttl ) ).thenReturn( true );
@@ -67,7 +66,7 @@ class CommercialSecurityModuleTest
         nativeAuth( false, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME );
+        authProviders( SecuritySettings.NATIVE_GRAPH_REALM_NAME );
 
         // Then
         assertIllegalArgumentException( "Illegal configuration: All authentication providers are disabled." );
@@ -80,7 +79,7 @@ class CommercialSecurityModuleTest
         nativeAuth( true, false );
         ldapAuth( false, false );
         pluginAuth( false, false );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME );
+        authProviders( SecuritySettings.NATIVE_GRAPH_REALM_NAME );
 
         // Then
         assertIllegalArgumentException( "Illegal configuration: All authorization providers are disabled." );
@@ -93,10 +92,10 @@ class CommercialSecurityModuleTest
         nativeAuth( false, false );
         ldapAuth( false, false );
         pluginAuth( true, true );
-        authProviders( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
+        authProviders( SecuritySettings.NATIVE_GRAPH_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: Native auth provider configured, " +
+        assertIllegalArgumentException( "Illegal configuration: Native graph auth provider configured, " +
                 "but both authentication and authorization are disabled." );
     }
 
@@ -117,55 +116,76 @@ class CommercialSecurityModuleTest
     }
 
     @Test
-    void shouldNotFailNativeWithPluginAuthorizationProvider()
+    void shouldNotFailWithOnlyNativeGraph()
+    {
+        // Given
+        nativeAuth( true, true );
+        ldapAuth( false, false );
+        pluginAuth( false, false );
+
+        authProviders(
+                SecuritySettings.NATIVE_GRAPH_REALM_NAME
+        );
+
+        // Then
+        assertSuccess();
+    }
+
+    @Test
+    void shouldFailWithNativeAndNativeGraphTogether()
+    {
+        // Given
+        nativeAuth( true, true );
+        ldapAuth( false, false );
+        pluginAuth( false, false );
+
+        authProviders(
+                SecuritySettings.NATIVE_GRAPH_REALM_NAME,
+                SecuritySettings.NATIVE_REALM_NAME
+        );
+
+        // Then
+        assertIllegalArgumentException( "Illegal configuration: Both native auth provider and native graph auth provider configured," +
+                " but they cannot be used together. Please remove one of them from the configuration." );
+    }
+
+    @Test
+    void shouldNotFailNativeGraphWithLdapAuthorizationProvider()
+    {
+        // Given
+        nativeAuth( true, true );
+        ldapAuth( true, true );
+        pluginAuth( false, false );
+        authProviders(
+                SecuritySettings.NATIVE_GRAPH_REALM_NAME,
+                SecuritySettings.LDAP_REALM_NAME
+        );
+
+        // When
+        when( config.get( SecuritySettings.ldap_connection_timeout ) ).thenReturn( Duration.ofSeconds( 5 ) );
+        when( config.get( SecuritySettings.ldap_read_timeout ) ).thenReturn( Duration.ofSeconds( 5 ) );
+        when( config.get( SecuritySettings.ldap_authorization_connection_pooling ) ).thenReturn( false );
+        when( config.get( SecuritySettings.ldap_authentication_use_samaccountname ) ).thenReturn( false );
+        when( config.get( SecuritySettings.ldap_authentication_cache_enabled  ) ).thenReturn( false );
+
+        // Then
+        assertSuccess();
+    }
+
+    @Test
+    void shouldNotFailNativeGraphWithPluginAuthorizationProvider()
     {
         // Given
         nativeAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( true, true );
         authProviders(
-                SecuritySettings.NATIVE_REALM_NAME,
+                SecuritySettings.NATIVE_GRAPH_REALM_NAME,
                 SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthorizationPlugin"
         );
 
         // Then
         assertSuccess();
-    }
-
-    @Test
-    void shouldNotFailNativeWithNativeGraph()
-    {
-        // Given
-        nativeAuth( true, true );
-        ldapAuth( false, false );
-        pluginAuth( false, false );
-
-        authProviders(
-                SecuritySettings.NATIVE_REALM_NAME
-        );
-
-        when( config.get( SecuritySettings.native_graph_enabled ) ).thenReturn( true );
-
-        // Then
-        assertSuccess();
-    }
-
-    @Test
-    void shouldFailNativeGraphWithoutNative()
-    {
-        // Given
-        nativeAuth( false, false );
-        ldapAuth( true, true );
-        pluginAuth( false, false );
-
-        authProviders(
-                SecuritySettings.LDAP_REALM_NAME
-        );
-
-        when( config.get( SecuritySettings.native_graph_enabled ) ).thenReturn( true );
-
-        // Then
-        assertIllegalArgumentException( "Illegal configuration: Native graph enabled but native auth provider is not configured." );
     }
 
     // --------- HELPERS ----------

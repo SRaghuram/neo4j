@@ -47,7 +47,7 @@ class NativeGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     {
         super();
 
-        setName( SecuritySettings.NATIVE_REALM_NAME );
+        setName( SecuritySettings.NATIVE_GRAPH_REALM_NAME );
         this.initialUserRepository = initialUserRepository;
         this.defaultAdminRepository = defaultAdminRepository;
         this.passwordPolicy = passwordPolicy;

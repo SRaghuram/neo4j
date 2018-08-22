@@ -5,6 +5,10 @@
  */
 package com.neo4j.security;
 
+import org.apache.shiro.realm.Realm;
+
+import java.util.List;
+
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.helpers.Service;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
@@ -40,16 +44,20 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
 
     @Override
     protected EnterpriseUserManager createInternalRealm( Config config, LogProvider logProvider,
-            FileSystemAbstraction fileSystem, JobScheduler jobScheduler )
+            FileSystemAbstraction fileSystem, JobScheduler jobScheduler, List<Realm> realms )
     {
-        if ( config.get( SecuritySettings.native_graph_enabled ) )
+        EnterpriseUserManager internalRealm = null;
+        if ( securityConfig.hasNativeProvider )
         {
-            return createNativeGraphRealm( config, logProvider, fileSystem );
+            internalRealm = createInternalFlatFileRealm( config, logProvider, fileSystem, jobScheduler );
+            realms.add( (Realm) internalRealm );
         }
-        else
+        else if ( ( (CommercialSecurityConfig) securityConfig ).hasNativeGraphProvider )
         {
-            return createInternalFlatFileRealm( config, logProvider, fileSystem, jobScheduler );
+            internalRealm = createNativeGraphRealm( config, logProvider, fileSystem);
+            realms.add( (Realm) internalRealm );
         }
+        return internalRealm;
     }
 
     private NativeGraphRealm createNativeGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
@@ -62,5 +70,42 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
                 CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem ),
                 getDefaultAdminRepository( config, logProvider, fileSystem )
         );
+    }
+
+    @Override
+    protected SecurityConfig getValidatedSecurityConfig( Config config )
+    {
+        CommercialSecurityConfig securityConfig = new CommercialSecurityConfig( config );
+        securityConfig.validate();
+        return securityConfig;
+    }
+
+    static class CommercialSecurityConfig extends SecurityConfig
+    {
+        final boolean hasNativeGraphProvider;
+
+        CommercialSecurityConfig( Config config )
+        {
+            super( config );
+            hasNativeGraphProvider = authProviders.contains( SecuritySettings.NATIVE_GRAPH_REALM_NAME );
+        }
+
+        @Override
+        protected void validate()
+        {
+            if ( hasNativeGraphProvider && !nativeAuthentication && !nativeAuthorization )
+            {
+                throw illegalConfiguration(
+                        "Native graph auth provider configured, but both authentication and authorization are disabled." );
+            }
+
+            if ( hasNativeProvider && hasNativeGraphProvider )
+            {
+                throw illegalConfiguration(
+                        "Both native auth provider and native graph auth provider configured," +
+                        " but they cannot be used together. Please remove one of them from the configuration." );
+            }
+            super.validate();
+        }
     }
 }
