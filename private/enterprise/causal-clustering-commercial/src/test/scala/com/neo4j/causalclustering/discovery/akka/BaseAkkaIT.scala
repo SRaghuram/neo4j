@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessage
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import org.junit.runner.RunWith
+import org.neo4j.causalclustering.discovery.NoOpHostnameResolver
 import org.neo4j.kernel.configuration.Config
 import org.neo4j.ports.allocation.PortAuthority
 import org.scalatest.exceptions.TestFailedException
@@ -31,7 +32,7 @@ object BaseAkkaIT {
     config.augment("causal_clustering.discovery_listen_address", s":$discoveryListenPort")
     config.augment("causal_clustering.initial_discovery_members", s"localhost:$discoveryListenPort")
 
-    new TypesafeConfigService(config,ArteryTransport.TCP).generate()
+    new TypesafeConfigService(new NoOpHostnameResolver(), ArteryTransport.TCP, config).generate()
   }
 
   def bootstrapSetup: BootstrapSetup = BootstrapSetup().withActorRefProvider(ProviderSelection.cluster()).withConfig(config)

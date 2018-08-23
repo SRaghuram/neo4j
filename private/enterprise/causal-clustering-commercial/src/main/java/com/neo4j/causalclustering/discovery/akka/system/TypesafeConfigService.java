@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.CoreTopology;
+import org.neo4j.causalclustering.discovery.HostnameResolver;
 import org.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
@@ -46,7 +47,7 @@ import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
 public final class TypesafeConfigService
 {
-    public static final String DEFAULT_SCHEME = "akka://";
+    public static final String AKKA_SCHEME = "akka://";
 
     public enum ArteryTransport
     {
@@ -64,11 +65,13 @@ public final class TypesafeConfigService
 
     private final Config config;
     private final ArteryTransport arteryTransport;
+    private final HostnameResolver hostnameResolver;
 
-    public TypesafeConfigService( Config config, ArteryTransport arteryTransport )
+    public TypesafeConfigService( HostnameResolver hostnameResolver, ArteryTransport arteryTransport, Config config )
     {
         this.config = config;
         this.arteryTransport = arteryTransport;
+        this.hostnameResolver = hostnameResolver;
     }
 
     public com.typesafe.config.Config generate()
@@ -98,7 +101,8 @@ public final class TypesafeConfigService
     {
         List<AdvertisedSocketAddress> initMembers = config.get( CausalClusteringSettings.initial_discovery_members );
         return initMembers.stream()
-                .map( socket -> DEFAULT_SCHEME + ActorSystemFactory.ACTOR_SYSTEM_NAME + "@" + socket )
+                .flatMap( rawAddress -> hostnameResolver.resolve( rawAddress ).stream() )
+                .map( resolvedAddress -> AKKA_SCHEME + ActorSystemFactory.ACTOR_SYSTEM_NAME + "@" + resolvedAddress )
                 .collect( Collectors.toList() );
     }
 

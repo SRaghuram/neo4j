@@ -6,12 +6,13 @@
 package com.neo4j.causalclustering.discovery.akka;
 
 import akka.remote.artery.tcp.SSLEngineProvider;
-
-import java.util.Optional;
-
 import com.neo4j.causalclustering.discovery.AkkaDiscoverySSLEngineProvider;
 import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
+
+import java.util.Optional;
+
+import org.neo4j.causalclustering.discovery.HostnameResolver;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ssl.SslPolicy;
@@ -21,10 +22,10 @@ public class CommercialAkkaDiscoveryServiceFactory extends BaseAkkaDiscoveryServ
     private Optional<SslPolicy> sslPolicy = Optional.empty();
 
     @Override
-    protected ActorSystemFactory actorSystemFactory( Config config, LogProvider logProvider )
+    protected ActorSystemFactory actorSystemFactory( HostnameResolver hostnameResolver, Config config, LogProvider logProvider )
     {
         Optional<SSLEngineProvider> sslEngineProvider = sslPolicy.map( AkkaDiscoverySSLEngineProvider::new );
-        return new ActorSystemFactory( logProvider, config, sslEngineProvider );
+        return new ActorSystemFactory( hostnameResolver, sslEngineProvider, config, logProvider );
     }
 
     @Override

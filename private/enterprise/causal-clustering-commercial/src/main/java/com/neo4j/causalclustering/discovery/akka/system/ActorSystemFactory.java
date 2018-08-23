@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
+import org.neo4j.causalclustering.discovery.HostnameResolver;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 
@@ -31,13 +32,13 @@ public class ActorSystemFactory
     private final Optional<SSLEngineProvider> sslEngineProvider;
     private final TypesafeConfigService configService;
 
-    public ActorSystemFactory( LogProvider logProvider, Config config, Optional<SSLEngineProvider> sslEngineProvider )
+    public ActorSystemFactory( HostnameResolver hostnameResolver, Optional<SSLEngineProvider> sslEngineProvider, Config config, LogProvider logProvider )
     {
         this.logProvider = logProvider;
         this.sslEngineProvider = sslEngineProvider;
         TypesafeConfigService.ArteryTransport arteryTransport =
                 sslEngineProvider.isPresent() ? TypesafeConfigService.ArteryTransport.TLS_TCP : TypesafeConfigService.ArteryTransport.TCP;
-        this.configService = new TypesafeConfigService( config, arteryTransport );
+        this.configService = new TypesafeConfigService( hostnameResolver, arteryTransport, config );
     }
 
     Set<ActorPath> initialClientContacts()
