@@ -16,6 +16,12 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.impl.logging.LogService;
 
+/**
+ * Composite availability guard that makes desicion about its availability based on multiple underlying database specific availability guards.
+ * Any fulfillment, require, available, etc requests will be redistributed to all underlying availability guards.
+ *
+ * @see AvailabilityGuard
+ */
 public class CompositeDatabaseAvailabilityGuard implements AvailabilityGuard
 {
     private final Clock clock;
@@ -53,6 +59,9 @@ public class CompositeDatabaseAvailabilityGuard implements AvailabilityGuard
         return guards.stream().allMatch( DatabaseAvailabilityGuard::isAvailable );
     }
 
+    /**
+     * Since lifecycle of databases in 3.5 is glued together we can assume that we shutdown databases together.
+     */
     @Override
     public boolean isShutdown()
     {
