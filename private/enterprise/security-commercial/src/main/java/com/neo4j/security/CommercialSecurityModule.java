@@ -5,10 +5,6 @@
  */
 package com.neo4j.security;
 
-import org.apache.shiro.realm.Realm;
-
-import java.util.List;
-
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.helpers.Service;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
@@ -43,18 +39,16 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
 
     @Override
     protected EnterpriseUserManager createInternalRealm( Config config, LogProvider logProvider,
-            FileSystemAbstraction fileSystem, JobScheduler jobScheduler, List<Realm> realms )
+            FileSystemAbstraction fileSystem, JobScheduler jobScheduler )
     {
         EnterpriseUserManager internalRealm = null;
         if ( securityConfig.hasNativeProvider )
         {
             internalRealm = createInternalFlatFileRealm( config, logProvider, fileSystem, jobScheduler );
-            realms.add( (Realm) internalRealm );
         }
         else if ( ( (CommercialSecurityConfig) securityConfig ).hasSystemGraphProvider )
         {
             internalRealm = createSystemGraphRealm( config, logProvider, fileSystem);
-            realms.add( (Realm) internalRealm );
         }
         return internalRealm;
     }

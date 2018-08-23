@@ -150,7 +150,7 @@ class CommercialSecurityModuleTest
     }
 
     @Test
-    void shouldNotFailSystemGrapProviderhWithLdapAuthorizationProvider()
+    void shouldNotFailSystemGraphProviderhWithLdapAuthorizationProvider()
     {
         // Given
         systemGraphAuth( true, true );
