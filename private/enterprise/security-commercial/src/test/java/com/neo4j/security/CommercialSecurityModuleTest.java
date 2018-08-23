@@ -50,7 +50,7 @@ class CommercialSecurityModuleTest
     void shouldFailOnIllegalRealmNameConfiguration()
     {
         // Given
-        nativeAuth( true, true );
+        systemGraphAuth( true, true );
         ldapAuth( true, true );
         pluginAuth( false, false );
         authProviders( "this-realm-does-not-exist" );
@@ -63,10 +63,10 @@ class CommercialSecurityModuleTest
     void shouldFailOnNoAuthenticationMechanism()
     {
         // Given
-        nativeAuth( false, true );
+        systemGraphAuth( false, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
-        authProviders( SecuritySettings.NATIVE_GRAPH_REALM_NAME );
+        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
 
         // Then
         assertIllegalArgumentException( "Illegal configuration: All authentication providers are disabled." );
@@ -76,10 +76,10 @@ class CommercialSecurityModuleTest
     void shouldFailOnNoAuthorizationMechanism()
     {
         // Given
-        nativeAuth( true, false );
+        systemGraphAuth( true, false );
         ldapAuth( false, false );
         pluginAuth( false, false );
-        authProviders( SecuritySettings.NATIVE_GRAPH_REALM_NAME );
+        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
 
         // Then
         assertIllegalArgumentException( "Illegal configuration: All authorization providers are disabled." );
@@ -89,13 +89,13 @@ class CommercialSecurityModuleTest
     void shouldFailOnIllegalAdvancedRealmConfiguration()
     {
         // Given
-        nativeAuth( false, false );
+        systemGraphAuth( false, false );
         ldapAuth( false, false );
         pluginAuth( true, true );
-        authProviders( SecuritySettings.NATIVE_GRAPH_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
+        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: Native graph auth provider configured, " +
+        assertIllegalArgumentException( "Illegal configuration: System-graph auth provider configured, " +
                 "but both authentication and authorization are disabled." );
     }
 
@@ -103,7 +103,7 @@ class CommercialSecurityModuleTest
     void shouldFailOnNotLoadedPluginAuthProvider()
     {
         // Given
-        nativeAuth( false, false );
+        systemGraphAuth( false, false );
         ldapAuth( false, false );
         pluginAuth( true, true );
         authProviders(
@@ -116,15 +116,15 @@ class CommercialSecurityModuleTest
     }
 
     @Test
-    void shouldNotFailWithOnlyNativeGraph()
+    void shouldNotFailWithOnlySystemGraphProvider()
     {
         // Given
-        nativeAuth( true, true );
+        systemGraphAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
 
         authProviders(
-                SecuritySettings.NATIVE_GRAPH_REALM_NAME
+                SecuritySettings.SYSTEM_GRAPH_REALM_NAME
         );
 
         // Then
@@ -132,32 +132,32 @@ class CommercialSecurityModuleTest
     }
 
     @Test
-    void shouldFailWithNativeAndNativeGraphTogether()
+    void shouldFailWithNativeProviderAndSystemGraphProviderTogether()
     {
         // Given
-        nativeAuth( true, true );
+        systemGraphAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
 
         authProviders(
-                SecuritySettings.NATIVE_GRAPH_REALM_NAME,
+                SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
                 SecuritySettings.NATIVE_REALM_NAME
         );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: Both native auth provider and native graph auth provider configured," +
+        assertIllegalArgumentException( "Illegal configuration: Both system-graph auth provider and native auth provider configured," +
                 " but they cannot be used together. Please remove one of them from the configuration." );
     }
 
     @Test
-    void shouldNotFailNativeGraphWithLdapAuthorizationProvider()
+    void shouldNotFailSystemGrapProviderhWithLdapAuthorizationProvider()
     {
         // Given
-        nativeAuth( true, true );
+        systemGraphAuth( true, true );
         ldapAuth( true, true );
         pluginAuth( false, false );
         authProviders(
-                SecuritySettings.NATIVE_GRAPH_REALM_NAME,
+                SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
                 SecuritySettings.LDAP_REALM_NAME
         );
 
@@ -173,14 +173,14 @@ class CommercialSecurityModuleTest
     }
 
     @Test
-    void shouldNotFailNativeGraphWithPluginAuthorizationProvider()
+    void shouldNotFailSystemGraphProviderWithPluginAuthorizationProvider()
     {
         // Given
-        nativeAuth( true, true );
+        systemGraphAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( true, true );
         authProviders(
-                SecuritySettings.NATIVE_GRAPH_REALM_NAME,
+                SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
                 SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthorizationPlugin"
         );
 
@@ -190,7 +190,7 @@ class CommercialSecurityModuleTest
 
     // --------- HELPERS ----------
 
-    private void nativeAuth( boolean authn, boolean authr )
+    private void systemGraphAuth( boolean authn, boolean authr )
     {
         when( config.get( SecuritySettings.native_authentication_enabled ) ).thenReturn( authn );
         when( config.get( SecuritySettings.native_authorization_enabled ) ).thenReturn( authr );

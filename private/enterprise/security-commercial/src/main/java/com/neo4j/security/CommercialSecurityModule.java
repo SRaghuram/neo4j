@@ -21,13 +21,12 @@ import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
 import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
-import org.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 @Service.Implementation( SecurityModule.class )
 public class CommercialSecurityModule extends EnterpriseSecurityModule
 {
-    // This will be need as an input to the NativeGraphRealm later to be able to handle transactions
+    // This will be need as an input to the SystemGraphRealm later to be able to handle transactions
     private static DatabaseManager databaseManager;
 
     public CommercialSecurityModule()
@@ -52,17 +51,17 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
             internalRealm = createInternalFlatFileRealm( config, logProvider, fileSystem, jobScheduler );
             realms.add( (Realm) internalRealm );
         }
-        else if ( ( (CommercialSecurityConfig) securityConfig ).hasNativeGraphProvider )
+        else if ( ( (CommercialSecurityConfig) securityConfig ).hasSystemGraphProvider )
         {
-            internalRealm = createNativeGraphRealm( config, logProvider, fileSystem);
+            internalRealm = createSystemGraphRealm( config, logProvider, fileSystem);
             realms.add( (Realm) internalRealm );
         }
         return internalRealm;
     }
 
-    private NativeGraphRealm createNativeGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
+    private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
     {
-        return new NativeGraphRealm(
+        return new SystemGraphRealm(
                 new BasicPasswordPolicy(),
                 createAuthenticationStrategy( config ),
                 config.get( SecuritySettings.native_authentication_enabled ),
@@ -82,27 +81,27 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
 
     static class CommercialSecurityConfig extends SecurityConfig
     {
-        final boolean hasNativeGraphProvider;
+        final boolean hasSystemGraphProvider;
 
         CommercialSecurityConfig( Config config )
         {
             super( config );
-            hasNativeGraphProvider = authProviders.contains( SecuritySettings.NATIVE_GRAPH_REALM_NAME );
+            hasSystemGraphProvider = authProviders.contains( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
         }
 
         @Override
         protected void validate()
         {
-            if ( hasNativeGraphProvider && !nativeAuthentication && !nativeAuthorization )
+            if ( hasSystemGraphProvider && !nativeAuthentication && !nativeAuthorization )
             {
                 throw illegalConfiguration(
-                        "Native graph auth provider configured, but both authentication and authorization are disabled." );
+                        "System-graph auth provider configured, but both authentication and authorization are disabled." );
             }
 
-            if ( hasNativeProvider && hasNativeGraphProvider )
+            if ( hasNativeProvider && hasSystemGraphProvider )
             {
                 throw illegalConfiguration(
-                        "Both native auth provider and native graph auth provider configured," +
+                        "Both system-graph auth provider and native auth provider configured," +
                         " but they cannot be used together. Please remove one of them from the configuration." );
             }
             super.validate();

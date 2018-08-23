@@ -33,7 +33,7 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 /**
  * Shiro realm using a Neo4j graph to store users and roles
  */
-class NativeGraphRealm extends AuthorizingRealm implements RealmLifecycle, EnterpriseUserManager, ShiroAuthorizationInfoProvider
+class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, EnterpriseUserManager, ShiroAuthorizationInfoProvider
 {
     private final UserRepository initialUserRepository;
     private final UserRepository defaultAdminRepository;
@@ -42,12 +42,12 @@ class NativeGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     private final boolean authenticationEnabled;
     private final boolean authorizationEnabled;
 
-    NativeGraphRealm( PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled, boolean authorizationEnabled,
+    SystemGraphRealm( PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled, boolean authorizationEnabled,
             UserRepository initialUserRepository, UserRepository defaultAdminRepository )
     {
         super();
 
-        setName( SecuritySettings.NATIVE_GRAPH_REALM_NAME );
+        setName( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
         this.initialUserRepository = initialUserRepository;
         this.defaultAdminRepository = defaultAdminRepository;
         this.passwordPolicy = passwordPolicy;
