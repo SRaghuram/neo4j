@@ -5,7 +5,7 @@
  */
 package com.neo4j.dmbs.database;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +17,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -32,11 +33,13 @@ class MultiDatabaseManagerIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
+    private AssertableLogProvider logProvider;
 
     @BeforeEach
     void setUp()
     {
-        database = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
+        logProvider = new AssertableLogProvider( true );
+        database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newEmbeddedDatabase( testDirectory.databaseDir() );
     }
 
     @AfterEach
@@ -87,8 +90,19 @@ class MultiDatabaseManagerIT
         assertFalse( databaseManager.getDatabaseFacade( databaseName ).isPresent() );
     }
 
+    @Test
+    void logAboutDatabaseCreationAndShutdown()
+    {
+        DatabaseManager databaseManager = getDatabaseManager();
+        String logTestDb = "logTestDb";
+        databaseManager.createDatabase( logTestDb );
+        databaseManager.shutdownDatabase( logTestDb );
+        logProvider.assertLogStringContains( "Creating 'logTestDb' database." );
+        logProvider.assertLogStringContains( "Shutdown 'logTestDb' database." );
+    }
+
     private DatabaseManager getDatabaseManager()
     {
-        return ((GraphDatabaseAPI)database).getDependencyResolver().resolveDependency( DatabaseManager.class );
+        return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
 }

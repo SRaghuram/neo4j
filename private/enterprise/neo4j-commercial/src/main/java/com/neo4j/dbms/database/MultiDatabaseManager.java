@@ -5,7 +5,7 @@
  */
 package com.neo4j.dbms.database;
 
-import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.dbms.database.DatabaseManager;
@@ -31,31 +31,32 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     private final PlatformModule platform;
     private final EditionModule edition;
     private final Procedures procedures;
-    private final Logger msgLog;
+    private final Logger log;
     private final GraphDatabaseFacade graphDatabaseFacade;
 
     public MultiDatabaseManager( PlatformModule platform, EditionModule edition, Procedures procedures,
-            Logger msgLog, GraphDatabaseFacade graphDatabaseFacade )
+            Logger log, GraphDatabaseFacade graphDatabaseFacade )
     {
         this.platform = platform;
         this.edition = edition;
         this.procedures = procedures;
-        this.msgLog = msgLog;
+        this.log = log;
         this.graphDatabaseFacade = graphDatabaseFacade;
     }
 
     @Override
-    public GraphDatabaseFacade createDatabase( String name )
+    public GraphDatabaseFacade createDatabase( String databaseName )
     {
-        requireNonNull( name, "Database name should be not null" );
+        requireNonNull( databaseName, "Database name should be not null" );
+        log.log( "Creating '%s' database.", databaseName );
 
         GraphDatabaseFacade facade =
-                platform.config.get( GraphDatabaseSettings.active_database ).equals( name ) ? graphDatabaseFacade : new GraphDatabaseFacade();
-        DataSourceModule dataSource = new DataSourceModule( name, platform, edition, procedures, facade );
-        ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, msgLog, dataSource.coreAPIAvailabilityGuard, edition.threadToTransactionBridge );
+                platform.config.get( GraphDatabaseSettings.active_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
+        DataSourceModule dataSource = new DataSourceModule( databaseName, platform, edition, procedures, facade );
+        ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.threadToTransactionBridge );
         facade.init( spi, edition.threadToTransactionBridge, platform.config, dataSource.neoStoreDataSource.getTokenHolders() );
         platform.dataSourceManager.register( dataSource.neoStoreDataSource );
-        databaseMap.put( name, facade );
+        databaseMap.put( databaseName, facade );
         return facade;
     }
 
@@ -66,25 +67,24 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     }
 
     @Override
-    public void shutdownDatabase( String name )
+    public void shutdownDatabase( String databaseName )
     {
-        GraphDatabaseFacade databaseFacade = databaseMap.remove( name );
+        GraphDatabaseFacade databaseFacade = databaseMap.remove( databaseName );
         if ( databaseFacade != null )
         {
-            databaseFacade.shutdown();
+            shutdownDatabase( databaseName, databaseFacade );
         }
     }
 
     @Override
     public void stop() throws Throwable
     {
-        Collection<GraphDatabaseFacade> databaseFacades = databaseMap.values();
         Throwable stopException = null;
-        for ( GraphDatabaseFacade databaseFacade : databaseFacades )
+        for ( Map.Entry<String, GraphDatabaseFacade> databaseFacade : databaseMap.entrySet() )
         {
             try
             {
-                databaseFacade.shutdown();
+                shutdownDatabase( databaseFacade.getKey(), databaseFacade.getValue() );
             }
             catch ( Throwable t )
             {
@@ -96,5 +96,11 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         {
             throw stopException;
         }
+    }
+
+    private void shutdownDatabase( String databaseName, GraphDatabaseFacade databaseFacade )
+    {
+        log.log( "Shutdown '%s' database.", databaseName );
+        databaseFacade.shutdown();
     }
 }

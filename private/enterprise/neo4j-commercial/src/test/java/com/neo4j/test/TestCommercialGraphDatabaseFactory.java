@@ -1,26 +1,11 @@
 /*
  * Copyright (c) 2002-2018 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j Enterprise Edition. The included source
- * code can be redistributed and/or modified under the terms of the
- * GNU AFFERO GENERAL PUBLIC LICENSE Version 3
- * (http://www.fsf.org/licensing/licenses/agpl-3.0.html) with the
- * Commons Clause, as found in the associated LICENSE.txt file.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * Neo4j object code can be licensed independently from the source
- * under separate terms from the AGPL. Inquiries can be directed to:
- * licensing@neo4j.com
- *
- * More information is also available at:
- * https://neo4j.com/licensing/
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.test;
+package com.neo4j.test;
+
+import com.neo4j.commercial.edition.CommercialEditionModule;
 
 import java.io.File;
 
@@ -33,43 +18,40 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.Edition;
 import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.logging.SimpleLogService;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.TestGraphDatabaseFactoryState;
 
-/**
- * Factory for test graph database.
- */
-public class TestEnterpriseGraphDatabaseFactory extends TestGraphDatabaseFactory
+public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
 {
-    public TestEnterpriseGraphDatabaseFactory()
+    public TestCommercialGraphDatabaseFactory()
     {
         super();
     }
 
-    public TestEnterpriseGraphDatabaseFactory( LogProvider logProvider )
+    public TestCommercialGraphDatabaseFactory( LogProvider logProvider )
     {
         super( logProvider );
     }
 
     @Override
     protected GraphDatabaseBuilder.DatabaseCreator createDatabaseCreator( File storeDir,
-                                                                          GraphDatabaseFactoryState state )
+            GraphDatabaseFactoryState state )
     {
         return new GraphDatabaseBuilder.DatabaseCreator()
         {
             @Override
             public GraphDatabaseService newDatabase( Config config )
             {
-                File absoluteStoreDir = storeDir.getAbsoluteFile();
-                File databasesRoot = absoluteStoreDir.getParentFile();
+                File databasesRoot = storeDir.getParentFile();
                 config.augment( GraphDatabaseSettings.ephemeral, Settings.FALSE );
-                config.augment( GraphDatabaseSettings.active_database, absoluteStoreDir.getName() );
+                config.augment( GraphDatabaseSettings.active_database, storeDir.getName() );
                 config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
-                return new GraphDatabaseFacadeFactory( DatabaseInfo.ENTERPRISE, EnterpriseEditionModule::new )
+                return new GraphDatabaseFacadeFactory( DatabaseInfo.ENTERPRISE, CommercialEditionModule::new )
                 {
                     @Override
                     protected PlatformModule createPlatform( File storeDir, Config config, Dependencies dependencies )
@@ -105,18 +87,18 @@ public class TestEnterpriseGraphDatabaseFactory extends TestGraphDatabaseFactory
             @Override
             public GraphDatabaseService newDatabase( Config config )
             {
-                return new TestEnterpriseGraphDatabaseFacadeFactory( state, true ).newFacade( storeDir, config,
+                return new TestCommercialGraphDatabaseFacadeFactory( state, true ).newFacade( storeDir, config,
                         GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
             }
         };
     }
 
-    static class TestEnterpriseGraphDatabaseFacadeFactory extends TestGraphDatabaseFacadeFactory
+    static class TestCommercialGraphDatabaseFacadeFactory extends TestGraphDatabaseFacadeFactory
     {
 
-        TestEnterpriseGraphDatabaseFacadeFactory( TestGraphDatabaseFactoryState state, boolean impermanent )
+        TestCommercialGraphDatabaseFacadeFactory( TestGraphDatabaseFactoryState state, boolean impermanent )
         {
-            super( state, impermanent, DatabaseInfo.ENTERPRISE, EnterpriseEditionModule::new );
+            super( state, impermanent, DatabaseInfo.ENTERPRISE, CommercialEditionModule::new );
         }
     }
 
@@ -126,3 +108,4 @@ public class TestEnterpriseGraphDatabaseFactory extends TestGraphDatabaseFactory
         return Edition.enterprise.toString();
     }
 }
+

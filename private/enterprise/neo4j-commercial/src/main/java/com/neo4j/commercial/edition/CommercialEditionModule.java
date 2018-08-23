@@ -29,11 +29,11 @@ import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.logging.Logger;
 
-class CommercialEditionModule extends EnterpriseEditionModule
+public class CommercialEditionModule extends EnterpriseEditionModule
 {
     private final GlobalTransactionStats globalTransactionStats;
 
-    CommercialEditionModule( PlatformModule platformModule )
+    public CommercialEditionModule( PlatformModule platformModule )
     {
         super( platformModule );
         globalTransactionStats = new GlobalTransactionStats();
