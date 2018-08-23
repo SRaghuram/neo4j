@@ -37,7 +37,7 @@ class CommercialEditionModule extends EnterpriseEditionModule
     {
         super( platformModule );
         globalTransactionStats = new GlobalTransactionStats();
-        globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( platformModule.clock, platformModule.logging );
+        initGlobalGuard( platformModule.clock, platformModule.logging );
     }
 
     @Override
@@ -71,14 +71,16 @@ class CommercialEditionModule extends EnterpriseEditionModule
         return globalTransactionStats;
     }
 
+    @Override
     public AvailabilityGuard getGlobalAvailabilityGuard( Clock clock, LogService logService )
     {
+        initGlobalGuard( clock, logService );
         return globalAvailabilityGuard;
     }
 
     public DatabaseAvailabilityGuard createDatabaseAvailabilityGuard( String databaseName, Clock clock, LogService logService )
     {
-        return ((CompositeDatabaseAvailabilityGuard) globalAvailabilityGuard).createDatabaseAvailabilityGuard( databaseName );
+        return ((CompositeDatabaseAvailabilityGuard) getGlobalAvailabilityGuard( clock, logService )).createDatabaseAvailabilityGuard( databaseName );
     }
 
     @Override
@@ -104,6 +106,14 @@ class CommercialEditionModule extends EnterpriseEditionModule
             editionModule.userManagerSupplier = UserManagerSupplier.NO_AUTH;
             platformModule.life.add( platformModule.dependencies.satisfyDependency( editionModule.authManager ) );
             platformModule.life.add( platformModule.dependencies.satisfyDependency( editionModule.userManagerSupplier ) );
+        }
+    }
+
+    private void initGlobalGuard( Clock clock, LogService logService )
+    {
+        if ( globalAvailabilityGuard == null )
+        {
+            globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( clock, logService );
         }
     }
 }

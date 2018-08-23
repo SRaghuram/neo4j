@@ -51,7 +51,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     {
         super( platformModule, discoveryServiceFactory );
         this.globalTransactionStats = new GlobalTransactionStats();
-        this.globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( platformModule.clock, platformModule.logging );
+        initGlobalGuard( platformModule.clock, platformModule.logging );
     }
 
     @Override
@@ -109,13 +109,14 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     @Override
     public AvailabilityGuard getGlobalAvailabilityGuard( Clock clock, LogService logService )
     {
+        initGlobalGuard( clock, logService );
         return globalAvailabilityGuard;
     }
 
     @Override
     public DatabaseAvailabilityGuard createDatabaseAvailabilityGuard( String databaseName, Clock clock, LogService logService )
     {
-        return ((CompositeDatabaseAvailabilityGuard) globalAvailabilityGuard).createDatabaseAvailabilityGuard( databaseName );
+        return ((CompositeDatabaseAvailabilityGuard) getGlobalAvailabilityGuard( clock, logService )).createDatabaseAvailabilityGuard( databaseName );
     }
 
     @Override
@@ -123,5 +124,13 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     {
         //TODO: change to commercial security module here when ready
         EnterpriseEditionModule.createEnterpriseSecurityModule( this, platformModule, procedures );
+    }
+
+    private void initGlobalGuard( Clock clock, LogService logService )
+    {
+        if ( globalAvailabilityGuard == null )
+        {
+            globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( clock, logService );
+        }
     }
 }
