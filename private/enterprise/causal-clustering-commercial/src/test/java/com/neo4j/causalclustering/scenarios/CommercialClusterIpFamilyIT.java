@@ -5,14 +5,11 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceType;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.scenarios.BaseClusterIpFamilyIT;
 
@@ -33,8 +30,8 @@ public class CommercialClusterIpFamilyIT extends BaseClusterIpFamilyIT
         } );
     }
 
-    public CommercialClusterIpFamilyIT( Supplier<DiscoveryServiceFactory> discoveryServiceFactory, IpFamily ipFamily, boolean useWildcard )
+    public CommercialClusterIpFamilyIT( CommercialDiscoveryServiceType discoveryServiceType, IpFamily ipFamily, boolean useWildcard )
     {
-        super( discoveryServiceFactory, ipFamily, useWildcard );
+        super( discoveryServiceType, ipFamily, useWildcard );
     }
 }

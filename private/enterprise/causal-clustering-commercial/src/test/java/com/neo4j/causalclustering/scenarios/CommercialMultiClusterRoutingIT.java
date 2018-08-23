@@ -10,17 +10,15 @@ import org.junit.runners.Parameterized;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Set;
-import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.scenarios.BaseMultiClusterRoutingIT;
 
-import static com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceType.AKKA;
+import static com.neo4j.causalclustering.scenarios.CommercialDiscoveryServiceType.AKKA;
 
 public class CommercialMultiClusterRoutingIT extends BaseMultiClusterRoutingIT
 {
     public CommercialMultiClusterRoutingIT( String ignoredName, int numCores, int numReplicas, Set<String> dbNames,
-            Supplier<DiscoveryServiceFactory> discoveryType )
+            CommercialDiscoveryServiceType discoveryType )
     {
         super( ignoredName, numCores, numReplicas, dbNames, discoveryType );
     }

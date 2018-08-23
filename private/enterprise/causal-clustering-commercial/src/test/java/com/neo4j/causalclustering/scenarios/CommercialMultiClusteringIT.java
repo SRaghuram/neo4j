@@ -10,19 +10,17 @@ import org.junit.runners.Parameterized;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Set;
-import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.scenarios.BaseMultiClusteringIT;
 
-import static com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceType.AKKA;
+import static com.neo4j.causalclustering.scenarios.CommercialDiscoveryServiceType.AKKA;
 
 public class CommercialMultiClusteringIT extends BaseMultiClusteringIT
 {
     public CommercialMultiClusteringIT( String ignoredName, int numCores, int numReplicas, Set<String> dbNames,
-            Supplier<DiscoveryServiceFactory> discoveryServiceFactory )
+            CommercialDiscoveryServiceType discoveryServiceType )
     {
-        super( ignoredName, numCores, numReplicas, dbNames, discoveryServiceFactory );
+        super( ignoredName, numCores, numReplicas, dbNames, discoveryServiceType );
     }
 
     @Parameterized.Parameters( name = "{0}" )

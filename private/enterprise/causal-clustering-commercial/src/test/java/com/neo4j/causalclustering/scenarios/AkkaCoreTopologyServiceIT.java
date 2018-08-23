@@ -5,14 +5,12 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import com.neo4j.causalclustering.discovery.akka.CommercialAkkaDiscoveryServiceFactory;
+import org.neo4j.causalclustering.scenarios.BaseCoreTopologyServiceIT;
 
-import org.neo4j.causalclustering.scenarios.CoreTopologyServiceIT;
-
-public class AkkaCoreTopologyServiceIT extends CoreTopologyServiceIT
+public class AkkaCoreTopologyServiceIT extends BaseCoreTopologyServiceIT
 {
     public AkkaCoreTopologyServiceIT()
     {
-        super( CommercialAkkaDiscoveryServiceFactory::new );
+        super( CommercialDiscoveryServiceType.AKKA );
     }
 }
