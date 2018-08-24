@@ -21,11 +21,12 @@ import org.neo4j.kernel.impl.logging.NullLogService;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.lessThan;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CompositeDatabaseAvailabilityGuardTest
@@ -95,24 +96,24 @@ class CompositeDatabaseAvailabilityGuardTest
     @Test
     void addRemoveListenersOnAllGuards()
     {
-        TestAvailabilityListener listener = new TestAvailabilityListener();
+        AvailabilityListener listener = mock( AvailabilityListener.class );
         compositeGuard.addListener( listener );
 
         compositeGuard.require( requirement );
 
-        assertEquals( 2, listener.getUnavailableCount() );
+        verify( listener, times( 2 ) ).unavailable();
 
         compositeGuard.fulfill( requirement );
 
-        assertEquals( 2, listener.getAvailableCount() );
+        verify( listener, times( 2 ) ).available();
 
         compositeGuard.removeListener( listener );
 
         compositeGuard.require( requirement );
         compositeGuard.fulfill( requirement );
 
-        assertEquals( 2, listener.getUnavailableCount() );
-        assertEquals( 2, listener.getAvailableCount() );
+        verify( listener, times( 2 ) ).unavailable();
+        verify( listener, times( 2 ) ).available();
     }
 
     @Test
@@ -157,33 +158,5 @@ class CompositeDatabaseAvailabilityGuardTest
         assertThat( counter.getValue(), lessThan( 20L ) );
         assertTrue( defaultGuard.isAvailable() );
         assertFalse( systemGuard.isAvailable() );
-    }
-
-    private static class TestAvailabilityListener implements AvailabilityListener
-    {
-        private int unavailableCount;
-        private int availableCount;
-
-        @Override
-        public void available()
-        {
-            availableCount++;
-        }
-
-        @Override
-        public void unavailable()
-        {
-            unavailableCount++;
-        }
-
-        int getUnavailableCount()
-        {
-            return unavailableCount;
-        }
-
-        int getAvailableCount()
-        {
-            return availableCount;
-        }
     }
 }

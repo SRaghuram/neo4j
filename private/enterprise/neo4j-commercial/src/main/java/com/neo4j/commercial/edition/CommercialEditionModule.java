@@ -78,6 +78,7 @@ class CommercialEditionModule extends EnterpriseEditionModule
         return globalAvailabilityGuard;
     }
 
+    @Override
     public DatabaseAvailabilityGuard createDatabaseAvailabilityGuard( String databaseName, Clock clock, LogService logService )
     {
         return ((CompositeDatabaseAvailabilityGuard) getGlobalAvailabilityGuard( clock, logService )).createDatabaseAvailabilityGuard( databaseName );

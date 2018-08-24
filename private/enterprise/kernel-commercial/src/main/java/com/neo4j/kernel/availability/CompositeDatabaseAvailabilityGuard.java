@@ -7,7 +7,6 @@ package com.neo4j.kernel.availability;
 
 import java.time.Clock;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.AvailabilityListener;
@@ -16,8 +15,10 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.impl.logging.LogService;
 
+import static java.util.stream.Collectors.joining;
+
 /**
- * Composite availability guard that makes desicion about its availability based on multiple underlying database specific availability guards.
+ * Composite availability guard that makes decision about its availability based on multiple underlying database specific availability guards.
  * Any fulfillment, require, available, etc requests will be redistributed to all underlying availability guards.
  *
  * @see AvailabilityGuard
@@ -127,6 +128,6 @@ public class CompositeDatabaseAvailabilityGuard implements AvailabilityGuard
 
     private String describeGuards()
     {
-        return String.join( ", ", guards.stream().map( DatabaseAvailabilityGuard::describeWhoIsBlocking ).collect( Collectors.toList()) );
+        return guards.stream().map( DatabaseAvailabilityGuard::describeWhoIsBlocking ).collect( joining( ", " ) );
     }
 }
