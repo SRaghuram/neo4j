@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.facade.spi.ClassicCoreSPI;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DataSourceModule;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
@@ -19,6 +20,8 @@ import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Logger;
+
+import static java.util.Objects.requireNonNull;
 
 public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseManager
 {
@@ -44,7 +47,10 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     @Override
     public GraphDatabaseFacade createDatabase( String name )
     {
-        GraphDatabaseFacade facade = DatabaseManager.DEFAULT_DATABASE_NAME.equals( name ) ? graphDatabaseFacade : new GraphDatabaseFacade();
+        requireNonNull( name, "Database name should be not null" );
+
+        GraphDatabaseFacade facade =
+                platform.config.get( GraphDatabaseSettings.active_database ).equals( name ) ? graphDatabaseFacade : new GraphDatabaseFacade();
         DataSourceModule dataSource = new DataSourceModule( name, platform, edition, procedures, facade );
         ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, msgLog, dataSource.coreAPIAvailabilityGuard, edition.threadToTransactionBridge );
         facade.init( spi, edition.threadToTransactionBridge, platform.config, dataSource.neoStoreDataSource.getTokenHolders() );
