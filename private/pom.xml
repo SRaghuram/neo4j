@@ -21,6 +21,7 @@
     <module>build-resources</module>
     <module>enterprise</module>
     <module>packaging</module>
+    <module>integrationtests</module>
   </modules>
 
   <licenses>
@@ -36,6 +37,7 @@
 
   <properties>
     <license-text.header>commercial-license-header.txt</license-text.header>
+    <akka.version>2.5.14</akka.version>
   </properties>
 
   <build>
