@@ -13,7 +13,7 @@ import org.neo4j.kernel.availability.AvailabilityListener;
 import org.neo4j.kernel.availability.AvailabilityRequirement;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
-import org.neo4j.kernel.impl.logging.LogService;
+import org.neo4j.logging.internal.LogService;
 
 import static java.util.stream.Collectors.joining;
 
