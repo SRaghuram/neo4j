@@ -47,7 +47,7 @@ public class DefaultIdController extends LifecycleAdapter implements IdControlle
     }
 
     @Override
-    public void initialize( Supplier<KernelTransactionsSnapshot> transactionsSnapshotSupplier )
+    public void initialize( Supplier transactionsSnapshotSupplier )
     {
     }
 }

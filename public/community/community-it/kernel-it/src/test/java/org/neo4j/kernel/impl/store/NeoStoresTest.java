@@ -54,6 +54,7 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.properties.PropertyKeyValue;
 import org.neo4j.kernel.api.txstate.TransactionState;
@@ -112,8 +113,8 @@ import static org.junit.Assert.fail;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.counts_store_rotation_timeout;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.internal.kernel.api.security.LoginContext.AUTH_DISABLED;
+import static org.neo4j.kernel.api.Constants.*;
 import static org.neo4j.kernel.impl.store.RecordStore.getRecord;
-import static org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat.FIELD_NOT_PRESENT;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 

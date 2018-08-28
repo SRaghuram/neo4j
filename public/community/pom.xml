@@ -53,6 +53,9 @@
     <module>io</module>
     <module>diagnostics</module>
     <module>kernel-api</module>
+    <module>neo4j-kernel-id</module>
+    <module>neo4j-kernel-config</module>
+    <module>neo4j-kernel-helpers</module>
     <module>csv</module>
     <module>logging</module>
     <module>security</module>
@@ -84,6 +87,8 @@
     <module>ssl</module>
     <module>spatial-index</module>
     <module>community-it</module>
+    <module>neo4j-store-api</module>
+    <module>neo4j-store</module>
   </modules>
 
   <licenses>

@@ -19,8 +19,6 @@
  */
 package org.neo4j.unsafe.impl.batchimport.input;
 
-import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
-
 /**
  * Group of {@link InputEntity inputs}. Used primarily in {@link IdMapper} for supporting multiple
  * id groups within the same index.

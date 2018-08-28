@@ -22,8 +22,9 @@ package org.neo4j.kernel.impl.transaction.log;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.kernel.impl.store.TransactionId;
+import org.neo4j.kernel.api.Constants;
 
-import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
+import static org.neo4j.kernel.api.Constants.LogHeader_LOG_HEADER_SIZE;
 
 /**
  * Keeps a latest transaction id. There's one counter for {@code committed transaction id} and one for
@@ -69,7 +70,7 @@ public interface TransactionIdStore
     long UNKNOWN_TX_COMMIT_TIMESTAMP = 1;
 
     long BASE_TX_LOG_VERSION = 0;
-    long BASE_TX_LOG_BYTE_OFFSET = LOG_HEADER_SIZE;
+    long BASE_TX_LOG_BYTE_OFFSET = LogHeader_LOG_HEADER_SIZE;
 
     /**
      * @return the next transaction id for a committing transaction. The transaction id is incremented

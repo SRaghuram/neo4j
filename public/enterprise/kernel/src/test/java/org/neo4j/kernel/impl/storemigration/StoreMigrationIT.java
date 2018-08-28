@@ -120,7 +120,7 @@ public class StoreMigrationIT
         for ( RecordFormats toFormat : recordFormats )
         {
             UpgradableDatabase upgradableDatabase =
-                    new UpgradableDatabase( storeVersionCheck, toFormat, tailScanner );
+                    new UpgradableDatabase( storeVersionCheck, toFormat, tailScanner.getTailInformation().commitsAfterLastCheckpoint() );
             for ( RecordFormats fromFormat : recordFormats )
             {
                 try

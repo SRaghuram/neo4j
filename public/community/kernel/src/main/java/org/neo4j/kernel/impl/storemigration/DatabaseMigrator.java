@@ -32,7 +32,7 @@ import org.neo4j.kernel.impl.storemigration.participant.CountsMigrator;
 import org.neo4j.kernel.impl.storemigration.participant.ExplicitIndexMigrator;
 import org.neo4j.kernel.impl.storemigration.participant.NativeLabelScanStoreMigrator;
 import org.neo4j.kernel.impl.storemigration.participant.StoreMigrator;
-import org.neo4j.kernel.recovery.LogTailScanner;
+//import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.logging.LogProvider;
 
 /**
@@ -52,13 +52,13 @@ public class DatabaseMigrator
     private final ExplicitIndexProvider explicitIndexProvider;
     private final PageCache pageCache;
     private final RecordFormats format;
-    private final LogTailScanner tailScanner;
+    private boolean logTailValid;
 
     public DatabaseMigrator(
             MigrationProgressMonitor progressMonitor, FileSystemAbstraction fs,
             Config config, LogService logService, IndexProviderMap indexProviderMap,
             ExplicitIndexProvider indexProvider, PageCache pageCache,
-            RecordFormats format, LogTailScanner tailScanner )
+            RecordFormats format, boolean logTailValid )
     {
         this.progressMonitor = progressMonitor;
         this.fs = fs;
@@ -68,7 +68,7 @@ public class DatabaseMigrator
         this.explicitIndexProvider = indexProvider;
         this.pageCache = pageCache;
         this.format = format;
-        this.tailScanner = tailScanner;
+        this.logTailValid = logTailValid;
     }
 
     /**
@@ -79,7 +79,7 @@ public class DatabaseMigrator
     public void migrate( DatabaseLayout directoryStructure )
     {
         LogProvider logProvider = logService.getInternalLogProvider();
-        UpgradableDatabase upgradableDatabase = new UpgradableDatabase( new StoreVersionCheck( pageCache ), format, tailScanner );
+        UpgradableDatabase upgradableDatabase = new UpgradableDatabase( new StoreVersionCheck( pageCache ), format, logTailValid );
         StoreUpgrader storeUpgrader = new StoreUpgrader( upgradableDatabase, progressMonitor, config, fs, pageCache,
                 logProvider );
 

@@ -28,6 +28,7 @@ import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
@@ -48,7 +49,6 @@ import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.factory.CanWrite;
 import org.neo4j.kernel.impl.factory.CommunityCommitProcessFactory;
 import org.neo4j.kernel.impl.factory.ReadOnly;
-import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.LocksFactory;
 import org.neo4j.kernel.impl.locking.SimpleStatementLocksFactory;
@@ -144,7 +144,7 @@ public class CommunityEditionModule extends EditionModule
     {
         return Predicates.any(
                 fileName -> fileName.startsWith( TransactionLogFiles.DEFAULT_NAME ),
-                fileName -> fileName.startsWith( IndexConfigStore.INDEX_DB_FILE_NAME )
+                fileName -> fileName.startsWith( Constants.INDEX_DB_FILE_NAME )
         );
     }
 

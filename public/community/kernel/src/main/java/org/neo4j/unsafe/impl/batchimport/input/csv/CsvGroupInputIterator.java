@@ -36,7 +36,7 @@ import org.neo4j.unsafe.impl.batchimport.input.InputChunk;
 public class CsvGroupInputIterator extends InputIterator.Adapter
 {
     private final Iterator<DataFactory> source;
-    private final Header.Factory headerFactory;
+    private final HeaderFactory headerFactory;
     private final IdType idType;
     private final Configuration config;
     private final Collector badCollector;
@@ -44,7 +44,7 @@ public class CsvGroupInputIterator extends InputIterator.Adapter
     private CsvInputIterator current;
     private int groupId;
 
-    public CsvGroupInputIterator( Iterator<DataFactory> source, Header.Factory headerFactory,
+    public CsvGroupInputIterator( Iterator<DataFactory> source, HeaderFactory headerFactory,
             IdType idType, Configuration config, Collector badCollector, Groups groups )
     {
         this.source = source;

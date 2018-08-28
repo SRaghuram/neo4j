@@ -57,9 +57,9 @@ public class CsvInput implements Input
     private static final long ESTIMATE_SAMPLE_SIZE = mebiBytes( 1 );
 
     private final Iterable<DataFactory> nodeDataFactory;
-    private final Header.Factory nodeHeaderFactory;
+    private final HeaderFactory nodeHeaderFactory;
     private final Iterable<DataFactory> relationshipDataFactory;
-    private final Header.Factory relationshipHeaderFactory;
+    private final HeaderFactory relationshipHeaderFactory;
     private final IdType idType;
     private final Configuration config;
     private final Collector badCollector;
@@ -79,8 +79,8 @@ public class CsvInput implements Input
      * @param badCollector Collector getting calls about bad input data.
      */
     public CsvInput(
-            Iterable<DataFactory> nodeDataFactory, Header.Factory nodeHeaderFactory,
-            Iterable<DataFactory> relationshipDataFactory, Header.Factory relationshipHeaderFactory,
+            Iterable<DataFactory> nodeDataFactory, HeaderFactory nodeHeaderFactory,
+            Iterable<DataFactory> relationshipDataFactory, HeaderFactory relationshipHeaderFactory,
             IdType idType, Configuration config, Collector badCollector )
     {
         this( nodeDataFactory, nodeHeaderFactory, relationshipDataFactory, relationshipHeaderFactory, idType, config, badCollector,
@@ -88,8 +88,8 @@ public class CsvInput implements Input
     }
 
     CsvInput(
-            Iterable<DataFactory> nodeDataFactory, Header.Factory nodeHeaderFactory,
-            Iterable<DataFactory> relationshipDataFactory, Header.Factory relationshipHeaderFactory,
+            Iterable<DataFactory> nodeDataFactory, HeaderFactory nodeHeaderFactory,
+            Iterable<DataFactory> relationshipDataFactory, HeaderFactory relationshipHeaderFactory,
             IdType idType, Configuration config, Collector badCollector, Groups groups )
     {
         assertSaneConfiguration( config );
@@ -175,7 +175,7 @@ public class CsvInput implements Input
         return () -> stream( relationshipDataFactory, relationshipHeaderFactory );
     }
 
-    private InputIterator stream( Iterable<DataFactory> data, Header.Factory headerFactory )
+    private InputIterator stream( Iterable<DataFactory> data, HeaderFactory headerFactory )
     {
         return new CsvGroupInputIterator( data.iterator(), headerFactory, idType, config, badCollector, groups );
     }
@@ -204,7 +204,7 @@ public class CsvInput implements Input
                 nodeSample[3] );
     }
 
-    private long[] sample( Iterable<DataFactory> dataFactories, Header.Factory headerFactory,
+    private long[] sample( Iterable<DataFactory> dataFactories, HeaderFactory headerFactory,
             ToIntFunction<Value[]> valueSizeCalculator, ToIntFunction<InputEntity> additionalCalculator ) throws IOException
     {
         long[] estimates = new long[4]; // [entity count, property count, property size, labels (for nodes only)]

@@ -64,6 +64,7 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.api.exceptions.index.IndexPopulationFailedKernelException;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.api.index.IndexProvider;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema.constraints.ConstraintDescriptor;
@@ -175,7 +176,6 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.helpers.Numbers.safeCastLongToInt;
-import static org.neo4j.internal.kernel.api.TokenRead.NO_TOKEN;
 import static org.neo4j.kernel.impl.api.index.IndexingService.NO_MONITOR;
 import static org.neo4j.kernel.impl.locking.LockService.NO_LOCK_SERVICE;
 import static org.neo4j.kernel.impl.store.NodeLabelsField.parseLabelsField;
@@ -656,7 +656,7 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
     private boolean primitiveHasProperty( PrimitiveRecord record, String propertyName )
     {
         int propertyKeyId = tokenHolders.propertyKeyTokens().getIdByName( propertyName );
-        return propertyKeyId != NO_TOKEN && propertyTraverser.findPropertyRecordContaining( record, propertyKeyId,
+        return propertyKeyId != Constants.TokenRead_NO_TOKEN && propertyTraverser.findPropertyRecordContaining( record, propertyKeyId,
                 recordAccess.getPropertyRecords(), false ) != Record.NO_NEXT_PROPERTY.intValue();
     }
 
@@ -785,7 +785,7 @@ public class BatchInserterImpl implements BatchInserter, IndexConfigStoreProvide
     public boolean nodeHasLabel( long node, Label label )
     {
         int labelId = tokenHolders.labelTokens().getIdByName( label.name() );
-        return labelId != NO_TOKEN && nodeHasLabel( node, labelId );
+        return labelId != Constants.TokenRead_NO_TOKEN && nodeHasLabel( node, labelId );
     }
 
     private boolean nodeHasLabel( long node, int labelId )

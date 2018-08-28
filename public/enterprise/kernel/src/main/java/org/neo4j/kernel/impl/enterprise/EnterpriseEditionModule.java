@@ -30,6 +30,7 @@ import org.neo4j.graphdb.factory.module.CommunityEditionModule;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
@@ -42,7 +43,6 @@ import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import org.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
-import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.logging.LogService;
@@ -83,7 +83,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule
     {
         return Predicates.any(
                 fileName -> fileName.startsWith( TransactionLogFiles.DEFAULT_NAME ),
-                fileName -> fileName.startsWith( IndexConfigStore.INDEX_DB_FILE_NAME ),
+                fileName -> fileName.startsWith( Constants.INDEX_DB_FILE_NAME ),
                 filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF )
         );
     }

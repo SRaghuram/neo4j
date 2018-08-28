@@ -36,14 +36,14 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.impl.util.IoPrimitiveUtils;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 public class IndexConfigStore extends LifecycleAdapter
 {
-    public static final String INDEX_DB_FILE_NAME = "index.db";
-    private static final String OLD_INDEX_DB_FILE_NAME = INDEX_DB_FILE_NAME + ".old";
-    private static final String TMP_INDEX_DB_FILE_NAME = INDEX_DB_FILE_NAME + ".tmp";
+    private static final String OLD_INDEX_DB_FILE_NAME = Constants.INDEX_DB_FILE_NAME + ".old";
+    private static final String TMP_INDEX_DB_FILE_NAME = Constants.INDEX_DB_FILE_NAME + ".tmp";
 
     private static final byte[] MAGIC = new byte[] { 'n', 'e', 'o', '4', 'j', '-', 'i', 'n', 'd', 'e', 'x' };
     private static final int VERSION = 1;
@@ -60,7 +60,7 @@ public class IndexConfigStore extends LifecycleAdapter
     {
         this.dbDirectoryStructure = dbDirectoryStructure;
         this.fileSystem = fileSystem;
-        this.file = dbDirectoryStructure.file( INDEX_DB_FILE_NAME );
+        this.file = dbDirectoryStructure.file( Constants.INDEX_DB_FILE_NAME );
         this.oldFile = dbDirectoryStructure.file( OLD_INDEX_DB_FILE_NAME );
     }
 

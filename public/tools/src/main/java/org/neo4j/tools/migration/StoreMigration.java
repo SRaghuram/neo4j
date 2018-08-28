@@ -139,7 +139,8 @@ public class StoreMigration
             long startTime = System.currentTimeMillis();
             DatabaseMigrator migrator = new DatabaseMigrator( progressMonitor, fs, config, logService,
                     indexProviderMap, migrationIndexProvider,
-                    pageCache, RecordFormatSelector.selectForConfig( config, userLogProvider ), tailScanner );
+                    pageCache, RecordFormatSelector.selectForConfig( config, userLogProvider ),
+                    tailScanner.getTailInformation().commitsAfterLastCheckpoint() );
             migrator.migrate( databaseLayout );
 
             // Append checkpoint so the last log entry will have the latest version

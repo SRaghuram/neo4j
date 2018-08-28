@@ -182,7 +182,7 @@ public class DataFactoriesTest
         final CharReadable secondSource = wrap( "0\tThe node\t123456789" );
         DataFactory dataFactory = DataFactories.data( value -> value,
                 () -> new MultiReadable( Readables.iterator( IOFunctions.identity(), firstSource, secondSource ) ) );
-        Header.Factory headerFactory = defaultFormatNodeFileHeader();
+        HeaderFactory headerFactory = defaultFormatNodeFileHeader();
         Extractors extractors = new Extractors( ';' );
 
         // WHEN

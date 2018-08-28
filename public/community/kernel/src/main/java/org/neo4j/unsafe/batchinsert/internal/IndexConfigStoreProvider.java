@@ -21,7 +21,6 @@ package org.neo4j.unsafe.batchinsert.internal;
 
 
 import org.neo4j.kernel.impl.index.IndexConfigStore;
-import org.neo4j.unsafe.batchinsert.BatchInserterIndexProvider;
 
 /**
  * Provider of index store for batch inserter index providers

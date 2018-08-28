@@ -216,8 +216,8 @@ public class CsvInputEstimateCalculationIT
         assertThat( expected / 10, greaterThan( diff ) );
     }
 
-    private DataFactory generateData( Header.Factory factory, MutableLong start, long count,
-            long nodeCount, String headerString, String fileName, Groups groups ) throws IOException
+    private DataFactory generateData(HeaderFactory factory, MutableLong start, long count,
+                                     long nodeCount, String headerString, String fileName, Groups groups ) throws IOException
     {
         File file = directory.file( fileName );
         Header header = factory.create( charSeeker( wrap( headerString ), COMMAS, false ), COMMAS, IdType.INTEGER, groups );

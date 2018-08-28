@@ -168,7 +168,7 @@ public class UpgradableDatabaseTest
         private UpgradableDatabase getUpgradableDatabase()
         {
             return new UpgradableDatabase( new StoreVersionCheck( pageCacheRule.getPageCache( fileSystem ) ),
-                    getRecordFormat(), tailScanner );
+                    getRecordFormat(), tailScanner.getTailInformation().commitsAfterLastCheckpoint() );
         }
     }
 
@@ -257,7 +257,7 @@ public class UpgradableDatabaseTest
         private UpgradableDatabase getUpgradableDatabase()
         {
             return new UpgradableDatabase( new StoreVersionCheck( pageCacheRule.getPageCache( fileSystem ) ),
-                    getRecordFormat(), tailScanner );
+                    getRecordFormat(), tailScanner.getTailInformation().commitsAfterLastCheckpoint() );
         }
     }
 

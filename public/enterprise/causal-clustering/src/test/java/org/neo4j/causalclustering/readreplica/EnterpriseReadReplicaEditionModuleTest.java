@@ -29,6 +29,7 @@ import java.util.function.Predicate;
 
 import org.neo4j.com.storecopy.StoreUtil;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
@@ -55,7 +56,7 @@ class EnterpriseReadReplicaEditionModuleTest
         assertFalse( filter.test( metadataStoreName ) );
         assertFalse( filter.test( databaseLayout.nodeStore().getName() ) );
         assertTrue( filter.test( TransactionLogFiles.DEFAULT_NAME + ".1" ) );
-        assertTrue( filter.test( IndexConfigStore.INDEX_DB_FILE_NAME + ".any" ) );
+        assertTrue( filter.test( Constants.INDEX_DB_FILE_NAME + ".any" ) );
         assertTrue( filter.test( StoreUtil.BRANCH_SUBDIRECTORY ) );
         assertTrue( filter.test( StoreUtil.TEMP_COPY_DIRECTORY_NAME ) );
         assertTrue( filter.test( metadataStoreName + PageCacheWarmer.SUFFIX_CACHEPROF ) );

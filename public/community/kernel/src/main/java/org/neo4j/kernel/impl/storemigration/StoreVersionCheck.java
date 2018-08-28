@@ -24,8 +24,8 @@ import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat;
 
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 import static org.neo4j.kernel.impl.storemigration.StoreVersionCheck.Result.Outcome;
@@ -42,7 +42,7 @@ public class StoreVersionCheck
     public Optional<String> getVersion( File neostoreFile ) throws IOException
     {
         long record = MetaDataStore.getRecord( pageCache, neostoreFile, STORE_VERSION );
-        if ( record == MetaDataRecordFormat.FIELD_NOT_PRESENT )
+        if ( record == Constants.FIELD_NOT_PRESENT )
         {
             return Optional.empty();
         }

@@ -19,7 +19,7 @@
  */
 package org.neo4j.unsafe.impl.batchimport.input.csv;
 
-import org.neo4j.unsafe.impl.batchimport.input.csv.Header.Entry;
+//import org.neo4j.unsafe.impl.batchimport.input.csv.Header.Entry;
 
 /**
  * Types used to semantically specify the contents of a {@link Entry}.

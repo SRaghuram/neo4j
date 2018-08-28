@@ -73,6 +73,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
@@ -155,7 +156,6 @@ import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
-import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.LocksFactory;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
@@ -585,7 +585,7 @@ public class HighlyAvailableEditionModule extends EditionModule
     {
         return Predicates.any(
                 fileName -> fileName.startsWith( TransactionLogFiles.DEFAULT_NAME ),
-                fileName -> fileName.startsWith( IndexConfigStore.INDEX_DB_FILE_NAME ),
+                fileName -> fileName.startsWith( Constants.INDEX_DB_FILE_NAME ),
                 filename -> filename.startsWith( StoreUtil.BRANCH_SUBDIRECTORY ),
                 filename -> filename.startsWith( StoreUtil.TEMP_COPY_DIRECTORY_NAME ),
                 filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF )

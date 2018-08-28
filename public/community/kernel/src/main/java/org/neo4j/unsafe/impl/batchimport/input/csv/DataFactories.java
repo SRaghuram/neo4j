@@ -133,7 +133,7 @@ public class DataFactories
      *
      * @param defaultTimeZone A supplier of the time zone to be used for temporal values when not specified explicitly
      */
-    public static Header.Factory defaultFormatNodeFileHeader( Supplier<ZoneId> defaultTimeZone )
+    public static HeaderFactory defaultFormatNodeFileHeader(Supplier<ZoneId> defaultTimeZone )
     {
         return new DefaultNodeFileHeaderParser( defaultTimeZone );
     }
@@ -141,7 +141,7 @@ public class DataFactories
     /**
      * Like {@link #defaultFormatNodeFileHeader(Supplier<ZoneId>)} with UTC as the default time zone.
      */
-    public static Header.Factory defaultFormatNodeFileHeader()
+    public static HeaderFactory defaultFormatNodeFileHeader()
     {
         return defaultFormatNodeFileHeader( defaultTimeZone );
     }
@@ -155,7 +155,7 @@ public class DataFactories
      *
      * @param defaultTimeZone A supplier of the time zone to be used for temporal values when not specified explicitly
      */
-    public static Header.Factory defaultFormatRelationshipFileHeader( Supplier<ZoneId> defaultTimeZone )
+    public static HeaderFactory defaultFormatRelationshipFileHeader(Supplier<ZoneId> defaultTimeZone )
     {
         return new DefaultRelationshipFileHeaderParser( defaultTimeZone );
     }
@@ -163,14 +163,14 @@ public class DataFactories
     /**
      * Like {@link #defaultFormatRelationshipFileHeader(Supplier<ZoneId>)} with UTC as the default time zone.
      */
-    public static Header.Factory defaultFormatRelationshipFileHeader()
+    public static HeaderFactory defaultFormatRelationshipFileHeader()
     {
         return defaultFormatRelationshipFileHeader( defaultTimeZone );
     }
 
     private static Supplier<ZoneId> defaultTimeZone = () -> UTC;
 
-    private abstract static class AbstractDefaultFileHeaderParser implements Header.Factory
+    private abstract static class AbstractDefaultFileHeaderParser implements HeaderFactory
     {
         private final boolean createGroups;
         private final Type[] mandatoryTypes;

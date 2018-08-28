@@ -33,6 +33,7 @@ import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.com.storecopy.StoreUtil;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.BufferedIdController;
@@ -74,7 +75,7 @@ public class EnterpriseCoreEditionModuleIT
         assertFalse( filter.test( metadataStoreName ) );
         assertFalse( filter.test( layout.nodeStore().getName() ) );
         assertTrue( filter.test( TransactionLogFiles.DEFAULT_NAME + ".1" ) );
-        assertTrue( filter.test( IndexConfigStore.INDEX_DB_FILE_NAME + ".any" ) );
+        assertTrue( filter.test( Constants.INDEX_DB_FILE_NAME + ".any" ) );
         assertTrue( filter.test( StoreUtil.TEMP_COPY_DIRECTORY_NAME ) );
         assertTrue( filter.test( metadataStoreName + PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }

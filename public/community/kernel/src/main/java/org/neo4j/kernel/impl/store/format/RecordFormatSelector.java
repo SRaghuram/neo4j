@@ -34,9 +34,9 @@ import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.format.standard.StandardV2_3;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_0;
@@ -148,7 +148,7 @@ public class RecordFormatSelector
             try
             {
                 long value = MetaDataStore.getRecord( pageCache, neoStoreFile, STORE_VERSION );
-                if ( value != MetaDataRecordFormat.FIELD_NOT_PRESENT )
+                if ( value != Constants.FIELD_NOT_PRESENT )
                 {
                     String storeVersion = MetaDataStore.versionLongToString( value );
 

@@ -94,6 +94,7 @@ import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
@@ -115,7 +116,6 @@ import org.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider
 import org.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
-import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import org.neo4j.kernel.impl.pagecache.PageCacheWarmer;
@@ -385,7 +385,7 @@ public class EnterpriseReadReplicaEditionModule extends EditionModule
     static Predicate<String> fileWatcherFileNameFilter()
     {
         return Predicates.any( fileName -> fileName.startsWith( TransactionLogFiles.DEFAULT_NAME ),
-                fileName -> fileName.startsWith( IndexConfigStore.INDEX_DB_FILE_NAME ),
+                fileName -> fileName.startsWith( Constants.INDEX_DB_FILE_NAME ),
                 filename -> filename.startsWith( StoreUtil.BRANCH_SUBDIRECTORY ),
                 filename -> filename.startsWith( StoreUtil.TEMP_COPY_DIRECTORY_NAME ),
                 filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );

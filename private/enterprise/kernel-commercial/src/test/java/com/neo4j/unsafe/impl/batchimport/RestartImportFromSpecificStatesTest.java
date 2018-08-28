@@ -13,6 +13,7 @@ import java.io.IOException;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
@@ -51,7 +52,7 @@ public class RestartImportFromSpecificStatesTest
 
         // when
         SimpleRandomizedInput input = input();
-        importer( new PanicSpreadingExecutionMonitor( DataImporter.RELATIONSHIP_IMPORT_NAME, true ) ).doImport( input );
+        importer( new PanicSpreadingExecutionMonitor( Constants.RELATIONSHIP_IMPORT_NAME, true ) ).doImport( input );
 
         // then good :)
         verifyDb( input );

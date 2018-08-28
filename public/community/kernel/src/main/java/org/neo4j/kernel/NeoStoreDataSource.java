@@ -482,7 +482,8 @@ public class NeoStoreDataSource extends LifecycleAdapter
                 indexProviderMap,
                 explicitIndexProvider,
                 pageCache,
-                format, tailScanner ).migrate( databaseLayout );
+                format,
+                tailScanner.getTailInformation().commitsAfterLastCheckpoint() ).migrate( databaseLayout );
     }
 
     private StorageEngine buildStorageEngine(

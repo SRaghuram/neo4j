@@ -13,6 +13,7 @@ import java.io.IOException;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
@@ -59,13 +60,13 @@ public class RestartableParallelBatchImporterIT
     @Test
     public void shouldRestartImportAfterNodeImportStart() throws Exception
     {
-        shouldRestartImport( DataImporter.NODE_IMPORT_NAME, true );
+        shouldRestartImport( Constants.NODE_IMPORT_NAME, true );
     }
 
     @Test
     public void shouldRestartImportAfterNodeImportEnd() throws Exception
     {
-        shouldRestartImport( DataImporter.NODE_IMPORT_NAME, false );
+        shouldRestartImport( Constants.NODE_IMPORT_NAME, false );
     }
 
     @Test
@@ -83,13 +84,13 @@ public class RestartableParallelBatchImporterIT
     @Test
     public void shouldRestartImportAfterRelationshipImportStart() throws Exception
     {
-        shouldRestartImport( DataImporter.RELATIONSHIP_IMPORT_NAME, true );
+        shouldRestartImport( Constants.RELATIONSHIP_IMPORT_NAME, true );
     }
 
     @Test
     public void shouldRestartImportAfterRelationshipImportEnd() throws Exception
     {
-        shouldRestartImport( DataImporter.RELATIONSHIP_IMPORT_NAME, false );
+        shouldRestartImport( Constants.RELATIONSHIP_IMPORT_NAME, false );
     }
 
     @Test

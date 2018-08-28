@@ -208,6 +208,7 @@ public class ParallelSort
          * This is exposed to be able to introduce an indirection while preparing the tracker indexes
          * just like the other methods on this interface does.
          */
+        boolean eq( long right, long pivot );
         long dataValue( long dataValue );
     }
 
@@ -223,6 +224,12 @@ public class ParallelSort
         public boolean ge( long right, long pivot )
         {
             return Utils.unsignedCompare( right, pivot, CompareType.GE );
+        }
+
+        @Override
+        public boolean eq( long right, long pivot )
+        {
+            return Utils.unsignedCompare( right, pivot, CompareType.EQ );
         }
 
         @Override
@@ -269,7 +276,7 @@ public class ParallelSort
         @Override
         public void run()
         {
-            qsort( start, start + size );
+            qsort( start, start + size - 1 );
             reportProgress();
         }
 
@@ -311,6 +318,22 @@ public class ParallelSort
             return partingIndex;
         }
 
+        private boolean allEqual( long leftIndex, long rightIndex )
+        {
+            long ri = rightIndex;
+            long left = clearCollision( dataCache.get( tracker.get( leftIndex ) ) );
+            long right = clearCollision( dataCache.get( tracker.get( rightIndex ) ) );
+            while ( comparator.eq( left, right ) && leftIndex < rightIndex )
+            {
+                right = clearCollision( dataCache.get( tracker.get( --rightIndex ) ) );
+            }
+            if ( rightIndex == leftIndex )
+            {
+                return true;
+            }
+            return false;
+        }
+
         private void qsort( long initialStart, long initialEnd )
         {
             final MutableLongStack stack = new LongArrayStack();
@@ -328,6 +351,12 @@ public class ParallelSort
                 }
 
                 incrementProgress( 1 );
+
+                // if the partition contains only one value, skip sorting the entire partition
+                if ( allEqual( start, end ) )
+                {
+                    continue;
+                }
 
                 // choose a random pivot between start and end
                 long pivot = start + random.nextLong( diff );

@@ -41,6 +41,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.NeoStoresDiagnostics;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.CountsAccessor;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
@@ -49,7 +50,6 @@ import org.neo4j.kernel.impl.store.format.CapabilityType;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
-import org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.kvstore.DataInitializer;
@@ -196,7 +196,7 @@ public class NeoStores implements AutoCloseable
         {
             String expectedStoreVersion = recordFormats.storeVersion();
             long record = getRecord( pageCache, metadataStore, STORE_VERSION );
-            if ( record != MetaDataRecordFormat.FIELD_NOT_PRESENT )
+            if ( record != Constants.FIELD_NOT_PRESENT )
             {
                 String actualStoreVersion = versionLongToString( record );
                 RecordFormats actualStoreFormat = RecordFormatSelector.selectForVersion( actualStoreVersion );

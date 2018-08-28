@@ -19,9 +19,8 @@
  */
 package org.neo4j.kernel.impl.store.format.standard;
 
-import java.io.IOException;
-
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.impl.store.MetaDataStore.Position;
 import org.neo4j.kernel.impl.store.format.BaseOneByteHeaderRecordFormat;
 import org.neo4j.kernel.impl.store.record.MetaDataRecord;
@@ -30,13 +29,11 @@ import org.neo4j.kernel.impl.store.record.RecordLoad;
 
 public class MetaDataRecordFormat extends BaseOneByteHeaderRecordFormat<MetaDataRecord>
 {
-    public static final int RECORD_SIZE = 9;
-    public static final long FIELD_NOT_PRESENT = -1;
     private static final int ID_BITS = 32;
 
     public MetaDataRecordFormat()
     {
-        super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, ID_BITS );
+        super( fixedRecordSize( Constants.RECORD_SIZE ), 0, IN_USE_BIT, ID_BITS );
     }
 
     @Override
@@ -52,7 +49,7 @@ public class MetaDataRecordFormat extends BaseOneByteHeaderRecordFormat<MetaData
         Position[] values = Position.values();
         if ( id >= values.length )
         {
-            record.initialize( false, FIELD_NOT_PRESENT );
+            record.initialize( false, Constants.FIELD_NOT_PRESENT );
             return;
         }
 
@@ -60,7 +57,7 @@ public class MetaDataRecordFormat extends BaseOneByteHeaderRecordFormat<MetaData
         int offset = position.id() * recordSize;
         cursor.setOffset( offset );
         boolean inUse = cursor.getByte() == Record.IN_USE.byteValue();
-        long value = inUse ? cursor.getLong() : FIELD_NOT_PRESENT;
+        long value = inUse ? cursor.getLong() : Constants.FIELD_NOT_PRESENT;
         record.initialize( inUse, value );
     }
 

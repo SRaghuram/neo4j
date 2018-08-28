@@ -31,11 +31,11 @@ import org.neo4j.configuration.Internal;
 import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.configuration.ReplacedBy;
 import org.neo4j.csv.reader.Configuration;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.ByteUnit;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.configuration.BoltConnectorValidator;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConfigurationMigrator;
@@ -111,7 +111,7 @@ public class GraphDatabaseSettings implements LoadableConfig
             setting( "unsupported.dbms.directories.neo4j_home", PATH, NO_DEFAULT );
 
     @Description( "Name of the database to load" )
-    public static final Setting<String> active_database = setting( "dbms.active_database", STRING, DatabaseManager.DEFAULT_DATABASE_NAME );
+    public static final Setting<String> active_database = setting( "dbms.active_database", STRING, Constants.DEFAULT_DATABASE_NAME );
 
     @Description( "Path of the data directory. You must not configure more than one Neo4j installation to use the " +
             "same data directory." )

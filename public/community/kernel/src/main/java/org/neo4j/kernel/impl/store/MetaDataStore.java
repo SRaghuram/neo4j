@@ -54,8 +54,8 @@ import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_WRITE_LOCK;
-import static org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat.FIELD_NOT_PRESENT;
-import static org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat.RECORD_SIZE;
+import static org.neo4j.kernel.api.Constants.FIELD_NOT_PRESENT;
+import static org.neo4j.kernel.api.Constants.RECORD_SIZE;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
@@ -63,8 +63,6 @@ public class MetaDataStore extends CommonAbstractStore<MetaDataRecord,NoStoreHea
         implements TransactionIdStore, LogVersionRepository
 {
     public static final String TYPE_DESCRIPTOR = "NeoStore";
-    // This value means the field has not been refreshed from the store. Normally, this should happen only once
-    public static final long FIELD_NOT_INITIALIZED = Long.MIN_VALUE;
     /*
      *  9 longs in header (long + in use), time | random | version | txid | store version | graph next prop | latest
      *  constraint tx | upgrade time | upgrade id
@@ -110,6 +108,8 @@ public class MetaDataStore extends CommonAbstractStore<MetaDataRecord,NoStoreHea
         }
     }
 
+    // This value means the field has not been refreshed from the store. Normally, this should happen only once
+    public static final long FIELD_NOT_INITIALIZED = Long.MIN_VALUE;
     // Fields the neostore keeps cached and must be initialized on startup
     private volatile long creationTimeField = FIELD_NOT_INITIALIZED;
     private volatile long randomNumberField = FIELD_NOT_INITIALIZED;

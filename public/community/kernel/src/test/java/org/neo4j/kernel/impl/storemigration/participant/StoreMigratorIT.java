@@ -276,7 +276,7 @@ public class StoreMigratorIT
 
     private static UpgradableDatabase getUpgradableDatabase( PageCache pageCache, LogTailScanner tailScanner )
     {
-        return new UpgradableDatabase( new StoreVersionCheck( pageCache ), selectFormat(), tailScanner );
+        return new UpgradableDatabase( new StoreVersionCheck( pageCache ), selectFormat(), tailScanner.getTailInformation().commitsAfterLastCheckpoint() );
     }
 
     private LogTailScanner getTailScanner( File databaseDirectory ) throws IOException

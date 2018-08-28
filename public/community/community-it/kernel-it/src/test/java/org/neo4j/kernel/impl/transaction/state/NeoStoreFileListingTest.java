@@ -38,6 +38,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.impl.api.ExplicitIndexProvider;
 import org.neo4j.kernel.impl.api.index.IndexingService;
@@ -58,7 +59,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.helpers.collection.Iterators.asResourceIterator;
-import static org.neo4j.kernel.impl.index.IndexConfigStore.INDEX_DB_FILE_NAME;
 
 public class NeoStoreFileListingTest
 {
@@ -203,7 +203,7 @@ public class NeoStoreFileListingTest
         ResourceIterator<StoreFileMetadata> storeFiles = neoStoreDataSource.listStoreFiles( false );
         Set<File> listedStoreFiles = storeFiles.stream()
                 .map( StoreFileMetadata::file )
-                .filter( file -> !file.getName().equals( INDEX_DB_FILE_NAME ) )
+                .filter( file -> !file.getName().equals(Constants.INDEX_DB_FILE_NAME ) )
                 .collect( Collectors.toSet() );
         assertEquals( expectedFiles, listedStoreFiles );
     }

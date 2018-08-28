@@ -569,6 +569,12 @@ public class EncodingIdMapper implements IdMapper
             }
 
             @Override
+            public boolean eq( long right, long pivot )
+            {
+                return false;
+            }
+
+            @Override
             public long dataValue( long nodeId )
             {
                 return dataCache.get( nodeId );

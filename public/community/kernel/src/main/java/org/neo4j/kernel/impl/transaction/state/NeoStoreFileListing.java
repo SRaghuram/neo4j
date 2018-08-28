@@ -37,6 +37,7 @@ import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.impl.api.ExplicitIndexProvider;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.util.MultiResource;
@@ -113,7 +114,7 @@ public class NeoStoreFileListing
 
     private void gatherNonRecordStores( Collection<StoreFileMetadata> files, boolean includeLogs )
     {
-        File[] indexFiles = databaseLayout.listDatabaseFiles( ( dir, name ) -> name.equals( IndexConfigStore.INDEX_DB_FILE_NAME ) );
+        File[] indexFiles = databaseLayout.listDatabaseFiles( ( dir, name ) -> name.equals( Constants.INDEX_DB_FILE_NAME ) );
         if ( indexFiles != null )
         {
             for ( File file : indexFiles )

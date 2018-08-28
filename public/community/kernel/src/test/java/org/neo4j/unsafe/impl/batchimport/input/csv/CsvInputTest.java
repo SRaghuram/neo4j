@@ -1260,9 +1260,9 @@ public class CsvInputTest
         return asSet( labels );
     }
 
-    private Header.Factory header( final Header.Entry... entries )
+    private HeaderFactory header(final Header.Entry... entries )
     {
-        return new Header.Factory()
+        return new HeaderFactory()
         {
             @Override
             public boolean isDefined()

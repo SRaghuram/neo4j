@@ -22,8 +22,8 @@ package org.neo4j.unsafe.impl.batchimport.staging;
 import java.util.TimeZone;
 
 import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.unsafe.impl.batchimport.CountGroupsStage;
-import org.neo4j.unsafe.impl.batchimport.DataImporter;
 import org.neo4j.unsafe.impl.batchimport.DataStatistics;
 import org.neo4j.unsafe.impl.batchimport.IdMapperPreparationStage;
 import org.neo4j.unsafe.impl.batchimport.NodeDegreeCountStage;
@@ -158,7 +158,7 @@ public class HumanUnderstandableExecutionMonitor implements ExecutionMonitor
     public void start( StageExecution execution )
     {
         // Divide into 4 progress stages:
-        if ( execution.getStageName().equals( DataImporter.NODE_IMPORT_NAME ) )
+        if ( execution.getStageName().equals( Constants.NODE_IMPORT_NAME ) )
         {
             // Import nodes:
             // - import nodes
@@ -168,7 +168,7 @@ public class HumanUnderstandableExecutionMonitor implements ExecutionMonitor
                     dependencyResolver.resolveDependency( IdMapper.class ),
                     dependencyResolver.resolveDependency( BatchingNeoStores.class ) );
         }
-        else if ( execution.getStageName().equals( DataImporter.RELATIONSHIP_IMPORT_NAME ) )
+        else if ( execution.getStageName().equals( Constants.RELATIONSHIP_IMPORT_NAME ) )
         {
             endPrevious();
 

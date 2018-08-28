@@ -40,6 +40,7 @@ import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordNodeCursor;
@@ -55,7 +56,6 @@ import org.neo4j.kernel.impl.store.TransactionId;
 import org.neo4j.kernel.impl.store.format.CapabilityType;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
-import org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.ReadOnlyIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
@@ -89,7 +89,7 @@ import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
 import static java.util.Arrays.asList;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForVersion;
-import static org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat.FIELD_NOT_PRESENT;
+import static org.neo4j.kernel.api.Constants.FIELD_NOT_PRESENT;
 import static org.neo4j.kernel.impl.storemigration.FileOperation.COPY;
 import static org.neo4j.kernel.impl.storemigration.FileOperation.DELETE;
 import static org.neo4j.kernel.impl.storemigration.FileOperation.MOVE;
@@ -296,8 +296,8 @@ public class StoreMigrator extends AbstractStoreMigrationParticipant
                 MetaDataStore.getRecord( pageCache, neoStore, Position.LAST_CLOSED_TRANSACTION_LOG_VERSION );
         long lastClosedTxLogByteOffset =
                 MetaDataStore.getRecord( pageCache, neoStore, Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET );
-        if ( lastClosedTxLogVersion != MetaDataRecordFormat.FIELD_NOT_PRESENT &&
-             lastClosedTxLogByteOffset != MetaDataRecordFormat.FIELD_NOT_PRESENT )
+        if ( lastClosedTxLogVersion != Constants.FIELD_NOT_PRESENT &&
+             lastClosedTxLogByteOffset != Constants.FIELD_NOT_PRESENT )
         {
             return new LogPosition( lastClosedTxLogVersion, lastClosedTxLogByteOffset );
         }

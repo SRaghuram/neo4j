@@ -349,7 +349,7 @@ public class StoreUpgraderTest
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fileSystem )
                 .withLogEntryReader( entryReader ).build();
         LogTailScanner tailScanner = new LogTailScanner( logFiles, entryReader, new Monitors() );
-        return new UpgradableDatabase( new StoreVersionCheck( pageCache ), getRecordFormats(), tailScanner );
+        return new UpgradableDatabase( new StoreVersionCheck( pageCache ), getRecordFormats(), tailScanner.getTailInformation().commitsAfterLastCheckpoint() );
     }
 
     private StoreMigrationParticipant participantThatWillFailWhenMoving( final String failureMessage )

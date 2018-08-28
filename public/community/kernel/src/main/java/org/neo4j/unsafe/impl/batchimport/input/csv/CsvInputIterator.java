@@ -74,14 +74,14 @@ class CsvInputIterator implements SourceTraceability, Closeable
         }
     }
 
-    CsvInputIterator( CharReadable stream, Decorator decorator, Header.Factory headerFactory, IdType idType, Configuration config, Groups groups,
-            Collector badCollector, Extractors extractors, int groupId ) throws IOException
+    CsvInputIterator(CharReadable stream, Decorator decorator, HeaderFactory headerFactory, IdType idType, Configuration config, Groups groups,
+                     Collector badCollector, Extractors extractors, int groupId ) throws IOException
     {
         this( stream, decorator, extractHeader( stream, headerFactory, idType, config, groups ), config, idType, badCollector, extractors, groupId );
     }
 
-    static Header extractHeader( CharReadable stream, Header.Factory headerFactory, IdType idType,
-            Configuration config, Groups groups ) throws IOException
+    static Header extractHeader(CharReadable stream, HeaderFactory headerFactory, IdType idType,
+                                Configuration config, Groups groups ) throws IOException
     {
         if ( !headerFactory.isDefined() )
         {

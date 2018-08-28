@@ -29,7 +29,7 @@ import org.neo4j.kernel.impl.util.monitoring.ProgressReporter;
  * Default empty implementation of StoreMigrationParticipant.
  * Base class for all StoreMigrationParticipant implementations.
  *
- * @see org.neo4j.kernel.impl.storemigration.StoreUpgrader
+ *
  */
 public class AbstractStoreMigrationParticipant implements StoreMigrationParticipant
 {

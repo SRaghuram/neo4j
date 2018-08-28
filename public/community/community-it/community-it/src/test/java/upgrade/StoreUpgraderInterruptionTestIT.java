@@ -156,7 +156,7 @@ public class StoreUpgraderInterruptionTestIT
         VersionAwareLogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader = new VersionAwareLogEntryReader<>();
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( workingDatabaseLayout.databaseDirectory(), fs ).build();
         LogTailScanner tailScanner = new LogTailScanner( logFiles, logEntryReader, new Monitors() );
-        return new UpgradableDatabase( check, Standard.LATEST_RECORD_FORMATS, tailScanner );
+        return new UpgradableDatabase( check, Standard.LATEST_RECORD_FORMATS, tailScanner.getTailInformation().commitsAfterLastCheckpoint() );
     }
 
     private SchemaIndexMigrator createIndexMigrator()

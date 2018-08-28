@@ -31,7 +31,6 @@ import org.neo4j.kernel.impl.store.record.ConstraintRule;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.transaction.command.Command.BaseCommand;
 import org.neo4j.storageengine.api.CommandVersion;
-
 /**
  * Visits commands targeted towards the {@link NeoStores} and update corresponding stores.
  * What happens in here is what will happen in a "internal" transaction, i.e. a transaction that has been

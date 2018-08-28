@@ -27,6 +27,7 @@ import org.neo4j.helpers.Listeners;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleStatus;
@@ -39,6 +40,8 @@ import org.neo4j.kernel.lifecycle.LifecycleStatus;
  */
 public class DataSourceManager implements Lifecycle, Supplier<Kernel>
 {
+    public static final String DEFAULT_DATABASE_NAME = Constants.DEFAULT_DATABASE_NAME;
+
     public interface Listener
     {
         void registered( NeoStoreDataSource dataSource );

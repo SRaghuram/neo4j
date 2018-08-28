@@ -32,6 +32,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.logging.LogService;
 import org.neo4j.kernel.impl.logging.NullLogService;
@@ -56,12 +57,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
+import static org.neo4j.kernel.api.Constants.*;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_CHECKSUM;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_COMMIT_TIMESTAMP;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
 import static org.neo4j.kernel.impl.store.MetaDataStore.getRecord;
 import static org.neo4j.kernel.impl.store.MetaDataStore.setRecord;
-import static org.neo4j.kernel.impl.store.format.standard.MetaDataRecordFormat.FIELD_NOT_PRESENT;
 
 public class StoreMigratorTest
 {
@@ -176,7 +177,7 @@ public class StoreMigratorTest
         database.shutdown();
 
         MetaDataStore.setRecord( pageCache, neoStore, MetaDataStore.Position.LAST_CLOSED_TRANSACTION_LOG_VERSION,
-                MetaDataRecordFormat.FIELD_NOT_PRESENT );
+                FIELD_NOT_PRESENT );
         Config config = Config.defaults( logical_logs_location, path );
         StoreMigrator migrator = new StoreMigrator( fileSystemRule.get(), pageCache, config, logService );
         LogPosition logPosition = migrator.extractTransactionLogPosition( neoStore, databaseLayout, 100 );

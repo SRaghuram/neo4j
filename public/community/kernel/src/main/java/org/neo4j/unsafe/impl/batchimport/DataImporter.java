@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
 
+import org.neo4j.kernel.api.Constants;
 import org.neo4j.unsafe.impl.batchimport.DataStatistics.RelationshipTypeCount;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
@@ -69,8 +70,6 @@ import static org.neo4j.unsafe.impl.batchimport.stats.Stats.longStat;
  */
 public class DataImporter
 {
-    public static final String NODE_IMPORT_NAME = "Nodes";
-    public static final String RELATIONSHIP_IMPORT_NAME = "Relationships";
 
     public static class Monitor
     {
@@ -178,7 +177,7 @@ public class DataImporter
                     throws IOException
     {
         Supplier<EntityImporter> importers = () -> new NodeImporter( stores, idMapper, monitor );
-        importData( NODE_IMPORT_NAME, numRunners, input.nodes(), stores, importers, executionMonitor,
+        importData( Constants.NODE_IMPORT_NAME, numRunners, input.nodes(), stores, importers, executionMonitor,
                 new MemoryUsageStatsProvider( stores, idMapper ) );
     }
 
@@ -190,7 +189,7 @@ public class DataImporter
         DataStatistics typeDistribution = new DataStatistics( monitor.nodes.sum(), monitor.properties.sum(), new RelationshipTypeCount[0] );
         Supplier<EntityImporter> importers = () -> new RelationshipImporter( stores, idMapper, typeDistribution, monitor,
                 badCollector, validateRelationshipData, stores.usesDoubleRelationshipRecordUnits() );
-        importData( RELATIONSHIP_IMPORT_NAME, numRunners, input.relationships(), stores, importers, executionMonitor,
+        importData( Constants.RELATIONSHIP_IMPORT_NAME, numRunners, input.relationships(), stores, importers, executionMonitor,
                 new MemoryUsageStatsProvider( stores, idMapper ) );
         return typeDistribution;
     }
