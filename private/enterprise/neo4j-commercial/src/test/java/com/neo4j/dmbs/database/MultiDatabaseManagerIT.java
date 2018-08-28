@@ -98,7 +98,7 @@ class MultiDatabaseManagerIT
         databaseManager.createDatabase( logTestDb );
         databaseManager.shutdownDatabase( logTestDb );
         logProvider.assertLogStringContains( "Creating 'logTestDb' database." );
-        logProvider.assertLogStringContains( "Shutdown 'logTestDb' database." );
+        logProvider.assertLogStringContains( "Shutting down 'logTestDb' database." );
     }
 
     private DatabaseManager getDatabaseManager()

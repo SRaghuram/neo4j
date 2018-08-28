@@ -100,7 +100,7 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
 
     private void shutdownDatabase( String databaseName, GraphDatabaseFacade databaseFacade )
     {
-        log.log( "Shutdown '%s' database.", databaseName );
+        log.log( "Shutting down '%s' database.", databaseName );
         databaseFacade.shutdown();
     }
 }

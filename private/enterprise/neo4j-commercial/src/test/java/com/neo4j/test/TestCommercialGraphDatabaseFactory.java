@@ -93,19 +93,19 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
         };
     }
 
-    static class TestCommercialGraphDatabaseFacadeFactory extends TestGraphDatabaseFacadeFactory
+    @Override
+    public String getEdition()
+    {
+        return Edition.enterprise.toString();
+    }
+
+    private static class TestCommercialGraphDatabaseFacadeFactory extends TestGraphDatabaseFacadeFactory
     {
 
         TestCommercialGraphDatabaseFacadeFactory( TestGraphDatabaseFactoryState state, boolean impermanent )
         {
             super( state, impermanent, DatabaseInfo.ENTERPRISE, CommercialEditionModule::new );
         }
-    }
-
-    @Override
-    public String getEdition()
-    {
-        return Edition.enterprise.toString();
     }
 }
 
