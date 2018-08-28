@@ -30,6 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseManagerIT
 {
+    private static final String CUSTOM_DATABASE_NAME = "customDatabaseName";
+
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
@@ -39,7 +41,8 @@ class MultiDatabaseManagerIT
     void setUp()
     {
         logProvider = new AssertableLogProvider( true );
-        database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newEmbeddedDatabase( testDirectory.databaseDir() );
+        database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider )
+                .newEmbeddedDatabase( testDirectory.databaseLayout( CUSTOM_DATABASE_NAME ).databaseDirectory() );
     }
 
     @AfterEach
@@ -71,7 +74,7 @@ class MultiDatabaseManagerIT
     void lookupExistingDatabase()
     {
         DatabaseManager databaseManager = getDatabaseManager();
-        Optional<GraphDatabaseFacade> database = databaseManager.getDatabaseFacade( DatabaseManager.DEFAULT_DATABASE_NAME );
+        Optional<GraphDatabaseFacade> database = databaseManager.getDatabaseFacade( CUSTOM_DATABASE_NAME );
         assertTrue( database.isPresent() );
     }
 
