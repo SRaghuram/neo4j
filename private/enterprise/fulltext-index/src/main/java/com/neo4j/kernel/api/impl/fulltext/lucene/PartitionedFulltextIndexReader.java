@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.api.impl.index.partition.PartitionSearcher;
 import org.neo4j.kernel.api.impl.schema.reader.IndexReaderCloseException;
+import org.neo4j.values.storable.Value;
 
 /**
  * Index reader that is able to read/sample multiple partitions of a partitioned Lucene index.
@@ -66,5 +67,11 @@ class PartitionedFulltextIndexReader extends FulltextIndexReader
             results.add( indexReader.query( query ) );
         }
         return ScoreEntityIterator.concat( results );
+    }
+
+    @Override
+    public long countIndexedNodes( long nodeId, int[] propertyKeyIds, Value... propertyValues )
+    {
+        return 0;// TODO
     }
 }

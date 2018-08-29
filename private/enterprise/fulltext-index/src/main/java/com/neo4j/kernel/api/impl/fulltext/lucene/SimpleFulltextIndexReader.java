@@ -8,9 +8,13 @@ package com.neo4j.kernel.api.impl.fulltext.lucene;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TotalHitCountCollector;
 
 import java.io.IOException;
 
@@ -18,6 +22,7 @@ import org.neo4j.kernel.api.impl.index.collector.DocValuesCollector;
 import org.neo4j.kernel.api.impl.index.collector.ValuesIterator;
 import org.neo4j.kernel.api.impl.index.partition.PartitionSearcher;
 import org.neo4j.kernel.api.impl.schema.reader.IndexReaderCloseException;
+import org.neo4j.values.storable.Value;
 
 /**
  * Lucene index reader that is able to read/sample a single partition of a partitioned Lucene index.
@@ -77,5 +82,25 @@ class SimpleFulltextIndexReader extends FulltextIndexReader
     private IndexSearcher getIndexSearcher()
     {
         return partitionSearcher.getIndexSearcher();
+    }
+
+    @Override
+    public long countIndexedNodes( long nodeId, int[] propertyKeyIds, Value... propertyValues )
+    {
+        Query nodeIdQuery = new TermQuery( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( nodeId ) );
+        Query valueQuery = LuceneFulltextDocumentStructure.newCountQuery( propertyKeyIds, propertyValues );
+        BooleanQuery.Builder nodeIdAndValueQuery = new BooleanQuery.Builder().setDisableCoord( true );
+        nodeIdAndValueQuery.add( nodeIdQuery, BooleanClause.Occur.MUST );
+        nodeIdAndValueQuery.add( valueQuery, BooleanClause.Occur.MUST );
+        try
+        {
+            TotalHitCountCollector collector = new TotalHitCountCollector();
+            getIndexSearcher().search( nodeIdAndValueQuery.build(), collector );
+            return collector.getTotalHits();
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 }

@@ -94,10 +94,9 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     @Override
     public IndexPopulator getPopulator( StoreIndexDescriptor descriptor, IndexSamplingConfig samplingConfig )
     {
-        TokenHolders tokens = tokenHolders.get();
         PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
         FulltextIndexDescriptor fulltextIndexDescriptor = FulltextIndexSettings.readOrInitialiseDescriptor(
-                descriptor, defaultAnalyzerName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
+                descriptor, defaultAnalyzerName, indexStorage, fileSystem );
         DatabaseIndex<FulltextIndexReader> fulltextIndex = FulltextIndexBuilder
                 .create( fulltextIndexDescriptor, config )
                 .withFileSystem( fileSystem )
@@ -116,11 +115,10 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     @Override
     public IndexAccessor getOnlineAccessor( StoreIndexDescriptor descriptor, IndexSamplingConfig samplingConfig ) throws IOException
     {
-        TokenHolders tokens = tokenHolders.get();
         PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
 
         FulltextIndexDescriptor fulltextIndexDescriptor = FulltextIndexSettings.readOrInitialiseDescriptor(
-                descriptor, defaultAnalyzerName, tokens.propertyKeyTokens(), indexStorage, fileSystem );
+                descriptor, defaultAnalyzerName, indexStorage, fileSystem );
         FulltextIndexBuilder fulltextIndexBuilder = FulltextIndexBuilder.create( fulltextIndexDescriptor, config )
                 .withFileSystem( fileSystem )
                 .withOperationalMode( operationalMode )

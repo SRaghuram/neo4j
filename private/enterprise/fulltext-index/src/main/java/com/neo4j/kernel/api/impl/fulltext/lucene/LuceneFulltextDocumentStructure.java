@@ -12,6 +12,11 @@ import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.ConstantScoreQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -21,6 +26,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
 import static org.apache.lucene.document.Field.Store.NO;
+import static org.apache.lucene.document.Field.Store.YES;
 
 public class LuceneFulltextDocumentStructure
 {
@@ -55,12 +61,30 @@ public class LuceneFulltextDocumentStructure
 
     static long getNodeId( Document from )
     {
-        return Long.parseLong( from.get( FIELD_ENTITY_ID ) );
+        String entityId = from.get( FIELD_ENTITY_ID );
+        return Long.parseLong( entityId );
     }
 
     static Term newTermForChangeOrRemove( long id )
     {
         return new Term( FIELD_ENTITY_ID, "" + id );
+    }
+
+    static Query newCountQuery( int[] propertyKeyIds, Value... propertyValues )
+    {
+        BooleanQuery.Builder builder = new BooleanQuery.Builder();
+        for ( int i = 0; i < propertyKeyIds.length; i++ )
+        {
+            int propertyKeyId = propertyKeyIds[i];
+            Value value = propertyValues[i];
+            if ( value.valueGroup() == ValueGroup.TEXT )
+            {
+                Query valueQuery = new ConstantScoreQuery(
+                        new TermQuery( new Term( "p" + propertyKeyId, value.asObject().toString() ) ) );
+                builder.add( valueQuery, BooleanClause.Occur.MUST );
+            }
+        }
+        return builder.build();
     }
 
     private static class DocWithId
@@ -72,7 +96,7 @@ public class LuceneFulltextDocumentStructure
 
         private DocWithId()
         {
-            idField = new StringField( FIELD_ENTITY_ID, "", NO );
+            idField = new StringField( FIELD_ENTITY_ID, "", YES );
             idValueField = new NumericDocValuesField( FIELD_ENTITY_ID, 0L );
             document = new Document();
             document.add( idField );

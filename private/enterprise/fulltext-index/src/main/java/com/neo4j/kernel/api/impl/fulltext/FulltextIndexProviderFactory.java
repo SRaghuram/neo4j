@@ -23,6 +23,7 @@ import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
@@ -73,17 +74,16 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         DirectoryFactory directoryFactory = directoryFactory( ephemeral, fileSystemAbstraction );
         OperationalMode operationalMode = context.databaseInfo().operationalMode;
         JobScheduler scheduler = dependencies.scheduler();
-        NeoStoreDataSource neoStoreDataSource = dependencies.neoStoreDataSource();
         IndexDirectoryStructure.Factory directoryStructureFactory = subProviderDirectoryStructure( context.directory() );
-        Supplier<TokenHolders> tokenHoldersSupplier = dataSourceDependency( neoStoreDataSource, TokenHolders.class );
+        Supplier<TokenHolders> tokenHoldersSupplier = dataSourceDependency( dependencies, TokenHolders.class );
         Log log = dependencies.getLogService().getInternalLog( FulltextIndexProvider.class );
 
         FulltextIndexProvider provider = new FulltextIndexProvider(
                 DESCRIPTOR, PRIORITY, directoryStructureFactory, fileSystemAbstraction, config, tokenHoldersSupplier,
                 directoryFactory, operationalMode, scheduler );
-        dependencies.procedures().registerComponent( FulltextAdapter.class, procContext -> provider, true );
         try
         {
+            dependencies.procedures().registerComponent( FulltextAdapter.class, procContext -> provider, true );
             dependencies.procedures().registerProcedure( FulltextProcedures.class );
         }
         catch ( KernelException e )
@@ -91,12 +91,17 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
             log.error( "Failed to register the fulltext index procedures. The fulltext index provider will be loaded and updated like normal, " +
                     "but it might not be possible to query any fulltext indexes.", e );
         }
+        catch ( UnsatisfiedDependencyException e )
+        {
+            // This will for instance happen when the kernel extension is created as part of a concistency check run.
+            log.debug( "Fulltext index procedures will not be registered: " + e.getMessage() );
+        }
 
         return provider;
     }
 
-    private static <T> Supplier<T> dataSourceDependency( NeoStoreDataSource neoStoreDataSource, Class<T> clazz )
+    private static <T> Supplier<T> dataSourceDependency( Dependencies dependencies, Class<T> clazz )
     {
-        return () -> neoStoreDataSource.getDependencyResolver().resolveDependency( clazz );
+        return () -> dependencies.neoStoreDataSource().getDependencyResolver().resolveDependency( clazz );
     }
 }

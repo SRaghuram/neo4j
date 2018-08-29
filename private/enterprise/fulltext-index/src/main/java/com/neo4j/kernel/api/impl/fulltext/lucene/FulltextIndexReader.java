@@ -27,13 +27,6 @@ public abstract class FulltextIndexReader implements IndexReader
     public abstract ScoreEntityIterator query( String query ) throws ParseException;
 
     @Override
-    public long countIndexedNodes( long nodeId, Value... propertyValues )
-    {
-        //TODO Maybe we need to count indexed nodes somewhere?
-        return 0;
-    }
-
-    @Override
     public IndexSampler createSampler()
     {
         return IndexSampler.EMPTY;

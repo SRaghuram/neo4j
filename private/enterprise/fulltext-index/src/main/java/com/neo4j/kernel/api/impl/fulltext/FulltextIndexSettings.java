@@ -15,17 +15,11 @@ import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Properties;
-import java.util.Set;
 
-import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
-import org.neo4j.kernel.impl.core.TokenHolder;
-import org.neo4j.kernel.impl.core.TokenNotFoundException;
 import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 
 class FulltextIndexSettings
@@ -35,7 +29,7 @@ class FulltextIndexSettings
     static final String INDEX_CONFIG_EVENTUALLY_CONSISTENT = "eventually_consistent";
 
     static FulltextIndexDescriptor readOrInitialiseDescriptor( StoreIndexDescriptor descriptor, String defaultAnalyzerName,
-            TokenHolder propertyKeyTokenHolder, PartitionedIndexStorage indexStorage, FileSystemAbstraction fileSystem )
+            PartitionedIndexStorage indexStorage, FileSystemAbstraction fileSystem )
     {
         Properties indexConfiguration = new Properties();
         if ( descriptor.schema() instanceof FulltextSchemaDescriptor )
@@ -47,21 +41,7 @@ class FulltextIndexSettings
         boolean eventuallyConsistent = Boolean.parseBoolean( indexConfiguration.getProperty( INDEX_CONFIG_EVENTUALLY_CONSISTENT ) );
         String analyzerName = indexConfiguration.getProperty( INDEX_CONFIG_ANALYZER, defaultAnalyzerName );
         Analyzer analyzer = createAnalyzer( analyzerName );
-        Set<String> names = new HashSet<>();
-        for ( int propertyKeyId : descriptor.schema().getPropertyIds() )
-        {
-            try
-            {
-                names.add( propertyKeyTokenHolder.getTokenById( propertyKeyId ).name() );
-            }
-            catch ( TokenNotFoundException e )
-            {
-                throw new IllegalStateException( "Property key id not found.",
-                        new PropertyKeyIdNotFoundKernelException( propertyKeyId, e ) );
-            }
-        }
-        Set<String> propertyNames = Collections.unmodifiableSet( names );
-        return new FulltextIndexDescriptor( descriptor, propertyNames, analyzer, analyzerName, eventuallyConsistent );
+        return new FulltextIndexDescriptor( descriptor, analyzer, analyzerName, eventuallyConsistent );
     }
 
     private static void loadPersistedSettings( Properties settings, PartitionedIndexStorage indexStorage, FileSystemAbstraction fs )
@@ -100,7 +80,6 @@ class FulltextIndexSettings
         Properties settings = new Properties();
         settings.getProperty( INDEX_CONFIG_EVENTUALLY_CONSISTENT, Boolean.toString( descriptor.isEventuallyConsistent() ) );
         settings.setProperty( INDEX_CONFIG_ANALYZER, descriptor.analyzerName() );
-        settings.setProperty( "_propertyNames", descriptor.propertyNames().toString() );
         settings.setProperty( "_propertyIds", Arrays.toString( descriptor.properties() ) );
         settings.setProperty( "_name", descriptor.name() );
         settings.setProperty( "_schema_entityType", descriptor.schema().entityType().name() );
