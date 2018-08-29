@@ -52,7 +52,10 @@ public class FulltextIndexPopulator extends LuceneIndexPopulator<DatabaseIndex<F
     {
         try
         {
-            luceneIndex.getIndexWriter().addDocuments( updates.size(), () -> updates.stream().map( this::updateAsDocument ).iterator() );
+            for ( IndexEntryUpdate<?> update : updates )
+            {
+                writer.updateDocument( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( update.getEntityId() ), updateAsDocument( update ) );
+            }
         }
         catch ( IOException e )
         {

@@ -72,6 +72,6 @@ class PartitionedFulltextIndexReader extends FulltextIndexReader
     @Override
     public long countIndexedNodes( long nodeId, int[] propertyKeyIds, Value... propertyValues )
     {
-        return 0;// TODO
+        return indexReaders.stream().mapToLong( reader -> reader.countIndexedNodes( nodeId, propertyKeyIds, propertyValues ) ).sum();
     }
 }
