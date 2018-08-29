@@ -61,6 +61,12 @@
             <type>test-jar</type>
         </dependency>
 
+        <!-- External dependencies -->
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>annotations</artifactId>
+        </dependency>
+
         <!-- External test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
