@@ -121,16 +121,20 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         initialUserRepository.start();
         defaultAdminRepository.start();
 
+        // On first startup:
         // Ensure that multiple users, roles or databases cannot have the same name
-        final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row -> true;
-        systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (u:User) ASSERT u.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
-        systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (r:Role) ASSERT r.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
-        systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (d:Database) ASSERT d.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
-
         // Setup default db, predefined roles and default users
-        ensureDefaultDatabases();
-        boolean wasDefaultRolesCreated = ensureDefaultRoles();
-        ensureDefaultUsers( wasDefaultRolesCreated );
+        if ( isSystemGraphEmpty() )
+        {
+            final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row -> true;
+            systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (u:User) ASSERT u.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
+            systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (r:Role) ASSERT r.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
+            systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (d:Database) ASSERT d.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
+
+            ensureDefaultDatabases();
+            boolean wasDefaultRolesCreated = ensureDefaultRoles();
+            ensureDefaultUsers( wasDefaultRolesCreated );
+        }
     }
 
     @Override
@@ -744,6 +748,15 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     {
         String query = "MATCH (r:Role) RETURN count(r)";
         return systemGraphExecutor.executeQueryLong( query );
+    }
+
+    private boolean isSystemGraphEmpty()
+    {
+        // Execute a query to see if the system database exists
+        String query = "MATCH (db:Database {name: $name}) RETURN db.name";
+        Map<String,Object> params = map( "name", MultiDatabaseManager.SYSTEM_DB_NAME );
+
+        return !systemGraphExecutor.executeQueryWithParamCheck( query, params );
     }
 
     private SystemGraphCredential createCredentialForPassword( String password )

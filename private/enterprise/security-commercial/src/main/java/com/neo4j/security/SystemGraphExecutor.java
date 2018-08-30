@@ -41,6 +41,7 @@ class SystemGraphExecutor
     private DatabaseManager databaseManager;
     private final String activeDbName;
     private GraphDatabaseFacade systemDb;
+    private ThreadToStatementContextBridge statementContext;
 
     SystemGraphExecutor( DatabaseManager databaseManager, String activeDbName )
     {
@@ -147,10 +148,13 @@ class SystemGraphExecutor
 
     void executeQuery( String query, Map<String,Object> params, QueryResult.QueryResultVisitor resultVisitor )
     {
-        GraphDatabaseFacade activeDb = getDb( activeDbName );
-        systemDb = getDb( MultiDatabaseManager.SYSTEM_DB_NAME );
-        final ThreadToStatementContextBridge statementContext =
-                activeDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+        // resolve statementContext and systemDb on the first call
+        if ( statementContext == null )
+        {
+            GraphDatabaseFacade activeDb = getDb( activeDbName );
+            systemDb = getDb( MultiDatabaseManager.SYSTEM_DB_NAME );
+            statementContext = activeDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+        }
 
         // pause outer transaction if there is one
         if ( statementContext.hasTransaction() )
