@@ -6,6 +6,8 @@
 package com.neo4j.security;
 
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableLong;
 
 import java.util.Collections;
 import java.util.Map;
@@ -51,16 +53,16 @@ class SystemGraphExecutor
 
     long executeQueryLong( String query )
     {
-        long[] count = new long[1];
+        MutableLong count = new MutableLong();
 
         final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row ->
         {
-            count[0] = ((NumberValue) row.fields()[0]).longValue();
+            count.setValue( ((NumberValue) row.fields()[0]).longValue() );
             return false;
         };
 
         executeQuery( query, Collections.emptyMap(), resultVisitor );
-        return count[0];
+        return count.getValue();
     }
 
     void executeQueryWithConstraint( String query, Map<String,Object> params, String failureMessage ) throws InvalidArgumentsException
@@ -84,16 +86,16 @@ class SystemGraphExecutor
 
     boolean executeQueryWithParamCheck( String query, Map<String,Object> params )
     {
-        boolean[] paramCheck = { false };
+        MutableBoolean paramCheck = new MutableBoolean( false );
 
         final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row ->
         {
-            paramCheck[0] = true; // If we get a result row, we know that the user and/or role specified in the params exist
+            paramCheck.setTrue(); // If we get a result row, we know that the user and/or role specified in the params exist
             return true;
         };
 
         executeQuery( query, params, resultVisitor );
-        return paramCheck[0];
+        return paramCheck.getValue();
     }
 
     boolean executeQueryWithParamCheck( String query, Map<String,Object> params, String errorMsg ) throws InvalidArgumentsException
@@ -123,12 +125,12 @@ class SystemGraphExecutor
 
     Set<String> executeQueryWithResultSetAndParamCheck( String query, Map<String,Object> params, String errorMsg ) throws InvalidArgumentsException
     {
-        boolean[] success = { false };
+        MutableBoolean success = new MutableBoolean( false );
         Set<String> resultSet = new TreeSet<>();
 
         final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row ->
         {
-            success[0] = true; // If we get a row we know that the parameter existed in the system db
+            success.setTrue(); // If we get a row we know that the parameter existed in the system db
             Value value = (Value) row.fields()[0];
             if ( value != Values.NO_VALUE )
             {
@@ -139,7 +141,7 @@ class SystemGraphExecutor
 
         executeQuery( query, params, resultVisitor );
 
-        if ( !success[0] )
+        if ( success.isFalse() )
         {
             throw new InvalidArgumentsException( errorMsg );
         }

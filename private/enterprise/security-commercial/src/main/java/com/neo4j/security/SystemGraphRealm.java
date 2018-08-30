@@ -6,6 +6,7 @@
 package com.neo4j.security;
 
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -246,9 +247,9 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             return null;
         }
 
-        boolean[] existingUser = {false};
-        boolean[] passwordChangeRequired = {false};
-        boolean[] suspended = {false};
+        MutableBoolean existingUser = new MutableBoolean( false );
+        MutableBoolean passwordChangeRequired = new MutableBoolean( false );
+        MutableBoolean suspended = new MutableBoolean( false );
         Set<String> roleNames = new TreeSet<>();
 
         String query = "MATCH (u:User {name: $username}) OPTIONAL MATCH (u)-[:HAS_DB_ROLE]->(:DbRole)-[:FOR_ROLE]->(r:Role) " +
@@ -258,9 +259,9 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row ->
         {
             AnyValue[] fields = row.fields();
-            existingUser[0] = true;
-            passwordChangeRequired[0] = ((BooleanValue) fields[0]).booleanValue();
-            suspended[0] = ((BooleanValue) fields[1]).booleanValue();
+            existingUser.setTrue();
+            passwordChangeRequired.setValue( ((BooleanValue) fields[0]).booleanValue() );
+            suspended.setValue( ((BooleanValue) fields[1]).booleanValue() );
 
             Value role = (Value) fields[2];
             if ( role != Values.NO_VALUE )
@@ -273,12 +274,12 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
 
         systemGraphExecutor.executeQuery( query, params, resultVisitor );
 
-        if ( !existingUser[0] )
+        if ( existingUser.isFalse() )
         {
             return null;
         }
 
-        if ( passwordChangeRequired[0] || suspended[0] )
+        if ( passwordChangeRequired.isTrue() || suspended.isTrue() )
         {
             return new SimpleAuthorizationInfo();
         }
