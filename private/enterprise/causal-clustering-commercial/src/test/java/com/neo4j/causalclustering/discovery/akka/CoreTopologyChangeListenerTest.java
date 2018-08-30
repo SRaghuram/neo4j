@@ -5,31 +5,31 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
+import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.UUID;
 
 import org.neo4j.causalclustering.discovery.CoreTopology;
+import org.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
 import org.neo4j.causalclustering.discovery.HostnameResolver;
 import org.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import org.neo4j.causalclustering.discovery.TopologyServiceNoRetriesStrategy;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
-import org.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
-import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.scheduler.CentralJobScheduler;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public class CoreTopologyChangeListenerTest
 {
     MemberId myself = new MemberId( UUID.randomUUID() );
-    JobScheduler jobScheduler = new CentralJobScheduler();
+    JobScheduler jobScheduler = createInitialisedScheduler();
     HostnameResolver hostnameResolver = new NoOpHostnameResolver();
     TopologyServiceRetryStrategy  topologyServiceRetryStrategy = new TopologyServiceNoRetriesStrategy();
 

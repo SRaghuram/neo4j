@@ -25,6 +25,8 @@ import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -110,14 +112,13 @@ public class RestartableImportIT
         return new SimpleRandomizedInput( seed, NODE_COUNT, RELATIONSHIP_COUNT, 0, 0 );
     }
 
-    public static void main( String[] args ) throws IOException
+    public static void main( String[] args ) throws Exception
     {
-        try
+        try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.of( new File( args[0] ) ), new DefaultFileSystemAbstraction(),
-                    null, DEFAULT, NullLogService.getInstance(),
-                    ExecutionMonitors.invisible(), EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR ).doImport(
-                    input( Long.parseLong( args[1] ) ) );
+                    null, DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(),
+                    RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler ).doImport( input( Long.parseLong( args[1] ) ) );
         }
         catch ( IllegalStateException e )
         {

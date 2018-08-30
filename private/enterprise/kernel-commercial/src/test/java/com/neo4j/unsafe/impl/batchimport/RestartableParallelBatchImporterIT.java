@@ -5,6 +5,7 @@
  */
 package com.neo4j.unsafe.impl.batchimport;
 
+import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -16,6 +17,8 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
@@ -52,9 +55,16 @@ public class RestartableParallelBatchImporterIT
     private final RandomRule random = new RandomRule();
     private final TestDirectory directory = TestDirectory.testDirectory( fs );
     private final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    private static final JobScheduler jobScheduler = new ThreadPoolJobScheduler();
 
     @Rule
     public final RuleChain rules = RuleChain.outerRule( random ).around( fs ).around( directory ).around( suppressOutput );
+
+    @AfterClass
+    public static void tearDown() throws Exception
+    {
+        jobScheduler.close();
+    }
 
     @Test
     public void shouldRestartImportAfterNodeImportStart() throws Exception
@@ -261,6 +271,6 @@ public class RestartableParallelBatchImporterIT
     {
         return BatchImporterFactory.withHighestPriority().instantiate(
               directory.databaseLayout(), fs, null, DEFAULT, NullLogService.getInstance(), monitor,
-              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR );
+              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler );
     }
 }

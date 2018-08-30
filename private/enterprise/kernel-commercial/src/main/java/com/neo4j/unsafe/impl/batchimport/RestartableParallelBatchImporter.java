@@ -23,6 +23,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
@@ -76,10 +77,11 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private final AdditionalInitialIds additionalInitialIds;
     private final RelationshipTypeDistributionStorage dataStatisticsStorage;
     private final Monitor monitor;
+    private final JobScheduler jobScheduler;
 
     public RestartableParallelBatchImporter( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             Configuration config, LogService logService, ExecutionMonitor executionMonitor,
-            AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, Monitor monitor )
+            AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, Monitor monitor, JobScheduler jobScheduler )
     {
         this.externalPageCache = externalPageCache;
         this.databaseDirectory = databaseLayout.databaseDirectory();
@@ -93,13 +95,14 @@ public class RestartableParallelBatchImporter implements BatchImporter
         this.monitor = monitor;
         this.dataStatisticsStorage = new RelationshipTypeDistributionStorage( fileSystem,
                 new File( databaseDirectory, FILE_NAME_RELATIONSHIP_DISTRIBUTION ) );
+        this.jobScheduler = jobScheduler;
     }
 
     @Override
     public void doImport( Input input ) throws IOException
     {
         try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, databaseDirectory, externalPageCache, recordFormats,
-                      config, logService, additionalInitialIds, dbConfig );
+                      config, logService, additionalInitialIds, dbConfig, jobScheduler );
               ImportLogic logic = new ImportLogic( databaseDirectory, fileSystem, store, config, logService,
                       executionMonitor, recordFormats, monitor ) )
         {
