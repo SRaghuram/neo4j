@@ -29,6 +29,7 @@ import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
@@ -89,8 +90,8 @@ public class FulltextIndexConsistencyCheckIT
         Config config = Config.defaults();
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService( new Date() );
         ConsistencyFlags checkConsistencyConfig = new ConsistencyFlags( config );
-        return consistencyCheckService.runFullConsistencyCheck( testDirectory.databaseLayout(), config,
-                ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), true, checkConsistencyConfig );
+        return consistencyCheckService.runFullConsistencyCheck( testDirectory.databaseLayout(), config, ProgressMonitorFactory.NONE,
+                NullLogProvider.getInstance(), true, checkConsistencyConfig );
     }
 
     private StoreIndexDescriptor getIndexDescriptor( IndexDefinition definition )
@@ -193,6 +194,27 @@ public class FulltextIndexConsistencyCheckIT
     }
 
     @Test
+    public void mustBeAbleToConsistencyCheckNodeIndexWithManyLabelsAndOneProperty() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        // Enough labels to prevent inlining them into the node record, and instead require a dynamic label record to be allocated.
+        String[] labels = {"L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "L9", "L10", "L11", "L12", "L13", "L14", "L15", "L16"};
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( labels ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            db.createNode( Stream.of( labels ).map( Label::label ).toArray( Label[]::new ) ).setProperty( "prop", "value" );
+            tx.success();
+        }
+        db.shutdown();
+        assertIsConsistent( checkConsistency() );
+    }
+
+    @Test
     public void mustBeAbleToConsistencyCheckNodeIndexWithMultipleLabelsAndMultipleProperties() throws Exception
     {
         GraphDatabaseService db = createDatabase();
@@ -234,10 +256,148 @@ public class FulltextIndexConsistencyCheckIT
         db.shutdown();
         assertIsConsistent( checkConsistency() );
     }
-    // todo must be able to consistency check relationship index with one label and one property
-    // todo must be able to consistency check relationship index with one label and multiple properties
-    // todo must be able to consistency check relationship index with multiple labels and one property
-    // todo must be able to consistency check relationship index with multiple labels and multiple properties
+
+    @Test
+    public void mustBeAbleToConsistencyCheckRelationshipIndexWithOneRelationshipTypeAndOneProperty() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        RelationshipType relationshipType = RelationshipType.withName( "R1" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( "R1" ), array( "p1" ) ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            Node node = db.createNode();
+            node.createRelationshipTo( node, relationshipType ).setProperty( "p1", "value" );
+            node.createRelationshipTo( node, relationshipType ).setProperty( "p1", "value" ); // This relationship will have a different id value than the node.
+            tx.success();
+        }
+        db.shutdown();
+        assertIsConsistent( checkConsistency() );
+    }
+
+    @Test
+    public void mustBeAbleToConsistencyCheckRelationshipIndexWithOneRelationshipTypeAndMultipleProperties() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        RelationshipType relationshipType = RelationshipType.withName( "R1" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( "R1" ), array( "p1", "p2" ) ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            Node node = db.createNode();
+            Relationship r1 = node.createRelationshipTo( node, relationshipType );
+            r1.setProperty( "p1", "value" );
+            r1.setProperty( "p2", "value" );
+            Relationship r2 = node.createRelationshipTo( node, relationshipType ); // This relationship will have a different id value than the node.
+            r2.setProperty( "p1", "value" );
+            r2.setProperty( "p2", "value" );
+            node.createRelationshipTo( node, relationshipType ).setProperty( "p1", "value" );
+            node.createRelationshipTo( node, relationshipType ).setProperty( "p2", "value" );
+            tx.success();
+        }
+        db.shutdown();
+        assertIsConsistent( checkConsistency() );
+    }
+
+    @Test
+    public void mustBeAbleToConsistencyCheckRelationshipIndexWithMultipleRelationshipTypesAndOneProperty() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        RelationshipType relType1 = RelationshipType.withName( "R1" );
+        RelationshipType relType2 = RelationshipType.withName( "R2" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( "R1", "R2" ), array( "p1" ) ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            Node n1 = db.createNode();
+            Node n2 = db.createNode();
+            n1.createRelationshipTo( n1, relType1 ).setProperty( "p1", "value" );
+            n1.createRelationshipTo( n1, relType2 ).setProperty( "p1", "value" );
+            n2.createRelationshipTo( n2, relType1 ).setProperty( "p1", "value" );
+            n2.createRelationshipTo( n2, relType2 ).setProperty( "p1", "value" );
+            tx.success();
+        }
+        db.shutdown();
+        assertIsConsistent( checkConsistency() );
+    }
+
+    @Test
+    public void mustBeAbleToConsistencyCheckRelationshipIndexWithMultipleRelationshipTypesAndMultipleProperties() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        RelationshipType relType1 = RelationshipType.withName( "R1" );
+        RelationshipType relType2 = RelationshipType.withName( "R2" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( "R1", "R2" ), array( "p1", "p2" ) ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            Node n1 = db.createNode();
+            Node n2 = db.createNode();
+            Relationship r1 = n1.createRelationshipTo( n1, relType1 );
+            r1.setProperty( "p1", "value" );
+            r1.setProperty( "p2", "value" );
+            Relationship r2 = n1.createRelationshipTo( n1, relType2 );
+            r2.setProperty( "p1", "value" );
+            r2.setProperty( "p2", "value" );
+            Relationship r3 = n2.createRelationshipTo( n2, relType1 );
+            r3.setProperty( "p1", "value" );
+            r3.setProperty( "p2", "value" );
+            Relationship r4 = n2.createRelationshipTo( n2, relType2 );
+            r4.setProperty( "p1", "value" );
+            r4.setProperty( "p2", "value" );
+            n1.createRelationshipTo( n2, relType1 ).setProperty( "p1", "value" );
+            n1.createRelationshipTo( n2, relType2 ).setProperty( "p1", "value" );
+            n1.createRelationshipTo( n2, relType1 ).setProperty( "p2", "value" );
+            n1.createRelationshipTo( n2, relType2 ).setProperty( "p2", "value" );
+            tx.success();
+        }
+        db.shutdown();
+        assertIsConsistent( checkConsistency() );
+    }
+
+    @Test
+    public void mustBeAbleToConsistencyCheckNodeAndRelationshipIndexesAtTheSameTime() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( "L1", "L2", "L3" ), array( "p1", "p2" ) ) ).close();
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( "R1", "R2" ), array( "p1", "p2" ) ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            Node n1 = db.createNode( Label.label( "L1" ), Label.label( "L3" ) );
+            n1.setProperty( "p1", "value" );
+            n1.setProperty( "p2", "value" );
+            n1.createRelationshipTo( n1, RelationshipType.withName( "R2" ) ).setProperty( "p1", "value" );
+            Node n2 = db.createNode( Label.label( "L2" ) );
+            n2.setProperty( "p2", "value" );
+            Relationship r1 = n2.createRelationshipTo( n2, RelationshipType.withName( "R1" ) );
+            r1.setProperty( "p1", "value" );
+            r1.setProperty( "p2", "value" );
+            tx.success();
+        }
+        db.shutdown();
+        assertIsConsistent( checkConsistency() );
+    }
     // todo ... same as above, but including property value types that are not indexed by the fulltext index.
 
     @Test
@@ -260,9 +420,9 @@ public class FulltextIndexConsistencyCheckIT
                 Stream.of( propertyKeys ).forEach( p -> node.setProperty( p, p ) );
                 nodes.add( node );
                 int localRelCount = Math.min( nodes.size(), 5 );
-                rng.ints( localRelCount, 0, localRelCount ).distinct()
-                        .mapToObj( x -> node.createRelationshipTo( nodes.get( x ), relTypes[rng.nextInt( relTypes.length )] ) )
-                        .forEach( r -> Stream.of( propertyKeys ).forEach( p -> r.setProperty( p, p ) ) );
+                rng.ints( localRelCount, 0, localRelCount ).distinct().mapToObj(
+                        x -> node.createRelationshipTo( nodes.get( x ), relTypes[rng.nextInt( relTypes.length )] ) ).forEach(
+                        r -> Stream.of( propertyKeys ).forEach( p -> r.setProperty( p, p ) ) );
             }
             tx.success();
         }
@@ -271,8 +431,7 @@ public class FulltextIndexConsistencyCheckIT
         {
             for ( int i = 1; i < labels.length; i++ )
             {
-                db.execute( format( NODE_CREATE, "nodes" + i,
-                        array( Arrays.stream( labels ).limit( i ).map( Label::name ).toArray( String[]::new ) ),
+                db.execute( format( NODE_CREATE, "nodes" + i, array( Arrays.stream( labels ).limit( i ).map( Label::name ).toArray( String[]::new ) ),
                         array( Arrays.copyOf( propertyKeys, i ) ) ) ).close();
             }
             for ( int i = 1; i < relTypes.length; i++ )

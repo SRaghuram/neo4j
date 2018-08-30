@@ -70,9 +70,10 @@ public class LuceneFulltextDocumentStructure
         return new Term( FIELD_ENTITY_ID, "" + id );
     }
 
-    static Query newCountQuery( int[] propertyKeyIds, Value... propertyValues )
+    static Query newCountNodeEntriesQuery( long nodeId, int[] propertyKeyIds, Value... propertyValues )
     {
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
+        builder.add( new TermQuery( newTermForChangeOrRemove( nodeId ) ), BooleanClause.Occur.MUST );
         for ( int i = 0; i < propertyKeyIds.length; i++ )
         {
             int propertyKeyId = propertyKeyIds[i];
@@ -80,11 +81,16 @@ public class LuceneFulltextDocumentStructure
             if ( value.valueGroup() == ValueGroup.TEXT )
             {
                 Query valueQuery = new ConstantScoreQuery(
-                        new TermQuery( new Term( "p" + propertyKeyId, value.asObject().toString() ) ) );
-                builder.add( valueQuery, BooleanClause.Occur.MUST );
+                        new TermQuery( new Term( fieldNameForPropertyKeyId( propertyKeyId ), value.asObject().toString() ) ) );
+                builder.add( valueQuery, BooleanClause.Occur.SHOULD );
             }
         }
         return builder.build();
+    }
+
+    public static String fieldNameForPropertyKeyId( int propertyKeyId )
+    {
+        return "p" + propertyKeyId;
     }
 
     private static class DocWithId

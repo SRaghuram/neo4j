@@ -87,15 +87,11 @@ class SimpleFulltextIndexReader extends FulltextIndexReader
     @Override
     public long countIndexedNodes( long nodeId, int[] propertyKeyIds, Value... propertyValues )
     {
-        Query nodeIdQuery = new TermQuery( LuceneFulltextDocumentStructure.newTermForChangeOrRemove( nodeId ) );
-        Query valueQuery = LuceneFulltextDocumentStructure.newCountQuery( propertyKeyIds, propertyValues );
-        BooleanQuery.Builder nodeIdAndValueQuery = new BooleanQuery.Builder().setDisableCoord( true );
-        nodeIdAndValueQuery.add( nodeIdQuery, BooleanClause.Occur.MUST );
-        nodeIdAndValueQuery.add( valueQuery, BooleanClause.Occur.MUST );
+        Query query = LuceneFulltextDocumentStructure.newCountNodeEntriesQuery( nodeId, propertyKeyIds, propertyValues );
         try
         {
             TotalHitCountCollector collector = new TotalHitCountCollector();
-            getIndexSearcher().search( nodeIdAndValueQuery.build(), collector );
+            getIndexSearcher().search( query, collector );
             return collector.getTotalHits();
         }
         catch ( IOException e )

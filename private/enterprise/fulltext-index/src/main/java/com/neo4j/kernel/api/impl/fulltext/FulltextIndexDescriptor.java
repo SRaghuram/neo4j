@@ -5,6 +5,7 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
+import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure;
 import org.apache.lucene.analysis.Analyzer;
 
 import java.util.ArrayList;
@@ -32,7 +33,7 @@ public class FulltextIndexDescriptor extends StoreIndexDescriptor
         Collection<String> propertyNames = new ArrayList<>( propertyIds.length );
         for ( int propertyId : propertyIds )
         {
-            propertyNames.add( "p" + propertyId );
+            propertyNames.add( LuceneFulltextDocumentStructure.fieldNameForPropertyKeyId( propertyId ) );
         }
         return propertyNames;
     }

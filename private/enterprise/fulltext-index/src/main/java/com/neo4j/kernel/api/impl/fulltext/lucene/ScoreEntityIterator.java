@@ -150,9 +150,14 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
 
         ScoreEntry( long entityId, float score )
         {
-
             this.entityId = entityId;
             this.score = score;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "ScoreEntry[entityId=" + entityId + ", score=" + score + "]";
         }
     }
 }
