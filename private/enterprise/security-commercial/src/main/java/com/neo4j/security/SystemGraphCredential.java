@@ -16,12 +16,11 @@ import org.neo4j.kernel.impl.security.Credential;
 import org.neo4j.server.security.auth.exception.FormatException;
 import org.neo4j.server.security.enterprise.auth.SecureHasher;
 
-import static java.lang.String.format;
-
 class SystemGraphCredential implements Credential
 {
     private final SecureHasher secureHasher;
     private final SimpleHash hashedCredentials;
+    private static final String credentialSeparator = ",";
 
     SystemGraphCredential( SecureHasher secureHasher, SimpleHash hash )
     {
@@ -77,9 +76,7 @@ class SystemGraphCredential implements Credential
         return hashedCredentials;
     }
 
-    private static final String credentialSeparator = ",";
-
-    public static String serialize( SystemGraphCredential credential )
+    static String serialize( SystemGraphCredential credential )
     {
         String algortihm = credential.hashedCredentials.getAlgorithmName();
         String iterations = Integer.toString( credential.hashedCredentials.getIterations() );
@@ -88,12 +85,12 @@ class SystemGraphCredential implements Credential
         return String.join( credentialSeparator, algortihm, encodedPassword, encodedSalt, iterations );
     }
 
-    public static SystemGraphCredential deserialize( String part, SecureHasher secureHasher ) throws FormatException
+    static SystemGraphCredential deserialize( String part, SecureHasher secureHasher ) throws FormatException
     {
         String[] split = part.split( credentialSeparator, -1 );
         if ( split.length < 3 || split.length > 4 )
         {
-            throw new FormatException( format( "wrong number of credential fields" ) );
+            throw new FormatException( "wrong number of credential fields" );
         }
         String algorithm = split[0];
         byte[] decodedPassword = Hex.decode( split[1] );
