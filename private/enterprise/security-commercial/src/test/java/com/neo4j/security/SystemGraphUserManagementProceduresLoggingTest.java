@@ -11,6 +11,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.mockito.Mockito;
 
+import java.io.File;
+
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
@@ -28,6 +30,7 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
 {
     private GraphDatabaseService database;
     private DatabaseManager databaseManager;
+    private String activeDbName;
 
     @Rule
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
@@ -37,7 +40,9 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
     public void setUp() throws Throwable
     {
         CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
-        final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
+        File storeDir = testDirectory.databaseDir();
+        final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
+        activeDbName = storeDir.getAbsoluteFile().getName();
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
         database = builder.newGraphDatabase();
         databaseManager = getDatabaseManager();
@@ -64,7 +69,7 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
     {
 
         SystemGraphRealm realm = new SystemGraphRealm(
-                new SystemGraphExecutor( databaseManager, DatabaseManager.DEFAULT_DATABASE_NAME ),
+                new SystemGraphExecutor( databaseManager, activeDbName ),
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 Mockito.mock( AuthenticationStrategy.class ),

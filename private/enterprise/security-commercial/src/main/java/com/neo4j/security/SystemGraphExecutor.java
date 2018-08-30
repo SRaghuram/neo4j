@@ -39,13 +39,13 @@ import org.neo4j.values.storable.Values;
 class SystemGraphExecutor
 {
     private DatabaseManager databaseManager;
+    private final String activeDbName;
     private GraphDatabaseFacade systemDb;
-    private String activeDb;
 
-    SystemGraphExecutor( DatabaseManager databaseManager, String activeDb )
+    SystemGraphExecutor( DatabaseManager databaseManager, String activeDbName )
     {
         this.databaseManager = databaseManager;
-        this.activeDb = activeDb;
+        this.activeDbName = activeDbName;
     }
 
     long executeQueryLong( String query )
@@ -147,19 +147,26 @@ class SystemGraphExecutor
 
     void executeQuery( String query, Map<String,Object> params, QueryResult.QueryResultVisitor resultVisitor )
     {
-        GraphDatabaseFacade defaultDb = getDb( activeDb );
+        GraphDatabaseFacade activeDb = getDb( activeDbName );
         systemDb = getDb( MultiDatabaseManager.SYSTEM_DB_NAME );
         final ThreadToStatementContextBridge statementContext =
-                defaultDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+                activeDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
 
         // pause outer transaction if there is one
         if ( statementContext.hasTransaction() )
         {
             final KernelTransaction outerTx = statementContext.getKernelTransactionBoundToThisThread( true );
             statementContext.unbindTransactionFromCurrentThread();
-            systemDbExecute( query, params, resultVisitor );
-            statementContext.unbindTransactionFromCurrentThread();
-            statementContext.bindTransactionToCurrentThread( outerTx );
+
+            try
+            {
+                systemDbExecute( query, params, resultVisitor );
+            }
+            finally
+            {
+                statementContext.unbindTransactionFromCurrentThread();
+                statementContext.bindTransactionToCurrentThread( outerTx );
+            }
         }
         else
         {
