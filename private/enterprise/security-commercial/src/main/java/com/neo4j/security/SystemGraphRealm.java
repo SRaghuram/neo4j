@@ -402,10 +402,24 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         assertValidUsername( username );
         assertValidDbName( dbName );
 
-        // TODO: Also remove the DbRoleNode if this was the last user connected to it?
+        // Find the DbRole connected to the given role and database
+        // Remove the relationship between the user and that DbRole
+        // If this was the last user connected to that specific DbRole, also remove the DbRole
         String query = "MATCH (u:User {name: $name})-[rel:HAS_DB_ROLE]->(dbr:DbRole) WITH dbr, rel " +
-                "MATCH (r:Role {name: $role})<-[:FOR_ROLE]-(dbr)-[:FOR_DATABASE]->(db:Database {name: $db})" +
-                "WITH dbr, rel DELETE rel RETURN dbr.id";
+                "MATCH (r:Role {name: $role})<-[:FOR_ROLE]-(dbr)-[:FOR_DATABASE]->(db:Database {name: $db}) " +
+                "WITH dbr, rel " +
+                "DELETE rel " +
+                "WITH dbr " +
+                "OPTIONAL MATCH (u :User)-[:HAS_DB_ROLE]->(dbr) " +
+                "WITH dbr, count(u) as nbrUsersStillConnectedToDbr " +
+                "WITH " +
+                    "CASE nbrUsersStillConnectedToDbr " +
+                        "WHEN 0 " +
+                        "THEN dbr " +
+                        "ELSE NULL " +
+                    "END AS nodeToRemove " +
+                "DETACH DELETE nodeToRemove " +
+                "RETURN 0 ";
 
         Map<String,Object> params = map( "name", username, "role", roleName, "db", dbName);
 
