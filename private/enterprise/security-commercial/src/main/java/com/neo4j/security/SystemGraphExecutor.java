@@ -11,28 +11,20 @@ import org.apache.commons.lang3.mutable.MutableLong;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.ExecutionPlanDescription;
-import org.neo4j.graphdb.Notification;
 import org.neo4j.graphdb.QueryExecutionException;
-import org.neo4j.graphdb.QueryExecutionType;
-import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
-import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.values.storable.NumberValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
@@ -40,7 +32,7 @@ import org.neo4j.values.storable.Values;
 
 class SystemGraphExecutor
 {
-    private DatabaseManager databaseManager;
+    private final DatabaseManager databaseManager;
     private final String activeDbName;
     private GraphDatabaseFacade systemDb;
     private ThreadToStatementContextBridge statementContext;

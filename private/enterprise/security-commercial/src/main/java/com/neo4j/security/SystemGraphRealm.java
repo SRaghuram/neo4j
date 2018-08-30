@@ -44,7 +44,6 @@ import org.neo4j.kernel.impl.security.Credential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.UserRepository;
-import org.neo4j.server.security.auth.UserSerialization;
 import org.neo4j.server.security.auth.exception.FormatException;
 import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import org.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
@@ -83,8 +82,6 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
      * placed here because of user suspension not being a part of community edition
      */
     private static final String IS_SUSPENDED = "is_suspended";
-
-    private final UserSerialization serialization = new UserSerialization();
 
    SystemGraphRealm( SystemGraphExecutor systemGraphExecutor, SecureHasher secureHasher, PasswordPolicy passwordPolicy,
            AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled, boolean authorizationEnabled,
@@ -207,12 +204,16 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
 
         switch ( result )
         {
+        case SUCCESS:
+            break;
+        case PASSWORD_CHANGE_REQUIRED:
+            break;
         case FAILURE:
             throw new IncorrectCredentialsException();
         case TOO_MANY_ATTEMPTS:
             throw new ExcessiveAttemptsException();
         default:
-            break;
+            throw new AuthenticationException();
         }
 
         if ( user.hasFlag( IS_SUSPENDED ) )
