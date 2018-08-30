@@ -50,6 +50,7 @@ import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.values.storable.RandomValues;
 import org.neo4j.values.storable.Values;
 
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
@@ -398,7 +399,45 @@ public class FulltextIndexConsistencyCheckIT
         db.shutdown();
         assertIsConsistent( checkConsistency() );
     }
-    // todo ... same as above, but including property value types that are not indexed by the fulltext index.
+
+    @Test
+    public void mustBeAbleToConsistencyCheckNodeIndexThatIsMissingNodesBecauseTheirPropertyValuesAreNotStrings() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( "L1" ), array( "p1" ) ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            db.createNode( Label.label( "L1" ) ).setProperty( "p1", 1 );
+            tx.success();
+        }
+        db.shutdown();
+        assertIsConsistent( checkConsistency() );
+    }
+
+    @Test
+    public void mustBeAbleToConsistencycheckRelationshipIndexThatIsMissingRelationshipsBecauseTheirPropertyValuesaAreNotStrings() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( "R1" ), array( "p1" ) ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            Node node = db.createNode();
+            node.createRelationshipTo( node, RelationshipType.withName( "R1" ) ).setProperty( "p1", 1 );
+            tx.success();
+        }
+        db.shutdown();
+        assertIsConsistent( checkConsistency() );
+    }
 
     @Test
     public void consistencyCheckerMustBeAbleToRunOnStoreWithFulltextIndexes() throws Exception
@@ -407,6 +446,7 @@ public class FulltextIndexConsistencyCheckIT
         Label[] labels = IntStream.range( 1, 7 ).mapToObj( i -> Label.label( "LABEL" + i ) ).toArray( Label[]::new );
         RelationshipType[] relTypes = IntStream.range( 1, 5 ).mapToObj( i -> RelationshipType.withName( "REL" + i ) ).toArray( RelationshipType[]::new );
         String[] propertyKeys = IntStream.range( 1, 7 ).mapToObj( i -> "PROP" + i ).toArray( String[]::new );
+        RandomValues randomValues = RandomValues.create();
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -417,12 +457,12 @@ public class FulltextIndexConsistencyCheckIT
             {
                 Label[] nodeLabels = rng.ints( rng.nextInt( labels.length ), 0, labels.length ).distinct().mapToObj( x -> labels[x] ).toArray( Label[]::new );
                 Node node = db.createNode( nodeLabels );
-                Stream.of( propertyKeys ).forEach( p -> node.setProperty( p, p ) );
+                Stream.of( propertyKeys ).forEach( p -> node.setProperty( p, rng.nextBoolean() ? p : randomValues.nextValue().asObject() ) );
                 nodes.add( node );
                 int localRelCount = Math.min( nodes.size(), 5 );
                 rng.ints( localRelCount, 0, localRelCount ).distinct().mapToObj(
                         x -> node.createRelationshipTo( nodes.get( x ), relTypes[rng.nextInt( relTypes.length )] ) ).forEach(
-                        r -> Stream.of( propertyKeys ).forEach( p -> r.setProperty( p, p ) ) );
+                        r -> Stream.of( propertyKeys ).forEach( p -> r.setProperty( p, rng.nextBoolean() ? p : randomValues.nextValue().asObject() ) ) );
             }
             tx.success();
         }
@@ -451,8 +491,7 @@ public class FulltextIndexConsistencyCheckIT
 
         db.shutdown();
 
-        ConsistencyCheckService.Result result = checkConsistency();
-        assertIsConsistent( result );
+        assertIsConsistent( checkConsistency() );
     }
 
     @Test
