@@ -6,8 +6,10 @@
 package com.neo4j.kernel.api.impl.fulltext;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
 
@@ -44,6 +46,13 @@ import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.coreapi.schema.IndexDefinitionImpl;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
+import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
+import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.store.record.PropertyRecord;
+import org.neo4j.kernel.impl.store.record.RecordLoad;
+import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
@@ -105,9 +114,20 @@ public class FulltextIndexConsistencyCheckIT
 
     private IndexingService getIndexingService( GraphDatabaseService db )
     {
-        GraphDatabaseAPI api = (GraphDatabaseAPI) db;
-        DependencyResolver dependencyResolver = api.getDependencyResolver();
+        DependencyResolver dependencyResolver = getDependencyResolver( db );
         return dependencyResolver.resolveDependency( IndexingService.class, DependencyResolver.SelectionStrategy.ONLY );
+    }
+
+    private NeoStores getNeoStores( GraphDatabaseService db )
+    {
+        DependencyResolver dependencyResolver = getDependencyResolver( db );
+        return dependencyResolver.resolveDependency( RecordStorageEngine.class, DependencyResolver.SelectionStrategy.ONLY ).testAccessNeoStores();
+    }
+
+    private DependencyResolver getDependencyResolver( GraphDatabaseService db )
+    {
+        GraphDatabaseAPI api = (GraphDatabaseAPI) db;
+        return api.getDependencyResolver();
     }
 
     private void assertIsConsistent( ConsistencyCheckService.Result result ) throws IOException
@@ -526,8 +546,109 @@ public class FulltextIndexConsistencyCheckIT
         ConsistencyCheckService.Result result = checkConsistency();
         assertFalse( result.isSuccessful() );
     }
-    // todo must discover node in store missing from index
-    // todo must discover node in index missing from store
-    // todo must discover relationship in store missing from index
-    // todo must discover relationship in index missing from store
+
+    @Ignore( "Turns out that this is not something that the consistency checker actually looks for, currently. " +
+            "The test is disabled until the consistency checker is extended with checks that will discover this sort of inconsistency." )
+    @Test
+    public void mustDiscoverNodeInIndexMissingFromStore() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( "Label" ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            Node node = db.createNode( Label.label( "Label" ) );
+            nodeId = node.getId();
+            node.setProperty( "prop", "value" );
+            tx.success();
+        }
+        NeoStores stores = getNeoStores( db );
+        NodeRecord record = stores.getNodeStore().newRecord();
+        record = stores.getNodeStore().getRecord( nodeId, record, RecordLoad.NORMAL );
+        long propId = record.getNextProp();
+        record.setNextProp( AbstractBaseRecord.NO_ID );
+        stores.getNodeStore().updateRecord( record );
+        PropertyRecord propRecord = stores.getPropertyStore().getRecord( propId, stores.getPropertyStore().newRecord(), RecordLoad.NORMAL );
+        propRecord.setInUse( false );
+        stores.getPropertyStore().updateRecord( propRecord );
+        db.shutdown();
+
+        ConsistencyCheckService.Result result = checkConsistency();
+        assertFalse( result.isSuccessful() );
+    }
+
+    @Test
+    public void mustDiscoverRelationshipInStoreMissingFromIndex() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( "REL" ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        StoreIndexDescriptor indexDescriptor;
+        long relId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            indexDescriptor = getIndexDescriptor( first( db.schema().getIndexes() ) );
+            Node node = db.createNode();
+            Relationship rel = node.createRelationshipTo( node, RelationshipType.withName( "REL" ) );
+            rel.setProperty( "prop", "value" );
+            relId = rel.getId();
+            tx.success();
+        }
+        IndexingService indexes = getIndexingService( db );
+        IndexProxy indexProxy = indexes.getIndexProxy( indexDescriptor.schema() );
+        try ( IndexUpdater updater = indexProxy.newUpdater( IndexUpdateMode.ONLINE ) )
+        {
+            updater.process( IndexEntryUpdate.remove( relId, indexDescriptor, Values.stringValue( "value" ) ) );
+        }
+
+        db.shutdown();
+
+        ConsistencyCheckService.Result result = checkConsistency();
+        assertFalse( result.isSuccessful() );
+    }
+
+    @Ignore( "Turns out that this is not something that the consistency checker actually looks for, currently. " +
+            "The test is disabled until the consistency checker is extended with checks that will discover this sort of inconsistency." )
+    @Test
+    public void mustDiscoverRelationshipInIndexMissingFromStore() throws Exception
+    {
+        GraphDatabaseService db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( "REL" ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        long relId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            Node node = db.createNode();
+            Relationship rel = node.createRelationshipTo( node, RelationshipType.withName( "REL" ) );
+            relId = rel.getId();
+            rel.setProperty( "prop", "value" );
+            tx.success();
+        }
+        NeoStores stores = getNeoStores( db );
+        RelationshipRecord record = stores.getRelationshipStore().newRecord();
+        record = stores.getRelationshipStore().getRecord( relId, record, RecordLoad.NORMAL );
+        long propId = record.getNextProp();
+        record.setNextProp( AbstractBaseRecord.NO_ID );
+        stores.getRelationshipStore().updateRecord( record );
+        PropertyRecord propRecord = stores.getPropertyStore().getRecord( propId, stores.getPropertyStore().newRecord(), RecordLoad.NORMAL );
+        propRecord.setInUse( false );
+        stores.getPropertyStore().updateRecord( propRecord );
+        db.shutdown();
+
+        ConsistencyCheckService.Result result = checkConsistency();
+        assertFalse( result.isSuccessful() );
+    }
 }
