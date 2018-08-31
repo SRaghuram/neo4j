@@ -45,7 +45,7 @@ class CommercialReadReplicaEditionModuleTest
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );
-//        order.verify( manager ).createDatabase( eq( "system.db" ) );
+        order.verify( manager ).createDatabase( eq( "system.db" ) );
         order.verify( manager ).createDatabase( eq( "graph.db" ) );
     }
 }

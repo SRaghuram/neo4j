@@ -10,17 +10,23 @@ import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 
 import java.time.Clock;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolder;
+import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.logging.LogService;
@@ -28,6 +34,8 @@ import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.logging.Logger;
+
+import static java.lang.String.format;
 
 public class CommercialEditionModule extends EnterpriseEditionModule
 {
@@ -38,6 +46,24 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         super( platformModule );
         globalTransactionStats = new GlobalTransactionStats();
         initGlobalGuard( platformModule.clock, platformModule.logging );
+    }
+
+    protected Function<String,TokenHolders> createTokenHolderProvider( PlatformModule platform )
+    {
+        Config config = platform.config;
+        return databaseName -> {
+            DatabaseManager databaseManager = platform.dependencies.resolveDependency( DatabaseManager.class );
+            Supplier<Kernel> kernelSupplier = () ->
+            {
+                GraphDatabaseFacade facade = databaseManager.getDatabaseFacade( databaseName )
+                        .orElseThrow( () -> new IllegalStateException( format( "Database %s not found.", databaseName ) ) );
+                return facade.getDependencyResolver().resolveDependency( Kernel.class );
+            };
+            return new TokenHolders(
+                    new DelegatingTokenHolder( createPropertyKeyCreator( config, kernelSupplier ), TokenHolder.TYPE_PROPERTY_KEY ),
+                    new DelegatingTokenHolder( createLabelIdCreator( config, kernelSupplier ), TokenHolder.TYPE_LABEL ),
+                    new DelegatingTokenHolder( createRelationshipTypeCreator( config, kernelSupplier ), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
+        };
     }
 
     @Override
