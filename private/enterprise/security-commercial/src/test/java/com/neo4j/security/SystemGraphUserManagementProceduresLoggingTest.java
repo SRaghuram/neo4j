@@ -16,6 +16,7 @@ import java.io.File;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
@@ -42,9 +43,9 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
         CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
         File storeDir = testDirectory.databaseDir();
         final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
-        activeDbName = storeDir.getAbsoluteFile().getName();
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
         database = builder.newGraphDatabase();
+        activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
         databaseManager = getDatabaseManager();
         super.setUp();
     }
