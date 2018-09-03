@@ -18,27 +18,34 @@ import scala.concurrent.ExecutionContextExecutor;
 
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.HostnameResolver;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 
 public class ActorSystemFactory
 {
     public static final String ACTOR_SYSTEM_NAME = "cc-discovery-actor-system";
+    private final JobScheduler jobScheduler;
     private final LogProvider logProvider;
     private final Optional<SSLEngineProvider> sslEngineProvider;
     private final TypesafeConfigService configService;
+    private final int parallelism;
 
-    public ActorSystemFactory( HostnameResolver hostnameResolver, Optional<SSLEngineProvider> sslEngineProvider, Config config, LogProvider logProvider )
+    public ActorSystemFactory( HostnameResolver hostnameResolver, Optional<SSLEngineProvider> sslEngineProvider, JobScheduler jobScheduler, Config config,
+            LogProvider logProvider )
     {
+        this.jobScheduler = jobScheduler;
         this.logProvider = logProvider;
         this.sslEngineProvider = sslEngineProvider;
         TypesafeConfigService.ArteryTransport arteryTransport =
                 sslEngineProvider.isPresent() ? TypesafeConfigService.ArteryTransport.TLS_TCP : TypesafeConfigService.ArteryTransport.TCP;
         this.configService = new TypesafeConfigService( hostnameResolver, arteryTransport, config );
+        this.parallelism = config.get( CausalClusteringSettings.middleware_akka_parallelism_level );
     }
 
     Set<ActorPath> initialClientContacts()
@@ -54,7 +61,7 @@ public class ActorSystemFactory
     {
         com.typesafe.config.Config tsConfig = configService.generate();
 
-        ExecutionContextExecutor ec = ExecutionContexts.fromExecutor( new ForkJoinPool() );
+        ExecutionContextExecutor ec = ExecutionContexts.fromExecutor( jobScheduler.workStealingExecutor( Group.AKKA_TOPOLOGY_WORKER, parallelism, true ) );
 
         BootstrapSetup bootstrapSetup = BootstrapSetup.create( tsConfig )
                 .withActorRefProvider( providerSelection )

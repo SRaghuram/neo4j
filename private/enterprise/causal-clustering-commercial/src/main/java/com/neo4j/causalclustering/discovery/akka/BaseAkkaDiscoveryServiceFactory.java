@@ -20,7 +20,8 @@ import org.neo4j.scheduler.JobScheduler;
 
 public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
-   protected abstract ActorSystemFactory actorSystemFactory( HostnameResolver hostnameResolver, Config config, LogProvider logProvider );
+   protected abstract ActorSystemFactory actorSystemFactory( HostnameResolver hostnameResolver, JobScheduler jobScheduler, Config config,
+           LogProvider logProvider );
 
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
@@ -29,7 +30,7 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
         return new AkkaCoreTopologyService(
                 config,
                 myself,
-                new ActorSystemLifecycle( actorSystemFactory( hostnameResolver, config, logProvider ), logProvider ),
+                new ActorSystemLifecycle( actorSystemFactory( hostnameResolver, jobScheduler, config, logProvider ), logProvider ),
                 jobScheduler,
                 logProvider,
                 userLogProvider,
@@ -49,7 +50,7 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
                 myself,
                 hostnameResolver,
                 topologyServiceRetryStrategy,
-                new ActorSystemLifecycle( actorSystemFactory( hostnameResolver, config, logProvider ), logProvider )
+                new ActorSystemLifecycle( actorSystemFactory( hostnameResolver, jobScheduler, config, logProvider ), logProvider )
         );
     }
 
