@@ -17,8 +17,7 @@ public class SslHazelcastClientConnector extends HazelcastClientConnector
 {
     private final SslPolicy sslPolicy;
 
-    SslHazelcastClientConnector( Config config, LogProvider logProvider, SslPolicy sslPolicy,
-                                 HostnameResolver hostnameResolver )
+    SslHazelcastClientConnector( Config config, LogProvider logProvider, SslPolicy sslPolicy, HostnameResolver hostnameResolver )
     {
         super( config, logProvider, hostnameResolver );
         this.sslPolicy = sslPolicy;
