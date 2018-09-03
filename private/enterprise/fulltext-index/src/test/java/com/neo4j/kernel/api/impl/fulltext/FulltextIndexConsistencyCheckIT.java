@@ -90,60 +90,6 @@ public class FulltextIndexConsistencyCheckIT
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 
-    private GraphDatabaseService createDatabase()
-    {
-        return cleanup.add( builder.newGraphDatabase() );
-    }
-
-    private ConsistencyCheckService.Result checkConsistency() throws ConsistencyCheckIncompleteException
-    {
-        Config config = Config.defaults();
-        ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService( new Date() );
-        ConsistencyFlags checkConsistencyConfig = new ConsistencyFlags( config );
-        return consistencyCheckService.runFullConsistencyCheck( testDirectory.databaseLayout(), config, ProgressMonitorFactory.NONE,
-                NullLogProvider.getInstance(), true, checkConsistencyConfig );
-    }
-
-    private StoreIndexDescriptor getIndexDescriptor( IndexDefinition definition )
-    {
-        StoreIndexDescriptor indexDescriptor;
-        IndexDefinitionImpl indexDefinition = (IndexDefinitionImpl) definition;
-        indexDescriptor = (StoreIndexDescriptor) indexDefinition.getIndexReference();
-        return indexDescriptor;
-    }
-
-    private IndexingService getIndexingService( GraphDatabaseService db )
-    {
-        DependencyResolver dependencyResolver = getDependencyResolver( db );
-        return dependencyResolver.resolveDependency( IndexingService.class, DependencyResolver.SelectionStrategy.ONLY );
-    }
-
-    private NeoStores getNeoStores( GraphDatabaseService db )
-    {
-        DependencyResolver dependencyResolver = getDependencyResolver( db );
-        return dependencyResolver.resolveDependency( RecordStorageEngine.class, DependencyResolver.SelectionStrategy.ONLY ).testAccessNeoStores();
-    }
-
-    private DependencyResolver getDependencyResolver( GraphDatabaseService db )
-    {
-        GraphDatabaseAPI api = (GraphDatabaseAPI) db;
-        return api.getDependencyResolver();
-    }
-
-    private void assertIsConsistent( ConsistencyCheckService.Result result ) throws IOException
-    {
-        if ( !result.isSuccessful() )
-        {
-            printReport( result );
-            fail( "Expected consistency check to be successful." );
-        }
-    }
-
-    private void printReport( ConsistencyCheckService.Result result ) throws IOException
-    {
-        Files.readAllLines( result.reportFile().toPath() ).forEach( System.err::println );
-    }
-
     @Test
     public void mustBeAbleToConsistencyCheckEmptyDatabaseWithFulltextIndexingEnabled() throws Exception
     {
@@ -650,5 +596,59 @@ public class FulltextIndexConsistencyCheckIT
 
         ConsistencyCheckService.Result result = checkConsistency();
         assertFalse( result.isSuccessful() );
+    }
+
+    private GraphDatabaseService createDatabase()
+    {
+        return cleanup.add( builder.newGraphDatabase() );
+    }
+
+    private ConsistencyCheckService.Result checkConsistency() throws ConsistencyCheckIncompleteException
+    {
+        Config config = Config.defaults();
+        ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService( new Date() );
+        ConsistencyFlags checkConsistencyConfig = new ConsistencyFlags( config );
+        return consistencyCheckService.runFullConsistencyCheck( testDirectory.databaseLayout(), config, ProgressMonitorFactory.NONE,
+                NullLogProvider.getInstance(), true, checkConsistencyConfig );
+    }
+
+    private static StoreIndexDescriptor getIndexDescriptor( IndexDefinition definition )
+    {
+        StoreIndexDescriptor indexDescriptor;
+        IndexDefinitionImpl indexDefinition = (IndexDefinitionImpl) definition;
+        indexDescriptor = (StoreIndexDescriptor) indexDefinition.getIndexReference();
+        return indexDescriptor;
+    }
+
+    private static IndexingService getIndexingService( GraphDatabaseService db )
+    {
+        DependencyResolver dependencyResolver = getDependencyResolver( db );
+        return dependencyResolver.resolveDependency( IndexingService.class, DependencyResolver.SelectionStrategy.ONLY );
+    }
+
+    private static NeoStores getNeoStores( GraphDatabaseService db )
+    {
+        DependencyResolver dependencyResolver = getDependencyResolver( db );
+        return dependencyResolver.resolveDependency( RecordStorageEngine.class, DependencyResolver.SelectionStrategy.ONLY ).testAccessNeoStores();
+    }
+
+    private static DependencyResolver getDependencyResolver( GraphDatabaseService db )
+    {
+        GraphDatabaseAPI api = (GraphDatabaseAPI) db;
+        return api.getDependencyResolver();
+    }
+
+    private static void assertIsConsistent( ConsistencyCheckService.Result result ) throws IOException
+    {
+        if ( !result.isSuccessful() )
+        {
+            printReport( result );
+            fail( "Expected consistency check to be successful." );
+        }
+    }
+
+    private static void printReport( ConsistencyCheckService.Result result ) throws IOException
+    {
+        Files.readAllLines( result.reportFile().toPath() ).forEach( System.err::println );
     }
 }
