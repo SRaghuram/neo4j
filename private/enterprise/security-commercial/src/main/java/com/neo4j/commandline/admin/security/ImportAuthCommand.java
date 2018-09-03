@@ -38,7 +38,7 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 public class ImportAuthCommand implements AdminCommand
 {
     public static final String COMMAND_NAME = "import-auth";
-    public static final String USER_IMPORT_FILENAME = ".users.import";
+    public static final String USER_IMPORT_FILENAME = ".users.import"; // TODO: Move to CommercialSecurityModule?
     public static final String ROLE_IMPORT_FILENAME = ".roles.import";
     public static final String USER_ARG_NAME = "users";
     public static final String ROLE_ARG_NAME = "roles";

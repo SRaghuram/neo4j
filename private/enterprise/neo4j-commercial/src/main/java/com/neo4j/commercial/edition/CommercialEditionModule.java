@@ -130,7 +130,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         SecurityProvider securityProvider;
         if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
         {
-            SecurityModule securityModule = setupSecurityModule( platformModule,
+            SecurityModule securityModule = setupSecurityModule( platformModule, editionModule,
                     platformModule.logging.getUserLog( EnterpriseEditionModule.class ),
                     procedures, "commercial-security-module" );
             platformModule.life.add( securityModule );

@@ -16,6 +16,8 @@ import java.util.TreeSet;
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.Lock;
+import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -36,7 +38,7 @@ class SystemGraphExecutor
     private final DatabaseManager databaseManager;
     private final String activeDbName;
     private GraphDatabaseFacade systemDb;
-    private ThreadToStatementContextBridge statementContext;
+    private ThreadToStatementContextBridge threadToStatementContextBridge;
 
     SystemGraphExecutor( DatabaseManager databaseManager, String activeDbName )
     {
@@ -143,18 +145,13 @@ class SystemGraphExecutor
 
     void executeQuery( String query, Map<String,Object> params, QueryResult.QueryResultVisitor resultVisitor )
     {
-        // resolve statementContext and systemDb on the first call
-        if ( statementContext == null )
-        {
-            GraphDatabaseFacade activeDb = getDb( activeDbName );
-            systemDb = getDb( SYSTEM_DATABASE_NAME );
-            statementContext = activeDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
-        }
+        final ThreadToStatementContextBridge statementContext = getThreadToStatementContextBridge();
 
         // pause outer transaction if there is one
         if ( statementContext.hasTransaction() )
         {
             final KernelTransaction outerTx = statementContext.getKernelTransactionBoundToThisThread( true );
+
             statementContext.unbindTransactionFromCurrentThread();
 
             try
@@ -175,18 +172,119 @@ class SystemGraphExecutor
 
     private void systemDbExecute( String query, Map<String,Object> parameters, QueryResult.QueryResultVisitor resultVisitor )
     {
-        try ( Transaction transaction = systemDb.beginTx() )
+        try ( Transaction transaction = getSystemDb().beginTx() ) // TODO: REV Is it really safe begin transaction with AUTH_DISABLED here?
         {
-            Result result = systemDb.execute( query, parameters );
-            QueryResult queryResult = ((QueryResultProvider) result).queryResult();
-            queryResult.accept( resultVisitor );
+            systemDbExecuteWithinTransaction( query, parameters, resultVisitor );
             transaction.success();
         }
     }
 
+    private void systemDbExecuteWithinTransaction( String query, Map<String,Object> parameters, QueryResult.QueryResultVisitor resultVisitor )
+    {
+        Result result = getSystemDb().execute( query, parameters );
+        QueryResult queryResult = ((QueryResultProvider) result).queryResult();
+        queryResult.accept( resultVisitor );
+    }
+
+    Transaction systemDbBeginTransaction()
+    {
+        final ThreadToStatementContextBridge statementContext = getThreadToStatementContextBridge();
+        final Runnable onClose;
+
+        // pause outer transaction if there is one
+        if ( statementContext.hasTransaction() )
+        {
+            final KernelTransaction outerTx = statementContext.getKernelTransactionBoundToThisThread( true );
+            statementContext.unbindTransactionFromCurrentThread();
+
+            onClose = () ->
+            {
+                // Restore the outer transaction
+                statementContext.unbindTransactionFromCurrentThread();
+                statementContext.bindTransactionToCurrentThread( outerTx );
+            };
+        }
+        else
+        {
+            onClose = () -> {};
+        }
+
+        Transaction transaction = systemDb.beginTx();
+
+        return new Transaction()
+        {
+            @Override
+            public void terminate()
+            {
+                transaction.terminate();
+            }
+
+            @Override
+            public void failure()
+            {
+                transaction.failure();
+            }
+
+            @Override
+            public void success()
+            {
+                transaction.success();
+            }
+
+            @Override
+            public void close()
+            {
+                //assert activeSystemDbTransaction == transaction;
+                //activeSystemDbTransaction = null;
+
+                try
+                {
+                    transaction.close();
+                }
+                finally
+                {
+                    onClose.run();
+                }
+            }
+
+            @Override
+            public Lock acquireWriteLock( PropertyContainer entity )
+            {
+                return transaction.acquireWriteLock( entity );
+            }
+
+            @Override
+            public Lock acquireReadLock( PropertyContainer entity )
+            {
+                return transaction.acquireReadLock( entity );
+            }
+        };
+    }
+
+    protected ThreadToStatementContextBridge getThreadToStatementContextBridge()
+    {
+        // resolve statementContext and systemDb on the first call
+        if ( threadToStatementContextBridge == null )
+        {
+            GraphDatabaseFacade activeDb = getDb( activeDbName );
+            systemDb = getDb( SYSTEM_DATABASE_NAME );
+            threadToStatementContextBridge = activeDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+        }
+        return threadToStatementContextBridge;
+    }
+
+    private GraphDatabaseFacade getSystemDb()
+    {
+        if ( systemDb == null )
+        {
+            systemDb = getDb( SYSTEM_DATABASE_NAME );
+        }
+        return systemDb;
+    }
+
     private GraphDatabaseFacade getDb( String dbName )
     {
-        return  databaseManager.getDatabaseFacade( dbName )
+        return databaseManager.getDatabaseFacade( dbName )
                 .orElseThrow( () -> new AuthProviderFailedException( "No database called `" + dbName + "` was found." ) );
     }
 }

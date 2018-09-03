@@ -22,6 +22,7 @@ import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
+import org.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
 import org.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.auth.UserManagementProceduresLoggingTest;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
@@ -76,8 +77,16 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
                 Mockito.mock( AuthenticationStrategy.class ),
                 true,
                 true,
-                new InMemoryUserRepository(),
-                new InMemoryUserRepository()
+                new SystemGraphImportOptions(
+                    false,
+                    false,
+                    () -> new InMemoryUserRepository(),
+                    () -> new InMemoryRoleRepository(),
+                    () -> new InMemoryUserRepository(),
+                    () -> new InMemoryRoleRepository(),
+                    () -> new InMemoryUserRepository(),
+                    () -> new InMemoryUserRepository()
+                )
         );
         realm.initialize();
         realm.start(); // creates default user and roles

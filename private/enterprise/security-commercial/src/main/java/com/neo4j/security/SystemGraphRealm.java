@@ -5,6 +5,7 @@
  */
 package com.neo4j.security;
 
+import com.neo4j.commandline.admin.security.ImportAuthCommand;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
@@ -22,31 +23,38 @@ import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.SimplePrincipalCollection;
 
+import java.io.IOException;
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.cypher.result.QueryResult;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.PasswordPolicy;
-import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.security.Credential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
+import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.auth.exception.FormatException;
 import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import org.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import org.neo4j.server.security.enterprise.auth.RealmLifecycle;
+import org.neo4j.server.security.enterprise.auth.RoleRecord;
+import org.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.auth.ShiroAuthToken;
 import org.neo4j.server.security.enterprise.auth.ShiroAuthenticationInfo;
@@ -60,6 +68,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.String.format;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
@@ -68,36 +77,33 @@ import static org.neo4j.helpers.collection.MapUtil.map;
  */
 class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, EnterpriseUserManager, ShiroAuthorizationInfoProvider
 {
-    private final UserRepository initialUserRepository;
-    private final UserRepository defaultAdminRepository;
+    private final SystemGraphImportOptions importOptions;
     private final PasswordPolicy passwordPolicy;
     private final AuthenticationStrategy authenticationStrategy;
     private final boolean authenticationEnabled;
     private final boolean authorizationEnabled;
     private final SecureHasher secureHasher;
     private final SystemGraphExecutor systemGraphExecutor;
-
     /**
      * This flag is used in the same way as User.PASSWORD_CHANGE_REQUIRED, but it's
      * placed here because of user suspension not being a part of community edition
      */
     private static final String IS_SUSPENDED = "is_suspended";
 
-   SystemGraphRealm( SystemGraphExecutor systemGraphExecutor, SecureHasher secureHasher, PasswordPolicy passwordPolicy,
-           AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled, boolean authorizationEnabled,
-           UserRepository initialUserRepository, UserRepository defaultAdminRepository )
+    SystemGraphRealm( SystemGraphExecutor systemGraphExecutor, SecureHasher secureHasher, PasswordPolicy passwordPolicy,
+            AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled, boolean authorizationEnabled,
+            SystemGraphImportOptions importOptions )
     {
         super();
 
         setName( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
 
         this.secureHasher = secureHasher;
-        this.initialUserRepository = initialUserRepository;
-        this.defaultAdminRepository = defaultAdminRepository;
         this.passwordPolicy = passwordPolicy;
         this.authenticationStrategy = authenticationStrategy;
         this.authenticationEnabled = authenticationEnabled;
         this.authorizationEnabled = authorizationEnabled;
+        this.importOptions = importOptions;
         this.systemGraphExecutor = systemGraphExecutor;
         setAuthenticationCachingEnabled( true );
         setAuthorizationCachingEnabled( true );
@@ -108,45 +114,25 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public void initialize() throws Throwable
     {
-        // TODO: should we still have initialUserRepository and defaultAdminRepository?
-        initialUserRepository.init();
-        defaultAdminRepository.init();
     }
 
     @Override
     public void start() throws Throwable
     {
-        initialUserRepository.start();
-        defaultAdminRepository.start();
-
-        // On first startup:
-        // Ensure that multiple users, roles or databases cannot have the same name
-        // Setup default db, predefined roles and default users
-        if ( isSystemGraphEmpty() )
+        if ( authenticationEnabled || authorizationEnabled )
         {
-            final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row -> true;
-            systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (u:User) ASSERT u.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
-            systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (r:Role) ASSERT r.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
-            systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (d:Database) ASSERT d.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
-
-            ensureDefaultDatabases();
-            boolean wasDefaultRolesCreated = ensureDefaultRoles();
-            ensureDefaultUsers( wasDefaultRolesCreated );
+            initializeSystemGraph();
         }
     }
 
     @Override
     public void stop() throws Throwable
     {
-        initialUserRepository.stop();
-        defaultAdminRepository.stop();
     }
 
     @Override
     public void shutdown() throws Throwable
     {
-        initialUserRepository.shutdown();
-        defaultAdminRepository.shutdown();
     }
 
     @Override
@@ -369,7 +355,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
     {
-        addRoleToUserForDb( roleName, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, username );
+        addRoleToUserForDb( roleName, DEFAULT_DATABASE_NAME, username );
     }
 
     private void addRoleToUserForDb( String roleName, String dbName, String username ) throws InvalidArgumentsException
@@ -399,7 +385,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException
     {
-        removeRoleFromUserForDb( roleName, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, username );
+        removeRoleFromUserForDb( roleName, DEFAULT_DATABASE_NAME, username );
     }
 
     private void removeRoleFromUserForDb( String roleName, String dbName, String username ) throws InvalidArgumentsException
@@ -516,10 +502,11 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
 
     private void addUser( User user ) throws InvalidArgumentsException
     {
+        // NOTE: If username already exists we will violate a constraint
         String query = "CREATE (u:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})";
         Map<String,Object> params =
                 MapUtil.map( "name", user.name(),
-                        "credentials", SystemGraphCredential.serialize( (SystemGraphCredential) user.credentials() ),
+                        "credentials", user.credentials().serialize(),
                         "passwordChangeRequired", user.passwordChangeRequired(),
                         "suspended", user.hasFlag( IS_SUSPENDED ) );
         systemGraphExecutor.executeQueryWithConstraint( query, params,
@@ -657,100 +644,6 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         return systemGraphExecutor.executeQueryWithResultSetAndParamCheck( query, params, errorMsg );
     }
 
-    private void ensureDefaultDatabases() throws InvalidArgumentsException
-    {
-        newDb( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        newDb( SYSTEM_DATABASE_NAME );
-    }
-
-    /* Adds neo4j user if no users exist. Adds 'neo4j' to admin role if no admin is assigned. */
-    private void ensureDefaultUsers( boolean shouldAssignAdmin ) throws Throwable
-    {
-        if ( authenticationEnabled || authorizationEnabled )
-        {
-            String newAdmin = UserManager.INITIAL_USER_NAME;
-
-            // check nbr of users in db
-            if ( numberOfUsers() == 0L )
-            {
-                User initUser;
-                if ( initialUserRepository.numberOfUsers() > 0 &&
-                        ( initUser = initialUserRepository.getUserByName( UserManager.INITIAL_USER_NAME )) != null )
-                {
-                    addUser( initUser );
-                }
-                else
-                {
-                    newUser( UserManager.INITIAL_USER_NAME, "neo4j", true );
-                }
-
-                // Assign the admin role
-                addRoleToUser( PredefinedRoles.ADMIN, newAdmin );
-            }
-            else if ( shouldAssignAdmin )
-            {
-                Set<String> usernames = getAllUsernames();
-                final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
-                if ( numberOfDefaultAdmins > 1 )
-                {
-                    throw new InvalidArgumentsException(
-                            "No roles defined, and multiple users defined as default admin user." +
-                                    " Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
-                                    "` to select a valid admin." );
-                }
-                else if ( numberOfDefaultAdmins == 1 )
-                {
-                    // We currently support only one default admin
-                    String newAdminUsername = defaultAdminRepository.getAllUsernames().iterator().next();
-                    if ( getUser( newAdminUsername ) == null )
-                    {
-                        throw new InvalidArgumentsException(
-                                "No roles defined, and default admin user '" + newAdminUsername +
-                                        "' does not exist. Please use `neo4j-admin " +
-                                        SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
-                    }
-                    newAdmin = newAdminUsername;
-                }
-                else if ( usernames.size() == 1 )
-                {
-                    newAdmin = usernames.iterator().next();
-                }
-                else if ( usernames.contains( UserManager.INITIAL_USER_NAME ) )
-                {
-                    newAdmin = UserManager.INITIAL_USER_NAME;
-                }
-                else
-                {
-                    throw new InvalidArgumentsException(
-                            "No roles defined, and cannot determine which user should be admin. " +
-                                    "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
-                                    "` to select an " + "admin." );
-                }
-
-                // Assign the admin role
-                addRoleToUser( PredefinedRoles.ADMIN, newAdmin );
-            }
-        }
-    }
-
-    /* Builds all predefined roles if no roles exist.
-     * Returns true if no roles existed and we had to create them. */
-    private boolean ensureDefaultRoles() throws InvalidArgumentsException
-    {
-        if ( authenticationEnabled || authorizationEnabled )
-        {
-            if ( numberOfRoles() == 0 )
-            {
-                for ( String role : PredefinedRolesBuilder.roles.keySet() )
-                {
-                    newRole( role );
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
     private static void assertNotPredefinedRoleName( String roleName ) throws InvalidArgumentsException
     {
         if ( roleName != null && PredefinedRolesBuilder.roles.keySet().contains( roleName ) )
@@ -770,15 +663,6 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     {
         String query = "MATCH (r:Role) RETURN count(r)";
         return systemGraphExecutor.executeQueryLong( query );
-    }
-
-    private boolean isSystemGraphEmpty()
-    {
-        // Execute a query to see if the system database exists
-        String query = "MATCH (db:Database {name: $name}) RETURN db.name";
-        Map<String,Object> params = map( "name", SYSTEM_DATABASE_NAME );
-
-        return !systemGraphExecutor.executeQueryWithParamCheck( query, params );
     }
 
     private SystemGraphCredential createCredentialForPassword( String password )
@@ -844,4 +728,302 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             cache.clear();
         }
     }
+
+    private void initializeSystemGraph() throws Throwable
+    {
+        // If the system graph has not been initialized (typically the first time you start neo4j with the system graph auth provider)
+        // we set it up with auth data in the following order:
+        // 1) Do we have import files from running the `neo4j-admin import-auth` command?
+        // 2) Otherwise, are there existing users and roles in the internal flat file realm, and are we allowed to migrate them to the system graph?
+        // 3) If no users or roles were imported or migrated, create the predefined roles and one default admin user
+        if ( isSystemGraphEmpty() )
+        {
+            // Ensure that multiple users, roles or databases cannot have the same name and are indexed
+            final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row -> true;
+            systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (u:User) ASSERT u.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
+            systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (r:Role) ASSERT r.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
+            systemGraphExecutor.executeQuery( "CREATE CONSTRAINT ON (d:Database) ASSERT d.name IS UNIQUE", Collections.emptyMap(), resultVisitor );
+
+            ensureDefaultDatabases();
+
+            if ( importOptions.shouldPerformImport )
+            {
+                importUsersAndRoles();
+            }
+            else if ( importOptions.mayPerformMigration )
+            {
+                migrateFromFlatFileRealm();
+            }
+
+            // If no users or roles were imported we setup the
+            // default predefined roles and users and make sure we have an admin user
+            //ensureDefaultUsersAndRoles();
+        }
+        else if ( importOptions.shouldPerformImport )
+        {
+            importUsersAndRoles();
+        }
+
+        // If no users or roles were imported we setup the
+        // default predefined roles and users and make sure we have an admin user
+        ensureDefaultUsersAndRoles();
+    }
+
+    private boolean isSystemGraphEmpty()
+    {
+        // Execute a query to see if the system database exists
+        String query = "MATCH (db:Database {name: $name}) RETURN db.name";
+        Map<String,Object> params = map( "name", SYSTEM_DATABASE_NAME );
+
+        return !systemGraphExecutor.executeQueryWithParamCheck( query, params );
+    }
+
+    private void ensureDefaultUsersAndRoles() throws Throwable
+    {
+        Set<String> addedDefaultUsers = ensureDefaultUsers();
+        ensureDefaultRoles( addedDefaultUsers );
+    }
+
+    private void ensureDefaultDatabases() throws InvalidArgumentsException
+    {
+        newDb( DEFAULT_DATABASE_NAME );
+        newDb( SYSTEM_DATABASE_NAME );
+    }
+
+    private UserRepository startUserRepository( Supplier<UserRepository> supplier ) throws Throwable
+    {
+        UserRepository userRepository = supplier.get();
+        userRepository.init();
+        userRepository.start();
+        return userRepository;
+    }
+
+    private void stopUserRepository( UserRepository userRepository ) throws Throwable
+    {
+        userRepository.stop();
+        userRepository.shutdown();
+    }
+
+    private RoleRepository startRoleRepository( Supplier<RoleRepository> supplier ) throws Throwable
+    {
+        RoleRepository roleRepository = supplier.get();
+        roleRepository.init();
+        roleRepository.start();
+        return roleRepository;
+    }
+
+    private void stopRoleRepository( RoleRepository roleRepository ) throws Throwable
+    {
+        roleRepository.stop();
+        roleRepository.shutdown();
+    }
+
+    /* Adds neo4j user if no users exist */
+    private Set<String> ensureDefaultUsers() throws Throwable
+    {
+        if ( numberOfUsers() == 0 )
+        {
+            UserRepository initialUserRepository = startUserRepository( importOptions.initialUserRepositorySupplier );
+            Set<String> addedUsernames;
+            if ( initialUserRepository.numberOfUsers() > 0 )
+            {
+                ListSnapshot<User> initialUsers = initialUserRepository.getPersistedSnapshot();
+                addedUsernames = new TreeSet<>();
+                for ( User user : initialUsers.values() )
+                {
+                    addUser( user );
+                    addedUsernames.add( user.name() );
+                }
+            }
+            else
+            {
+                newUser( INITIAL_USER_NAME, "neo4j", true );
+                addedUsernames = Collections.singleton( INITIAL_USER_NAME );
+            }
+            stopUserRepository( initialUserRepository );
+
+            return addedUsernames;
+        }
+        return Collections.emptySet();
+    }
+
+    /* Builds all predefined roles if no roles exist. Adds 'neo4j' to admin role if no admin is assigned */
+    private void ensureDefaultRoles( Set<String> addedDefaultUsers ) throws Throwable
+    {
+        List<String> newAdmins = new LinkedList<>( addedDefaultUsers );
+
+        if ( numberOfRoles() == 0 )
+        {
+            if ( newAdmins.isEmpty() )
+            {
+                Set<String> usernames = getAllUsernames();
+                UserRepository defaultAdminRepository = startUserRepository( importOptions.defaultAdminRepositorySupplier );
+                final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
+                if ( numberOfDefaultAdmins > 1 )
+                {
+                    throw new InvalidArgumentsException(
+                            "No roles defined, and multiple users defined as default admin user." +
+                                    " Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
+                                    "` to select a valid admin." );
+                }
+                else if ( numberOfDefaultAdmins == 1 )
+                {
+                    // We currently support only one default admin
+                    String newAdminUsername = defaultAdminRepository.getAllUsernames().iterator().next();
+                    if ( silentlyGetUser( newAdminUsername ) == null )
+                    {
+                        throw new InvalidArgumentsException(
+                                "No roles defined, and default admin user '" + newAdminUsername +
+                                        "' does not exist. Please use `neo4j-admin " +
+                                        SetDefaultAdminCommand.COMMAND_NAME + "` to select a valid admin." );
+                    }
+                    newAdmins.add( newAdminUsername );
+                }
+                else if ( usernames.size() == 1 )
+                {
+                    newAdmins.add( usernames.iterator().next() );
+                }
+                else if ( usernames.contains( INITIAL_USER_NAME ) )
+                {
+                    newAdmins.add( INITIAL_USER_NAME );
+                }
+                else
+                {
+                    throw new InvalidArgumentsException(
+                            "No roles defined, and cannot determine which user should be admin. " +
+                                    "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
+                                    "` to select an " + "admin." );
+                }
+                stopUserRepository( defaultAdminRepository );
+            }
+
+            // Create the predefined roles
+            for ( String role : PredefinedRolesBuilder.roles.keySet() )
+            {
+                newRole( role );
+            }
+        }
+
+        for ( String username : newAdmins )
+        {
+            addRoleToUser( PredefinedRoles.ADMIN, username );
+        }
+    }
+
+
+    private void migrateFromFlatFileRealm() throws Throwable
+    {
+        UserRepository userRepository = startUserRepository( importOptions.migrationUserRepositorySupplier );
+        RoleRepository roleRepository = startRoleRepository( importOptions.migrationRoleRepositorySupplier );
+
+        if ( !doImportUsersAndRoles( userRepository, roleRepository, /* !purgeOnSuccess */ false ) )
+        {
+            throw new InvalidArgumentsException(
+                    "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " +
+                            "Please use `neo4j-admin " + ImportAuthCommand.COMMAND_NAME + "` to perform migration manually." );
+        }
+
+        stopUserRepository( userRepository );
+        stopRoleRepository( roleRepository );
+    }
+
+    private void importUsersAndRoles() throws Throwable
+    {
+        UserRepository userRepository = startUserRepository( importOptions.importUserRepositorySupplier );
+        RoleRepository roleRepository = startRoleRepository( importOptions.importRoleRepositorySupplier );
+
+        if ( !doImportUsersAndRoles( userRepository, roleRepository, /* purgeOnSuccess */ true ) )
+        {
+            throw new InvalidArgumentsException(
+                    "Import of users and roles into system graph failed because the import files are inconsistent. " +
+                            "Please use `neo4j-admin " + ImportAuthCommand.COMMAND_NAME + "` to retry import again." );
+        }
+
+        stopUserRepository( userRepository );
+        stopRoleRepository( roleRepository );
+    }
+
+    private boolean doImportUsersAndRoles( UserRepository userRepository, RoleRepository roleRepository, boolean purgeOnSuccess ) throws Throwable
+    {
+        ListSnapshot<User> users = userRepository.getPersistedSnapshot();
+        ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
+
+        boolean isEmpty = users.values().isEmpty() && roles.values().isEmpty();
+        boolean valid = RoleRepository.validate( users.values(), roles.values() );
+
+        if ( !valid )
+        {
+            return false;
+        }
+
+        if ( !isEmpty )
+        {
+            try ( Transaction transaction = systemGraphExecutor.systemDbBeginTransaction() )
+            {
+                // This is not an efficient implementation, since it executes many queries
+                // If performance ever becomes an issue we could do this with a single query instead
+                for ( User user : users.values() )
+                {
+                    addUser( user );
+                }
+                for ( RoleRecord role : roles.values() )
+                {
+                    newRole( role.name() );
+                    for ( String username : role.users() )
+                    {
+                        addRoleToUser( role.name(), username );
+                    }
+                }
+                transaction.success();
+            }
+
+            assert validateImportSucceeded( userRepository, roleRepository );
+        }
+
+        // If transaction succeeded, we purge the repositories so that we will not try to import them again the next time we restart
+        if ( purgeOnSuccess )
+        {
+            userRepository.purge();
+            roleRepository.purge();
+        }
+        return true;
+    }
+
+    private boolean validateImportSucceeded( UserRepository userRepository, RoleRepository roleRepository ) throws Throwable
+    {
+        // Take a new snapshot of the import repositories
+        ListSnapshot<User> users = userRepository.getPersistedSnapshot();
+        ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
+
+        try ( Transaction transaction = systemGraphExecutor.systemDbBeginTransaction() )
+        {
+
+            Set<String> systemGraphUsers = getAllUsernames();
+            List<String> repoUsernames = users.values().stream().map( u -> u.name() ).collect( Collectors.toList() );
+            if ( !systemGraphUsers.containsAll( repoUsernames ) )
+            {
+                throw new IOException( "Users were not imported correctly" );
+            }
+
+            List<String> repoRoleNames = roles.values().stream().map( r -> r.name() ).collect( Collectors.toList() );
+            Set<String> systemGraphRoles = getAllRoleNames();
+            if ( !systemGraphRoles.containsAll( repoRoleNames ) )
+            {
+                throw new IOException( "Roles were not imported correctly" );
+            }
+
+            for ( RoleRecord role : roles.values() )
+            {
+                Set<String> usernamesForRole = getUsernamesForRole( role.name() );
+                if ( !usernamesForRole.containsAll( role.users() ) )
+                {
+                    throw new IOException( "Role assignments were not imported correctly" );
+                }
+            }
+
+            transaction.success();
+        }
+        return true;
+    }
+
 }

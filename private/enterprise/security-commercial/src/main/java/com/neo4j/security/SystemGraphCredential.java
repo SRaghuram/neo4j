@@ -71,6 +71,12 @@ class SystemGraphCredential implements Credential
         } );
     }
 
+    @Override
+    public String serialize()
+    {
+        return serialize( this );
+    }
+
     SimpleHash hashedCredentials()
     {
         return hashedCredentials;
