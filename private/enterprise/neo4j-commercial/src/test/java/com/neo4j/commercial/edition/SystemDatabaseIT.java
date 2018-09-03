@@ -8,7 +8,6 @@ package com.neo4j.commercial.edition;
 import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -46,7 +45,6 @@ import static org.neo4j.dbms.database.DatabaseManager.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterators.count;
 
-@Disabled
 @ExtendWith( TestDirectoryExtension.class )
 class SystemDatabaseIT
 {

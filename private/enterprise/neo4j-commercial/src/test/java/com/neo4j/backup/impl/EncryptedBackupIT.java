@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -63,7 +62,6 @@ import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.clusterDatabase;
 import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.createSomeData;
 import static org.neo4j.causalclustering.discovery.Cluster.dataMatchesEventually;
 
-@Disabled
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class EncryptedBackupIT
 {
