@@ -25,8 +25,6 @@ import static java.util.Objects.requireNonNull;
 
 public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseManager
 {
-    public static final String SYSTEM_DB_NAME = "system.db";
-
     private final CopyOnWriteHashMap<String, GraphDatabaseFacade> databaseMap = new CopyOnWriteHashMap<>();
     private final PlatformModule platform;
     private final EditionModule edition;

@@ -5,7 +5,6 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.dbms.database.MultiDatabaseManager;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableLong;
 
@@ -29,6 +28,8 @@ import org.neo4j.values.storable.NumberValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
+
+import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
 
 class SystemGraphExecutor
 {
@@ -146,7 +147,7 @@ class SystemGraphExecutor
         if ( statementContext == null )
         {
             GraphDatabaseFacade activeDb = getDb( activeDbName );
-            systemDb = getDb( MultiDatabaseManager.SYSTEM_DB_NAME );
+            systemDb = getDb( SYSTEM_DB_NAME );
             statementContext = activeDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         }
 

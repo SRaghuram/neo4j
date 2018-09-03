@@ -5,7 +5,6 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.dbms.database.MultiDatabaseManager;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
@@ -60,6 +59,7 @@ import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
+import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
 import static java.lang.String.format;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
@@ -654,7 +654,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     private void ensureDefaultDatabases() throws InvalidArgumentsException
     {
         newDb( DatabaseManager.DEFAULT_DATABASE_NAME );
-        newDb( MultiDatabaseManager.SYSTEM_DB_NAME );
+        newDb( SYSTEM_DB_NAME );
     }
 
     /* Adds neo4j user if no users exist. Adds 'neo4j' to admin role if no admin is assigned. */
@@ -770,7 +770,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     {
         // Execute a query to see if the system database exists
         String query = "MATCH (db:Database {name: $name}) RETURN db.name";
-        Map<String,Object> params = map( "name", MultiDatabaseManager.SYSTEM_DB_NAME );
+        Map<String,Object> params = map( "name", SYSTEM_DB_NAME );
 
         return !systemGraphExecutor.executeQueryWithParamCheck( query, params );
     }

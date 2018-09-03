@@ -16,7 +16,7 @@ public class GlobalTransactionStats implements TransactionCounters
     private final CopyOnWriteArrayList<TransactionCounters> databasesCounters = new CopyOnWriteArrayList<>();
 
     /**
-     * next major release will nto gonna be able to provide this metric on a server level
+     * next major release will not gonna be able to provide this metric on a server level
      */
     @Override
     @Deprecated

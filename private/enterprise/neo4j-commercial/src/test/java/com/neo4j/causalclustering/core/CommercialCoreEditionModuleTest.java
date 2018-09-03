@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.discovery.SslSharedDiscoveryServiceFactory;
+import com.neo4j.security.configuration.CommercialSecuritySettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -36,6 +37,7 @@ class CommercialCoreEditionModuleTest
     {
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
+        config.augment( CommercialSecuritySettings.system_graph_authorization_enabled, Settings.TRUE );
         PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() );
         CommercialCoreEditionModule editionModule = new CommercialCoreEditionModule( platformModule, new SslSharedDiscoveryServiceFactory() );
         editionModule.createDatabases( manager, config );

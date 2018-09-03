@@ -6,6 +6,7 @@
 package com.neo4j.security;
 
 import org.junit.Test;
+
 import java.util.Map;
 
 import org.neo4j.dbms.database.DatabaseManager;

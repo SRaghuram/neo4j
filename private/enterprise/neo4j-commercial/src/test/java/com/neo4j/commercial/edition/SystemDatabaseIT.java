@@ -6,11 +6,13 @@
 package com.neo4j.commercial.edition;
 
 import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.security.configuration.CommercialSecuritySettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.consistency.ConsistencyCheckService;
@@ -24,6 +26,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
@@ -35,9 +38,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.dbms.database.MultiDatabaseManager.SYSTEM_DB_NAME;
+import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
 import static java.lang.String.valueOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -58,8 +62,9 @@ class SystemDatabaseIT
     @BeforeEach
     void setUp()
     {
-        database = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
-        databaseManager = getDatabaseManager();
+        database = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+                .setConfig( CommercialSecuritySettings.system_graph_authorization_enabled, Settings.TRUE ).newGraphDatabase();
+        databaseManager = getDatabaseManager( database );
         defaultDb = getDatabaseByName( databaseManager, DEFAULT_DATABASE_NAME );
         systemDb = getDatabaseByName( databaseManager, SYSTEM_DB_NAME );
     }
@@ -168,6 +173,27 @@ class SystemDatabaseIT
         assertTrue( runConsistencyCheck( defaultDbLayout, consistencyCheckService ).isSuccessful() );
     }
 
+    @Test
+    void systemDatabaseDisabledByDefault()
+    {
+        GraphDatabaseService databaseWithoutSystemDb = null;
+
+        try
+        {
+            File disabledSystemDbDirectory = testDirectory.databaseDir( "disabledSystemDb" );
+            databaseWithoutSystemDb = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledSystemDbDirectory ).newGraphDatabase();
+            DatabaseManager databaseManager = getDatabaseManager( databaseWithoutSystemDb );
+            assertFalse( databaseManager.getDatabaseFacade( SYSTEM_DB_NAME ).isPresent() );
+        }
+        finally
+        {
+            if ( databaseWithoutSystemDb != null )
+            {
+                databaseWithoutSystemDb.shutdown();
+            }
+        }
+    }
+
     private static ConsistencyCheckService.Result runConsistencyCheck( DatabaseLayout systemDatabaseLayout, ConsistencyCheckService consistencyCheckService )
             throws ConsistencyCheckIncompleteException
     {
@@ -194,7 +220,7 @@ class SystemDatabaseIT
         return databaseManager.getDatabaseFacade( dbName ).orElseThrow( IllegalStateException::new );
     }
 
-    private DatabaseManager getDatabaseManager()
+    private DatabaseManager getDatabaseManager( GraphDatabaseService database )
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

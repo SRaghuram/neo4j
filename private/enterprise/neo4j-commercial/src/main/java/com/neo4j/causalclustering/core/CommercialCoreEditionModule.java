@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
+import com.neo4j.kernel.settings.CommercialGraphDatabaseSettings;
 
 import java.time.Clock;
 
@@ -38,6 +39,8 @@ import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.SslPolicy;
+
+import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
 
 /**
  * This implementation of {@link EditionModule} creates the implementations of services
@@ -79,8 +82,11 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     @Override
     public void createDatabases( DatabaseManager databaseManager, Config config )
     {
-        GraphDatabaseFacade systemFacade = databaseManager.createDatabase( MultiDatabaseManager.SYSTEM_DB_NAME );
-        createConfiguredDatabases( databaseManager, systemFacade, config );
+        if ( isSystemDatabaseEnabled( config ) )
+        {
+            databaseManager.createDatabase( CommercialGraphDatabaseSettings.SYSTEM_DB_NAME );
+        }
+        createConfiguredDatabases( databaseManager, config );
     }
 
     @Override
@@ -89,7 +95,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
         return new SecurePipelineFactory();
     }
 
-    private static void createConfiguredDatabases( DatabaseManager databaseManager, GraphDatabaseFacade systemFacade, Config config )
+    private static void createConfiguredDatabases( DatabaseManager databaseManager, Config config )
     {
         databaseManager.createDatabase( config.get( GraphDatabaseSettings.active_database ) );
     }
