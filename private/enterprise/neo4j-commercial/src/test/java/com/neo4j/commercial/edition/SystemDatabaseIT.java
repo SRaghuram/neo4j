@@ -14,17 +14,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 
+import org.neo4j.consistency.ConsistencyCheckService;
+import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -34,6 +41,7 @@ import static java.lang.String.valueOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.dbms.database.DatabaseManager.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterators.count;
@@ -116,6 +124,57 @@ class SystemDatabaseIT
 
         countTransactionInLogicalStore( systemDb, systemDatabaseTransactions * 2 );
         countTransactionInLogicalStore( defaultDb, defaultDatabaseTransactions * 2);
+    }
+
+    @Test
+    void differentDatabaseHaveDifferentTxLogsDirectories()
+    {
+        LogFiles systemLogFiles = systemDb.getDependencyResolver().resolveDependency( LogFiles.class );
+        LogFiles defaultLogFiles = defaultDb.getDependencyResolver().resolveDependency( LogFiles.class );
+        assertEquals( systemDb.databaseLayout().databaseDirectory(), systemLogFiles.logFilesDirectory() );
+        assertEquals( defaultDb.databaseLayout().databaseDirectory(), defaultLogFiles.logFilesDirectory() );
+    }
+
+    @Test
+    void systemAndDefaultDatabasesAreConsistentAfterShutdown() throws ConsistencyCheckIncompleteException
+    {
+        int systemDatabaseTransactions = 100;
+        int defaultDatabaseTransactions = 15;
+        DatabaseLayout systemDatabaseLayout = systemDb.databaseLayout();
+        DatabaseLayout defaultDbLayout = defaultDb.databaseLayout();
+
+        for ( int i = 0; i < systemDatabaseTransactions; i++ )
+        {
+            try ( Transaction transaction = systemDb.beginTx() )
+            {
+                Node nodeA = systemDb.createNode();
+                Node nodeB = systemDb.createNode();
+                nodeA.createRelationshipTo( nodeB, RelationshipType.withName( valueOf( i ) ) );
+                transaction.success();
+            }
+        }
+
+        for ( int i = 0; i < defaultDatabaseTransactions; i++ )
+        {
+            try ( Transaction transaction = defaultDb.beginTx() )
+            {
+                defaultDb.createNode( label( valueOf( i ) ) );
+                transaction.success();
+            }
+        }
+
+        database.shutdown();
+
+        ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
+        assertTrue( runConsistencyCheck( systemDatabaseLayout, consistencyCheckService ).isSuccessful() );
+        assertTrue( runConsistencyCheck( defaultDbLayout, consistencyCheckService ).isSuccessful() );
+    }
+
+    private static ConsistencyCheckService.Result runConsistencyCheck( DatabaseLayout systemDatabaseLayout, ConsistencyCheckService consistencyCheckService )
+            throws ConsistencyCheckIncompleteException
+    {
+        return consistencyCheckService.runFullConsistencyCheck( systemDatabaseLayout, Config.defaults(), ProgressMonitorFactory.NONE,
+                NullLogProvider.getInstance(), false );
     }
 
     private static void countTransactionInLogicalStore( GraphDatabaseFacade facade, int expectedTransactions ) throws IOException
