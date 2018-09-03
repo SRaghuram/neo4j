@@ -13,15 +13,16 @@ import java.io.IOException;
 import org.neo4j.kernel.api.impl.index.WritableAbstractDatabaseIndex;
 import org.neo4j.kernel.api.impl.index.partition.WritableIndexPartitionFactory;
 import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
+import org.neo4j.kernel.impl.core.TokenHolder;
 
 class WritableFulltextIndex extends WritableAbstractDatabaseIndex<LuceneFulltextIndex,FulltextIndexReader>
 {
     private final IndexUpdateSink indexUpdateSink;
 
     WritableFulltextIndex( PartitionedIndexStorage storage, WritableIndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor,
-            IndexUpdateSink indexUpdateSink )
+            IndexUpdateSink indexUpdateSink, TokenHolder propertyKeyTokenHolder )
     {
-        super( new LuceneFulltextIndex( storage, partitionFactory, descriptor ) );
+        super( new LuceneFulltextIndex( storage, partitionFactory, descriptor, propertyKeyTokenHolder ) );
         this.indexUpdateSink = indexUpdateSink;
     }
 

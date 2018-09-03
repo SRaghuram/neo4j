@@ -7,8 +7,6 @@ package com.neo4j.kernel.api.impl.fulltext;
 
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextAnalyzerTest;
 import org.apache.lucene.queryparser.flexible.standard.QueryParserUtil;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.TermQuery;
 import org.eclipse.collections.api.iterator.MutableLongIterator;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
@@ -19,9 +17,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
 import org.junit.rules.Timeout;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -75,6 +71,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 
 public class FulltextProceduresTest
 {
@@ -620,7 +617,7 @@ public class FulltextProceduresTest
 
         // Prevent index updates from being applied to eventually consistent indexes.
         BinaryLatch indexUpdateBlocker = new BinaryLatch();
-        db.getDependencyResolver().resolveDependency( JobScheduler.class ).schedule( Group.INDEX_UPDATING, indexUpdateBlocker::await );
+        db.getDependencyResolver().resolveDependency( JobScheduler.class, ONLY ).schedule( Group.INDEX_UPDATING, indexUpdateBlocker::await );
 
         LongHashSet nodeIds = new LongHashSet();
         long relId;
@@ -1139,6 +1136,39 @@ public class FulltextProceduresTest
         try ( Transaction tx = db.beginTx() )
         {
             assertQueryFindsIds( db, "books", "impellit scriptum offerendum", nodeId );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void mustBeAbleToQuerySpecificPropertiesViaLuceneSyntax()
+    {
+        db = createDatabase();
+        Label book = Label.label( "Book" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "books", array( book.name() ), array( "title", "author" ) ) ).close();
+            tx.success();
+        }
+
+        long book2id;
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            Node book1 = db.createNode( book );
+            book1.setProperty( "author", "René Descartes" );
+            book1.setProperty( "title", "Meditationes de prima philosophia" );
+            Node book2 = db.createNode( book );
+            book2.setProperty( "author", "E. M. Curley" );
+            book2.setProperty( "title", "Descartes Against the Skeptics" );
+            book2id = book2.getId();
+            tx.success();
+        }
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            LongHashSet ids = LongHashSet.newSetWith( book2id );
+            assertQueryFindsIds( db, db::getNodeById, "books", "title:Descartes", ids );
             tx.success();
         }
     }

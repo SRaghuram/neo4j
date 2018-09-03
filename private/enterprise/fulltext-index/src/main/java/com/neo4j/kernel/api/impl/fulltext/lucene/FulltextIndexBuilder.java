@@ -17,28 +17,32 @@ import org.neo4j.kernel.api.impl.index.builder.AbstractLuceneIndexBuilder;
 import org.neo4j.kernel.api.impl.index.partition.ReadOnlyIndexPartitionFactory;
 import org.neo4j.kernel.api.impl.index.partition.WritableIndexPartitionFactory;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.core.TokenHolder;
 
 public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextIndexBuilder>
 {
     private final FulltextIndexDescriptor descriptor;
+    private final TokenHolder propertyKeyTokenHolder;
     private boolean populating;
     private IndexUpdateSink indexUpdateSink = NullIndexUpdateSink.INSTANCE;
 
-    private FulltextIndexBuilder( FulltextIndexDescriptor descriptor, Config config )
+    private FulltextIndexBuilder( FulltextIndexDescriptor descriptor, Config config, TokenHolder propertyKeyTokenHolder )
     {
         super( config );
         this.descriptor = descriptor;
+        this.propertyKeyTokenHolder = propertyKeyTokenHolder;
     }
 
     /**
      * Create new lucene fulltext index builder.
      *
      * @param descriptor The descriptor for this index
+     * @param propertyKeyTokenHolder A token holder used to look up property key token names by id.
      * @return new FulltextIndexBuilder
      */
-    public static FulltextIndexBuilder create( FulltextIndexDescriptor descriptor, Config config )
+    public static FulltextIndexBuilder create( FulltextIndexDescriptor descriptor, Config config, TokenHolder propertyKeyTokenHolder )
     {
-        return new FulltextIndexBuilder( descriptor, config );
+        return new FulltextIndexBuilder( descriptor, config, propertyKeyTokenHolder );
     }
 
     /**
@@ -68,7 +72,7 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
     {
         if ( isReadOnly() )
         {
-            return new ReadOnlyFulltextIndex( storageBuilder.build(), new ReadOnlyIndexPartitionFactory(), descriptor );
+            return new ReadOnlyFulltextIndex( storageBuilder.build(), new ReadOnlyIndexPartitionFactory(), descriptor, propertyKeyTokenHolder );
         }
         else
         {
@@ -82,7 +86,7 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
                 writerConfigFactory = () -> IndexWriterConfigs.standard( descriptor.analyzer() );
             }
             WritableIndexPartitionFactory partitionFactory = new WritableIndexPartitionFactory( writerConfigFactory );
-            return new WritableFulltextIndex( storageBuilder.build(), partitionFactory, descriptor, indexUpdateSink );
+            return new WritableFulltextIndex( storageBuilder.build(), partitionFactory, descriptor, indexUpdateSink, propertyKeyTokenHolder );
         }
     }
 }

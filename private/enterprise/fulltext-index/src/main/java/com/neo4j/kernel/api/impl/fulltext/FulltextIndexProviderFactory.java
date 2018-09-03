@@ -47,7 +47,7 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
 
         JobScheduler scheduler();
 
-        NeoStoreDataSource neoStoreDataSource();
+        TokenHolders tokenHolders();
 
         Procedures procedures();
 
@@ -75,11 +75,11 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         OperationalMode operationalMode = context.databaseInfo().operationalMode;
         JobScheduler scheduler = dependencies.scheduler();
         IndexDirectoryStructure.Factory directoryStructureFactory = subProviderDirectoryStructure( context.directory() );
-        Supplier<TokenHolders> tokenHoldersSupplier = dataSourceDependency( dependencies, TokenHolders.class );
+        TokenHolders tokenHolders = dependencies.tokenHolders();
         Log log = dependencies.getLogService().getInternalLog( FulltextIndexProvider.class );
 
         FulltextIndexProvider provider = new FulltextIndexProvider(
-                DESCRIPTOR, PRIORITY, directoryStructureFactory, fileSystemAbstraction, config, tokenHoldersSupplier,
+                DESCRIPTOR, PRIORITY, directoryStructureFactory, fileSystemAbstraction, config, tokenHolders,
                 directoryFactory, operationalMode, scheduler );
         try
         {
@@ -98,10 +98,5 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         }
 
         return provider;
-    }
-
-    private static <T> Supplier<T> dataSourceDependency( Dependencies dependencies, Class<T> clazz )
-    {
-        return () -> dependencies.neoStoreDataSource().getDependencyResolver().resolveDependency( clazz );
     }
 }

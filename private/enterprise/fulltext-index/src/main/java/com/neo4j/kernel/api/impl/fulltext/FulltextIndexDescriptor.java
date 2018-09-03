@@ -5,23 +5,25 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure;
 import org.apache.lucene.analysis.Analyzer;
 
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 
 import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 
 public class FulltextIndexDescriptor extends StoreIndexDescriptor
 {
+    private final List<String> propertyNames;
     private final Analyzer analyzer;
     private final String analyzerName;
     private final boolean eventuallyConsistent;
 
-    FulltextIndexDescriptor( StoreIndexDescriptor descriptor, Analyzer analyzer, String analyzerName, boolean eventuallyConsistent )
+    FulltextIndexDescriptor( StoreIndexDescriptor descriptor, List<String> propertyNames, Analyzer analyzer, String analyzerName, boolean eventuallyConsistent )
     {
         super( descriptor );
+        this.propertyNames = propertyNames;
         this.analyzer = analyzer;
         this.analyzerName = analyzerName;
         this.eventuallyConsistent = eventuallyConsistent;
@@ -29,12 +31,6 @@ public class FulltextIndexDescriptor extends StoreIndexDescriptor
 
     public Collection<String> propertyNames()
     {
-        int[] propertyIds = schema().getPropertyIds();
-        Collection<String> propertyNames = new ArrayList<>( propertyIds.length );
-        for ( int propertyId : propertyIds )
-        {
-            propertyNames.add( LuceneFulltextDocumentStructure.fieldNameForPropertyKeyId( propertyId ) );
-        }
         return propertyNames;
     }
 

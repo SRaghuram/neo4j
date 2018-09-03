@@ -70,27 +70,22 @@ public class LuceneFulltextDocumentStructure
         return new Term( FIELD_ENTITY_ID, "" + id );
     }
 
-    static Query newCountNodeEntriesQuery( long nodeId, int[] propertyKeyIds, Value... propertyValues )
+    static Query newCountNodeEntriesQuery( long nodeId, String[] propertyKeys, Value... propertyValues )
     {
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
         builder.add( new TermQuery( newTermForChangeOrRemove( nodeId ) ), BooleanClause.Occur.MUST );
-        for ( int i = 0; i < propertyKeyIds.length; i++ )
+        for ( int i = 0; i < propertyKeys.length; i++ )
         {
-            int propertyKeyId = propertyKeyIds[i];
+            String propertyKey = propertyKeys[i];
             Value value = propertyValues[i];
             if ( value.valueGroup() == ValueGroup.TEXT )
             {
                 Query valueQuery = new ConstantScoreQuery(
-                        new TermQuery( new Term( fieldNameForPropertyKeyId( propertyKeyId ), value.asObject().toString() ) ) );
+                        new TermQuery( new Term( propertyKey, value.asObject().toString() ) ) );
                 builder.add( valueQuery, BooleanClause.Occur.SHOULD );
             }
         }
         return builder.build();
-    }
-
-    public static String fieldNameForPropertyKeyId( int propertyKeyId )
-    {
-        return "p" + propertyKeyId;
     }
 
     private static class DocWithId

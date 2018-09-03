@@ -17,7 +17,6 @@ import org.apache.lucene.queryparser.classic.ParseException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -51,14 +50,14 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
 
     private final FileSystemAbstraction fileSystem;
     private final Config config;
-    private final Supplier<TokenHolders> tokenHolders;
+    private final TokenHolders tokenHolders;
     private final OperationalMode operationalMode;
     private final String defaultAnalyzerName;
     private final String defaultEventuallyConsistentSetting;
     private final IndexUpdateSink indexUpdateSink;
 
     FulltextIndexProvider( IndexProviderDescriptor descriptor, int priority, IndexDirectoryStructure.Factory directoryStructureFactory,
-            FileSystemAbstraction fileSystem, Config config, Supplier<TokenHolders> tokenHolders, DirectoryFactory directoryFactory,
+            FileSystemAbstraction fileSystem, Config config, TokenHolders tokenHolders, DirectoryFactory directoryFactory,
             OperationalMode operationalMode, JobScheduler scheduler )
     {
         super( descriptor, priority, directoryStructureFactory, config, operationalMode, fileSystem, directoryFactory );
@@ -96,9 +95,9 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     {
         PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
         FulltextIndexDescriptor fulltextIndexDescriptor = FulltextIndexSettings.readOrInitialiseDescriptor(
-                descriptor, defaultAnalyzerName, indexStorage, fileSystem );
+                descriptor, defaultAnalyzerName, tokenHolders.propertyKeyTokens(), indexStorage, fileSystem );
         DatabaseIndex<FulltextIndexReader> fulltextIndex = FulltextIndexBuilder
-                .create( fulltextIndexDescriptor, config )
+                .create( fulltextIndexDescriptor, config, tokenHolders.propertyKeyTokens() )
                 .withFileSystem( fileSystem )
                 .withOperationalMode( operationalMode )
                 .withIndexStorage( indexStorage )
@@ -118,8 +117,9 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         PartitionedIndexStorage indexStorage = getIndexStorage( descriptor.getId() );
 
         FulltextIndexDescriptor fulltextIndexDescriptor = FulltextIndexSettings.readOrInitialiseDescriptor(
-                descriptor, defaultAnalyzerName, indexStorage, fileSystem );
-        FulltextIndexBuilder fulltextIndexBuilder = FulltextIndexBuilder.create( fulltextIndexDescriptor, config )
+                descriptor, defaultAnalyzerName, tokenHolders.propertyKeyTokens(), indexStorage, fileSystem );
+        FulltextIndexBuilder fulltextIndexBuilder = FulltextIndexBuilder
+                .create( fulltextIndexDescriptor, config, tokenHolders.propertyKeyTokens() )
                 .withFileSystem( fileSystem )
                 .withOperationalMode( operationalMode )
                 .withIndexStorage( indexStorage )
@@ -146,7 +146,6 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         {
             throw new BadSchemaException( "At least one property name must be specified when creating a fulltext index." );
         }
-        TokenHolders tokens = tokenHolders.get();
         if ( Arrays.asList( properties ).contains( LuceneFulltextDocumentStructure.FIELD_ENTITY_ID ) )
         {
             throw new BadSchemaException( "Unable to index the property, the name is reserved for internal use " +
@@ -155,13 +154,13 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         int[] entityTokenIds = new int[entityTokens.length];
         if ( type == EntityType.NODE )
         {
-            tokens.labelTokens().getOrCreateIds( entityTokens, entityTokenIds );
+            tokenHolders.labelTokens().getOrCreateIds( entityTokens, entityTokenIds );
         }
         else
         {
-            tokens.relationshipTypeTokens().getOrCreateIds( entityTokens, entityTokenIds );
+            tokenHolders.relationshipTypeTokens().getOrCreateIds( entityTokens, entityTokenIds );
         }
-        int[] propertyIds = Arrays.stream( properties ).mapToInt( tokens.propertyKeyTokens()::getOrCreateId ).toArray();
+        int[] propertyIds = Arrays.stream( properties ).mapToInt( tokenHolders.propertyKeyTokens()::getOrCreateId ).toArray();
 
         SchemaDescriptor schema = SchemaDescriptorFactory.multiToken( entityTokenIds, type, propertyIds );
         indexConfiguration.putIfAbsent( FulltextIndexSettings.INDEX_CONFIG_ANALYZER, defaultAnalyzerName );

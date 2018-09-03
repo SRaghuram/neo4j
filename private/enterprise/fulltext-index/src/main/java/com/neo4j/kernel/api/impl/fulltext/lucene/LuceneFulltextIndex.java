@@ -19,6 +19,7 @@ import org.neo4j.kernel.api.impl.index.partition.AbstractIndexPartition;
 import org.neo4j.kernel.api.impl.index.partition.IndexPartitionFactory;
 import org.neo4j.kernel.api.impl.index.partition.PartitionSearcher;
 import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.storageengine.api.EntityType;
 
 public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader> implements Closeable
@@ -26,15 +27,18 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
     private final Analyzer analyzer;
     private final String identifier;
     private final EntityType type;
-    private Collection<String> properties;
+    private final Collection<String> properties;
+    private final TokenHolder propertyKeyTokenHolder;
 
-    LuceneFulltextIndex( PartitionedIndexStorage storage, IndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor )
+    LuceneFulltextIndex( PartitionedIndexStorage storage, IndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor,
+            TokenHolder propertyKeyTokenHolder )
     {
         super( storage, partitionFactory, descriptor );
         this.analyzer = descriptor.analyzer();
         this.identifier = descriptor.getName();
         this.type = descriptor.schema().entityType();
         this.properties = descriptor.propertyNames();
+        this.propertyKeyTokenHolder = propertyKeyTokenHolder;
     }
 
     @Override
@@ -54,13 +58,13 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
     {
         AbstractIndexPartition singlePartition = getFirstPartition( partitions );
         PartitionSearcher partitionSearcher = singlePartition.acquireSearcher();
-        return new SimpleFulltextIndexReader( partitionSearcher, properties.toArray( new String[0] ), analyzer );
+        return new SimpleFulltextIndexReader( partitionSearcher, properties.toArray( new String[0] ), analyzer, propertyKeyTokenHolder );
     }
 
     @Override
     protected FulltextIndexReader createPartitionedReader( List<AbstractIndexPartition> partitions ) throws IOException
     {
         List<PartitionSearcher> searchers = acquireSearchers( partitions );
-        return new PartitionedFulltextIndexReader( searchers, properties.toArray( new String[0] ), analyzer );
+        return new PartitionedFulltextIndexReader( searchers, properties.toArray( new String[0] ), analyzer, propertyKeyTokenHolder );
     }
 }

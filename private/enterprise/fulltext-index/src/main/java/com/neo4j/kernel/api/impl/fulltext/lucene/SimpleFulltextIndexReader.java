@@ -8,12 +8,9 @@ package com.neo4j.kernel.api.impl.fulltext.lucene;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
-import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TotalHitCountCollector;
 
 import java.io.IOException;
@@ -22,6 +19,7 @@ import org.neo4j.kernel.api.impl.index.collector.DocValuesCollector;
 import org.neo4j.kernel.api.impl.index.collector.ValuesIterator;
 import org.neo4j.kernel.api.impl.index.partition.PartitionSearcher;
 import org.neo4j.kernel.api.impl.schema.reader.IndexReaderCloseException;
+import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.values.storable.Value;
 
 /**
@@ -33,13 +31,15 @@ class SimpleFulltextIndexReader extends FulltextIndexReader
 {
     private final PartitionSearcher partitionSearcher;
     private final Analyzer analyzer;
+    private final TokenHolder propertyKeyTokenHolder;
     private final String[] properties;
 
-    SimpleFulltextIndexReader( PartitionSearcher partitionSearcher, String[] properties, Analyzer analyzer )
+    SimpleFulltextIndexReader( PartitionSearcher partitionSearcher, String[] properties, Analyzer analyzer, TokenHolder propertyKeyTokenHolder )
     {
         this.partitionSearcher = partitionSearcher;
         this.properties = properties;
         this.analyzer = analyzer;
+        this.propertyKeyTokenHolder = propertyKeyTokenHolder;
     }
 
     @Override
@@ -87,14 +87,19 @@ class SimpleFulltextIndexReader extends FulltextIndexReader
     @Override
     public long countIndexedNodes( long nodeId, int[] propertyKeyIds, Value... propertyValues )
     {
-        Query query = LuceneFulltextDocumentStructure.newCountNodeEntriesQuery( nodeId, propertyKeyIds, propertyValues );
         try
         {
+            String[] propertyKeys = new String[propertyKeyIds.length];
+            for ( int i = 0; i < propertyKeyIds.length; i++ )
+            {
+                propertyKeys[i] = propertyKeyTokenHolder.getTokenById( propertyKeyIds[i] ).name();
+            }
+            Query query = LuceneFulltextDocumentStructure.newCountNodeEntriesQuery( nodeId, propertyKeys, propertyValues );
             TotalHitCountCollector collector = new TotalHitCountCollector();
             getIndexSearcher().search( query, collector );
             return collector.getTotalHits();
         }
-        catch ( IOException e )
+        catch ( Exception e )
         {
             throw new RuntimeException( e );
         }

@@ -10,6 +10,7 @@ import com.neo4j.kernel.api.impl.fulltext.IndexUpdateSink;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Arrays;
 
 import org.neo4j.helpers.collection.BoundedIterable;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndexAccessor;

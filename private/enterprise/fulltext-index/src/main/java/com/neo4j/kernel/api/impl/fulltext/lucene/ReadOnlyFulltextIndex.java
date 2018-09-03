@@ -10,11 +10,13 @@ import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
 import org.neo4j.kernel.api.impl.index.ReadOnlyAbstractDatabaseIndex;
 import org.neo4j.kernel.api.impl.index.partition.IndexPartitionFactory;
 import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
+import org.neo4j.kernel.impl.core.TokenHolder;
 
 class ReadOnlyFulltextIndex extends ReadOnlyAbstractDatabaseIndex<LuceneFulltextIndex,FulltextIndexReader>
 {
-    ReadOnlyFulltextIndex( PartitionedIndexStorage storage, IndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor )
+    ReadOnlyFulltextIndex( PartitionedIndexStorage storage, IndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor,
+            TokenHolder propertyKeyTokenHolder )
     {
-        super( new LuceneFulltextIndex( storage, partitionFactory, descriptor ) );
+        super( new LuceneFulltextIndex( storage, partitionFactory, descriptor, propertyKeyTokenHolder ) );
     }
 }
