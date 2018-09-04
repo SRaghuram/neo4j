@@ -18,4 +18,10 @@ public class SystemGraphEmbeddedConfiguredAuthScenariosInteractionIT extends Con
     {
         return new SystemGraphEmbeddedInteraction( config, testDirectory );
     }
+
+    @Override
+    protected String internalSecurityName()
+    {
+        return "system-graph";
+    }
 }
