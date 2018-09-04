@@ -247,7 +247,7 @@ public class CausalClusterStatusEndpointIT
     {
         Map<String,Object> statusDescription = getStatus( getCcEndpoint( member.httpURI() ) );
         String msg = statusDescription.toString();
-        assertEquals( msg, isCore, Boolean.parseBoolean( statusDescription.get( "isCore" ).toString() ) );
+        assertEquals( msg, isCore, Boolean.parseBoolean( statusDescription.get( "core" ).toString() ) );
         assertThat( msg, Long.valueOf( statusDescription.get( "lastAppliedRaftIndex" ).toString() ), greaterThan( 0L ) );
         assertVotingMembers( statusDescription );
         assertParticipatingInRaftGroup( statusDescription, isCore );
