@@ -50,6 +50,7 @@ class CommercialSecurityModuleTest
     void shouldFailOnIllegalRealmNameConfiguration()
     {
         // Given
+        nativeAuth( false, false );
         systemGraphAuth( true, true );
         ldapAuth( true, true );
         pluginAuth( false, false );
@@ -63,6 +64,7 @@ class CommercialSecurityModuleTest
     void shouldFailOnNoAuthenticationMechanism()
     {
         // Given
+        nativeAuth( false, false );
         systemGraphAuth( false, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
@@ -76,6 +78,7 @@ class CommercialSecurityModuleTest
     void shouldFailOnNoAuthorizationMechanism()
     {
         // Given
+        nativeAuth( false, false );
         systemGraphAuth( true, false );
         ldapAuth( false, false );
         pluginAuth( false, false );
@@ -89,6 +92,7 @@ class CommercialSecurityModuleTest
     void shouldFailOnIllegalAdvancedRealmConfiguration()
     {
         // Given
+        nativeAuth( false, false );
         systemGraphAuth( false, false );
         ldapAuth( false, false );
         pluginAuth( true, true );
@@ -103,6 +107,7 @@ class CommercialSecurityModuleTest
     void shouldFailOnNotLoadedPluginAuthProvider()
     {
         // Given
+        nativeAuth( false, false );
         systemGraphAuth( false, false );
         ldapAuth( false, false );
         pluginAuth( true, true );
@@ -119,6 +124,7 @@ class CommercialSecurityModuleTest
     void shouldNotFailWithOnlySystemGraphProvider()
     {
         // Given
+        nativeAuth( false, false );
         systemGraphAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
@@ -135,7 +141,8 @@ class CommercialSecurityModuleTest
     void shouldFailWithNativeProviderAndSystemGraphProviderTogether()
     {
         // Given
-        systemGraphAuth( true, true );
+        nativeAuth( true, false );
+        systemGraphAuth( false, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
 
@@ -153,6 +160,7 @@ class CommercialSecurityModuleTest
     void shouldNotFailSystemGraphProviderhWithLdapAuthorizationProvider()
     {
         // Given
+        nativeAuth( false, false );
         systemGraphAuth( true, true );
         ldapAuth( true, true );
         pluginAuth( false, false );
@@ -176,6 +184,7 @@ class CommercialSecurityModuleTest
     void shouldNotFailSystemGraphProviderWithPluginAuthorizationProvider()
     {
         // Given
+        nativeAuth( false, false );
         systemGraphAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( true, true );
@@ -189,11 +198,16 @@ class CommercialSecurityModuleTest
     }
 
     // --------- HELPERS ----------
-
-    private void systemGraphAuth( boolean authn, boolean authr )
+    private void nativeAuth( boolean authn, boolean authr )
     {
         when( config.get( SecuritySettings.native_authentication_enabled ) ).thenReturn( authn );
         when( config.get( SecuritySettings.native_authorization_enabled ) ).thenReturn( authr );
+    }
+
+    private void systemGraphAuth( boolean authn, boolean authr )
+    {
+        when( config.get( SecuritySettings.system_graph_authentication_enabled ) ).thenReturn( authn );
+        when( config.get( SecuritySettings.system_graph_authorization_enabled ) ).thenReturn( authr );
     }
 
     private void ldapAuth( boolean authn, boolean authr )

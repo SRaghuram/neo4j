@@ -62,8 +62,8 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 createAuthenticationStrategy( config ),
-                config.get( SecuritySettings.native_authentication_enabled ),
-                config.get( SecuritySettings.native_authorization_enabled ),
+                config.get( SecuritySettings.system_graph_authentication_enabled ),
+                config.get( SecuritySettings.system_graph_authorization_enabled ),
                 CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem ),
                 getDefaultAdminRepository( config, logProvider, fileSystem )
         );
@@ -80,20 +80,58 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     static class CommercialSecurityConfig extends SecurityConfig
     {
         final boolean hasSystemGraphProvider;
+        final boolean systemGraphAuthentication;
+        final boolean systemGraphAuthorization;
 
         CommercialSecurityConfig( Config config )
         {
             super( config );
             hasSystemGraphProvider = authProviders.contains( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
+            systemGraphAuthentication = config.get( SecuritySettings.system_graph_authentication_enabled );
+            systemGraphAuthorization = config.get( SecuritySettings.system_graph_authorization_enabled );
+            internal_security_enabled = internal_security_enabled || systemGraphAuthentication || systemGraphAuthorization;
         }
 
         @Override
         protected void validate()
         {
-            if ( hasSystemGraphProvider && !nativeAuthentication && !nativeAuthorization )
+            if ( !nativeAuthentication && !systemGraphAuthentication && !ldapAuthentication && !pluginAuthentication )
+            {
+                throw illegalConfiguration( "All authentication providers are disabled." );
+            }
+
+            if ( !nativeAuthorization && !systemGraphAuthorization && !ldapAuthorization && !pluginAuthorization )
+            {
+                throw illegalConfiguration( "All authorization providers are disabled." );
+            }
+
+            if ( hasNativeProvider && !nativeAuthentication && !nativeAuthorization )
+            {
+                throw illegalConfiguration(
+                        "Native auth provider configured, but both authentication and authorization are disabled." );
+            }
+
+            if ( hasSystemGraphProvider && !systemGraphAuthentication && !systemGraphAuthorization )
             {
                 throw illegalConfiguration(
                         "System-graph auth provider configured, but both authentication and authorization are disabled." );
+            }
+
+            if ( hasLdapProvider && !ldapAuthentication && !ldapAuthorization )
+            {
+                throw illegalConfiguration(
+                        "LDAP auth provider configured, but both authentication and authorization are disabled." );
+            }
+
+            if ( !pluginAuthProviders.isEmpty() && !pluginAuthentication && !pluginAuthorization )
+            {
+                throw illegalConfiguration(
+                        "Plugin auth provider configured, but both authentication and authorization are disabled." );
+            }
+            if ( propertyAuthorization && !parsePropertyPermissions() )
+            {
+                throw illegalConfiguration(
+                        "Property level authorization is enabled but there is a error in the permissions mapping." );
             }
 
             if ( hasNativeProvider && hasSystemGraphProvider )
@@ -102,7 +140,18 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
                         "Both system-graph auth provider and native auth provider configured," +
                         " but they cannot be used together. Please remove one of them from the configuration." );
             }
-            super.validate();
+        }
+
+        @Override
+        protected boolean onlyPluginAuthentication()
+        {
+            return !nativeAuthentication && !systemGraphAuthentication && !ldapAuthentication && pluginAuthentication;
+        }
+
+        @Override
+        protected boolean onlyPluginAuthorization()
+        {
+            return !nativeAuthorization && !systemGraphAuthorization && !ldapAuthorization && pluginAuthorization;
         }
     }
 }
