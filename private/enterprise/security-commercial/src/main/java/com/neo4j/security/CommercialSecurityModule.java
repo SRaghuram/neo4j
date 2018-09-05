@@ -5,6 +5,8 @@
  */
 package com.neo4j.security;
 
+import com.neo4j.security.configuration.CommercialSecuritySettings;
+
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
@@ -62,8 +64,8 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 createAuthenticationStrategy( config ),
-                config.get( SecuritySettings.system_graph_authentication_enabled ),
-                config.get( SecuritySettings.system_graph_authorization_enabled ),
+                ( (CommercialSecurityConfig) securityConfig ).systemGraphAuthentication,
+                ( (CommercialSecurityConfig) securityConfig ).systemGraphAuthentication,
                 CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem ),
                 getDefaultAdminRepository( config, logProvider, fileSystem )
         );
@@ -87,8 +89,8 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         {
             super( config );
             hasSystemGraphProvider = authProviders.contains( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
-            systemGraphAuthentication = config.get( SecuritySettings.system_graph_authentication_enabled );
-            systemGraphAuthorization = config.get( SecuritySettings.system_graph_authorization_enabled );
+            systemGraphAuthentication = config.get( CommercialSecuritySettings.system_graph_authentication_enabled );
+            systemGraphAuthorization = config.get( CommercialSecuritySettings.system_graph_authorization_enabled );
             internal_security_enabled = internal_security_enabled || systemGraphAuthentication || systemGraphAuthorization;
         }
 
