@@ -171,6 +171,7 @@ public class CausalClusterStatusEndpointIT
 
             // and some data
             writeSomeData( cluster );
+            waitUntilCondition( allReplicasMatch( cluster, nodeCount( 1 ) ), Duration.ofMinutes( 1 ), Duration.ofSeconds( 1 ) );
 
             // when all status endpoints are accessed for last applied raft index
             List<Long> allCoreLastAppliedRaftIndex = cluster.getCoreControls()
