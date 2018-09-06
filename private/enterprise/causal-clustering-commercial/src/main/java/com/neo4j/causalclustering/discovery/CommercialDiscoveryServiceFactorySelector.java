@@ -12,7 +12,7 @@ import org.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
 public class CommercialDiscoveryServiceFactorySelector extends DiscoveryServiceFactorySelector<SslDiscoveryServiceFactory>
 {
     @Override
-    protected SslDiscoveryServiceFactory select( DiscoveryMiddleware middleware )
+    protected SslDiscoveryServiceFactory select( DiscoveryImplementation middleware )
     {
         switch ( middleware )
         {
