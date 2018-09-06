@@ -80,6 +80,7 @@ public final class TypesafeConfigService
                 .withFallback( clusterConfig() )
                 .withFallback( transportConfig() )
                 .withFallback( serializationConfig() )
+                .withFallback( failureDetectorConfig() )
                 .withFallback( loggingConfig() )
                 .withFallback( ConfigFactory.defaultReference() )
                 .resolve();
@@ -120,6 +121,28 @@ public final class TypesafeConfigService
 
         configMap.put( "akka.remote.artery.bind.hostname", hostname( listenAddress ) );
         configMap.put( "akka.remote.artery.bind.port", listenAddress.getPort() );
+
+        return ConfigFactory.parseMap( configMap );
+    }
+
+    private com.typesafe.config.Config failureDetectorConfig()
+    {
+        Map<String,Object> configMap = new HashMap<>();
+
+        long heartbeatIntervalMillis = config.get( CausalClusteringSettings.akka_failure_detector_heartbeat_interval ).toMillis();
+        configMap.put( "akka.cluster.failure-detector.heartbeat-interval", heartbeatIntervalMillis + "ms" );
+        Double threshold = config.get( CausalClusteringSettings.akka_failure_detector_threshold );
+        configMap.put( "akka.cluster.failure-detector.threshold", threshold );
+        Integer maxSampleSize = config.get( CausalClusteringSettings.akka_failure_detector_max_sample_size );
+        configMap.put( "akka.cluster.failure-detector.max-sample-size", maxSampleSize );
+        long minStdDeviationMillis = config.get( CausalClusteringSettings.akka_failure_detector_min_std_deviation ).toMillis();
+        configMap.put( "akka.cluster.failure-detector.min-std-deviation", minStdDeviationMillis + "ms" );
+        long acceptableHeartbeatPauseMillis = config.get( CausalClusteringSettings.akka_failure_detector_acceptable_heartbeat_pause ).toMillis();
+        configMap.put( "akka.cluster.failure-detector.acceptable-heartbeat-pause", acceptableHeartbeatPauseMillis + "ms" );
+        Integer monitoredByNrOfMembers = config.get( CausalClusteringSettings.akka_failure_detector_monitored_by_nr_of_members );
+        configMap.put( "akka.cluster.failure-detector.monitored-by-nr-of-members", monitoredByNrOfMembers );
+        long expectedResponseAfterMillis = config.get( CausalClusteringSettings.akka_failure_detector_expected_response_after ).toMillis();
+        configMap.put( "akka.cluster.failure-detector.expected-response-after", expectedResponseAfterMillis + "ms" );
 
         return ConfigFactory.parseMap( configMap );
     }
