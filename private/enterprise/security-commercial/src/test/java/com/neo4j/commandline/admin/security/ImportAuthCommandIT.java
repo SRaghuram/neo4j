@@ -1,37 +1,27 @@
 /*
  * Copyright (c) 2002-2018 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
- *
- * Neo4j is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.commandline.admin.security;
 
+import com.neo4j.dbms.database.MultiDatabaseManager;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Set;
 
 import org.neo4j.commandline.admin.AdminTool;
 import org.neo4j.commandline.admin.BlockerLocator;
 import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.OutsideWorld;
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.NullLogProvider;
@@ -40,6 +30,8 @@ import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
 import org.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import org.neo4j.server.security.enterprise.auth.RoleRecord;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -58,20 +50,26 @@ public class ImportAuthCommandIT
     private static final String ALTERNATIVE_USER_STORE_FILENAME = "users_to_import";
     private static final String ALTERNATIVE_ROLE_STORE_FILENAME = "roles_to_import";
 
-    private FileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
+    private final EphemeralFileSystemRule fileSystem = new EphemeralFileSystemRule();
+    private final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystem );
+
+    @Rule
+    public RuleChain ruleChain = RuleChain.outerRule( testDirectory ).around( fileSystem );
+
     private File confDir;
     private File homeDir;
     private OutsideWorld out;
     private AdminTool tool;
 
     @Before
-    public void setup()
+    public void setup() throws IOException
     {
-        File graphDir = new File( DatabaseManager.DEFAULT_DATABASE_NAME );
+        File graphDir = testDirectory.directory();
         confDir = new File( graphDir, "conf" );
         homeDir = new File( graphDir, "home" );
         out = mock( OutsideWorld.class );
         resetOutsideWorldMock();
+        resetSystemDatabaseDirectory();
         tool = new AdminTool( CommandLocator.fromServiceLocator(), BlockerLocator.fromServiceLocator(), out, true );
     }
 
@@ -237,6 +235,119 @@ public class ImportAuthCommandIT
         verify( out, never() ).stdOutLine( anyString() );
     }
 
+    @Test
+    public void shouldOfflineImportAuthFromDefaultUserAndRoleStoreFiles() throws Throwable
+    {
+        // Given
+        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME,  "flunky", "jane" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "bob", "jim" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster", "alice" );
+
+        // When
+        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
+                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+
+        // Then
+        assertSuccessfulOutputMessageForOfflineMode();
+        assertSystemDbExists();
+    }
+
+    @Test
+    public void shouldOfflineImportAuthIncrementally() throws Throwable
+    {
+        // Given
+        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME,  "flunky", "jane" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "bob", "jim" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster", "alice" );
+
+        // When
+        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
+                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+
+        // Then
+        assertSuccessfulOutputMessageForOfflineMode();
+        assertSystemDbExists();
+
+        // When
+        insertUsers( ALTERNATIVE_USER_STORE_FILENAME, "mia" );
+        insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "box_ticker", "mia" );
+
+        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
+                "--" + ImportAuthCommand.USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
+                "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME,
+                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+
+        // Then
+        assertSuccessfulOutputMessageForOfflineMode( 2 );
+        assertSystemDbExists();
+    }
+
+    @Test
+    public void shouldFailOfflineImportExistingUser() throws Throwable
+    {
+        // Given
+        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME,  "flunky", "jane" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "bob", "jim" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster", "alice" );
+
+        // When
+        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
+                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+
+        // Then
+        assertSuccessfulOutputMessageForOfflineMode();
+        assertSystemDbExists();
+
+        // When
+        insertUsers( ALTERNATIVE_USER_STORE_FILENAME, "alice" ); // Already exists
+        insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "box_ticker" ); // Does not yet exist
+
+        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
+                "--" + ImportAuthCommand.USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
+                "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME,
+                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+
+        // Then
+        verify( out ).stdErrLine( "command failed: The specified user 'alice' already exists." );
+        verify( out ).exit( 1 );
+        assertSystemDbExists();
+    }
+
+    @Test
+    public void shouldOfflineImportExistingUserAfterReset() throws Throwable
+    {
+        // Given
+        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME,  "flunky", "jane" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "bob", "jim" );
+        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster", "alice" );
+
+        // When
+        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
+                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+
+        // Then
+        assertSuccessfulOutputMessageForOfflineMode();
+        assertSystemDbExists();
+
+        // When
+        insertUsers( ALTERNATIVE_USER_STORE_FILENAME, "alice" ); // Already exists
+        insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "box_ticker" ); // Does not yet exist
+
+        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
+                "--" + ImportAuthCommand.USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
+                "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME,
+                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true",
+                "--" + ImportAuthCommand.RESET_ARG_NAME, "true" );
+
+        // Then
+        assertSuccessfulOutputMessageForOfflineMode( 2 );
+        assertSystemDbExists();
+    }
+
     private void insertUsers( String filename, String... usernames ) throws Throwable
     {
         File userFile = getFile( filename );
@@ -318,6 +429,28 @@ public class ImportAuthCommandIT
                 "Please restart the database with configuration setting dbms.security.auth_provider=system-graph to complete the import." );
     }
 
+    private void assertSuccessfulOutputMessageForOfflineMode()
+    {
+        assertSuccessfulOutputMessageForOfflineMode( 1 );
+    }
+
+    private void assertSuccessfulOutputMessageForOfflineMode( int numberOfTimes )
+    {
+        verify( out, times( numberOfTimes ) ).stdOutLine( "Users and roles files imported into system graph." );
+    }
+
+    private void assertSystemDbExists()
+    {
+        File systemDbStore = new File( getSystemDbDirectory(), "neostore" );
+        // NOTE: Because creating the system database is done on the real file system we cannot use our EphemeralFileSystemRule here
+        FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+        assertTrue( fs.fileExists( systemDbStore ) );
+    }
+
+    private File getSystemDbDirectory()
+    {
+        return new File( new File( new File( homeDir, "data" ), "databases" ), MultiDatabaseManager.SYSTEM_DB_NAME );
+    }
     private File getFile( String name )
     {
         return new File( new File( new File( homeDir, "data" ), "dbms" ), name );
@@ -327,5 +460,12 @@ public class ImportAuthCommandIT
     {
         reset( out );
         when( out.fileSystem() ).thenReturn( fileSystem );
+    }
+
+    private void resetSystemDatabaseDirectory() throws IOException
+    {
+        File systemDbDirectory = getSystemDbDirectory();
+        FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+        fs.deleteRecursively( systemDbDirectory );
     }
 }

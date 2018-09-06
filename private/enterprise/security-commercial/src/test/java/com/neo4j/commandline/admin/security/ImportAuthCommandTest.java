@@ -135,6 +135,7 @@ public class ImportAuthCommandTest
 
             assertEquals( String.format(
                     "usage: neo4j-admin import-auth [--users=<auth>] [--roles=<roles>]%n" +
+                            "                               [--offline[=<true|false>]]%n" +
                             "%n" +
                             "environment variables:%n" +
                             "    NEO4J_CONF    Path to directory which contains neo4j.conf.%n" +
@@ -147,8 +148,14 @@ public class ImportAuthCommandTest
                             "to neo4j 3.5 commercial.%n" +
                             "%n" +
                             "options:%n" +
-                            "  --users=<auth>    File name of user repository file to import. [default:auth]%n" +
-                            "  --roles=<roles>   File name of role repository file to import. [default:roles]%n" ),
+                            "  --users=<auth>           File name of user repository file to import.%n" +
+                            "                           [default:auth]%n" +
+                            "  --roles=<roles>          File name of role repository file to import.%n" +
+                            "                           [default:roles]%n" +
+                            "  --offline=<true|false>   If set to true the actual import will happen%n" +
+                            "                           immediately on an offline system database. Otherwise%n" +
+                            "                           the actual import will happen on the next startup of%n" +
+                            "                           Neo4j. [default:false]%n"),
                     baos.toString() );
         }
     }

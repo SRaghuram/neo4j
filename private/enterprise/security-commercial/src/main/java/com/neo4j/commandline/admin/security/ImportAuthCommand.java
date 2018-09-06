@@ -1,25 +1,16 @@
 /*
  * Copyright (c) 2002-2018 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
- *
- * Neo4j is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package com.neo4j.commandline.admin.security;
 
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.security.CommercialSecurityModule;
+
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -28,12 +19,25 @@ import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.arguments.Arguments;
+import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
+import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
+import org.neo4j.server.security.auth.FileUserRepository;
+import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
+import org.neo4j.server.security.enterprise.auth.FileRoleRepository;
+import org.neo4j.server.security.enterprise.auth.RealmLifecycle;
+import org.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import org.neo4j.server.security.enterprise.log.SecurityLog;
 
 public class ImportAuthCommand implements AdminCommand
 {
@@ -42,12 +46,20 @@ public class ImportAuthCommand implements AdminCommand
     public static final String ROLE_IMPORT_FILENAME = ".roles.import";
     public static final String USER_ARG_NAME = "users";
     public static final String ROLE_ARG_NAME = "roles";
+    public static final String OFFLINE_ARG_NAME = "offline";
+    public static final String RESET_ARG_NAME = "reset";
 
     private static final Arguments arguments = new Arguments()
             .withArgument( new OptionalNamedArg( USER_ARG_NAME, CommunitySecurityModule.USER_STORE_FILENAME, CommunitySecurityModule.USER_STORE_FILENAME,
                     "File name of user repository file to import." ))
             .withArgument( new OptionalNamedArg( ROLE_ARG_NAME, EnterpriseSecurityModule.ROLE_STORE_FILENAME, EnterpriseSecurityModule.ROLE_STORE_FILENAME,
-                    "File name of role repository file to import." ));
+                    "File name of role repository file to import." ))
+            .withArgument( new OptionalBooleanArg( OFFLINE_ARG_NAME, false,
+                    "If set to true the actual import will happen immediately on an offline system database. " +
+                            "Otherwise the actual import will happen on the next startup of Neo4j." ))
+            .withArgument( new OptionalBooleanArg( RESET_ARG_NAME, false,
+                    "If set to true all existing auth data in the system graph will be deleted before importing the new data. " +
+                    "This only works in combination with --" + OFFLINE_ARG_NAME ));
 
     private final Path homeDir;
     private final Path configDir;
@@ -71,7 +83,15 @@ public class ImportAuthCommand implements AdminCommand
         try
         {
             arguments.parse( args );
-            importAuth( arguments.get( USER_ARG_NAME ), arguments.get( ROLE_ARG_NAME ) );
+            boolean offline = arguments.getBoolean( OFFLINE_ARG_NAME );
+            boolean reset = arguments.getBoolean( RESET_ARG_NAME );
+
+            if ( reset && !offline )
+            {
+                throw new IncorrectUsage( String.format( "%s only works in combination with %s", RESET_ARG_NAME, OFFLINE_ARG_NAME ) );
+            }
+
+            importAuth( arguments.get( USER_ARG_NAME ), arguments.get( ROLE_ARG_NAME ), offline, reset );
         }
         catch ( IncorrectUsage | CommandFailed e )
         {
@@ -83,7 +103,14 @@ public class ImportAuthCommand implements AdminCommand
         }
     }
 
-    private void importAuth( String userFilename, String roleFilename ) throws Throwable
+    Config loadNeo4jConfig()
+    {
+        return Config.fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
+                .withHome( homeDir )
+                .withConnectorsDisabled().build();
+    }
+
+    private void importAuth( String userFilename, String roleFilename, boolean offline, boolean reset ) throws Throwable
     {
         FileSystemAbstraction fileSystem = outsideWorld.fileSystem();
         Config config = loadNeo4jConfig();
@@ -102,6 +129,18 @@ public class ImportAuthCommand implements AdminCommand
                          new File( parentFile, roleFilename ) :
                          sourceRolePath.toFile();
 
+        if ( offline )
+        {
+            importAuthOffline( config, fileSystem, sourceUserFile, sourceRoleFile, reset );
+        }
+        else
+        {
+            importAuthOnDatabaseStart( fileSystem, parentFile, sourceUserFile, sourceRoleFile );
+        }
+    }
+
+    private void importAuthOnDatabaseStart( FileSystemAbstraction fileSystem, File parentFile, File sourceUserFile, File sourceRoleFile ) throws IOException
+    {
         File targetUserFile = new File( parentFile, USER_IMPORT_FILENAME );
         File targetRoleFile = new File( parentFile, ROLE_IMPORT_FILENAME );
 
@@ -122,10 +161,77 @@ public class ImportAuthCommand implements AdminCommand
                 SecuritySettings.SYSTEM_GRAPH_REALM_NAME + " to complete the import." );
     }
 
-    Config loadNeo4jConfig()
+    private void importAuthOffline( Config config, FileSystemAbstraction fileSystem,
+            File sourceUserFile, File sourceRoleFile, boolean reset ) throws Throwable
     {
-        return Config.fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
-                .withHome( homeDir )
-                .withConnectorsDisabled().build();
+
+        FileUserRepository userRepository = new FileUserRepository( fileSystem, sourceUserFile, NullLogProvider.getInstance() );
+        FileRoleRepository roleRepository = new FileRoleRepository( fileSystem, sourceRoleFile, NullLogProvider.getInstance() );
+
+        userRepository.init();
+        roleRepository.init();
+        userRepository.start();
+        roleRepository.start();
+
+        try
+        {
+            GraphDatabaseService systemDb = createSystemGraphDatabaseFacade( config );
+            try
+            {
+                RealmLifecycle systemGraphRealm = createSystemGraphRealmForOfflineImport( systemDb, config, userRepository, roleRepository, reset );
+                systemGraphRealm.initialize();
+                systemGraphRealm.start();
+                systemGraphRealm.stop();
+                systemGraphRealm.shutdown();
+
+                outsideWorld.stdOutLine( "Users and roles files imported into system graph." );
+            }
+            finally
+            {
+                systemDb.shutdown();
+            }
+        }
+        finally
+        {
+            userRepository.stop();
+            roleRepository.stop();
+            userRepository.shutdown();
+            roleRepository.shutdown();
+        }
+    }
+
+    private GraphDatabaseService createSystemGraphDatabaseFacade( Config config )
+    {
+        File databaseDir = config.get( GraphDatabaseSettings.databases_root_path ).getAbsoluteFile();
+        File systemDbStoreDir = new File( databaseDir, MultiDatabaseManager.SYSTEM_DB_NAME );
+
+        CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
+        final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( systemDbStoreDir );
+        GraphDatabaseService db = builder
+                .setConfig( SecuritySettings.native_import_auth, "true" )
+                .newGraphDatabase();
+        return db;
+    }
+
+    private RealmLifecycle createSystemGraphRealmForOfflineImport( GraphDatabaseService db, Config config,
+            UserRepository importUserRepository, RoleRepository importRoleRepository,
+            boolean shouldResetSystemGraphAuthBeforeImport ) throws IOException
+    {
+
+        SecurityLog securityLog = new SecurityLog( config, outsideWorld.fileSystem(), Runnable::run );
+
+        DatabaseManager databaseManager = getDatabaseManager( db );
+        RealmLifecycle systemGraphRealm = CommercialSecurityModule.createSystemGraphRealmForOfflineImport(
+                config, NullLogProvider.getInstance(),
+                securityLog,
+                databaseManager,
+                importUserRepository, importRoleRepository,
+                shouldResetSystemGraphAuthBeforeImport );
+        return systemGraphRealm;
+    }
+
+    private DatabaseManager getDatabaseManager( GraphDatabaseService db )
+    {
+        return ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
 }

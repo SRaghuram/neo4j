@@ -34,7 +34,7 @@ class SystemGraphCredential implements Credential
         // TODO: Create a new CredentialMatcher class that extends HashedCredentialsMatcher
         //       and adds a tailored match-method so we do not need to create these
         //       virtual AuthenticationToken and AuthenticationInfo objects
-        return secureHasher.getHashedCredentialsMatcher().doCredentialsMatch( new AuthenticationToken()
+        return secureHasher.getHashedCredentialsMatcherWithIterations( hashedCredentials.getIterations() ).doCredentialsMatch( new AuthenticationToken()
         // This is just password wrapped in an AuthenticationToken
         {
             @Override

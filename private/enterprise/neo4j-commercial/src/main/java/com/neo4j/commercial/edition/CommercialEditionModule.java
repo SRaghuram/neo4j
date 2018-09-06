@@ -34,6 +34,7 @@ import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
 import static java.lang.String.format;
@@ -82,7 +83,9 @@ public class CommercialEditionModule extends EnterpriseEditionModule
 
     public static void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
     {
-        if ( isSystemDatabaseEnabled( config ) )
+        // Do not create the system database if we are just doing an import
+        // TODO: When there is another setting for this we may be able to remove this setting again
+        if ( isSystemDatabaseEnabled( config ) && !config.get( SecuritySettings.native_import_auth ) )
         {
             databaseManager.createDatabase( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         }

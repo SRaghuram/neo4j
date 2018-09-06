@@ -39,6 +39,7 @@ import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.AuthToken;
@@ -61,6 +62,7 @@ import org.neo4j.server.security.enterprise.auth.ShiroAuthenticationInfo;
 import org.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import org.neo4j.server.security.enterprise.log.SecurityLog;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.TextValue;
@@ -84,6 +86,8 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     private final boolean authorizationEnabled;
     private final SecureHasher secureHasher;
     private final SystemGraphExecutor systemGraphExecutor;
+    private final SecurityLog securityLog;
+
     /**
      * This flag is used in the same way as User.PASSWORD_CHANGE_REQUIRED, but it's
      * placed here because of user suspension not being a part of community edition
@@ -92,7 +96,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
 
     SystemGraphRealm( SystemGraphExecutor systemGraphExecutor, SecureHasher secureHasher, PasswordPolicy passwordPolicy,
             AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled, boolean authorizationEnabled,
-            SystemGraphImportOptions importOptions )
+            SecurityLog securityLog, SystemGraphImportOptions importOptions )
     {
         super();
 
@@ -103,6 +107,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         this.authenticationStrategy = authenticationStrategy;
         this.authenticationEnabled = authenticationEnabled;
         this.authorizationEnabled = authorizationEnabled;
+        this.securityLog = securityLog;
         this.importOptions = importOptions;
         this.systemGraphExecutor = systemGraphExecutor;
         setAuthenticationCachingEnabled( true );
@@ -119,7 +124,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public void start() throws Throwable
     {
-        if ( authenticationEnabled || authorizationEnabled )
+        if ( authenticationEnabled || authorizationEnabled || importOptions.shouldPerformImport )
         {
             initializeSystemGraph();
         }
@@ -330,7 +335,11 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     public boolean deleteRole( String roleName ) throws InvalidArgumentsException
     {
         assertNotPredefinedRoleName( roleName );
+        return doDeleteRole( roleName );
+    }
 
+    private boolean doDeleteRole( String roleName ) throws InvalidArgumentsException
+    {
         String query = "MATCH (r:Role {name: $name}) WITH r OPTIONAL MATCH (dbr:DbRole)-[:FOR_ROLE]->(r) " +
                 "WITH r, r.name as name, dbr DETACH DELETE r, dbr RETURN name";
 
@@ -754,10 +763,6 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             {
                 migrateFromFlatFileRealm();
             }
-
-            // If no users or roles were imported we setup the
-            // default predefined roles and users and make sure we have an admin user
-            //ensureDefaultUsersAndRoles();
         }
         else if ( importOptions.shouldPerformImport )
         {
@@ -823,24 +828,28 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     {
         if ( numberOfUsers() == 0 )
         {
-            UserRepository initialUserRepository = startUserRepository( importOptions.initialUserRepositorySupplier );
-            Set<String> addedUsernames;
-            if ( initialUserRepository.numberOfUsers() > 0 )
+            Set<String> addedUsernames = new TreeSet<>();
+            if ( importOptions.initialUserRepositorySupplier != null )
             {
-                ListSnapshot<User> initialUsers = initialUserRepository.getPersistedSnapshot();
-                addedUsernames = new TreeSet<>();
-                for ( User user : initialUsers.values() )
+                UserRepository initialUserRepository = startUserRepository( importOptions.initialUserRepositorySupplier );
+                if ( initialUserRepository.numberOfUsers() > 0 )
                 {
-                    addUser( user );
-                    addedUsernames.add( user.name() );
+                    ListSnapshot<User> initialUsers = initialUserRepository.getPersistedSnapshot();
+                    for ( User user : initialUsers.values() )
+                    {
+                        addUser( user );
+                        addedUsernames.add( user.name() );
+                    }
                 }
+                stopUserRepository( initialUserRepository );
             }
-            else
+
+            // If no initial user was set create the default neo4j user
+            if ( addedUsernames.isEmpty() )
             {
                 newUser( INITIAL_USER_NAME, "neo4j", true );
-                addedUsernames = Collections.singleton( INITIAL_USER_NAME );
+                addedUsernames.add( INITIAL_USER_NAME );
             }
-            stopUserRepository( initialUserRepository );
 
             return addedUsernames;
         }
@@ -856,20 +865,30 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         {
             if ( newAdmins.isEmpty() )
             {
-                Set<String> usernames = getAllUsernames();
-                UserRepository defaultAdminRepository = startUserRepository( importOptions.defaultAdminRepositorySupplier );
-                final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
-                if ( numberOfDefaultAdmins > 1 )
+                String newAdminUsername = null;
+
+                // Try to import the name of a single admin user as set by the SetDefaultAdmin command
+                if ( importOptions.defaultAdminRepositorySupplier != null )
                 {
-                    throw new InvalidArgumentsException(
-                            "No roles defined, and multiple users defined as default admin user." +
-                                    " Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
-                                    "` to select a valid admin." );
+                    UserRepository defaultAdminRepository = startUserRepository( importOptions.defaultAdminRepositorySupplier );
+                    final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
+                    if ( numberOfDefaultAdmins > 1 )
+                    {
+                        throw new InvalidArgumentsException(
+                                "No roles defined, and multiple users defined as default admin user." +
+                                        " Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
+                                        "` to select a valid admin." );
+                    }
+                    newAdminUsername = numberOfDefaultAdmins == 0 ? null :
+                                       defaultAdminRepository.getAllUsernames().iterator().next();
+                    stopUserRepository( defaultAdminRepository );
                 }
-                else if ( numberOfDefaultAdmins == 1 )
+
+                Set<String> usernames = getAllUsernames();
+
+                if ( newAdminUsername != null )
                 {
                     // We currently support only one default admin
-                    String newAdminUsername = defaultAdminRepository.getAllUsernames().iterator().next();
                     if ( silentlyGetUser( newAdminUsername ) == null )
                     {
                         throw new InvalidArgumentsException(
@@ -881,10 +900,12 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
                 }
                 else if ( usernames.size() == 1 )
                 {
+                    // If only a single user exists, make her an admin
                     newAdmins.add( usernames.iterator().next() );
                 }
                 else if ( usernames.contains( INITIAL_USER_NAME ) )
                 {
+                    // If the default neo4j user exists, make her an admin
                     newAdmins.add( INITIAL_USER_NAME );
                 }
                 else
@@ -894,7 +915,6 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
                                     "Please use `neo4j-admin " + SetDefaultAdminCommand.COMMAND_NAME +
                                     "` to select an " + "admin." );
                 }
-                stopUserRepository( defaultAdminRepository );
             }
 
             // Create the predefined roles
@@ -904,12 +924,13 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             }
         }
 
+        // Actually assign the admin role
         for ( String username : newAdmins )
         {
             addRoleToUser( PredefinedRoles.ADMIN, username );
+            securityLog.info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, username );
         }
     }
-
 
     private void migrateFromFlatFileRealm() throws Throwable
     {
@@ -932,7 +953,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         UserRepository userRepository = startUserRepository( importOptions.importUserRepositorySupplier );
         RoleRepository roleRepository = startRoleRepository( importOptions.importRoleRepositorySupplier );
 
-        if ( !doImportUsersAndRoles( userRepository, roleRepository, /* purgeOnSuccess */ true ) )
+        if ( !doImportUsersAndRoles( userRepository, roleRepository, importOptions.shouldPurgeImportRepositoriesAfterSuccesfulImport ) )
         {
             throw new InvalidArgumentsException(
                     "Import of users and roles into system graph failed because the import files are inconsistent. " +
@@ -958,8 +979,17 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
 
         if ( !isEmpty )
         {
+            Pair<Integer,Integer> numberOfDeletedUsersAndRoles = Pair.of( 0, 0 );
+
             try ( Transaction transaction = systemGraphExecutor.systemDbBeginTransaction() )
             {
+
+                // If a reset of all existing auth data was requested we do it within the same transaction as the import
+                if ( importOptions.shouldResetSystemGraphAuthBeforeImport )
+                {
+                    numberOfDeletedUsersAndRoles = deleteAllSystemGraphAuthData();
+                }
+
                 // This is not an efficient implementation, since it executes many queries
                 // If performance ever becomes an issue we could do this with a single query instead
                 for ( User user : users.values() )
@@ -976,8 +1006,32 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
                 }
                 transaction.success();
             }
+            catch ( Throwable t )
+            {
+                throw t;
+            }
 
             assert validateImportSucceeded( userRepository, roleRepository );
+
+            // Log what happened to the security log
+            if ( importOptions.shouldResetSystemGraphAuthBeforeImport )
+            {
+                String userString = numberOfDeletedUsersAndRoles.first() == 1 ? "user" : "users";
+                String roleString = numberOfDeletedUsersAndRoles.other() == 1 ? "role" : "roles";
+
+                securityLog.info( "Deleted %s %s and %s %s into system graph.",
+                        Integer.toString( numberOfDeletedUsersAndRoles.first() ), userString,
+                        Integer.toString( numberOfDeletedUsersAndRoles.other() ), roleString );
+            }
+            {
+                String userString = users.values().size() == 1 ? "user" : "users";
+                String roleString = roles.values().size() == 1 ? "role" : "roles";
+
+                securityLog.info( "Completed import of %s %s and %s %s into system graph.",
+                        Integer.toString( users.values().size() ), userString,
+                        Integer.toString( roles.values().size() ), roleString );
+            }
+
         }
 
         // If transaction succeeded, we purge the repositories so that we will not try to import them again the next time we restart
@@ -985,8 +1039,38 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         {
             userRepository.purge();
             roleRepository.purge();
+
+            securityLog.debug( "Source import user and role repositories were purged." );
         }
         return true;
+    }
+
+    /**
+     * This method should delete all existing auth data from the system graph.
+     * It is used in preparation for an import where the admin has requested
+     * a reset of the auth graph.
+     */
+    private Pair<Integer,Integer> deleteAllSystemGraphAuthData() throws InvalidArgumentsException
+    {
+        // This is not an efficient implementation, since it executes many queries
+        // If performance becomes an issue we could do this with a single query instead
+
+        Set<String> usernames = getAllUsernames();
+        for ( String username : usernames )
+        {
+            deleteUser( username );
+        }
+
+        Set<String> roleNames = getAllRoleNames();
+        for ( String roleName : roleNames )
+        {
+            doDeleteRole( roleName );
+        }
+
+        // TODO: Delete DbRole nodes
+        // TODO: Delete Database nodes? (Only if they are exclusively used by the security module)
+
+        return Pair.of( usernames.size(), roleNames.size() );
     }
 
     private boolean validateImportSucceeded( UserRepository userRepository, RoleRepository roleRepository ) throws Throwable

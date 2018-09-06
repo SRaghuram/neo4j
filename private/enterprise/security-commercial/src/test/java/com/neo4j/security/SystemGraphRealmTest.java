@@ -15,17 +15,21 @@ import java.io.IOException;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -38,27 +42,33 @@ import org.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
 import org.neo4j.server.security.enterprise.auth.RoleRecord;
 import org.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.server.security.enterprise.auth.SecureHasher;
+import org.neo4j.server.security.enterprise.auth.ShiroAuthToken;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
+import org.neo4j.server.security.enterprise.log.SecurityLog;
 import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class SystemGraphRealmTest
 {
     TestDatabaseManager dbManager;
     SystemGraphExecutor executor;
-    List<String> messages;
+    private AssertableLogProvider log;
+    private SecurityLog securityLog;
 
     @BeforeEach
     void setUp()
     {
         dbManager = new TestDatabaseManager();
         executor =  new TestSystemGraphExecutor( dbManager );
-        messages = new ArrayList<>();
+        log = new AssertableLogProvider();
+        securityLog = new SecurityLog( log.getLog( getClass() ) );
     }
 
     @AfterEach
@@ -79,6 +89,10 @@ public class SystemGraphRealmTest
         );
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "alice" ) );
+        assertAuthenticationSucceeds( realm, "alice" );
+        log.assertExactly(
+                info( "Completed import of %s %s and %s %s into system graph.", "1", "user", "1", "role" )
+        );
     }
 
     @Test
@@ -95,6 +109,11 @@ public class SystemGraphRealmTest
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "alice" ) );
         assertThat( realm.getUsernamesForRole( "goon" ), contains( "bob" ) );
+        assertAuthenticationSucceeds( realm, "alice" );
+        assertAuthenticationSucceeds( realm, "bob" );
+        log.assertExactly(
+                info( "Completed import of %s %s and %s %s into system graph.", "2", "users", "2", "roles" )
+        );
     }
 
     @Test
@@ -108,6 +127,10 @@ public class SystemGraphRealmTest
         );
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( UserManager.INITIAL_USER_NAME ) );
+        assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME );
+        log.assertExactly(
+                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, UserManager.INITIAL_USER_NAME )
+        );
     }
 
     // TODO: This is not allowed in InternalFlatFileRealm. There you can only set UserManager.INITIAL_USER_NAME
@@ -123,6 +146,12 @@ public class SystemGraphRealmTest
         );
 
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "jane", "joe" ) );
+        assertAuthenticationSucceeds( realm, "jane" );
+        assertAuthenticationSucceeds( realm, "joe" );
+        log.assertExactly(
+                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "jane" ),
+                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "joe" )
+        );
     }
 
     @Test
@@ -149,6 +178,10 @@ public class SystemGraphRealmTest
 
         // Then
         assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "trinity" ) );
+        log.assertExactly(
+                info( "Completed import of %s %s and %s %s into system graph.", "3", "users", "0", "roles" ),
+                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "trinity" )
+        );
     }
 
     @Test
@@ -164,6 +197,9 @@ public class SystemGraphRealmTest
 
         assertThat( realm.getUsernamesForRole( "not_admin" ), contains( "alice" ) );
         assertTrue( realm.silentlyGetUsernamesForRole( PredefinedRoles.ADMIN ).isEmpty() );
+        log.assertExactly(
+                info( "Completed import of %s %s and %s %s into system graph.", "1", "user", "1", "role" )
+        );
     }
 
     private void prePopulateUsers( String... usernames ) throws Throwable
@@ -181,6 +217,8 @@ public class SystemGraphRealmTest
     {
         private boolean shouldPerformImport;
         private boolean mayPerformMigration;
+        private boolean shouldPurgeImportRepositoriesAfterSuccesfulImport;
+        private boolean shouldResetSystemGraphAuthBeforeImport;
         private String[] importUsers = new String[0];
         private List<Pair<String,String[]>> importRoles = new ArrayList<>();
         private String[] migrateUsers = new String[0];
@@ -213,6 +251,30 @@ public class SystemGraphRealmTest
         ImportOptionsBuilder mayNotPerformMigration()
         {
             mayPerformMigration = false;
+            return this;
+        }
+
+        ImportOptionsBuilder shouldPurgeImportRepositoriesAfterSuccesfulImport()
+        {
+            shouldPurgeImportRepositoriesAfterSuccesfulImport = true;
+            return this;
+        }
+
+        ImportOptionsBuilder shouldNotPurgeImportRepositoriesAfterSuccesfulImport()
+        {
+            shouldPurgeImportRepositoriesAfterSuccesfulImport = false;
+            return this;
+        }
+
+        ImportOptionsBuilder shouldResetSystemGraphAuthBeforeImport()
+        {
+            shouldResetSystemGraphAuthBeforeImport = true;
+            return this;
+        }
+
+        ImportOptionsBuilder shouldNotResetSystemGraphAuthBeforeImport()
+        {
+            shouldResetSystemGraphAuthBeforeImport = false;
             return this;
         }
 
@@ -252,12 +314,14 @@ public class SystemGraphRealmTest
             return this;
         }
 
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings( "unchecked" )
         SystemGraphImportOptions build() throws IOException, InvalidArgumentsException
         {
             return testImportOptions(
                     shouldPerformImport,
                     mayPerformMigration,
+                    shouldPurgeImportRepositoriesAfterSuccesfulImport,
+                    shouldResetSystemGraphAuthBeforeImport,
                     importUsers,
                     importRoles.toArray( new Pair[0] ),
                     migrateUsers,
@@ -270,6 +334,8 @@ public class SystemGraphRealmTest
     private static SystemGraphImportOptions testImportOptions(
             boolean shouldPerformImport,
             boolean mayPerformMigration,
+            boolean shouldPurgeImportRepositoriesAfterSuccesfulImport,
+            boolean shouldResetSystemGraphAuthBeforeImport,
             String[] importUsers,
             Pair<String,String[]>[] importRoles,
             String[] migrateUsers,
@@ -295,6 +361,8 @@ public class SystemGraphRealmTest
         return new SystemGraphImportOptions(
                 shouldPerformImport,
                 mayPerformMigration,
+                shouldPurgeImportRepositoriesAfterSuccesfulImport,
+                shouldResetSystemGraphAuthBeforeImport,
                 () -> importUserRepository,
                 () -> importRoleRepository,
                 () -> migrationUserRepository,
@@ -332,6 +400,7 @@ public class SystemGraphRealmTest
                 newRateLimitedAuthStrategy(),
                 true,
                 true,
+                securityLog,
                 importOptions
         );
 
@@ -417,8 +486,26 @@ public class SystemGraphRealmTest
         }
     }
 
-    private void log( String format, String... params )
+    private AssertableLogProvider.LogMatcher info( String message, String... arguments )
     {
-        messages.add( String.format( format, params ) );
+        if ( arguments.length == 0 )
+        {
+            return inLog( this.getClass() ).info( message );
+        }
+        return inLog( this.getClass() ).info( message, (Object[]) arguments );
+    }
+
+    private static ShiroAuthToken testAuthenticationToken( String username, String password )
+    {
+        Map<String,Object> authToken = new TreeMap<>();
+        authToken.put( AuthToken.PRINCIPAL, username );
+        authToken.put( AuthToken.CREDENTIALS, password );
+        return new ShiroAuthToken( authToken );
+    }
+
+    private static void assertAuthenticationSucceeds( SystemGraphRealm realm, String username )
+    {
+        // NOTE: Password is the same as username
+        assertNotNull( realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) );
     }
 }

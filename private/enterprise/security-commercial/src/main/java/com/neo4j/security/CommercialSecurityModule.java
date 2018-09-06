@@ -6,6 +6,8 @@
 package com.neo4j.security;
 
 import com.neo4j.security.configuration.CommercialSecuritySettings;
+import com.neo4j.dbms.database.MultiDatabaseManager;
+
 import java.io.File;
 import java.util.function.Supplier;
 
@@ -30,6 +32,7 @@ import org.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import org.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import org.neo4j.server.security.enterprise.log.SecurityLog;
 
 import static com.neo4j.commandline.admin.security.ImportAuthCommand.ROLE_IMPORT_FILENAME;
 import static com.neo4j.commandline.admin.security.ImportAuthCommand.USER_IMPORT_FILENAME;
@@ -54,7 +57,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
 
     @Override
     protected EnterpriseUserManager createInternalRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, JobScheduler jobScheduler,
-            AccessCapability accessCapability )
+            SecurityLog securityLog, AccessCapability accessCapability )
     {
         EnterpriseUserManager internalRealm = null;
         if ( securityConfig.hasNativeProvider )
@@ -63,12 +66,12 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         }
         else if ( ( (CommercialSecurityConfig) securityConfig ).hasSystemGraphProvider )
         {
-            internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, accessCapability );
+            internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, accessCapability );
         }
         return internalRealm;
     }
 
-    private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem,
+    private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog,
             AccessCapability accessCapability )
     {
         return new SystemGraphRealm(
@@ -78,6 +81,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
                 createAuthenticationStrategy( config ),
                 ( (CommercialSecurityConfig) securityConfig ).systemGraphAuthentication,
                 ( (CommercialSecurityConfig) securityConfig ).systemGraphAuthentication,
+                securityLog,
                 configureImportOptions( config, logProvider, fileSystem, accessCapability )
         );
     }
@@ -91,6 +95,8 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
 
         boolean shouldPerformImport = fileSystem.fileExists( userImportFile ) || fileSystem.fileExists( roleImportFile );
         boolean mayPerformMigration = !shouldPerformImport && mayPerformMigration( config, accessCapability );
+        boolean shouldPurgeImportRepositoriesAfterSuccesfulImport = shouldPerformImport;
+        boolean shouldResetSystemGraphAuthBeforeImport = false;
 
         Supplier<UserRepository> importUserRepositorySupplier = () -> new FileUserRepository( fileSystem, userImportFile, logProvider );
         Supplier<RoleRepository> importRoleRepositorySupplier = () -> new FileRoleRepository( fileSystem, roleImportFile, logProvider );
@@ -102,6 +108,36 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         return new SystemGraphImportOptions(
                 shouldPerformImport,
                 mayPerformMigration,
+                shouldPurgeImportRepositoriesAfterSuccesfulImport,
+                shouldResetSystemGraphAuthBeforeImport,
+                importUserRepositorySupplier,
+                importRoleRepositorySupplier,
+                migrationUserRepositorySupplier,
+                migrationRoleRepositorySupplier,
+                initialUserRepositorySupplier,
+                defaultAdminRepositorySupplier
+        );
+    }
+
+    private static SystemGraphImportOptions configureImportOptionsForOfflineImport( Config config, LogProvider logProvider,
+            UserRepository importUserRepository, RoleRepository importRoleRepository, boolean shouldResetSystemGraphAuthBeforeImport )
+    {
+        boolean shouldPerformImport = true;
+        boolean mayPerformMigration = false;
+        boolean shouldPurgeImportRepositoriesAfterSuccesfulImport = false;
+
+        Supplier<UserRepository> importUserRepositorySupplier = () -> importUserRepository;
+        Supplier<RoleRepository> importRoleRepositorySupplier = () -> importRoleRepository;
+        Supplier<UserRepository> migrationUserRepositorySupplier = null;
+        Supplier<RoleRepository> migrationRoleRepositorySupplier = null;
+        Supplier<UserRepository> initialUserRepositorySupplier = null;
+        Supplier<UserRepository> defaultAdminRepositorySupplier = null;
+
+        return new SystemGraphImportOptions(
+                shouldPerformImport,
+                mayPerformMigration,
+                shouldPurgeImportRepositoriesAfterSuccesfulImport,
+                shouldResetSystemGraphAuthBeforeImport,
                 importUserRepositorySupplier,
                 importRoleRepositorySupplier,
                 migrationUserRepositorySupplier,
@@ -120,12 +156,13 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         {
             try
             {
-                // In a cluster, only perform migration on the leader
+                // Only perform migration if this neo4j instance can write (In a cluster, only the leader can write)
                 accessCapability.assertCanWrite();
                 mayPerformMigration = true;
             }
             catch ( WriteOperationsNotAllowedException e )
             {
+                // Do nothing
             }
         }
         return mayPerformMigration;
@@ -215,5 +252,27 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         {
             return !nativeAuthorization && !systemGraphAuthorization && !ldapAuthorization && pluginAuthorization;
         }
+    }
+
+    // This is used by ImportAuthCommand for offline import of auth information
+    public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config, LogProvider logProvider,
+            SecurityLog securityLog,
+            DatabaseManager databaseManager,
+            UserRepository importUserRepository, RoleRepository importRoleRepository,
+            boolean shouldResetSystemGraphAuthBeforeImport )
+    {
+        return new SystemGraphRealm(
+                //new SystemGraphExecutor( databaseManager, config.get( GraphDatabaseSettings.active_database ) ),
+                new SystemGraphExecutor( databaseManager, MultiDatabaseManager.SYSTEM_DB_NAME ),
+                new SecureHasher(),
+                new BasicPasswordPolicy(),
+                createAuthenticationStrategy( config ),
+                false,
+                false,
+                securityLog,
+                configureImportOptionsForOfflineImport( config, logProvider,
+                        importUserRepository, importRoleRepository,
+                        shouldResetSystemGraphAuthBeforeImport )
+        );
     }
 }

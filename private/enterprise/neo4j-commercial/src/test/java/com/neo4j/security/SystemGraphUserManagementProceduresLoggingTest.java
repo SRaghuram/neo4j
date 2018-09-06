@@ -69,7 +69,6 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
     @Override
     protected EnterpriseUserManager getUserManager() throws Throwable
     {
-
         SystemGraphRealm realm = new SystemGraphRealm(
                 new SystemGraphExecutor( databaseManager, activeDbName ),
                 new SecureHasher(),
@@ -77,7 +76,10 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
                 Mockito.mock( AuthenticationStrategy.class ),
                 true,
                 true,
+                authProcedures.securityLog,
                 new SystemGraphImportOptions(
+                    false,
+                    false,
                     false,
                     false,
                     () -> new InMemoryUserRepository(),
