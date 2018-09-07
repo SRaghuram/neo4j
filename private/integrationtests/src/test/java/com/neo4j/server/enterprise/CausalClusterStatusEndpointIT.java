@@ -35,7 +35,6 @@ import org.neo4j.harness.PortAuthorityPortPickingStrategy;
 import org.neo4j.harness.ServerControls;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
