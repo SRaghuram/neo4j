@@ -61,7 +61,7 @@ public class ActorSystemFactory
     {
         com.typesafe.config.Config tsConfig = configService.generate();
 
-        ExecutionContextExecutor ec = ExecutionContexts.fromExecutor( jobScheduler.workStealingExecutor( Group.AKKA_TOPOLOGY_WORKER, parallelism, true ) );
+        ExecutionContextExecutor ec = ExecutionContexts.fromExecutor( jobScheduler.workStealingExecutorAsyncMode( Group.AKKA_TOPOLOGY_WORKER, parallelism ) );
 
         BootstrapSetup bootstrapSetup = BootstrapSetup.create( tsConfig )
                 .withActorRefProvider( providerSelection )
