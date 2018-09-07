@@ -27,7 +27,7 @@ import org.neo4j.logging.LogProvider;
 
 public class ClientTopologyActor extends AbstractActorWithTimers
 {
-    private static final String TARGET_PATH = "/user/" + ReadReplicatorTopologyActor.NAME;
+    static final String TARGET_PATH = "/user/" + ReadReplicatorTopologyActor.NAME;
     private static final String REFRESH = "topology refresh";
 
     public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopology> coreTopologySink,
@@ -41,6 +41,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     public static final String NAME = "cc-client-topology-actor";
 
     private final MemberId myself;
+    private final ReadReplicaInfo readReplicaInfo;
     private final SourceQueueWithComplete<CoreTopology> coreTopologySink;
     private final SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink;
     private final SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink;
@@ -58,6 +59,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
         this.clusterClient = clusterClient;
         this.config = config;
         this.log = logProvider.getLog( getClass() );
+        this.readReplicaInfo = ReadReplicaInfo.from( config );
     }
 
     @Override
@@ -66,8 +68,8 @@ public class ClientTopologyActor extends AbstractActorWithTimers
         return ReceiveBuilder.create()
                 .match( CoreTopology.class, coreTopologySink::offer )
                 .match( ReadReplicaTopology.class, rrTopologySink::offer )
-                .match( Refresh.class, ignored -> sendInfo() )
                 .match( LeaderInfoDirectoryMessage.class, msg -> discoverySink.offer( msg.leaders() ) )
+                .match( Refresh.class, ignored -> sendInfo() )
                 .build();
     }
 
@@ -80,7 +82,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     private void sendInfo()
     {
-        ReadReplicaInfoMessage msg = new ReadReplicaInfoMessage( ReadReplicaInfo.from( config ), myself, clusterClient, getSelf() );
+        ReadReplicaInfoMessage msg = new ReadReplicaInfoMessage( readReplicaInfo, myself, clusterClient, getSelf() );
         sendToCore( msg );
     }
 

@@ -180,7 +180,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
       awaitCond(
         actualCoreTopology == newCoreTopology && actualCoreTopology.clusterId() == newCoreTopology.clusterId(),
         max = defaultWaitTime,
-        message = s"Expected $expectedCoreTopology but was $actualCoreTopology"
+        message = s"Expected $newCoreTopology but was $actualCoreTopology"
       )
       readReplicaProbe.expectMsg(newCoreTopology)
     }
