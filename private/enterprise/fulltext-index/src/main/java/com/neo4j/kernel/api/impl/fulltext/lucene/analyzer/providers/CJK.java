@@ -5,10 +5,10 @@
  */
 package com.neo4j.kernel.api.impl.fulltext.lucene.analyzer.providers;
 
-import com.neo4j.kernel.api.impl.fulltext.lucene.analyzer.AnalyzerProvider;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.cjk.CJKAnalyzer;
 
+import org.neo4j.graphdb.index.fulltext.AnalyzerProvider;
 import org.neo4j.helpers.Service;
 
 @Service.Implementation( AnalyzerProvider.class )

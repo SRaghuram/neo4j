@@ -5,7 +5,6 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.kernel.api.impl.fulltext.lucene.analyzer.AnalyzerProvider;
 import org.apache.lucene.analysis.Analyzer;
 
 import java.io.File;
@@ -17,12 +16,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.neo4j.graphdb.index.fulltext.AnalyzerProvider;
 import org.neo4j.internal.kernel.api.exceptions.PropertyKeyIdNotFoundKernelException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;

@@ -11,7 +11,6 @@ import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexPopulator;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
 import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure;
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
-import com.neo4j.kernel.api.impl.fulltext.lucene.analyzer.AnalyzerProvider;
 import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
@@ -20,6 +19,7 @@ import java.util.Properties;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.neo4j.graphdb.index.fulltext.AnalyzerProvider;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
