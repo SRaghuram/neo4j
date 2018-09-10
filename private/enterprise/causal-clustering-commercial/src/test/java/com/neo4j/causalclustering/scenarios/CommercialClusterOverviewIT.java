@@ -7,6 +7,9 @@ package com.neo4j.causalclustering.scenarios;
 
 import org.junit.runners.Parameterized;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.neo4j.causalclustering.scenarios.BaseClusterOverviewIT;
 
 public class CommercialClusterOverviewIT extends BaseClusterOverviewIT
@@ -17,8 +20,8 @@ public class CommercialClusterOverviewIT extends BaseClusterOverviewIT
     }
 
     @Parameterized.Parameters( name = "discovery-{0}" )
-    public static CommercialDiscoveryServiceType[] data()
+    public static List<CommercialDiscoveryServiceType> data()
     {
-        return CommercialDiscoveryServiceType.values();
+        return Collections.singletonList( CommercialDiscoveryServiceType.AKKA );
     }
 }
