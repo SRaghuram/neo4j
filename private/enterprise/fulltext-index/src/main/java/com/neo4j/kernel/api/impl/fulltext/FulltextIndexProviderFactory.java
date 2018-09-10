@@ -6,24 +6,25 @@
 package com.neo4j.kernel.api.impl.fulltext;
 
 import java.io.File;
-import java.util.function.Supplier;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.schema.IndexProviderDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.core.TokenHolders;
+import org.neo4j.kernel.impl.factory.Edition;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
+import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
@@ -66,8 +67,14 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
     }
 
     @Override
-    public FulltextIndexProvider newInstance( KernelContext context, Dependencies dependencies )
+    public Lifecycle newInstance( KernelContext context, Dependencies dependencies )
     {
+        if ( context.databaseInfo().edition == Edition.community )
+        {
+            // Fulltext schema indexes are not available in Community Edition, so we nerf ourselves since throwing an exception from this method will
+            // otherwise prevent the database from starting.
+            return new LifecycleAdapter();
+        }
         Config config = dependencies.getConfig();
         boolean ephemeral = config.get( GraphDatabaseSettings.ephemeral );
         FileSystemAbstraction fileSystemAbstraction = dependencies.fileSystem();

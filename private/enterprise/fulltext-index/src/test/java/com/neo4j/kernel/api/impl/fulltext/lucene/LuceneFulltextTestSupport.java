@@ -39,7 +39,7 @@ import org.neo4j.kernel.impl.api.index.IndexProviderMap;
 import org.neo4j.kernel.impl.coreapi.TopLevelTransaction;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.test.rule.DatabaseRule;
-import org.neo4j.test.rule.EmbeddedDatabaseRule;
+import org.neo4j.test.rule.EnterpriseDatabaseRule;
 import org.neo4j.test.rule.RepeatRule;
 
 import static java.lang.String.format;
@@ -56,7 +56,7 @@ public class LuceneFulltextTestSupport
     static final RelationshipType RELTYPE = RelationshipType.withName( "type" );
     static final String PROP = "prop";
 
-    DatabaseRule db = new EmbeddedDatabaseRule().withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
+    DatabaseRule db = new EnterpriseDatabaseRule().withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
     private RepeatRule repeatRule = createRepeatRule();
 
     @Rule

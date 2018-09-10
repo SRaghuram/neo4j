@@ -22,6 +22,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -66,7 +67,7 @@ public class FulltextIndexBackupIT
     public void setUpPorts()
     {
         backupPort = PortAuthority.allocatePort();
-        GraphDatabaseFactory factory = new GraphDatabaseFactory();
+        GraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
         GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( dir.storeDir() );
         builder.setConfig( online_backup_enabled, "true" );
         builder.setConfig( online_backup_server, "127.0.0.1:" + backupPort );
@@ -173,7 +174,7 @@ public class FulltextIndexBackupIT
 
     private GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        return (GraphDatabaseAPI) cleanup.add( new GraphDatabaseFactory()
+        return (GraphDatabaseAPI) cleanup.add( new EnterpriseGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( backupDatabaseDir )
                 .newGraphDatabase() );
     }

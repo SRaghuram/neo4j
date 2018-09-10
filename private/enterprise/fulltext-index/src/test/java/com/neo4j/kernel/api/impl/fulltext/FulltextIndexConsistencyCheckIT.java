@@ -34,6 +34,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.schema.IndexDefinition;
@@ -85,7 +86,7 @@ public class FulltextIndexConsistencyCheckIT
     @Before
     public void before()
     {
-        GraphDatabaseFactory factory = new GraphDatabaseFactory();
+        GraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
         builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
     }
