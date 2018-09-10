@@ -15,15 +15,14 @@ import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.EditionModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.edition.EditionModule;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.kernel.api.security.SecurityModule;
-import org.neo4j.kernel.api.security.UserManagerSupplier;
+import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
@@ -123,16 +122,13 @@ public class CommercialEditionModule extends EnterpriseEditionModule
             SecurityModule securityModule = setupSecurityModule( platformModule,
                     platformModule.logging.getUserLog( EnterpriseEditionModule.class ),
                     procedures, "commercial-security-module" );
-            editionModule.authManager = securityModule.authManager();
-            editionModule.userManagerSupplier = securityModule.userManagerSupplier();
             platformModule.life.add( securityModule );
+            editionModule.setSecurityProvider( securityModule );
         }
         else
         {
-            editionModule.authManager = EnterpriseAuthManager.NO_AUTH;
-            editionModule.userManagerSupplier = UserManagerSupplier.NO_AUTH;
-            platformModule.life.add( platformModule.dependencies.satisfyDependency( editionModule.authManager ) );
-            platformModule.life.add( platformModule.dependencies.satisfyDependency( editionModule.userManagerSupplier ) );
+            NoAuthSecurityProvider noAuthSecurityProvider = NoAuthSecurityProvider.INSTANCE;
+            editionModule.setSecurityProvider( noAuthSecurityProvider );
         }
     }
 
