@@ -7,8 +7,6 @@ Apache Software License, Version 2.0
   Apache Commons BeanUtils
   Apache Commons Collections
   Apache Commons Lang
-  Data Mapper for Jackson
-  Jackson
   Lucene codecs
   Lucene Common Analyzers
   Lucene Core

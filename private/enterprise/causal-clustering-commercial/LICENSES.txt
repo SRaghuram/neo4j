@@ -28,9 +28,7 @@ Apache Software License, Version 2.0
   Apache Shiro :: Lang
   Caffeine cache
   config
-  Data Mapper for Jackson
   hazelcast-all
-  Jackson
   jPowerShell
   jProcesses
   Lucene codecs
