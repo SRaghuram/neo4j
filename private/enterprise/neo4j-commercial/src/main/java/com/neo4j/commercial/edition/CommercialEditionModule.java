@@ -78,6 +78,11 @@ public class CommercialEditionModule extends EnterpriseEditionModule
     @Override
     public void createDatabases( DatabaseManager databaseManager, Config config )
     {
+        createCommercialEditionDatabases( databaseManager, config );
+    }
+
+    public static void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
+    {
         if ( isSystemDatabaseEnabled( config ) )
         {
             databaseManager.createDatabase( CommercialGraphDatabaseSettings.SYSTEM_DB_NAME );

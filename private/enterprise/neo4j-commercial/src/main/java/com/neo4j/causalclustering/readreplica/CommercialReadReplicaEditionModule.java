@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
-import com.neo4j.kernel.settings.CommercialGraphDatabaseSettings;
 
 import java.time.Clock;
 
@@ -20,7 +19,6 @@ import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.readreplica.EnterpriseReadReplicaEditionModule;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.EditionModule;
 import org.neo4j.kernel.availability.AvailabilityGuard;
@@ -38,7 +36,7 @@ import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.SslPolicy;
 
-import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
+import static com.neo4j.commercial.edition.CommercialEditionModule.createCommercialEditionDatabases;
 
 /**
  * This implementation of {@link EditionModule} creates the implementations of services
@@ -78,22 +76,13 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
     @Override
     public void createDatabases( DatabaseManager databaseManager, Config config )
     {
-        if ( isSystemDatabaseEnabled( config ) )
-        {
-            databaseManager.createDatabase( CommercialGraphDatabaseSettings.SYSTEM_DB_NAME );
-        }
-        createConfiguredDatabases( databaseManager, config );
+        createCommercialEditionDatabases( databaseManager, config );
     }
 
     @Override
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
         return new SecurePipelineFactory();
-    }
-
-    private static void createConfiguredDatabases( DatabaseManager databaseManager, Config config )
-    {
-        databaseManager.createDatabase( config.get( GraphDatabaseSettings.active_database ) );
     }
 
     @Override
