@@ -20,6 +20,7 @@ import org.neo4j.graphdb.factory.module.edition.EditionModule;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
+import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
@@ -117,19 +118,20 @@ public class CommercialEditionModule extends EnterpriseEditionModule
 
     private static void createCommercialSecurityModule( EditionModule editionModule, PlatformModule platformModule, Procedures procedures )
     {
+        SecurityProvider securityProvider;
         if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
         {
             SecurityModule securityModule = setupSecurityModule( platformModule,
                     platformModule.logging.getUserLog( EnterpriseEditionModule.class ),
                     procedures, "commercial-security-module" );
             platformModule.life.add( securityModule );
-            editionModule.setSecurityProvider( securityModule );
+            securityProvider = securityModule;
         }
         else
         {
-            NoAuthSecurityProvider noAuthSecurityProvider = NoAuthSecurityProvider.INSTANCE;
-            editionModule.setSecurityProvider( noAuthSecurityProvider );
+            securityProvider = NoAuthSecurityProvider.INSTANCE;
         }
+        editionModule.setSecurityProvider( securityProvider );
     }
 
     private void initGlobalGuard( Clock clock, LogService logService )
