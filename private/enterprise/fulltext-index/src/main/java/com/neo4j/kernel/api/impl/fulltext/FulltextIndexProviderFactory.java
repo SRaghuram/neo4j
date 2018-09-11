@@ -100,7 +100,7 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         }
         catch ( UnsatisfiedDependencyException e )
         {
-            // This will for instance happen when the kernel extension is created as part of a concistency check run.
+            // This will for instance happen when the kernel extension is created as part of a consistency check run.
             log.debug( "Fulltext index procedures will not be registered: " + e.getMessage() );
         }
 
