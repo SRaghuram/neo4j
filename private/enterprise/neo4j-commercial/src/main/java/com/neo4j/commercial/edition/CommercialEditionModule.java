@@ -19,11 +19,11 @@ import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.EditionModule;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.kernel.api.security.SecurityModule;
-import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
@@ -129,7 +129,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         }
         else
         {
-            securityProvider = NoAuthSecurityProvider.INSTANCE;
+            securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
         }
         editionModule.setSecurityProvider( securityProvider );
     }
