@@ -5,9 +5,11 @@
  */
 package com.neo4j.server.enterprise;
 
+import com.neo4j.server.database.CommercialGraphFactory;
+
 import java.util.ArrayList;
 import java.util.Collection;
-import javax.annotation.Nonnull;
+import java.util.List;
 
 import org.neo4j.causalclustering.core.CausalClusterConfigurationValidator;
 import org.neo4j.configuration.HaConfigurationValidator;
@@ -17,22 +19,26 @@ import org.neo4j.kernel.configuration.ConfigurationValidator;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.CommunityBootstrapper;
 import org.neo4j.server.NeoServer;
+import org.neo4j.server.database.GraphFactory;
 
 public class CommercialBootstrapper extends CommunityBootstrapper
 {
     @Override
-    protected NeoServer createNeoServer( Config configurator, GraphDatabaseDependencies dependencies,
-            LogProvider userLogProvider )
+    protected GraphFactory createGraphFactory( Config config )
     {
-        return new CommercialNeoServer( configurator, dependencies, userLogProvider );
+        return new CommercialGraphFactory();
     }
 
     @Override
-    @Nonnull
+    protected NeoServer createNeoServer( GraphFactory graphFactory, Config config, GraphDatabaseDependencies dependencies, LogProvider userLogProvider )
+    {
+        return new CommercialNeoServer( config, graphFactory, dependencies, userLogProvider );
+    }
+
+    @Override
     protected Collection<ConfigurationValidator> configurationValidators()
     {
-        ArrayList<ConfigurationValidator> validators = new ArrayList<>();
-        validators.addAll( super.configurationValidators() );
+        List<ConfigurationValidator> validators = new ArrayList<>( super.configurationValidators() );
         validators.add( new HaConfigurationValidator() );
         validators.add( new CausalClusterConfigurationValidator() );
         return validators;

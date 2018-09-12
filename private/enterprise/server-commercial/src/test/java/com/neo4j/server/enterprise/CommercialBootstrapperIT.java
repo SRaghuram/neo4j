@@ -21,10 +21,11 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
-import org.neo4j.server.BaseBootstrapperTestIT;
+import org.neo4j.server.BaseBootstrapperIT;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.ServerBootstrapper;
 import org.neo4j.server.ServerTestUtils;
+import org.neo4j.server.database.GraphFactory;
 import org.neo4j.test.rule.CleanupRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -42,7 +43,7 @@ import static org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig.certifica
 import static org.neo4j.server.ServerTestUtils.getRelativePath;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class CommercialBootstrapperTestIT extends BaseBootstrapperTestIT
+public class CommercialBootstrapperIT extends BaseBootstrapperIT
 {
     private final TemporaryFolder folder = new TemporaryFolder();
     private final CleanupRule cleanupRule = new CleanupRule();
@@ -156,11 +157,10 @@ public class CommercialBootstrapperTestIT extends BaseBootstrapperTestIT
         private LogProvider userLogProvider;
 
         @Override
-        protected NeoServer createNeoServer( Config configurator, GraphDatabaseDependencies dependencies,
-                LogProvider userLogProvider )
+        protected NeoServer createNeoServer( GraphFactory graphFactory, Config config, GraphDatabaseDependencies dependencies, LogProvider userLogProvider )
         {
             this.userLogProvider = userLogProvider;
-            return super.createNeoServer( configurator, dependencies, userLogProvider );
+            return super.createNeoServer( graphFactory, config, dependencies, userLogProvider );
         }
 
         LogProvider getUserLogProvider()
