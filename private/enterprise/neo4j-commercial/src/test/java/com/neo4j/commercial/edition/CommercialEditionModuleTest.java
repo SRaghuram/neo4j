@@ -5,7 +5,6 @@
  */
 package com.neo4j.commercial.edition;
 
-import com.neo4j.security.configuration.CommercialSecuritySettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -13,7 +12,6 @@ import org.mockito.InOrder;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -23,6 +21,8 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.ENTERPRISE;
+import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
+import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.auth_provider;
 
 @ExtendWith( TestDirectoryExtension.class )
 class CommercialEditionModuleTest
@@ -35,7 +35,7 @@ class CommercialEditionModuleTest
     {
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults();
-        config.augment( CommercialSecuritySettings.system_graph_authorization_enabled, Settings.TRUE );
+        config.augment( auth_provider, SYSTEM_GRAPH_REALM_NAME );
         PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, ENTERPRISE, newDependencies() );
         CommercialEditionModule editionModule = new CommercialEditionModule( platformModule );
         editionModule.createDatabases( manager, config );

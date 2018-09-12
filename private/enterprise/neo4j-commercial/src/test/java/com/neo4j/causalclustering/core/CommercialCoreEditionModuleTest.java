@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.discovery.SslSharedDiscoveryServiceFactory;
-import com.neo4j.security.configuration.CommercialSecuritySettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -25,6 +24,8 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.READ_REPLICA;
+import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
+import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.auth_provider;
 
 @ExtendWith( TestDirectoryExtension.class )
 class CommercialCoreEditionModuleTest
@@ -37,7 +38,7 @@ class CommercialCoreEditionModuleTest
     {
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
-        config.augment( CommercialSecuritySettings.system_graph_authorization_enabled, Settings.TRUE );
+        config.augment( auth_provider, SYSTEM_GRAPH_REALM_NAME );
         PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() );
         CommercialCoreEditionModule editionModule = new CommercialCoreEditionModule( platformModule, new SslSharedDiscoveryServiceFactory() );
         editionModule.createDatabases( manager, config );
