@@ -57,8 +57,8 @@
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-security-enterprise</artifactId>
             <version>${project.version}</version>
-            <classifier>tests</classifier>
             <scope>test</scope>
+            <type>test-jar</type>
         </dependency>
 
         <!-- External test dependencies -->
