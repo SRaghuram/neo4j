@@ -12,7 +12,7 @@ import org.mockito.stubbing.Answer;
 
 import java.time.Clock;
 
-import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.availability.AvailabilityListener;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;
@@ -43,7 +43,7 @@ class CompositeDatabaseAvailabilityGuardTest
     {
         mockClock = mock( Clock.class );
         compositeGuard = new CompositeDatabaseAvailabilityGuard( mockClock, NullLogService.getInstance() );
-        defaultGuard = compositeGuard.createDatabaseAvailabilityGuard( DatabaseManager.DEFAULT_DATABASE_NAME );
+        defaultGuard = compositeGuard.createDatabaseAvailabilityGuard( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         systemGuard = compositeGuard.createDatabaseAvailabilityGuard( "system.db" );
     }
 

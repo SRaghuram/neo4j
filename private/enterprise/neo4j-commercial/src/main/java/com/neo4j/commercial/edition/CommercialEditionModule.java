@@ -8,7 +8,6 @@ package com.neo4j.commercial.edition;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
-import com.neo4j.kernel.settings.CommercialGraphDatabaseSettings;
 
 import java.time.Clock;
 import java.util.function.Function;
@@ -85,7 +84,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
     {
         if ( isSystemDatabaseEnabled( config ) )
         {
-            databaseManager.createDatabase( CommercialGraphDatabaseSettings.SYSTEM_DB_NAME );
+            databaseManager.createDatabase( GraphDatabaseSettings.SYSTEM_DB_NAME );
         }
         createConfiguredDatabases( databaseManager, config );
     }

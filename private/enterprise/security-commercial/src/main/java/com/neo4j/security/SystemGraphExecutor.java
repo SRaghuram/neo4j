@@ -29,7 +29,7 @@ import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
-import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DB_NAME;
 
 class SystemGraphExecutor
 {

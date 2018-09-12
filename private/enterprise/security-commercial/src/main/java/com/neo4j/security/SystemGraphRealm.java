@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.cypher.result.QueryResult;
-import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -59,8 +59,8 @@ import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
-import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
 import static java.lang.String.format;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DB_NAME;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
 /**
@@ -363,7 +363,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
     {
-        addRoleToUserForDb( roleName, DatabaseManager.DEFAULT_DATABASE_NAME, username );
+        addRoleToUserForDb( roleName, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, username );
     }
 
     private void addRoleToUserForDb( String roleName, String dbName, String username ) throws InvalidArgumentsException
@@ -393,7 +393,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException
     {
-        removeRoleFromUserForDb( roleName, DatabaseManager.DEFAULT_DATABASE_NAME, username );
+        removeRoleFromUserForDb( roleName, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, username );
     }
 
     private void removeRoleFromUserForDb( String roleName, String dbName, String username ) throws InvalidArgumentsException
@@ -653,7 +653,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
 
     private void ensureDefaultDatabases() throws InvalidArgumentsException
     {
-        newDb( DatabaseManager.DEFAULT_DATABASE_NAME );
+        newDb( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         newDb( SYSTEM_DB_NAME );
     }
 

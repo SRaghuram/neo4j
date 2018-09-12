@@ -9,7 +9,7 @@ import org.junit.Test;
 
 import java.util.Map;
 
-import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.server.security.enterprise.auth.AuthProceduresInteractionTestBase;
 import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
@@ -45,10 +45,10 @@ public class SystemGraphEmbeddedUserManagementProceduresInteractionIT extends Au
         userManager.newRole( "new_role" );
         userManager.addRoleToUser( "new_role", "noneSubject" );
         assertTrue( "Should be connected to default db",
-                ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" ).contains( DatabaseManager.DEFAULT_DATABASE_NAME ) );
+                ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" ).contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
         assertEmpty( adminSubject, "CALL dbms.security.deleteRole('new_role')" );
         assertFalse( "Should not be connected to default db",
-                ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" ).contains( DatabaseManager.DEFAULT_DATABASE_NAME ) );
+                ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" ).contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
     }
 
 }
