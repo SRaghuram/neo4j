@@ -5,8 +5,7 @@
  */
 package com.neo4j.commandline.admin.security;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
-import com.neo4j.dbms.database.MultiDatabaseManager;
+//import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import com.neo4j.security.CommercialSecurityModule;
 
 import java.io.File;
@@ -23,11 +22,13 @@ import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
@@ -38,6 +39,8 @@ import org.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import org.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
+
+import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
 
 public class ImportAuthCommand implements AdminCommand
 {
@@ -55,7 +58,7 @@ public class ImportAuthCommand implements AdminCommand
             .withArgument( new OptionalNamedArg( ROLE_ARG_NAME, EnterpriseSecurityModule.ROLE_STORE_FILENAME, EnterpriseSecurityModule.ROLE_STORE_FILENAME,
                     "File name of role repository file to import." ))
             .withArgument( new OptionalBooleanArg( OFFLINE_ARG_NAME, false,
-                    "If set to true the actual import will happen immediately on an offline system database. " +
+                    "If set to true the actual import will happen immediately into an offline system graph. " +
                             "Otherwise the actual import will happen on the next startup of Neo4j." ))
             .withArgument( new OptionalBooleanArg( RESET_ARG_NAME, false,
                     "If set to true all existing auth data in the system graph will be deleted before importing the new data. " +
@@ -168,12 +171,7 @@ public class ImportAuthCommand implements AdminCommand
         FileUserRepository userRepository = new FileUserRepository( fileSystem, sourceUserFile, NullLogProvider.getInstance() );
         FileRoleRepository roleRepository = new FileRoleRepository( fileSystem, sourceRoleFile, NullLogProvider.getInstance() );
 
-        userRepository.init();
-        roleRepository.init();
-        userRepository.start();
-        roleRepository.start();
-
-        try
+        try ( Lifespan lifespan = new Lifespan( userRepository, roleRepository ) )
         {
             GraphDatabaseService systemDb = createSystemGraphDatabaseFacade( config );
             try
@@ -191,21 +189,15 @@ public class ImportAuthCommand implements AdminCommand
                 systemDb.shutdown();
             }
         }
-        finally
-        {
-            userRepository.stop();
-            roleRepository.stop();
-            userRepository.shutdown();
-            roleRepository.shutdown();
-        }
     }
 
     private GraphDatabaseService createSystemGraphDatabaseFacade( Config config )
     {
         File databaseDir = config.get( GraphDatabaseSettings.databases_root_path ).getAbsoluteFile();
-        File systemDbStoreDir = new File( databaseDir, MultiDatabaseManager.SYSTEM_DB_NAME );
+        File systemDbStoreDir = new File( databaseDir, SYSTEM_DB_NAME );
 
-        CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
+        //CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
+        EnterpriseGraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
         final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( systemDbStoreDir );
         GraphDatabaseService db = builder
                 .setConfig( SecuritySettings.native_import_auth, "true" )

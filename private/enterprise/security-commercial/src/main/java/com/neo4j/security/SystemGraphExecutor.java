@@ -172,7 +172,9 @@ class SystemGraphExecutor
 
     private void systemDbExecute( String query, Map<String,Object> parameters, QueryResult.QueryResultVisitor resultVisitor )
     {
-        try ( Transaction transaction = getSystemDb().beginTx() ) // TODO: REV Is it really safe begin transaction with AUTH_DISABLED here?
+        // NOTE: This transaction is executed with AUTH_DISABLED.
+        // We need to make sure this method is only accessible from a SecurityContext with admin rights.
+        try ( Transaction transaction = getSystemDb().beginTx() )
         {
             systemDbExecuteWithinTransaction( query, parameters, resultVisitor );
             transaction.success();
@@ -200,7 +202,6 @@ class SystemGraphExecutor
             onClose = () ->
             {
                 // Restore the outer transaction
-                statementContext.unbindTransactionFromCurrentThread();
                 statementContext.bindTransactionToCurrentThread( outerTx );
             };
         }
@@ -209,7 +210,7 @@ class SystemGraphExecutor
             onClose = () -> {};
         }
 
-        Transaction transaction = systemDb.beginTx();
+        Transaction transaction = getSystemDb().beginTx();
 
         return new Transaction()
         {
@@ -234,15 +235,13 @@ class SystemGraphExecutor
             @Override
             public void close()
             {
-                //assert activeSystemDbTransaction == transaction;
-                //activeSystemDbTransaction = null;
-
                 try
                 {
                     transaction.close();
                 }
                 finally
                 {
+                    statementContext.unbindTransactionFromCurrentThread();
                     onClose.run();
                 }
             }
@@ -267,7 +266,6 @@ class SystemGraphExecutor
         if ( threadToStatementContextBridge == null )
         {
             GraphDatabaseFacade activeDb = getDb( activeDbName );
-            systemDb = getDb( SYSTEM_DATABASE_NAME );
             threadToStatementContextBridge = activeDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         }
         return threadToStatementContextBridge;

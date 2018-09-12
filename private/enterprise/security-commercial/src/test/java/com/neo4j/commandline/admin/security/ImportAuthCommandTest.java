@@ -136,6 +136,7 @@ public class ImportAuthCommandTest
             assertEquals( String.format(
                     "usage: neo4j-admin import-auth [--users=<auth>] [--roles=<roles>]%n" +
                             "                               [--offline[=<true|false>]]%n" +
+                            "                               [--reset[=<true|false>]]%n" +
                             "%n" +
                             "environment variables:%n" +
                             "    NEO4J_CONF    Path to directory which contains neo4j.conf.%n" +
@@ -144,8 +145,10 @@ public class ImportAuthCommandTest
                             "    HEAP_SIZE     Set JVM maximum heap size during command execution.%n" +
                             "                  Takes a number and a unit, for example 512m.%n" +
                             "%n" +
-                            "Import users and roles from files into system graph, for example when upgrading%n" +
-                            "to neo4j 3.5 commercial.%n" +
+                            "Import users and roles from files into the system graph, for example when%n" +
+                            "upgrading to Neo4j 3.5 Commercial Edition. This can be used to migrate auth data%n" +
+                            "from the flat files used as storage by the old native auth provider into the%n" +
+                            "'system-graph' auth provider.%n" +
                             "%n" +
                             "options:%n" +
                             "  --users=<auth>           File name of user repository file to import.%n" +
@@ -153,9 +156,13 @@ public class ImportAuthCommandTest
                             "  --roles=<roles>          File name of role repository file to import.%n" +
                             "                           [default:roles]%n" +
                             "  --offline=<true|false>   If set to true the actual import will happen%n" +
-                            "                           immediately on an offline system database. Otherwise%n" +
+                            "                           immediately into an offline system graph. Otherwise%n" +
                             "                           the actual import will happen on the next startup of%n" +
-                            "                           Neo4j. [default:false]%n"),
+                            "                           Neo4j. [default:false]%n" +
+                            "  --reset=<true|false>     If set to true all existing auth data in the system%n" +
+                            "                           graph will be deleted before importing the new data.%n" +
+                            "                           This only works in combination with --offline%n" +
+                            "                           [default:false]%n" ),
                     baos.toString() );
         }
     }

@@ -10,20 +10,20 @@ import java.util.function.Supplier;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.RoleRepository;
 
-public class SystemGraphImportOptions
+class SystemGraphImportOptions
 {
-    public boolean shouldPerformImport;
-    public boolean mayPerformMigration;
-    public boolean shouldPurgeImportRepositoriesAfterSuccesfulImport;
-    public boolean shouldResetSystemGraphAuthBeforeImport;
-    public Supplier<UserRepository> importUserRepositorySupplier;
-    public Supplier<RoleRepository> importRoleRepositorySupplier;
-    public Supplier<UserRepository> migrationUserRepositorySupplier;
-    public Supplier<RoleRepository> migrationRoleRepositorySupplier;
-    public Supplier<UserRepository> initialUserRepositorySupplier;
-    public Supplier<UserRepository> defaultAdminRepositorySupplier;
+    boolean shouldPerformImport;
+    boolean mayPerformMigration;
+    boolean shouldPurgeImportRepositoriesAfterSuccesfulImport;
+    boolean shouldResetSystemGraphAuthBeforeImport;
+    Supplier<UserRepository> importUserRepositorySupplier;
+    Supplier<RoleRepository> importRoleRepositorySupplier;
+    Supplier<UserRepository> migrationUserRepositorySupplier;
+    Supplier<RoleRepository> migrationRoleRepositorySupplier;
+    Supplier<UserRepository> initialUserRepositorySupplier;
+    Supplier<UserRepository> defaultAdminRepositorySupplier;
 
-    public SystemGraphImportOptions(
+    SystemGraphImportOptions(
             boolean shouldPerformImport,
             boolean mayPerformMigration,
             boolean shouldPurgeImportRepositoriesAfterSuccesfulImport,

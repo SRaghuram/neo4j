@@ -6,7 +6,6 @@
 package com.neo4j.security;
 
 import com.neo4j.security.configuration.CommercialSecuritySettings;
-import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.io.File;
 import java.util.function.Supplier;
@@ -36,6 +35,7 @@ import org.neo4j.server.security.enterprise.log.SecurityLog;
 
 import static com.neo4j.commandline.admin.security.ImportAuthCommand.ROLE_IMPORT_FILENAME;
 import static com.neo4j.commandline.admin.security.ImportAuthCommand.USER_IMPORT_FILENAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @Service.Implementation( SecurityModule.class )
 public class CommercialSecurityModule extends EnterpriseSecurityModule
@@ -128,10 +128,6 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
 
         Supplier<UserRepository> importUserRepositorySupplier = () -> importUserRepository;
         Supplier<RoleRepository> importRoleRepositorySupplier = () -> importRoleRepository;
-        Supplier<UserRepository> migrationUserRepositorySupplier = null;
-        Supplier<RoleRepository> migrationRoleRepositorySupplier = null;
-        Supplier<UserRepository> initialUserRepositorySupplier = null;
-        Supplier<UserRepository> defaultAdminRepositorySupplier = null;
 
         return new SystemGraphImportOptions(
                 shouldPerformImport,
@@ -140,10 +136,10 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
                 shouldResetSystemGraphAuthBeforeImport,
                 importUserRepositorySupplier,
                 importRoleRepositorySupplier,
-                migrationUserRepositorySupplier,
-                migrationRoleRepositorySupplier,
-                initialUserRepositorySupplier,
-                defaultAdminRepositorySupplier
+                /* migrationUserRepositorySupplier = */ null,
+                /* migrationRoleRepositorySupplier = */ null,
+                /* initialUserRepositorySupplier = */ null,
+                /* defaultAdminRepositorySupplier = */ null
         );
     }
 
@@ -262,8 +258,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
             boolean shouldResetSystemGraphAuthBeforeImport )
     {
         return new SystemGraphRealm(
-                //new SystemGraphExecutor( databaseManager, config.get( GraphDatabaseSettings.active_database ) ),
-                new SystemGraphExecutor( databaseManager, MultiDatabaseManager.SYSTEM_DB_NAME ),
+                new SystemGraphExecutor( databaseManager, SYSTEM_DATABASE_NAME ),
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 createAuthenticationStrategy( config ),

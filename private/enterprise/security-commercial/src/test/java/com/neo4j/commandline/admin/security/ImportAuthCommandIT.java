@@ -5,7 +5,6 @@
  */
 package com.neo4j.commandline.admin.security;
 
-import com.neo4j.dbms.database.MultiDatabaseManager;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -21,7 +20,6 @@ import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.NullLogProvider;
@@ -33,6 +31,7 @@ import org.neo4j.server.security.enterprise.auth.RoleRecord;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
+import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertFalse;
@@ -86,7 +85,7 @@ public class ImportAuthCommandIT
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME );
 
         // Then
-        assertUserImportFileContains( "jane", "alice", "bob", "jim" );
+        assertUserImportFileContainsOnly( "jane", "alice", "bob", "jim" );
         assertRoleImportFileContains( "flunky","jane" );
         assertRoleImportFileContains( "goon","bob", "jim" );
         assertRoleImportFileContains( "taskmaster","alice" );
@@ -107,7 +106,7 @@ public class ImportAuthCommandIT
                 "--" + ImportAuthCommand.USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME );
 
         // Then
-        assertUserImportFileContains( "jane", "alice", "bob", "jim" );
+        assertUserImportFileContainsOnly( "jane", "alice", "bob", "jim" );
         assertRoleImportFileContains( "flunky", "jane" );
         assertRoleImportFileContains( "goon", "bob", "jim" );
         assertRoleImportFileContains( "taskmaster", "alice" );
@@ -127,7 +126,7 @@ public class ImportAuthCommandIT
                 "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME );
 
         // Then
-        assertUserImportFileContains( "alice", "bob" );
+        assertUserImportFileContainsOnly( "alice", "bob" );
         assertRoleImportFileContains( "duct_taper", "alice" );
         assertRoleImportFileContains( "box_ticker","bob" );
         assertSuccessfulOutputMessage();
@@ -147,7 +146,7 @@ public class ImportAuthCommandIT
                 "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME );
 
         // Then
-        assertUserImportFileContains( "alice", "bob" );
+        assertUserImportFileContainsOnly( "alice", "bob" );
         assertRoleImportFileContains( "duct_taper", "alice" );
         assertRoleImportFileContains( "box_ticker","bob" );
         assertSuccessfulOutputMessage();
@@ -168,7 +167,7 @@ public class ImportAuthCommandIT
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME );
 
         // Then
-        assertUserImportFileContains( "jim", "john" );
+        assertUserImportFileContainsOnly( "jim", "john" );
         assertRoleImportFileContains( "flunky","jim" );
         assertRoleImportFileContains( "goon","john" );
         assertSuccessfulOutputMessage();
@@ -183,7 +182,7 @@ public class ImportAuthCommandIT
                 "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME );
 
         // Then
-        assertUserImportFileContains( "alice", "bob" );
+        assertUserImportFileContainsOnly( "alice", "bob" );
         assertRoleImportFileContains( "duct_taper", "alice" );
         assertRoleImportFileContains( "box_ticker","bob" );
         assertSuccessfulOutputMessage( 2 );
@@ -384,7 +383,7 @@ public class ImportAuthCommandIT
         roleRepository.shutdown();
     }
 
-    private void assertUserImportFileContains( String... usernames ) throws Throwable
+    private void assertUserImportFileContainsOnly( String... usernames ) throws Throwable
     {
         File importFile = getFile( ImportAuthCommand.USER_IMPORT_FILENAME );
         assertTrue( fileSystem.fileExists( importFile ) );
@@ -395,14 +394,14 @@ public class ImportAuthCommandIT
         assertThat( allUsernames, containsInAnyOrder( usernames ) );
     }
 
-    private void assertRoleImportFileContains( String roleName, String... usernames ) throws Throwable
+    private void assertRoleImportFileContains( String roleName, String... withOnlyUsernames ) throws Throwable
     {
         File importFile = getFile( ImportAuthCommand.ROLE_IMPORT_FILENAME );
         assertTrue( fileSystem.fileExists( importFile ) );
         FileRoleRepository roleRepository = new FileRoleRepository( fileSystem, importFile,
                 NullLogProvider.getInstance() );
         roleRepository.start();
-        for ( String username : usernames )
+        for ( String username : withOnlyUsernames )
         {
             assertThat( roleRepository.getRoleNamesByUsername( username ), containsInAnyOrder( roleName ) );
         }
@@ -449,7 +448,7 @@ public class ImportAuthCommandIT
 
     private File getSystemDbDirectory()
     {
-        return new File( new File( new File( homeDir, "data" ), "databases" ), MultiDatabaseManager.SYSTEM_DB_NAME );
+        return new File( new File( new File( homeDir, "data" ), "databases" ), SYSTEM_DB_NAME );
     }
     private File getFile( String name )
     {

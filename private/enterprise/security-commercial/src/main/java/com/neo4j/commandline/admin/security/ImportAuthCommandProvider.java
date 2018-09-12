@@ -32,15 +32,17 @@ public class ImportAuthCommandProvider extends AdminCommand.Provider
     @Nonnull
     public String description()
     {
-        return "Import users and roles from files into system graph, " +
-                "for example when upgrading to neo4j 3.5 commercial.";
+        return "Import users and roles from files into the system graph, " +
+                "for example when upgrading to Neo4j 3.5 Commercial Edition. " +
+                "This can be used to migrate auth data from the flat files used " +
+                "as storage by the old native auth provider into the 'system-graph' auth provider.";
     }
 
     @Override
     @Nonnull
     public String summary()
     {
-        return "Import users and roles from files into system graph.";
+        return "Import users and roles from files into the system graph.";
     }
 
     @Override

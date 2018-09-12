@@ -5,7 +5,6 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.dbms.database.MultiDatabaseManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +46,7 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
 import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 
+import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.startsWith;
@@ -447,7 +447,7 @@ public class SystemGraphRealmTest
         @Override
         public Optional<GraphDatabaseFacade> getDatabaseFacade( String name )
         {
-            if ( MultiDatabaseManager.SYSTEM_DB_NAME.equals( name ) )
+            if ( SYSTEM_DB_NAME.equals( name ) )
             {
                 return Optional.of( testSystemDb );
             }
