@@ -103,6 +103,7 @@ mkdir -p %{buildroot}/%{_datadir}/neo4j/bin/tools
 mkdir -p %{buildroot}/%{_datadir}/doc/neo4j
 mkdir -p %{buildroot}/%{neo4jhome}/plugins
 mkdir -p %{buildroot}/%{neo4jhome}/data/databases
+mkdir -p %{buildroot}/%{neo4jhome}/data/dbms
 mkdir -p %{buildroot}/%{neo4jhome}/import
 mkdir -p %{buildroot}/%{_sysconfdir}/neo4j
 mkdir -p %{buildroot}/%{_localstatedir}/log/neo4j
@@ -139,6 +140,7 @@ install -m 0644 manpages/* %{buildroot}/%{_mandir}/man1
 %dir %{neo4jhome}/plugins
 %dir %{neo4jhome}/import
 %dir %{neo4jhome}/data/databases
+%dir %{neo4jhome}/data/dbms
 %attr(-,neo4j,neo4j) %dir %{_localstatedir}/run/neo4j
 
 %{_datadir}/neo4j
