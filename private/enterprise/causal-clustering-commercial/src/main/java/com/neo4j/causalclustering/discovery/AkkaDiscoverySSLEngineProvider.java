@@ -32,35 +32,32 @@ public class AkkaDiscoverySSLEngineProvider implements SSLEngineProvider
     @Override
     public SSLEngine createServerSSLEngine( String hostname, int port )
     {
-        return createSSLEngine( false, hostname, port );
+        SSLEngine sslEngine = createSSLEngine( false, hostname, port );
+        sslEngine.setWantClientAuth( ClientAuth.OPTIONAL.equals( sslPolicy.getClientAuth() ) );
+        sslEngine.setNeedClientAuth( ClientAuth.REQUIRE.equals( sslPolicy.getClientAuth() ) );
+        return  sslEngine;
     }
 
     @Override
     public SSLEngine createClientSSLEngine( String hostname, int port )
     {
-        return createSSLEngine( true, hostname, port );
+        SSLEngine sslEngine = createSSLEngine( true, hostname, port );
+        if ( sslPolicy.isVerifyHostname() )
+        {
+            sslEngine = new HostnameVerificationEngineModification().apply( sslEngine );
+        }
+        return sslEngine;
     }
 
     private SSLEngine createSSLEngine( boolean isClient, String hostname, int port )
     {
         SSLEngine sslEngine = sslContext.createSSLEngine( hostname, port );
 
-        if ( sslPolicy.isVerifyHostname() )
-        {
-            sslEngine = new HostnameVerificationEngineModification().apply( sslEngine );
-        }
-
         sslEngine = new EssentialEngineModifications( sslPolicy.getTlsVersions(), isClient ).apply( sslEngine );
 
         if ( sslPolicy.getCipherSuites() != null )
         {
             sslEngine.setEnabledCipherSuites( sslPolicy.getCipherSuites().toArray( new String[0] ) );
-        }
-
-        if ( !isClient )
-        {
-            sslEngine.setWantClientAuth( ClientAuth.OPTIONAL.equals( sslPolicy.getClientAuth() ) );
-            sslEngine.setNeedClientAuth( ClientAuth.REQUIRE.equals( sslPolicy.getClientAuth() ) );
         }
 
         return sslEngine;

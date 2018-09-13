@@ -24,7 +24,11 @@ import com.neo4j.causalclustering.discovery.AkkaDiscoverySSLEngineProvider;
 import com.typesafe.config.ConfigFactory;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,6 +36,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
+import javax.net.ssl.SSLEngine;
 
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
@@ -45,14 +51,16 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.ssl.SslContextFactory.SslParameters.protocols;
-import static org.neo4j.ssl.SslContextFactory.makeSslPolicy;
 import static org.neo4j.ssl.HostnameVerificationHelper.POLICY_NAME;
+import static org.neo4j.ssl.HostnameVerificationHelper.SSL_POLICY_CONFIG;
 import static org.neo4j.ssl.HostnameVerificationHelper.aConfig;
 import static org.neo4j.ssl.HostnameVerificationHelper.trust;
+import static org.neo4j.ssl.SslContextFactory.SslParameters.protocols;
+import static org.neo4j.ssl.SslContextFactory.makeSslPolicy;
 import static org.neo4j.ssl.SslResourceBuilder.caSignedKeyId;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
+@RunWith( Parameterized.class )
 public class AkkaDiscoverySSLEngineProviderIT
 {
     private static final String MSG = "When in doubt, burn it to the ground and start from scratch";
@@ -69,6 +77,15 @@ public class AkkaDiscoverySSLEngineProviderIT
 
     @Rule
     public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
+
+    @Parameterized.Parameter
+    public Function<SslPolicy,SSLEngineProvider> sslEngineProviderFactory;
+
+    @Parameterized.Parameters
+    public static Collection<Function<SslPolicy, SSLEngineProvider>> data()
+    {
+        return Arrays.asList( AkkaDiscoverySSLEngineProvider::new, TestSSLEngineProvider::new );
+    }
 
     @Test
     public void shouldConnectWithMutualTrust() throws Throwable
@@ -216,6 +233,24 @@ public class AkkaDiscoverySSLEngineProviderIT
         testConnection( clientPolicy, serverPolicy, this::accept );
     }
 
+    @Test
+    public void shouldConnectWithHostnameVerificationAndClientAuth() throws Throwable
+    {
+        Config serverConfig = aConfig( "localhost", testDir );
+        serverConfig.augment( SSL_POLICY_CONFIG.client_auth, "require" );
+
+        Config clientConfig = aConfig( "localhost", testDir );
+        clientConfig.augment( SSL_POLICY_CONFIG.client_auth, "require" );
+
+        trust( serverConfig, clientConfig );
+        trust( clientConfig, serverConfig );
+
+        SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+        SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( POLICY_NAME );
+
+        testConnection( clientPolicy, serverPolicy, this::accept );
+    }
+
     private ActorSystem createActorSystem( String name, SSLEngineProvider sslEngineProvider )
     {
         BootstrapSetup bootstrap = BootstrapSetup.create().withActorRefProvider( ProviderSelection.remote() ).withConfig( config() );
@@ -257,10 +292,10 @@ public class AkkaDiscoverySSLEngineProviderIT
     private void testConnection( SslPolicy clientSslPolicy, SslPolicy serverSslPolicy, BiConsumer<TestProbe,TestProbe> verify )
             throws InterruptedException, ExecutionException, TimeoutException
     {
-        AkkaDiscoverySSLEngineProvider clientSslProvider = new AkkaDiscoverySSLEngineProvider( clientSslPolicy );
+        SSLEngineProvider clientSslProvider = sslEngineProviderFactory.apply( clientSslPolicy );
         ActorSystem clientActorSystem = createActorSystem( "client", clientSslProvider );
 
-        AkkaDiscoverySSLEngineProvider serverSslProvider = new AkkaDiscoverySSLEngineProvider( serverSslPolicy );
+        SSLEngineProvider serverSslProvider = sslEngineProviderFactory.apply( serverSslPolicy );
         ActorSystem serverActorSystem = createActorSystem( "server", serverSslProvider );
 
         TestProbe serverMsgProbe = new TestProbe( serverActorSystem );
@@ -323,6 +358,24 @@ public class AkkaDiscoverySSLEngineProviderIT
                         remote.forward( msg, getContext() );
                     } )
                     .build();
+        }
+    }
+
+    private static class TestSSLEngineProvider extends AkkaDiscoverySSLEngineProvider
+    {
+        TestSSLEngineProvider( SslPolicy sslPolicy )
+        {
+            super( sslPolicy );
+        }
+
+        /**
+         * @param hostname ignored, with 0.0.0.0 instead. This has been observed, and has caused the combination
+         * of client auth and hostname verification to fail.
+         */
+        @Override
+        public SSLEngine createServerSSLEngine( String hostname, int port )
+        {
+            return super.createServerSSLEngine( "0.0.0.0", port );
         }
     }
 }
