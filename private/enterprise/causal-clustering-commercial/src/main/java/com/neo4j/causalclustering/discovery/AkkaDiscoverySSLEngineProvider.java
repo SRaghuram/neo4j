@@ -14,7 +14,7 @@ import javax.net.ssl.SSLSession;
 
 import org.neo4j.ssl.ClientAuth;
 import org.neo4j.ssl.EssentialEngineModifications;
-import org.neo4j.ssl.HostnameVerificationEngineModification;
+import org.neo4j.ssl.ClientSideHostnameVerificationEngineModification;
 import org.neo4j.ssl.SslPolicy;
 
 public class AkkaDiscoverySSLEngineProvider implements SSLEngineProvider
@@ -44,7 +44,7 @@ public class AkkaDiscoverySSLEngineProvider implements SSLEngineProvider
         SSLEngine sslEngine = createSSLEngine( true, hostname, port );
         if ( sslPolicy.isVerifyHostname() )
         {
-            sslEngine = new HostnameVerificationEngineModification().apply( sslEngine );
+            sslEngine = new ClientSideHostnameVerificationEngineModification().apply( sslEngine );
         }
         return sslEngine;
     }
