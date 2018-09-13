@@ -22,12 +22,12 @@ import static org.neo4j.server.security.enterprise.configuration.SecuritySetting
 @Description( "Commercial edition security settings" )
 public class CommercialSecuritySettings implements LoadableConfig
 {
-    @Description( "Enable authentication via system-graph provider." )
+    @Description( "Enable authentication via system graph authentication provider." )
     @Internal
     public static final Setting<Boolean> system_graph_authentication_enabled =
             derivedSetting( "dbms.security.system_graph.authentication_enabled", auth_providers, containsSystemGraphRealm(), BOOLEAN );
 
-    @Description( "Enable authorization via system-graph authorization provider." )
+    @Description( "Enable authorization via system graph authorization provider." )
     @Internal
     public static final Setting<Boolean> system_graph_authorization_enabled =
             derivedSetting( "dbms.security.system_graph.authorization_enabled", auth_providers, containsSystemGraphRealm(), BOOLEAN );

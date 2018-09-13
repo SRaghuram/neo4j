@@ -116,7 +116,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
             if ( hasSystemGraphProvider && !systemGraphAuthentication && !systemGraphAuthorization )
             {
                 throw illegalConfiguration(
-                        "System-graph auth provider configured, but both authentication and authorization are disabled." );
+                        "System graph auth provider configured, but both authentication and authorization are disabled." );
             }
 
             if ( hasLdapProvider && !ldapAuthentication && !ldapAuthorization )
@@ -139,7 +139,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
             if ( hasNativeProvider && hasSystemGraphProvider )
             {
                 throw illegalConfiguration(
-                        "Both system-graph auth provider and native auth provider configured," +
+                        "Both system graph auth provider and native auth provider configured," +
                         " but they cannot be used together. Please remove one of them from the configuration." );
             }
         }

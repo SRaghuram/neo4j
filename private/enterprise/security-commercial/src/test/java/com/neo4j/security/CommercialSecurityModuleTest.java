@@ -100,7 +100,7 @@ class CommercialSecurityModuleTest
         authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: System-graph auth provider configured, " +
+        assertIllegalArgumentException( "Illegal configuration: System graph auth provider configured, " +
                 "but both authentication and authorization are disabled." );
     }
 
@@ -153,7 +153,7 @@ class CommercialSecurityModuleTest
         );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: Both system-graph auth provider and native auth provider configured," +
+        assertIllegalArgumentException( "Illegal configuration: Both system graph auth provider and native auth provider configured," +
                 " but they cannot be used together. Please remove one of them from the configuration." );
     }
 
