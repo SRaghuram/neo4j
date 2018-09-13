@@ -13,7 +13,7 @@ import java.util.function.Function;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.PlatformModule;
-import org.neo4j.graphdb.factory.module.edition.EditionModule;
+import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 
@@ -23,7 +23,7 @@ public class CommercialCoreGraphDatabase extends CoreGraphDatabase
                                         GraphDatabaseFacadeFactory.Dependencies dependencies,
                                         SslDiscoveryServiceFactory discoveryServiceFactory )
     {
-        Function<PlatformModule,EditionModule> factory =
+        Function<PlatformModule,AbstractEditionModule> factory =
                 platformModule -> new CommercialCoreEditionModule( platformModule, discoveryServiceFactory );
         new GraphDatabaseFacadeFactory( DatabaseInfo.CORE, factory ).initFacade( storeDir, config, dependencies, this );
     }

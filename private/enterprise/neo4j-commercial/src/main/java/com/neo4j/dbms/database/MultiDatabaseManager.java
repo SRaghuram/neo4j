@@ -13,7 +13,7 @@ import org.neo4j.graphdb.facade.spi.ClassicCoreSPI;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DataSourceModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
-import org.neo4j.graphdb.factory.module.edition.EditionModule;
+import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -27,12 +27,12 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
 {
     private final CopyOnWriteHashMap<String, GraphDatabaseFacade> databaseMap = new CopyOnWriteHashMap<>();
     private final PlatformModule platform;
-    private final EditionModule edition;
+    private final AbstractEditionModule edition;
     private final Procedures procedures;
     private final Logger log;
     private final GraphDatabaseFacade graphDatabaseFacade;
 
-    public MultiDatabaseManager( PlatformModule platform, EditionModule edition, Procedures procedures,
+    public MultiDatabaseManager( PlatformModule platform, AbstractEditionModule edition, Procedures procedures,
             Logger log, GraphDatabaseFacade graphDatabaseFacade )
     {
         this.platform = platform;

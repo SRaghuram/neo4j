@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
-import org.neo4j.graphdb.factory.module.edition.EditionModule;
+import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
@@ -68,7 +68,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
     }
 
     @Override
-    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, PlatformModule platform, EditionModule edition,
+    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, PlatformModule platform, AbstractEditionModule edition,
             Procedures procedures, Logger msgLog )
     {
         return new MultiDatabaseManager( platform, edition, procedures, msgLog, graphDatabaseFacade );
@@ -125,7 +125,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         createCommercialSecurityModule( this, platformModule, procedures );
     }
 
-    private static void createCommercialSecurityModule( EditionModule editionModule, PlatformModule platformModule, Procedures procedures )
+    private static void createCommercialSecurityModule( AbstractEditionModule editionModule, PlatformModule platformModule, Procedures procedures )
     {
         SecurityProvider securityProvider;
         if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )

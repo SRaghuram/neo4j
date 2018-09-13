@@ -22,7 +22,7 @@ import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.PlatformModule;
-import org.neo4j.graphdb.factory.module.edition.EditionModule;
+import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
@@ -41,7 +41,7 @@ import org.neo4j.ssl.SslPolicy;
 import static com.neo4j.commercial.edition.CommercialEditionModule.createCommercialEditionDatabases;
 
 /**
- * This implementation of {@link EditionModule} creates the implementations of services
+ * This implementation of {@link AbstractEditionModule} creates the implementations of services
  * that are specific to the Enterprise Core edition that provides a core cluster.
  */
 public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
@@ -71,7 +71,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     }
 
     @Override
-    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, PlatformModule platform, EditionModule edition,
+    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, PlatformModule platform, AbstractEditionModule edition,
             Procedures procedures, Logger msgLog )
     {
         return new MultiDatabaseManager( platform, edition, procedures, msgLog, graphDatabaseFacade );

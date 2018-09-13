@@ -16,7 +16,7 @@ import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
 import org.neo4j.graphdb.factory.module.PlatformModule;
-import org.neo4j.graphdb.factory.module.edition.EditionModule;
+import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 
@@ -30,7 +30,7 @@ public class CommercialReadReplicaGraphDatabase extends ReadReplicaGraphDatabase
     public CommercialReadReplicaGraphDatabase( File storeDir, Config config, Dependencies dependencies,
                                                SslDiscoveryServiceFactory discoveryServiceFactory, MemberId memberId )
     {
-        Function<PlatformModule,EditionModule> factory =
+        Function<PlatformModule,AbstractEditionModule> factory =
                 platformModule -> new CommercialReadReplicaEditionModule( platformModule,
                         discoveryServiceFactory, memberId );
         new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config,
