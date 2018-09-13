@@ -21,7 +21,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.internal.NullLogService;
@@ -35,6 +34,8 @@ import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
 import static java.lang.Long.max;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.test.proc.ProcessUtil.getClassPath;
+import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
 import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
@@ -98,7 +99,7 @@ public class RestartableImportIT
 
     private Process startImportInSeparateProcess( File databaseDirectory ) throws IOException
     {
-        ProcessBuilder pb = new ProcessBuilder( ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(),
+        ProcessBuilder pb = new ProcessBuilder( getJavaExecutable().toString(), "-cp", getClassPath(),
                 getClass().getCanonicalName(), databaseDirectory.getPath(), Long.toString( random.seed() ) );
         File wd = new File( "target/test-classes" ).getAbsoluteFile();
         Files.createDirectories( wd.toPath() );
