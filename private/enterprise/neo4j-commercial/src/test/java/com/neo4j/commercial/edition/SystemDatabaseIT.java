@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DB_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.count;
 import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
 import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.auth_provider;
@@ -66,7 +66,7 @@ class SystemDatabaseIT
                 .setConfig( auth_provider, SYSTEM_GRAPH_REALM_NAME ).newGraphDatabase();
         databaseManager = getDatabaseManager( database );
         defaultDb = getDatabaseByName( databaseManager, DEFAULT_DATABASE_NAME );
-        systemDb = getDatabaseByName( databaseManager, SYSTEM_DB_NAME );
+        systemDb = getDatabaseByName( databaseManager, SYSTEM_DATABASE_NAME );
     }
 
     @AfterEach
@@ -183,7 +183,7 @@ class SystemDatabaseIT
             File disabledSystemDbDirectory = testDirectory.databaseDir( "disabledSystemDb" );
             databaseWithoutSystemDb = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledSystemDbDirectory ).newGraphDatabase();
             DatabaseManager databaseManager = getDatabaseManager( databaseWithoutSystemDb );
-            assertFalse( databaseManager.getDatabaseFacade( SYSTEM_DB_NAME ).isPresent() );
+            assertFalse( databaseManager.getDatabaseFacade( SYSTEM_DATABASE_NAME ).isPresent() );
         }
         finally
         {

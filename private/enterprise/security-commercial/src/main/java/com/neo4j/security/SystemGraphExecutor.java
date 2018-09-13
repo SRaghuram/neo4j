@@ -29,7 +29,7 @@ import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DB_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 class SystemGraphExecutor
 {
@@ -147,7 +147,7 @@ class SystemGraphExecutor
         if ( statementContext == null )
         {
             GraphDatabaseFacade activeDb = getDb( activeDbName );
-            systemDb = getDb( SYSTEM_DB_NAME );
+            systemDb = getDb( SYSTEM_DATABASE_NAME );
             statementContext = activeDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
         }
 

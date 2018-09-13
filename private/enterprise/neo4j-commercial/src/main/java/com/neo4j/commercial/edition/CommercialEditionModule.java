@@ -84,7 +84,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
     {
         if ( isSystemDatabaseEnabled( config ) )
         {
-            databaseManager.createDatabase( GraphDatabaseSettings.SYSTEM_DB_NAME );
+            databaseManager.createDatabase( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         }
         createConfiguredDatabases( databaseManager, config );
     }
