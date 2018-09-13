@@ -12,12 +12,14 @@ import org.apache.lucene.queryparser.classic.ParseException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.exceptions.InvalidTransactionTypeKernelException;
@@ -143,7 +145,9 @@ public class FulltextProcedures
                     ", so it cannot be queried for nodes." );
         }
         ScoreEntityIterator resultIterator = accessor.query( tx, name, query );
-        return resultIterator.stream().map( result -> new NodeOutput( db.getNodeById( result.entityId() ), result.score() ) );
+        return resultIterator.stream()
+                .map( result -> NodeOutput.forExistingEntityOrNull( db, result ) )
+                .filter( Objects::nonNull );
     }
 
     @Description( "Query the given fulltext index. Returns the matching relationships and their lucene query score, ordered by score." )
@@ -159,7 +163,9 @@ public class FulltextProcedures
                     ", so it cannot be queried for relationships." );
         }
         ScoreEntityIterator resultIterator = accessor.query( tx, name, query );
-        return resultIterator.stream().map( result -> new RelationshipOutput( db.getRelationshipById( result.entityId() ), result.score() ) );
+        return resultIterator.stream()
+                .map( result -> RelationshipOutput.forExistingEntityOrNull( db, result ) )
+                .filter( Objects::nonNull );
     }
 
     public static final class EntityIdOutput
@@ -184,6 +190,19 @@ public class FulltextProcedures
             this.node = node;
             this.score = score;
         }
+
+        public static NodeOutput forExistingEntityOrNull( GraphDatabaseService db, ScoreEntityIterator.ScoreEntry result )
+        {
+            try
+            {
+                return new NodeOutput( db.getNodeById( result.entityId() ), result.score() );
+            }
+            catch ( NotFoundException ignore )
+            {
+                // This node was most likely deleted by a concurrent transaction, so we just ignore it.
+                return null;
+            }
+        }
     }
 
     public static final class RelationshipOutput
@@ -195,6 +214,19 @@ public class FulltextProcedures
         {
             this.relationship = relationship;
             this.score = score;
+        }
+
+        public static RelationshipOutput forExistingEntityOrNull( GraphDatabaseService db, ScoreEntityIterator.ScoreEntry result )
+        {
+            try
+            {
+                return new RelationshipOutput( db.getRelationshipById( result.entityId() ), result.score() );
+            }
+            catch ( NotFoundException ignore )
+            {
+                // This relationship was most likely deleted by a concurrent transaction, so we just ignore it.
+                return null;
+            }
         }
     }
 

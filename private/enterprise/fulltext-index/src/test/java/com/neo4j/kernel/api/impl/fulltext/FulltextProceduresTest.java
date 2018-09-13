@@ -54,6 +54,7 @@ import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.ThreadTestUtils;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.VerboseTimeout;
@@ -89,6 +90,7 @@ public class FulltextProceduresTest
 
     private static final String SCORE = "score";
     static final String ENTITYID = "entityId";
+    public static final String DESCARTES_MEDITATIONES = "/meditationes--rene-descartes--public-domain.txt";
 
     private final Timeout timeout = VerboseTimeout.builder().withTimeout( 1, TimeUnit.MINUTES ).build();
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
@@ -431,7 +433,7 @@ public class FulltextProceduresTest
                 Relationship rel = node.createRelationshipTo( node, relType );
                 rel.setProperty( prop, value );
                 nodeIds.add( node.getId() );
-                relIds. add( rel.getId() );
+                relIds.add( rel.getId() );
             }
             tx.success();
         }
@@ -489,7 +491,7 @@ public class FulltextProceduresTest
                 Relationship rel = node.createRelationshipTo( node, relType );
                 rel.setProperty( prop, value );
                 nodeIds.add( node.getId() );
-                relIds. add( rel.getId() );
+                relIds.add( rel.getId() );
             }
             tx.success();
         }
@@ -521,7 +523,7 @@ public class FulltextProceduresTest
                 Relationship rel = node.createRelationshipTo( node, relType );
                 rel.setProperty( prop, value );
                 nodeIds.add( node.getId() );
-                relIds. add( rel.getId() );
+                relIds.add( rel.getId() );
             }
             tx.success();
         }
@@ -563,7 +565,7 @@ public class FulltextProceduresTest
                 Relationship rel = node.createRelationshipTo( node, relType );
                 rel.setProperty( prop, oldValue );
                 nodeIds.add( node.getId() );
-                relIds. add( rel.getId() );
+                relIds.add( rel.getId() );
             }
             tx.success();
         }
@@ -1079,8 +1081,8 @@ public class FulltextProceduresTest
     public void mustBeAbleToIndexHugeTextPropertiesInIndexUpdates() throws Exception
     {
         String meditationes;
-        try ( BufferedReader reader = new BufferedReader( new InputStreamReader(
-                getClass().getResourceAsStream( "/meditationes--rene-descartes--public-domain.txt" ), StandardCharsets.UTF_8 ) ) )
+        try ( BufferedReader reader = new BufferedReader(
+                new InputStreamReader( getClass().getResourceAsStream( DESCARTES_MEDITATIONES ), StandardCharsets.UTF_8 ) ) )
         {
             meditationes = reader.lines().collect( Collectors.joining( "\n" ) );
         }
@@ -1117,8 +1119,8 @@ public class FulltextProceduresTest
     public void mustBeAbleToIndexHugeTextPropertiesInIndexPopulation() throws Exception
     {
         String meditationes;
-        try ( BufferedReader reader = new BufferedReader( new InputStreamReader(
-                getClass().getResourceAsStream( "/meditationes--rene-descartes--public-domain.txt" ), StandardCharsets.UTF_8 ) ) )
+        try ( BufferedReader reader = new BufferedReader(
+                new InputStreamReader( getClass().getResourceAsStream( DESCARTES_MEDITATIONES ), StandardCharsets.UTF_8 ) ) )
         {
             meditationes = reader.lines().collect( Collectors.joining( "\n" ) );
         }
@@ -1180,6 +1182,93 @@ public class FulltextProceduresTest
         {
             LongHashSet ids = LongHashSet.newSetWith( book2id );
             assertQueryFindsIds( db, db::getNodeById, "books", "title:Descartes", ids );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustNotIncludeNodesDeletedInOtherConcurrentlyCommittedTransactions() throws Exception
+    {
+        db = createDatabase();
+        Label label = Label.label( "Label" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        long nodeIdA;
+        long nodeIdB;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node nodeA = db.createNode( label );
+            nodeA.setProperty( "prop", "value" );
+            nodeIdA = nodeA.getId();
+            Node nodeB = db.createNode( label );
+            nodeB.setProperty( "prop", "value" );
+            nodeIdB = nodeB.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            try ( Result result = db.execute( format( QUERY_NODES, "nodes", "value" ) ) )
+            {
+                ThreadTestUtils.forkFuture( () ->
+                {
+                    try ( Transaction forkedTx = db.beginTx() )
+                    {
+                        db.getNodeById( nodeIdA ).delete();
+                        db.getNodeById( nodeIdB ).delete();
+                        forkedTx.success();
+                    }
+                    return null;
+                } ).get();
+                assertThat( result.stream().count(), is( 0L ) );
+            }
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustNotIncludeRelationshipsDeletedInOtherConcurrentlyCommittedTransactions() throws Exception
+    {
+        db = createDatabase();
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        long relIdA;
+        long relIdB;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode();
+            Relationship relA = node.createRelationshipTo( node, relType );
+            relA.setProperty( "prop", "value" );
+            relIdA = relA.getId();
+            Relationship relB = node.createRelationshipTo( node, relType );
+            relB.setProperty( "prop", "value" );
+            relIdB = relB.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            try ( Result result = db.execute( format( QUERY_RELS, "rels", "value" ) ) )
+            {
+                ThreadTestUtils.forkFuture( () ->
+                {
+                    try ( Transaction forkedTx = db.beginTx() )
+                    {
+                        db.getRelationshipById( relIdA ).delete();
+                        db.getRelationshipById( relIdB ).delete();
+                        forkedTx.success();
+                    }
+                    return null;
+                } ).get();
+                assertThat( result.stream().count(), is( 0L ) );
+            }
             tx.success();
         }
     }
@@ -1252,8 +1341,8 @@ public class FulltextProceduresTest
         }
     }
 
-    private static void failQuery(
-            LongFunction<Entity> getEntity, String index, String query, MutableLongSet ids, long[] expectedIds, MutableLongSet actualIds, String msg )
+    private static void failQuery( LongFunction<Entity> getEntity, String index, String query, MutableLongSet ids, long[] expectedIds, MutableLongSet actualIds,
+            String msg )
     {
         StringBuilder message = new StringBuilder( msg ).append( '\n' );
         MutableLongIterator itr = ids.longIterator();
