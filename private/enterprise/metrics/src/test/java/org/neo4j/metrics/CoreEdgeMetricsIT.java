@@ -13,9 +13,9 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
-import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;

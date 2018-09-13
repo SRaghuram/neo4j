@@ -9,8 +9,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.ClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;

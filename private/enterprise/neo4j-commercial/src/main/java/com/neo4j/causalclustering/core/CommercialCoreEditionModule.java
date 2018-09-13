@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.catchup.CommercialCatchupServerHandler;
 import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
@@ -13,19 +14,23 @@ import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 
 import java.time.Clock;
 
+import org.neo4j.causalclustering.catchup.CatchupServerHandler;
+import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
 import org.neo4j.causalclustering.core.IdentityModule;
-import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.ClusteringModule;
+import org.neo4j.causalclustering.core.state.CoreSnapshotService;
+import org.neo4j.causalclustering.core.state.CoreStateStorageService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
@@ -38,7 +43,7 @@ import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.SslPolicy;
 
-import static com.neo4j.commercial.edition.CommercialEditionModule.createCommercialEditionDatabases;
+import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -56,8 +61,15 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     }
 
     @Override
+    protected CatchupServerHandler getHandlerFactory( PlatformModule platformModule,
+            FileSystemAbstraction fileSystem, CoreSnapshotService snapshotService )
+    {
+        return new CommercialCatchupServerHandler( databaseService, logProvider, fileSystem, snapshotService );
+    }
+
+    @Override
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
-            ClusterStateDirectory clusterStateDirectory, IdentityModule identityModule, Dependencies dependencies, DatabaseLayout databaseLayout )
+            CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies, DatabaseService databaseService )
     {
         SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
@@ -67,7 +79,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
             ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
 
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, clusterStateDirectory.get(), databaseLayout );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService );
     }
 
     @Override
@@ -81,6 +93,20 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     public void createDatabases( DatabaseManager databaseManager, Config config )
     {
         createCommercialEditionDatabases( databaseManager, config );
+    }
+
+    private void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
+    {
+        if ( isSystemDatabaseEnabled( config ) )
+        {
+            createDatabase( databaseManager, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+        }
+        createConfiguredDatabases( databaseManager, config );
+    }
+
+    private void createConfiguredDatabases( DatabaseManager databaseManager, Config config )
+    {
+        createDatabase( databaseManager, config.get( GraphDatabaseSettings.active_database ) );
     }
 
     @Override

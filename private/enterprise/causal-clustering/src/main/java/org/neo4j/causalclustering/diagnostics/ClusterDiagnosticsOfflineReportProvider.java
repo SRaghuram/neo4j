@@ -14,6 +14,7 @@ import java.util.SortedMap;
 import org.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.ClusterStateException;
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.diagnostics.DiagnosticsOfflineReportProvider;
 import org.neo4j.diagnostics.DiagnosticsReportSource;
 import org.neo4j.diagnostics.DiagnosticsReportSources;
@@ -21,8 +22,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLog;
-
-import static org.neo4j.causalclustering.core.consensus.log.RaftLog.RAFT_LOG_DIRECTORY_NAME;
 
 public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineReportProvider
 {
@@ -42,7 +41,8 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
         final File dataDir = config.get( GraphDatabaseSettings.data_directory );
         try
         {
-            clusterStateDirectory = new ClusterStateDirectory( dataDir, storeDirectory, true ).initialize( fs ).get();
+            clusterStateDirectory = new ClusterStateDirectory( dataDir, storeDirectory, true )
+                    .initialize( fs, config.get( GraphDatabaseSettings.active_database ) ).get();
         }
         catch ( ClusterStateException e )
         {
@@ -75,7 +75,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
             return;
         }
 
-        File raftLogDirectory = new File( clusterStateDirectory, RAFT_LOG_DIRECTORY_NAME );
+        File raftLogDirectory = CoreStateFiles.RAFT_LOG.at( clusterStateDirectory );
         FileNames fileNames = new FileNames( raftLogDirectory );
         SortedMap<Long,File> allFiles = fileNames.getAllFiles( fs, NullLog.getInstance() );
 
@@ -94,7 +94,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
             return;
         }
 
-        for ( File file : fs.listFiles( clusterStateDirectory, ( dir, name ) -> !name.equals( RAFT_LOG_DIRECTORY_NAME ) ) )
+        for ( File file : fs.listFiles( clusterStateDirectory, ( dir, name ) -> !name.equals( CoreStateFiles.RAFT_LOG.directoryFullName() ) ) )
         {
             addDirectory( "ccstate", file, sources );
         }

@@ -109,7 +109,7 @@ public class CompositeDatabaseAvailabilityGuard implements AvailabilityGuard
             totalWait += clock.millis() - startMillis;
             if ( totalWait > millis )
             {
-                throw new UnavailableException( "Database is not available: " + describeGuards() );
+                throw new UnavailableException( "Database is not available: " + describe() );
             }
         }
     }
@@ -126,8 +126,9 @@ public class CompositeDatabaseAvailabilityGuard implements AvailabilityGuard
         guards.forEach( guard -> guard.removeListener( listener ) );
     }
 
-    private String describeGuards()
+    @Override
+    public String describe()
     {
-        return guards.stream().map( DatabaseAvailabilityGuard::describeWhoIsBlocking ).collect( joining( ", " ) );
+        return guards.stream().map( DatabaseAvailabilityGuard::describe ).collect( joining( ", " ) );
     }
 }

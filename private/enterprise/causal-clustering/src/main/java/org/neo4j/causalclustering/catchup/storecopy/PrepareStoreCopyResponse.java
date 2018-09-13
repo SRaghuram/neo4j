@@ -30,6 +30,14 @@ import org.neo4j.string.UTF8;
 
 public class PrepareStoreCopyResponse
 {
+    public enum Status
+    {
+        SUCCESS,
+        E_STORE_ID_MISMATCH,
+        E_LISTING_STORE,
+        E_DATABASE_UNKNOWN
+    }
+
     private final File[] files;
     private final LongSet indexIds;
     private final Long transactionId;
@@ -49,16 +57,9 @@ public class PrepareStoreCopyResponse
         return new PrepareStoreCopyResponse( storeFiles, indexIds, lastTransactionId, Status.SUCCESS );
     }
 
-    LongSet getIndexIds()
+    public LongSet getIndexIds()
     {
         return indexIds;
-    }
-
-    enum Status
-    {
-        SUCCESS,
-        E_STORE_ID_MISMATCH,
-        E_LISTING_STORE
     }
 
     private PrepareStoreCopyResponse( File[] files, LongSet indexIds, Long transactionId, Status status )
@@ -74,7 +75,7 @@ public class PrepareStoreCopyResponse
         return files;
     }
 
-    long lastTransactionId()
+    public long lastTransactionId()
     {
         return transactionId;
     }

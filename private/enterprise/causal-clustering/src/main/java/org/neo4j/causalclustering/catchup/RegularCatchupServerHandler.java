@@ -27,7 +27,6 @@ import org.neo4j.logging.LogProvider;
 
 public class RegularCatchupServerHandler implements CatchupServerHandler
 {
-
     private final Monitors monitors;
     private final LogProvider logProvider;
     private final Supplier<StoreId> storeIdSupplier;
@@ -87,6 +86,6 @@ public class RegularCatchupServerHandler implements CatchupServerHandler
     @Override
     public Optional<ChannelHandler> snapshotHandler( CatchupServerProtocol catchupServerProtocol )
     {
-        return Optional.ofNullable( (snapshotService != null) ? new CoreSnapshotRequestHandler( catchupServerProtocol, snapshotService ) : null );
+        return Optional.ofNullable( snapshotService ).map( svc -> new CoreSnapshotRequestHandler( catchupServerProtocol, svc ) );
     }
 }

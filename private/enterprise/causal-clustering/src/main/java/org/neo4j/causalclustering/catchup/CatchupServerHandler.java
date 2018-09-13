@@ -6,7 +6,6 @@
 package org.neo4j.causalclustering.catchup;
 
 import io.netty.channel.ChannelHandler;
-
 import java.util.Optional;
 
 public interface CatchupServerHandler

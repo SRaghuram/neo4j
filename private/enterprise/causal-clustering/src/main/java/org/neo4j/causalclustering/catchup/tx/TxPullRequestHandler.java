@@ -16,6 +16,7 @@ import org.neo4j.causalclustering.catchup.CatchupResult;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol.State;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
+import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.graphdb.DependencyResolver;
@@ -34,6 +35,7 @@ import static org.neo4j.causalclustering.catchup.CatchupResult.E_STORE_ID_MISMAT
 import static org.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
 import static org.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static org.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
+import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 
 public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequest>
 {
@@ -52,8 +54,8 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         this.storeIdSupplier = storeIdSupplier;
         this.databaseAvailable = databaseAvailable;
         DependencyResolver dependencies = dataSourceSupplier.get().getDependencyResolver();
-        this.transactionIdStore = dependencies.resolveDependency( TransactionIdStore.class );
-        this.logicalTransactionStore = dependencies.resolveDependency( LogicalTransactionStore.class );
+        this.transactionIdStore = dependencies.resolveDependency( TransactionIdStore.class, ONLY );
+        this.logicalTransactionStore = dependencies.resolveDependency( LogicalTransactionStore.class, ONLY );
         this.monitor = monitors.newMonitor( TxPullRequestsMonitor.class );
         this.log = logProvider.getLog( getClass() );
     }

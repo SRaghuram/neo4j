@@ -10,8 +10,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.EnterpriseCluster;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.common.EnterpriseCluster;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -27,7 +27,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static java.util.Collections.emptyMap;
-import static org.neo4j.causalclustering.discovery.Cluster.dataMatchesEventually;
+import static org.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 
 public class ClusterCommunityToEnterpriseIT
 {

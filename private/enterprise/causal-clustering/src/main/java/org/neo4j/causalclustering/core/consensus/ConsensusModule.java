@@ -7,6 +7,8 @@ package org.neo4j.causalclustering.core.consensus;
 
 import java.io.File;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
@@ -28,15 +30,15 @@ import org.neo4j.causalclustering.core.consensus.term.TermState;
 import org.neo4j.causalclustering.core.consensus.vote.VoteState;
 import org.neo4j.causalclustering.core.replication.ReplicatedContent;
 import org.neo4j.causalclustering.core.replication.SendToMyself;
-import org.neo4j.causalclustering.core.state.storage.DurableStateStorage;
-import org.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
+import org.neo4j.causalclustering.core.state.CoreStateStorageService;
 import org.neo4j.causalclustering.core.state.storage.StateStorage;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.messaging.Outbound;
 import org.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
+import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
@@ -49,14 +51,13 @@ import static org.neo4j.causalclustering.core.CausalClusteringSettings.catchup_b
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.join_catch_up_timeout;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.log_shipping_max_lag;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.refuse_to_be_leader;
-import static org.neo4j.causalclustering.core.consensus.log.RaftLog.RAFT_LOG_DIRECTORY_NAME;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_MEMBERSHIP;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_TERM;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_VOTE;
 import static org.neo4j.time.Clocks.systemClock;
 
 public class ConsensusModule
 {
-    public static final String RAFT_MEMBERSHIP_NAME = "membership";
-    public static final String RAFT_TERM_NAME = "term";
-    public static final String RAFT_VOTE_NAME = "vote";
 
     private final MonitoredRaftLog raftLog;
     private final RaftMachine raftMachine;
@@ -65,9 +66,8 @@ public class ConsensusModule
 
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
 
-    public ConsensusModule( MemberId myself, final PlatformModule platformModule,
-            Outbound<MemberId,RaftMessages.RaftMessage> outbound, File clusterStateDirectory,
-            CoreTopologyService coreTopologyService )
+    public ConsensusModule( MemberId myself, final PlatformModule platformModule, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
+            File clusterStateDirectory, CoreTopologyService coreTopologyService, CoreStateStorageService coreStorageService, String activeDatabaseName )
     {
         final Config config = platformModule.config;
         final LogService logging = platformModule.logging;
@@ -76,31 +76,19 @@ public class ConsensusModule
 
         LogProvider logProvider = logging.getInternalLogProvider();
 
-        final SafeChannelMarshal<ReplicatedContent> marshal = CoreReplicatedContentMarshal.marshaller();
+        Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = new HashMap<>();
+        marshals.put( 1, CoreReplicatedContentMarshalFactory.marshalV1( activeDatabaseName ) );
+        marshals.put( 2, CoreReplicatedContentMarshalFactory.marshalV2() );
 
-        RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterStateDirectory, marshal, logProvider,
+        RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterStateDirectory, marshals, logProvider,
                 platformModule.jobScheduler );
 
         raftLog = new MonitoredRaftLog( underlyingLog, platformModule.monitors );
 
-        StateStorage<TermState> termState;
-        StateStorage<VoteState> voteState;
-        StateStorage<RaftMembershipState> raftMembershipStorage;
-
-        StateStorage<TermState> durableTermState = life.add(
-                new DurableStateStorage<>( fileSystem, clusterStateDirectory, RAFT_TERM_NAME, new TermState.Marshal(),
-                        config.get( CausalClusteringSettings.term_state_size ), logProvider ) );
-
-        termState = new MonitoredTermStateStorage( durableTermState, platformModule.monitors );
-
-        voteState = life.add( new DurableStateStorage<>( fileSystem, clusterStateDirectory, RAFT_VOTE_NAME,
-                new VoteState.Marshal( new MemberId.Marshal() ), config.get( CausalClusteringSettings.vote_state_size ),
-                logProvider ) );
-
-        raftMembershipStorage = life.add(
-                new DurableStateStorage<>( fileSystem, clusterStateDirectory, RAFT_MEMBERSHIP_NAME,
-                        new RaftMembershipState.Marshal(),
-                        config.get( CausalClusteringSettings.raft_membership_state_size ), logProvider ) );
+        StateStorage<TermState> durableTermState = coreStorageService.stateStorage( RAFT_TERM );
+        StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, platformModule.monitors );
+        StateStorage<VoteState> voteState = coreStorageService.stateStorage( RAFT_VOTE );
+        StateStorage<RaftMembershipState> raftMembershipStorage = coreStorageService.stateStorage( RAFT_MEMBERSHIP );
 
         TimerService timerService = new TimerService( platformModule.jobScheduler, logProvider );
 
@@ -151,7 +139,7 @@ public class ConsensusModule
     }
 
     private RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, File clusterStateDirectory,
-            ChannelMarshal<ReplicatedContent> marshal, LogProvider logProvider,
+            Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider,
             JobScheduler scheduler )
     {
         EnterpriseCoreEditionModule.RaftLogImplementation raftLogImplementation =
@@ -172,8 +160,9 @@ public class ConsensusModule
             CoreLogPruningStrategy pruningStrategy =
                     new CoreLogPruningStrategyFactory( config.get( CausalClusteringSettings.raft_log_pruning_strategy ),
                             logProvider ).newInstance();
-            File directory = new File( clusterStateDirectory, RAFT_LOG_DIRECTORY_NAME );
-            return life.add( new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshal, logProvider,
+            File directory = CoreStateFiles.RAFT_LOG.at( clusterStateDirectory );
+
+            return life.add( new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider,
                     readerPoolSize, systemClock(), scheduler, pruningStrategy ) );
         }
         default:

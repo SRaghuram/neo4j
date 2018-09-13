@@ -12,10 +12,13 @@ import org.junit.Test;
 
 import java.io.File;
 
+import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
 import org.neo4j.causalclustering.identity.StoreId;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
+//TODO: Add tests for v2 marhsals
 public class GetStoreFileMarshalTest
 {
     EmbeddedChannel embeddedChannel;
@@ -23,7 +26,7 @@ public class GetStoreFileMarshalTest
     @Before
     public void setup()
     {
-        embeddedChannel = new EmbeddedChannel( new GetStoreFileRequest.Encoder(), new GetStoreFileRequest.Decoder() );
+        embeddedChannel = new EmbeddedChannel( new GetStoreFileRequest.Encoder(), new GetStoreFileRequest.Decoder( DEFAULT_DATABASE_NAME ) );
     }
 
     private static final StoreId expectedStore = new StoreId( 1, 2, 3, 4 );
@@ -34,7 +37,7 @@ public class GetStoreFileMarshalTest
     public void getsTransmitted()
     {
         // given
-        GetStoreFileRequest expectedStoreRequest = new GetStoreFileRequest( expectedStore, expectedFile, expectedLastTransaction );
+        GetStoreFileRequest expectedStoreRequest = new GetStoreFileRequest( expectedStore, expectedFile, expectedLastTransaction, DEFAULT_DATABASE_NAME );
 
         // when
         sendToChannel( expectedStoreRequest, embeddedChannel );

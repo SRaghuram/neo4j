@@ -16,18 +16,20 @@ import java.util.Queue;
 
 import org.neo4j.causalclustering.helper.ErrorHandler;
 import org.neo4j.causalclustering.messaging.ChunkingNetworkChannel;
-import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
+import org.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
-class ChunkedTransaction implements ChunkedInput<ByteBuf>
+public class ChunkedTransaction implements ChunkedInput<ByteBuf>
 {
     private static final int CHUNK_SIZE = 32 * 1024;
     private final ReplicatedTransactionFactory.TransactionRepresentationWriter txWriter;
+    private final String databaseName;
     private ChunkingNetworkChannel channel;
     private Queue<ByteBuf> chunks = new LinkedList<>();
 
-    ChunkedTransaction( TransactionRepresentation tx )
+    ChunkedTransaction( TransactionRepresentationReplicatedTransaction tx )
     {
-        txWriter = ReplicatedTransactionFactory.transactionalRepresentationWriter( tx );
+        this.txWriter = ReplicatedTransactionFactory.transactionalRepresentationWriter( tx.tx() );
+        this.databaseName = tx.databaseName();
     }
 
     @Override
@@ -39,7 +41,7 @@ class ChunkedTransaction implements ChunkedInput<ByteBuf>
     @Override
     public void close()
     {
-        try ( ErrorHandler errorHandler = new ErrorHandler( "Closing ChunkedTransaction" ) )
+        try ( ErrorHandler errorHandler = new ErrorHandler( "Closing chunked transaction" ) )
         {
             if ( channel != null )
             {
@@ -66,6 +68,7 @@ class ChunkedTransaction implements ChunkedInput<ByteBuf>
         {
             // Ensure that the written buffers does not overflow the allocators chunk size.
             channel = new ChunkingNetworkChannel( allocator, CHUNK_SIZE, chunks );
+            StringMarshal.marshal( channel, databaseName );
         }
 
         // write to chunks if empty and there is more to write

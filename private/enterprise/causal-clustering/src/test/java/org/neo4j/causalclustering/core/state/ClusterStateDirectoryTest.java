@@ -17,6 +17,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class ClusterStateDirectoryTest
@@ -54,7 +55,7 @@ public class ClusterStateDirectoryTest
 
         // when
         ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, storeDir, false );
-        clusterStateDirectory.initialize( fs );
+        clusterStateDirectory.initialize( fs, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         // then
         assertEquals( clusterStateDirectory.get(), stateDir );
@@ -77,10 +78,51 @@ public class ClusterStateDirectoryTest
 
         // when
         ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, storeDir, false );
-        clusterStateDirectory.initialize( fs );
+        clusterStateDirectory.initialize( fs, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         // then
         assertEquals( clusterStateDirectory.get(), stateDir );
         assertTrue( fs.fileExists( new File( clusterStateDirectory.get(), fileName ) ) );
+    }
+
+    @Test
+    public void shouldMigrateDatabaseStateToSubDir() throws Exception
+    {
+        //given
+        fs.mkdirs( stateDir );
+        File rootIdAlloc = CoreStateFiles.ID_ALLOCATION.at( stateDir );
+        File rootLockToken = CoreStateFiles.LOCK_TOKEN.at( stateDir );
+        fs.create( rootIdAlloc );
+        fs.create( rootLockToken );
+
+        //when
+        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, false );
+        clusterStateDirectory.initialize( fs, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+
+        //then
+        File databaseSubDir = new File( stateDir, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        assertTrue( fs.fileExists( databaseSubDir ) );
+        assertTrue( fs.fileExists( CoreStateFiles.ID_ALLOCATION.at( databaseSubDir ) ) );
+        assertTrue( fs.fileExists( CoreStateFiles.LOCK_TOKEN.at( databaseSubDir ) ) );
+        assertFalse( fs.fileExists( rootIdAlloc ) );
+        assertFalse( fs.fileExists( rootLockToken ) );
+    }
+
+    @Test( expected = ClusterStateException.class )
+    public void shouldThrowOnInvalidClusterState() throws Exception
+    {
+        //given
+        fs.mkdirs( stateDir );
+        File rootIdAlloc = CoreStateFiles.ID_ALLOCATION.at( stateDir );
+        File rootLockToken = CoreStateFiles.LOCK_TOKEN.at( stateDir );
+        fs.create( rootIdAlloc );
+        fs.create( rootLockToken );
+
+        //when
+        File existingSubDir = new File( stateDir, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        fs.mkdir( existingSubDir );
+
+        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, false );
+        clusterStateDirectory.initialize( fs, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 }

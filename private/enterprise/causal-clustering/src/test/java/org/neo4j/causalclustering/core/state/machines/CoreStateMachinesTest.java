@@ -10,7 +10,6 @@ import org.mockito.InOrder;
 
 import java.util.function.Consumer;
 
-import org.neo4j.causalclustering.catchup.storecopy.LocalDatabase;
 import org.neo4j.causalclustering.core.state.CommandDispatcher;
 import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
@@ -146,7 +145,7 @@ public class CoreStateMachinesTest
 
     private final CoreStateMachines coreStateMachines = new CoreStateMachines( txSM, labelTokenSM,
             relationshipTypeTokenSM, propertyKeyTokenSM, lockTokenSM, idAllocationSM, dummySM,
-            mock( LocalDatabase.class ), recoverConsensusLogIndex );
+            recoverConsensusLogIndex );
 
     private final ReplicatedTransaction replicatedTransaction = mock( ReplicatedTransaction.class );
     private final ReplicatedIdAllocationRequest iAllocationRequest = mock( ReplicatedIdAllocationRequest.class );

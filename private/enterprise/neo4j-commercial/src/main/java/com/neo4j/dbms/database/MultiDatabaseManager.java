@@ -25,7 +25,7 @@ import static java.util.Objects.requireNonNull;
 
 public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseManager
 {
-    private final CopyOnWriteHashMap<String, GraphDatabaseFacade> databaseMap = new CopyOnWriteHashMap<>();
+    private final Map<String, GraphDatabaseFacade> databaseMap = new CopyOnWriteHashMap<>();
     private final PlatformModule platform;
     private final AbstractEditionModule edition;
     private final Procedures procedures;
@@ -53,7 +53,7 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         DataSourceModule dataSource = new DataSourceModule( databaseName, platform, edition, procedures, facade );
         ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
         facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, dataSource.neoStoreDataSource.getTokenHolders() );
-        platform.dataSourceManager.register( dataSource.neoStoreDataSource );
+        platform.dataSourceManager.register( databaseName, dataSource.neoStoreDataSource );
         databaseMap.put( databaseName, facade );
         return facade;
     }

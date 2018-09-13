@@ -79,7 +79,7 @@ class ReaderPool
 
     private Reader createFor( long version ) throws IOException
     {
-        return new Reader( fsa, fileNames.getForVersion( version ), version );
+        return new Reader( fsa, fileNames.getForSegment( version ), version );
     }
 
     synchronized void prune( long maxAge, TimeUnit unit )

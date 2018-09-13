@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
+import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
 import org.neo4j.causalclustering.identity.StoreId;
 
 import static org.neo4j.causalclustering.catchup.CatchupServerProtocol.State;

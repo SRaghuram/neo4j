@@ -7,20 +7,18 @@ package org.neo4j.causalclustering.catchup.tx;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
-import java.util.function.Supplier;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
-import org.neo4j.causalclustering.catchup.CatchUpClient;
-import org.neo4j.causalclustering.catchup.CatchUpClientException;
-import org.neo4j.causalclustering.catchup.CatchUpResponseAdaptor;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
+import org.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import org.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import org.neo4j.causalclustering.catchup.storecopy.LocalDatabase;
-import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
-import org.neo4j.causalclustering.core.consensus.schedule.Timer;
-import org.neo4j.causalclustering.core.consensus.schedule.TimerService;
-import org.neo4j.causalclustering.core.consensus.schedule.TimerService.TimerName;
+import org.neo4j.causalclustering.common.DatabaseService;
+import org.neo4j.causalclustering.common.LocalDatabase;
+import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import org.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.helper.Suspendable;
@@ -30,38 +28,25 @@ import org.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
-import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.Group;
 
 import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.CANCELLED;
 import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.PANIC;
 import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.STORE_COPYING;
 import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.TX_PULLING;
-import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.Timers.TX_PULLER_TIMER;
-import static org.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.fixedTimeout;
-import static org.neo4j.causalclustering.core.consensus.schedule.Timer.CancelMode.SYNC_WAIT;
 
 /**
  * This class is responsible for pulling transactions from a core server and queuing
- * them to be applied with the {@link BatchingTxApplier}. Pull requests are issued on
- * a fixed interval.
- * <p>
- * If the necessary transactions are not remotely available then a fresh copy of the
- * entire store will be pulled down.
+ * them to be applied with the {@link BatchingTxApplier}.
+ *
+ * TODO: This is Read Replica only, move packages?
  */
 public class CatchupPollingProcess extends LifecycleAdapter
 {
-    enum Timers implements TimerName
-    {
-        TX_PULLER_TIMER
-    }
-
     enum State
     {
         TX_PULLING,
@@ -70,56 +55,53 @@ public class CatchupPollingProcess extends LifecycleAdapter
         CANCELLED
     }
 
+    private final String databaseName;
     private final LocalDatabase localDatabase;
+    //TODO: It makes no sense to take both localDatabase and databaseService here. When localDatabase objects can stop and start it won't be needed
+    private final DatabaseService databaseService;
     private final Log log;
     private final Suspendable enableDisableOnStoreCopy;
     private final StoreCopyProcess storeCopyProcess;
-    private final Supplier<DatabaseHealth> databaseHealthSupplier;
-    private final CatchUpClient catchUpClient;
+    private final CatchupClientFactory catchUpClient;
     private final UpstreamDatabaseStrategySelector selectionStrategy;
-    private final TimerService timerService;
-    private final long txPullIntervalMillis;
     private final BatchingTxApplier applier;
     private final PullRequestMonitor pullRequestMonitor;
     private final TopologyService topologyService;
+    private final Consumer<Throwable> globalPanic;
+    private final Executor executor;
 
-    private Timer timer;
     private volatile State state = TX_PULLING;
-    private DatabaseHealth dbHealth;
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private volatile long latestTxIdOfUpStream;
 
-    public CatchupPollingProcess( LogProvider logProvider, LocalDatabase localDatabase, Suspendable enableDisableOnSoreCopy, CatchUpClient catchUpClient,
-                                  UpstreamDatabaseStrategySelector selectionStrategy, TimerService timerService, long txPullIntervalMillis,
-                                  BatchingTxApplier applier, Monitors monitors, StoreCopyProcess storeCopyProcess,
-                                  Supplier<DatabaseHealth> databaseHealthSupplier, TopologyService topologyService )
+    public CatchupPollingProcess( Executor executor, String databaseName, DatabaseService databaseService, Suspendable enableDisableOnSoreCopy,
+            CatchupClientFactory catchUpClient, UpstreamDatabaseStrategySelector selectionStrategy, BatchingTxApplier applier, Monitors monitors,
+            StoreCopyProcess storeCopyProcess, TopologyService topologyService, LogProvider logProvider, Consumer<Throwable> globalPanic )
 
     {
-        this.localDatabase = localDatabase;
-        this.log = logProvider.getLog( getClass() );
+        this.databaseName = databaseName;
+        this.databaseService = databaseService;
+        this.localDatabase = databaseService.get( databaseName ).orElseThrow( IllegalStateException::new );
         this.enableDisableOnStoreCopy = enableDisableOnSoreCopy;
         this.catchUpClient = catchUpClient;
         this.selectionStrategy = selectionStrategy;
-        this.timerService = timerService;
-        this.txPullIntervalMillis = txPullIntervalMillis;
         this.applier = applier;
         this.pullRequestMonitor = monitors.newMonitor( PullRequestMonitor.class );
         this.storeCopyProcess = storeCopyProcess;
-        this.databaseHealthSupplier = databaseHealthSupplier;
         this.topologyService = topologyService;
+        this.log = logProvider.getLog( getClass() );
+        this.globalPanic = globalPanic;
+        this.executor = executor;
     }
 
     @Override
     public synchronized void start()
     {
         state = TX_PULLING;
-        timer = timerService.create( TX_PULLER_TIMER, Group.PULL_UPDATES, timeout -> onTimeout() );
-        timer.set( fixedTimeout( txPullIntervalMillis, MILLISECONDS ) );
-        dbHealth = databaseHealthSupplier.get();
         upToDateFuture = new CompletableFuture<>();
     }
 
-    public Future<Boolean> upToDateFuture()
+    public CompletableFuture<Boolean> upToDateFuture()
     {
         return upToDateFuture;
     }
@@ -128,7 +110,6 @@ public class CatchupPollingProcess extends LifecycleAdapter
     public void stop()
     {
         state = CANCELLED;
-        timer.cancel( SYNC_WAIT );
     }
 
     public State state()
@@ -138,42 +119,50 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
     /**
      * Time to catchup!
+     * //TODO: Fix error handling further down the stack to bubble up to this level rather than panicking, as that will not complete the future.
      */
-    private void onTimeout()
+    public CompletableFuture<Void> tick()
     {
-        try
+        if ( state == CANCELLED || state == PANIC )
         {
-            switch ( state )
-            {
-            case TX_PULLING:
-                pullTransactions();
-                break;
-
-            case STORE_COPYING:
-                copyStore();
-                break;
-
-            default:
-                throw new IllegalStateException( "Tried to execute catchup but was in state " + state );
-            }
+            return CompletableFuture.completedFuture( null );
         }
-        catch ( Throwable e )
+
+        return CompletableFuture.runAsync( () ->
+        {
+            try
+            {
+                switch ( state )
+                {
+                case TX_PULLING:
+                    pullTransactions();
+                    break;
+
+                case STORE_COPYING:
+                    copyStore();
+                    break;
+
+                default:
+                    throw new IllegalStateException( "Tried to execute catchup but was in state " + state );
+                }
+            }
+            catch ( Throwable e )
+            {
+                throw new CompletionException( e );
+            }
+
+        }, executor ).exceptionally( e ->
         {
             panic( e );
-        }
-
-        if ( state != PANIC && state != CANCELLED )
-        {
-            timer.reset();
-        }
+            return null;
+        } );
     }
 
     private synchronized void panic( Throwable e )
     {
-        log.error( "Unexpected issue in catchup process. No more catchup requests will be scheduled.", e );
-        dbHealth.panic( e );
         upToDateFuture.completeExceptionally( e );
         state = PANIC;
+        globalPanic.accept( e );
     }
 
     private void pullTransactions()
@@ -195,7 +184,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         int batchCount = 1;
         while ( moreToPull )
         {
-            moreToPull = pullAndApplyBatchOfTransactions( upstream, localStoreId, batchCount );
+            moreToPull = pullAndApplyBatchOfTransactions( upstream, batchCount, localStoreId );
             batchCount++;
         }
     }
@@ -234,43 +223,49 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
-    private boolean pullAndApplyBatchOfTransactions( MemberId upstream, StoreId localStoreId, int batchCount )
+    private boolean pullAndApplyBatchOfTransactions( MemberId upstream, int batchCount, StoreId localStoreId )
     {
         long lastQueuedTxId = applier.lastQueuedTxId();
         pullRequestMonitor.txPullRequest( lastQueuedTxId );
-        TxPullRequest txPullRequest = new TxPullRequest( lastQueuedTxId, localStoreId );
         log.debug( "Pull transactions from %s where tx id > %d [batch #%d]", upstream, lastQueuedTxId, batchCount );
 
-        TxStreamFinishedResponse response;
+        CatchupResponseAdaptor<TxPullResult> responseHandler = new CatchupResponseAdaptor<TxPullResult>()
+        {
+            @Override
+            public void onTxPullResponse( CompletableFuture<TxPullResult> signal, TxPullResponse response )
+            {
+                handleTransaction( response.tx() );
+            }
+
+            @Override
+            public void onTxStreamFinishedResponse( CompletableFuture<TxPullResult> signal, TxStreamFinishedResponse response )
+            {
+                streamComplete();
+                signal.complete( new TxPullResult( response.status(), response.lastTxId() ) );
+            }
+        };
+
+        TxPullResult result;
         try
         {
             AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( upstream ).orElseThrow( () -> new TopologyLookupException( upstream ) );
-            response = catchUpClient.makeBlockingRequest( fromAddress, txPullRequest, new CatchUpResponseAdaptor<TxStreamFinishedResponse>()
-            {
-                @Override
-                public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxPullResponse response )
-                {
-                    handleTransaction( response.tx() );
-                }
-
-                @Override
-                public void onTxStreamFinishedResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxStreamFinishedResponse response )
-                {
-                    streamComplete();
-                    signal.complete( response );
-                }
-            } );
+            result = catchUpClient.getClient( fromAddress )
+                    .v1( c -> c.pullTransactions( localStoreId, lastQueuedTxId ) )
+                    .v2( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseName ) )
+                    .withResponseHandler( responseHandler )
+                    .request()
+                    .get();
         }
-        catch ( CatchUpClientException | TopologyLookupException e )
+        catch ( Exception e )
         {
             log.warn( "Exception occurred while pulling transactions. Will retry shortly.", e );
             streamComplete();
             return false;
         }
 
-        latestTxIdOfUpStream = response.latestTxId();
+        latestTxIdOfUpStream = result.lastTxId();
 
-        switch ( response.status() )
+        switch ( result.status() )
         {
         case SUCCESS_END_OF_STREAM:
             log.debug( "Successfully pulled transactions from tx id %d", lastQueuedTxId );
@@ -278,7 +273,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
             return false;
         case E_TRANSACTION_PRUNED:
             log.info( "Tx pull unable to get transactions starting from %d since transactions have been pruned. Attempting a store copy.", lastQueuedTxId );
-            state = STORE_COPYING;
+            transitionToStoreCopy();
             return false;
         default:
             log.info( "Tx pull request unable to get transactions > %d " + lastQueuedTxId );
@@ -286,17 +281,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
-    private void copyStore()
-    {
-        StoreId localStoreId = localDatabase.storeId();
-        downloadDatabase( localStoreId );
-    }
-
-    private void downloadDatabase( StoreId localStoreId )
+    private void transitionToStoreCopy()
     {
         try
         {
-            localDatabase.stopForStoreCopy();
+            databaseService.stopForStoreCopy();
             enableDisableOnStoreCopy.disable();
         }
         catch ( Throwable throwable )
@@ -304,26 +293,14 @@ public class CatchupPollingProcess extends LifecycleAdapter
             throw new RuntimeException( throwable );
         }
 
-        try
-        {
-            MemberId source = selectionStrategy.bestUpstreamDatabase();
-            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source ).orElseThrow( () -> new TopologyLookupException( source ) );
-            storeCopyProcess.replaceWithStoreFrom( new SingleAddressProvider( fromAddress ), localStoreId );
-        }
-        catch ( IOException | StoreCopyFailedException | UpstreamDatabaseSelectionException | TopologyLookupException e )
-        {
-            log.warn( "Error copying store. Will retry shortly.", e );
-            return;
-        }
-        catch ( DatabaseShutdownException e )
-        {
-            log.warn( "Store copy aborted due to shutdown.", e );
-            return;
-        }
+        state = STORE_COPYING;
+    }
 
+    private void transitionToTxPulling()
+    {
         try
         {
-            localDatabase.start();
+            databaseService.start();
             enableDisableOnStoreCopy.enable();
         }
         catch ( Throwable throwable )
@@ -332,19 +309,39 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
 
         latestTxIdOfUpStream = 0; // we will find out on the next pull request response
-        state = TX_PULLING;
         applier.refreshFromNewStore();
+
+        state = TX_PULLING;
+    }
+
+    private void copyStore()
+    {
+        try
+        {
+            MemberId source = selectionStrategy.bestUpstreamDatabase();
+            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source ).orElseThrow( () -> new TopologyLookupException( source ) );
+            storeCopyProcess.replaceWithStoreFrom( new SingleAddressProvider( fromAddress ), localDatabase.storeId() );
+            transitionToTxPulling();
+        }
+        catch ( IOException | StoreCopyFailedException | UpstreamDatabaseSelectionException | TopologyLookupException e )
+        {
+            log.warn( "Error copying store. Will retry shortly.", e );
+        }
+        catch ( DatabaseShutdownException e )
+        {
+            log.warn( "Store copy aborted due to shutdown.", e );
+        }
     }
 
     public String describeState()
     {
         if ( state == TX_PULLING && applier.lastQueuedTxId() > 0 && latestTxIdOfUpStream > 0 )
         {
-            return format( "%s (%d of %d)", TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
+            return format( "%s is %s (%d of %d)", databaseName, TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
         }
         else
         {
-            return state.name();
+            return format( "%s is %s", databaseName, state.name() );
         }
     }
 }

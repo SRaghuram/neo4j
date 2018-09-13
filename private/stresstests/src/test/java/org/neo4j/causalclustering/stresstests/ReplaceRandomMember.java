@@ -11,9 +11,9 @@ import java.io.File;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.ClusterMember;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.common.ClusterMember;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 

@@ -52,6 +52,10 @@ class OnlineBackupContextFactory
     static final String ARG_DESC_BACKUP_SOURCE = "Host and port of Neo4j.";
     static final String ARG_DFLT_BACKUP_SOURCE = "localhost:6362";
 
+    static final String ARG_NAME_DATABASE_NAME = "database";
+    static final String ARG_DESC_DATABASE_NAME = "Name of the remote database to backup. Only supported with latest version of the catchup protocol.";
+    static final String ARG_DFLT_DATABASE_NAME = null;
+
     static final String ARG_NAME_PROTO_OVERRIDE = "protocol";
     static final String ARG_DESC_PROTO_OVERRIDE = "Preferred backup protocol";
     static final String ARG_DFLT_PROTO_OVERRIDE = "any";
@@ -117,6 +121,8 @@ class OnlineBackupContextFactory
                         ARG_NAME_BACKUP_NAME, "graph.db-backup", ARG_DESC_BACKUP_NAME ) )
                 .withArgument( new OptionalNamedArg(
                         ARG_NAME_BACKUP_SOURCE, "address", ARG_DFLT_BACKUP_SOURCE, ARG_DESC_BACKUP_SOURCE ) )
+                .withArgument( new OptionalNamedArg(
+                        ARG_NAME_DATABASE_NAME, "graph.db", ARG_DFLT_DATABASE_NAME, ARG_DESC_DATABASE_NAME ) )
                 .withArgument( new OptionalNamedArg( ARG_NAME_PROTO_OVERRIDE, argExampleProtoOverride,
                         ARG_DFLT_PROTO_OVERRIDE, ARG_DESC_PROTO_OVERRIDE ) )
                 .withArgument( new OptionalBooleanArg(
@@ -150,6 +156,7 @@ class OnlineBackupContextFactory
 
             OptionalHostnamePort address = toOptionalHostnamePortFromRawAddress(
                     arguments.get( ARG_NAME_BACKUP_SOURCE ) );
+            String databaseName = arguments.get( ARG_NAME_DATABASE_NAME );
             Path folder = getBackupDirectory( arguments );
             String name = arguments.get( ARG_NAME_BACKUP_NAME );
             boolean fallbackToFull = arguments.getBoolean( ARG_NAME_FALLBACK_FULL );
@@ -162,7 +169,7 @@ class OnlineBackupContextFactory
                     () -> new IllegalArgumentException( ARG_NAME_REPORT_DIRECTORY + " must be a path" ) );
 
             OnlineBackupRequiredArguments requiredArguments = new OnlineBackupRequiredArguments(
-                    address, folder, name, selectedBackupProtocol, fallbackToFull, doConsistencyCheck, timeout, reportDir );
+                    address, databaseName, folder, name, selectedBackupProtocol, fallbackToFull, doConsistencyCheck, timeout, reportDir );
 
             Path configFile = configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME );
             Config.Builder builder = Config.fromFile( configFile );

@@ -11,16 +11,18 @@ import java.io.File;
 import java.net.ConnectException;
 import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.catchup.CatchUpClient;
-import org.neo4j.causalclustering.catchup.CatchUpClientException;
-import org.neo4j.causalclustering.catchup.CatchUpResponseAdaptor;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
+import org.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import org.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
+import org.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
+import org.neo4j.causalclustering.catchup.VersionedCatchupClients.PreparedRequest;
 import org.neo4j.causalclustering.helper.TimeoutStrategy;
 import org.neo4j.causalclustering.identity.StoreId;
-import org.neo4j.causalclustering.messaging.CatchUpRequest;
 import org.neo4j.com.storecopy.StoreCopyClientMonitor;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -33,17 +35,20 @@ import static org.neo4j.causalclustering.catchup.storecopy.StoreCopyResponseAdap
 
 public class StoreCopyClient
 {
-    private final CatchUpClient catchUpClient;
+    private final CatchupClientFactory catchUpClientFactory;
+    private final Supplier<Monitors> monitors;
+    private final String databaseName;
     private final Log log;
-    private TimeoutStrategy backOffStrategy;
-    private final Monitors monitors;
+    private final TimeoutStrategy backOffStrategy;
 
-    public StoreCopyClient( CatchUpClient catchUpClient, Monitors monitors, LogProvider logProvider, TimeoutStrategy backOffStrategy )
+    public StoreCopyClient( CatchupClientFactory catchUpClientFactory, String databaseName, Supplier<Monitors> monitors, LogProvider logProvider,
+            TimeoutStrategy backOffStrategy )
     {
-        this.catchUpClient = catchUpClient;
+        this.catchUpClientFactory = catchUpClientFactory;
         this.monitors = monitors;
-        log = logProvider.getLog( getClass() );
+        this.databaseName = databaseName;
         this.backOffStrategy = backOffStrategy;
+        this.log = logProvider.getLog( getClass() );
     }
 
     long copyStoreFiles( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, StoreFileStreamProvider storeFileStreamProvider,
@@ -59,7 +64,7 @@ public class StoreCopyClient
                     requestWiseTerminationCondition );
             return prepareStoreCopyResponse.lastTransactionId();
         }
-        catch ( CatchupAddressResolutionException | CatchUpClientException e )
+        catch ( Exception e )
         {
             throw new StoreCopyFailedException( e );
         }
@@ -69,15 +74,20 @@ public class StoreCopyClient
             StoreFileStreamProvider storeFileStream, Supplier<TerminationCondition> terminationConditions, File destDir ) throws StoreCopyFailedException
     {
         StoreCopyClientMonitor
-                storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
+                storeCopyClientMonitor = monitors.get().newMonitor( StoreCopyClientMonitor.class );
         storeCopyClientMonitor.startReceivingStoreFiles();
         long lastTransactionId = prepareStoreCopyResponse.lastTransactionId();
+
         for ( File file : prepareStoreCopyResponse.getFiles() )
         {
             storeCopyClientMonitor.startReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
-            persistentCallToSecondary( new GetStoreFileRequest( expectedStoreId, file, lastTransactionId ), filesCopyAdaptor( storeFileStream, log ),
-                    addressProvider,
+
+            persistentCallToSecondary( addressProvider,
+                    c -> c.getStoreFile( expectedStoreId, file, lastTransactionId ),
+                    c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, databaseName ),
+                    storeFileStream,
                     terminationConditions.get() );
+
             storeCopyClientMonitor.finishReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
         }
         storeCopyClientMonitor.finishReceivingStoreFiles();
@@ -88,24 +98,31 @@ public class StoreCopyClient
             throws StoreCopyFailedException
     {
         StoreCopyClientMonitor
-                storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
+                storeCopyClientMonitor = monitors.get().newMonitor( StoreCopyClientMonitor.class );
         long lastTransactionId = prepareStoreCopyResponse.lastTransactionId();
         LongIterator indexIds = prepareStoreCopyResponse.getIndexIds().longIterator();
         storeCopyClientMonitor.startReceivingIndexSnapshots();
+
         while ( indexIds.hasNext() )
         {
             long indexId = indexIds.next();
             storeCopyClientMonitor.startReceivingIndexSnapshot( indexId );
-            persistentCallToSecondary( new GetIndexFilesRequest( expectedStoreId, indexId, lastTransactionId ), filesCopyAdaptor( storeFileStream, log ),
-                    addressProvider,
+
+            persistentCallToSecondary( addressProvider,
+                    c -> c.getIndexFiles( expectedStoreId, indexId, lastTransactionId ),
+                    c -> c.getIndexFiles( expectedStoreId, indexId, lastTransactionId, databaseName ),
+                    storeFileStream,
                     terminationConditions.get() );
+
             storeCopyClientMonitor.finishReceivingIndexSnapshot( indexId );
         }
         storeCopyClientMonitor.finishReceivingIndexSnapshots();
     }
 
-    private void persistentCallToSecondary( CatchUpRequest request, CatchUpResponseAdaptor<StoreCopyFinishedResponse> copyHandler,
-            CatchupAddressProvider addressProvider,
+    private void persistentCallToSecondary( CatchupAddressProvider addressProvider,
+            Function<CatchupClientV1,PreparedRequest<StoreCopyFinishedResponse>> v1Request,
+            Function<CatchupClientV2,PreparedRequest<StoreCopyFinishedResponse>> v2Request,
+            StoreFileStreamProvider storeFileStream,
             TerminationCondition terminationCondition ) throws StoreCopyFailedException
     {
         TimeoutStrategy.Timeout timeout = backOffStrategy.newTimeout();
@@ -114,28 +131,35 @@ public class StoreCopyClient
             try
             {
                 AdvertisedSocketAddress address = addressProvider.secondary();
-                log.info( format( "Sending request '%s' to '%s'", request, address ) );
-                StoreCopyFinishedResponse response = catchUpClient.makeBlockingRequest( address, request, copyHandler );
-                if ( successfulRequest( response, request ) )
+                log.info( format( "Sending request StoreCopyRequest to '%s'", address ) );
+
+                StoreCopyFinishedResponse response = catchUpClientFactory.getClient( address )
+                        .v1( v1Request )
+                        .v2( v2Request )
+                        .withResponseHandler( filesCopyAdaptor( storeFileStream, log ) )
+                        .request().get();
+
+                if ( successfulRequest( response ) )
                 {
                     break;
                 }
             }
-            catch ( CatchUpClientException e )
+            catch ( CatchupAddressResolutionException e )
             {
-                Throwable cause = e.getCause();
-                if ( cause instanceof ConnectException )
+                log.warn( "Unable to resolve address for StoreCopyRequest. %s", e.getMessage() );
+            }
+            catch ( Exception e )
+            {
+                //TODO: I understood the argument that we should just throw and catch Exception because anything can go wrong with a future/network request, but
+                // it seems like we're at risk of swallowing runtime exceptions in some cases where we otherwise wouldn't
+                if ( e instanceof ConnectException )
                 {
-                    log.warn( cause.getMessage() );
+                    log.warn( e.getMessage() );
                 }
                 else
                 {
-                    log.warn( format( "Request failed exceptionally '%s'.", request ), e );
+                    log.warn( "StoreCopyRequest failed exceptionally.", e );
                 }
-            }
-            catch ( CatchupAddressResolutionException e )
-            {
-                log.warn( "Unable to resolve address for '%s'. %s", request, e.getMessage() );
             }
             terminationCondition.assertContinue();
             awaitAndIncrementTimeout( timeout );
@@ -156,11 +180,23 @@ public class StoreCopyClient
     }
 
     private PrepareStoreCopyResponse prepareStoreCopy( AdvertisedSocketAddress from, StoreId expectedStoreId, StoreFileStreamProvider storeFileStream )
-            throws CatchUpClientException, StoreCopyFailedException
+            throws StoreCopyFailedException
     {
-        log.info( "Requesting store listing from: " + from );
-        PrepareStoreCopyResponse prepareStoreCopyResponse =
-                catchUpClient.makeBlockingRequest( from, new PrepareStoreCopyRequest( expectedStoreId ), prepareStoreCopyAdaptor( storeFileStream, log ) );
+        PrepareStoreCopyResponse prepareStoreCopyResponse;
+        try
+        {
+            log.info( "Requesting store listing from: " + from );
+            prepareStoreCopyResponse = catchUpClientFactory.getClient( from )
+                    .v1( c -> c.prepareStoreCopy( expectedStoreId ) )
+                    .v2( c -> c.prepareStoreCopy( expectedStoreId, databaseName ) )
+                    .withResponseHandler( prepareStoreCopyAdaptor( storeFileStream, log ) )
+                    .request().get();
+        }
+        catch ( Exception e )
+        {
+            throw new StoreCopyFailedException( e );
+        }
+
         if ( prepareStoreCopyResponse.status() != PrepareStoreCopyResponse.Status.SUCCESS )
         {
             throw new StoreCopyFailedException( "Preparing store failed due to: " + prepareStoreCopyResponse.status() );
@@ -172,7 +208,7 @@ public class StoreCopyClient
     {
         try
         {
-            CatchUpResponseAdaptor<StoreId> responseHandler = new CatchUpResponseAdaptor<StoreId>()
+            CatchupResponseAdaptor<StoreId> responseHandler = new CatchupResponseAdaptor<StoreId>()
             {
                 @Override
                 public void onGetStoreIdResponse( CompletableFuture<StoreId> signal, GetStoreIdResponse response )
@@ -180,31 +216,33 @@ public class StoreCopyClient
                     signal.complete( response.storeId() );
                 }
             };
-            return catchUpClient.makeBlockingRequest( fromAddress, new GetStoreIdRequest(), responseHandler );
+            return catchUpClientFactory.getClient( fromAddress )
+                    .v1( CatchupClientV1::getStoreId )
+                    .v2( c -> c.getStoreId( databaseName ) )
+                    .withResponseHandler( responseHandler )
+                    .request().get();
         }
-        catch ( CatchUpClientException e )
+        catch ( Exception e )
         {
             throw new StoreIdDownloadFailedException( e );
         }
     }
 
-    private boolean successfulRequest( StoreCopyFinishedResponse response, CatchUpRequest request ) throws StoreCopyFailedException
+    private boolean successfulRequest( StoreCopyFinishedResponse response ) throws StoreCopyFailedException
     {
-        StoreCopyFinishedResponse.Status responseStatus = response.status();
-        if ( responseStatus == StoreCopyFinishedResponse.Status.SUCCESS )
+        switch ( response.status() )
         {
-            log.info( format( "Request was successful '%s'", request ) );
-            return true;
-        }
-        else if ( StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND == responseStatus || StoreCopyFinishedResponse.Status.E_UNKNOWN == responseStatus ||
-                StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH == responseStatus )
-        {
-            log.warn( format( "Request failed '%s'. With response: %s", request, response.status() ) );
-            return false;
-        }
-        else
-        {
-            throw new StoreCopyFailedException( format( "Request responded with an unknown response type: %s. '%s'", responseStatus, request ) );
+            case SUCCESS:
+                log.info( "StoreCopyRequest was successful." );
+                return true;
+            case E_TOO_FAR_BEHIND:
+            case E_UNKNOWN:
+            case E_STORE_ID_MISMATCH:
+            case E_DATABASE_UNKNOWN:
+                log.warn( format( "StoreCopyRequest failed with response: %s", response.status() ) );
+                return false;
+            default:
+                throw new StoreCopyFailedException( format( "Request responded with an unknown response type: %s.", response.status() ) );
         }
     }
 }

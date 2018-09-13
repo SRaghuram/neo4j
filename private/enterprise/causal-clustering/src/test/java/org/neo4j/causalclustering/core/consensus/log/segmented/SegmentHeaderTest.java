@@ -13,6 +13,7 @@ import org.neo4j.kernel.impl.transaction.log.InMemoryClosableChannel;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+// TODO: Tests for new segment header
 public class SegmentHeaderTest
 {
     private SegmentHeader.Marshal marshal = new SegmentHeader.Marshal();
@@ -50,7 +51,7 @@ public class SegmentHeaderTest
         SegmentHeader writtenHeader = new SegmentHeader( prevFileLastIndex, version, prevIndex, prevTerm );
         InMemoryClosableChannel channel = new InMemoryClosableChannel();
 
-        channel.putLong( writtenHeader.version() );
+        channel.putLong( writtenHeader.segmentNumber() );
         channel.putLong( writtenHeader.prevIndex() );
 
         // when

@@ -10,13 +10,13 @@ import java.io.File;
 import org.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import org.neo4j.causalclustering.core.consensus.log.RaftLog;
 import org.neo4j.causalclustering.core.consensus.log.RaftLogVerificationIT;
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.time.Clocks;
 
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
-import static org.neo4j.causalclustering.core.consensus.log.RaftLog.RAFT_LOG_DIRECTORY_NAME;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
 public class SegmentedRaftLogVerificationIT extends RaftLogVerificationIT
@@ -26,7 +26,7 @@ public class SegmentedRaftLogVerificationIT extends RaftLogVerificationIT
     {
         FileSystemAbstraction fsa = fsRule.get();
 
-        File directory = new File( RAFT_LOG_DIRECTORY_NAME );
+        File directory = new File( CoreStateFiles.RAFT_LOG.directoryFullName() );
         fsa.mkdir( directory );
 
         long rotateAtSizeBytes = 128;
@@ -37,7 +37,7 @@ public class SegmentedRaftLogVerificationIT extends RaftLogVerificationIT
                 new CoreLogPruningStrategyFactory( raft_log_pruning_strategy.getDefaultValue(), logProvider )
                         .newInstance();
         SegmentedRaftLog newRaftLog = new SegmentedRaftLog( fsa, directory, rotateAtSizeBytes,
-                new DummyRaftableContentSerializer(), logProvider, readerPoolSize, Clocks.systemClock(),
+                ignored -> new DummyRaftableContentSerializer(), logProvider, readerPoolSize, Clocks.systemClock(),
                 new OnDemandJobScheduler(),
                 pruningStrategy );
 

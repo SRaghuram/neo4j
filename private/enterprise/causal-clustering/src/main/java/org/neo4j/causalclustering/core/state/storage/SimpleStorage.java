@@ -9,7 +9,7 @@ import java.io.IOException;
 
 import org.neo4j.function.ThrowingConsumer;
 
-public interface SimpleStorage<T>
+public interface SimpleStorage<T> extends StateStorage<T>
 {
     boolean exists();
 
@@ -27,5 +27,17 @@ public interface SimpleStorage<T>
         {
             writeState( state );
         }
+    }
+
+    @Override
+    default T getInitialState()
+    {
+        return null;
+    }
+
+    @Override
+    default void persistStoreData( T t ) throws IOException
+    {
+        writeState( t );
     }
 }

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.neo4j</groupId>
+        <artifactId>commercial-parent</artifactId>
+        <version>3.5.0-SNAPSHOT</version>
+        <relativePath>../..</relativePath>
+    </parent>
+
+    <groupId>com.neo4j.test</groupId>
+    <artifactId>neo4j-harness-commercial</artifactId>
+
+    <packaging>jar</packaging>
+
+    <name>Neo4j - Commercial Test Harness</name>
+    <description>Components for writing integration tests with Neo4j.</description>
+    <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
+
+    <properties>
+        <moduleName>org.neo4j.harness.commercial</moduleName>
+    </properties>
+
+    <licenses>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
+                Copyright (c) 2002-2018 "Neo Technology,"
+                Network Engine for Objects in Lund AB [http://neotechnology.com]
+                This file is a commercial add-on to Neo4j Enterprise Edition.
+            </comments>
+        </license>
+    </licenses>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.neo4j.test</groupId>
+            <artifactId>neo4j-harness-enterprise</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j.app</groupId>
+            <artifactId>neo4j-server-commercial</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+</project>

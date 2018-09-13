@@ -14,6 +14,7 @@ import org.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import org.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import org.neo4j.causalclustering.core.consensus.log.RaftLogCursor;
 import org.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -24,7 +25,6 @@ import org.neo4j.time.Clocks;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
-import static org.neo4j.causalclustering.core.consensus.log.RaftLog.RAFT_LOG_DIRECTORY_NAME;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
 public class SegmentedRaftLogCursorIT
@@ -47,14 +47,14 @@ public class SegmentedRaftLogCursorIT
             fileSystem = new EphemeralFileSystemAbstraction();
         }
 
-        File directory = new File( RAFT_LOG_DIRECTORY_NAME );
+        File directory = new File( CoreStateFiles.RAFT_LOG.directoryFullName() );
         fileSystem.mkdir( directory );
 
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( pruneStrategy, logProvider ).newInstance();
         SegmentedRaftLog newRaftLog =
-                new SegmentedRaftLog( fileSystem, directory, rotateAtSize, new DummyRaftableContentSerializer(),
+                new SegmentedRaftLog( fileSystem, directory, rotateAtSize, ignored -> new DummyRaftableContentSerializer(),
                         logProvider, 8, Clocks.systemClock(),
                         new OnDemandJobScheduler(),
                         pruningStrategy );

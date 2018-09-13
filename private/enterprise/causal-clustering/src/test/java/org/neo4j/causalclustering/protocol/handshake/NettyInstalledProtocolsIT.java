@@ -56,7 +56,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
-import org.neo4j.stream.Streams;
+import org.neo4j.helpers.collection.Streams;
 
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -65,6 +65,7 @@ import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCa
 import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.RAFT_1;
 import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.RAFT_2;
 import static org.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.COMPRESSION;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @RunWith( Parameterized.class )
@@ -206,7 +207,7 @@ public class NettyInstalledProtocolsIT
             RaftProtocolServerInstallerV2.Factory raftFactoryV2 =
                     new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineBuilderFactory, logProvider );
             RaftProtocolServerInstallerV1.Factory raftFactoryV1 =
-                    new RaftProtocolServerInstallerV1.Factory( nettyHandler, pipelineBuilderFactory,
+                    new RaftProtocolServerInstallerV1.Factory( nettyHandler, pipelineBuilderFactory, DEFAULT_DATABASE_NAME,
                             logProvider );
             ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository =
                     new ProtocolInstallerRepository<>( Arrays.asList( raftFactoryV1, raftFactoryV2 ), ModifierProtocolInstaller.allServerInstallers );

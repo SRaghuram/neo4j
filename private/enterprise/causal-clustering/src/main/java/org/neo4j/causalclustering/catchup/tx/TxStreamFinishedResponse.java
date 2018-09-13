@@ -14,20 +14,20 @@ public class TxStreamFinishedResponse
     private final CatchupResult status;
     private final long latestTxId;
 
-    public CatchupResult status()
-    {
-        return status;
-    }
-
     TxStreamFinishedResponse( CatchupResult status, long latestTxId )
     {
         this.status = status;
         this.latestTxId = latestTxId;
     }
 
-    public long latestTxId()
+    public long lastTxId()
     {
         return latestTxId;
+    }
+
+    public CatchupResult status()
+    {
+        return status;
     }
 
     @Override
@@ -56,7 +56,7 @@ public class TxStreamFinishedResponse
     {
         return "TxStreamFinishedResponse{" +
                "status=" + status +
-               ", latestTxId=" + latestTxId +
+               ", lastTxId=" + latestTxId +
                '}';
     }
 }

@@ -15,12 +15,14 @@ import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
+import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import org.neo4j.graphdb.Resource;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 
 import static org.neo4j.causalclustering.catchup.storecopy.DataSourceChecks.hasSameStoreId;
+import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 
 public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<PrepareStoreCopyRequest>
 {
@@ -52,7 +54,7 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
             }
             else
             {
-                CheckPointer checkPointer = neoStoreDataSource.getDependencyResolver().resolveDependency( CheckPointer.class );
+                CheckPointer checkPointer = neoStoreDataSource.getDependencyResolver().resolveDependency( CheckPointer.class, ONLY );
                 closeablesListener.add( tryCheckpointAndAcquireMutex( checkPointer ) );
                 PrepareStoreCopyFiles prepareStoreCopyFiles =
                         closeablesListener.add( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( neoStoreDataSource ) );

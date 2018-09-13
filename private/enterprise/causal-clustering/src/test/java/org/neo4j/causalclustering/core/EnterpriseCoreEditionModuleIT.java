@@ -11,8 +11,7 @@ import org.junit.Test;
 import java.util.function.Predicate;
 
 import org.neo4j.causalclustering.core.state.machines.id.FreeIdFilteredIdGeneratorFactory;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.com.storecopy.StoreUtil;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.io.layout.DatabaseLayout;

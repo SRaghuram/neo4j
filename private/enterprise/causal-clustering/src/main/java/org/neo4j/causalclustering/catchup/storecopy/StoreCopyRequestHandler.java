@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.CheckPointerService;
+import org.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
+import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
 import org.neo4j.causalclustering.messaging.StoreCopyRequest;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterators;
@@ -43,8 +45,9 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
     private final Log log;
 
     StoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<NeoStoreDataSource> dataSource, CheckPointerService checkPointerService,
-            StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
+            StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider, Class<T> clazz )
     {
+        super( clazz );
         this.protocol = protocol;
         this.dataSource = dataSource;
         this.storeFileStreamingProtocol = storeFileStreamingProtocol;
@@ -115,7 +118,7 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         public GetStoreFileRequestHandler( CatchupServerProtocol protocol, Supplier<NeoStoreDataSource> dataSource, CheckPointerService checkPointerService,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider );
+            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
@@ -136,7 +139,7 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
                 CheckPointerService checkPointerService, StoreFileStreamingProtocol storeFileStreamingProtocol,
                 FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider );
+            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider, GetIndexFilesRequest.class );
         }
 
         @Override

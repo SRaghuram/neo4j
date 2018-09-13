@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.function.Function;
 
 import org.neo4j.causalclustering.core.consensus.log.segmented.OpenEndRangeMap.ValueRange;
 import org.neo4j.causalclustering.core.replication.ReplicatedContent;
@@ -33,18 +34,18 @@ class Segments implements AutoCloseable
 
     private FileSystemAbstraction fileSystem;
     private final FileNames fileNames;
-    private final ChannelMarshal<ReplicatedContent> contentMarshal;
+    private final Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector;
     private final LogProvider logProvider;
     private long currentVersion;
     private final ReaderPool readerPool;
 
     Segments( FileSystemAbstraction fileSystem, FileNames fileNames, ReaderPool readerPool, List<SegmentFile> allSegments,
-            ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, long currentVersion )
+            Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, long currentVersion )
     {
         this.fileSystem = fileSystem;
         this.fileNames = fileNames;
         this.allSegments = new ArrayList<>( allSegments );
-        this.contentMarshal = contentMarshal;
+        this.marshalSelector = marshalSelector;
         this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
         this.currentVersion = currentVersion;
@@ -121,7 +122,8 @@ class Segments implements AutoCloseable
         currentVersion++;
         SegmentHeader header = new SegmentHeader( prevFileLastIndex, currentVersion, prevIndex, prevTerm );
 
-        File file = fileNames.getForVersion( currentVersion );
+        File file = fileNames.getForSegment( currentVersion );
+        ChannelMarshal<ReplicatedContent> contentMarshal = marshalSelector.apply( header.formatVersion() );
         SegmentFile segment = SegmentFile.create( fileSystem, file, readerPool, currentVersion, contentMarshal, logProvider, header );
         // TODO: Force base directory... probably not possible using fsa.
         segment.flush();

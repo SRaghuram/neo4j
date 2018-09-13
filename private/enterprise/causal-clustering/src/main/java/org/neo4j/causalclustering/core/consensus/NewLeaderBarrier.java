@@ -35,7 +35,7 @@ public class NewLeaderBarrier implements ReplicatedContent
     }
 
     @Override
-    public void handle( ReplicatedContentHandler contentHandler ) throws IOException
+    public void dispatch( ReplicatedContentHandler contentHandler ) throws IOException
     {
         contentHandler.handle( this );
     }

@@ -56,7 +56,7 @@ class SegmentFile implements AutoCloseable
         this.header = header;
         this.version = version;
 
-        this.positionCache = new PositionCache();
+        this.positionCache = new PositionCache( header.recordOffset() );
         this.refCount = new ReferenceCounter();
 
         this.log = logProvider.getLog( getClass() );

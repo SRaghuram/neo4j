@@ -8,7 +8,6 @@ package org.neo4j.causalclustering.catchup.storecopy;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.commons.compress.utils.Charsets;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.After;
 import org.junit.Before;
@@ -17,9 +16,8 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.Reader;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -27,17 +25,24 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.causalclustering.catchup.CatchUpClient;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import org.neo4j.causalclustering.catchup.CatchupClientBuilder;
 import org.neo4j.causalclustering.catchup.CatchupServerBuilder;
+import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
+import org.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
+import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
+import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import org.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
+import org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.net.Server;
+import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
+import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.helpers.collection.Iterators;
@@ -50,15 +55,20 @@ import org.neo4j.logging.DuplicatingLogProvider;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.util.Collections.emptyList;
 import static org.hamcrest.CoreMatchers.both;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
+import static org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.getCatchupServer;
+import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
 
 public class StoreCopyClientIT
 {
@@ -105,16 +115,15 @@ public class StoreCopyClientIT
         writeContents( fsa, relative( indexFileA.getFilename() ), indexFileA.getContent() );
 
         ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", PortAuthority.allocatePort() );
-        catchupServer = new CatchupServerBuilder( serverHandler ).listenAddress( listenAddress ).build();
+        catchupServer = getCatchupServer( serverHandler, listenAddress );
         catchupServer.start();
 
-        CatchUpClient catchUpClient = new CatchupClientBuilder().build();
+        CatchupClientFactory catchUpClient = CausalClusteringTestHelpers.getCatchupClient( logProvider );
         catchUpClient.start();
 
         ConstantTimeTimeoutStrategy storeCopyBackoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
 
-        Monitors monitors = new Monitors();
-        subject = new StoreCopyClient( catchUpClient, monitors, logProvider, storeCopyBackoffStrategy );
+        subject = new StoreCopyClient( catchUpClient, "graph.db", Monitors::new, logProvider, storeCopyBackoffStrategy );
     }
 
     @After
@@ -250,7 +259,7 @@ public class StoreCopyClientIT
         {
             // when
             ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", PortAuthority.allocatePort() );
-            halfWayFailingServer = new CatchupServerBuilder( halfWayFailingServerhandler ).listenAddress( listenAddress ).build();
+            halfWayFailingServer = getCatchupServer( halfWayFailingServerhandler, listenAddress );
             halfWayFailingServer.start();
 
             CatchupAddressProvider addressProvider =
@@ -274,7 +283,7 @@ public class StoreCopyClientIT
             {
                 storeChannel.read( buffer );
             }
-            assertEquals( finishedContent, new String( buffer.array(), Charsets.UTF_8 ) );
+            assertEquals( finishedContent, new String( buffer.array(), StandardCharsets.UTF_8 ) );
         }
         finally
         {
@@ -344,11 +353,6 @@ public class StoreCopyClientIT
         }
     }
 
-    private static AdvertisedSocketAddress from( int port )
-    {
-        return new AdvertisedSocketAddress( "localhost", port );
-    }
-
     private File relative( String filename )
     {
         return testDirectory.file( filename );
@@ -356,24 +360,12 @@ public class StoreCopyClientIT
 
     private String fileContent( File file ) throws IOException
     {
-        return fileContent( file, fsa );
+        return CausalClusteringTestHelpers.fileContent( file, fsa );
     }
 
-    static String fileContent( File file, FileSystemAbstraction fsa ) throws IOException
+    private static AdvertisedSocketAddress from( int port )
     {
-        int chunkSize = 128;
-        StringBuilder stringBuilder = new StringBuilder();
-        try ( Reader reader = fsa.openAsReader( file, Charsets.UTF_8 ) )
-        {
-            CharBuffer charBuffer = CharBuffer.wrap( new char[chunkSize] );
-            while ( reader.read( charBuffer ) != -1 )
-            {
-                charBuffer.flip();
-                stringBuilder.append( charBuffer );
-                charBuffer.clear();
-            }
-        }
-        return stringBuilder.toString();
+        return new AdvertisedSocketAddress( "localhost", port );
     }
 
     private static String clientFileContents( InMemoryStoreStreamProvider storeFileStreamsProvider, String filename )

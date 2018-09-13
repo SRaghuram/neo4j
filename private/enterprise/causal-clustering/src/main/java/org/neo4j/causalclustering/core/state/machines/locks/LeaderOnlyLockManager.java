@@ -59,15 +59,17 @@ public class LeaderOnlyLockManager implements Locks
     private final LeaderLocator leaderLocator;
     private final Locks localLocks;
     private final ReplicatedLockTokenStateMachine lockTokenStateMachine;
+    private final String databaseName;
 
     public LeaderOnlyLockManager( MemberId myself, Replicator replicator, LeaderLocator leaderLocator, Locks localLocks,
-            ReplicatedLockTokenStateMachine lockTokenStateMachine )
+            ReplicatedLockTokenStateMachine lockTokenStateMachine, String databaseName )
     {
         this.myself = myself;
         this.replicator = replicator;
         this.leaderLocator = leaderLocator;
         this.localLocks = localLocks;
         this.lockTokenStateMachine = lockTokenStateMachine;
+        this.databaseName = databaseName;
     }
 
     @Override
@@ -81,7 +83,7 @@ public class LeaderOnlyLockManager implements Locks
      */
     private synchronized int acquireTokenOrThrow()
     {
-        LockToken currentToken = lockTokenStateMachine.currentToken();
+        LockToken currentToken = currentToken();
         if ( myself.equals( currentToken.owner() ) )
         {
             return currentToken.id();
@@ -92,7 +94,7 @@ public class LeaderOnlyLockManager implements Locks
         ensureLeader();
 
         ReplicatedLockTokenRequest lockTokenRequest =
-                new ReplicatedLockTokenRequest( myself, LockToken.nextCandidateId( currentToken.id() ) );
+                new ReplicatedLockTokenRequest( myself, LockToken.nextCandidateId( currentToken.id() ), databaseName );
 
         Future<Object> future;
         try
@@ -126,6 +128,12 @@ public class LeaderOnlyLockManager implements Locks
             Thread.currentThread().interrupt();
             throw new AcquireLockTimeoutException( e, "Failed to acquire lock token.", Interrupted );
         }
+    }
+
+    private LockToken currentToken()
+    {
+        ReplicatedLockTokenState state = lockTokenStateMachine.snapshot();
+        return new ReplicatedLockTokenRequest( state, databaseName );
     }
 
     private void ensureLeader()
@@ -186,7 +194,7 @@ public class LeaderOnlyLockManager implements Locks
             {
                 lockTokenId = acquireTokenOrThrow();
             }
-            else if ( lockTokenId != lockTokenStateMachine.currentToken().id() )
+            else if ( lockTokenId != currentToken().id() )
             {
                 throw new AcquireLockTimeoutException( "Local instance lost lock token.", NotALeader );
             }

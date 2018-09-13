@@ -38,6 +38,7 @@ import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.KernelData;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.management.ClusterMemberInfo;
 import org.neo4j.management.HighAvailability;
 import org.neo4j.test.rule.TestDirectory;
@@ -75,14 +76,14 @@ public class HighAvailabilityBeanTest
     @Before
     public void setup() throws NotCompliantMBeanException
     {
-        DataSourceManager dataSourceManager = new DataSourceManager( Config.defaults() );
+        DataSourceManager dataSourceManager = new DataSourceManager( NullLogProvider.getInstance(), Config.defaults() );
         fileSystem = new DefaultFileSystemAbstraction();
         kernelData = new TestHighlyAvailableKernelData( dataSourceManager );
         ManagementData data = new ManagementData( bean, kernelData, ManagementSupport.load() );
 
         NeoStoreDataSource dataSource = mock( NeoStoreDataSource.class );
         when( dataSource.getDatabaseLayout() ).thenReturn( testDirectory.databaseLayout() );
-        dataSourceManager.register( dataSource );
+        dataSourceManager.register( "graph.db", dataSource );
         when( dataSource.getDependencyResolver() ).thenReturn( dependencies );
         dependencies.satisfyDependency( DatabaseInfo.HA );
         haBean = (HighAvailability) new HighAvailabilityBean().createMBean( data );

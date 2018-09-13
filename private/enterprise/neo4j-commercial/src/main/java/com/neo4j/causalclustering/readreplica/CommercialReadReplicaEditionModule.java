@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
+import com.neo4j.causalclustering.catchup.CommercialCatchupServerHandler;
 import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
@@ -13,14 +14,17 @@ import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 
 import java.time.Clock;
 
+import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.readreplica.EnterpriseReadReplicaEditionModule;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
@@ -36,11 +40,11 @@ import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.SslPolicy;
 
-import static com.neo4j.commercial.edition.CommercialEditionModule.createCommercialEditionDatabases;
+import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
- * that are specific to the Enterprise Read Replica edition.
+ * that are specific to the Commercial Read Replica edition.
  */
 public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEditionModule
 {
@@ -79,6 +83,20 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
         createCommercialEditionDatabases( databaseManager, config );
     }
 
+    private void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
+    {
+        if ( isSystemDatabaseEnabled( config ) )
+        {
+            createDatabase( databaseManager, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+        }
+        createConfiguredDatabases( databaseManager, config );
+    }
+
+    private void createConfiguredDatabases( DatabaseManager databaseManager, Config config )
+    {
+        createDatabase( databaseManager, config.get( GraphDatabaseSettings.active_database ) );
+    }
+
     @Override
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
@@ -103,6 +121,13 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
         initGlobalGuard( clock, logService );
         return globalAvailabilityGuard;
     }
+
+    @Override
+    protected CatchupServerHandler getHandlerFactory( PlatformModule platformModule, FileSystemAbstraction fileSystem )
+    {
+        return new CommercialCatchupServerHandler( databaseService, logProvider, fileSystem );
+    }
+
     @Override
     public DatabaseAvailabilityGuard createDatabaseAvailabilityGuard( String databaseName, Clock clock, LogService logService, Config config )
     {

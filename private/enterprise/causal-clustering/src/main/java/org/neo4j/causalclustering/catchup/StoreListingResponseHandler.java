@@ -13,10 +13,10 @@ import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 public class StoreListingResponseHandler extends SimpleChannelInboundHandler<PrepareStoreCopyResponse>
 {
     private final CatchupClientProtocol protocol;
-    private final CatchUpResponseHandler handler;
+    private final CatchupResponseHandler handler;
 
     public StoreListingResponseHandler( CatchupClientProtocol protocol,
-            CatchUpResponseHandler handler )
+            CatchupResponseHandler handler )
     {
         this.protocol = protocol;
         this.handler = handler;

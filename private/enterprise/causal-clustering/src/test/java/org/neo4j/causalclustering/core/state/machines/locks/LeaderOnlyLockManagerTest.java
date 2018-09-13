@@ -11,6 +11,7 @@ import org.neo4j.causalclustering.core.consensus.LeaderLocator;
 import org.neo4j.causalclustering.core.replication.DirectReplicator;
 import org.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import org.neo4j.causalclustering.identity.MemberId;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
@@ -24,6 +25,8 @@ import static org.neo4j.causalclustering.identity.RaftTestMember.member;
 @SuppressWarnings( "unchecked" )
 public class LeaderOnlyLockManagerTest
 {
+    private final String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+
     @Test
     public void shouldIssueLocksOnLeader() throws Exception
     {
@@ -42,7 +45,7 @@ public class LeaderOnlyLockManagerTest
         when( locks.newClient() ).thenReturn( client );
 
         LeaderOnlyLockManager lockManager =
-                new LeaderOnlyLockManager( me, replicator, leaderLocator, locks, replicatedLockStateMachine );
+                new LeaderOnlyLockManager( me, replicator, leaderLocator, locks, replicatedLockStateMachine, databaseName );
 
         // when
         lockManager.newClient().acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L );
@@ -68,7 +71,7 @@ public class LeaderOnlyLockManagerTest
         when( locks.newClient() ).thenReturn( client );
 
         LeaderOnlyLockManager lockManager =
-                new LeaderOnlyLockManager( me, replicator, leaderLocator, locks, replicatedLockStateMachine );
+                new LeaderOnlyLockManager( me, replicator, leaderLocator, locks, replicatedLockStateMachine, databaseName );
 
         // when
         Locks.Client lockClient = lockManager.newClient();

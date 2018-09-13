@@ -13,6 +13,7 @@ import java.io.File;
 import org.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import org.neo4j.causalclustering.core.consensus.log.RaftLog;
 import org.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
@@ -21,7 +22,6 @@ import org.neo4j.time.Clocks;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
-import static org.neo4j.causalclustering.core.consensus.log.RaftLog.RAFT_LOG_DIRECTORY_NAME;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
 public class SegmentedRaftLogRotationTruncationPruneTest
@@ -38,7 +38,7 @@ public class SegmentedRaftLogRotationTruncationPruneTest
     @Test
     public void shouldPruneAwaySingleEntriesIfRotationHappenedEveryEntry() throws Exception
     {
-        /**
+        /*
          * If you have a raft log which rotates after every append, therefore having a single entry in every segment,
          * we assert that every sequential prune attempt will result in the prevIndex incrementing by one.
          */
@@ -65,7 +65,7 @@ public class SegmentedRaftLogRotationTruncationPruneTest
     @Test
     public void shouldPruneAwaySingleEntriesAfterTruncationIfRotationHappenedEveryEntry() throws Exception
     {
-        /**
+        /*
          * Given a log with many single-entry segments, a series of truncations at descending values followed by
          * pruning at more previous segments will maintain the correct prevIndex for the log.
          *
@@ -113,15 +113,16 @@ public class SegmentedRaftLogRotationTruncationPruneTest
 
     private RaftLog createRaftLog() throws Exception
     {
-        File directory = new File( RAFT_LOG_DIRECTORY_NAME );
+        File directory = new File( CoreStateFiles.RAFT_LOG.directoryFullName() );
         FileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
         fileSystem.mkdir( directory );
 
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( "1 entries", logProvider ).newInstance();
+
         SegmentedRaftLog newRaftLog = new SegmentedRaftLog( fileSystem, directory, 1,
-                new DummyRaftableContentSerializer(), logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(),
+                ignored -> new DummyRaftableContentSerializer(), logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(),
                 pruningStrategy );
 
         newRaftLog.start();

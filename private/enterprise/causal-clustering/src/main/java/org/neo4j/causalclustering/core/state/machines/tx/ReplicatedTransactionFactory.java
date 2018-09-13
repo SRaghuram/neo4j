@@ -29,7 +29,6 @@ import org.neo4j.storageengine.api.WritableChannel;
 
 public class ReplicatedTransactionFactory
 {
-
     private ReplicatedTransactionFactory()
     {
         throw new AssertionError( "Should not be instantiated" );
@@ -40,7 +39,7 @@ public class ReplicatedTransactionFactory
         return transactionCommand.extract( new TransactionRepresentationReader( extraHeader ) );
     }
 
-    public static TransactionRepresentationWriter transactionalRepresentationWriter( TransactionRepresentation transactionCommand )
+    static TransactionRepresentationWriter transactionalRepresentationWriter( TransactionRepresentation transactionCommand )
     {
         return new TransactionRepresentationWriter( transactionCommand );
     }

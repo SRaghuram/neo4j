@@ -16,8 +16,6 @@ import java.io.IOException;
  */
 public interface RaftLog extends ReadableRaftLog
 {
-     String RAFT_LOG_DIRECTORY_NAME = "raft-log";
-
     /**
      * Appends entry to the end of the log. The first log index is 0.
      * <p/>

@@ -8,8 +8,8 @@ package org.neo4j.causalclustering.core.state.machines;
 import java.io.IOException;
 import java.util.function.Consumer;
 
-import org.neo4j.causalclustering.catchup.storecopy.LocalDatabase;
 import org.neo4j.causalclustering.core.state.CommandDispatcher;
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import org.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
@@ -23,7 +23,6 @@ import org.neo4j.causalclustering.core.state.machines.tx.RecoverConsensusLogInde
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import org.neo4j.causalclustering.core.state.snapshot.CoreStateType;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 
 import static java.lang.Math.max;
@@ -35,19 +34,15 @@ public class CoreStateMachines
     private final ReplicatedTokenStateMachine labelTokenStateMachine;
     private final ReplicatedTokenStateMachine relationshipTypeTokenStateMachine;
     private final ReplicatedTokenStateMachine propertyKeyTokenStateMachine;
-
     private final ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine;
     private final ReplicatedIdAllocationStateMachine idAllocationStateMachine;
-
     private final DummyMachine benchmarkMachine;
 
-    private final LocalDatabase localDatabase;
     private final RecoverConsensusLogIndex consensusLogIndexRecovery;
 
-    private final CommandDispatcher dispatcher = new StateMachineCommandDispatcher();
-    private volatile boolean runningBatch;
+    private final CommandDispatcher dispatcher;
 
-    CoreStateMachines(
+    public CoreStateMachines(
             ReplicatedTransactionStateMachine replicatedTxStateMachine,
             ReplicatedTokenStateMachine labelTokenStateMachine,
             ReplicatedTokenStateMachine relationshipTypeTokenStateMachine,
@@ -55,7 +50,6 @@ public class CoreStateMachines
             ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine,
             ReplicatedIdAllocationStateMachine idAllocationStateMachine,
             DummyMachine benchmarkMachine,
-            LocalDatabase localDatabase,
             RecoverConsensusLogIndex consensusLogIndexRecovery )
     {
         this.replicatedTxStateMachine = replicatedTxStateMachine;
@@ -65,15 +59,12 @@ public class CoreStateMachines
         this.replicatedLockTokenStateMachine = replicatedLockTokenStateMachine;
         this.idAllocationStateMachine = idAllocationStateMachine;
         this.benchmarkMachine = benchmarkMachine;
-        this.localDatabase = localDatabase;
         this.consensusLogIndexRecovery = consensusLogIndexRecovery;
+        this.dispatcher = new StateMachineCommandDispatcher();
     }
 
     public CommandDispatcher commandDispatcher()
     {
-        localDatabase.assertHealthy( IllegalStateException.class );
-        assert !runningBatch;
-        runningBatch = true;
         return dispatcher;
     }
 
@@ -86,8 +77,6 @@ public class CoreStateMachines
 
     public void flush() throws IOException
     {
-        assert !runningBatch;
-
         replicatedTxStateMachine.flush();
 
         labelTokenStateMachine.flush();
@@ -98,27 +87,22 @@ public class CoreStateMachines
         idAllocationStateMachine.flush();
     }
 
-    public void addSnapshots( CoreSnapshot coreSnapshot )
+    public void addSnapshots( String databaseName, CoreSnapshot coreSnapshot )
     {
-        assert !runningBatch;
-
-        coreSnapshot.add( CoreStateType.ID_ALLOCATION, idAllocationStateMachine.snapshot() );
-        coreSnapshot.add( CoreStateType.LOCK_TOKEN, replicatedLockTokenStateMachine.snapshot() );
+        coreSnapshot.add( databaseName, CoreStateFiles.ID_ALLOCATION, idAllocationStateMachine.snapshot() );
+        coreSnapshot.add( databaseName, CoreStateFiles.LOCK_TOKEN, replicatedLockTokenStateMachine.snapshot() );
         // transactions and tokens live in the store
     }
 
-    public void installSnapshots( CoreSnapshot coreSnapshot )
+    public void installSnapshots( String databaseName, CoreSnapshot coreSnapshot )
     {
-        assert !runningBatch;
-
-        idAllocationStateMachine.installSnapshot( coreSnapshot.get( CoreStateType.ID_ALLOCATION ) );
-        replicatedLockTokenStateMachine.installSnapshot( coreSnapshot.get( CoreStateType.LOCK_TOKEN ) );
+        idAllocationStateMachine.installSnapshot( coreSnapshot.get( databaseName, CoreStateFiles.ID_ALLOCATION ) );
+        replicatedLockTokenStateMachine.installSnapshot( coreSnapshot.get( databaseName, CoreStateFiles.LOCK_TOKEN) );
         // transactions and tokens live in the store
     }
 
     public void installCommitProcess( TransactionCommitProcess localCommit )
     {
-        assert !runningBatch;
         long lastAppliedIndex = consensusLogIndexRecovery.findLastAppliedIndex();
 
         replicatedTxStateMachine.installCommitProcess( localCommit, lastAppliedIndex );
@@ -179,7 +163,6 @@ public class CoreStateMachines
         @Override
         public void close()
         {
-            runningBatch = false;
             replicatedTxStateMachine.ensuredApplied();
         }
     }

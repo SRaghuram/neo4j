@@ -14,4 +14,7 @@ import org.neo4j.causalclustering.core.state.Result;
 public interface CoreReplicatedContent extends ReplicatedContent
 {
     void dispatch( CommandDispatcher commandDispatcher, long commandIndex, Consumer<Result> callback );
+
+    //TODO: Should this instead exist on Replicated Content, and if so how do we handle e.g. MemberIdSet?
+    String databaseName();
 }

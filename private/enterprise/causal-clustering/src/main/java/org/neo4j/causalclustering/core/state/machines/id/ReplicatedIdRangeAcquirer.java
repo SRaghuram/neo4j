@@ -29,8 +29,9 @@ public class ReplicatedIdRangeAcquirer
 
     private final MemberId me;
     private final Log log;
+    private final String databaseName;
 
-    public ReplicatedIdRangeAcquirer(
+    public ReplicatedIdRangeAcquirer( String databaseName,
             Replicator replicator, ReplicatedIdAllocationStateMachine idAllocationStateMachine,
             Map<IdType, Integer> allocationSizes, MemberId me, LogProvider logProvider )
     {
@@ -39,6 +40,7 @@ public class ReplicatedIdRangeAcquirer
         this.allocationSizes = allocationSizes;
         this.me = me;
         this.log = logProvider.getLog( getClass() );
+        this.databaseName = databaseName;
     }
 
     IdAllocation acquireIds( IdType idType )
@@ -47,7 +49,7 @@ public class ReplicatedIdRangeAcquirer
         {
             long firstUnallocated = idAllocationStateMachine.firstUnallocated( idType );
             ReplicatedIdAllocationRequest idAllocationRequest =
-                    new ReplicatedIdAllocationRequest( me, idType, firstUnallocated, allocationSizes.get( idType ) );
+                    new ReplicatedIdAllocationRequest( me, idType, firstUnallocated, allocationSizes.get( idType ), databaseName );
 
             if ( replicateIdAllocationRequest( idType, idAllocationRequest ) )
             {

@@ -32,10 +32,10 @@ import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.ClusterMember;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
-import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.common.ClusterMember;
+import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -250,9 +250,7 @@ public class ReadReplicaReplicationIT
             // Lifecycle should throw exception, server should not start.
             assertThat( required.getCause(), instanceOf( LifecycleException.class ) );
             assertThat( required.getCause().getCause(), instanceOf( Exception.class ) );
-            assertThat( required.getCause().getCause().getMessage(),
-                    containsString( "This read replica cannot join the cluster. " +
-                            "The local database is not empty and has a mismatching storeId:" ) );
+            assertThat( required.getCause().getCause().getMessage(), containsString( "This read replica cannot join the cluster." ) );
         }
     }
 

@@ -12,7 +12,7 @@ import org.junit.rules.ExpectedException;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.discovery.Cluster;
+import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.graphdb.Node;
 import org.neo4j.test.causalclustering.ClusterRule;
 

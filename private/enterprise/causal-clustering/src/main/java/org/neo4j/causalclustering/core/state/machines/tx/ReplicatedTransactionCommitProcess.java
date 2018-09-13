@@ -21,10 +21,12 @@ import static org.neo4j.kernel.api.exceptions.Status.Cluster.ReplicationFailure;
 public class ReplicatedTransactionCommitProcess implements TransactionCommitProcess
 {
     private final Replicator replicator;
+    private final String databaseName;
 
-    public ReplicatedTransactionCommitProcess( Replicator replicator )
+    public ReplicatedTransactionCommitProcess( Replicator replicator, String databaseName )
     {
         this.replicator = replicator;
+        this.databaseName = databaseName;
     }
 
     @Override
@@ -32,7 +34,8 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
                         final CommitEvent commitEvent,
                         TransactionApplicationMode mode ) throws TransactionFailureException
     {
-        TransactionRepresentationReplicatedTransaction transaction = ReplicatedTransaction.from( tx.transactionRepresentation() );
+        TransactionRepresentationReplicatedTransaction transaction = ReplicatedTransaction.from( tx.transactionRepresentation(), databaseName );
+
         Future<Object> futureTxId;
         try
         {

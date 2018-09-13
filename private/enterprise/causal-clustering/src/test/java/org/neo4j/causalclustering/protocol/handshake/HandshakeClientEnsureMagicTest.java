@@ -60,7 +60,8 @@ public class HandshakeClientEnsureMagicTest
     @Before
     public void setUp()
     {
-        protocolStackCompletableFuture = client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
+        client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
+        protocolStackCompletableFuture = client.protocol();
     }
 
     @Test( expected = IllegalStateException.class )

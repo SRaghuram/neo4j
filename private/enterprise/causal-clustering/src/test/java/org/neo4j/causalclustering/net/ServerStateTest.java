@@ -21,8 +21,8 @@ import org.junit.Test;
 import org.neo4j.causalclustering.helper.SuspendableLifeCycleLifeStateChangeTest;
 import org.neo4j.causalclustering.helper.SuspendableLifeCycleSuspendedStateChangeTest;
 import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.logging.FormattedLogProvider;
-import org.neo4j.logging.Level;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
 
 import static org.junit.Assert.assertFalse;
@@ -34,6 +34,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class ServerStateTest
 {
+    private static final LogProvider logProvider = NullLogProvider.getInstance();
+
     private static Bootstrap bootstrap;
     private static EventLoopGroup clientGroup;
     private Server server;
@@ -128,8 +130,7 @@ public class ServerStateTest
 
     private static Server createServer()
     {
-        return new Server( channel -> {}, FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out ),
-                           FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out ),
+        return new Server( channel -> {}, logProvider, logProvider,
                            new ListenSocketAddress( "localhost", PortAuthority.allocatePort() ), "serverName" );
     }
 

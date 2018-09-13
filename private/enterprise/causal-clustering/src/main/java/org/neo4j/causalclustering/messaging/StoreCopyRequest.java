@@ -7,7 +7,7 @@ package org.neo4j.causalclustering.messaging;
 
 import org.neo4j.causalclustering.identity.StoreId;
 
-public interface StoreCopyRequest extends CatchUpRequest
+public interface StoreCopyRequest extends DatabaseCatchupRequest
 {
     long requiredTransactionId();
 

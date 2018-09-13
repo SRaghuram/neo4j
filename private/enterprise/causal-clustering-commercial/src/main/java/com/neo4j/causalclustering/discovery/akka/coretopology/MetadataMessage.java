@@ -14,7 +14,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.neo4j.stream.Streams;
+import org.neo4j.helpers.collection.Streams;
 
 public class MetadataMessage
 {

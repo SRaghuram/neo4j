@@ -8,6 +8,7 @@ package org.neo4j.causalclustering.catchup.storecopy;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse.Status.E_DATABASE_UNKNOWN;
 import static org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse.Status.E_LISTING_STORE;
 import static org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse.Status.E_STORE_ID_MISMATCH;
 import static org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse.Status.SUCCESS;
@@ -21,7 +22,8 @@ public class PrepareStoreCopyResponseTest
     public void shouldMaintainOrderOfStatuses()
     {
         PrepareStoreCopyResponse.Status[] givenValues = PrepareStoreCopyResponse.Status.values();
-        PrepareStoreCopyResponse.Status[] expectedValues = new PrepareStoreCopyResponse.Status[]{SUCCESS, E_STORE_ID_MISMATCH, E_LISTING_STORE};
+        PrepareStoreCopyResponse.Status[] expectedValues =
+                new PrepareStoreCopyResponse.Status[]{SUCCESS, E_STORE_ID_MISMATCH, E_LISTING_STORE, E_DATABASE_UNKNOWN};
 
         assertArrayEquals( givenValues, expectedValues );
     }

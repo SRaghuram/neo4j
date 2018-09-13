@@ -12,10 +12,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.ClusterMember;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
-import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.common.ClusterMember;
+import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;

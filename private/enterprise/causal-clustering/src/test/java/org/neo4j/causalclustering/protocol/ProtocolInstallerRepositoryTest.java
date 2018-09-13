@@ -29,6 +29,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ProtocolInstallerRepositoryTest
 {
@@ -50,7 +51,7 @@ public class ProtocolInstallerRepositoryTest
     private final RaftProtocolClientInstallerV1.Factory raftProtocolClientInstaller =
             new RaftProtocolClientInstallerV1.Factory( pipelineBuilderFactory, NullLogProvider.getInstance() );
     private final RaftProtocolServerInstallerV1.Factory raftProtocolServerInstaller =
-            new RaftProtocolServerInstallerV1.Factory( null, pipelineBuilderFactory, NullLogProvider.getInstance() );
+            new RaftProtocolServerInstallerV1.Factory( null, pipelineBuilderFactory, DEFAULT_DATABASE_NAME, NullLogProvider.getInstance() );
 
     private final ProtocolInstallerRepository<Orientation.Client> clientRepository =
             new ProtocolInstallerRepository<>( asList( raftProtocolClientInstaller ), clientModifiers );

@@ -572,8 +572,8 @@ public class HighAvailabilityModeSwitcherTest
 
     private static DataSourceManager neoStoreDataSourceSupplierMock()
     {
-        DataSourceManager dataSourceManager = new DataSourceManager( Config.defaults() );
-        dataSourceManager.register( mock( NeoStoreDataSource.class ) );
+        DataSourceManager dataSourceManager = new DataSourceManager( NullLogProvider.getInstance(), Config.defaults() );
+        dataSourceManager.register( "graph.db", mock( NeoStoreDataSource.class ) );
         return dataSourceManager;
     }
 }

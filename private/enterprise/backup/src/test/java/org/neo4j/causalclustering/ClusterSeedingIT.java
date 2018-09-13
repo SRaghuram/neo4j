@@ -21,9 +21,9 @@ import org.neo4j.causalclustering.backup_stores.BackupStoreWithSomeData;
 import org.neo4j.causalclustering.backup_stores.BackupStoreWithSomeDataButNoTransactionLogs;
 import org.neo4j.causalclustering.backup_stores.EmptyBackupStore;
 import org.neo4j.causalclustering.backup_stores.NoStore;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
-import org.neo4j.causalclustering.discovery.EnterpriseCluster;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.common.EnterpriseCluster;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -37,7 +37,7 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.causalclustering.BackupUtil.restoreFromBackup;
-import static org.neo4j.causalclustering.discovery.Cluster.dataMatchesEventually;
+import static org.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 
 @RunWith( Parameterized.class )
 public class ClusterSeedingIT

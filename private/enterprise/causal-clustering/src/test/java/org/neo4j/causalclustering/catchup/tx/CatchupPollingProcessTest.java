@@ -7,167 +7,185 @@ package org.neo4j.causalclustering.catchup.tx;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
-import org.neo4j.causalclustering.catchup.CatchUpClient;
-import org.neo4j.causalclustering.catchup.CatchUpResponseCallback;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupResult;
-import org.neo4j.causalclustering.catchup.storecopy.LocalDatabase;
+import org.neo4j.causalclustering.catchup.MockCatchupClient;
+import org.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV1;
+import org.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV2;
+import org.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
+import org.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
-import org.neo4j.causalclustering.core.consensus.schedule.CountingTimerService;
-import org.neo4j.causalclustering.core.consensus.schedule.Timer;
+import org.neo4j.causalclustering.common.LocalDatabase;
+import org.neo4j.causalclustering.common.StubLocalDatabaseService;
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.helper.Suspendable;
+import org.neo4j.causalclustering.helpers.FakeExecutor;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.identity.StoreId;
+import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
-import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.FakeClockJobScheduler;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.PANIC;
 import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.STORE_COPYING;
 import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.TX_PULLING;
-import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.Timers.TX_PULLER_TIMER;
-import static org.neo4j.helpers.collection.Iterables.single;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 
 public class CatchupPollingProcessTest
 {
-    private final CatchUpClient catchUpClient = mock( CatchUpClient.class );
     private final UpstreamDatabaseStrategySelector strategyPipeline = mock( UpstreamDatabaseStrategySelector.class );
     private final MemberId coreMemberId = mock( MemberId.class );
+    private final CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
-
+    private final Executor executor = new FakeExecutor();
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
-    private final FakeClockJobScheduler scheduler = new FakeClockJobScheduler();
-    private final CountingTimerService timerService = new CountingTimerService( scheduler, NullLogProvider.getInstance() );
-
-    private final long txPullIntervalMillis = 100;
-    private final StoreCopyProcess storeCopyProcess = mock( StoreCopyProcess.class );
-    private final StoreId storeId = new StoreId( 1, 2, 3, 4 );
     private final LocalDatabase localDatabase = mock( LocalDatabase.class );
     private final TopologyService topologyService = mock( TopologyService.class );
+    private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
+    private final Suspendable startStopOnStoreCopy = mock( Suspendable.class );
+    private final StubLocalDatabaseService databaseService = spy( new StubLocalDatabaseService() );
+    private final String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+    private final StoreId storeId = new StoreId( 1, 2, 3, 4 );
     private final AdvertisedSocketAddress coreMemberAddress = new AdvertisedSocketAddress( "hostname", 1234 );
 
+    private final MockCatchupClient.MockClientResponses clientResponses = MockCatchupClient.responses();
+    private final CatchupClientV1 v1Client = spy( new MockClientV1( clientResponses ) );
+    private final CatchupClientV2 v2Client = spy( new MockClientV2( clientResponses ) );
+    private final Consumer<Throwable> globalPanic = ( Throwable e ) ->
     {
-        when( localDatabase.storeId() ).thenReturn( storeId );
-        when( topologyService.findCatchupAddress( coreMemberId ) ).thenReturn( Optional.of( coreMemberAddress ) );
-    }
+        //do nothing
+    };
 
-    private final Suspendable startStopOnStoreCopy = mock( Suspendable.class );
-
-    private final CatchupPollingProcess txPuller =
-            new CatchupPollingProcess( NullLogProvider.getInstance(), localDatabase, startStopOnStoreCopy, catchUpClient, strategyPipeline, timerService,
-                    txPullIntervalMillis, txApplier, new Monitors(), storeCopyProcess, () -> mock( DatabaseHealth.class ), topologyService );
+    private CatchupPollingProcess txPuller;
+    private MockCatchupClient catchupClient;
 
     @Before
     public void before() throws Throwable
     {
+        databaseService.registerDatabase( databaseName, localDatabase );
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID );
         when( strategyPipeline.bestUpstreamDatabase() ).thenReturn( coreMemberId );
+        when( localDatabase.storeId() ).thenReturn( storeId );
+        when( topologyService.findCatchupAddress( coreMemberId ) ).thenReturn( Optional.of( coreMemberAddress ) );
+
+        catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_1, v1Client, v2Client );
+        when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ) ) ).thenReturn( catchupClient );
+        txPuller = new CatchupPollingProcess( executor, databaseName, databaseService, startStopOnStoreCopy, catchupClientFactory,
+                strategyPipeline, txApplier, new Monitors(), storeCopy, topologyService, NullLogProvider.getInstance(), globalPanic );
     }
 
     @Test
-    public void shouldSendPullRequestOnTick() throws Throwable
+    public void shouldSendPullRequestOnTickForAllVersions()
     {
         // given
+        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.SUCCESS_END_OF_STREAM, 10 ) );
+        txPuller.start();
+        long lastAppliedTxId = 99L;
+        when( txApplier.lastQueuedTxId() ).thenReturn( lastAppliedTxId );
+        // when
+        txPuller.tick();
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 ); // Need to switch protocols to test both clients without having two txPuller objects
+        txPuller.tick();
+
+        // then
+        verify( v1Client ).pullTransactions( storeId, lastAppliedTxId );
+        verify( v2Client ).pullTransactions( storeId, lastAppliedTxId, databaseName );
+    }
+
+    @Test
+    public void shouldKeepMakingPullRequestsUntilEndOfStream()
+    {
+        //TODO make a real test
+        // given
+        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.SUCCESS_END_OF_STREAM, 10 ) );
         txPuller.start();
         long lastAppliedTxId = 99L;
         when( txApplier.lastQueuedTxId() ).thenReturn( lastAppliedTxId );
 
         // when
-        timerService.invoke( TX_PULLER_TIMER );
+        txPuller.tick();
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
+        txPuller.tick();
 
         // then
-        verify( catchUpClient ).makeBlockingRequest( any( AdvertisedSocketAddress.class ), any( TxPullRequest.class ), any( CatchUpResponseCallback.class ) );
+        verify( v1Client, times( 1 ) ).pullTransactions( any( StoreId.class ), anyLong() );
+        verify( v2Client, times( 1 ) ).pullTransactions( any( StoreId.class ), anyLong(), anyString() );
     }
 
-    @Test
-    public void shouldKeepMakingPullRequestsUntilEndOfStream() throws Throwable
-    {
-        // given
-        txPuller.start();
-        long lastAppliedTxId = 99L;
-        when( txApplier.lastQueuedTxId() ).thenReturn( lastAppliedTxId );
-
-        // when
-        when( catchUpClient.<TxStreamFinishedResponse>makeBlockingRequest( any( AdvertisedSocketAddress.class ), any( TxPullRequest.class ),
-                any( CatchUpResponseCallback.class ) ) ).thenReturn( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 10 ) );
-
-        timerService.invoke( TX_PULLER_TIMER );
-
-        // then
-        verify( catchUpClient, times( 1 ) ).makeBlockingRequest( any( AdvertisedSocketAddress.class ), any( TxPullRequest.class ),
-                any( CatchUpResponseCallback.class ) );
-    }
+    // TODO:  Come up with a way of avoiding V1/V2 versions of these tests.  I tried to parameterize instead but that wasn't much better re: clarity.
+    // I believe it *should* be possible with a bunch of unsafe casting, but again, messy and confusing. The problem is that we need to expect/verify
+    // different method calls (pullTransactions with 2 or 3 params) for each catchup version. Open to ideas ...
+    // Should be able to simple parameterize with the new mock catchup client
 
     @Test
-    public void shouldRenewTxPullTimeoutOnSuccessfulTxPulling() throws Throwable
+    public void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV1()
     {
         // when
+        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-        when( catchUpClient.makeBlockingRequest( any( AdvertisedSocketAddress.class ), any( TxPullRequest.class ),
-                any( CatchUpResponseCallback.class ) ) ).thenReturn( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 0 ) );
 
-        timerService.invoke( TX_PULLER_TIMER );
-
-        // then
-        assertEquals( 1, timerService.invocationCount( TX_PULLER_TIMER ) );
-    }
-
-    @Test
-    public void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAway() throws Throwable
-    {
         // when
-        txPuller.start();
-        when( catchUpClient.makeBlockingRequest( any( AdvertisedSocketAddress.class ), any( TxPullRequest.class ),
-                any( CatchUpResponseCallback.class ) ) ).thenReturn( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
-
-        timerService.invoke( TX_PULLER_TIMER );
+        txPuller.tick();
 
         // then
         assertEquals( STORE_COPYING, txPuller.state() );
     }
 
     @Test
-    public void nextStateShouldBeTxPullingAfterASuccessfulStoreCopy() throws Throwable
+    public void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV2()
     {
         // given
+        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-        when( catchUpClient.makeBlockingRequest( any( AdvertisedSocketAddress.class ), any( TxPullRequest.class ),
-                any( CatchUpResponseCallback.class ) ) ).thenReturn( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
 
-        // when (tx pull)
-        timerService.invoke( TX_PULLER_TIMER );
-
-        // when (store copy)
-        timerService.invoke( TX_PULLER_TIMER );
+        // when
+        txPuller.tick();
 
         // then
-        verify( localDatabase ).stopForStoreCopy();
+        assertEquals( STORE_COPYING, txPuller.state() );
+    }
+
+    @Test
+    public void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV1() throws Throwable
+    {
+        // given
+        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        txPuller.start();
+
+        // when (tx pull)
+        txPuller.tick();
+        // when (store copy)
+        txPuller.tick();
+
+        // then
+        verify( databaseService ).stopForStoreCopy();
         verify( startStopOnStoreCopy ).disable();
-        verify( storeCopyProcess ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
-        verify( localDatabase ).start();
+        verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
+        verify( databaseService, atLeast( 1 ) ).start();
         verify( startStopOnStoreCopy ).enable();
         verify( txApplier ).refreshFromNewStore();
 
@@ -176,44 +194,78 @@ public class CatchupPollingProcessTest
     }
 
     @Test
-    public void shouldNotRenewTheTimeoutIfInPanicState()
+    public void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV2() throws Throwable
     {
         // given
+        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-        CatchUpResponseCallback callback = mock( CatchUpResponseCallback.class );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
 
-        doThrow( new RuntimeException( "Panic all the things" ) ).when( callback ).onTxPullResponse( any( CompletableFuture.class ),
-                any( TxPullResponse.class ) );
-        Timer timer = Mockito.spy( single( timerService.getTimers( TX_PULLER_TIMER ) ) );
-
-        // when
-        timerService.invoke( TX_PULLER_TIMER );
+        // when (tx pull)
+        txPuller.tick();
+        // when (store copy)
+        txPuller.tick();
 
         // then
-        assertEquals( PANIC, txPuller.state() );
-        verify( timer, never() ).reset();
+        verify( databaseService ).stopForStoreCopy();
+        verify( startStopOnStoreCopy ).disable();
+        verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
+        verify( databaseService ).start();
+        verify( startStopOnStoreCopy ).enable();
+        verify( txApplier ).refreshFromNewStore();
+
+        // then
+        assertEquals( TX_PULLING, txPuller.state() );
     }
 
     @Test
-    public void shouldNotSignalOperationalUntilPulling() throws Throwable
+    public void shouldNotSignalOperationalUntilPullingV1() throws Throwable
     {
         // given
-        when( catchUpClient.<TxStreamFinishedResponse>makeBlockingRequest( any( AdvertisedSocketAddress.class ), any( TxPullRequest.class ),
-                any( CatchUpResponseCallback.class ) ) ).thenReturn( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ),
-                new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 15 ) );
+        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
 
         // when
         txPuller.start();
         Future<Boolean> operationalFuture = txPuller.upToDateFuture();
         assertFalse( operationalFuture.isDone() );
 
-        timerService.invoke( TX_PULLER_TIMER ); // realises we need a store copy
+        txPuller.tick(); // realises we need a store copy
         assertFalse( operationalFuture.isDone() );
 
-        timerService.invoke( TX_PULLER_TIMER ); // does the store copy
+        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.SUCCESS_END_OF_STREAM, 15 ) );
+
+        txPuller.tick(); // does the store copy
         assertFalse( operationalFuture.isDone() );
 
-        timerService.invoke( TX_PULLER_TIMER ); // does a pulling
+        txPuller.tick(); // does a pulling
+        assertTrue( operationalFuture.isDone() );
+        assertTrue( operationalFuture.get() );
+
+        // then
+        assertEquals( TX_PULLING, txPuller.state() );
+    }
+
+    @Test
+    public void shouldNotSignalOperationalUntilPullingV2() throws Throwable
+    {
+        // given
+        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
+
+        // when
+        txPuller.start();
+        Future<Boolean> operationalFuture = txPuller.upToDateFuture();
+        assertFalse( operationalFuture.isDone() );
+
+        txPuller.tick(); // realises we need a store copy
+        assertFalse( operationalFuture.isDone() );
+
+        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.SUCCESS_END_OF_STREAM, 15 ) );
+
+        txPuller.tick(); // does the store copy
+        assertFalse( operationalFuture.isDone() );
+
+        txPuller.tick(); // does a pulling
         assertTrue( operationalFuture.isDone() );
         assertTrue( operationalFuture.get() );
 

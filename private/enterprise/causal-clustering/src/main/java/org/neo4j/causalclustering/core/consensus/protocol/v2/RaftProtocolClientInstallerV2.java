@@ -12,7 +12,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
 import org.neo4j.causalclustering.messaging.marshalling.v2.encoding.ContentTypeEncoder;
 import org.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftMessageContentEncoder;
 import org.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftMessageEncoder;
@@ -23,6 +22,8 @@ import org.neo4j.causalclustering.protocol.ProtocolInstaller;
 import org.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory.codecV2;
 
 public class RaftProtocolClientInstallerV2 implements ProtocolInstaller<Orientation.Client>
 {
@@ -58,7 +59,7 @@ public class RaftProtocolClientInstallerV2 implements ProtocolInstaller<Orientat
                 .add( "raft_message_encoder", new RaftMessageEncoder() )
                 .add( "raft_content_type_encoder", new ContentTypeEncoder() )
                 .add( "raft_chunked_writer", new ChunkedWriteHandler(  ) )
-                .add( "raft_message_content_encoder", new RaftMessageContentEncoder( CoreReplicatedContentMarshal.codec() ) )
+                .add( "raft_message_content_encoder", new RaftMessageContentEncoder( codecV2() ) )
                 .install();
     }
 

@@ -8,11 +8,11 @@ package org.neo4j.causalclustering.core.state;
 import java.util.Optional;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import org.neo4j.causalclustering.catchup.storecopy.LocalDatabase;
+import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.consensus.RaftMessages;
 import org.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
-import org.neo4j.causalclustering.core.state.snapshot.CoreStateDownloaderService;
+import org.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.neo4j.logging.Log;
@@ -21,17 +21,17 @@ import org.neo4j.scheduler.JobHandle;
 
 public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
 {
-    private final LocalDatabase localDatabase;
+    private final DatabaseService databaseService;
     private final Log log;
     private final RaftMachine raftMachine;
-    private final CoreStateDownloaderService downloadService;
+    private final CoreDownloaderService downloadService;
     private final CommandApplicationProcess applicationProcess;
     private CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider;
 
-    public RaftMessageApplier( LocalDatabase localDatabase, LogProvider logProvider, RaftMachine raftMachine, CoreStateDownloaderService downloadService,
+    public RaftMessageApplier( DatabaseService databaseService, LogProvider logProvider, RaftMachine raftMachine, CoreDownloaderService downloadService,
             CommandApplicationProcess applicationProcess, CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider )
     {
-        this.localDatabase = localDatabase;
+        this.databaseService = databaseService;
         this.log = logProvider.getLog( getClass() );
         this.raftMachine = raftMachine;
         this.downloadService = downloadService;
@@ -42,6 +42,8 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
     @Override
     public synchronized void handle( RaftMessages.ReceivedInstantClusterIdAwareMessage<?> wrappedMessage )
     {
+        // TODO: At tme moment download jobs are issued against both databases every time they are issued at all. This is probably fine for 3.5, but should be
+        // fixed for 4.0
         try
         {
             ConsensusOutcome outcome = raftMachine.handle( wrappedMessage.message() );
@@ -62,7 +64,7 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
         {
             log.error( "Error handling message", e );
             raftMachine.panic();
-            localDatabase.panic( e );
+            databaseService.panic( e );
         }
     }
 

@@ -11,8 +11,8 @@ import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.EnterpriseCluster;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.common.EnterpriseCluster;
 import org.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.io.fs.FileSystemAbstraction;

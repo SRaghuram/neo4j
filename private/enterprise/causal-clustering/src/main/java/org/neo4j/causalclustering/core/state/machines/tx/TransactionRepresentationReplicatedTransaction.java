@@ -12,27 +12,32 @@ import java.io.IOException;
 
 import org.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
-import org.neo4j.storageengine.api.WritableChannel;
 
-public class TransactionRepresentationReplicatedTransaction implements ReplicatedTransaction
+/**
+ * The regular transaction in the POJO format represented by the kernel.
+ */
+public class TransactionRepresentationReplicatedTransaction extends ReplicatedTransaction
 {
     private final TransactionRepresentation tx;
+    private final String databaseName;
 
-    TransactionRepresentationReplicatedTransaction( TransactionRepresentation tx )
+    public TransactionRepresentationReplicatedTransaction( TransactionRepresentation tx, String databaseName )
     {
+        super( databaseName );
         this.tx = tx;
+        this.databaseName = databaseName;
+    }
+
+    @Override
+    public String databaseName()
+    {
+        return databaseName;
     }
 
     @Override
     public ChunkedInput<ByteBuf> encode()
     {
-        return ReplicatedTransactionSerializer.encode( this );
-    }
-
-    @Override
-    public void marshal( WritableChannel writableChannel ) throws IOException
-    {
-        ReplicatedTransactionSerializer.marshal( writableChannel, this );
+        return new ChunkedTransaction( this );
     }
 
     @Override
@@ -47,7 +52,7 @@ public class TransactionRepresentationReplicatedTransaction implements Replicate
     }
 
     @Override
-    public void handle( ReplicatedContentHandler contentHandler ) throws IOException
+    public void dispatch( ReplicatedContentHandler contentHandler ) throws IOException
     {
         contentHandler.handle( this );
     }

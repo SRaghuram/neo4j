@@ -16,9 +16,10 @@ import org.neo4j.storageengine.api.StorageEngine;
 
 public class ReplicatedLabelTokenHolder extends ReplicatedTokenHolder
 {
-    public ReplicatedLabelTokenHolder( TokenRegistry registry, Replicator replicator,
+    public ReplicatedLabelTokenHolder( String databaseName, TokenRegistry registry, Replicator replicator,
             IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier )
     {
-        super( registry, replicator, idGeneratorFactory, IdType.LABEL_TOKEN, storageEngineSupplier, TokenType.LABEL, TransactionState::labelDoCreateForName );
+        super( databaseName, registry, replicator, idGeneratorFactory, IdType.LABEL_TOKEN, storageEngineSupplier,
+                TokenType.LABEL, TransactionState::labelDoCreateForName );
     }
 }

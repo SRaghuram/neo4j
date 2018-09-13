@@ -15,6 +15,6 @@ public class TxStreamFinishedResponseEncoder extends MessageToByteEncoder<TxStre
     protected void encode( ChannelHandlerContext ctx, TxStreamFinishedResponse response, ByteBuf out )
     {
         out.writeInt( response.status().ordinal() );
-        out.writeLong( response.latestTxId() );
+        out.writeLong( response.lastTxId() );
     }
 }

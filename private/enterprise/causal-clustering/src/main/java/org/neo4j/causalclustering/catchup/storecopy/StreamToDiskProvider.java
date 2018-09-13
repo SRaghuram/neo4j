@@ -18,7 +18,7 @@ public class StreamToDiskProvider implements StoreFileStreamProvider
     private final FileSystemAbstraction fs;
     private final FileCopyMonitor fileCopyMonitor;
 
-    StreamToDiskProvider( File storeDir, FileSystemAbstraction fs, Monitors monitors )
+    public StreamToDiskProvider( File storeDir, FileSystemAbstraction fs, Monitors monitors )
     {
         this.storeDir = storeDir;
         this.fs = fs;

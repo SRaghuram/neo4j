@@ -12,7 +12,7 @@ import org.mockito.ArgumentCaptor;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.causalclustering.catchup.CatchUpClient;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.catchup.storecopy.RemoteStore;
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.when;
 public class BackupDelegatorTest
 {
     private RemoteStore remoteStore;
-    private CatchUpClient catchUpClient;
+    private CatchupClientFactory catchUpClient;
     private StoreCopyClient storeCopyClient;
 
     BackupDelegator subject;
@@ -43,7 +43,7 @@ public class BackupDelegatorTest
     public void setup()
     {
         remoteStore = mock( RemoteStore.class );
-        catchUpClient = mock( CatchUpClient.class );
+        catchUpClient = mock( CatchupClientFactory.class );
         storeCopyClient = mock( StoreCopyClient.class );
         subject = new BackupDelegator( remoteStore, catchUpClient, storeCopyClient );
     }

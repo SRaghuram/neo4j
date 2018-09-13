@@ -9,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
+import org.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
+
 import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 
 public class ClusterOfClustersInProcessRunner
@@ -23,6 +25,7 @@ public class ClusterOfClustersInProcessRunner
 
             CausalClusterInProcessBuilder.CausalCluster cluster =
                     CausalClusterInProcessBuilder.init()
+                            .withBuilder( EnterpriseInProcessServerBuilder::new )
                             .withCores( 9 )
                             .withReplicas( 6 )
                             .withLogger( toOutputStream( System.out ) )

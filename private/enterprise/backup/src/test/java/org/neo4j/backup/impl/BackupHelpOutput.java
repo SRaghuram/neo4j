@@ -18,7 +18,8 @@ public class BackupHelpOutput
         List<String> lines = new ArrayList<>();
 
         lines.add( "usage: neo4j-admin backup --backup-dir=<backup-path> --name=<graph.db-backup>" );
-        lines.add( "                          [--from=<address>] [--protocol=<any|catchup|common>]" );
+        lines.add( "                          [--from=<address>] [--database=<graph.db>]" );
+        lines.add( "                          [--protocol=<any|catchup|common>]" );
         lines.add( "                          [--fallback-to-full[=<true|false>]]" );
         lines.add( "                          [--timeout=<timeout>] [--pagecache=<8m>]" );
         lines.add( "                          [--check-consistency[=<true|false>]]" );

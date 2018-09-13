@@ -13,7 +13,7 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
-import org.neo4j.causalclustering.discovery.Cluster;
+import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Settings;

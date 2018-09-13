@@ -52,6 +52,7 @@ import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
 @RunWith( Parameterized.class )
@@ -128,7 +129,8 @@ public class SenderServiceIT
     {
         NettyPipelineBuilderFactory pipelineFactory = new NettyPipelineBuilderFactory( VOID_WRAPPER );
 
-        RaftProtocolServerInstallerV1.Factory factoryV1 = new RaftProtocolServerInstallerV1.Factory( nettyHandler, pipelineFactory, logProvider );
+        RaftProtocolServerInstallerV1.Factory factoryV1 = new RaftProtocolServerInstallerV1.Factory( nettyHandler, pipelineFactory,
+                DEFAULT_DATABASE_NAME, logProvider );
         RaftProtocolServerInstallerV2.Factory factoryV2 =
                 new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineFactory, logProvider );
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> installer =

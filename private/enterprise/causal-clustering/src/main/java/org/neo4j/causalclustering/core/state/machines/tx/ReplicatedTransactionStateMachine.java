@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.causalclustering.core.state.machines.StateMachine;
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
@@ -80,7 +81,7 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
         byte[] extraHeader = encodeLogIndexAsTxHeader( commandIndex );
         tx = ReplicatedTransactionFactory.extractTransactionRepresentation( replicatedTx, extraHeader );
 
-        int currentTokenId = lockTokenStateMachine.currentToken().id();
+        int currentTokenId = lockTokenStateMachine.snapshot().candidateId();
         int txLockSessionId = tx.getLockSessionId();
 
         if ( currentTokenId != txLockSessionId && txLockSessionId != Locks.Client.NO_LOCK_SESSION_ID )

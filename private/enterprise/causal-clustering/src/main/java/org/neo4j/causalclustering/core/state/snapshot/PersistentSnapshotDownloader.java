@@ -5,11 +5,15 @@
  */
 package org.neo4j.causalclustering.core.state.snapshot;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
+import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.state.CommandApplicationProcess;
+import org.neo4j.causalclustering.core.state.CoreSnapshotService;
+import org.neo4j.causalclustering.helper.Suspendable;
 import org.neo4j.causalclustering.helper.TimeoutStrategy;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -28,23 +32,29 @@ public class PersistentSnapshotDownloader implements Runnable
 
     private final CommandApplicationProcess applicationProcess;
     private final CatchupAddressProvider addressProvider;
-    private final CoreStateDownloader downloader;
+    private final Suspendable auxiliaryServices;
+    private final DatabaseService databaseService;
+    private final CoreDownloader downloader;
+    private final CoreSnapshotService snapshotService;
     private final Log log;
-    private final TimeoutStrategy.Timeout timeout;
+    private final TimeoutStrategy backoffStrategy;
     private final Supplier<DatabaseHealth> dbHealth;
     private final Monitor monitor;
     private volatile State state;
     private volatile boolean keepRunning;
 
-    PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess,
-            CoreStateDownloader downloader, Log log, TimeoutStrategy.Timeout pauseStrategy,
+    PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess, Suspendable auxiliaryServices,
+            DatabaseService databaseService, CoreDownloader downloader, CoreSnapshotService snapshotService, Log log, TimeoutStrategy backoffStrategy,
             Supplier<DatabaseHealth> dbHealth, Monitors monitors )
     {
         this.applicationProcess = applicationProcess;
         this.addressProvider = addressProvider;
+        this.auxiliaryServices = auxiliaryServices;
+        this.databaseService = databaseService;
         this.downloader = downloader;
+        this.snapshotService = snapshotService;
         this.log = log;
-        this.timeout = pauseStrategy;
+        this.backoffStrategy = backoffStrategy;
         this.dbHealth = dbHealth;
         this.monitor = monitors.newMonitor( Monitor.class );
         this.state = State.INITIATED;
@@ -70,11 +80,31 @@ public class PersistentSnapshotDownloader implements Runnable
         {
             monitor.startedDownloadingSnapshot();
             applicationProcess.pauseApplier( OPERATION_NAME );
-            while ( keepRunning && !downloader.downloadSnapshot( addressProvider ) )
+
+            auxiliaryServices.disable();
+            databaseService.stopForStoreCopy();
+
+            TimeoutStrategy.Timeout backoff = backoffStrategy.newTimeout();
+            Optional<CoreSnapshot> snapshot;
+            while ( keepRunning )
             {
-                Thread.sleep( timeout.getMillis() );
-                timeout.increment();
+                snapshot = downloader.downloadSnapshotAndStores( addressProvider );
+                if ( snapshot.isPresent() )
+                {
+                    snapshotService.installSnapshot( snapshot.get() );
+                    log.info( "Core snapshot installed: " + snapshot );
+                    keepRunning = false;
+                }
+                else
+                {
+                    Thread.sleep( backoff.getAndIncrement() );
+                }
             }
+
+            /* Starting the databases will invoke the commit process factory in the EnterpriseCoreEditionModule, which has important side-effects. */
+            log.info( "Starting local databases" );
+            databaseService.start();
+            auxiliaryServices.enable();
         }
         catch ( InterruptedException e )
         {

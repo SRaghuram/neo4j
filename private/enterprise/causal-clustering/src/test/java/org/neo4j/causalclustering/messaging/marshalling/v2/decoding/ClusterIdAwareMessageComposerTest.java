@@ -21,6 +21,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ClusterIdAwareMessageComposerTest
 {
@@ -48,8 +49,7 @@ public class ClusterIdAwareMessageComposerTest
         try
         {
             RaftMessageComposer raftMessageComposer = new RaftMessageComposer( Clock.systemUTC() );
-
-            ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( new byte[0] );
+            ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( new byte[0], DEFAULT_DATABASE_NAME );
             raftMessageComposer.decode( null, replicatedTransaction, null );
             List<Object> out = new ArrayList<>();
             raftMessageComposer.decode( null, messageCreator( ( a, b ) -> Optional.of( dummyRequest() ) ), out );

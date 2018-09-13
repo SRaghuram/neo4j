@@ -30,7 +30,6 @@ import org.neo4j.com.ResourceReleaser;
 import org.neo4j.com.Response;
 import org.neo4j.com.storecopy.StoreCopyClientMonitor;
 import org.neo4j.function.Suppliers;
-import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -63,6 +62,7 @@ import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
@@ -212,7 +212,7 @@ public class HighAvailabilityMemberStateMachineTest
         HighAvailabilityMemberContext context = new SimpleHighAvailabilityMemberContext( me, false );
 
         AvailabilityGuard guard = mock( DatabaseAvailabilityGuard.class );
-        List<InstanceId> otherInstances = new LinkedList();
+        List<InstanceId> otherInstances = new LinkedList<>();
         otherInstances.add( other1 );
         otherInstances.add( other2 );
         ObservedClusterMembers members = mockClusterMembers( me, emptyList(), otherInstances );
@@ -463,21 +463,21 @@ public class HighAvailabilityMemberStateMachineTest
         ClusterMember self = new ClusterMember( me );
         when( members.getMembers() ).thenReturn( Arrays.asList( self, masterMember ) );
         when( members.getCurrentMember() ).thenReturn( self );
-        DependencyResolver dependencyResolver = mock( DependencyResolver.class );
+        Dependencies dependencies = mock( Dependencies.class );
         FileSystemAbstraction fs = mock( FileSystemAbstraction.class );
         when( fs.fileExists( any( File.class ) ) ).thenReturn( true );
-        when( dependencyResolver.resolveDependency( FileSystemAbstraction.class ) ).thenReturn( fs );
-        when( dependencyResolver.resolveDependency( Monitors.class ) ).thenReturn( new Monitors() );
+        when( dependencies.resolveDependency( FileSystemAbstraction.class ) ).thenReturn( fs );
+        when( dependencies.resolveDependency( Monitors.class ) ).thenReturn( new Monitors() );
         NeoStoreDataSource dataSource = mock( NeoStoreDataSource.class );
-        when( dataSource.getDependencyResolver() ).thenReturn( dependencyResolver );
+        when( dataSource.getDependencyResolver() ).thenReturn( dependencies );
         when( dataSource.getStoreId() ).thenReturn( storeId );
-        when( dependencyResolver.resolveDependency( NeoStoreDataSource.class ) ).thenReturn( dataSource );
-        when( dependencyResolver.resolveDependency( TransactionIdStore.class ) ).
+        when( dependencies.resolveDependency( NeoStoreDataSource.class ) ).thenReturn( dataSource );
+        when( dependencies.resolveDependency( TransactionIdStore.class ) ).
                 thenReturn( new SimpleTransactionIdStore() );
-        when( dependencyResolver.resolveDependency( ObservedClusterMembers.class ) ).thenReturn( members );
+        when( dependencies.resolveDependency( ObservedClusterMembers.class ) ).thenReturn( members );
         UpdatePuller updatePuller = mock( UpdatePuller.class );
         when( updatePuller.tryPullUpdates() ).thenReturn( true );
-        when( dependencyResolver.resolveDependency( UpdatePuller.class ) ).thenReturn( updatePuller );
+        when( dependencies.resolveDependency( UpdatePuller.class ) ).thenReturn( updatePuller );
 
         ClusterMemberAvailability clusterMemberAvailability = mock( ClusterMemberAvailability.class );
         final TriggerableClusterMemberEvents events = new TriggerableClusterMemberEvents();
@@ -488,7 +488,7 @@ public class HighAvailabilityMemberStateMachineTest
                         NullLogProvider.getInstance() );
 
         ClusterMembers clusterMembers = new ClusterMembers( members, stateMachine );
-        when( dependencyResolver.resolveDependency( ClusterMembers.class ) ).thenReturn( clusterMembers );
+        when( dependencies.resolveDependency( ClusterMembers.class ) ).thenReturn( clusterMembers );
 
         stateMachine.init();
         stateMachine.start();
@@ -647,8 +647,8 @@ public class HighAvailabilityMemberStateMachineTest
 
     private static DataSourceManager neoStoreDataSourceSupplierMock()
     {
-        DataSourceManager dataSourceManager = new DataSourceManager( Config.defaults() );
-        dataSourceManager.register( mock( NeoStoreDataSource.class ) );
+        DataSourceManager dataSourceManager = new DataSourceManager( NullLogProvider.getInstance(), Config.defaults() );
+        dataSourceManager.register( "graph.db", mock( NeoStoreDataSource.class ) );
         return dataSourceManager;
     }
 

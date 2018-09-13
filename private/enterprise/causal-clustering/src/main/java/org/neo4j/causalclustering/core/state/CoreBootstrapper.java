@@ -8,15 +8,17 @@ package org.neo4j.causalclustering.core.state;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
+import org.neo4j.causalclustering.common.DatabaseService;
+import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import org.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import org.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import org.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import org.neo4j.causalclustering.core.state.snapshot.CoreStateType;
 import org.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -65,7 +67,7 @@ public class CoreBootstrapper
     private static final long FIRST_INDEX = 0L;
     private static final long FIRST_TERM = 0L;
 
-    private final DatabaseLayout databaseLayout;
+    private final DatabaseService databaseService;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final Config config;
@@ -73,9 +75,10 @@ public class CoreBootstrapper
     private final RecoveryRequiredChecker recoveryRequiredChecker;
     private final Log log;
 
-    CoreBootstrapper( DatabaseLayout databaseLayout, PageCache pageCache, FileSystemAbstraction fs, Config config, LogProvider logProvider, Monitors monitors )
+    CoreBootstrapper( DatabaseService databaseService, FileSystemAbstraction fs, Config config,
+            LogProvider logProvider, PageCache pageCache, Monitors monitors )
     {
-        this.databaseLayout = databaseLayout;
+        this.databaseService = databaseService;
         this.pageCache = pageCache;
         this.fs = fs;
         this.config = config;
@@ -84,9 +87,10 @@ public class CoreBootstrapper
         this.recoveryRequiredChecker = new RecoveryRequiredChecker( fs, pageCache, config, monitors );
     }
 
-    public CoreSnapshot bootstrap( Set<MemberId> members ) throws Exception
+    private void updateSnapshot( String databaseName, LocalDatabase localDatabase, CoreSnapshot coreSnapshot ) throws IOException
     {
-        if ( recoveryRequiredChecker.isRecoveryRequiredAt( databaseLayout ) )
+        DatabaseLayout databaseLayout = localDatabase.databaseLayout();
+        if ( recoveryRequiredChecker.isRecoveryRequiredAt( databaseLayout, localDatabase.monitors() ) )
         {
             String message = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
                     "instance of Neo4j or a Neo4j backup";
@@ -95,21 +99,29 @@ public class CoreBootstrapper
         }
         StoreFactory factory = new StoreFactory( databaseLayout, config,
                 new DefaultIdGeneratorFactory( fs ), pageCache, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
-
         NeoStores neoStores = factory.openAllNeoStores( true );
         neoStores.close();
 
+        coreSnapshot.add( databaseName, CoreStateFiles.ID_ALLOCATION, deriveIdAllocationState( databaseLayout ) );
+        coreSnapshot.add( databaseName, CoreStateFiles.LOCK_TOKEN, new ReplicatedLockTokenState() );
+        appendNullTransactionLogEntryToSetRaftIndexToMinusOne( databaseLayout );
+    }
+
+    public CoreSnapshot bootstrap( Set<MemberId> members ) throws IOException
+    {
         CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
-        coreSnapshot.add( CoreStateType.ID_ALLOCATION, deriveIdAllocationState( databaseLayout ) );
-        coreSnapshot.add( CoreStateType.LOCK_TOKEN, new ReplicatedLockTokenState() );
-        coreSnapshot.add( CoreStateType.RAFT_CORE_STATE,
-                new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
-        coreSnapshot.add( CoreStateType.SESSION_TRACKER, new GlobalSessionTrackerState() );
-        appendNullTransactionLogEntryToSetRaftIndexToMinusOne();
+        coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
+        coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, new GlobalSessionTrackerState() );
+
+        for ( Map.Entry<String,? extends LocalDatabase> database : databaseService.registeredDatabases().entrySet() )
+        {
+            updateSnapshot( database.getKey(), database.getValue(), coreSnapshot );
+        }
+
         return coreSnapshot;
     }
 
-    private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne() throws IOException
+    private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( DatabaseLayout databaseLayout ) throws IOException
     {
         ReadOnlyTransactionIdStore readOnlyTransactionIdStore = new ReadOnlyTransactionIdStore( pageCache, databaseLayout );
         LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache )
@@ -118,7 +130,7 @@ public class CoreBootstrapper
                 .build();
 
         long dummyTransactionId;
-        try ( Lifespan lifespan = new Lifespan( logFiles ) )
+        try ( Lifespan ignored = new Lifespan( logFiles ) )
         {
             FlushableChannel channel = logFiles.getLogFile().getWriter();
             TransactionLogWriter writer = new TransactionLogWriter( new LogEntryWriter( channel ) );

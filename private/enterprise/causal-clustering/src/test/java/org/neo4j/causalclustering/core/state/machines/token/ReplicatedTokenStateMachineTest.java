@@ -29,14 +29,16 @@ import org.neo4j.storageengine.api.TransactionApplicationMode;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestSerializer.commandBytes;
+import static org.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV1.commandBytes;
 import static org.neo4j.causalclustering.core.state.machines.token.TokenType.LABEL;
 import static org.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ReplicatedTokenStateMachineTest
 {
     private final int EXPECTED_TOKEN_ID = 1;
     private final int UNEXPECTED_TOKEN_ID = 1024;
+    private final String databaseName = DEFAULT_DATABASE_NAME;
 
     @Test
     public void shouldCreateTokenId()
@@ -49,7 +51,7 @@ public class ReplicatedTokenStateMachineTest
 
         // when
         byte[] commandBytes = commandBytes( tokenCommands( EXPECTED_TOKEN_ID ) );
-        stateMachine.applyCommand( new ReplicatedTokenRequest( LABEL, "Person", commandBytes ), 1, r -> {} );
+        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes ), 1, r -> {} );
 
         // then
         assertEquals( EXPECTED_TOKEN_ID, (int) registry.getId( "Person" ) );
@@ -66,9 +68,9 @@ public class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( mock( TransactionCommitProcess.class ), -1 );
 
         ReplicatedTokenRequest winningRequest =
-                new ReplicatedTokenRequest( LABEL, "Person", commandBytes( tokenCommands( EXPECTED_TOKEN_ID ) ) );
+                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes( tokenCommands( EXPECTED_TOKEN_ID ) ) );
         ReplicatedTokenRequest losingRequest =
-                new ReplicatedTokenRequest( LABEL, "Person", commandBytes( tokenCommands( UNEXPECTED_TOKEN_ID ) ) );
+                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes( tokenCommands( UNEXPECTED_TOKEN_ID ) ) );
 
         // when
         stateMachine.applyCommand( winningRequest, 1, r -> {} );
@@ -92,7 +94,7 @@ public class ReplicatedTokenStateMachineTest
 
         // when
         byte[] commandBytes = commandBytes( tokenCommands( EXPECTED_TOKEN_ID ) );
-        stateMachine.applyCommand( new ReplicatedTokenRequest( LABEL, "Person", commandBytes ), logIndex, r -> {} );
+        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes ), logIndex, r -> {} );
 
         // then
         List<TransactionRepresentation> transactions = commitProcess.transactionsToApply;

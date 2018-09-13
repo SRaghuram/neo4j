@@ -5,11 +5,10 @@
  */
 package org.neo4j.causalclustering;
 
-import java.io.File;
 import java.time.Duration;
 import java.util.UUID;
 
-import org.neo4j.causalclustering.catchup.storecopy.LocalDatabase;
+import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.consensus.RaftMessages;
@@ -18,36 +17,30 @@ import org.neo4j.causalclustering.core.replication.RaftReplicator;
 import org.neo4j.causalclustering.core.replication.session.GlobalSession;
 import org.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import org.neo4j.causalclustering.core.replication.session.LocalSessionPool;
-import org.neo4j.causalclustering.core.state.storage.DurableStateStorage;
+import org.neo4j.causalclustering.core.state.CoreStateStorageService;
+import org.neo4j.causalclustering.core.state.storage.StateStorage;
 import org.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import org.neo4j.causalclustering.helper.TimeoutStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.messaging.Outbound;
 import org.neo4j.graphdb.factory.module.PlatformModule;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
+
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.SESSION_TRACKER;
 
 public class ReplicationModule
 {
-    public static final String SESSION_TRACKER_NAME = "session-tracker";
-
     private final RaftReplicator replicator;
     private final ProgressTrackerImpl progressTracker;
     private final SessionTracker sessionTracker;
 
     public ReplicationModule( RaftMachine raftMachine, MemberId myself, PlatformModule platformModule, Config config,
-            Outbound<MemberId,RaftMessages.RaftMessage> outbound, File clusterStateDirectory, FileSystemAbstraction fileSystem, LogProvider logProvider,
-            AvailabilityGuard globalAvailabilityGuard, LocalDatabase localDatabase )
+            Outbound<MemberId,RaftMessages.RaftMessage> outbound, CoreStateStorageService stateStorageService, LogProvider logProvider,
+            AvailabilityGuard globalAvailabilityGuard, DatabaseService localDatabases )
     {
-        LifeSupport life = platformModule.life;
-
-        DurableStateStorage<GlobalSessionTrackerState> sessionTrackerStorage;
-        sessionTrackerStorage = life.add( new DurableStateStorage<>( fileSystem, clusterStateDirectory,
-                SESSION_TRACKER_NAME, new GlobalSessionTrackerState.Marshal( new MemberId.Marshal() ),
-                config.get( CausalClusteringSettings.global_session_tracker_state_size ), logProvider ) );
+        StateStorage<GlobalSessionTrackerState> sessionTrackerStorage = stateStorageService.stateStorage( SESSION_TRACKER );
 
         sessionTracker = new SessionTracker( sessionTrackerStorage );
 
@@ -66,7 +59,7 @@ public class ReplicationModule
                 outbound,
                 sessionPool,
                 progressTracker, progressRetryStrategy, availabilityTimeoutMillis,
-                globalAvailabilityGuard, logProvider, localDatabase,
+                globalAvailabilityGuard, logProvider, localDatabases,
                 platformModule.monitors );
     }
 

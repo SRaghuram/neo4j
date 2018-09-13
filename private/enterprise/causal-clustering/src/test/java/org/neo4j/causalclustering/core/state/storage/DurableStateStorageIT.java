@@ -16,6 +16,8 @@ import java.nio.ByteBuffer;
 import org.neo4j.adversaries.CountingAdversary;
 import org.neo4j.adversaries.MethodGuardedAdversary;
 import org.neo4j.adversaries.fs.AdversarialFileSystemAbstraction;
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
+import org.neo4j.causalclustering.core.state.LongIndexMarshal;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.graphdb.mockfs.SelectiveFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -87,7 +89,7 @@ public class DurableStateStorageIT
                         FileSystemAbstraction.class.getMethod( "truncate", File.class, long.class ) ),
                 normalFSA );
         SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction(
-                new File( new File( testDir.directory(), "long-state" ), "long.a" ), breakingFSA, normalFSA );
+                new File( new File( testDir.directory(), "dummy-state" ), "dummy.a" ), breakingFSA, normalFSA );
 
         long lastValue = 0;
         try ( LongState persistedState = new LongState( combinedFSA, testDir.directory(), 14 ) )
@@ -129,7 +131,7 @@ public class DurableStateStorageIT
                         StoreChannel.class.getMethod( "force", boolean.class ) ),
                 normalFSA );
         SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction(
-                new File( new File( testDir.directory(), "long-state" ), "long.a" ), breakingFSA, normalFSA );
+                new File( new File( testDir.directory(), "dummy-state" ), "dummy.a" ), breakingFSA, normalFSA );
 
         long lastValue = 0;
 
@@ -204,7 +206,7 @@ public class DurableStateStorageIT
                         StoreChannel.class.getMethod( "close" ) ),
                 normalFSA );
         SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction(
-                new File( new File( testDir.directory(), "long-state" ), "long.a" ), breakingFSA, normalFSA );
+                new File( new File( testDir.directory(), "dummy-state" ), "dummy.a" ), breakingFSA, normalFSA );
 
         long lastValue = 0;
         try ( LongState persistedState = new LongState( combinedFSA, testDir.directory(), 14 ) )
@@ -242,7 +244,6 @@ public class DurableStateStorageIT
 
     private static class LongState implements AutoCloseable
     {
-        private static final String FILENAME = "long";
         private final DurableStateStorage<Long> stateStorage;
         private long theState = -1;
         private LifeSupport lifeSupport = new LifeSupport();
@@ -279,8 +280,7 @@ public class DurableStateStorageIT
                 }
             };
 
-            this.stateStorage = lifeSupport.add( new DurableStateStorage<>( fileSystemAbstraction, stateDir, FILENAME,
-                    byteBufferMarshal,
+            this.stateStorage = lifeSupport.add( new DurableStateStorage<>( fileSystemAbstraction, stateDir, CoreStateFiles.DUMMY( new LongIndexMarshal() ),
                     numberOfEntriesBeforeRotation, NullLogProvider.getInstance()
             ) );
 

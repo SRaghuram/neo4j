@@ -7,8 +7,8 @@ package org.neo4j.causalclustering.backup_stores;
 
 import java.io.File;
 
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.causalclustering.helpers.DataCreator.createEmptyNodes;

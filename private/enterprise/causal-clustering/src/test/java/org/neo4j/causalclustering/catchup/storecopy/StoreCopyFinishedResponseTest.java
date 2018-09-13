@@ -8,6 +8,7 @@ package org.neo4j.causalclustering.catchup.storecopy;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_DATABASE_UNKNOWN;
 import static org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH;
 import static org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND;
 import static org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_UNKNOWN;
@@ -23,7 +24,8 @@ public class StoreCopyFinishedResponseTest
     public void shouldMaintainOrderOfStatuses()
     {
         StoreCopyFinishedResponse.Status[] givenValues = values();
-        StoreCopyFinishedResponse.Status[] expectedValues = new StoreCopyFinishedResponse.Status[]{SUCCESS, E_STORE_ID_MISMATCH, E_TOO_FAR_BEHIND, E_UNKNOWN};
+        StoreCopyFinishedResponse.Status[] expectedValues =
+                new StoreCopyFinishedResponse.Status[]{SUCCESS, E_STORE_ID_MISMATCH, E_TOO_FAR_BEHIND, E_UNKNOWN, E_DATABASE_UNKNOWN};
 
         assertArrayEquals( givenValues, expectedValues );
     }

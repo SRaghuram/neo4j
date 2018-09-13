@@ -10,22 +10,21 @@ import java.io.IOException;
 import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.consensus.log.RaftLog;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import org.neo4j.causalclustering.core.state.snapshot.CoreStateType;
 
 public class CoreSnapshotService
 {
     private static final String OPERATION_NAME = "snapshot request";
 
     private final CommandApplicationProcess applicationProcess;
-    private final CoreState coreState;
+    private final CoreStateRepository coreStateRepository;
     private final RaftLog raftLog;
     private final RaftMachine raftMachine;
 
-    public CoreSnapshotService( CommandApplicationProcess applicationProcess, CoreState coreState, RaftLog raftLog,
+    public CoreSnapshotService( CommandApplicationProcess applicationProcess, CoreStateRepository coreStateRepository, RaftLog raftLog,
             RaftMachine raftMachine )
     {
         this.applicationProcess = applicationProcess;
-        this.coreState = coreState;
+        this.coreStateRepository = coreStateRepository;
         this.raftLog = raftLog;
         this.raftMachine = raftMachine;
     }
@@ -40,8 +39,8 @@ public class CoreSnapshotService
             long prevTerm = raftLog.readEntryTerm( lastApplied );
             CoreSnapshot coreSnapshot = new CoreSnapshot( lastApplied, prevTerm );
 
-            coreState.augmentSnapshot( coreSnapshot );
-            coreSnapshot.add( CoreStateType.RAFT_CORE_STATE, raftMachine.coreState() );
+            coreStateRepository.augmentSnapshot( coreSnapshot );
+            coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftMachine.coreState() );
 
             return coreSnapshot;
         }
@@ -56,9 +55,9 @@ public class CoreSnapshotService
         long snapshotPrevIndex = coreSnapshot.prevIndex();
         raftLog.skip( snapshotPrevIndex, coreSnapshot.prevTerm() );
 
-        coreState.installSnapshot( coreSnapshot );
-        raftMachine.installCoreState( coreSnapshot.get( CoreStateType.RAFT_CORE_STATE ) );
-        coreState.flush( snapshotPrevIndex );
+        coreStateRepository.installSnapshot( coreSnapshot );
+        raftMachine.installCoreState( coreSnapshot.get( CoreStateFiles.RAFT_CORE_STATE ) );
+        coreStateRepository.flush( snapshotPrevIndex );
 
         applicationProcess.installSnapshot( coreSnapshot );
         notifyAll();

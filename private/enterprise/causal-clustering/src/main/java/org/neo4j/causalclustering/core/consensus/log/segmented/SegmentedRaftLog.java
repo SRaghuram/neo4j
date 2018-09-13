@@ -8,6 +8,7 @@ package org.neo4j.causalclustering.core.consensus.log.segmented;
 import java.io.File;
 import java.io.IOException;
 import java.time.Clock;
+import java.util.function.Function;
 
 import org.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import org.neo4j.causalclustering.core.consensus.log.RaftLog;
@@ -50,7 +51,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     private final FileSystemAbstraction fileSystem;
     private final File directory;
     private final long rotateAtSize;
-    private final ChannelMarshal<ReplicatedContent> contentMarshal;
+    private final Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector;
     private final FileNames fileNames;
     private final JobScheduler scheduler;
     private final Log log;
@@ -64,13 +65,13 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     private JobHandle readerPoolPruner;
 
     public SegmentedRaftLog( FileSystemAbstraction fileSystem, File directory, long rotateAtSize,
-            ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, int readerPoolSize, Clock clock,
+            Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, int readerPoolSize, Clock clock,
             JobScheduler scheduler, CoreLogPruningStrategy pruningStrategy )
     {
         this.fileSystem = fileSystem;
         this.directory = directory;
         this.rotateAtSize = rotateAtSize;
-        this.contentMarshal = contentMarshal;
+        this.marshalSelector = marshalSelector;
         this.logProvider = logProvider;
         this.scheduler = scheduler;
 
@@ -88,7 +89,15 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
             throw new IOException( "Could not create: " + directory );
         }
 
-        state = new RecoveryProtocol( fileSystem, fileNames, readerPool, contentMarshal, logProvider ).run();
+        try
+        {
+            state = new RecoveryProtocol( fileSystem, fileNames, readerPool, marshalSelector, logProvider ).run();
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( e );
+        }
+
         log.info( "log started with recovered state %s", state );
         /*
          * Recovery guarantees that once complete the header of the last raft log file is intact. No such guarantee
@@ -98,7 +107,8 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
          * As an obvious optimization, we don't need to rotate if the file contains only the header, such as is
          * the case of a newly created log.
          */
-        if ( state.segments.last().size() > SegmentHeader.SIZE )
+        SegmentFile lastSegment = state.segments.last();
+        if ( lastSegment.size() > lastSegment.header().recordOffset() )
         {
             rotateSegment( state.appendIndex, state.appendIndex, state.terms.latest() );
         }
@@ -110,7 +120,10 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     @Override
     public synchronized void stop() throws Throwable
     {
-        readerPoolPruner.cancel( false );
+        if ( readerPoolPruner != null )
+        {
+            readerPoolPruner.cancel( false );
+        }
         readerPool.close();
         state.segments.close();
     }

@@ -10,10 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.IntFunction;
 
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.IpFamily;
-import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.ports.allocation.PortAuthority;

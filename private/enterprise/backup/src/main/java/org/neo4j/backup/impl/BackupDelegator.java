@@ -7,7 +7,7 @@ package org.neo4j.backup.impl;
 
 import java.io.IOException;
 
-import org.neo4j.causalclustering.catchup.CatchUpClient;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupResult;
 import org.neo4j.causalclustering.catchup.storecopy.RemoteStore;
@@ -26,10 +26,10 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 class BackupDelegator extends LifecycleAdapter
 {
     private final RemoteStore remoteStore;
-    private final CatchUpClient catchUpClient;
+    private final CatchupClientFactory catchUpClient;
     private final StoreCopyClient storeCopyClient;
 
-    BackupDelegator( RemoteStore remoteStore, CatchUpClient catchUpClient, StoreCopyClient storeCopyClient )
+    BackupDelegator( RemoteStore remoteStore, CatchupClientFactory catchUpClient, StoreCopyClient storeCopyClient )
     {
         this.remoteStore = remoteStore;
         this.catchUpClient = catchUpClient;

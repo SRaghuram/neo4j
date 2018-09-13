@@ -5,6 +5,7 @@
  */
 package org.neo4j.harness;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -34,18 +36,19 @@ import static java.util.Collections.synchronizedList;
 public class CausalClusterInProcessBuilder
 {
 
-    public static WithCores init()
+    public static WithServerBuilder init()
     {
         return new Builder();
     }
 
     /**
      * Step Builder to ensure that Cluster has all the required pieces
-     * TODO: Add mapping methods to allow for core hosts and replicas to be unevenly distributed  between databases
+     * TODO: Add mapping methods to allow for core hosts and replicas to be unevenly distributed between databases
      */
-    public static class Builder implements WithCores, WithReplicas, WithLogger, WithPath, WithOptionalDatabasesAndPorts
+    public static class Builder implements WithServerBuilder, WithCores, WithReplicas, WithLogger, WithPath, WithOptionalDatabasesAndPorts
     {
 
+        private BiFunction<File,String,EnterpriseInProcessServerBuilder> serverBuilder;
         private int numCoreHosts;
         private int numReadReplicas;
         private Log log;
@@ -56,6 +59,12 @@ public class CausalClusterInProcessBuilder
         private DiscoveryServiceFactorySelector.DiscoveryImplementation discoveryServiceFactory = DiscoveryServiceFactorySelector.DEFAULT;
 
         @Override
+        public WithCores withBuilder( BiFunction<File,String,EnterpriseInProcessServerBuilder> serverBuilder )
+        {
+            this.serverBuilder = serverBuilder;
+            return this;
+        }
+
         public WithReplicas withCores( int n )
         {
             numCoreHosts = n;
@@ -126,9 +135,14 @@ public class CausalClusterInProcessBuilder
         }
     }
 
-    /**
+    /*
      * Builder step interfaces
      */
+    public interface WithServerBuilder
+    {
+        WithCores withBuilder( BiFunction<File,String,EnterpriseInProcessServerBuilder> serverBuilder );
+    }
+
     public interface WithCores
     {
         WithReplicas withCores( int n );
@@ -149,7 +163,7 @@ public class CausalClusterInProcessBuilder
         Builder atPath( Path p );
     }
 
-    interface WithOptionalDatabasesAndPorts
+    public interface WithOptionalDatabasesAndPorts
     {
         Builder withOptionalPortsStrategy( PortPickingStrategy s );
 
@@ -244,6 +258,7 @@ public class CausalClusterInProcessBuilder
         private final PortPickingFactory portFactory;
         private final Map<String,String> config;
         private final DiscoveryServiceFactorySelector.DiscoveryImplementation discoveryServiceFactory;
+        private final BiFunction<File,String,EnterpriseInProcessServerBuilder> serverBuilder;
 
         private List<ServerControls> coreControls = synchronizedList( new ArrayList<>() );
         private List<ServerControls> replicaControls = synchronizedList( new ArrayList<>() );
@@ -258,6 +273,7 @@ public class CausalClusterInProcessBuilder
             this.databaseNames = builder.databases;
             this.config = builder.config;
             this.discoveryServiceFactory = builder.discoveryServiceFactory;
+            this.serverBuilder = builder.serverBuilder;
         }
 
         private Map<Integer,String> distributeHostsBetweenDatabases( int nHosts, List<String> databases )
@@ -303,7 +319,8 @@ public class CausalClusterInProcessBuilder
                 int httpsPort = portFactory.httpsCorePort( coreId );
 
                 String homeDir = "core-" + coreId;
-                EnterpriseInProcessServerBuilder builder = new EnterpriseInProcessServerBuilder( clusterPath.toFile(), homeDir );
+
+                EnterpriseInProcessServerBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
 
                 String homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath().toString();
                 builder.withConfig( GraphDatabaseSettings.neo4j_home.name(), homePath );

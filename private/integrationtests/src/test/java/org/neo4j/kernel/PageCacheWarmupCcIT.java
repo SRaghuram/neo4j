@@ -12,10 +12,10 @@ import org.junit.Test;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.ClusterMember;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
-import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.common.ClusterMember;
+import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.upstream.strategies.LeaderOnlyStrategy;
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;

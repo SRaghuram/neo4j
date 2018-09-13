@@ -11,9 +11,9 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.ClusterMember;
-import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.common.ClusterMember;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.stresstests.LagEvaluator.Lag;
 import org.neo4j.helper.Workload;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -89,7 +89,7 @@ class CatchupNewReadReplica extends Workload
             fs.deleteRecursively( readReplica.databaseDirectory() );
         }
         deleteStore = !deleteStore;
-    }
+   }
 
     private OptionalLong leaderTxId()
     {

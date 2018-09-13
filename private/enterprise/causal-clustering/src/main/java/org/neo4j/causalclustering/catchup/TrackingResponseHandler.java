@@ -5,7 +5,6 @@
  */
 package org.neo4j.causalclustering.catchup;
 
-import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.time.Clock;
 import java.util.Optional;
@@ -20,21 +19,34 @@ import org.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
+import static org.neo4j.util.concurrent.Futures.failedFuture;
+
 @SuppressWarnings( "unchecked" )
-class TrackingResponseHandler implements CatchUpResponseHandler
+class TrackingResponseHandler implements CatchupResponseHandler
 {
-    private CatchUpResponseCallback delegate;
-    private CompletableFuture<?> requestOutcomeSignal = new CompletableFuture<>();
+    private static final CompletableFuture<Object> ILLEGAL_FUTURE =
+            failedFuture( new IllegalStateException( "Not expected" ) );
+    private static final CatchupResponseAdaptor ILLEGAL_HANDLER = new CatchupResponseAdaptor();
+
     private final Clock clock;
+
+    private CatchupResponseCallback delegate;
+    private CompletableFuture<?> requestOutcomeSignal;
     private Long lastResponseTime;
 
-    TrackingResponseHandler( CatchUpResponseCallback delegate, Clock clock )
+    TrackingResponseHandler( Clock clock )
     {
-        this.delegate = delegate;
         this.clock = clock;
+        clearResponseHandler();
     }
 
-    void setResponseHandler( CatchUpResponseCallback responseHandler, CompletableFuture<?>
+    void clearResponseHandler()
+    {
+        this.requestOutcomeSignal = ILLEGAL_FUTURE;
+        this.delegate = ILLEGAL_HANDLER;
+    }
+
+    void setResponseHandler( CatchupResponseCallback responseHandler, CompletableFuture<?>
             requestOutcomeSignal )
     {
         this.delegate = responseHandler;
@@ -52,7 +64,7 @@ class TrackingResponseHandler implements CatchUpResponseHandler
     }
 
     @Override
-    public boolean onFileContent( FileChunk fileChunk ) throws IOException
+    public boolean onFileContent( FileChunk fileChunk )
     {
         if ( !requestOutcomeSignal.isCancelled() )
         {
@@ -126,7 +138,7 @@ class TrackingResponseHandler implements CatchUpResponseHandler
     @Override
     public void onClose()
     {
-        requestOutcomeSignal.completeExceptionally( new ClosedChannelException() );
+        requestOutcomeSignal.completeExceptionally( new ClosedChannelException().fillInStackTrace() );
     }
 
     Optional<Long> lastResponseTime()

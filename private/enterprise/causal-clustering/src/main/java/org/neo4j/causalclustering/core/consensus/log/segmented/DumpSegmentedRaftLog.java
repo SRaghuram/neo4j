@@ -13,7 +13,7 @@ import java.io.PrintStream;
 import org.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import org.neo4j.causalclustering.core.replication.ReplicatedContent;
 import org.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
+import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -21,6 +21,8 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.Clocks;
+
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class DumpSegmentedRaftLog
 {
@@ -41,8 +43,9 @@ class DumpSegmentedRaftLog
         final int[] logsFound = {0};
         FileNames fileNames = new FileNames( new File( filenameOrDirectory ) );
         ReaderPool readerPool = new ReaderPool( 0, logProvider, fileNames, fileSystem, Clocks.systemClock() );
+        //TODO: Update to provide a proper MarshalSelector (although in this dump tool its probably just the latest?)
         RecoveryProtocol recoveryProtocol =
-                new RecoveryProtocol( fileSystem, fileNames, readerPool, marshal, logProvider );
+                new RecoveryProtocol( fileSystem, fileNames, readerPool, ignored -> marshal, logProvider );
         Segments segments = recoveryProtocol.run().segments;
 
         segments.visit( segment -> {
@@ -84,7 +87,7 @@ class DumpSegmentedRaftLog
 
                 try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
                 {
-                    new DumpSegmentedRaftLog( fileSystem, CoreReplicatedContentMarshal.marshaller() )
+                    new DumpSegmentedRaftLog( fileSystem, CoreReplicatedContentMarshalFactory.marshalV1( DEFAULT_DATABASE_NAME ) )
                             .dump( fileAsString, printer.getFor( fileAsString ) );
                 }
                 catch ( IOException | DisposedException | DamagedLogStorageException e )

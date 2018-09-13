@@ -8,6 +8,7 @@ package org.neo4j.causalclustering.core.state.storage;
 import java.io.File;
 import java.io.IOException;
 
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.causalclustering.core.state.StateRecoveryManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
@@ -25,7 +26,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     private final File fileA;
     private final File fileB;
     private final FileSystemAbstraction fsa;
-    private final String name;
+    private final CoreStateFiles fileType;
     private final StateMarshal<STATE> marshal;
     private final int numberOfEntriesBeforeRotation;
 
@@ -34,18 +35,18 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
 
     private PhysicalFlushableChannel currentStoreChannel;
 
-    public DurableStateStorage( FileSystemAbstraction fsa, File baseDir, String name, StateMarshal<STATE> marshal,
+    public DurableStateStorage( FileSystemAbstraction fsa, File baseDir, CoreStateFiles<STATE> fileType,
             int numberOfEntriesBeforeRotation, LogProvider logProvider )
     {
         this.fsa = fsa;
-        this.name = name;
-        this.marshal = marshal;
+        this.fileType = fileType;
+        this.marshal = fileType.marshal();
         this.numberOfEntriesBeforeRotation = numberOfEntriesBeforeRotation;
         this.log = logProvider.getLog( getClass() );
-        this.recoveryManager = new StateRecoveryManager<>( fsa, marshal );
-        File parent = stateDir( baseDir, name );
-        this.fileA = new File( parent, name + ".a" );
-        this.fileB = new File( parent, name + ".b" );
+        this.recoveryManager = new StateRecoveryManager<>( fsa, this.marshal );
+        File parent = fileType.at( baseDir );
+        this.fileA = new File( parent, fileType.directoryBaseName() + ".a" );
+        this.fileB = new File( parent, fileType.directoryBaseName() + ".b" );
     }
 
     public boolean exists()
@@ -79,7 +80,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         this.currentStoreChannel = resetStoreFile( currentStoreFile );
         this.initialState = recoveryStatus.recoveredState();
 
-        log.info( "%s state restored, up to ordinal %d", name, marshal.ordinal( initialState ) );
+        log.info( "%s state restored, up to ordinal %d", fileType, marshal.ordinal( initialState ) );
     }
 
     @Override
@@ -140,8 +141,4 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         return new PhysicalFlushableChannel( fsa.open( nextStore, OpenMode.READ_WRITE ) );
     }
 
-    static File stateDir( File baseDir, String name )
-    {
-        return new File( baseDir, name + "-state" );
-    }
 }

@@ -13,13 +13,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Set;
 
+import org.neo4j.causalclustering.common.StubLocalDatabaseService;
 import org.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
-import org.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import org.neo4j.causalclustering.core.state.machines.tx.LastCommittedIndexFinder;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import org.neo4j.causalclustering.core.state.snapshot.CoreStateType;
-import org.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import org.neo4j.causalclustering.helpers.ClassicNeo4jStore;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -45,6 +43,7 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
@@ -53,9 +52,10 @@ public class CoreBootstrapperIT
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final PageCacheRule pageCacheRule = new PageCacheRule();
     private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    private final StubLocalDatabaseService databaseService = new StubLocalDatabaseService();
 
     @Rule
-    public RuleChain ruleChain = RuleChain.outerRule( pageCacheRule ).around( pageCacheRule ).around( testDirectory );
+    public RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( pageCacheRule ).around( testDirectory );
 
     @Test
     public void shouldSetAllCoreState() throws Exception
@@ -63,13 +63,22 @@ public class CoreBootstrapperIT
         // given
         int nodeCount = 100;
         FileSystemAbstraction fileSystem = fileSystemRule.get();
-        File classicNeo4jStore = ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem ).amountOfNodes( nodeCount ).build().getStoreDir();
+        File classicNeo4jStore = ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem )
+                .amountOfNodes( nodeCount )
+                .build()
+                .getStoreDir();
+        DatabaseLayout databaseLayout = DatabaseLayout.of( classicNeo4jStore );
+
+        //TODO: Consider providing a data source manager as well - when we have NeoStoreDataSourceRule playing nice with cluster
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseLayout( databaseLayout )
+                .withMonitors( new Monitors() )
+                .register();
 
         PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
-        DatabaseLayout databaseLayout = DatabaseLayout.of( classicNeo4jStore );
-        CoreBootstrapper bootstrapper =
-                new CoreBootstrapper( databaseLayout, pageCache, fileSystem, Config.defaults(), NullLogProvider.getInstance(), new Monitors() );
-        bootstrapAndVerify( nodeCount, fileSystem, databaseLayout, pageCache, Config.defaults(), bootstrapper );
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, fileSystem, Config.defaults(),
+                NullLogProvider.getInstance(), pageCache, new Monitors() );
+        bootstrapAndVerify( nodeCount, fileSystem, databaseLayout, pageCache, Config.defaults(), bootstrapper, DEFAULT_DATABASE_NAME );
     }
 
     @Test
@@ -79,19 +88,24 @@ public class CoreBootstrapperIT
         int nodeCount = 100;
         FileSystemAbstraction fileSystem = fileSystemRule.get();
         String customTransactionLogsLocation = "transaction-logs";
-        File classicNeo4jStore = ClassicNeo4jStore
-                .builder( testDirectory.directory(), fileSystem )
+        File classicNeo4jStore = ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem )
                 .amountOfNodes( nodeCount )
                 .logicalLogsLocation( customTransactionLogsLocation )
                 .build()
                 .getStoreDir();
+        DatabaseLayout databaseLayout = DatabaseLayout.of( classicNeo4jStore );
+
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseLayout( databaseLayout )
+                .withMonitors( new Monitors() )
+                .register();
 
         PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
-        DatabaseLayout databaseLayout = DatabaseLayout.of( classicNeo4jStore );
-        Config config = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseLayout, pageCache, fileSystem, config, NullLogProvider.getInstance(), new Monitors() );
+        Config config = Config.defaults( GraphDatabaseSettings.logical_logs_location,
+                customTransactionLogsLocation );
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, fileSystem, config, NullLogProvider.getInstance(), pageCache, new Monitors() );
 
-        bootstrapAndVerify( nodeCount, fileSystem, databaseLayout, pageCache, config, bootstrapper );
+        bootstrapAndVerify( nodeCount, fileSystem, databaseLayout, pageCache, config, bootstrapper, DEFAULT_DATABASE_NAME );
     }
 
     @Test
@@ -101,13 +115,22 @@ public class CoreBootstrapperIT
         int nodeCount = 100;
         FileSystemAbstraction fileSystem = fileSystemRule.get();
         File storeInNeedOfRecovery =
-                ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem ).amountOfNodes( nodeCount ).needToRecover().build().getStoreDir();
+                ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem )
+                        .amountOfNodes( nodeCount )
+                        .needToRecover()
+                        .build()
+                        .getStoreDir();
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider(  );
+        DatabaseLayout databaseLayout = DatabaseLayout.of( storeInNeedOfRecovery );
+
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseLayout( databaseLayout )
+                .withMonitors( new Monitors() )
+                .register();
 
         PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
-        DatabaseLayout databaseLayout = DatabaseLayout.of( storeInNeedOfRecovery );
-        CoreBootstrapper bootstrapper =
-                new CoreBootstrapper( databaseLayout, pageCache, fileSystem, Config.defaults(), assertableLogProvider, new Monitors() );
+        Config config = Config.defaults();
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, fileSystem, config, assertableLogProvider, pageCache, new Monitors() );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
@@ -143,8 +166,14 @@ public class CoreBootstrapperIT
 
         PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
         DatabaseLayout databaseLayout = DatabaseLayout.of( storeInNeedOfRecovery );
+
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseLayout( databaseLayout )
+                .withMonitors( new Monitors() )
+                .register();
+
         Config config = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseLayout, pageCache, fileSystem, config, assertableLogProvider, new Monitors() );
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, fileSystem, config, assertableLogProvider, pageCache, new Monitors() );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
@@ -163,7 +192,7 @@ public class CoreBootstrapperIT
     }
 
     private static void bootstrapAndVerify( long nodeCount, FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, PageCache pageCache, Config config,
-            CoreBootstrapper bootstrapper ) throws Exception
+            CoreBootstrapper bootstrapper, String databaseName ) throws Exception
     {
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
@@ -171,7 +200,7 @@ public class CoreBootstrapperIT
 
         // then
         int recordIdBatchSize = parseInt( record_id_batch_size.getDefaultValue() );
-        assertThat( ((IdAllocationState) snapshot.get( CoreStateType.ID_ALLOCATION )).firstUnallocated( IdType.NODE ),
+        assertThat( snapshot.get( databaseName, CoreStateFiles.ID_ALLOCATION ).firstUnallocated( IdType.NODE ),
                 allOf( greaterThanOrEqualTo( nodeCount ), lessThanOrEqualTo( nodeCount + recordIdBatchSize ) ) );
 
         /* Bootstrapped state is created in RAFT land at index -1 and term -1. */
@@ -179,13 +208,13 @@ public class CoreBootstrapperIT
         assertEquals( 0, snapshot.prevTerm() );
 
         /* Lock is initially not taken. */
-        assertEquals( new ReplicatedLockTokenState(), snapshot.get( CoreStateType.LOCK_TOKEN ) );
+        assertEquals( new ReplicatedLockTokenState(), snapshot.get( databaseName, CoreStateFiles.LOCK_TOKEN ) );
 
         /* Raft has the bootstrapped set of members initially. */
-        assertEquals( membership, ((RaftCoreState) snapshot.get( CoreStateType.RAFT_CORE_STATE )).committed().members() );
+        assertEquals( membership, snapshot.get( CoreStateFiles.RAFT_CORE_STATE ).committed().members() );
 
         /* The session state is initially empty. */
-        assertEquals( new GlobalSessionTrackerState(), snapshot.get( CoreStateType.SESSION_TRACKER ) );
+        assertEquals( new GlobalSessionTrackerState(), snapshot.get( CoreStateFiles.SESSION_TRACKER ) );
 
         ReadOnlyTransactionStore transactionStore = new ReadOnlyTransactionStore( pageCache, fileSystem,
                 databaseLayout, config, new Monitors() );

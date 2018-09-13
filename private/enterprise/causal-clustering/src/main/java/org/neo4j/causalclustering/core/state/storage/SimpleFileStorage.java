@@ -26,12 +26,11 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
     private final File file;
     private Log log;
 
-    public SimpleFileStorage( FileSystemAbstraction fileSystem, File directory, String name,
-                              ChannelMarshal<T> marshal, LogProvider logProvider )
+    public SimpleFileStorage( FileSystemAbstraction fileSystem, File file, ChannelMarshal<T> marshal, LogProvider logProvider )
     {
         this.fileSystem = fileSystem;
         this.log = logProvider.getLog( getClass() );
-        this.file = new File( DurableStateStorage.stateDir( directory, name ), name );
+        this.file = file;
         this.marshal = marshal;
     }
 
@@ -58,7 +57,10 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
     @Override
     public void writeState( T state ) throws IOException
     {
-        fileSystem.mkdirs( file.getParentFile() );
+        if ( file.getParentFile() != null )
+        {
+            fileSystem.mkdirs( file.getParentFile() );
+        }
         fileSystem.deleteFile( file );
 
         try ( FlushableChannel channel = new PhysicalFlushableChannel( fileSystem.create( file ) ) )
@@ -66,4 +68,5 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
             marshal.marshal( state, channel );
         }
     }
+
 }

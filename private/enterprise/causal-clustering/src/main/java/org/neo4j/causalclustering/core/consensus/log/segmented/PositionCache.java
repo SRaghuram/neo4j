@@ -19,17 +19,19 @@ import org.neo4j.causalclustering.core.consensus.log.LogPosition;
  */
 class PositionCache
 {
-    private static final LogPosition BEGINNING_OF_RECORDS = new LogPosition( 0, SegmentHeader.SIZE );
     static final int CACHE_SIZE = 8;
+
+    private final LogPosition first;
 
     private LogPosition[] cache = new LogPosition[CACHE_SIZE];
     private int pos;
 
-    PositionCache()
+    PositionCache( long recordOffset )
     {
+        first = new LogPosition( 0, recordOffset );
         for ( int i = 0; i < cache.length; i++ )
         {
-            cache[i] = BEGINNING_OF_RECORDS;
+            cache[i] = first;
         }
     }
 
@@ -55,10 +57,10 @@ class PositionCache
     {
         if ( offsetIndex == 0 )
         {
-            return BEGINNING_OF_RECORDS;
+            return first;
         }
 
-        LogPosition best = BEGINNING_OF_RECORDS;
+        LogPosition best = first;
 
         for ( int i = 0; i < CACHE_SIZE; i++ )
         {

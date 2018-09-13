@@ -7,8 +7,12 @@ package org.neo4j.causalclustering.catchup;
 
 import io.netty.channel.ChannelInboundHandler;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
+import org.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
+import org.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
 import org.neo4j.causalclustering.net.Server;
 import org.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -25,90 +29,166 @@ import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
-import static org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
-import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
-
-public class CatchupServerBuilder
+public final class CatchupServerBuilder
 {
-    private final CatchupServerHandler catchupServerHandler;
-    private LogProvider debugLogProvider = NullLogProvider.getInstance();
-    private LogProvider userLogProvider = NullLogProvider.getInstance();
-    private NettyPipelineBuilderFactory pipelineBuilder = new NettyPipelineBuilderFactory( VOID_WRAPPER );
-    private ApplicationSupportedProtocols catchupProtocols = new ApplicationSupportedProtocols( CATCHUP, emptyList() );
-    private Collection<ModifierSupportedProtocols> modifierProtocols = emptyList();
-    private ChannelInboundHandler parentHandler;
-    private ListenSocketAddress listenAddress;
-    private String serverName = "catchup-server";
-
-    public CatchupServerBuilder( CatchupServerHandler catchupServerHandler )
+    private CatchupServerBuilder()
     {
-        this.catchupServerHandler = catchupServerHandler;
     }
 
-    public CatchupServerBuilder catchupProtocols( ApplicationSupportedProtocols catchupProtocols )
+    public static NeedsCatchupServerHandler builder()
     {
-        this.catchupProtocols = catchupProtocols;
-        return this;
+        return new StepBuilder();
     }
 
-    public CatchupServerBuilder modifierProtocols( Collection<ModifierSupportedProtocols> modifierProtocols )
+    private static class StepBuilder implements NeedsCatchupServerHandler, NeedsDefaultDatabaseName, NeedsCatchupProtocols, NeedsModifierProtocols,
+            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, AcceptsOptionalParams
     {
-        this.modifierProtocols = modifierProtocols;
-        return this;
+        private CatchupServerHandler catchupServerHandler;
+        private String defaultDatabaseName;
+        private NettyPipelineBuilderFactory pipelineBuilder;
+        private ApplicationSupportedProtocols catchupProtocols;
+        private Collection<ModifierSupportedProtocols> modifierProtocols;
+        private ChannelInboundHandler parentHandler;
+        private ListenSocketAddress listenAddress;
+        private LogProvider debugLogProvider = NullLogProvider.getInstance();
+        private LogProvider userLogProvider = NullLogProvider.getInstance();
+        private String serverName = "catchup-server";
+
+        private StepBuilder()
+        {
+        }
+
+        @Override
+        public NeedsDefaultDatabaseName catchupServerHandler( CatchupServerHandler catchupServerHandler )
+        {
+            this.catchupServerHandler = catchupServerHandler;
+            return this;
+        }
+
+        @Override
+        public NeedsCatchupProtocols defaultDatabaseName( String defaultDatabaseName )
+        {
+            this.defaultDatabaseName = defaultDatabaseName;
+            return this;
+        }
+
+        @Override
+        public NeedsModifierProtocols catchupProtocols( ApplicationSupportedProtocols catchupProtocols )
+        {
+            this.catchupProtocols = catchupProtocols;
+            return this;
+        }
+
+        @Override
+        public NeedsPipelineBuilder modifierProtocols( Collection<ModifierSupportedProtocols> modifierProtocols )
+        {
+            this.modifierProtocols = modifierProtocols;
+            return this;
+        }
+
+        @Override
+        public NeedsInstalledProtocolsHandler pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder )
+        {
+            this.pipelineBuilder = pipelineBuilder;
+            return this;
+        }
+
+        @Override
+        public NeedsListenAddress installedProtocolsHandler( ChannelInboundHandler parentHandler )
+        {
+            this.parentHandler = parentHandler;
+            return this;
+        }
+
+        @Override
+        public AcceptsOptionalParams listenAddress( ListenSocketAddress listenAddress )
+        {
+            this.listenAddress = listenAddress;
+            return this;
+        }
+
+        @Override
+        public AcceptsOptionalParams serverName( String serverName )
+        {
+            this.serverName = serverName;
+            return this;
+        }
+
+        @Override
+        public AcceptsOptionalParams userLogProvider( LogProvider userLogProvider )
+        {
+            this.userLogProvider = userLogProvider;
+            return this;
+        }
+
+        @Override
+        public AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider )
+        {
+            this.debugLogProvider = debugLogProvider;
+            return this;
+        }
+
+        @Override
+        public Server build()
+        {
+            ApplicationProtocolRepository applicationProtocolRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
+            ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), modifierProtocols );
+
+            List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = Arrays.asList(
+                    new CatchupProtocolServerInstallerV1.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler, defaultDatabaseName ),
+                    new CatchupProtocolServerInstallerV2.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
+
+            ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(
+                    protocolInstallers, ModifierProtocolInstaller.allServerInstallers );
+
+            HandshakeServerInitializer handshakeServerInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
+                    protocolInstallerRepository, pipelineBuilder, debugLogProvider );
+
+            return new Server( handshakeServerInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName );
+        }
     }
 
-    public CatchupServerBuilder pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder )
+    public interface NeedsCatchupServerHandler
     {
-        this.pipelineBuilder = pipelineBuilder;
-        return this;
+        NeedsDefaultDatabaseName catchupServerHandler( CatchupServerHandler catchupServerHandler );
     }
 
-    public CatchupServerBuilder serverHandler( ChannelInboundHandler parentHandler )
+    public interface NeedsDefaultDatabaseName
     {
-        this.parentHandler = parentHandler;
-        return this;
+        NeedsCatchupProtocols defaultDatabaseName( String defaultDatabaseName );
     }
 
-    public CatchupServerBuilder listenAddress( ListenSocketAddress listenAddress )
+    public interface NeedsCatchupProtocols
     {
-        this.listenAddress = listenAddress;
-        return this;
+        NeedsModifierProtocols catchupProtocols( ApplicationSupportedProtocols catchupProtocols );
     }
 
-    public CatchupServerBuilder userLogProvider( LogProvider userLogProvider )
+    public interface NeedsModifierProtocols
     {
-        this.userLogProvider = userLogProvider;
-        return this;
+        NeedsPipelineBuilder modifierProtocols( Collection<ModifierSupportedProtocols> modifierProtocols );
     }
 
-    public CatchupServerBuilder debugLogProvider( LogProvider debugLogProvider )
+    public interface NeedsPipelineBuilder
     {
-        this.debugLogProvider = debugLogProvider;
-        return this;
+        NeedsInstalledProtocolsHandler pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder );
     }
 
-    public CatchupServerBuilder serverName( String serverName )
+    public interface NeedsInstalledProtocolsHandler
     {
-        this.serverName = serverName;
-        return this;
+        NeedsListenAddress installedProtocolsHandler( ChannelInboundHandler parentHandler );
     }
 
-    public Server build()
+    public interface NeedsListenAddress
     {
-        ApplicationProtocolRepository applicationProtocolRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
-        ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), modifierProtocols );
-
-        CatchupProtocolServerInstaller.Factory catchupProtocolServerInstaller = new CatchupProtocolServerInstaller.Factory( pipelineBuilder, debugLogProvider,
-                catchupServerHandler );
-
-        ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(
-                singletonList( catchupProtocolServerInstaller ), ModifierProtocolInstaller.allServerInstallers );
-
-        HandshakeServerInitializer handshakeServerInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                protocolInstallerRepository, pipelineBuilder, debugLogProvider );
-
-        return new Server( handshakeServerInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName );
+        AcceptsOptionalParams listenAddress( ListenSocketAddress listenAddress );
     }
+
+    public interface AcceptsOptionalParams
+    {
+        AcceptsOptionalParams serverName( String serverName );
+        AcceptsOptionalParams userLogProvider( LogProvider userLogProvider );
+        AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider );
+        Server build();
+    }
+
 }

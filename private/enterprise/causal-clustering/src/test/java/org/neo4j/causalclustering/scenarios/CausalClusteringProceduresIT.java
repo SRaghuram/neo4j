@@ -12,9 +12,9 @@ import org.junit.Test;
 import java.util.Optional;
 
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
-import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.api.KernelTransaction;

@@ -20,6 +20,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
+import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
@@ -31,7 +32,9 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
+//TODO: Update with some test cases for issues related to databaseName
 public class PrepareStoreCopyRequestHandlerTest
 {
     private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4 );
@@ -62,7 +65,7 @@ public class PrepareStoreCopyRequestHandlerTest
         // given store id doesn't match
 
         // when PrepareStoreCopyRequest is written to channel
-        embeddedChannel.writeInbound( new PrepareStoreCopyRequest( STORE_ID_MISMATCHING ) );
+        embeddedChannel.writeInbound( new PrepareStoreCopyRequest( STORE_ID_MISMATCHING, DEFAULT_DATABASE_NAME  ) );
 
         // then there is a store id mismatch message
         assertEquals( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE, embeddedChannel.readOutbound() );
@@ -84,7 +87,7 @@ public class PrepareStoreCopyRequestHandlerTest
         configureProvidedStoreCopyFiles( new StoreResource[0], files, indexIds, lastCheckpoint );
 
         // when store listing is requested
-        embeddedChannel.writeInbound( channelHandlerContext, new PrepareStoreCopyRequest( STORE_ID_MATCHING ) );
+        embeddedChannel.writeInbound( channelHandlerContext, new PrepareStoreCopyRequest( STORE_ID_MATCHING, DEFAULT_DATABASE_NAME ) );
 
         // and the contents of the store listing response is sent
         assertEquals( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE, embeddedChannel.readOutbound() );
@@ -114,7 +117,7 @@ public class PrepareStoreCopyRequestHandlerTest
         configureProvidedStoreCopyFiles( new StoreResource[0], files, indexIds, lastCheckpoint );
 
         // when
-        subjectHandler.channelRead0( channelHandlerContext, new PrepareStoreCopyRequest( STORE_ID_MATCHING ) );
+        subjectHandler.channelRead0( channelHandlerContext, new PrepareStoreCopyRequest( STORE_ID_MATCHING, DEFAULT_DATABASE_NAME ) );
 
         // then
         assertEquals( 1, lock.getReadLockCount() );

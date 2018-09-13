@@ -8,9 +8,13 @@ package org.neo4j.causalclustering.core.state.snapshot;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import org.neo4j.causalclustering.messaging.EndOfStreamException;
+import org.neo4j.causalclustering.messaging.marshalling.StringMarshal;
+import org.neo4j.helpers.collection.Pair;
 import org.neo4j.storageengine.api.ReadableChannel;
 import org.neo4j.storageengine.api.WritableChannel;
 
@@ -21,7 +25,8 @@ public class CoreSnapshot
     private final long prevIndex;
     private final long prevTerm;
 
-    private final Map<CoreStateType,Object> snapshotCollection = new HashMap<>();
+    //Casts throughout this class are safe because we check that the state type corresponds to the CoreStateFiles type parameter on insertion
+    private final Map<Pair<String,CoreStateFiles>,Object> snapshotCollection = new HashMap<>();
 
     public CoreSnapshot( long prevIndex, long prevTerm )
     {
@@ -39,19 +44,33 @@ public class CoreSnapshot
         return prevTerm;
     }
 
-    public void add( CoreStateType type, Object state )
+    public <T> void add( String databaseName, CoreStateFiles<T> type, T state )
     {
-        snapshotCollection.put( type, state );
+        snapshotCollection.put( Pair.of( databaseName, type ), state );
     }
 
-    public <T> T get( CoreStateType type )
+    public <T> void add( CoreStateFiles<T> type, T state )
     {
-        return (T) snapshotCollection.get( type );
+        add( null, type, state );
     }
 
-    public Iterable<CoreStateType> types()
+    public <T> T get( String databaseName, CoreStateFiles<T> type )
     {
-        return snapshotCollection.keySet();
+        //noinspection unchecked
+        return (T) snapshotCollection.get( Pair.of( databaseName, type) );
+    }
+
+    public <T> T get( CoreStateFiles<T> type )
+    {
+        return get( null, type );
+    }
+
+    public <T> void forEachSnapshotOfType( CoreStateFiles<T> type, BiConsumer<String, T> consumer )
+    {
+        //noinspection unchecked
+        snapshotCollection.entrySet().stream()
+                .filter( entry -> entry.getKey().other().equals( type ) )
+                .forEach( entry -> consumer.accept( entry.getKey().first(), (T) entry.getValue() ) );
     }
 
     public int size()
@@ -62,16 +81,19 @@ public class CoreSnapshot
     public static class Marshal extends SafeChannelMarshal<CoreSnapshot>
     {
         @Override
-        public void marshal( CoreSnapshot coreSnapshot, WritableChannel buffer ) throws IOException
+        public void marshal( CoreSnapshot coreSnapshot, WritableChannel channel ) throws IOException
         {
-            buffer.putLong( coreSnapshot.prevIndex );
-            buffer.putLong( coreSnapshot.prevTerm );
+            channel.putLong( coreSnapshot.prevIndex );
+            channel.putLong( coreSnapshot.prevTerm );
 
-            buffer.putInt( coreSnapshot.size() );
-            for ( CoreStateType type : coreSnapshot.types() )
+            channel.putInt( coreSnapshot.size() );
+            for ( Map.Entry<Pair<String,CoreStateFiles>,Object> entry : coreSnapshot.snapshotCollection.entrySet() )
             {
-                buffer.putInt( type.ordinal() );
-                type.marshal.marshal( coreSnapshot.get( type ), buffer );
+                CoreStateFiles type = entry.getKey().other();
+                channel.putInt( type.ordinal() );
+                //noinspection unchecked
+                type.marshal().marshal( entry.getValue(), channel );
+                StringMarshal.marshal( channel, entry.getKey().first() );
             }
         }
 
@@ -86,9 +108,11 @@ public class CoreSnapshot
             for ( int i = 0; i < snapshotCount; i++ )
             {
                 int typeOrdinal = channel.getInt();
-                CoreStateType type = CoreStateType.values()[typeOrdinal];
-                Object state = type.marshal.unmarshal( channel );
-                coreSnapshot.add( type, state );
+                CoreStateFiles type = CoreStateFiles.values().get(typeOrdinal);
+                Object state = type.marshal().unmarshal( channel );
+                String databaseName = StringMarshal.unmarshal( channel );
+                //noinspection unchecked
+                coreSnapshot.add( databaseName, type, state );
             }
 
             return coreSnapshot;

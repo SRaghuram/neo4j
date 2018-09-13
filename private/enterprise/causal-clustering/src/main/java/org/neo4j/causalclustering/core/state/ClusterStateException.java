@@ -5,7 +5,7 @@
  */
 package org.neo4j.causalclustering.core.state;
 
-public class ClusterStateException extends Exception
+public class ClusterStateException extends RuntimeException
 {
     ClusterStateException( String message )
     {

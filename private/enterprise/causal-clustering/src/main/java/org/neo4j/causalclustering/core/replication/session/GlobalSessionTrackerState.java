@@ -126,9 +126,9 @@ public class GlobalSessionTrackerState
     {
         private final ChannelMarshal<MemberId> memberMarshal;
 
-        public Marshal( ChannelMarshal<MemberId> marshal )
+        public Marshal()
         {
-            this.memberMarshal = marshal;
+            this.memberMarshal = MemberId.Marshal.INSTANCE;
         }
 
         @Override

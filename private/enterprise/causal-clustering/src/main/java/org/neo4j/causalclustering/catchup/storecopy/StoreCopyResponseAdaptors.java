@@ -8,19 +8,19 @@ package org.neo4j.causalclustering.catchup.storecopy;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
-import org.neo4j.causalclustering.catchup.CatchUpResponseAdaptor;
+import org.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import org.neo4j.logging.Log;
 
 import static java.lang.String.format;
 
-public abstract class StoreCopyResponseAdaptors<T> extends CatchUpResponseAdaptor<T>
+public abstract class StoreCopyResponseAdaptors<T> extends CatchupResponseAdaptor<T>
 {
-    static StoreCopyResponseAdaptors<StoreCopyFinishedResponse> filesCopyAdaptor( StoreFileStreamProvider storeFileStreamProvider, Log log )
+    public static StoreCopyResponseAdaptors<StoreCopyFinishedResponse> filesCopyAdaptor( StoreFileStreamProvider storeFileStreamProvider, Log log )
     {
         return new StoreFilesCopyResponseAdaptors( storeFileStreamProvider, log );
     }
 
-    static StoreCopyResponseAdaptors<PrepareStoreCopyResponse> prepareStoreCopyAdaptor( StoreFileStreamProvider storeFileStreamProvider, Log log )
+    public static StoreCopyResponseAdaptors<PrepareStoreCopyResponse> prepareStoreCopyAdaptor( StoreFileStreamProvider storeFileStreamProvider, Log log )
     {
         return new PrepareStoreCopyResponseAdaptors( storeFileStreamProvider, log );
     }

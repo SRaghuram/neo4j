@@ -38,7 +38,7 @@ public class DummyRequest implements CoreReplicatedContent
     }
 
     @Override
-    public void handle( ReplicatedContentHandler contentHandler ) throws IOException
+    public void dispatch( ReplicatedContentHandler contentHandler ) throws IOException
     {
         contentHandler.handle( this );
     }
@@ -52,6 +52,12 @@ public class DummyRequest implements CoreReplicatedContent
     public void dispatch( CommandDispatcher commandDispatcher, long commandIndex, Consumer<Result> callback )
     {
         commandDispatcher.dispatch( this, commandIndex, callback );
+    }
+
+    @Override
+    public String databaseName()
+    {
+        return null;
     }
 
     public ChunkedInput<ByteBuf> encoder()

@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.IntFunction;
 
-import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;

@@ -6,7 +6,7 @@
 package org.neo4j.causalclustering.core.consensus.log.cache;
 
 import org.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import org.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
+import org.neo4j.causalclustering.core.replication.ReplicatedContent;
 
 /**
  * A cache that keeps Raft log entries in memory, generally to bridge the gap
@@ -17,7 +17,7 @@ import org.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
  * <p>
  * The cache relies on highly efficient underlying data structures (a circular
  * buffer) and also allows on to specify a maximum bound on the number of entries
- * as well as their total size where known, see {@link CoreReplicatedContent#size()} ()}.
+ * as well as their total size where known, see {@link ReplicatedContent#size()} ()}.
  */
 public class ConsecutiveInFlightCache implements InFlightCache
 {

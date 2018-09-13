@@ -21,7 +21,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
-import org.neo4j.causalclustering.core.state.ClusterStateException;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.OutsideWorld;
@@ -74,11 +73,11 @@ public class UnbindFromClusterCommandTest
         IOUtils.closeAll( channel );
     }
 
-    private File createClusterStateDir( FileSystemAbstraction fs ) throws ClusterStateException
+    private File createClusterStateDir( FileSystemAbstraction fs )
     {
         File dataDir = new File( homeDir.toFile(), "data" );
         ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, false );
-        clusterStateDirectory.initialize( fs );
+        clusterStateDirectory.initialize( fs, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         return clusterStateDirectory.get();
     }
 

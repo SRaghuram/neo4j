@@ -15,30 +15,33 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.UUID;
 
-import org.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import org.neo4j.causalclustering.core.consensus.term.TermState;
-import org.neo4j.causalclustering.core.consensus.vote.VoteState;
-import org.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
-import org.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
-import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
-import org.neo4j.causalclustering.core.state.storage.DurableStateStorage;
-import org.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import org.neo4j.causalclustering.core.state.storage.SimpleStorage;
-import org.neo4j.causalclustering.core.state.storage.StateMarshal;
+import org.neo4j.causalclustering.core.state.storage.StateStorage;
+import org.neo4j.causalclustering.identity.ClusterId;
+import org.neo4j.causalclustering.identity.DatabaseName;
 import org.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.causalclustering.ReplicationModule.SESSION_TRACKER_NAME;
-import static org.neo4j.causalclustering.core.IdentityModule.CORE_MEMBER_ID_NAME;
-import static org.neo4j.causalclustering.core.consensus.ConsensusModule.RAFT_MEMBERSHIP_NAME;
-import static org.neo4j.causalclustering.core.consensus.ConsensusModule.RAFT_TERM_NAME;
-import static org.neo4j.causalclustering.core.consensus.ConsensusModule.RAFT_VOTE_NAME;
-import static org.neo4j.causalclustering.core.server.CoreServerModule.LAST_FLUSHED_NAME;
-import static org.neo4j.causalclustering.core.state.machines.CoreStateMachinesModule.ID_ALLOCATION_NAME;
-import static org.neo4j.causalclustering.core.state.machines.CoreStateMachinesModule.LOCK_TOKEN_NAME;
+
+import static org.junit.Assert.assertThat;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.CLUSTER_ID;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.CORE_MEMBER_ID;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.DB_NAME;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.ID_ALLOCATION;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.LAST_FLUSHED;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.LOCK_TOKEN;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_MEMBERSHIP;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.SESSION_TRACKER;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_TERM;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_VOTE;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class DumpClusterStateTest
 {
@@ -46,54 +49,71 @@ public class DumpClusterStateTest
     public EphemeralFileSystemRule fsa = new EphemeralFileSystemRule();
     private File dataDir = new File( "data" );
     private ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, false );
+    private String defaultDbName = DEFAULT_DATABASE_NAME;
+    private CoreStateStorageService storageService;
+    private LifeSupport lifeSupport = new LifeSupport();
 
     @Before
-    public void setup() throws ClusterStateException
+    public void setup()
     {
-        clusterStateDirectory.initialize( fsa.get() );
+        clusterStateDirectory.initialize( fsa.get(), defaultDbName );
+        storageService = new CoreStateStorageService( fsa, clusterStateDirectory, lifeSupport, NullLogProvider.getInstance(), Config.defaults() );
     }
 
     @Test
     public void shouldDumpClusterState() throws Exception
     {
         // given
-        createStates();
+        int numClusterStateItems = 10;
+        MemberId nonDefaultMember = new MemberId( UUID.randomUUID() );
+        DatabaseName nonDefaultClusterName = new DatabaseName( "foo" );
+        TermState nonDefaultTermState = new TermState();
+        nonDefaultTermState.update( 1L );
+        ClusterId nonDefaultClusterId = new ClusterId( UUID.randomUUID() );
+        createStates( nonDefaultMember, nonDefaultClusterId, nonDefaultClusterName, nonDefaultTermState );
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        DumpClusterState dumpTool = new DumpClusterState( fsa.get(), dataDir, new PrintStream( out ) );
+        DumpClusterState dumpTool = new DumpClusterState( fsa.get(), dataDir, new PrintStream( out ), defaultDbName, defaultDbName );
 
         // when
         dumpTool.dump();
 
         // then
-        int lineCount = out.toString().split( System.lineSeparator() ).length;
-        assertEquals( 8, lineCount );
+        String outStr = out.toString();
+        assertThat( outStr, allOf(
+                containsString( nonDefaultMember.toString() ),
+                containsString( nonDefaultClusterId.toString() ),
+                containsString( nonDefaultClusterName.toString() ),
+                containsString( nonDefaultTermState.toString() ) ) );
+        int lineCount = outStr.split( System.lineSeparator() ).length;
+        assertEquals( numClusterStateItems, lineCount );
     }
 
-    private void createStates() throws IOException
+    private void createStates( MemberId nonDefaultMember, ClusterId nonDefaultClusterId,
+            DatabaseName nonDefaultClusterName, TermState nonDefaultTermState ) throws IOException
     {
-        SimpleStorage<MemberId> memberIdStorage = new SimpleFileStorage<>( fsa.get(), clusterStateDirectory.get(),
-                CORE_MEMBER_ID_NAME, new MemberId.Marshal(), NullLogProvider.getInstance() );
-        memberIdStorage.writeState( new MemberId( UUID.randomUUID() ) );
 
-        createDurableState( LAST_FLUSHED_NAME, new LongIndexMarshal() );
-        createDurableState( LOCK_TOKEN_NAME, new ReplicatedLockTokenState.Marshal( new MemberId.Marshal() ) );
-        createDurableState( ID_ALLOCATION_NAME, new IdAllocationState.Marshal() );
-        createDurableState( SESSION_TRACKER_NAME, new GlobalSessionTrackerState.Marshal( new MemberId.Marshal() ) );
+        // We're writing to 4 pieces of cluster state
+        SimpleStorage<MemberId> memberIdStorage = storageService.simpleStorage( CORE_MEMBER_ID );
+        SimpleStorage<DatabaseName> clusterNameStorage = storageService.simpleStorage( DB_NAME );
+        SimpleStorage<ClusterId> clusterIdStorage = storageService.simpleStorage( CLUSTER_ID );
+        StateStorage<TermState> termStateStateStorage = storageService.durableStorage( RAFT_TERM );
 
-        /* raft state */
-        createDurableState( RAFT_MEMBERSHIP_NAME, new RaftMembershipState.Marshal() );
-        createDurableState( RAFT_TERM_NAME, new TermState.Marshal() );
-        createDurableState( RAFT_VOTE_NAME, new VoteState.Marshal( new MemberId.Marshal() ) );
+        // But still need to create all the other state, otherwise the read only DumpClusterState tool will throw
+        storageService.stateStorage( LOCK_TOKEN, defaultDbName );
+        storageService.stateStorage( ID_ALLOCATION, defaultDbName );
+        storageService.stateStorage( SESSION_TRACKER );
+        storageService.stateStorage( LAST_FLUSHED );
+        storageService.stateStorage( RAFT_MEMBERSHIP );
+        storageService.stateStorage( RAFT_VOTE );
+
+        lifeSupport.start();
+
+        memberIdStorage.writeState( nonDefaultMember );
+        clusterNameStorage.writeState( nonDefaultClusterName );
+        termStateStateStorage.persistStoreData( nonDefaultTermState );
+        clusterIdStorage.writeState( nonDefaultClusterId );
+
+        lifeSupport.shutdown();
     }
 
-    private <T> void createDurableState( String name, StateMarshal<T> marshal )
-    {
-        DurableStateStorage<T> storage = new DurableStateStorage<>(
-                fsa.get(), clusterStateDirectory.get(), name, marshal, 1024, NullLogProvider.getInstance() );
-
-        //noinspection EmptyTryBlock: Will create initial state.
-        try ( Lifespan ignored = new Lifespan( storage ) )
-        {
-        }
-    }
 }

@@ -17,10 +17,10 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.CORE_MEMBER_ID;
+
 public class IdentityModule
 {
-    public static final String CORE_MEMBER_ID_NAME = "core-member-id";
-
     private MemberId myself;
 
     IdentityModule( PlatformModule platformModule, File clusterStateDirectory )
@@ -30,8 +30,8 @@ public class IdentityModule
 
         Log log = logProvider.getLog( getClass() );
 
-        SimpleStorage<MemberId> memberIdStorage = new SimpleFileStorage<>( fileSystem, clusterStateDirectory,
-                CORE_MEMBER_ID_NAME, new MemberId.Marshal(), logProvider );
+        SimpleStorage<MemberId> memberIdStorage = new SimpleFileStorage<>( fileSystem, CORE_MEMBER_ID.at( clusterStateDirectory ),
+                new MemberId.Marshal(), logProvider );
 
         try
         {

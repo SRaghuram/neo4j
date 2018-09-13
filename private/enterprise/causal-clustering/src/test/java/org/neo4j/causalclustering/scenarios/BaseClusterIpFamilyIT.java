@@ -12,14 +12,14 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.helpers.DataCreator;
 import org.neo4j.test.causalclustering.ClusterRule;
 
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.causalclustering.discovery.Cluster.dataMatchesEventually;
+import static org.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static org.neo4j.causalclustering.helpers.DataCreator.countNodes;
 
 @RunWith( Parameterized.class )
