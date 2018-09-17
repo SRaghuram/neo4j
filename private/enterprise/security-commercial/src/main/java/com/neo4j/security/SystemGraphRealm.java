@@ -289,6 +289,12 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     }
 
     @Override
+    protected Object getAuthorizationCacheKey( PrincipalCollection principals )
+    {
+        return getAvailablePrincipal( principals );
+    }
+
+    @Override
     public AuthorizationInfo getAuthorizationInfoSnapshot( PrincipalCollection principalCollection )
     {
         return getAuthorizationInfo( principalCollection );
