@@ -10,6 +10,7 @@ import org.apache.lucene.queryparser.flexible.standard.QueryParserUtil;
 import org.eclipse.collections.api.iterator.MutableLongIterator;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -105,8 +106,17 @@ public class FulltextProceduresTest
     public void before()
     {
         GraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
-        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
+    }
+
+    @After
+    public void tearDown()
+    {
+        if ( db != null )
+        {
+            db.shutdown();
+        }
     }
 
     @Test
