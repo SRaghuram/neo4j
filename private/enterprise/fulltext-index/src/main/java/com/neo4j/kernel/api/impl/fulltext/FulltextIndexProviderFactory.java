@@ -14,6 +14,7 @@ import org.neo4j.internal.kernel.api.schema.IndexProviderDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
+import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionStateManager;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
@@ -52,6 +53,8 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         Procedures procedures();
 
         LogService getLogService();
+
+        AuxiliaryTransactionStateManager auxiliaryTransactionStateManager();
     }
 
     public FulltextIndexProviderFactory()
@@ -83,10 +86,22 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         IndexDirectoryStructure.Factory directoryStructureFactory = subProviderDirectoryStructure( context.directory() );
         TokenHolders tokenHolders = dependencies.tokenHolders();
         Log log = dependencies.getLogService().getInternalLog( FulltextIndexProvider.class );
+        AuxiliaryTransactionStateManager auxiliaryTransactionStateManager;
+        try
+        {
+            auxiliaryTransactionStateManager = dependencies.auxiliaryTransactionStateManager();
+        }
+        catch ( UnsatisfiedDependencyException e )
+        {
+            log.debug( "Fulltext indexes failed to register as transaction state providers. This means that, if queried, they will not be able to " +
+                    "uncommitted transactional changes into account. This is fine if the indexes are opened for non-transactional work, such as for " +
+                    "consistency checking." );
+            auxiliaryTransactionStateManager = new NullAuxiliaryTransactionStateManager();
+        }
 
         FulltextIndexProvider provider = new FulltextIndexProvider(
                 DESCRIPTOR, directoryStructureFactory, fileSystemAbstraction, config, tokenHolders,
-                directoryFactory, operationalMode, scheduler );
+                directoryFactory, operationalMode, scheduler, auxiliaryTransactionStateManager );
         try
         {
             dependencies.procedures().registerComponent( FulltextAdapter.class, procContext -> provider, true );

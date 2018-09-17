@@ -14,7 +14,6 @@ import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotApplicableKernelE
 import org.neo4j.storageengine.api.schema.IndexProgressor;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.IndexSampler;
-import org.neo4j.values.storable.Value;
 
 public abstract class FulltextIndexReader implements IndexReader
 {

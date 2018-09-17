@@ -1273,6 +1273,81 @@ public class FulltextProceduresTest
         }
     }
 
+    @Test
+    public void queryResultsMustNotIncludeNodesDeletedInThisTransaction()
+    {
+        db = createDatabase();
+        Label label = Label.label( "Label" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        long nodeIdA;
+        long nodeIdB;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node nodeA = db.createNode( label );
+            nodeA.setProperty( "prop", "value" );
+            nodeIdA = nodeA.getId();
+            Node nodeB = db.createNode( label );
+            nodeB.setProperty( "prop", "value" );
+            nodeIdB = nodeB.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.getNodeById( nodeIdA ).delete();
+            db.getNodeById( nodeIdB ).delete();
+            try ( Result result = db.execute( format( QUERY_NODES, "nodes", "value" ) ) )
+            {
+                assertThat( result.stream().count(), is( 0L ) );
+            }
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustNotIncludeRelationshipsDeletedInThisTransaction()
+    {
+        db = createDatabase();
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        long relIdA;
+        long relIdB;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode();
+            Relationship relA = node.createRelationshipTo( node, relType );
+            relA.setProperty( "prop", "value" );
+            relIdA = relA.getId();
+            Relationship relB = node.createRelationshipTo( node, relType );
+            relB.setProperty( "prop", "value" );
+            relIdB = relB.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.getRelationshipById( relIdA ).delete();
+            db.getRelationshipById( relIdB ).delete();
+            try ( Result result = db.execute( format( QUERY_RELS, "rels", "value" ) ) )
+            {
+                assertThat( result.stream().count(), is( 0L ) );
+            }
+            tx.success();
+        }
+    }
+
+    // todo must include things added in same transaction
+    // todo must include things modified in same transaction
+    // todo dropping/creating indexes?
+
     private GraphDatabaseAPI createDatabase()
     {
         return (GraphDatabaseAPI) cleanup.add( builder.newGraphDatabase() );

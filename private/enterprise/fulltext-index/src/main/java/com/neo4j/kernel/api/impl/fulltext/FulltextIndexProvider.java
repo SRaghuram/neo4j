@@ -11,6 +11,7 @@ import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexPopulator;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
 import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure;
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
@@ -35,7 +36,11 @@ import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
+import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionState;
+import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionStateManager;
+import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionStateProvider;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.factory.OperationalMode;
@@ -45,8 +50,9 @@ import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 
-class FulltextIndexProvider extends AbstractLuceneIndexProvider implements FulltextAdapter
+class FulltextIndexProvider extends AbstractLuceneIndexProvider implements FulltextAdapter, AuxiliaryTransactionStateProvider
 {
+    private static final String TX_PROVIDER_KEY = "FULLTEXT SCHEMA INDEX TRANSACTION STATE";
 
     private final FileSystemAbstraction fileSystem;
     private final Config config;
@@ -54,11 +60,12 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     private final OperationalMode operationalMode;
     private final String defaultAnalyzerName;
     private final String defaultEventuallyConsistentSetting;
+    private final AuxiliaryTransactionStateManager auxiliaryTransactionStateManager;
     private final IndexUpdateSink indexUpdateSink;
 
     FulltextIndexProvider( IndexProviderDescriptor descriptor, IndexDirectoryStructure.Factory directoryStructureFactory,
-            FileSystemAbstraction fileSystem, Config config, TokenHolders tokenHolders, DirectoryFactory directoryFactory,
-            OperationalMode operationalMode, JobScheduler scheduler )
+            FileSystemAbstraction fileSystem, Config config, TokenHolders tokenHolders, DirectoryFactory directoryFactory, OperationalMode operationalMode,
+            JobScheduler scheduler, AuxiliaryTransactionStateManager auxiliaryTransactionStateManager )
     {
         super( descriptor, directoryStructureFactory, config, operationalMode, fileSystem, directoryFactory );
         this.fileSystem = fileSystem;
@@ -68,7 +75,22 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
 
         defaultAnalyzerName = config.get( FulltextConfig.fulltext_default_analyzer );
         defaultEventuallyConsistentSetting = Boolean.toString( config.get( FulltextConfig.eventually_consistent ) );
+        this.auxiliaryTransactionStateManager = auxiliaryTransactionStateManager;
         indexUpdateSink = new IndexUpdateSink( scheduler, config.get( FulltextConfig.eventually_consistent_index_update_queue_max_length ) );
+    }
+
+    @Override
+    public void start() throws Throwable
+    {
+        super.start();
+        auxiliaryTransactionStateManager.registerProvider( this );
+    }
+
+    @Override
+    public void stop() throws Throwable
+    {
+        auxiliaryTransactionStateManager.unregisterProvider( this );
+        super.stop();
     }
 
     @Override
@@ -190,5 +212,17 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         Iterable<AnalyzerProvider> providers = AnalyzerProvider.load( AnalyzerProvider.class );
         Stream<AnalyzerProvider> stream = StreamSupport.stream( providers.spliterator(), false );
         return stream.flatMap( provider -> StreamSupport.stream( provider.getKeys().spliterator(), false ) );
+    }
+
+    @Override
+    public Object getIdentityKey()
+    {
+        return TX_PROVIDER_KEY;
+    }
+
+    @Override
+    public AuxiliaryTransactionState createNewAuxiliaryTransactionState()
+    {
+        return null;
     }
 }
