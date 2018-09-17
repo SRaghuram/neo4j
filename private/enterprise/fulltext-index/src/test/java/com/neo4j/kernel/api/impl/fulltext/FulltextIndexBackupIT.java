@@ -31,9 +31,11 @@ import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.ENTITYID;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_RELS;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static java.lang.String.format;
@@ -92,7 +94,7 @@ public class FulltextIndexBackupIT
     public void fulltextIndexesMustBeUpdatedByIncrementalBackup() throws Exception
     {
         initializeTestData();
-        File backup  = dir.databaseDir( "backup" );
+        File backup = dir.databaseDir( "backup" );
         OnlineBackup.from( "127.0.0.1", backupPort ).backup( backup );
 
         long nodeId3;
@@ -121,14 +123,14 @@ public class FulltextIndexBackupIT
 
         try ( Transaction tx = backupDb.beginTx() )
         {
-            try ( Result nodes = backupDb.execute( format( QUERY, NODE_INDEX, "additional" ) ) )
+            try ( Result nodes = backupDb.execute( format( QUERY_NODES, NODE_INDEX, "additional" ) ) )
             {
-                List<Long> nodeIds = nodes.stream().map( m -> (Long) m.get( ENTITYID ) ).collect( Collectors.toList() );
+                List<Long> nodeIds = nodes.stream().map( m -> ((Node) m.get( NODE )).getId() ).collect( Collectors.toList() );
                 assertThat( nodeIds, containsInAnyOrder( nodeId3, nodeId4 ) );
             }
-            try ( Result relationships = backupDb.execute( format( QUERY, REL_INDEX, "knows" ) ) )
+            try ( Result relationships = backupDb.execute( format( QUERY_RELS, REL_INDEX, "knows" ) ) )
             {
-                List<Long> relIds = relationships.stream().map( m -> (Long) m.get( ENTITYID ) ).collect( Collectors.toList() );
+                List<Long> relIds = relationships.stream().map( m -> ((Relationship) m.get( RELATIONSHIP )).getId() ).collect( Collectors.toList() );
                 assertThat( relIds, containsInAnyOrder( relId2 ) );
             }
             tx.success();
@@ -174,9 +176,7 @@ public class FulltextIndexBackupIT
 
     private GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        return (GraphDatabaseAPI) cleanup.add( new EnterpriseGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( backupDatabaseDir )
-                .newGraphDatabase() );
+        return (GraphDatabaseAPI) cleanup.add( new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( backupDatabaseDir ).newGraphDatabase() );
     }
 
     private void verifyData( GraphDatabaseAPI db )
@@ -188,14 +188,14 @@ public class FulltextIndexBackupIT
         }
         try ( Transaction tx = db.beginTx() )
         {
-            try ( Result nodes = db.execute( format( QUERY, NODE_INDEX, "integration" ) ) )
+            try ( Result nodes = db.execute( format( QUERY_NODES, NODE_INDEX, "integration" ) ) )
             {
-                List<Long> nodeIds = nodes.stream().map( m -> (Long) m.get( ENTITYID ) ).collect( Collectors.toList() );
+                List<Long> nodeIds = nodes.stream().map( m -> ((Node) m.get( NODE )).getId() ).collect( Collectors.toList() );
                 assertThat( nodeIds, containsInAnyOrder( nodeId1, nodeId2 ) );
             }
-            try ( Result relationships = db.execute( format( QUERY, REL_INDEX, "relate" ) ) )
+            try ( Result relationships = db.execute( format( QUERY_RELS, REL_INDEX, "relate" ) ) )
             {
-                List<Long> relIds = relationships.stream().map( m -> (Long) m.get( ENTITYID ) ).collect( Collectors.toList() );
+                List<Long> relIds = relationships.stream().map( m -> ((Relationship) m.get( RELATIONSHIP )).getId() ).collect( Collectors.toList() );
                 assertThat( relIds, containsInAnyOrder( relId1 ) );
             }
             tx.success();

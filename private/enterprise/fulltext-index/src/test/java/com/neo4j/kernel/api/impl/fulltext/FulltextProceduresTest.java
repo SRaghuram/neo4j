@@ -81,15 +81,17 @@ public class FulltextProceduresTest
     private static final String DB_INDEXES = "CALL db.indexes";
     private static final String DROP = "CALL db.index.fulltext.drop(\"%s\")";
     private static final String LIST_AVAILABLE_ANALYZERS = "CALL db.index.fulltext.listAvailableAnalyzers()";
-    private static final String QUERY_NODES = "CALL db.index.fulltext.queryNodes(\"%s\", \"%s\")";
-    private static final String QUERY_RELS = "CALL db.index.fulltext.queryRelationships(\"%s\", \"%s\")";
+    static final String QUERY_NODES = "CALL db.index.fulltext.queryNodes(\"%s\", \"%s\")";
+    static final String QUERY_RELS = "CALL db.index.fulltext.queryRelationships(\"%s\", \"%s\")";
     static final String AWAIT_REFRESH = "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()";
     static final String NODE_CREATE = "CALL db.index.fulltext.createNodeIndex(\"%s\", %s, %s )";
     static final String RELATIONSHIP_CREATE = "CALL db.index.fulltext.createRelationshipIndex(\"%s\", %s, %s)";
     static final String QUERY = "CALL db.index.fulltext.query(\"%s\", \"%s\")";
 
-    private static final String SCORE = "score";
+    static final String SCORE = "score";
     static final String ENTITYID = "entityId";
+    static final String NODE = "node";
+    static final String RELATIONSHIP = "relationship";
     public static final String DESCARTES_MEDITATIONES = "/meditationes--rene-descartes--public-domain.txt";
 
     private final Timeout timeout = VerboseTimeout.builder().withTimeout( 1, TimeUnit.MINUTES ).build();

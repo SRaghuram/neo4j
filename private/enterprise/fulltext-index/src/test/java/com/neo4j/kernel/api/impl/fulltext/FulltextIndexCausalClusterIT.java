@@ -25,6 +25,7 @@ import org.neo4j.causalclustering.discovery.ClusterMember;
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.ReadReplica;
 import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -39,9 +40,11 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.causalclustering.ClusterRule;
 
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_REFRESH;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.ENTITYID;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_RELS;
+import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
 import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static java.lang.String.format;
@@ -63,9 +66,7 @@ public class FulltextIndexCausalClusterIT
     private static final String EVENTUALLY_CONSISTENT_SETTING = ", {" + FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT + ": 'true'}";
 
     @Rule
-    public ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 1 );
+    public ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 );
 
     private Cluster<?> cluster;
     private long nodeId1;
@@ -108,14 +109,14 @@ public class FulltextIndexCausalClusterIT
 
         awaitCatchup();
 
-        verifyIndexContents( NODE_INDEX, "integration", nodeId1, nodeId2 );
-        verifyIndexContents( NODE_INDEX_EC, "integration", nodeId1, nodeId2 );
-        verifyIndexContents( NODE_INDEX, "test", nodeId1, nodeId2 );
-        verifyIndexContents( NODE_INDEX_EC, "test", nodeId1, nodeId2 );
-        verifyIndexContents( NODE_INDEX, "related", nodeId2 );
-        verifyIndexContents( NODE_INDEX_EC, "related", nodeId2 );
-        verifyIndexContents( REL_INDEX, "relate", relId1 );
-        verifyIndexContents( REL_INDEX_EC, "relate", relId1 );
+        verifyIndexContents( NODE_INDEX, "integration", true, nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "integration", true, nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX, "test", true, nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "test", true, nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX, "related", true, nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "related", true, nodeId2 );
+        verifyIndexContents( REL_INDEX, "relate", false, relId1 );
+        verifyIndexContents( REL_INDEX_EC, "relate", false, relId1 );
     }
 
     @Test
@@ -151,14 +152,14 @@ public class FulltextIndexCausalClusterIT
 
         awaitCatchup();
 
-        verifyIndexContents( NODE_INDEX, "integration", nodeId1, nodeId2 );
-        verifyIndexContents( NODE_INDEX_EC, "integration", nodeId1, nodeId2 );
-        verifyIndexContents( NODE_INDEX, "test", nodeId1, nodeId2 );
-        verifyIndexContents( NODE_INDEX_EC, "test", nodeId1, nodeId2 );
-        verifyIndexContents( NODE_INDEX, "related", nodeId2 );
-        verifyIndexContents( NODE_INDEX_EC, "related", nodeId2 );
-        verifyIndexContents( REL_INDEX, "relate", relId1 );
-        verifyIndexContents( REL_INDEX_EC, "relate", relId1 );
+        verifyIndexContents( NODE_INDEX, "integration", true, nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "integration", true, nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX, "test", true, nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "test", true, nodeId1, nodeId2 );
+        verifyIndexContents( NODE_INDEX, "related", true, nodeId2 );
+        verifyIndexContents( NODE_INDEX_EC, "related", true, nodeId2 );
+        verifyIndexContents( REL_INDEX, "relate", false, relId1 );
+        verifyIndexContents( REL_INDEX_EC, "relate", false, relId1 );
     }
 
     // TODO analyzer setting must be replicates to all cluster members
@@ -213,29 +214,30 @@ public class FulltextIndexCausalClusterIT
         while ( appliedTransactions.size() != 1 );
     }
 
-    private void verifyIndexContents( String index, String queryString, long... entityIds ) throws Exception
+    private void verifyIndexContents( String index, String queryString, boolean queryNodes, long... entityIds ) throws Exception
     {
         for ( CoreClusterMember member : cluster.coreMembers() )
         {
-            verifyIndexContents( member.database(), index, queryString, entityIds );
+            verifyIndexContents( member.database(), index, queryString, entityIds, queryNodes );
         }
         for ( ReadReplica member : cluster.readReplicas() )
         {
-            verifyIndexContents( member.database(), index, queryString, entityIds );
+            verifyIndexContents( member.database(), index, queryString, entityIds, queryNodes );
         }
     }
 
-    private void verifyIndexContents( GraphDatabaseService db, String index, String queryString, long[] entityIds ) throws Exception
+    private void verifyIndexContents( GraphDatabaseService db, String index, String queryString, long[] entityIds, boolean queryNodes ) throws Exception
     {
         List<Long> expected = Arrays.stream( entityIds ).boxed().collect( Collectors.toList() );
-        try ( Result result = db.execute( format( QUERY, index, queryString ) ) )
+        String queryCall = queryNodes ? QUERY_NODES : QUERY_RELS;
+        try ( Result result = db.execute( format( queryCall, index, queryString ) ) )
         {
             Set<Long> results = new HashSet<>();
             while ( result.hasNext() )
             {
-                results.add( (Long) result.next().get( ENTITYID ) );
+                results.add( ((Entity) result.next().get( queryNodes ? NODE : RELATIONSHIP )).getId() );
             }
-            String errorMessage = errorMessage( results, expected ) + " (" + db + ", leader is " +  cluster.awaitLeader() + ") query = " + queryString;
+            String errorMessage = errorMessage( results, expected ) + " (" + db + ", leader is " + cluster.awaitLeader() + ") query = " + queryString;
             assertEquals( errorMessage, expected.size(), results.size() );
             int i = 0;
             while ( !results.isEmpty() )
