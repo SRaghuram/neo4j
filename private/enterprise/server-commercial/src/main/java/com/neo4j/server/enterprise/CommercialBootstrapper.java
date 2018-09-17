@@ -30,9 +30,9 @@ public class CommercialBootstrapper extends CommunityBootstrapper
     }
 
     @Override
-    protected NeoServer createNeoServer( GraphFactory graphFactory, Config config, GraphDatabaseDependencies dependencies, LogProvider userLogProvider )
+    protected NeoServer createNeoServer( GraphFactory graphFactory, Config config, GraphDatabaseDependencies dependencies )
     {
-        return new CommercialNeoServer( config, graphFactory, dependencies, userLogProvider );
+        return new CommercialNeoServer( config, graphFactory, dependencies );
     }
 
     @Override

@@ -15,13 +15,13 @@ import org.neo4j.server.enterprise.OpenEnterpriseNeoServer;
 
 public class CommercialNeoServer extends OpenEnterpriseNeoServer
 {
-    public CommercialNeoServer( Config config, Dependencies dependencies, LogProvider logProvider )
+    public CommercialNeoServer( Config config, Dependencies dependencies )
     {
-        super( config, new CommercialGraphFactory(), dependencies, logProvider );
+        super( config, new CommercialGraphFactory(), dependencies );
     }
 
-    public CommercialNeoServer( Config config, GraphFactory graphFactory, Dependencies dependencies, LogProvider logProvider )
+    public CommercialNeoServer( Config config, GraphFactory graphFactory, Dependencies dependencies )
     {
-        super( config, graphFactory, dependencies, logProvider );
+        super( config, graphFactory, dependencies );
     }
 }

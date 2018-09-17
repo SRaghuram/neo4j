@@ -157,10 +157,10 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
         private LogProvider userLogProvider;
 
         @Override
-        protected NeoServer createNeoServer( GraphFactory graphFactory, Config config, GraphDatabaseDependencies dependencies, LogProvider userLogProvider )
+        protected NeoServer createNeoServer( GraphFactory graphFactory, Config config, GraphDatabaseDependencies dependencies )
         {
-            this.userLogProvider = userLogProvider;
-            return super.createNeoServer( graphFactory, config, dependencies, userLogProvider );
+            this.userLogProvider = dependencies.userLogProvider();
+            return super.createNeoServer( graphFactory, config, dependencies );
         }
 
         LogProvider getUserLogProvider()

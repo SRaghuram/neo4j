@@ -52,7 +52,7 @@ public class ServerManagementIT
                 .build();
 
         // When
-        NeoServer server = cleanup.add( new CommercialNeoServer( config, graphDbDependencies(), NullLogProvider.getInstance() ) );
+        NeoServer server = cleanup.add( new CommercialNeoServer( config, graphDbDependencies() ) );
         server.start();
 
         assertNotNull( server.getDatabase().getGraph() );
