@@ -33,13 +33,14 @@ import org.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
 
-import static com.neo4j.commandline.admin.security.ImportAuthCommand.ROLE_IMPORT_FILENAME;
-import static com.neo4j.commandline.admin.security.ImportAuthCommand.USER_IMPORT_FILENAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @Service.Implementation( SecurityModule.class )
 public class CommercialSecurityModule extends EnterpriseSecurityModule
 {
+    public static final String USER_IMPORT_FILENAME = ".users.import";
+    public static final String ROLE_IMPORT_FILENAME = ".roles.import";
+
     // This will be need as an input to the SystemGraphRealm later to be able to handle transactions
     private static DatabaseManager databaseManager;
 

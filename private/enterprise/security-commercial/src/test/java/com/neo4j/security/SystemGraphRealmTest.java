@@ -46,13 +46,14 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
 import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 
-import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class SystemGraphRealmTest
@@ -421,7 +422,7 @@ public class SystemGraphRealmTest
 
         TestSystemGraphExecutor( DatabaseManager databaseManager )
         {
-            super( databaseManager, DatabaseManager.DEFAULT_DATABASE_NAME );
+            super( databaseManager, DEFAULT_DATABASE_NAME );
             bridge = new TestThreadToStatementContextBridge();
         }
 
@@ -447,7 +448,7 @@ public class SystemGraphRealmTest
         @Override
         public Optional<GraphDatabaseFacade> getDatabaseFacade( String name )
         {
-            if ( SYSTEM_DB_NAME.equals( name ) )
+            if ( SYSTEM_DATABASE_NAME.equals( name ) )
             {
                 return Optional.of( testSystemDb );
             }

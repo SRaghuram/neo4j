@@ -34,6 +34,8 @@ import org.neo4j.server.security.enterprise.auth.RoleRecord;
 import org.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.security.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
+import static com.neo4j.security.CommercialSecurityModule.USER_IMPORT_FILENAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;
@@ -84,8 +86,8 @@ public class ImportAuthCommandTest
         altRoleStoreFile = new File( parentFolder, ALTERNATIVE_ROLE_STORE_FILENAME );
         fileSystem.copyFile( userStoreFile, altUserStoreFile );
         fileSystem.copyFile( roleStoreFile, altRoleStoreFile );
-        userImportFile = new File( parentFolder, ImportAuthCommand.USER_IMPORT_FILENAME );
-        roleImportFile = new File( parentFolder, ImportAuthCommand.ROLE_IMPORT_FILENAME );
+        userImportFile = new File( parentFolder, USER_IMPORT_FILENAME );
+        roleImportFile = new File( parentFolder, ROLE_IMPORT_FILENAME );
     }
 
     @Test
@@ -134,7 +136,7 @@ public class ImportAuthCommandTest
             usage.printUsageForCommand( new ImportAuthCommandProvider(), ps::println );
 
             assertEquals( String.format(
-                    "usage: neo4j-admin import-auth [--users=<auth>] [--roles=<roles>]%n" +
+                    "usage: neo4j-admin import-auth [--users-file=<auth>] [--roles-file=<roles>]%n" +
                             "                               [--offline[=<true|false>]]%n" +
                             "                               [--reset[=<true|false>]]%n" +
                             "%n" +
@@ -151,9 +153,9 @@ public class ImportAuthCommandTest
                             "'system-graph' auth provider.%n" +
                             "%n" +
                             "options:%n" +
-                            "  --users=<auth>           File name of user repository file to import.%n" +
+                            "  --users-file=<auth>      File name of user repository file to import.%n" +
                             "                           [default:auth]%n" +
-                            "  --roles=<roles>          File name of role repository file to import.%n" +
+                            "  --roles-file=<roles>     File name of role repository file to import.%n" +
                             "                           [default:roles]%n" +
                             "  --offline=<true|false>   If set to true the actual import will happen%n" +
                             "                           immediately into an offline system graph. Otherwise%n" +

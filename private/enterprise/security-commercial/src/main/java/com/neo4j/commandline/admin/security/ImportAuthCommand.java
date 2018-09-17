@@ -5,7 +5,6 @@
  */
 package com.neo4j.commandline.admin.security;
 
-//import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import com.neo4j.security.CommercialSecurityModule;
 
 import java.io.File;
@@ -40,15 +39,15 @@ import org.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
 
-import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
+import static com.neo4j.security.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
+import static com.neo4j.security.CommercialSecurityModule.USER_IMPORT_FILENAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class ImportAuthCommand implements AdminCommand
 {
     public static final String COMMAND_NAME = "import-auth";
-    public static final String USER_IMPORT_FILENAME = ".users.import"; // TODO: Move to CommercialSecurityModule?
-    public static final String ROLE_IMPORT_FILENAME = ".roles.import";
-    public static final String USER_ARG_NAME = "users";
-    public static final String ROLE_ARG_NAME = "roles";
+    public static final String USER_ARG_NAME = "users-file";
+    public static final String ROLE_ARG_NAME = "roles-file";
     public static final String OFFLINE_ARG_NAME = "offline";
     public static final String RESET_ARG_NAME = "reset";
 
@@ -194,8 +193,9 @@ public class ImportAuthCommand implements AdminCommand
     private GraphDatabaseService createSystemGraphDatabaseFacade( Config config )
     {
         File databaseDir = config.get( GraphDatabaseSettings.databases_root_path ).getAbsoluteFile();
-        File systemDbStoreDir = new File( databaseDir, SYSTEM_DB_NAME );
+        File systemDbStoreDir = new File( databaseDir, SYSTEM_DATABASE_NAME );
 
+        // NOTE: We do not have the dependency to use CommercialGraphDatabaseFactory here, but EnterpriseGraphDatabaseFactory should work fine for this purpose
         //CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
         EnterpriseGraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
         final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( systemDbStoreDir );

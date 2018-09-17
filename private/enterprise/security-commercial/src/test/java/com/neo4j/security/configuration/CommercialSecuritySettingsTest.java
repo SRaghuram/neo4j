@@ -18,7 +18,6 @@ import static org.neo4j.server.security.enterprise.configuration.SecuritySetting
 
 class CommercialSecuritySettingsTest
 {
-
     @Test
     void securityDatabaseDisableByDefault()
     {

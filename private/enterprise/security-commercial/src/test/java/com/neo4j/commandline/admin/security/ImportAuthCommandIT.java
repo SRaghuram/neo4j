@@ -31,7 +31,8 @@ import org.neo4j.server.security.enterprise.auth.RoleRecord;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
-import static com.neo4j.kernel.settings.CommercialGraphDatabaseSettings.SYSTEM_DB_NAME;
+import static com.neo4j.security.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
+import static com.neo4j.security.CommercialSecurityModule.USER_IMPORT_FILENAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertFalse;
@@ -43,6 +44,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class ImportAuthCommandIT
 {
@@ -385,7 +387,7 @@ public class ImportAuthCommandIT
 
     private void assertUserImportFileContainsOnly( String... usernames ) throws Throwable
     {
-        File importFile = getFile( ImportAuthCommand.USER_IMPORT_FILENAME );
+        File importFile = getFile( USER_IMPORT_FILENAME );
         assertTrue( fileSystem.fileExists( importFile ) );
         FileUserRepository userRepository = new FileUserRepository( fileSystem, importFile,
                 NullLogProvider.getInstance() );
@@ -396,7 +398,7 @@ public class ImportAuthCommandIT
 
     private void assertRoleImportFileContains( String roleName, String... withOnlyUsernames ) throws Throwable
     {
-        File importFile = getFile( ImportAuthCommand.ROLE_IMPORT_FILENAME );
+        File importFile = getFile( ROLE_IMPORT_FILENAME );
         assertTrue( fileSystem.fileExists( importFile ) );
         FileRoleRepository roleRepository = new FileRoleRepository( fileSystem, importFile,
                 NullLogProvider.getInstance() );
@@ -409,12 +411,12 @@ public class ImportAuthCommandIT
 
     private void assertNoUserImportFile()
     {
-        assertFalse( fileSystem.fileExists( getFile( ImportAuthCommand.USER_IMPORT_FILENAME ) ) );
+        assertFalse( fileSystem.fileExists( getFile( USER_IMPORT_FILENAME ) ) );
     }
 
     private void assertNoRoleImportFile()
     {
-        assertFalse( fileSystem.fileExists( getFile( ImportAuthCommand.ROLE_IMPORT_FILENAME ) ) );
+        assertFalse( fileSystem.fileExists( getFile( ROLE_IMPORT_FILENAME ) ) );
     }
 
     private void assertSuccessfulOutputMessage()
@@ -448,7 +450,7 @@ public class ImportAuthCommandIT
 
     private File getSystemDbDirectory()
     {
-        return new File( new File( new File( homeDir, "data" ), "databases" ), SYSTEM_DB_NAME );
+        return new File( new File( new File( homeDir, "data" ), "databases" ), SYSTEM_DATABASE_NAME );
     }
     private File getFile( String name )
     {
