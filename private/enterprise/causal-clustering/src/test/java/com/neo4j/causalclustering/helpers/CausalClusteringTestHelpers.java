@@ -35,13 +35,14 @@ import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
+import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
+import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
 import static java.util.Collections.emptyList;
 
@@ -58,8 +59,8 @@ public final class CausalClusteringTestHelpers
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( VOID_WRAPPER ) )
-                .inactivityTimeout( Duration.of( 10, ChronoUnit.SECONDS ) )
-                .scheduler( scheduler )
+                .inactivityTimeout( Duration.of( 10, ChronoUnit.SECONDS ) ).scheduler( scheduler )
+                .bootstrapConfig( clientConfig( Config.defaults() ) )
                 .debugLogProvider( logProvider )
                 .userLogProvider( logProvider )
                 .build();
@@ -74,8 +75,8 @@ public final class CausalClusteringTestHelpers
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( VOID_WRAPPER ) )
                 .installedProtocolsHandler( null )
-                .listenAddress( listenAddress )
-                .scheduler( scheduler )
+                .listenAddress( listenAddress ).scheduler( scheduler )
+                .bootstrapConfig( serverConfig( Config.defaults() ) )
                 .debugLogProvider( NullLogProvider.getInstance() )
                 .userLogProvider( NullLogProvider.getInstance() )
                 .serverName( "test-catchup-server" )

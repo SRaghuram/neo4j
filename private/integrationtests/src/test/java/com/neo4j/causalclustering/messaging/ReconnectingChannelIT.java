@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.messaging;
 
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -29,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
@@ -75,7 +77,7 @@ public class ReconnectingChannelIT
     public void before()
     {
         executor = Executors.newCachedThreadPool();
-        server = new Server( channel -> {}, listenAddress, "test-server", executor );
+        server = new Server( channel -> {}, listenAddress, "test-server", executor, BootstrapConfiguration.serverConfig( Config.defaults() ) );
         elg = new NioEventLoopGroup( 0 );
         Bootstrap bootstrap = new Bootstrap().channel( NioSocketChannel.class ).group( elg ).handler( childCounter );
         channel = new ReconnectingChannel( bootstrap, elg.next(), listenAddress, log );

@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientI
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -47,6 +48,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -147,7 +149,8 @@ public class SenderServiceIT
 
         ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", 0 );
         ExecutorService serverExecutor = cleanupRule.add( Executors.newCachedThreadPool() );
-        return new Server( channelInitializer, null, logProvider, logProvider, listenAddress, "raft-server", serverExecutor );
+        return new Server( channelInitializer, null, logProvider, logProvider, listenAddress, "raft-server", serverExecutor,
+                BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 
     private SenderService raftSender()
@@ -168,7 +171,8 @@ public class SenderServiceIT
                 logProvider,
                 logProvider );
 
-        return new SenderService( channelInitializer, cleanupRule.add( JobSchedulerFactory.createInitialisedScheduler() ), logProvider );
+        return new SenderService( channelInitializer, cleanupRule.add( JobSchedulerFactory.createInitialisedScheduler() ), logProvider,
+                BootstrapConfiguration.clientConfig( Config.defaults() ) );
     }
 
     private ApplicationProtocolRepository clientRepository()

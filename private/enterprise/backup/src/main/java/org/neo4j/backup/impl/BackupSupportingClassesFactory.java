@@ -5,13 +5,6 @@
  */
 package org.neo4j.backup.impl;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-
-import java.io.OutputStream;
-import java.time.Clock;
-import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
-
 import com.neo4j.causalclustering.catchup.CatchupClientBuilder;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
@@ -23,9 +16,17 @@ import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.handlers.PipelineWrapper;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol.CatchupProtocolFeatures;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+
+import java.io.OutputStream;
+import java.time.Clock;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
+
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -111,11 +112,11 @@ public class BackupSupportingClassesFactory
                 .pipelineBuilder( new NettyPipelineBuilderFactory( createPipelineWrapper( config ) ) )
                 .inactivityTimeout( config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
                 .scheduler( jobScheduler )
+                .bootstrapConfig( BootstrapConfiguration.clientConfig( config ) )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .clock( clock )
                 .debugLogProvider( logProvider )
-                .userLogProvider( logProvider )
-                .build();
+                .userLogProvider( logProvider ).build();
     }
 
     private ApplicationSupportedProtocols getSupportedCatchupProtocols( OnlineBackupRequiredArguments arguments,

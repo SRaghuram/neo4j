@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
 import com.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.identity.StoreId;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.ChildInitializer;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
@@ -32,6 +33,7 @@ import java.util.function.Supplier;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -47,8 +49,8 @@ class TestCatchupServer extends Server
 {
     TestCatchupServer( FileSystemAbstraction fileSystem, GraphDatabaseAPI graphDb, LogProvider logProvider, ExecutorService executor )
     {
-        super( childInitializer( fileSystem, graphDb, logProvider ), logProvider, logProvider,
-                new ListenSocketAddress( "localhost", 0 ), "fake-catchup-server", executor );
+        super( childInitializer( fileSystem, graphDb, logProvider ), logProvider, logProvider, new ListenSocketAddress( "localhost", 0 ), "fake-catchup-server",
+                executor, BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 
     private static ChildInitializer childInitializer( FileSystemAbstraction fileSystem, GraphDatabaseAPI graphDb, LogProvider logProvider )

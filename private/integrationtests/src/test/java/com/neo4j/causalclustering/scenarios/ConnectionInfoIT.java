@@ -16,7 +16,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
+
+import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 
 class ConnectionInfoIT
 {
@@ -43,7 +46,8 @@ class ConnectionInfoIT
         ListenSocketAddress listenSocketAddress = new ListenSocketAddress( "localhost", testSocket.getLocalPort() );
 
         ExecutorService executor = Executors.newCachedThreadPool();
-        Server catchupServer = new Server( channel -> { }, logProvider, userLogProvider, listenSocketAddress, "server-name", executor );
+        Server catchupServer = new Server( channel -> { }, logProvider, userLogProvider, listenSocketAddress, "server-name", executor,
+                serverConfig( Config.defaults() ) );
 
         //then
         try
@@ -58,8 +62,9 @@ class ConnectionInfoIT
         {
             executor.shutdown();
         }
-        logProvider.assertContainsMessageContaining( "server-name: address is already bound: " );
-        userLogProvider.assertContainsMessageContaining( "server-name: address is already bound: " );
+        String expectedPartOfMessage = String.format( "server-name: cannot bind to '%s' with transport ", listenSocketAddress );
+        logProvider.assertContainsMessageContaining( expectedPartOfMessage );
+        userLogProvider.assertContainsMessageContaining( expectedPartOfMessage );
     }
 
     @SuppressWarnings( "SameParameterValue" )

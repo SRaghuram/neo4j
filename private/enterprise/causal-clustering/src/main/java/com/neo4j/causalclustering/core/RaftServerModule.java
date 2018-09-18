@@ -23,6 +23,7 @@ import com.neo4j.causalclustering.logging.MessageLogger;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -117,9 +118,10 @@ public class RaftServerModule
                 protocolInstallerRepository, pipelineBuilderFactory, logProvider );
 
         ListenSocketAddress raftListenAddress = platformModule.config.get( CausalClusteringSettings.raft_listen_address );
+
         Executor raftServerExecutor = platformModule.jobScheduler.executor( Group.RAFT_SERVER );
         Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider, platformModule.logService.getUserLogProvider(),
-                raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor );
+                raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor, BootstrapConfiguration.serverConfig( platformModule.config ) );
         platformModule.dependencies.satisfyDependency( raftServer ); // resolved in tests
 
         LoggingInbound<ReceivedInstantClusterIdAwareMessage<?>> loggingRaftInbound =

@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.handshake.ChannelAttribute;
 import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
@@ -14,8 +15,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 
 import java.net.ConnectException;
 import java.time.Clock;
@@ -43,11 +44,13 @@ public class CatchupClientFactory extends LifecycleAdapter
     private final String defaultDatabaseName;
     private final JobScheduler scheduler;
     private final Duration inactivityTimeout;
+    private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
 
-    private NioEventLoopGroup eventLoopGroup;
+    private EventLoopGroup eventLoopGroup;
 
     public CatchupClientFactory( LogProvider logProvider, Clock clock, Function<CatchupResponseHandler,HandshakeClientInitializer> channelInitializerFactory,
-            String defaultDatabaseName, Duration inactivityTimeout, JobScheduler scheduler )
+            String defaultDatabaseName, Duration inactivityTimeout, JobScheduler scheduler,
+            BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration )
     {
         this.log = logProvider.getLog( getClass() );
         this.clock = clock;
@@ -55,6 +58,7 @@ public class CatchupClientFactory extends LifecycleAdapter
         this.defaultDatabaseName = defaultDatabaseName;
         this.scheduler = scheduler;
         this.inactivityTimeout = inactivityTimeout;
+        this.bootstrapConfiguration = bootstrapConfiguration;
     }
 
     public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream ) throws Exception
@@ -76,9 +80,7 @@ public class CatchupClientFactory extends LifecycleAdapter
             this.destination = destination;
             this.handler = new TrackingResponseHandler( clock );
             this.channelInitializer = channelInitializerFactory.apply( handler );
-            this.bootstrap = new Bootstrap()
-                    .group( eventLoopGroup )
-                    .channel( NioSocketChannel.class )
+            this.bootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() )
                     .handler( channelInitializer );
         }
 
@@ -146,7 +148,7 @@ public class CatchupClientFactory extends LifecycleAdapter
     @Override
     public void start()
     {
-        eventLoopGroup = new NioEventLoopGroup( 0, scheduler.executor( Group.CATCHUP_CLIENT ) );
+        eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( Group.CATCHUP_CLIENT ) );
     }
 
     @Override

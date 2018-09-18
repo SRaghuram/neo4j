@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.v1.CatchupProtocolClientInstallerV1;
 import com.neo4j.causalclustering.catchup.v2.CatchupProtocolClientInstallerV2;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
@@ -18,6 +19,8 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
+
+import io.netty.channel.socket.SocketChannel;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -43,8 +46,8 @@ public final class CatchupClientBuilder
         return new StepBuilder();
     }
 
-    private static class StepBuilder implements NeedsDefaultDatabaseName, NeedsCatchupProtocols,
-            NeedsModifierProtocols, NeedsPipelineBuilder, NeedsInactivityTimeout, NeedsScheduler, AcceptsOptionalParams
+    private static class StepBuilder implements NeedsDefaultDatabaseName, NeedsCatchupProtocols, NeedsModifierProtocols, NeedsPipelineBuilder,
+            NeedsInactivityTimeout, NeedsScheduler, NeedBootstrapConfig, AcceptsOptionalParams
     {
         private String defaultDatabaseName;
         private NettyPipelineBuilderFactory pipelineBuilder;
@@ -56,6 +59,7 @@ public final class CatchupClientBuilder
         private Duration inactivityTimeout;
         private Duration handshakeTimeout = Duration.ofSeconds( 5 );
         private Clock clock = systemClock();
+        private BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
 
         private StepBuilder()
         {
@@ -97,7 +101,7 @@ public final class CatchupClientBuilder
         }
 
         @Override
-        public AcceptsOptionalParams scheduler( JobScheduler scheduler )
+        public NeedBootstrapConfig scheduler( JobScheduler scheduler )
         {
             this.scheduler = scheduler;
             return this;
@@ -132,6 +136,13 @@ public final class CatchupClientBuilder
         }
 
         @Override
+        public AcceptsOptionalParams bootstrapConfig( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration )
+        {
+            this.bootstrapConfiguration = bootstrapConfiguration;
+            return this;
+        }
+
+        @Override
         public CatchupClientFactory build()
         {
             ApplicationProtocolRepository applicationProtocolRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
@@ -150,7 +161,8 @@ public final class CatchupClientBuilder
                         handshakeTimeout, debugLogProvider, userLogProvider );
             };
 
-            return new CatchupClientFactory( debugLogProvider, clock, channelInitializerFactory, defaultDatabaseName, inactivityTimeout, scheduler );
+            return new CatchupClientFactory( debugLogProvider, clock, channelInitializerFactory, defaultDatabaseName, inactivityTimeout, scheduler,
+                    bootstrapConfiguration );
         }
     }
 
@@ -176,12 +188,17 @@ public final class CatchupClientBuilder
 
     public interface NeedsScheduler
     {
-        AcceptsOptionalParams scheduler( JobScheduler scheduler );
+        NeedBootstrapConfig scheduler( JobScheduler scheduler );
     }
 
     public interface NeedsInactivityTimeout
     {
         NeedsScheduler inactivityTimeout( Duration inactivityTimeout );
+    }
+
+    public interface NeedBootstrapConfig
+    {
+        AcceptsOptionalParams bootstrapConfig( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration );
     }
 
     public interface AcceptsOptionalParams

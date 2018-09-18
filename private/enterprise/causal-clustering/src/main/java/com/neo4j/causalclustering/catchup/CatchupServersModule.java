@@ -27,6 +27,9 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
+import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
+import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
+
 public abstract class CatchupServersModule
 {
     protected Server catchupServer;
@@ -80,6 +83,7 @@ public abstract class CatchupServersModule
                 .pipelineBuilder( pipelineBuilders.client() )
                 .inactivityTimeout( config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
                 .scheduler( scheduler )
+                .bootstrapConfig( clientConfig( config ) )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .debugLogProvider( logProvider )
                 .userLogProvider( userLogProvider )
@@ -100,6 +104,7 @@ public abstract class CatchupServersModule
                 .installedProtocolsHandler( installedProtocolsHandler )
                 .listenAddress( config.get( CausalClusteringSettings.transaction_listen_address ) )
                 .scheduler( scheduler )
+                .bootstrapConfig( serverConfig( config ) )
                 .userLogProvider( userLogProvider )
                 .debugLogProvider( logProvider )
                 .serverName( "catchup-server" )
@@ -110,9 +115,7 @@ public abstract class CatchupServersModule
             String activeDatabaseName )
     {
         TransactionBackupServiceProvider transactionBackupServiceProvider =
-                new TransactionBackupServiceProvider( logProvider,
-                        userLogProvider,
-                        supportedCatchupProtocols,
+                new TransactionBackupServiceProvider( logProvider, supportedCatchupProtocols,
                         supportedModifierProtocols,
                         pipelineBuilders.backupServer(),
                         catchupServerHandler,

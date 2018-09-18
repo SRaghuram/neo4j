@@ -171,15 +171,12 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         ConnectorPortRegister portRegister = platformModule.connectorPortRegister;
 
         LogProvider internalLogProvider = platformModule.logService.getInternalLogProvider();
-        LogProvider userLogProvider = platformModule.logService.getUserLogProvider();
 
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, internalLogProvider );
         PipelineBuilders pipelineBuilders = new PipelineBuilders( SecurePipelineFactory::new, internalLogProvider, config, dependencies );
 
         TransactionBackupServiceProvider backupServiceProvider = new TransactionBackupServiceProvider(
-                internalLogProvider,
-                userLogProvider,
-                supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
+                internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
                 new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, internalLogProvider, fs ),

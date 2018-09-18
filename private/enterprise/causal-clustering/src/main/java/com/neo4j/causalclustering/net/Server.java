@@ -11,10 +11,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.ServerSocketChannel;
 
-import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
@@ -27,6 +25,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
 import static java.lang.String.format;
+import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 
 public class Server extends SuspendableLifeCycle
 {
@@ -35,6 +34,7 @@ public class Server extends SuspendableLifeCycle
     private final String serverName;
 
     private final Executor executor;
+    private final BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration;
     private final ChildInitializer childInitializer;
     private final ChannelInboundHandler parentHandler;
     private final ConnectorPortRegister portRegister;
@@ -44,24 +44,28 @@ public class Server extends SuspendableLifeCycle
     private ListenSocketAddress listenAddress;
 
     public Server( ChildInitializer childInitializer, LogProvider debugLogProvider, LogProvider userLogProvider, ListenSocketAddress listenAddress,
-                   String serverName, Executor executor )
+            String serverName, Executor executor, BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
     {
-        this( childInitializer, null, debugLogProvider, userLogProvider, listenAddress, serverName, executor );
+        this( childInitializer, null, debugLogProvider, userLogProvider, listenAddress, serverName, executor, bootstrapConfiguration );
     }
 
-    public Server( ChildInitializer childInitializer, ListenSocketAddress listenAddress, String serverName, Executor executor )
+    public Server( ChildInitializer childInitializer, ListenSocketAddress listenAddress, String serverName, Executor executor,
+            BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
     {
-        this( childInitializer, null, NullLogProvider.getInstance(), NullLogProvider.getInstance(), listenAddress, serverName, executor );
-    }
-
-    public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, LogProvider debugLogProvider, LogProvider userLogProvider,
-            ListenSocketAddress listenAddress, String serverName, Executor executor )
-    {
-        this( childInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor, null );
+        this( childInitializer, null, NullLogProvider.getInstance(), NullLogProvider.getInstance(), listenAddress, serverName, executor,
+                bootstrapConfiguration );
     }
 
     public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, LogProvider debugLogProvider, LogProvider userLogProvider,
-            ListenSocketAddress listenAddress, String serverName, Executor executor, ConnectorPortRegister portRegister )
+            ListenSocketAddress listenAddress, String serverName, Executor executor,
+            BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
+    {
+        this( childInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor, null, bootstrapConfiguration );
+    }
+
+    public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, LogProvider debugLogProvider, LogProvider userLogProvider,
+            ListenSocketAddress listenAddress, String serverName, Executor executor, ConnectorPortRegister portRegister,
+            BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
     {
         super( debugLogProvider.getLog( Server.class ) );
         this.childInitializer = childInitializer;
@@ -72,6 +76,7 @@ public class Server extends SuspendableLifeCycle
         this.serverName = serverName;
         this.executor = executor;
         this.portRegister = portRegister;
+        this.bootstrapConfiguration = bootstrapConfiguration;
     }
 
     @Override
@@ -88,11 +93,11 @@ public class Server extends SuspendableLifeCycle
             return;
         }
 
-        workerGroup = new NioEventLoopGroup( 0, executor );
+        workerGroup = bootstrapConfiguration.eventLoopGroup( executor );
 
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .group( workerGroup )
-                .channel( NioServerSocketChannel.class )
+                .channel( bootstrapConfiguration.channelClass() )
                 .option( ChannelOption.SO_REUSEADDR, Boolean.TRUE )
                 .localAddress( listenAddress.socketAddress() )
                 .childHandler( childInitializer.asChannelInitializer() );
@@ -107,17 +112,14 @@ public class Server extends SuspendableLifeCycle
             channel = bootstrap.bind().syncUninterruptibly().channel();
             listenAddress = actualListenAddress( channel );
             registerListenAddress();
-            debugLog.info( serverName + ": bound to " + listenAddress );
+            debugLog.info( "%s: bound to '%s' with transport '%s'", serverName, listenAddress, bootstrapConfiguration.channelClass().getSimpleName() );
         }
         catch ( Exception e )
         {
-            //noinspection ConstantConditions netty sneaky throw
-            if ( e instanceof BindException )
-            {
-                String message = serverName + ": address is already bound: " + listenAddress;
-                userLog.error( message );
-                debugLog.error( message, e );
-            }
+            String message =
+                    format( "%s: cannot bind to '%s' with transport '%s'.", serverName, listenAddress, bootstrapConfiguration.channelClass().getSimpleName() );
+            userLog.error( message + " Message: " + e.getMessage() );
+            debugLog.error( message, e );
             throw e;
         }
     }

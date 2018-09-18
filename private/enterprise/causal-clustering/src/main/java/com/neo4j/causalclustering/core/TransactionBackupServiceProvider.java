@@ -23,12 +23,13 @@ import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
+import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
+
 public class TransactionBackupServiceProvider
 {
     public static final String BACKUP_SERVER_NAME = "backup-server";
 
     private final LogProvider logProvider;
-    private final LogProvider userLogProvider;
     private final ChannelInboundHandler parentHandler;
     private final ApplicationSupportedProtocols catchupProtocols;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
@@ -38,13 +39,12 @@ public class TransactionBackupServiceProvider
     private final ConnectorPortRegister portRegister;
     private final String activeDatabaseName;
 
-    public TransactionBackupServiceProvider( LogProvider logProvider, LogProvider userLogProvider, ApplicationSupportedProtocols catchupProtocols,
+    public TransactionBackupServiceProvider( LogProvider logProvider, ApplicationSupportedProtocols catchupProtocols,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, NettyPipelineBuilderFactory serverPipelineBuilderFactory,
             CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, String activeDatabaseName, JobScheduler scheduler,
             ConnectorPortRegister portRegister )
     {
         this.logProvider = logProvider;
-        this.userLogProvider = userLogProvider;
         this.parentHandler = parentHandler;
         this.catchupProtocols = catchupProtocols;
         this.supportedModifierProtocols = supportedModifierProtocols;
@@ -70,7 +70,7 @@ public class TransactionBackupServiceProvider
                     .installedProtocolsHandler( parentHandler )
                     .listenAddress( backupAddress )
                     .scheduler( scheduler )
-                    .userLogProvider( userLogProvider )
+                    .bootstrapConfig( serverConfig( config ) )
                     .debugLogProvider( logProvider )
                     .portRegister( portRegister )
                     .serverName( BACKUP_SERVER_NAME )

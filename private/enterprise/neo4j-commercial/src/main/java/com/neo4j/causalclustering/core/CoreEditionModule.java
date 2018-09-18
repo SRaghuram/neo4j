@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
@@ -228,7 +229,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         Duration handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
         HandshakeClientInitializer channelInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 protocolInstallerRepository, pipelineBuilders.client(), handshakeTimeout, logProvider, platformModule.logService.getUserLogProvider() );
-        final SenderService raftSender = new SenderService( channelInitializer, platformModule.jobScheduler, logProvider );
+        final SenderService raftSender =
+                new SenderService( channelInitializer, platformModule.jobScheduler, logProvider, BootstrapConfiguration.clientConfig( config ) );
         life.add( raftSender );
         this.clientInstalledProtocols = raftSender::installedProtocols;
 

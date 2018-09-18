@@ -5,11 +5,12 @@
  */
 package com.neo4j.causalclustering.messaging;
 
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
@@ -30,6 +31,7 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 public class SenderService extends LifecycleAdapter implements Outbound<AdvertisedSocketAddress,Message>
 {
+    private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
     private ReconnectingChannels channels;
 
     private final ChannelInitializer channelInitializer;
@@ -39,14 +41,16 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
 
     private boolean senderServiceRunning;
     private Bootstrap bootstrap;
-    private NioEventLoopGroup eventLoopGroup;
+    private EventLoopGroup eventLoopGroup;
 
-    public SenderService( ChannelInitializer channelInitializer, JobScheduler scheduler, LogProvider logProvider )
+    public SenderService( ChannelInitializer channelInitializer, JobScheduler scheduler, LogProvider logProvider,
+            BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration )
     {
         this.channelInitializer = channelInitializer;
         this.scheduler = scheduler;
         this.log = logProvider.getLog( getClass() );
         this.channels = new ReconnectingChannels();
+        this.bootstrapConfiguration = bootstrapConfiguration;
     }
 
     @Override
@@ -115,10 +119,10 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
         serviceLock.writeLock().lock();
         try
         {
-            eventLoopGroup = new NioEventLoopGroup( 0, scheduler.executor( Group.RAFT_CLIENT ) );
+            eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( Group.RAFT_CLIENT ) );
             bootstrap = new Bootstrap()
                     .group( eventLoopGroup )
-                    .channel( NioSocketChannel.class )
+                    .channel( bootstrapConfiguration.channelClass() )
                     .handler( channelInitializer );
 
             senderServiceRunning = true;
