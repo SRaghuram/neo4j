@@ -306,9 +306,9 @@ public class FulltextIndexProviderTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            assertQueryFindsIds( db, db::getNodeById, "nodeIndex", "foo", nodes1 );
-            assertQueryFindsIds( db, db::getNodeById, "nodeIndex", "bar", nodes2 );
-            assertQueryFindsIds( db, db::getNodeById, "nodeIndex", "baz", nodes3 );
+            assertQueryFindsIds( db, true, "nodeIndex", "foo", nodes1 );
+            assertQueryFindsIds( db, true, "nodeIndex", "bar", nodes2 );
+            assertQueryFindsIds( db, true, "nodeIndex", "baz", nodes3 );
             tx.success();
         }
 
@@ -329,9 +329,9 @@ public class FulltextIndexProviderTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            assertQueryFindsIds( db, db::getRelationshipById, "relIndex", "foo", rels1 );
-            assertQueryFindsIds( db, db::getRelationshipById, "relIndex", "bar", rels2 );
-            assertQueryFindsIds( db, db::getRelationshipById, "relIndex", "baz", rels3 );
+            assertQueryFindsIds( db, false, "relIndex", "foo", rels1 );
+            assertQueryFindsIds( db, false, "relIndex", "bar", rels2 );
+            assertQueryFindsIds( db, false, "relIndex", "baz", rels3 );
             tx.success();
         }
     }

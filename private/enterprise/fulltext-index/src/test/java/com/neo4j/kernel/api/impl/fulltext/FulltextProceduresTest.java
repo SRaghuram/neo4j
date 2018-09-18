@@ -66,6 +66,7 @@ import org.neo4j.values.storable.ValueGroup;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static org.eclipse.collections.impl.set.mutable.primitive.LongHashSet.newSetWith;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -328,14 +329,14 @@ public class FulltextProceduresTest
         }
         try ( Transaction ignore = db.beginTx() )
         {
-            assertQueryFindsIds( db, db::getNodeById, labelledSwedishNodes, "and", englishNodes ); // english word
+            assertQueryFindsIds( db, true, labelledSwedishNodes, "and", englishNodes ); // english word
             // swedish stop word (ignored by swedish analyzer, and not among the english nodes)
-            assertQueryFindsIds( db, db::getNodeById, labelledSwedishNodes, "ett", noResults );
-            assertQueryFindsIds( db, db::getNodeById, labelledSwedishNodes, "apa", swedishNodes ); // swedish word
+            assertQueryFindsIds( db, true, labelledSwedishNodes, "ett", noResults );
+            assertQueryFindsIds( db, true, labelledSwedishNodes, "apa", swedishNodes ); // swedish word
 
-            assertQueryFindsIds( db, db::getRelationshipById, typedSwedishRelationships, "and", englishRels );
-            assertQueryFindsIds( db, db::getRelationshipById, typedSwedishRelationships, "ett", noResults );
-            assertQueryFindsIds( db, db::getRelationshipById, typedSwedishRelationships, "apa", swedishRels );
+            assertQueryFindsIds( db, false, typedSwedishRelationships, "and", englishRels );
+            assertQueryFindsIds( db, false, typedSwedishRelationships, "ett", noResults );
+            assertQueryFindsIds( db, false, typedSwedishRelationships, "apa", swedishRels );
         }
     }
 
@@ -364,11 +365,11 @@ public class FulltextProceduresTest
             horseRelId = horseRel.getId();
             tx.success();
         }
-        assertQueryFindsIds( db, "node", "horse", horseId );
-        assertQueryFindsIds( db, "node", "horse zebra", horseId );
+        assertQueryFindsIds( db, true, "node", "horse", newSetWith( horseId ) );
+        assertQueryFindsIds( db, true, "node", "horse zebra", newSetWith( horseId ) );
 
-        assertQueryFindsIds( db, "rel", "horse", horseRelId );
-        assertQueryFindsIds( db, "rel", "horse zebra", horseRelId );
+        assertQueryFindsIds( db, false, "rel", "horse", newSetWith( horseRelId ) );
+        assertQueryFindsIds( db, false, "rel", "horse zebra", newSetWith( horseRelId ) );
     }
 
     @Test
@@ -400,10 +401,10 @@ public class FulltextProceduresTest
         awaitIndexesOnline();
 
         // then
-        assertQueryFindsIds( db, "node", "integration", node1.getId(), node2.getId() );
-        assertQueryFindsIds( db, "node", "test", node1.getId(), node2.getId() );
-        assertQueryFindsIds( db, "node", "related", node2.getId() );
-        assertQueryFindsIds( db, "rel", "relate", relationship.getId() );
+        assertQueryFindsIds( db, true, "node", "integration", node1.getId(), node2.getId() );
+        assertQueryFindsIds( db, true, "node", "test", node1.getId(), node2.getId() );
+        assertQueryFindsIds( db, true, "node", "related", newSetWith( node2.getId() ) );
+        assertQueryFindsIds( db, false, "rel", "relate", newSetWith( relationship.getId() ) );
     }
 
     @Test
@@ -447,8 +448,8 @@ public class FulltextProceduresTest
         {
             try
             {
-                assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
-                assertQueryFindsIds( db, db::getRelationshipById, "rel", "bla", relIds );
+                assertQueryFindsIds( db, true, "node", "bla", nodeIds );
+                assertQueryFindsIds( db, false, "rel", "bla", relIds );
                 success = true;
             }
             catch ( Throwable throwable )
@@ -499,8 +500,8 @@ public class FulltextProceduresTest
         }
 
         db.execute( AWAIT_REFRESH ).close();
-        assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
-        assertQueryFindsIds( db, db::getRelationshipById, "rel", "bla", relIds );
+        assertQueryFindsIds( db, true, "node", "bla", nodeIds );
+        assertQueryFindsIds( db, false, "rel", "bla", relIds );
     }
 
     @Test
@@ -538,8 +539,8 @@ public class FulltextProceduresTest
         }
 
         awaitIndexesOnline();
-        assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
-        assertQueryFindsIds( db, db::getRelationshipById, "rel", "bla", relIds );
+        assertQueryFindsIds( db, true, "node", "bla", nodeIds );
+        assertQueryFindsIds( db, false, "rel", "bla", relIds );
     }
 
     @Test
@@ -610,8 +611,8 @@ public class FulltextProceduresTest
         future2.get();
         awaitIndexesOnline();
         db.execute( AWAIT_REFRESH ).close();
-        assertQueryFindsIds( db, db::getNodeById, "node", newValue, nodeIds );
-        assertQueryFindsIds( db, db::getRelationshipById, "rel", newValue, relIds );
+        assertQueryFindsIds( db, true, "node", newValue, nodeIds );
+        assertQueryFindsIds( db, false, "rel", newValue, relIds );
     }
 
     @Test
@@ -653,8 +654,8 @@ public class FulltextProceduresTest
             }
 
             // Index updates are still blocked for eventually consistent indexes, so we should not find anything at this point.
-            assertQueryFindsIds( db, db::getNodeById, "node", "bla", new LongHashSet() );
-            assertQueryFindsIds( db, db::getRelationshipById, "rel", "bla", new LongHashSet() );
+            assertQueryFindsIds( db, true, "node", "bla", new LongHashSet() );
+            assertQueryFindsIds( db, false, "rel", "bla", new LongHashSet() );
         }
         finally
         {
@@ -666,8 +667,8 @@ public class FulltextProceduresTest
         db.execute( AWAIT_REFRESH );
 
         // Now we should see our data.
-        assertQueryFindsIds( db, db::getNodeById, "node", "bla", nodeIds );
-        assertQueryFindsIds( db, "rel", "bla", relId );
+        assertQueryFindsIds( db, true, "node", "bla", nodeIds );
+        assertQueryFindsIds( db, false, "rel", "bla", newSetWith( relId ) );
     }
 
     @Test
@@ -737,83 +738,6 @@ public class FulltextProceduresTest
     }
 
     @Test
-    public void queryNodesMustFindSameNodeIdsAndScoreAsQuery()
-    {
-        db = createDatabase();
-
-        Label label = Label.label( "Label" );
-        try ( Transaction tx = db.beginTx() )
-        {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
-            tx.success();
-        }
-        awaitIndexesOnline();
-        try ( Transaction tx = db.beginTx() )
-        {
-            db.createNode( label ).setProperty( "prop", "yadda bla bla yadda" );
-            db.createNode( label ).setProperty( "prop", "blim blim bla yadda" );
-            db.createNode( label ).setProperty( "prop", "blue green bla grim fandango" );
-            db.createNode( label ).setProperty( "prop", "bubbles balloon bla bla bla bubblegum" );
-            db.createNode( label ).setProperty( "prop", "bada bing bada bla bada boom" );
-            tx.success();
-        }
-        try ( Transaction tx = db.beginTx() )
-        {
-            Result expected = db.execute( format( QUERY, "nodes", "bla" ) );
-            Result actual = db.execute( format( QUERY_NODES, "nodes", "bla " ) );
-            while ( expected.hasNext() )
-            {
-                assertTrue( actual.hasNext() );
-                Map<String,Object> expectedRow = expected.next();
-                Map<String,Object> actualRow = actual.next();
-                assertThat( actualRow.get( SCORE ), is( expectedRow.get( SCORE ) ) );
-                assertThat( ((Node) actualRow.get( "node" )).getId(), is( expectedRow.get( ENTITYID ) ) );
-            }
-            assertFalse( actual.hasNext() );
-            tx.success();
-        }
-    }
-
-    @Test
-    public void queryRelationshipsMustFindSameNodeIdsAndScoreAsQuery()
-    {
-        db = createDatabase();
-
-        RelationshipType relType = RelationshipType.withName( "REL" );
-        try ( Transaction tx = db.beginTx() )
-        {
-            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
-            tx.success();
-        }
-        awaitIndexesOnline();
-        try ( Transaction tx = db.beginTx() )
-        {
-            Node node = db.createNode();
-            node.createRelationshipTo( node, relType ).setProperty( "prop", "yadda bla bla yadda" );
-            node.createRelationshipTo( node, relType ).setProperty( "prop", "blim blim bla yadda" );
-            node.createRelationshipTo( node, relType ).setProperty( "prop", "blue green bla grim fandango" );
-            node.createRelationshipTo( node, relType ).setProperty( "prop", "bubbles balloon bla bla bla bubblegum" );
-            node.createRelationshipTo( node, relType ).setProperty( "prop", "bada bing bada bla bada boom" );
-            tx.success();
-        }
-        try ( Transaction tx = db.beginTx() )
-        {
-            Result expected = db.execute( format( QUERY, "rels", "bla" ) );
-            Result actual = db.execute( format( QUERY_RELS, "rels", "bla " ) );
-            while ( expected.hasNext() )
-            {
-                assertTrue( actual.hasNext() );
-                Map<String,Object> expectedRow = expected.next();
-                Map<String,Object> actualRow = actual.next();
-                assertThat( actualRow.get( SCORE ), is( expectedRow.get( SCORE ) ) );
-                assertThat( ((Relationship) actualRow.get( "relationship" )).getId(), is( expectedRow.get( ENTITYID ) ) );
-            }
-            assertFalse( actual.hasNext() );
-            tx.success();
-        }
-    }
-
-    @Test
     public void fulltextIndexMustIgnoreNonStringPropertiesForUpdate()
     {
         db = createDatabase();
@@ -829,7 +753,7 @@ public class FulltextProceduresTest
 
         awaitIndexesOnline();
 
-        List<Value> values = generateRandomNonStringValues( 1000 );
+        List<Value> values = generateRandomNonStringValues();
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -846,7 +770,7 @@ public class FulltextProceduresTest
         for ( Value value : values )
         {
             String fulltextQuery = quoteValueForQuery( value );
-            String cypherQuery = format( QUERY, "nodes", fulltextQuery );
+            String cypherQuery = format( QUERY_NODES, "nodes", fulltextQuery );
             Result nodes;
             try
             {
@@ -861,7 +785,7 @@ public class FulltextProceduresTest
                 fail( "did not expect to find any nodes, but found at least: " + nodes.next() );
             }
             nodes.close();
-            Result relationships = db.execute( format( QUERY, "rels", fulltextQuery ) );
+            Result relationships = db.execute( format( QUERY_RELS, "rels", fulltextQuery ) );
             if ( relationships.hasNext() )
             {
                 fail( "did not expect to find any relationships, but found at least: " + relationships.next() );
@@ -878,7 +802,7 @@ public class FulltextProceduresTest
         Label label = Label.label( "Label" );
         RelationshipType relType = RelationshipType.withName( "REL" );
 
-        List<Value> values = generateRandomNonStringValues( 1000 );
+        List<Value> values = generateRandomNonStringValues();
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -903,7 +827,7 @@ public class FulltextProceduresTest
         for ( Value value : values )
         {
             String fulltextQuery = quoteValueForQuery( value );
-            String cypherQuery = format( QUERY, "nodes", fulltextQuery );
+            String cypherQuery = format( QUERY_NODES, "nodes", fulltextQuery );
             Result nodes;
             try
             {
@@ -918,7 +842,7 @@ public class FulltextProceduresTest
                 fail( "did not expect to find any nodes, but found at least: " + nodes.next() );
             }
             nodes.close();
-            Result relationships = db.execute( format( QUERY, "rels", fulltextQuery ) );
+            Result relationships = db.execute( format( QUERY_RELS, "rels", fulltextQuery ) );
             if ( relationships.hasNext() )
             {
                 fail( "did not expect to find any relationships, but found at least: " + relationships.next() );
@@ -996,7 +920,7 @@ public class FulltextProceduresTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            assertQueryFindsIds( db, "nodes", "bla", nodeId );
+            assertQueryFindsIds( db, true, "nodes", "bla", nodeId );
             tx.success();
         }
     }
@@ -1033,7 +957,7 @@ public class FulltextProceduresTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            assertQueryFindsIds( db, "nodes", "foo", nodeId );
+            assertQueryFindsIds( db, true, "nodes", "foo", nodeId );
             Result result = db.execute( format( QUERY_NODES, "nodes", "bar" ) );
             assertFalse( result.hasNext() );
             result.close();
@@ -1073,8 +997,8 @@ public class FulltextProceduresTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            assertQueryFindsIds( db, "nodes", "foo", nodeId );
-            assertQueryFindsIds( db, "nodes", "bar", nodeId );
+            assertQueryFindsIds( db, true, "nodes", "foo", nodeId );
+            assertQueryFindsIds( db, true, "nodes", "bar", nodeId );
             tx.success();
         }
     }
@@ -1112,7 +1036,7 @@ public class FulltextProceduresTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            assertQueryFindsIds( db, "books", "impellit scriptum offerendum", nodeId );
+            assertQueryFindsIds( db, true, "books", "impellit scriptum offerendum", nodeId );
             tx.success();
         }
     }
@@ -1150,7 +1074,7 @@ public class FulltextProceduresTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            assertQueryFindsIds( db, "books", "impellit scriptum offerendum", nodeId );
+            assertQueryFindsIds( db, true, "books", "impellit scriptum offerendum", nodeId );
             tx.success();
         }
     }
@@ -1182,8 +1106,8 @@ public class FulltextProceduresTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            LongHashSet ids = LongHashSet.newSetWith( book2id );
-            assertQueryFindsIds( db, db::getNodeById, "books", "title:Descartes", ids );
+            LongHashSet ids = newSetWith( book2id );
+            assertQueryFindsIds( db, true, "books", "title:Descartes", ids );
             tx.success();
         }
     }
@@ -1364,17 +1288,18 @@ public class FulltextProceduresTest
         }
     }
 
-    static void assertQueryFindsIds( GraphDatabaseService db, String index, String query, long... ids )
+    static void assertQueryFindsIds( GraphDatabaseService db, boolean queryNodes, String index, String query, long... ids )
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Result result = db.execute( format( QUERY, index, query ) );
+            String queryCall = queryNodes ? QUERY_NODES : QUERY_RELS;
+            Result result = db.execute( format( queryCall, index, query ) );
             int num = 0;
             Double score = Double.MAX_VALUE;
             while ( result.hasNext() )
             {
                 Map entry = result.next();
-                Long nextId = (Long) entry.get( ENTITYID );
+                Long nextId = ((Entity) entry.get( queryNodes ? NODE : RELATIONSHIP )).getId();
                 Double nextScore = (Double) entry.get( SCORE );
                 assertThat( nextScore, lessThanOrEqualTo( score ) );
                 score = nextScore;
@@ -1386,19 +1311,21 @@ public class FulltextProceduresTest
         }
     }
 
-    static void assertQueryFindsIds( GraphDatabaseService db, LongFunction<Entity> getEntity, String index, String query, LongHashSet ids )
+    static void assertQueryFindsIds( GraphDatabaseService db, boolean queryNodes, String index, String query, LongHashSet ids )
     {
         ids = new LongHashSet( ids ); // Create a defensive copy, because we're going to modify this instance.
+        String queryCall = queryNodes ? QUERY_NODES : QUERY_RELS;
+        LongFunction<Entity> getEntity = queryNodes ? db::getNodeById : db::getRelationshipById;
         long[] expectedIds = ids.toArray();
         MutableLongSet actualIds = new LongHashSet();
         try ( Transaction tx = db.beginTx() )
         {
-            Result result = db.execute( format( QUERY, index, query ) );
+            Result result = db.execute( format( queryCall, index, query ) );
             Double score = Double.MAX_VALUE;
             while ( result.hasNext() )
             {
                 Map entry = result.next();
-                Long nextId = (Long) entry.get( ENTITYID );
+                long nextId = ((Entity) entry.get( queryNodes ? NODE : RELATIONSHIP )).getId();
                 Double nextScore = (Double) entry.get( SCORE );
                 assertThat( nextScore, lessThanOrEqualTo( score ) );
                 score = nextScore;
@@ -1447,8 +1374,9 @@ public class FulltextProceduresTest
         return Arrays.stream( args ).map( s -> "\"" + s + "\"" ).collect( Collectors.joining( ", ", "[", "]" ) );
     }
 
-    private List<Value> generateRandomNonStringValues( int valuesToGenerate )
+    private List<Value> generateRandomNonStringValues()
     {
+        int valuesToGenerate = 1000;
         RandomValues generator = RandomValues.create();
         List<Value> values = new ArrayList<>( valuesToGenerate );
         for ( int i = 0; i < valuesToGenerate; i++ )
