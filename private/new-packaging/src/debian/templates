@@ -2,8 +2,8 @@ Template: neo4j/question
 Type: select
 Choices: I REJECT, I ACCEPT
 Description: Do you accept the terms and conditions?
- (c) Network Engine for Objects in Lund AB.  2018.  All Rights
- Reserved.  Use of this Software without a proper commercial license
+ (c) Neo4j Sweden AB.  2018.  All Rights Reserved.
+ Use of this Software without a proper commercial license
  with Neo4j, Inc. or its affiliates is prohibited.
  .
  Email inquiries can be directed to: licensing@neo4j.com
