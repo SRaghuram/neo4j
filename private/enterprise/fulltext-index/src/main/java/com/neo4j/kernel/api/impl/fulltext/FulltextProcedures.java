@@ -122,16 +122,6 @@ public class FulltextProcedures
         tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( name ) );
     }
 
-    @Description( "Query the given fulltext index. Returns the ids of matching entities (be they nodes or relationships) and their lucene query score, " +
-            "ordered by score." )
-    @Procedure( name = "db.index.fulltext.query", mode = READ )
-    public Stream<EntityIdOutput> queryFulltext( @Name( "indexName" ) String name, @Name( "queryString" ) String query )
-            throws ParseException, IndexNotFoundKernelException, IOException
-    {
-        ScoreEntityIterator resultIterator = accessor.query( tx, name, query );
-        return resultIterator.stream().map( result -> new EntityIdOutput( result.entityId(), result.score() ) );
-    }
-
     @Description( "Query the given fulltext index. Returns the matching nodes and their lucene query score, ordered by score." )
     @Procedure( name = "db.index.fulltext.queryNodes", mode = READ )
     public Stream<NodeOutput> queryFulltextForNodes( @Name( "indexName" ) String name, @Name( "queryString" ) String query )
@@ -166,18 +156,6 @@ public class FulltextProcedures
         return resultIterator.stream()
                 .map( result -> RelationshipOutput.forExistingEntityOrNull( db, result ) )
                 .filter( Objects::nonNull );
-    }
-
-    public static final class EntityIdOutput
-    {
-        public final long entityId;
-        public final double score;
-
-        EntityIdOutput( long entityId, float score )
-        {
-            this.entityId = entityId;
-            this.score = score;
-        }
     }
 
     public static final class NodeOutput

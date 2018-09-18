@@ -87,13 +87,11 @@ public class FulltextProceduresTest
     static final String AWAIT_REFRESH = "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()";
     static final String NODE_CREATE = "CALL db.index.fulltext.createNodeIndex(\"%s\", %s, %s )";
     static final String RELATIONSHIP_CREATE = "CALL db.index.fulltext.createRelationshipIndex(\"%s\", %s, %s)";
-    static final String QUERY = "CALL db.index.fulltext.query(\"%s\", \"%s\")";
 
-    static final String SCORE = "score";
-    static final String ENTITYID = "entityId";
+    private static final String SCORE = "score";
     static final String NODE = "node";
     static final String RELATIONSHIP = "relationship";
-    public static final String DESCARTES_MEDITATIONES = "/meditationes--rene-descartes--public-domain.txt";
+    private static final String DESCARTES_MEDITATIONES = "/meditationes--rene-descartes--public-domain.txt";
 
     private final Timeout timeout = VerboseTimeout.builder().withTimeout( 1, TimeUnit.MINUTES ).build();
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
