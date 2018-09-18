@@ -36,6 +36,7 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NA
 @Service.Implementation( SecurityModule.class )
 public class CommercialSecurityModule extends EnterpriseSecurityModule
 {
+    public static final String IMPORT_AUTH_COMMAND_NAME = "import-auth";
     public static final String USER_IMPORT_FILENAME = ".users.import";
     public static final String ROLE_IMPORT_FILENAME = ".roles.import";
 

@@ -22,7 +22,6 @@ import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
@@ -45,7 +44,7 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NA
 
 public class ImportAuthCommand implements AdminCommand
 {
-    public static final String COMMAND_NAME = "import-auth";
+    public static final String COMMAND_NAME = CommercialSecurityModule.IMPORT_AUTH_COMMAND_NAME;
     public static final String USER_ARG_NAME = "users-file";
     public static final String ROLE_ARG_NAME = "roles-file";
     public static final String OFFLINE_ARG_NAME = "offline";

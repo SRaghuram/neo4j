@@ -5,7 +5,6 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.commandline.admin.security.ImportAuthCommand;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
@@ -69,6 +68,7 @@ import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
+import static com.neo4j.security.CommercialSecurityModule.IMPORT_AUTH_COMMAND_NAME;
 import static java.lang.String.format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -943,7 +943,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         {
             throw new InvalidArgumentsException(
                     "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " +
-                            "Please use `neo4j-admin " + ImportAuthCommand.COMMAND_NAME + "` to perform migration manually." );
+                            "Please use `neo4j-admin " + IMPORT_AUTH_COMMAND_NAME + "` to perform migration manually." );
         }
 
         stopUserRepository( userRepository );
@@ -959,7 +959,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         {
             throw new InvalidArgumentsException(
                     "Import of users and roles into system graph failed because the import files are inconsistent. " +
-                            "Please use `neo4j-admin " + ImportAuthCommand.COMMAND_NAME + "` to retry import again." );
+                            "Please use `neo4j-admin " + IMPORT_AUTH_COMMAND_NAME + "` to retry import again." );
         }
 
         stopUserRepository( userRepository );
