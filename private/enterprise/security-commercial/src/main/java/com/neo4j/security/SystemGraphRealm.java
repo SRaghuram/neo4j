@@ -124,7 +124,10 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public void start() throws Throwable
     {
-        initializeSystemGraph();
+        if ( authenticationEnabled || authorizationEnabled )
+        {
+            initializeSystemGraph();
+        }
     }
 
     @Override
@@ -831,11 +834,13 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
                 UserRepository initialUserRepository = startUserRepository( importOptions.initialUserRepositorySupplier );
                 if ( initialUserRepository.numberOfUsers() > 0 )
                 {
-                    ListSnapshot<User> initialUsers = initialUserRepository.getPersistedSnapshot();
-                    for ( User user : initialUsers.values() )
+                    // In alignment with InternalFlatFileRealm we only allow the INITIAL_USER_NAME here for now
+                    // (This is what we get from the `set-initial-password` command)
+                    User initialUser = initialUserRepository.getUserByName( INITIAL_USER_NAME );
+                    if ( initialUser != null )
                     {
-                        addUser( user );
-                        addedUsernames.add( user.name() );
+                        addUser( initialUser );
+                        addedUsernames.add( initialUser.name() );
                     }
                 }
                 stopUserRepository( initialUserRepository );

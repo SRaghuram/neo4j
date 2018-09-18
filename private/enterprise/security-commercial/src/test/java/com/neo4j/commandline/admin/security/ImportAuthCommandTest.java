@@ -77,7 +77,7 @@ public class ImportAuthCommandTest
         );
         RoleRepository roles = EnterpriseSecurityModule.getRoleRepository( config, NullLogProvider.getInstance(), fileSystem );
         roles.create(
-                new RoleRecord.Builder().withName( "sorcerer" ).withUser( "jake" ).withUser( "bob" ).build()
+                new RoleRecord.Builder().withName( "sorcerer" ).withUser( "jake" ).build()
         );
         File userStoreFile = CommunitySecurityModule.getUserRepositoryFile( config );
         File roleStoreFile = EnterpriseSecurityModule.getRoleRepositoryFile( config );

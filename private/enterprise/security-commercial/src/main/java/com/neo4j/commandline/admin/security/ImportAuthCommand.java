@@ -50,6 +50,8 @@ public class ImportAuthCommand implements AdminCommand
     public static final String ROLE_ARG_NAME = "roles-file";
     public static final String OFFLINE_ARG_NAME = "offline";
     public static final String RESET_ARG_NAME = "reset";
+    // TODO: Currently it is not allowed to set SYSTEM_DATABASE_NAME as `active_database`. We need to work around this for --offline mode.
+    public static final String IMPORT_SYSTEM_DATABASE_NAME = SYSTEM_DATABASE_NAME + ".import";
 
     private static final Arguments arguments = new Arguments()
             .withArgument( new OptionalNamedArg( USER_ARG_NAME, CommunitySecurityModule.USER_STORE_FILENAME, CommunitySecurityModule.USER_STORE_FILENAME,
@@ -193,10 +195,9 @@ public class ImportAuthCommand implements AdminCommand
     private GraphDatabaseService createSystemGraphDatabaseFacade( Config config )
     {
         File databaseDir = config.get( GraphDatabaseSettings.databases_root_path ).getAbsoluteFile();
-        File systemDbStoreDir = new File( databaseDir, SYSTEM_DATABASE_NAME );
+        File systemDbStoreDir = new File( databaseDir, IMPORT_SYSTEM_DATABASE_NAME );
 
         // NOTE: We do not have the dependency to use CommercialGraphDatabaseFactory here, but EnterpriseGraphDatabaseFactory should work fine for this purpose
-        //CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
         EnterpriseGraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
         final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( systemDbStoreDir );
         GraphDatabaseService db = builder

@@ -262,7 +262,7 @@ class SystemGraphExecutor
 
     protected ThreadToStatementContextBridge getThreadToStatementContextBridge()
     {
-        // resolve statementContext and systemDb on the first call
+        // Resolve statementContext of the active database on the first call
         if ( threadToStatementContextBridge == null )
         {
             GraphDatabaseFacade activeDb = getDb( activeDbName );
@@ -273,6 +273,7 @@ class SystemGraphExecutor
 
     private GraphDatabaseFacade getSystemDb()
     {
+        // Resolve systemDb on the first call
         if ( systemDb == null )
         {
             systemDb = getDb( SYSTEM_DATABASE_NAME );

@@ -5,6 +5,7 @@
  */
 package com.neo4j.security;
 
+import org.apache.shiro.authc.AuthenticationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -134,10 +136,9 @@ public class SystemGraphRealmTest
         );
     }
 
-    // TODO: This is not allowed in InternalFlatFileRealm. There you can only set UserManager.INITIAL_USER_NAME
-    // Should we actively prevent this case even though the admin tool currently does not support it?
+    // In alignment with InternalFlatFileRealm we prevent this case (the admin tool currently does not allow it anyways)
     @Test
-    void shouldSetInitialUsersAsAdminWithCustomUsernames() throws Throwable
+    void shouldNotSetInitialUsersAsAdminWithCustomUsernames() throws Throwable
     {
         SystemGraphRealm realm = testRealmWithImportOptions( new ImportOptionsBuilder()
                 .shouldNotPerformImport()
@@ -146,12 +147,13 @@ public class SystemGraphRealmTest
                 .build()
         );
 
-        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "jane", "joe" ) );
-        assertAuthenticationSucceeds( realm, "jane" );
-        assertAuthenticationSucceeds( realm, "joe" );
+        // Only the default user should have been created instead
+        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "neo4j" ) );
+        assertAuthenticationSucceeds( realm, "neo4j" );
+        assertAuthenticationFails( realm, "jane" );
+        assertAuthenticationFails( realm, "joe" );
         log.assertExactly(
-                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "jane" ),
-                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "joe" )
+                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "neo4j" )
         );
     }
 
@@ -508,5 +510,18 @@ public class SystemGraphRealmTest
     {
         // NOTE: Password is the same as username
         assertNotNull( realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) );
+    }
+
+    private static void assertAuthenticationFails( SystemGraphRealm realm, String username )
+    {
+        // NOTE: Password is the same as username
+        try
+        {
+            assertNull( realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) );
+        }
+        catch ( AuthenticationException e )
+        {
+            // This is expected
+        }
     }
 }

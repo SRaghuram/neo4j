@@ -18,8 +18,12 @@ import org.neo4j.commandline.admin.AdminTool;
 import org.neo4j.commandline.admin.BlockerLocator;
 import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.OutsideWorld;
+import org.neo4j.dbms.DatabaseManagementSystemSettings;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.NullLogProvider;
@@ -31,6 +35,7 @@ import org.neo4j.server.security.enterprise.auth.RoleRecord;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
+import static com.neo4j.commandline.admin.security.ImportAuthCommand.IMPORT_SYSTEM_DATABASE_NAME;
 import static com.neo4j.security.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
 import static com.neo4j.security.CommercialSecurityModule.USER_IMPORT_FILENAME;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -44,7 +49,6 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class ImportAuthCommandIT
 {
@@ -442,7 +446,7 @@ public class ImportAuthCommandIT
 
     private void assertSystemDbExists()
     {
-        File systemDbStore = new File( getSystemDbDirectory(), "neostore" );
+        File systemDbStore = DatabaseLayout.of( getSystemDbDirectory() ).metadataStore();
         // NOTE: Because creating the system database is done on the real file system we cannot use our EphemeralFileSystemRule here
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
         assertTrue( fs.fileExists( systemDbStore ) );
@@ -450,11 +454,14 @@ public class ImportAuthCommandIT
 
     private File getSystemDbDirectory()
     {
-        return new File( new File( new File( homeDir, "data" ), "databases" ), SYSTEM_DATABASE_NAME );
+        File databasesFolder = Config.defaults( GraphDatabaseSettings.neo4j_home, homeDir.getAbsolutePath() ).get( GraphDatabaseSettings.databases_root_path );
+        return DatabaseLayout.of( databasesFolder, IMPORT_SYSTEM_DATABASE_NAME ).databaseDirectory();
     }
+
     private File getFile( String name )
     {
-        return new File( new File( new File( homeDir, "data" ), "dbms" ), name );
+        return new File( Config.defaults( GraphDatabaseSettings.neo4j_home, homeDir.getAbsolutePath() )
+                .get( DatabaseManagementSystemSettings.auth_store_directory ), name );
     }
 
     private void resetOutsideWorldMock()

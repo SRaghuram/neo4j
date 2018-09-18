@@ -148,8 +148,9 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     {
         boolean mayPerformMigration = false;
 
-        // TODO: Should we use a new dedicated setting for this?
-        if ( config.get( GraphDatabaseSettings.allow_upgrade ) )
+        // TBD: Should we protect this with a dedicated setting?
+        // The argument against using GraphDatabaseSettings.allow_upgrade is that it will also force a potential store upgrade
+        //if ( config.get( SecuritySettings.allow_migration ) )
         {
             try
             {
@@ -264,7 +265,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
                 new BasicPasswordPolicy(),
                 createAuthenticationStrategy( config ),
                 false,
-                false,
+                true, // At least one of these needs to be true for the realm to consider imports
                 securityLog,
                 configureImportOptionsForOfflineImport( config, logProvider,
                         importUserRepository, importRoleRepository,
