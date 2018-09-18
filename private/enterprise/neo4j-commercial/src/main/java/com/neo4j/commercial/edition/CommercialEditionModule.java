@@ -83,11 +83,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
 
     public static void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
     {
-        if ( isSystemDatabaseEnabled( config ) &&
-                // Do not create the system database if we are just doing an offline import with the ImportAuthCommand
-                // TODO: Find a better way to so we can remove this setting again
-                // E.g. config.get( GraphDatabaseSettings.active_database ).equals( CommercialGraphDatabaseSettings.SYSTEM_DB_NAME )
-                !config.get( SecuritySettings.native_import_auth ) )
+        if ( isSystemDatabaseEnabled( config ) )
         {
             databaseManager.createDatabase( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         }

@@ -199,10 +199,7 @@ public class ImportAuthCommand implements AdminCommand
 
         // NOTE: We do not have the dependency to use CommercialGraphDatabaseFactory here, but EnterpriseGraphDatabaseFactory should work fine for this purpose
         EnterpriseGraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
-        final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( systemDbStoreDir );
-        GraphDatabaseService db = builder
-                .setConfig( SecuritySettings.native_import_auth, "true" )
-                .newGraphDatabase();
+        GraphDatabaseService db = factory.newEmbeddedDatabaseBuilder( systemDbStoreDir ).newGraphDatabase();
         return db;
     }
 
