@@ -63,11 +63,11 @@ parse_pkgname() {
 
 # Parse the license from a neo4j tarball like 'neo4j-community-3.2.0-SNAPSHOT-unix.tar.gz'
 # license: GPLv3 (if community)
-# license: AGPLv3 (if enterprise)
+# license: Proprietary (if enterprise)
 parse_license() {
   # Figure if community or enterprise
   if [[ $(basename ${1}) =~ "enterprise" ]]; then
-    license="AGPLv3"
+    license="Proprietary"
   else
     license="GPLv3"
   fi

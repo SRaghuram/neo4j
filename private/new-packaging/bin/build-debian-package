@@ -53,6 +53,12 @@ do
   mv ${package_directory}/debian/${file} ${newname}
 done
 
+# Put the license acceptance in the pre-installation script.
+if [ ${package_name} = "neo4j-enterprise" ]
+then
+  cat ${package_directory}/debian/license-agreement-preinst >> ${package_directory}/debian/${package_name}.preinst
+fi
+
 # Update changelog, control and files with package name etc
 DISTRIBUTION=${distribution} DATE=`date -R` PACKAGE_NAME=${package_name} VERSION=${deb_version_full} envsubst '${DATE} ${DISTRIBUTION} ${PACKAGE_NAME} ${VERSION}' < src/debian/changelog > ${package_directory}/debian/changelog
 DISTRIBUTION=${distribution} DATE=`date -R` PACKAGE_NAME=${package_name} VERSION=${deb_version_full} envsubst '${DATE} ${DISTRIBUTION} ${PACKAGE_NAME} ${VERSION}' < src/debian/NEWS.Debian > ${package_directory}/debian/NEWS.Debian
