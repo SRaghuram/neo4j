@@ -5,7 +5,6 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.security.configuration.CommercialSecuritySettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -207,8 +206,8 @@ class CommercialSecurityModuleTest
 
     private void systemGraphAuth( boolean authn, boolean authr )
     {
-        when( config.get( CommercialSecuritySettings.system_graph_authentication_enabled ) ).thenReturn( authn );
-        when( config.get( CommercialSecuritySettings.system_graph_authorization_enabled ) ).thenReturn( authr );
+        when( config.get( SecuritySettings.native_authentication_enabled ) ).thenReturn( authn );
+        when( config.get( SecuritySettings.native_authorization_enabled ) ).thenReturn( authr );
     }
 
     private void ldapAuth( boolean authn, boolean authr )
