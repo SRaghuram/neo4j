@@ -37,7 +37,7 @@ if [ "$PACKAGE_NAME" = "neo4j-enterprise" ]; then
     if [ "$NEO4J_ACCEPT_LICENSE_AGREEMENT" != "yes" ]; then
         if ! DIALOG_TTY=1 dialog --title "Neo4j License Agreement" --defaultno --yesno "\
 
-(c) Network Engine for Objects in Lund AB.  2018.  All Rights Reserved.
+(c) Neo4j Sweden AB.  2018.  All Rights Reserved.
 Use of this Software without a proper commercial license with Neo4j,
 Inc. or its affiliates is prohibited.
 
