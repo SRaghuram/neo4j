@@ -10,6 +10,7 @@ import java.util.Map;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.server.security.enterprise.auth.ConfiguredAuthScenariosInteractionTestBase;
 import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
+import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 public class SystemGraphEmbeddedConfiguredAuthScenariosInteractionIT extends ConfiguredAuthScenariosInteractionTestBase<EnterpriseLoginContext>
 {
@@ -22,6 +23,6 @@ public class SystemGraphEmbeddedConfiguredAuthScenariosInteractionIT extends Con
     @Override
     protected String internalSecurityName()
     {
-        return "system-graph";
+        return SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
     }
 }
