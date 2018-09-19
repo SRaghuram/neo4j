@@ -842,7 +842,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             // If no initial user was set create the default neo4j user
             if ( addedUsernames.isEmpty() )
             {
-                newUser( INITIAL_USER_NAME, "neo4j", true );
+                newUser( INITIAL_USER_NAME, INITIAL_PASSWORD, true );
                 addedUsernames.add( INITIAL_USER_NAME );
             }
 
