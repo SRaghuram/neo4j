@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.discovery.HostnameResolver;
+import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
@@ -36,15 +36,15 @@ public class ActorSystemFactory
     private final TypesafeConfigService configService;
     private final int parallelism;
 
-    public ActorSystemFactory( HostnameResolver hostnameResolver, Optional<SSLEngineProvider> sslEngineProvider, JobScheduler jobScheduler, Config config,
-            LogProvider logProvider )
+    public ActorSystemFactory( RemoteMembersResolver remoteMembersResolver, Optional<SSLEngineProvider> sslEngineProvider, JobScheduler jobScheduler,
+            Config config, LogProvider logProvider )
     {
         this.jobScheduler = jobScheduler;
         this.logProvider = logProvider;
         this.sslEngineProvider = sslEngineProvider;
         TypesafeConfigService.ArteryTransport arteryTransport =
                 sslEngineProvider.isPresent() ? TypesafeConfigService.ArteryTransport.TLS_TCP : TypesafeConfigService.ArteryTransport.TCP;
-        this.configService = new TypesafeConfigService( hostnameResolver, arteryTransport, config );
+        this.configService = new TypesafeConfigService( remoteMembersResolver, arteryTransport, config );
         this.parallelism = config.get( CausalClusteringSettings.middleware_akka_parallelism_level );
     }
 

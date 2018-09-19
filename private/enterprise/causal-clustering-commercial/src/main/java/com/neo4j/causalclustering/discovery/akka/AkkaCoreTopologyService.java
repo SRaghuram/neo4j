@@ -24,7 +24,6 @@ import java.util.Optional;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
 import org.neo4j.causalclustering.discovery.CoreTopology;
-import org.neo4j.causalclustering.discovery.HostnameResolver;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.causalclustering.discovery.RoleInfo;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
@@ -33,7 +32,6 @@ import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.util.VisibleForTesting;
 
 public class AkkaCoreTopologyService extends AbstractCoreTopologyService
@@ -41,21 +39,17 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private Optional<ActorRef> coreTopologyActorRef = Optional.empty();
     private Optional<ActorRef> directoryActorRef = Optional.empty();
     private final ActorSystemLifecycle actorSystemLifecycle;
-    private final JobScheduler jobScheduler;
     private final LogProvider logProvider;
-    private final HostnameResolver hostnameResolver;
     private final TopologyServiceRetryStrategy retryStrategy;
     private final TopologyState topologyState;
     private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
 
-    public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, JobScheduler jobScheduler,
-            LogProvider logProvider, LogProvider userLogProvider, HostnameResolver hostnameResolver, TopologyServiceRetryStrategy retryStrategy )
+    public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
+            LogProvider userLogProvider, TopologyServiceRetryStrategy retryStrategy )
     {
         super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
-        this.jobScheduler = jobScheduler;
         this.logProvider = logProvider;
-        this.hostnameResolver = hostnameResolver;
         this.retryStrategy = retryStrategy;
         this.topologyState = new TopologyState( config, logProvider, listenerService::notifyListeners );
     }

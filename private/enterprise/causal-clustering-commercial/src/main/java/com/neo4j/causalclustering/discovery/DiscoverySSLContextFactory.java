@@ -16,6 +16,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
+import org.neo4j.causalclustering.discovery.SecurePassword;
 import org.neo4j.ssl.SslPolicy;
 
 public class DiscoverySSLContextFactory

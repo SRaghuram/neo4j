@@ -29,7 +29,13 @@ Apache Software License, Version 2.0
   Caffeine cache
   ConcurrentLinkedHashMap
   config
+  Data Mapper for Jackson
   hazelcast-all
+  Jackson
+  Jetty :: Asynchronous HTTP Client
+  Jetty :: Http Utility
+  Jetty :: IO Utility
+  Jetty :: Utilities
   jPowerShell
   jProcesses
   Lucene codecs

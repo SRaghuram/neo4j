@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.discovery.akka;
 
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import org.neo4j.causalclustering.discovery.HostnameResolver;
+import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
@@ -20,37 +20,33 @@ import org.neo4j.scheduler.JobScheduler;
 
 public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
-   protected abstract ActorSystemFactory actorSystemFactory( HostnameResolver hostnameResolver, JobScheduler jobScheduler, Config config,
+   protected abstract ActorSystemFactory actorSystemFactory( RemoteMembersResolver remoteMembersResolver, JobScheduler jobScheduler, Config config,
            LogProvider logProvider );
 
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
-            LogProvider userLogProvider, HostnameResolver hostnameResolver, TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors )
+            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, TopologyServiceRetryStrategy topologyServiceRetryStrategy,
+            Monitors monitors )
     {
         return new AkkaCoreTopologyService(
                 config,
                 myself,
-                new ActorSystemLifecycle( actorSystemFactory( hostnameResolver, jobScheduler, config, logProvider ), logProvider ),
-                jobScheduler,
+                new ActorSystemLifecycle( actorSystemFactory( remoteMembersResolver, jobScheduler, config, logProvider ), logProvider ),
                 logProvider,
                 userLogProvider,
-                hostnameResolver,
                 topologyServiceRetryStrategy
         );
     }
 
     @Override
     public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, MemberId myself,
-            HostnameResolver hostnameResolver, TopologyServiceRetryStrategy topologyServiceRetryStrategy )
+            RemoteMembersResolver remoteMembersResolver, TopologyServiceRetryStrategy topologyServiceRetryStrategy )
     {
         return new AkkaTopologyClient(
                 config,
                 logProvider,
-                jobScheduler,
                 myself,
-                hostnameResolver,
-                topologyServiceRetryStrategy,
-                new ActorSystemLifecycle( actorSystemFactory( hostnameResolver, jobScheduler, config, logProvider ), logProvider )
+                new ActorSystemLifecycle( actorSystemFactory( remoteMembersResolver, jobScheduler, config, logProvider ), logProvider )
         );
     }
 

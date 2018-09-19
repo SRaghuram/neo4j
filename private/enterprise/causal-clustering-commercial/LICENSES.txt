@@ -28,7 +28,13 @@ Apache Software License, Version 2.0
   Apache Shiro :: Lang
   Caffeine cache
   config
+  Data Mapper for Jackson
   hazelcast-all
+  Jackson
+  Jetty :: Asynchronous HTTP Client
+  Jetty :: Http Utility
+  Jetty :: IO Utility
+  Jetty :: Utilities
   jPowerShell
   jProcesses
   Lucene codecs

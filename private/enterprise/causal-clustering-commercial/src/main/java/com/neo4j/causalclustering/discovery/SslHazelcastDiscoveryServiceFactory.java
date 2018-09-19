@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.HazelcastClient;
 import org.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
-import org.neo4j.causalclustering.discovery.HostnameResolver;
+import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
@@ -24,21 +24,21 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
 
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
-                                                   LogProvider logProvider, LogProvider userLogProvider, HostnameResolver hostnameResolver,
+                                                   LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
                                                    TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors )
     {
         configureHazelcast( config, logProvider );
         return new SslHazelcastCoreTopologyService( config, sslPolicy, myself, jobScheduler, logProvider,
-                userLogProvider, hostnameResolver, topologyServiceRetryStrategy, monitors );
+                userLogProvider, remoteMembersResolver, topologyServiceRetryStrategy, monitors );
     }
 
     @Override
     public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
-                                           MemberId myself, HostnameResolver hostnameResolver,
+                                           MemberId myself, RemoteMembersResolver remoteMembersResolver,
                                            TopologyServiceRetryStrategy topologyServiceRetryStrategy )
     {
         configureHazelcast( config, logProvider );
-        return new HazelcastClient( new SslHazelcastClientConnector( config, logProvider, sslPolicy, hostnameResolver ),
+        return new HazelcastClient( new SslHazelcastClientConnector( config, logProvider, sslPolicy, remoteMembersResolver ),
                 jobScheduler, logProvider, config, myself );
     }
 

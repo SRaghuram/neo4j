@@ -13,24 +13,18 @@ import java.util.UUID;
 
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
-import org.neo4j.causalclustering.discovery.HostnameResolver;
-import org.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import org.neo4j.causalclustering.discovery.TopologyServiceNoRetriesStrategy;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.scheduler.JobScheduler;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public class CoreTopologyChangeListenerTest
 {
     MemberId myself = new MemberId( UUID.randomUUID() );
-    JobScheduler jobScheduler = createInitialisedScheduler();
-    HostnameResolver hostnameResolver = new NoOpHostnameResolver();
     TopologyServiceRetryStrategy  topologyServiceRetryStrategy = new TopologyServiceNoRetriesStrategy();
 
     ActorSystemLifecycle actorSystemLifecycle = Mockito.mock( ActorSystemLifecycle.class );
@@ -39,10 +33,8 @@ public class CoreTopologyChangeListenerTest
             Config.defaults(),
             myself,
             actorSystemLifecycle,
-            jobScheduler,
             NullLogProvider.getInstance(),
             NullLogProvider.getInstance(),
-            hostnameResolver,
             topologyServiceRetryStrategy );
 
     @Test

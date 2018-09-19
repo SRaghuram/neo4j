@@ -6,25 +6,8 @@
 package com.neo4j.causalclustering.discovery.akka.system;
 
 import akka.cluster.UniqueAddress;
-import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
-import com.typesafe.config.ConfigFactory;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
-
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.core.consensus.LeaderInfo;
-import org.neo4j.causalclustering.discovery.CoreTopology;
-import org.neo4j.causalclustering.discovery.HostnameResolver;
-import org.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
-import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaInfoMessage;
-import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
+import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.akka.marshal.BaseAkkaSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ClusterIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.CoreServerInfoForMemberIdSerializer;
@@ -37,6 +20,22 @@ import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaInfoSerializ
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaRemovalMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaTopologySerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.UniqueAddressSerializer;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaInfoMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
+import com.typesafe.config.ConfigFactory;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
+
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.core.consensus.LeaderInfo;
+import org.neo4j.causalclustering.discovery.CoreTopology;
+import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import org.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -65,13 +64,13 @@ public final class TypesafeConfigService
 
     private final Config config;
     private final ArteryTransport arteryTransport;
-    private final HostnameResolver hostnameResolver;
+    private final RemoteMembersResolver remoteMembersResolver;
 
-    public TypesafeConfigService( HostnameResolver hostnameResolver, ArteryTransport arteryTransport, Config config )
+    public TypesafeConfigService( RemoteMembersResolver remoteMembersResolver, ArteryTransport arteryTransport, Config config )
     {
         this.config = config;
         this.arteryTransport = arteryTransport;
-        this.hostnameResolver = hostnameResolver;
+        this.remoteMembersResolver = remoteMembersResolver;
     }
 
     public com.typesafe.config.Config generate()
@@ -88,7 +87,7 @@ public final class TypesafeConfigService
 
     private com.typesafe.config.Config clusterConfig()
     {
-        List<String> seedAkkaClusterNodes = initialActorSystemPaths();
+        Collection<String> seedAkkaClusterNodes = initialActorSystemPaths();
 
         EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
 
@@ -98,13 +97,9 @@ public final class TypesafeConfigService
         return ConfigFactory.parseMap( configMap );
     }
 
-    List<String> initialActorSystemPaths()
+    Collection<String> initialActorSystemPaths()
     {
-        List<AdvertisedSocketAddress> initMembers = config.get( CausalClusteringSettings.initial_discovery_members );
-        return initMembers.stream()
-                .flatMap( rawAddress -> hostnameResolver.resolve( rawAddress ).stream() )
-                .map( resolvedAddress -> AKKA_SCHEME + ActorSystemFactory.ACTOR_SYSTEM_NAME + "@" + resolvedAddress )
-                .collect( Collectors.toList() );
+        return remoteMembersResolver.resolve( resolvedAddress -> AKKA_SCHEME + ActorSystemFactory.ACTOR_SYSTEM_NAME + "@" + resolvedAddress );
     }
 
     private com.typesafe.config.Config transportConfig()
