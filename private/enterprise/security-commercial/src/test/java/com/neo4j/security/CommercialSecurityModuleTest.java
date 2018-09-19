@@ -12,7 +12,9 @@ import java.time.Duration;
 import java.util.Arrays;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
@@ -20,6 +22,7 @@ import org.neo4j.server.security.enterprise.log.SecurityLog;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -28,6 +31,8 @@ class CommercialSecurityModuleTest
 {
     private Config config;
     private LogProvider mockLogProvider;
+    private FileSystemAbstraction mockFileSystem;
+    private AccessCapability mockAccessCapability;
 
     @BeforeEach
     void setup()
@@ -35,6 +40,8 @@ class CommercialSecurityModuleTest
         config = mock( Config.class );
         mockLogProvider = mock( LogProvider.class );
         Log mockLog = mock( Log.class );
+        mockFileSystem = mock( FileSystemAbstraction.class );
+        mockAccessCapability = mock( AccessCapability.class );
         when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
         when( mockLog.isDebugEnabled() ).thenReturn( true );
         when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false );
@@ -44,14 +51,14 @@ class CommercialSecurityModuleTest
         when( config.get( SecuritySettings.security_log_successful_authentication ) ).thenReturn( false );
         when( config.get( GraphDatabaseSettings.auth_max_failed_attempts ) ).thenReturn( 3 );
         when( config.get( GraphDatabaseSettings.auth_lock_time ) ).thenReturn( Duration.ofSeconds( 5 ) );
+        when( mockFileSystem.fileExists( any() ) ).thenReturn( false );
     }
 
     @Test
     void shouldFailOnIllegalRealmNameConfiguration()
     {
         // Given
-        nativeAuth( false, false );
-        systemGraphAuth( true, true );
+        nativeAuth( true, true );
         ldapAuth( true, true );
         pluginAuth( false, false );
         authProviders( "this-realm-does-not-exist" );
@@ -64,8 +71,7 @@ class CommercialSecurityModuleTest
     void shouldFailOnNoAuthenticationMechanism()
     {
         // Given
-        nativeAuth( false, false );
-        systemGraphAuth( false, true );
+        nativeAuth( false, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
         authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
@@ -78,8 +84,7 @@ class CommercialSecurityModuleTest
     void shouldFailOnNoAuthorizationMechanism()
     {
         // Given
-        nativeAuth( false, false );
-        systemGraphAuth( true, false );
+        nativeAuth( true, false );
         ldapAuth( false, false );
         pluginAuth( false, false );
         authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
@@ -93,7 +98,6 @@ class CommercialSecurityModuleTest
     {
         // Given
         nativeAuth( false, false );
-        systemGraphAuth( false, false );
         ldapAuth( false, false );
         pluginAuth( true, true );
         authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
@@ -108,7 +112,6 @@ class CommercialSecurityModuleTest
     {
         // Given
         nativeAuth( false, false );
-        systemGraphAuth( false, false );
         ldapAuth( false, false );
         pluginAuth( true, true );
         authProviders(
@@ -124,8 +127,7 @@ class CommercialSecurityModuleTest
     void shouldNotFailWithOnlySystemGraphProvider()
     {
         // Given
-        nativeAuth( false, false );
-        systemGraphAuth( true, true );
+        nativeAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
 
@@ -141,8 +143,7 @@ class CommercialSecurityModuleTest
     void shouldFailWithNativeProviderAndSystemGraphProviderTogether()
     {
         // Given
-        nativeAuth( true, false );
-        systemGraphAuth( false, true );
+        nativeAuth( false, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
 
@@ -160,8 +161,7 @@ class CommercialSecurityModuleTest
     void shouldNotFailSystemGraphProviderhWithLdapAuthorizationProvider()
     {
         // Given
-        nativeAuth( false, false );
-        systemGraphAuth( true, true );
+        nativeAuth( true, true );
         ldapAuth( true, true );
         pluginAuth( false, false );
         authProviders(
@@ -184,8 +184,7 @@ class CommercialSecurityModuleTest
     void shouldNotFailSystemGraphProviderWithPluginAuthorizationProvider()
     {
         // Given
-        nativeAuth( false, false );
-        systemGraphAuth( true, true );
+        nativeAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( true, true );
         authProviders(
@@ -199,12 +198,6 @@ class CommercialSecurityModuleTest
 
     // --------- HELPERS ----------
     private void nativeAuth( boolean authn, boolean authr )
-    {
-        when( config.get( SecuritySettings.native_authentication_enabled ) ).thenReturn( authn );
-        when( config.get( SecuritySettings.native_authorization_enabled ) ).thenReturn( authr );
-    }
-
-    private void systemGraphAuth( boolean authn, boolean authr )
     {
         when( config.get( SecuritySettings.native_authentication_enabled ) ).thenReturn( authn );
         when( config.get( SecuritySettings.native_authorization_enabled ) ).thenReturn( authr );
@@ -229,13 +222,15 @@ class CommercialSecurityModuleTest
 
     private void assertSuccess()
     {
-        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null, null );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, null,
+                mockAccessCapability );
     }
 
     private void assertIllegalArgumentException( String errorMsg )
     {
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), null, null, null ) );
+                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), mockFileSystem, null,
+                        mockAccessCapability ) );
         assertEquals( e.getMessage(), errorMsg );
     }
 }
