@@ -373,8 +373,12 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         assertValidUsername( username );
         assertValidDbName( dbName );
 
-        String query = "MATCH (u:User {name: $user}), (r:Role {name: $role}), (d:Database {name: $db})" +
-                "MERGE (r)<-[:FOR_ROLE]-(dbr:DbRole)-[:FOR_DATABASE]->(d) MERGE (u)-[:HAS_DB_ROLE]->(dbr) RETURN dbr.id";
+        String query = "MATCH (u:User {name: $user}), (r:Role {name: $role}), (d:Database {name: $db}) " +
+                "OPTIONAL MATCH (u)-[:HAS_DB_ROLE]->(dbr:DbRole)-[:FOR_DATABASE]->(d), (dbr)-[:FOR_ROLE]->(r) " +
+                "WITH u, r, d WHERE dbr IS NULL " +
+                "CREATE (newDbr:DbRole)-[:FOR_ROLE]->(r) " +
+                "CREATE (u)-[:HAS_DB_ROLE]->(newDbr)-[:FOR_DATABASE]->(d) " +
+                "RETURN newDbr";
         Map<String,Object> params = map("user", username, "role", roleName, "db", dbName);
 
         boolean success = systemGraphExecutor.executeQueryWithParamCheck( query, params );
@@ -385,7 +389,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             getUser( username ); // This throws InvalidArgumentException if user does not exist
             assertRoleExists( roleName ); //This throws InvalidArgumentException if role does not exist
             assertDbExists( dbName ); //This throws InvalidArgument if db does not exist
-            throw new AuthProviderFailedException( "Failed to execute query on auth graph" );
+            // If the user already had the role for the specified database, we should silently fall through
         }
 
         clearCachedAuthorizationInfoForUser( username );
@@ -525,7 +529,9 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public boolean deleteUser( String username ) throws InvalidArgumentsException
     {
-        String query = "MATCH (u:User {name: $name}) WITH u, u.name as name DETACH DELETE u RETURN name";
+        String query = "MATCH (u:User {name: $name}) WITH u " +
+                "OPTIONAL MATCH (u)-[:HAS_DB_ROLE]->(dbr :DbRole) " +
+                "WITH dbr, u, u.name as name DETACH DELETE u, dbr RETURN name";
         Map<String,Object> params = map("name", username );
         String errorMsg = "User '" + username + "' does not exist.";
 
