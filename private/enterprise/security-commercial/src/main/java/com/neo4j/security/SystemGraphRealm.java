@@ -294,7 +294,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public void suspendUser( String username ) throws InvalidArgumentsException
     {
-        String query = "MATCH (u:User {name: $name}) SET u.suspended = true RETURN u.name";
+        String query = "MATCH (u:User {name: $name}) SET u.suspended = true RETURN 0";
         Map<String,Object> params = map( "name", username );
         String errorMsg = "User '" + username + "' does not exist.";
 
@@ -305,7 +305,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public void activateUser( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
     {
-        String query = "MATCH (u:User {name: $name}) SET u.suspended = false, u.passwordChangeRequired = $passwordChangeRequired RETURN u.name";
+        String query = "MATCH (u:User {name: $name}) SET u.suspended = false, u.passwordChangeRequired = $passwordChangeRequired RETURN 0";
         Map<String,Object> params = map( "name", username, "passwordChangeRequired", requirePasswordChange );
         String errorMsg = "User '" + username + "' does not exist.";
 
@@ -340,8 +340,9 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
 
     private boolean doDeleteRole( String roleName ) throws InvalidArgumentsException
     {
-        String query = "MATCH (r:Role {name: $name}) WITH r OPTIONAL MATCH (dbr:DbRole)-[:FOR_ROLE]->(r) " +
-                "WITH r, r.name as name, dbr DETACH DELETE r, dbr RETURN name";
+        String query = "MATCH (r:Role {name: $name}) " +
+                "OPTIONAL MATCH (dbr:DbRole)-[:FOR_ROLE]->(r) " +
+                "DETACH DELETE r, dbr RETURN 0";
 
         Map<String,Object> params = map("name", roleName );
         String errorMsg = "Role '" + roleName + "' does not exist.";
@@ -378,7 +379,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
                 "WITH u, r, d WHERE dbr IS NULL " +
                 "CREATE (newDbr:DbRole)-[:FOR_ROLE]->(r) " +
                 "CREATE (u)-[:HAS_DB_ROLE]->(newDbr)-[:FOR_DATABASE]->(d) " +
-                "RETURN newDbr";
+                "RETURN 0";
         Map<String,Object> params = map("user", username, "role", roleName, "db", dbName);
 
         boolean success = systemGraphExecutor.executeQueryWithParamCheck( query, params );
@@ -407,23 +408,9 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         assertValidUsername( username );
         assertValidDbName( dbName );
 
-        // Find the DbRole connected to the given role and database
-        // Remove the relationship between the user and that DbRole
-        // If this was the last user connected to that specific DbRole, also remove the DbRole
-        String query = "MATCH (u:User {name: $name})-[rel:HAS_DB_ROLE]->(dbr:DbRole) WITH dbr, rel " +
-                "MATCH (r:Role {name: $role})<-[:FOR_ROLE]-(dbr)-[:FOR_DATABASE]->(db:Database {name: $db}) " +
-                "WITH dbr, rel " +
-                "DELETE rel " +
-                "WITH dbr " +
-                "OPTIONAL MATCH (u :User)-[:HAS_DB_ROLE]->(dbr) " +
-                "WITH dbr, count(u) as nbrUsersStillConnectedToDbr " +
-                "WITH " +
-                    "CASE nbrUsersStillConnectedToDbr " +
-                        "WHEN 0 " +
-                        "THEN dbr " +
-                        "ELSE NULL " +
-                    "END AS nodeToRemove " +
-                "DETACH DELETE nodeToRemove " +
+        String query = "MATCH (u:User {name: $name})-[:HAS_DB_ROLE]->(dbr:DbRole)-[:FOR_DATABASE]->(:Database {name: $db}), " +
+                "(dbr)-[:FOR_ROLE]->(r:Role {name: $role}) " +
+                "DETACH DELETE dbr " +
                 "RETURN 0 ";
 
         Map<String,Object> params = map( "name", username, "role", roleName, "db", dbName);
@@ -436,7 +423,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             getUser( username ); // This throws InvalidArgumentException if user does not exist
             assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
             assertDbExists( dbName ); // This throws InvalidArgumentException if db does not exist
-            // If the HAS_ROLE relationship does not exist we should silently fall through
+            // If the user didn't had the role for the specified db, we should silently fall through
         }
 
         clearCachedAuthorizationInfoForUser( username );
@@ -529,9 +516,9 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public boolean deleteUser( String username ) throws InvalidArgumentsException
     {
-        String query = "MATCH (u:User {name: $name}) WITH u " +
+        String query = "MATCH (u:User {name: $name}) " +
                 "OPTIONAL MATCH (u)-[:HAS_DB_ROLE]->(dbr :DbRole) " +
-                "WITH dbr, u, u.name as name DETACH DELETE u, dbr RETURN name";
+                "DETACH DELETE u, dbr RETURN 0";
         Map<String,Object> params = map("name", username );
         String errorMsg = "User '" + username + "' does not exist.";
 
