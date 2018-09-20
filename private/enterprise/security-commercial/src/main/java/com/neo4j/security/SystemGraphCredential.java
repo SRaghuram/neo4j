@@ -29,7 +29,7 @@ class SystemGraphCredential implements Credential
     }
 
     @Override
-    public boolean matchesPassword( String password )
+    public boolean matchesPassword( byte[] password )
     {
         // TODO: Create a new CredentialMatcher class that extends HashedCredentialsMatcher
         //       and adds a tailored match-method so we do not need to create these

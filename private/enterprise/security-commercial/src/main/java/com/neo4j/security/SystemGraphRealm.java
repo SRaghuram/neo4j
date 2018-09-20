@@ -23,6 +23,7 @@ import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.SimplePrincipalCollection;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -62,6 +63,7 @@ import org.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
+import org.neo4j.string.UTF8;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.TextValue;
@@ -170,11 +172,11 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         ShiroAuthToken shiroAuthToken = (ShiroAuthToken) token;
 
         String username;
-        String password;
+        byte[] password;
         try
         {
             username = AuthToken.safeCast( AuthToken.PRINCIPAL, shiroAuthToken.getAuthTokenMap() );
-            password = AuthToken.safeCast( AuthToken.CREDENTIALS, shiroAuthToken.getAuthTokenMap() );
+            password = AuthToken.safeCastCredentials( AuthToken.CREDENTIALS, shiroAuthToken.getAuthTokenMap() );
         }
         catch ( InvalidAuthTokenException e )
         {
@@ -483,21 +485,29 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     }
 
     @Override
-    public User newUser( String username, String initialPassword, boolean requirePasswordChange ) throws InvalidArgumentsException
+    public User newUser( String username, byte[] initialPassword, boolean requirePasswordChange ) throws InvalidArgumentsException
     {
-        assertValidUsername( username );
-        passwordPolicy.validatePassword( initialPassword );
+        try
+        {
+            assertValidUsername( username );
+            passwordPolicy.validatePassword( initialPassword );
 
-        Credential credential = createCredentialForPassword( initialPassword );
-        User user = new User.Builder()
-                .withName( username )
-                .withCredentials( credential )
-                .withRequiredPasswordChange( requirePasswordChange )
-                .withoutFlag( IS_SUSPENDED )
-                .build();
+            Credential credential = createCredentialForPassword( initialPassword );
+            User user = new User.Builder()
+                    .withName( username )
+                    .withCredentials( credential )
+                    .withRequiredPasswordChange( requirePasswordChange )
+                    .withoutFlag( IS_SUSPENDED )
+                    .build();
 
-        addUser( user );
-        return user;
+            addUser( user );
+            return user;
+        }
+        finally
+        {
+            // Clear password
+            Arrays.fill( initialPassword, (byte) 0 );
+        }
     }
 
     private void addUser( User user ) throws InvalidArgumentsException
@@ -587,28 +597,36 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     }
 
     @Override
-    public void setUserPassword( String username, String password, boolean requirePasswordChange ) throws InvalidArgumentsException
+    public void setUserPassword( String username, byte[] password, boolean requirePasswordChange ) throws InvalidArgumentsException
     {
-        User existingUser = getUser( username );
-        passwordPolicy.validatePassword( password );
-
-        if ( existingUser.credentials().matchesPassword( password ) )
+        try
         {
-            throw new InvalidArgumentsException( "Old password and new password cannot be the same." );
+            User existingUser = getUser( username );
+            passwordPolicy.validatePassword( password );
+
+            if ( existingUser.credentials().matchesPassword( password ) )
+            {
+                throw new InvalidArgumentsException( "Old password and new password cannot be the same." );
+            }
+
+            String newCredentials = SystemGraphCredential.serialize( createCredentialForPassword( password ) );
+
+            String query = "MATCH (u:User {name: $name}) SET u.credentials = $credentials, " +
+                    "u.passwordChangeRequired = $passwordChangeRequired RETURN u.name";
+            Map<String,Object> params =
+                    map( "name", username,
+                            "credentials", newCredentials,
+                            "passwordChangeRequired", requirePasswordChange );
+            String errorMsg = "User '" + username + "' does not exist.";
+
+            systemGraphExecutor.executeQueryWithParamCheck( query, params, errorMsg );
+            clearCacheForUser( username );
         }
-
-        String newCredentials = SystemGraphCredential.serialize( createCredentialForPassword( password ) );
-
-        String query = "MATCH (u:User {name: $name}) SET u.credentials = $credentials, " +
-                "u.passwordChangeRequired = $passwordChangeRequired RETURN u.name";
-        Map<String,Object> params =
-                map( "name", username,
-                        "credentials", newCredentials,
-                        "passwordChangeRequired", requirePasswordChange );
-        String errorMsg = "User '" + username + "' does not exist.";
-
-        systemGraphExecutor.executeQueryWithParamCheck( query, params, errorMsg );
-        clearCacheForUser( username );
+        finally
+        {
+            // Clear password
+            Arrays.fill( password, (byte) 0 );
+        }
     }
 
     @Override
@@ -667,9 +685,9 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         return systemGraphExecutor.executeQueryLong( query );
     }
 
-    private SystemGraphCredential createCredentialForPassword( String password )
+    private SystemGraphCredential createCredentialForPassword( byte[] password )
     {
-        SimpleHash hash = secureHasher.hash( password.getBytes() );
+        SimpleHash hash = secureHasher.hash( password );
         return new SystemGraphCredential( secureHasher, hash );
     }
 
@@ -842,7 +860,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             // If no initial user was set create the default neo4j user
             if ( addedUsernames.isEmpty() )
             {
-                newUser( INITIAL_USER_NAME, INITIAL_PASSWORD, true );
+                newUser( INITIAL_USER_NAME, UTF8.encode( INITIAL_PASSWORD ), true );
                 addedUsernames.add( INITIAL_USER_NAME );
             }
 

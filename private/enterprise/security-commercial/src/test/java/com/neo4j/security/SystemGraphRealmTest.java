@@ -45,6 +45,7 @@ import org.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.auth.ShiroAuthToken;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
+import org.neo4j.string.UTF8;
 import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -502,7 +503,7 @@ public class SystemGraphRealmTest
     {
         Map<String,Object> authToken = new TreeMap<>();
         authToken.put( AuthToken.PRINCIPAL, username );
-        authToken.put( AuthToken.CREDENTIALS, password );
+        authToken.put( AuthToken.CREDENTIALS, UTF8.encode( password ) );
         return new ShiroAuthToken( authToken );
     }
 
