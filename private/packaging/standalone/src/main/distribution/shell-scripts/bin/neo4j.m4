@@ -3,6 +3,7 @@
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
 # This file is a commercial add-on to Neo4j Enterprise Edition.
 #
+
 # Callers may provide the following environment variables to customize this script:
 #  * JAVA_HOME
 #  * JAVA_CMD
