@@ -423,7 +423,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             getUser( username ); // This throws InvalidArgumentException if user does not exist
             assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
             assertDbExists( dbName ); // This throws InvalidArgumentException if db does not exist
-            // If the user didn't had the role for the specified db, we should silently fall through
+            // If the user didn't have the role for the specified db, we should silently fall through
         }
 
         clearCachedAuthorizationInfoForUser( username );
@@ -1062,7 +1062,6 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             doDeleteRole( roleName );
         }
 
-        // TODO: Delete DbRole nodes
         // TODO: Delete Database nodes? (Only if they are exclusively used by the security module)
 
         return Pair.of( usernames.size(), roleNames.size() );
