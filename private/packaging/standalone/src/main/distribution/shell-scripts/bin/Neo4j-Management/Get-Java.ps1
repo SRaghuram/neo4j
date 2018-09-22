@@ -8,7 +8,7 @@
 Retrieves information about Java on the local machine to start Neo4j programs
 
 .DESCRIPTION
-Retrieves information about Java on the local machine to start Neo4j services and utilites, tailored to the type of Neo4j edition
+Retrieves information about Java on the local machine to start Neo4j services and utilities, tailored to the type of Neo4j edition
 
 .PARAMETER Neo4jServer
 An object representing a valid Neo4j Server object
@@ -25,7 +25,7 @@ The name of the starting class when invoking Java
 .EXAMPLE
 Get-Java -Neo4jServer $serverObject -ForServer
 
-Retrieves the Java comamnd line to start the Neo4j server for the instance in $serverObject.
+Retrieves the Java command line to start the Neo4j server for the instance in $serverObject.
 
 .OUTPUTS
 System.Collections.Hashtable
@@ -129,7 +129,8 @@ function Get-Java
 
     Write-Verbose "Java detected at '$javaCMD'"
 
-    if (-not (Confirm-JavaVersion -Path $javaCMD)) { Write-Error "This instance of Java is not supported"; return $null }
+    $javaVersion = Get-JavaVersion -Path $javaCMD
+    if (-not $javaVersion.isValid) { Write-Error "This instance of Java is not supported"; return $null }
 
     # Shell arguments for the Neo4jServer and Arbiter classes
     $ShellArgs = @()
@@ -194,33 +195,63 @@ WARNING: dbms.memory.heap.max_size will require a unit suffix in a
       # Parse Java config settings - GC
       $option = (Get-Neo4jSetting -Name 'dbms.logs.gc.enabled' -Neo4jServer $Neo4jServer)
       if (($option -ne $null) -and ($option.value.ToLower() -eq 'true')) {
-        $ShellArgs += "-Xloggc:`"$($Neo4jServer.Home)/gc.log`""
+        if ($javaVersion.isJava8) {
+          # JAVA 8 GC logs configuration
+          $ShellArgs += "-Xloggc:`"$( $Neo4jServer.Home )/gc.log`""
 
-        $option = (Get-Neo4jSetting -Name 'dbms.logs.gc.options' -Neo4jServer $Neo4jServer)
-        if ($option -eq $null) {
-          $ShellArgs += @('-XX:+PrintGCDetails',
+          $option = (Get-Neo4jSetting -Name 'dbms.logs.gc.options' -Neo4jServer $Neo4jServer)
+          if ($option -eq $null) {
+            $ShellArgs += @('-XX:+PrintGCDetails',
             '-XX:+PrintGCDateStamps',
             '-XX:+PrintGCApplicationStoppedTime',
             '-XX:+PrintPromotionFailure',
             '-XX:+PrintTenuringDistribution',
             '-XX:+UseGCLogFileRotation')
-        } else {
-          # The GC options _should_ be space delimited
-          $ShellArgs += ($option.value -split ' ')
-        }
+          } else {
+            # The GC options _should_ be space delimited
+            $ShellArgs += ($option.value -split ' ')
+          }
 
-        $option = (Get-Neo4jSetting -Name 'dbms.logs.gc.rotation.size' -Neo4jServer $Neo4jServer)
-        if ($option -ne $null) {
-          $ShellArgs += "-XX:GCLogFileSize=$($option.value)"
-        } else {
-          $ShellArgs += "-XX:GCLogFileSize=20m"
-        }
+          $option = (Get-Neo4jSetting -Name 'dbms.logs.gc.rotation.size' -Neo4jServer $Neo4jServer)
+          if ($option -ne $null) {
+            $ShellArgs += "-XX:GCLogFileSize=$( $option.value )"
+          } else {
+            $ShellArgs += "-XX:GCLogFileSize=20m"
+          }
 
-        $option = (Get-Neo4jSetting -Name 'dbms.logs.gc.rotation.keep_number' -Neo4jServer $Neo4jServer)
-        if ($option -ne $null) {
-          $ShellArgs += "-XX:NumberOfGCLogFiles=$($option.value)"
+          $option = (Get-Neo4jSetting -Name 'dbms.logs.gc.rotation.keep_number' -Neo4jServer $Neo4jServer)
+          if ($option -ne $null) {
+            $ShellArgs += "-XX:NumberOfGCLogFiles=$( $option.value )"
+          } else {
+            $ShellArgs += "-XX:NumberOfGCLogFiles=5"
+          }
         } else {
-          $ShellArgs += "-XX:NumberOfGCLogFiles=5"
+          # JAVA 9 and newer GC logs configuration
+          $option = (Get-Neo4jSetting -Name 'dbms.logs.gc.options' -Neo4jServer $Neo4jServer)
+          $gcOptions
+          if ($option -ne $null) {
+            $gcOptions = $option.value
+          } else {
+            $gcOptions = '-Xlog:gc*,safepoint,age*=trace'
+          }
+          # GC file name should be escaped on Windows because of ':' usage as part of absolue name
+          $gcFile = "\`"" + "$($Neo4jServer.Home)/gc.log" + "\`""
+          $gcOptions += ":file=$( $gcFile )::"
+
+          $option = (Get-Neo4jSetting -Name 'dbms.logs.gc.rotation.keep_number' -Neo4jServer $Neo4jServer)
+          if ($option -ne $null) {
+            $gcOptions += "filecount=$( $option.value )"
+          } else {
+            $gcOptions += "filecount=5"
+          }
+
+          $option = (Get-Neo4jSetting -Name 'dbms.logs.gc.rotation.size' -Neo4jServer $Neo4jServer)
+          if ($option -ne $null) {
+            $gcOptions += ",filesize=$( $option.value )"
+          } else {
+            $gcOptions += ",filesize=20m"
+          }
+          $ShellArgs += $gcOptions
         }
       }
       $ShellArgs += @("-Dfile.encoding=UTF-8",

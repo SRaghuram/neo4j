@@ -1,8 +1,20 @@
-#
 # Copyright (c) 2002-2018 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
-# This file is a commercial add-on to Neo4j Enterprise Edition.
 #
+# This file is part of Neo4j.
+#
+# Neo4j is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path).Replace(".Tests.",".")
@@ -12,7 +24,7 @@ $common = Join-Path (Split-Path -Parent $here) 'Common.ps1'
 Import-Module "$src\Neo4j-Management.psm1"
 
 InModuleScope Neo4j-Management {
-  Describe "Confirm-JavaVersion" {
+  Describe "Get-JavaVersion" {
 
     # Setup mocking environment
     #  Mock Java environment
@@ -24,10 +36,10 @@ InModuleScope Neo4j-Management {
       Mock Invoke-ExternalCommand -Verifiable { @{ 'exitCode' = 1 } }
       Mock Write-Warning -Verifiable -ParameterFilter { $Message -eq 'Unable to determine Java Version' }
 
-      $result = Confirm-JavaVersion -Path $global:mockJavaExe
+      $result = Get-JavaVersion -Path $global:mockJavaExe
 
       It "should return true" {
-        $result | Should Be $true
+        $result.isValid | Should Be $true
       }
 
       It "calls verified mocks" {
@@ -40,10 +52,10 @@ InModuleScope Neo4j-Management {
       Mock Invoke-ExternalCommand -Verifiable { @{ 'exitCode' = 0 } }
       Mock Write-Warning -Verifiable -ParameterFilter { $Message -eq 'Unable to determine Java Version' }
 
-      $result = Confirm-JavaVersion -Path $global:mockJavaExe
+      $result = Get-JavaVersion -Path $global:mockJavaExe
 
       It "should return true" {
-        $result | Should Be $true
+        $result.isValid | Should Be $true
       }
 
       It "calls verified mocks" {
@@ -56,10 +68,10 @@ InModuleScope Neo4j-Management {
       Mock Invoke-ExternalCommand -Verifiable { @{ 'exitCode' = 0; 'capturedOutput' = 'invalid java ver info' } }
       Mock Write-Warning -Verifiable -ParameterFilter { $Message -eq 'Unable to determine Java Version' }
 
-      $result = Confirm-JavaVersion -Path $global:mockJavaExe
+      $result = Get-JavaVersion -Path $global:mockJavaExe
 
       It "should return true" {
-        $result | Should Be $true
+        $result.isValid | Should Be $true
       }
 
       It "calls verified mocks" {
@@ -73,10 +85,11 @@ InModuleScope Neo4j-Management {
       Mock Invoke-ExternalCommand -Verifiable { @{ 'exitCode' = 0; 'capturedOutput' = 'java version "1.8.0"`n`rJava HotSpot(TM) 64-Bit Server VM (build 11.11-a11, mixed mode)' } }
       Mock Write-Warning {}
 
-      $result = Confirm-JavaVersion -Path $global:mockJavaExe
+      $result = Get-JavaVersion -Path $global:mockJavaExe
 
       It "should return true" {
-        $result | Should Be $true
+        $result.isValid | Should Be $true
+        $result.isJava8 | Should Be $true
       }
 
       It "should not emit warnings" {
@@ -93,10 +106,11 @@ InModuleScope Neo4j-Management {
       Mock Invoke-ExternalCommand -Verifiable { @{ 'exitCode' = 0; 'capturedOutput' = 'java version "10.0.2"`n`rJava HotSpot(TM) 64-Bit Server VM (build 10.0.2+13, mixed mode)' } }
       Mock Write-Warning {}
 
-      $result = Confirm-JavaVersion -Path $global:mockJavaExe
+      $result = Get-JavaVersion -Path $global:mockJavaExe
 
       It "should return true" {
-        $result | Should Be $true
+        $result.isValid | Should Be $true
+        $result.isJava8 | Should Be $false
       }
 
       It "should not emit warnings" {
@@ -113,10 +127,11 @@ InModuleScope Neo4j-Management {
       Mock Invoke-ExternalCommand -Verifiable { @{ 'exitCode' = 0; 'capturedOutput' = 'java version "1.8.0"`n`rJava BadSpot(TM) 64-Bit Server VM (build 11.11-a11, mixed mode)' } }
       Mock Write-Warning -Verifiable -ParameterFilter { $Message -eq 'WARNING! You are using an unsupported Java runtime' }
 
-      $result = Confirm-JavaVersion -Path $global:mockJavaExe
+      $result = Get-JavaVersion -Path $global:mockJavaExe
 
       It "should return true" {
-        $result | Should Be $true
+        $result.isValid | Should Be $true
+        $result.isJava8 | Should Be $true
       }
 
       It "calls verified mocks" {
@@ -129,10 +144,10 @@ InModuleScope Neo4j-Management {
       Mock Invoke-ExternalCommand -Verifiable { @{ 'exitCode' = 0; 'capturedOutput' = 'java version "1.7.0"`n`rJava HotSpot(TM) 64-Bit Server VM (build 11.11-a11, mixed mode)' } }
       Mock Write-Warning {}
 
-      $result = Confirm-JavaVersion -Path $global:mockJavaExe
+      $result = Get-JavaVersion -Path $global:mockJavaExe
 
       It "should return false" {
-        $result | Should Be $false
+        $result.isValid | Should Be $false
       }
 
       It "should emit a warning" {
