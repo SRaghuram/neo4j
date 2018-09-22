@@ -71,8 +71,42 @@ check_limits() {
   fi
 }
 
+setup_memory_opts() {
+  if [[ -n "${dbms_memory_heap_initial_size:-}" ]]; then
+    local mem="${dbms_memory_heap_initial_size}"
+    if ! [[ ${mem} =~ .*[gGmMkK] ]]; then
+      mem="${mem}m"
+      cat >&2 <<EOF
+WARNING: dbms.memory.heap.initial_size will require a unit suffix in a
+         future version of Neo4j. Please add a unit suffix to your
+         configuration. Example:
+
+         dbms.memory.heap.initial_size=512m
+                                          ^
+EOF
+    fi
+    JAVA_MEMORY_OPTS+=("-Xms${mem}")
+  fi
+  if [[ -n "${dbms_memory_heap_max_size:-}" ]]; then
+    local mem="${dbms_memory_heap_max_size}"
+    if ! [[ ${mem} =~ .*[gGmMkK] ]]; then
+      mem="${mem}m"
+      cat >&2 <<EOF
+WARNING: dbms.memory.heap.max_size will require a unit suffix in a
+         future version of Neo4j. Please add a unit suffix to your
+         configuration. Example:
+
+         dbms.memory.heap.max_size=512m
+                                      ^
+EOF
+    fi
+    JAVA_MEMORY_OPTS+=("-Xmx${mem}")
+  fi
+}
+
 check_java() {
   _find_java_cmd
+  setup_memory_opts
 
   version_command=("${JAVA_CMD}" "-version")
   [[ -n "${JAVA_MEMORY_OPTS:-}" ]] && version_command+=("${JAVA_MEMORY_OPTS[@]}")
@@ -189,10 +223,15 @@ _read_config() {
       if [[ "${key}" =~ ^(.*)_([0-9]+)$ ]]; then
         key="${BASH_REMATCH[1]}"
       fi
-      if [[ "${!key:-}" ]]; then
-        export ${key}="${!key} ${value}"
+      # Ignore keys that start with a number because export ${key}= will fail - it is not valid for a bash env var to start with a digit
+      if [[ ! "${key}" =~ ^[0-9]+.*$ ]]; then
+        if [[ "${!key:-}" ]]; then
+          export ${key}="${!key} ${value}"
+        else
+          export ${key}="${value}"
+        fi
       else
-        export ${key}="${value}"
+        echo >&2 "WARNING: Ignoring key ${key}, environment variables cannot start with a number."
       fi
     fi
   }
