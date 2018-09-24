@@ -11,7 +11,6 @@ import com.neo4j.kernel.api.impl.fulltext.NullIndexUpdateSink;
 import org.apache.lucene.index.IndexWriterConfig;
 
 import org.neo4j.function.Factory;
-import org.neo4j.kernel.api.impl.index.DatabaseIndex;
 import org.neo4j.kernel.api.impl.index.IndexWriterConfigs;
 import org.neo4j.kernel.api.impl.index.builder.AbstractLuceneIndexBuilder;
 import org.neo4j.kernel.api.impl.index.partition.ReadOnlyIndexPartitionFactory;
@@ -48,6 +47,7 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
     /**
      * Whether to create the index in a {@link IndexWriterConfigs#population() populating} mode, if {@code true}, or
      * in a {@link IndexWriterConfigs#standard() standard} mode, if {@code false}.
+     *
      * @param isPopulating {@code true} if the index should be created in a populating mode.
      * @return this index builder.
      */
@@ -68,11 +68,18 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
      *
      * @return lucene schema index
      */
-    public DatabaseIndex<FulltextIndexReader> build()
+    public DatabaseFulltextIndex build()
     {
         if ( isReadOnly() )
         {
-            return new ReadOnlyFulltextIndex( storageBuilder.build(), new ReadOnlyIndexPartitionFactory(), descriptor, propertyKeyTokenHolder );
+            final ReadOnlyIndexPartitionFactory partitionFactory = new ReadOnlyIndexPartitionFactory();
+            Factory<IndexWriterConfig> writerConfigFactory = () ->
+            {
+                throw new UnsupportedOperationException( "Cannot create new partitions for read-only index" );
+            };
+            LuceneFulltextIndex fulltextIndex =
+                    new LuceneFulltextIndex( storageBuilder.build(), partitionFactory, descriptor, propertyKeyTokenHolder, writerConfigFactory );
+            return new ReadOnlyFulltextIndex( fulltextIndex );
         }
         else
         {
@@ -86,7 +93,9 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
                 writerConfigFactory = () -> IndexWriterConfigs.standard( descriptor.analyzer() );
             }
             WritableIndexPartitionFactory partitionFactory = new WritableIndexPartitionFactory( writerConfigFactory );
-            return new WritableFulltextIndex( storageBuilder.build(), partitionFactory, descriptor, indexUpdateSink, propertyKeyTokenHolder );
+            LuceneFulltextIndex fulltextIndex =
+                    new LuceneFulltextIndex( storageBuilder.build(), partitionFactory, descriptor, propertyKeyTokenHolder, writerConfigFactory );
+            return new WritableFulltextIndex( indexUpdateSink, fulltextIndex );
         }
     }
 }

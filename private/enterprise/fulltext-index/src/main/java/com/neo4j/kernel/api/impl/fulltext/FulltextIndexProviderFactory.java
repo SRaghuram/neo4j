@@ -93,9 +93,11 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         }
         catch ( UnsatisfiedDependencyException e )
         {
-            log.debug( "Fulltext indexes failed to register as transaction state providers. This means that, if queried, they will not be able to " +
+            String message = "Fulltext indexes failed to register as transaction state providers. This means that, if queried, they will not be able to " +
                     "uncommitted transactional changes into account. This is fine if the indexes are opened for non-transactional work, such as for " +
-                    "consistency checking." );
+                    "consistency checking.";
+            if ( context.databaseInfo().operationalMode == OperationalMode.)
+            log.debug( message );
             auxiliaryTransactionStateManager = new NullAuxiliaryTransactionStateManager();
         }
 

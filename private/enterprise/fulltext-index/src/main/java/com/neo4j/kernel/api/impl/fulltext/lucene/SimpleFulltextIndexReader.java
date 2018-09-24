@@ -17,7 +17,6 @@ import java.io.IOException;
 
 import org.neo4j.kernel.api.impl.index.collector.DocValuesCollector;
 import org.neo4j.kernel.api.impl.index.collector.ValuesIterator;
-import org.neo4j.kernel.api.impl.index.partition.PartitionSearcher;
 import org.neo4j.kernel.api.impl.schema.reader.IndexReaderCloseException;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.values.storable.Value;
@@ -29,14 +28,14 @@ import org.neo4j.values.storable.Value;
  */
 class SimpleFulltextIndexReader extends FulltextIndexReader
 {
-    private final PartitionSearcher partitionSearcher;
+    private final SearcherReference searcherRef;
     private final Analyzer analyzer;
     private final TokenHolder propertyKeyTokenHolder;
     private final String[] properties;
 
-    SimpleFulltextIndexReader( PartitionSearcher partitionSearcher, String[] properties, Analyzer analyzer, TokenHolder propertyKeyTokenHolder )
+    SimpleFulltextIndexReader( SearcherReference searcherRef, String[] properties, Analyzer analyzer, TokenHolder propertyKeyTokenHolder )
     {
-        this.partitionSearcher = partitionSearcher;
+        this.searcherRef = searcherRef;
         this.properties = properties;
         this.analyzer = analyzer;
         this.propertyKeyTokenHolder = propertyKeyTokenHolder;
@@ -47,7 +46,7 @@ class SimpleFulltextIndexReader extends FulltextIndexReader
     {
         try
         {
-            partitionSearcher.close();
+            searcherRef.close();
         }
         catch ( IOException e )
         {
@@ -81,7 +80,7 @@ class SimpleFulltextIndexReader extends FulltextIndexReader
 
     private IndexSearcher getIndexSearcher()
     {
-        return partitionSearcher.getIndexSearcher();
+        return searcherRef.getIndexSearcher();
     }
 
     @Override

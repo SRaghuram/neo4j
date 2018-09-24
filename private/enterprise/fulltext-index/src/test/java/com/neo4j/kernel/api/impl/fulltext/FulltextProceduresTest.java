@@ -1111,6 +1111,32 @@ public class FulltextProceduresTest
     }
 
     @Test
+    public void mustIndexNodesByCorrectProperties()
+    {
+        db = createDatabase();
+        Label label = Label.label( "Label" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "a", "b", "c", "d", "e", "f" ) ) ).close();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode( label );
+            node.setProperty( "e", "value" );
+            nodeId = node.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertQueryFindsIds( db, true, "nodes", "e:value", nodeId );
+            tx.success();
+        }
+    }
+
+    @Test
     public void queryResultsMustNotIncludeNodesDeletedInOtherConcurrentlyCommittedTransactions() throws Exception
     {
         db = createDatabase();
@@ -1268,9 +1294,65 @@ public class FulltextProceduresTest
         }
     }
 
-    // todo must include things added in same transaction
+    @Test
+    public void queryResultsMustIncludeNodesAddedInThisTransaction()
+    {
+        db = createDatabase();
+        Label label = Label.label( "Label" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( label );
+            node.setProperty( "prop", "value" );
+            assertQueryFindsIds( db, true, "nodes", "value", newSetWith( node.getId() ) );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustIncludeRelationshipsAddedInThisTransaction()
+    {
+        db = createDatabase();
+        RelationshipType relType = RelationshipType.withName( "REL" );
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode();
+            Relationship relationship = node.createRelationshipTo( node, relType );
+            relationship.setProperty( "prop", "value" );
+            assertQueryFindsIds( db, false, "rels", "value", newSetWith( relationship.getId() ) );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustIncludeNodesWithPropertiesModifiedToBeIndexed() throws Exception
+    {
+
+    }
+    // todo query results must include nodes with labels modified to be indexed
     // todo must include things modified in same transaction
     // todo dropping/creating indexes?
+    // todo eventually consistent indexed must not include things added or modified in this transaction
+    // todo fulltext transaction state must not prevent index updates from being applied
 
     private GraphDatabaseAPI createDatabase()
     {

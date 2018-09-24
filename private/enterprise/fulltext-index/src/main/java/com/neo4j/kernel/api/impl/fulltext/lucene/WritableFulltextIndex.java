@@ -5,24 +5,19 @@
  */
 package com.neo4j.kernel.api.impl.fulltext.lucene;
 
-import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
 import com.neo4j.kernel.api.impl.fulltext.IndexUpdateSink;
 
 import java.io.IOException;
 
 import org.neo4j.kernel.api.impl.index.WritableAbstractDatabaseIndex;
-import org.neo4j.kernel.api.impl.index.partition.WritableIndexPartitionFactory;
-import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
-import org.neo4j.kernel.impl.core.TokenHolder;
 
-class WritableFulltextIndex extends WritableAbstractDatabaseIndex<LuceneFulltextIndex,FulltextIndexReader>
+class WritableFulltextIndex extends WritableAbstractDatabaseIndex<LuceneFulltextIndex,FulltextIndexReader> implements DatabaseFulltextIndex
 {
     private final IndexUpdateSink indexUpdateSink;
 
-    WritableFulltextIndex( PartitionedIndexStorage storage, WritableIndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor,
-            IndexUpdateSink indexUpdateSink, TokenHolder propertyKeyTokenHolder )
+    WritableFulltextIndex( IndexUpdateSink indexUpdateSink, LuceneFulltextIndex fulltextIndex )
     {
-        super( new LuceneFulltextIndex( storage, partitionFactory, descriptor, propertyKeyTokenHolder ) );
+        super( fulltextIndex );
         this.indexUpdateSink = indexUpdateSink;
     }
 
@@ -44,5 +39,11 @@ class WritableFulltextIndex extends WritableAbstractDatabaseIndex<LuceneFulltext
     {
         indexUpdateSink.awaitUpdateApplication();
         super.commitLockedClose();
+    }
+
+    @Override
+    public TransactionStateLuceneIndexWriter getTransactionalIndexWriter() throws IOException
+    {
+        return new TransactionStateLuceneIndexWriter( luceneIndex );
     }
 }

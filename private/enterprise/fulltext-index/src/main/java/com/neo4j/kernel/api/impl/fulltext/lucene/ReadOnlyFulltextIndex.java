@@ -5,18 +5,18 @@
  */
 package com.neo4j.kernel.api.impl.fulltext.lucene;
 
-import com.neo4j.kernel.api.impl.fulltext.FulltextIndexDescriptor;
-
 import org.neo4j.kernel.api.impl.index.ReadOnlyAbstractDatabaseIndex;
-import org.neo4j.kernel.api.impl.index.partition.IndexPartitionFactory;
-import org.neo4j.kernel.api.impl.index.storage.PartitionedIndexStorage;
-import org.neo4j.kernel.impl.core.TokenHolder;
 
-class ReadOnlyFulltextIndex extends ReadOnlyAbstractDatabaseIndex<LuceneFulltextIndex,FulltextIndexReader>
+class ReadOnlyFulltextIndex extends ReadOnlyAbstractDatabaseIndex<LuceneFulltextIndex,FulltextIndexReader> implements DatabaseFulltextIndex
 {
-    ReadOnlyFulltextIndex( PartitionedIndexStorage storage, IndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor,
-            TokenHolder propertyKeyTokenHolder )
+    ReadOnlyFulltextIndex( LuceneFulltextIndex luceneFulltextIndex )
     {
-        super( new LuceneFulltextIndex( storage, partitionFactory, descriptor, propertyKeyTokenHolder ) );
+        super( luceneFulltextIndex );
+    }
+
+    @Override
+    public TransactionStateLuceneIndexWriter getTransactionalIndexWriter()
+    {
+        throw new UnsupportedOperationException( "Can't get transaction state index writer for read only lucene index." );
     }
 }

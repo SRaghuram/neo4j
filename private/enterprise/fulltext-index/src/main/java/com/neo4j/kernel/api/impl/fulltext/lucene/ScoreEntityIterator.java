@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -21,10 +22,19 @@ import org.neo4j.kernel.api.impl.index.collector.ValuesIterator;
 public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEntry>
 {
     private final ValuesIterator iterator;
+    private final Predicate<ScoreEntry> predicate;
+    private ScoreEntry next;
 
     ScoreEntityIterator( ValuesIterator sortedValuesIterator )
     {
         this.iterator = sortedValuesIterator;
+        this.predicate = null;
+    }
+
+    private ScoreEntityIterator( ValuesIterator sortedValuesIterator, Predicate<ScoreEntry> predicate )
+    {
+        this.iterator = sortedValuesIterator;
+        this.predicate = predicate;
     }
 
     public Stream<ScoreEntry> stream()
@@ -35,7 +45,24 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
     @Override
     public boolean hasNext()
     {
-        return iterator.hasNext();
+//        if ( predicate == null )
+//        {
+//            return iterator.hasNext();
+//        }
+//        else
+//        {
+//        }
+        while ( next == null && iterator.hasNext() )
+        {
+            long entityId = iterator.next();
+            float score = iterator.currentScore();
+            ScoreEntry tmp = new ScoreEntry( entityId, score );
+            if ( predicate == null || predicate.test( tmp ) )
+            {
+                next = tmp;
+            }
+        }
+        return next != null;
     }
 
     @Override
@@ -43,12 +70,32 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
     {
         if ( hasNext() )
         {
-            return new ScoreEntry( iterator.next(), iterator.currentScore() );
+            ScoreEntry tmp = next;
+            next = null;
+            return tmp;
+//            if ( next != null )
+//            {
+//            }
+//            else
+//            {
+//                long entityId = iterator.next();
+//                float score = iterator.currentScore();
+//                return new ScoreEntry( entityId, score );
+//            }
         }
         else
         {
             throw new NoSuchElementException( "The iterator is exhausted" );
         }
+    }
+
+    public ScoreEntityIterator filter( Predicate<ScoreEntry> predicate )
+    {
+        if ( this.predicate != null )
+        {
+            predicate = this.predicate.and( predicate );
+        }
+        return new ScoreEntityIterator( iterator, predicate );
     }
 
     /**
