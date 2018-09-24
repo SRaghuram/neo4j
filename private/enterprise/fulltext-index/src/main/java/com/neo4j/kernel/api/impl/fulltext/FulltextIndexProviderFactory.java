@@ -18,7 +18,9 @@ import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionStateManager;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
+import org.neo4j.kernel.impl.api.NonTransactionalTokenNameLookup;
 import org.neo4j.kernel.impl.core.TokenHolders;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.Edition;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -27,6 +29,7 @@ import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
@@ -95,15 +98,17 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         {
             String message = "Fulltext indexes failed to register as transaction state providers. This means that, if queried, they will not be able to " +
                     "uncommitted transactional changes into account. This is fine if the indexes are opened for non-transactional work, such as for " +
-                    "consistency checking.";
-            if ( context.databaseInfo().operationalMode == OperationalMode.)
-            log.debug( message );
+                    "consistency checking. The reason given is: " + e.getMessage();
+            logDependencyException( context, log.debugLogger(), log.errorLogger(), message );
             auxiliaryTransactionStateManager = new NullAuxiliaryTransactionStateManager();
         }
 
         FulltextIndexProvider provider = new FulltextIndexProvider(
                 DESCRIPTOR, directoryStructureFactory, fileSystemAbstraction, config, tokenHolders,
                 directoryFactory, operationalMode, scheduler, auxiliaryTransactionStateManager );
+
+        String procedureRegistrationFailureMessage = "Failed to register the fulltext index procedures. The fulltext index provider will be loaded and " +
+                "updated like normal, but it might not be possible to query any fulltext indexes. The reason given is: ";
         try
         {
             dependencies.procedures().registerComponent( FulltextAdapter.class, procContext -> provider, true );
@@ -111,15 +116,31 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         }
         catch ( KernelException e )
         {
-            log.error( "Failed to register the fulltext index procedures. The fulltext index provider will be loaded and updated like normal, " +
-                    "but it might not be possible to query any fulltext indexes.", e );
+            String message = procedureRegistrationFailureMessage + e.getUserMessage( new NonTransactionalTokenNameLookup( tokenHolders ) );
+            // We use the 'warn' logger in this case, because it can occur due to multi-database shenanigans, or due to internal restarts in HA.
+            // These scenarios are less serious, and will _probably_ not prevent FTS from working. Hence we only warn about this.
+            logDependencyException( context, log.debugLogger(), log.warnLogger(), message );
         }
         catch ( UnsatisfiedDependencyException e )
         {
-            // This will for instance happen when the kernel extension is created as part of a consistency check run.
-            log.debug( "Fulltext index procedures will not be registered: " + e.getMessage() );
+            String message = procedureRegistrationFailureMessage + e.getMessage();
+            logDependencyException( context, log.debugLogger(), log.errorLogger(), message );
         }
 
         return provider;
+    }
+
+    private void logDependencyException( KernelContext context, Logger toolLog, Logger dbmsLog, String message )
+    {
+        // We can for instance get unsatisfied dependency exceptions when the kernel extension is created as part of a consistency check run.
+        if ( context.databaseInfo() == DatabaseInfo.TOOL )
+        {
+            toolLog.log( message );
+        }
+        else
+        {
+            // If we are not in a "TOOL" context, then we log this at the "DBMS" level, since it might be important for correctness.
+            dbmsLog.log( message );
+        }
     }
 }
