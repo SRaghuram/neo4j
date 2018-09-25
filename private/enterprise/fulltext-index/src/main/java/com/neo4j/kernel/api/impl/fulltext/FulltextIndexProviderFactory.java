@@ -105,7 +105,7 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
 
         FulltextIndexProvider provider = new FulltextIndexProvider(
                 DESCRIPTOR, directoryStructureFactory, fileSystemAbstraction, config, tokenHolders,
-                directoryFactory, operationalMode, scheduler, auxiliaryTransactionStateManager );
+                directoryFactory, operationalMode, scheduler, auxiliaryTransactionStateManager, log );
 
         String procedureRegistrationFailureMessage = "Failed to register the fulltext index procedures. The fulltext index provider will be loaded and " +
                 "updated like normal, but it might not be possible to query any fulltext indexes. The reason given is: ";

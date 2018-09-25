@@ -35,6 +35,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongFunction;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -49,6 +50,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -92,6 +94,8 @@ public class FulltextProceduresTest
     static final String NODE = "node";
     static final String RELATIONSHIP = "relationship";
     private static final String DESCARTES_MEDITATIONES = "/meditationes--rene-descartes--public-domain.txt";
+    public static final Label LABEL = Label.label( "Label" );
+    public static final RelationshipType REL = RelationshipType.withName( "REL" );
 
     private final Timeout timeout = VerboseTimeout.builder().withTimeout( 1, TimeUnit.MINUTES ).build();
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
@@ -104,12 +108,14 @@ public class FulltextProceduresTest
 
     private GraphDatabaseAPI db;
     private GraphDatabaseBuilder builder;
+    public static final String PROP = "prop";
 
     @Before
     public void before()
     {
         GraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
         builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
+        builder.setConfig( GraphDatabaseSettings.store_internal_log_level, "DEBUG" );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 
@@ -220,7 +226,7 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
         expectedException.expect( QueryExecutionException.class );
-        db.execute( format( NODE_CREATE, "nodeIndex", array(), array( "prop" ) ) ).close();
+        db.execute( format( NODE_CREATE, "nodeIndex", array(), array( PROP ) ) ).close();
     }
 
     @Test
@@ -228,7 +234,7 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
         expectedException.expect( QueryExecutionException.class );
-        db.execute( format( RELATIONSHIP_CREATE, "relIndex", array(), array( "prop" ) ) );
+        db.execute( format( RELATIONSHIP_CREATE, "relIndex", array(), array( PROP ) ) );
     }
 
     @Test
@@ -274,34 +280,31 @@ public class FulltextProceduresTest
         LongHashSet swedishRels = new LongHashSet();
         LongHashSet englishRels = new LongHashSet();
 
-        Label label = Label.label( "LABEL" );
-        RelationshipType relType = RelationshipType.withName( "REL" );
-        String prop = "prop";
         String labelledSwedishNodes = "labelledSwedishNodes";
         String typedSwedishRelationships = "typedSwedishRelationships";
 
         try ( Transaction tx = db.beginTx() )
         {
             // Nodes and relationships picked up by index population.
-            Node nodeA = db.createNode( label );
-            nodeA.setProperty( prop, "En apa och en tomte bodde i ett hus." );
+            Node nodeA = db.createNode( LABEL );
+            nodeA.setProperty( PROP, "En apa och en tomte bodde i ett hus." );
             swedishNodes.add( nodeA.getId() );
-            Node nodeB = db.createNode( label );
-            nodeB.setProperty( prop, "Hello and hello again, in the end." );
+            Node nodeB = db.createNode( LABEL );
+            nodeB.setProperty( PROP, "Hello and hello again, in the end." );
             englishNodes.add( nodeB.getId() );
-            Relationship relA = nodeA.createRelationshipTo( nodeB, relType );
-            relA.setProperty( prop, "En apa och en tomte bodde i ett hus." );
+            Relationship relA = nodeA.createRelationshipTo( nodeB, REL );
+            relA.setProperty( PROP, "En apa och en tomte bodde i ett hus." );
             swedishRels.add( relA.getId() );
-            Relationship relB = nodeB.createRelationshipTo( nodeA, relType );
-            relB.setProperty( prop, "Hello and hello again, in the end." );
+            Relationship relB = nodeB.createRelationshipTo( nodeA, REL );
+            relB.setProperty( PROP, "Hello and hello again, in the end." );
             englishRels.add( relB.getId() );
             tx.success();
         }
         try ( Transaction tx = db.beginTx() )
         {
-            String lbl = array( label.name() );
-            String rel = array( relType.name() );
-            String props = array( prop );
+            String lbl = array( LABEL.name() );
+            String rel = array( REL.name() );
+            String props = array( PROP );
             String swedish = props + ", {analyzer: '" + FulltextAnalyzerTest.SWEDISH + "'}";
             db.execute( format( NODE_CREATE, labelledSwedishNodes, lbl, swedish ) ).close();
             db.execute( format( RELATIONSHIP_CREATE, typedSwedishRelationships, rel, swedish ) ).close();
@@ -311,17 +314,17 @@ public class FulltextProceduresTest
         try ( Transaction tx = db.beginTx() )
         {
             // Nodes and relationships picked up by index updates.
-            Node nodeC = db.createNode( label );
-            nodeC.setProperty( prop, "En apa och en tomte bodde i ett hus." );
+            Node nodeC = db.createNode( LABEL );
+            nodeC.setProperty( PROP, "En apa och en tomte bodde i ett hus." );
             swedishNodes.add( nodeC.getId() );
-            Node nodeD = db.createNode( label );
-            nodeD.setProperty( prop, "Hello and hello again, in the end." );
+            Node nodeD = db.createNode( LABEL );
+            nodeD.setProperty( PROP, "Hello and hello again, in the end." );
             englishNodes.add( nodeD.getId() );
-            Relationship relC = nodeC.createRelationshipTo( nodeD, relType );
-            relC.setProperty( prop, "En apa och en tomte bodde i ett hus." );
+            Relationship relC = nodeC.createRelationshipTo( nodeD, REL );
+            relC.setProperty( PROP, "En apa och en tomte bodde i ett hus." );
             swedishRels.add( relC.getId() );
-            Relationship relD = nodeD.createRelationshipTo( nodeC, relType );
-            relD.setProperty( prop, "Hello and hello again, in the end." );
+            Relationship relD = nodeD.createRelationshipTo( nodeC, REL );
+            relD.setProperty( PROP, "Hello and hello again, in the end." );
             englishRels.add( relD.getId() );
             tx.success();
         }
@@ -374,26 +377,24 @@ public class FulltextProceduresTest
     public void queryShouldFindDataAddedInIndexPopulation()
     {
         // when
-        Label label = Label.label( "LABEL" );
-        RelationshipType relType = RelationshipType.withName( "REL" );
         Node node1;
         Node node2;
         Relationship relationship;
         db = createDatabase();
         try ( Transaction tx = db.beginTx() )
         {
-            node1 = db.createNode( label );
-            node1.setProperty( "prop", "This is a integration test." );
-            node2 = db.createNode( label );
+            node1 = db.createNode( LABEL );
+            node1.setProperty( PROP, "This is a integration test." );
+            node2 = db.createNode( LABEL );
             node2.setProperty( "otherprop", "This is a related integration test" );
-            relationship = node1.createRelationshipTo( node2, relType );
-            relationship.setProperty( "prop", "They relate" );
+            relationship = node1.createRelationshipTo( node2, REL );
+            relationship.setProperty( PROP, "They relate" );
             tx.success();
         }
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "node", array( label.name() ), array( "prop", "otherprop" ) ) );
-            db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( "prop" ) ) );
+            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP, "otherprop" ) ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) ) );
             tx.success();
         }
         awaitIndexesOnline();
@@ -408,17 +409,14 @@ public class FulltextProceduresTest
     @Test
     public void updatesToEventuallyConsistentIndexMustEventuallyBecomeVisible()
     {
-        Label label = Label.label( "LABEL" );
-        RelationshipType relType = RelationshipType.withName( "REL" );
-        String prop = "prop";
         String value = "bla bla";
         String eventuallyConsistent = ", {eventually_consistent: 'true'}";
         db = createDatabase();
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "node", array( label.name() ), array( prop ) + eventuallyConsistent ) );
-            db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( prop ) + eventuallyConsistent ) );
+            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + eventuallyConsistent ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + eventuallyConsistent ) );
             tx.success();
         }
 
@@ -429,10 +427,10 @@ public class FulltextProceduresTest
         {
             for ( int i = 0; i < entityCount; i++ )
             {
-                Node node = db.createNode( label );
-                node.setProperty( prop, value );
-                Relationship rel = node.createRelationshipTo( node, relType );
-                rel.setProperty( prop, value );
+                Node node = db.createNode( LABEL );
+                node.setProperty( PROP, value );
+                Relationship rel = node.createRelationshipTo( node, REL );
+                rel.setProperty( PROP, value );
                 nodeIds.add( node.getId() );
                 relIds.add( rel.getId() );
             }
@@ -465,17 +463,14 @@ public class FulltextProceduresTest
     @Test
     public void updatesToEventuallyConsistentIndexMustBecomeVisibleAfterAwaitRefresh()
     {
-        Label label = Label.label( "LABEL" );
-        RelationshipType relType = RelationshipType.withName( "REL" );
-        String prop = "prop";
         String value = "bla bla";
         String eventuallyConsistent = ", {eventually_consistent: 'true'}";
         db = createDatabase();
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "node", array( label.name() ), array( prop ) + eventuallyConsistent ) );
-            db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( prop ) + eventuallyConsistent ) );
+            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + eventuallyConsistent ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + eventuallyConsistent ) );
             tx.success();
         }
         awaitIndexesOnline();
@@ -487,10 +482,10 @@ public class FulltextProceduresTest
         {
             for ( int i = 0; i < entityCount; i++ )
             {
-                Node node = db.createNode( label );
-                node.setProperty( prop, value );
-                Relationship rel = node.createRelationshipTo( node, relType );
-                rel.setProperty( prop, value );
+                Node node = db.createNode( LABEL );
+                node.setProperty( PROP, value );
+                Relationship rel = node.createRelationshipTo( node, REL );
+                rel.setProperty( PROP, value );
                 nodeIds.add( node.getId() );
                 relIds.add( rel.getId() );
             }
@@ -505,9 +500,6 @@ public class FulltextProceduresTest
     @Test
     public void eventuallyConsistentIndexMustPopulateWithExistingDataWhenCreated()
     {
-        Label label = Label.label( "LABEL" );
-        RelationshipType relType = RelationshipType.withName( "REL" );
-        String prop = "prop";
         String value = "bla bla";
         String eventuallyConsistent = ", {eventually_consistent: 'true'}";
         db = createDatabase();
@@ -519,10 +511,10 @@ public class FulltextProceduresTest
         {
             for ( int i = 0; i < entityCount; i++ )
             {
-                Node node = db.createNode( label );
-                node.setProperty( prop, value );
-                Relationship rel = node.createRelationshipTo( node, relType );
-                rel.setProperty( prop, value );
+                Node node = db.createNode( LABEL );
+                node.setProperty( PROP, value );
+                Relationship rel = node.createRelationshipTo( node, REL );
+                rel.setProperty( PROP, value );
                 nodeIds.add( node.getId() );
                 relIds.add( rel.getId() );
             }
@@ -531,8 +523,8 @@ public class FulltextProceduresTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "node", array( label.name() ), array( prop ) + eventuallyConsistent ) );
-            db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( prop ) + eventuallyConsistent ) );
+            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + eventuallyConsistent ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + eventuallyConsistent ) );
             tx.success();
         }
 
@@ -544,9 +536,6 @@ public class FulltextProceduresTest
     @Test
     public void concurrentPopulationAndUpdatesToAnEventuallyConsistentIndexMustEventuallyResultInCorrectIndexState() throws Exception
     {
-        Label label = Label.label( "LABEL" );
-        RelationshipType relType = RelationshipType.withName( "REL" );
-        String prop = "prop";
         String oldValue = "red";
         String newValue = "green";
         String eventuallyConsistent = ", {eventually_consistent: 'true'}";
@@ -561,10 +550,10 @@ public class FulltextProceduresTest
         {
             for ( int i = 0; i < entityCount; i++ )
             {
-                Node node = db.createNode( label );
-                node.setProperty( prop, oldValue );
-                Relationship rel = node.createRelationshipTo( node, relType );
-                rel.setProperty( prop, oldValue );
+                Node node = db.createNode( LABEL );
+                node.setProperty( PROP, oldValue );
+                Relationship rel = node.createRelationshipTo( node, REL );
+                rel.setProperty( PROP, oldValue );
                 nodeIds.add( node.getId() );
                 relIds.add( rel.getId() );
             }
@@ -580,8 +569,8 @@ public class FulltextProceduresTest
             startLatch.await();
             try ( Transaction tx = db.beginTx() )
             {
-                db.execute( format( NODE_CREATE, "node", array( label.name() ), array( prop ) + eventuallyConsistent ) );
-                db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( prop ) + eventuallyConsistent ) );
+                db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + eventuallyConsistent ) );
+                db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + eventuallyConsistent ) );
                 tx.success();
             }
         };
@@ -590,8 +579,8 @@ public class FulltextProceduresTest
             try ( Transaction tx = db.beginTx() )
             {
                 // Prepare our transaction state first.
-                nodeIds.forEach( nodeId -> db.getNodeById( nodeId ).setProperty( prop, newValue ) );
-                relIds.forEach( relId -> db.getRelationshipById( relId ).setProperty( prop, newValue ) );
+                nodeIds.forEach( nodeId -> db.getNodeById( nodeId ).setProperty( PROP, newValue ) );
+                relIds.forEach( relId -> db.getRelationshipById( relId ).setProperty( PROP, newValue ) );
                 tx.success();
                 // Okay, NOW we're ready to race!
                 readyLatch.countDown();
@@ -619,12 +608,10 @@ public class FulltextProceduresTest
         builder.setConfig( FulltextConfig.eventually_consistent, Settings.TRUE );
         db = createDatabase();
 
-        Label label = Label.label( "LABEL" );
-        RelationshipType relType = RelationshipType.withName( "REL" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "node", array( label.name() ), array( "prop", "otherprop" ) ) );
-            db.execute( format( RELATIONSHIP_CREATE, "rel", array( relType.name() ), array( "prop" ) ) );
+            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP, "otherprop" ) ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) ) );
             tx.success();
         }
         awaitIndexesOnline();
@@ -639,12 +626,12 @@ public class FulltextProceduresTest
         {
             try ( Transaction tx = db.beginTx() )
             {
-                Node node1 = db.createNode( label );
-                node1.setProperty( "prop", "bla bla" );
-                Node node2 = db.createNode( label );
+                Node node1 = db.createNode( LABEL );
+                node1.setProperty( PROP, "bla bla" );
+                Node node2 = db.createNode( LABEL );
                 node2.setProperty( "otherprop", "bla bla" );
-                Relationship relationship = node1.createRelationshipTo( node2, relType );
-                relationship.setProperty( "prop", "bla bla" );
+                Relationship relationship = node1.createRelationshipTo( node2, REL );
+                relationship.setProperty( PROP, "bla bla" );
                 nodeIds.add( node1.getId() );
                 nodeIds.add( node2.getId() );
                 relId = relationship.getId();
@@ -695,11 +682,9 @@ public class FulltextProceduresTest
     public void queryNodesMustThrowWhenQueryingRelationshipIndex()
     {
         db = createDatabase();
-
-        RelationshipType relType = RelationshipType.withName( "REL" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            createSimpleRelationshipIndex();
             tx.success();
         }
 
@@ -718,10 +703,9 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
 
-        Label label = Label.label( "Label" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            createSimpleNodesIndex();
             tx.success();
         }
 
@@ -740,12 +724,11 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
 
-        Label label = Label.label( "Label" );
-        RelationshipType relType = RelationshipType.withName( "REL" );
+        Label label = LABEL;
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
-            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( PROP ) ) ).close();
+            createSimpleRelationshipIndex();
             tx.success();
         }
 
@@ -759,8 +742,8 @@ public class FulltextProceduresTest
             {
                 Node node = db.createNode( label );
                 Object propertyValue = value.asObject();
-                node.setProperty( "prop", propertyValue );
-                node.createRelationshipTo( node, relType ).setProperty( "prop", propertyValue );
+                node.setProperty( PROP, propertyValue );
+                node.createRelationshipTo( node, REL ).setProperty( PROP, propertyValue );
             }
             tx.success();
         }
@@ -797,26 +780,23 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
 
-        Label label = Label.label( "Label" );
-        RelationshipType relType = RelationshipType.withName( "REL" );
-
         List<Value> values = generateRandomNonStringValues();
 
         try ( Transaction tx = db.beginTx() )
         {
             for ( Value value : values )
             {
-                Node node = db.createNode( label );
+                Node node = db.createNode( LABEL );
                 Object propertyValue = value.asObject();
-                node.setProperty( "prop", propertyValue );
-                node.createRelationshipTo( node, relType ).setProperty( "prop", propertyValue );
+                node.setProperty( PROP, propertyValue );
+                node.createRelationshipTo( node, REL ).setProperty( PROP, propertyValue );
             }
             tx.success();
         }
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
-            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            createSimpleNodesIndex();
+            createSimpleRelationshipIndex();
             tx.success();
         }
 
@@ -854,18 +834,17 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
 
-        Label label = Label.label( "Label" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            createSimpleNodesIndex();
             tx.success();
         }
         long nodeId;
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode( label );
+            Node node = db.createNode( LABEL );
             nodeId = node.getId();
-            node.setProperty( "prop", "bla bla" );
+            node.setProperty( PROP, "bla bla" );
             tx.success();
         }
 
@@ -874,7 +853,7 @@ public class FulltextProceduresTest
         try ( Transaction tx = db.beginTx() )
         {
             Node node = db.getNodeById( nodeId );
-            node.setProperty( "prop", 42 );
+            node.setProperty( PROP, 42 );
             tx.success();
         }
 
@@ -892,17 +871,16 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
 
-        Label label = Label.label( "Label" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            createSimpleNodesIndex();
             tx.success();
         }
         long nodeId;
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode( label );
-            node.setProperty( "prop", 42 );
+            Node node = db.createNode( LABEL );
+            node.setProperty( PROP, 42 );
             nodeId = node.getId();
             tx.success();
         }
@@ -912,7 +890,7 @@ public class FulltextProceduresTest
         try ( Transaction tx = db.beginTx() )
         {
             Node node = db.getNodeById( nodeId );
-            node.setProperty( "prop", "bla bla" );
+            node.setProperty( PROP, "bla bla" );
             tx.success();
         }
 
@@ -928,16 +906,15 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
 
-        Label label = Label.label( "Label" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop1", "prop2" ) ) ).close();
+            db.execute( format( NODE_CREATE, "nodes", array( LABEL.name() ), array( "prop1", "prop2" ) ) ).close();
             tx.success();
         }
         long nodeId;
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode( label );
+            Node node = db.createNode( LABEL );
             nodeId = node.getId();
             node.setProperty( "prop1", "foo" );
             node.setProperty( "prop2", "bar" );
@@ -968,16 +945,15 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
 
-        Label label = Label.label( "Label" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop1", "prop2" ) ) ).close();
+            db.execute( format( NODE_CREATE, "nodes", array( LABEL.name() ), array( "prop1", "prop2" ) ) ).close();
             tx.success();
         }
         long nodeId;
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode( label );
+            Node node = db.createNode( LABEL );
             nodeId = node.getId();
             node.setProperty( "prop1", "foo" );
             node.setProperty( "prop2", 42 );
@@ -1114,17 +1090,16 @@ public class FulltextProceduresTest
     public void mustIndexNodesByCorrectProperties()
     {
         db = createDatabase();
-        Label label = Label.label( "Label" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "a", "b", "c", "d", "e", "f" ) ) ).close();
+            db.execute( format( NODE_CREATE, "nodes", array( LABEL.name() ), array( "a", "b", "c", "d", "e", "f" ) ) ).close();
             tx.success();
         }
         long nodeId;
         try ( Transaction tx = db.beginTx() )
         {
             awaitIndexesOnline();
-            Node node = db.createNode( label );
+            Node node = db.createNode( LABEL );
             node.setProperty( "e", "value" );
             nodeId = node.getId();
             tx.success();
@@ -1137,13 +1112,85 @@ public class FulltextProceduresTest
     }
 
     @Test
+    public void queryingIndexInPopulatingStateMustBlockUntilIndexIsOnline()
+    {
+        db = createDatabase();
+        long nodeCount = 10_000;
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( int i = 0; i < nodeCount; i++ )
+            {
+
+                db.createNode( LABEL ).setProperty( PROP, "value" );
+            }
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            try ( Result result = db.execute( format( QUERY_NODES, "nodes", "value" ) );
+                  Stream<Map<String,Object>> stream = result.stream(); )
+            {
+                assertThat( stream.count(), is( nodeCount ) );
+            }
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryingIndexInPopulatingStateMustBlockUntilIndexIsOnlineEvenWhenTransactionHasState()
+    {
+        db = createDatabase();
+        long nodeCount = 10_000;
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( int i = 0; i < nodeCount; i++ )
+            {
+
+                db.createNode( LABEL ).setProperty( PROP, "value" );
+            }
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.createNode( LABEL ).setProperty( PROP, "value" );
+            try ( Result result = db.execute( format( QUERY_NODES, "nodes", "value" ) );
+                  Stream<Map<String,Object>> stream = result.stream(); )
+            {
+                assertThat( stream.count(), is( nodeCount + 1 ) );
+            }
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryingIndexInTransactionItWasCreatedInMustThrow()
+    {
+        db = createDatabase();
+        try ( Transaction ignore = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            expectedException.expect( QueryExecutionException.class );
+            db.execute( format( QUERY_NODES, "nodes", "value" ) ).close();
+        }
+    }
+
+    @Test
     public void queryResultsMustNotIncludeNodesDeletedInOtherConcurrentlyCommittedTransactions() throws Exception
     {
         db = createDatabase();
-        Label label = Label.label( "Label" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            createSimpleNodesIndex();
             tx.success();
         }
         long nodeIdA;
@@ -1151,11 +1198,11 @@ public class FulltextProceduresTest
         try ( Transaction tx = db.beginTx() )
         {
             awaitIndexesOnline();
-            Node nodeA = db.createNode( label );
-            nodeA.setProperty( "prop", "value" );
+            Node nodeA = db.createNode( LABEL );
+            nodeA.setProperty( PROP, "value" );
             nodeIdA = nodeA.getId();
-            Node nodeB = db.createNode( label );
-            nodeB.setProperty( "prop", "value" );
+            Node nodeB = db.createNode( LABEL );
+            nodeB.setProperty( PROP, "value" );
             nodeIdB = nodeB.getId();
             tx.success();
         }
@@ -1183,10 +1230,9 @@ public class FulltextProceduresTest
     public void queryResultsMustNotIncludeRelationshipsDeletedInOtherConcurrentlyCommittedTransactions() throws Exception
     {
         db = createDatabase();
-        RelationshipType relType = RelationshipType.withName( "REL" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            createSimpleRelationshipIndex();
             tx.success();
         }
         long relIdA;
@@ -1195,11 +1241,11 @@ public class FulltextProceduresTest
         {
             awaitIndexesOnline();
             Node node = db.createNode();
-            Relationship relA = node.createRelationshipTo( node, relType );
-            relA.setProperty( "prop", "value" );
+            Relationship relA = node.createRelationshipTo( node, REL );
+            relA.setProperty( PROP, "value" );
             relIdA = relA.getId();
-            Relationship relB = node.createRelationshipTo( node, relType );
-            relB.setProperty( "prop", "value" );
+            Relationship relB = node.createRelationshipTo( node, REL );
+            relB.setProperty( PROP, "value" );
             relIdB = relB.getId();
             tx.success();
         }
@@ -1227,10 +1273,9 @@ public class FulltextProceduresTest
     public void queryResultsMustNotIncludeNodesDeletedInThisTransaction()
     {
         db = createDatabase();
-        Label label = Label.label( "Label" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            createSimpleNodesIndex();
             tx.success();
         }
         long nodeIdA;
@@ -1238,11 +1283,11 @@ public class FulltextProceduresTest
         try ( Transaction tx = db.beginTx() )
         {
             awaitIndexesOnline();
-            Node nodeA = db.createNode( label );
-            nodeA.setProperty( "prop", "value" );
+            Node nodeA = db.createNode( LABEL );
+            nodeA.setProperty( PROP, "value" );
             nodeIdA = nodeA.getId();
-            Node nodeB = db.createNode( label );
-            nodeB.setProperty( "prop", "value" );
+            Node nodeB = db.createNode( LABEL );
+            nodeB.setProperty( PROP, "value" );
             nodeIdB = nodeB.getId();
             tx.success();
         }
@@ -1262,10 +1307,9 @@ public class FulltextProceduresTest
     public void queryResultsMustNotIncludeRelationshipsDeletedInThisTransaction()
     {
         db = createDatabase();
-        RelationshipType relType = RelationshipType.withName( "REL" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            createSimpleRelationshipIndex();
             tx.success();
         }
         long relIdA;
@@ -1274,11 +1318,11 @@ public class FulltextProceduresTest
         {
             awaitIndexesOnline();
             Node node = db.createNode();
-            Relationship relA = node.createRelationshipTo( node, relType );
-            relA.setProperty( "prop", "value" );
+            Relationship relA = node.createRelationshipTo( node, REL );
+            relA.setProperty( PROP, "value" );
             relIdA = relA.getId();
-            Relationship relB = node.createRelationshipTo( node, relType );
-            relB.setProperty( "prop", "value" );
+            Relationship relB = node.createRelationshipTo( node, REL );
+            relB.setProperty( PROP, "value" );
             relIdB = relB.getId();
             tx.success();
         }
@@ -1298,10 +1342,9 @@ public class FulltextProceduresTest
     public void queryResultsMustIncludeNodesAddedInThisTransaction()
     {
         db = createDatabase();
-        Label label = Label.label( "Label" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "nodes", array( label.name() ), array( "prop" ) ) ).close();
+            createSimpleNodesIndex();
             tx.success();
         }
         try ( Transaction tx = db.beginTx() )
@@ -1311,8 +1354,8 @@ public class FulltextProceduresTest
         }
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode( label );
-            node.setProperty( "prop", "value" );
+            Node node = db.createNode( LABEL );
+            node.setProperty( PROP, "value" );
             assertQueryFindsIds( db, true, "nodes", "value", newSetWith( node.getId() ) );
             tx.success();
         }
@@ -1322,10 +1365,9 @@ public class FulltextProceduresTest
     public void queryResultsMustIncludeRelationshipsAddedInThisTransaction()
     {
         db = createDatabase();
-        RelationshipType relType = RelationshipType.withName( "REL" );
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( RELATIONSHIP_CREATE, "rels", array( relType.name() ), array( "prop" ) ) ).close();
+            createSimpleRelationshipIndex();
             tx.success();
         }
         try ( Transaction tx = db.beginTx() )
@@ -1336,23 +1378,228 @@ public class FulltextProceduresTest
         try ( Transaction tx = db.beginTx() )
         {
             Node node = db.createNode();
-            Relationship relationship = node.createRelationshipTo( node, relType );
-            relationship.setProperty( "prop", "value" );
+            Relationship relationship = node.createRelationshipTo( node, REL );
+            relationship.setProperty( PROP, "value" );
             assertQueryFindsIds( db, false, "rels", "value", newSetWith( relationship.getId() ) );
             tx.success();
         }
     }
 
     @Test
-    public void queryResultsMustIncludeNodesWithPropertiesModifiedToBeIndexed() throws Exception
+    public void queryResultsMustIncludeNodesWithPropertiesAddedToBeIndexed()
     {
-
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            nodeId = db.createNode( LABEL ).getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.getNodeById( nodeId ).setProperty( PROP, "value" );
+            assertQueryFindsIds( db, true, "nodes", "prop:value", nodeId );
+            tx.success();
+        }
     }
-    // todo query results must include nodes with labels modified to be indexed
-    // todo must include things modified in same transaction
+
+    @Test
+    public void queryResultsMustIncludeRelationshipsWithPropertiesAddedToBeIndexed()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleRelationshipIndex();
+            tx.success();
+        }
+        long relId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode();
+            Relationship rel = node.createRelationshipTo( node, REL );
+            relId = rel.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Relationship rel = db.getRelationshipById( relId );
+            rel.setProperty( PROP, "value" );
+            assertQueryFindsIds( db, false, "rels", "prop:value", relId );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustIncludeNodesWithLabelsModifedToBeIndexed()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode();
+            node.setProperty( PROP, "value" );
+            nodeId = node.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.getNodeById( nodeId );
+            node.addLabel( LABEL );
+            assertQueryFindsIds( db, true, "nodes", "value", nodeId );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustIncludeUpdatedValueOfChangedNodeProperties()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode( LABEL );
+            node.setProperty( PROP, "primo" );
+            nodeId = node.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.getNodeById( nodeId ).setProperty( PROP, "secundo" );
+            assertQueryFindsIds( db, true, "nodes", "primo" );
+            assertQueryFindsIds( db, true, "nodes", "secundo", nodeId );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustIncludeUpdatedValuesOfChangedRelationshipProperties()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleRelationshipIndex();
+            tx.success();
+        }
+        long relId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode();
+            Relationship rel = node.createRelationshipTo( node, REL );
+            rel.setProperty( PROP, "primo" );
+            relId = rel.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.getRelationshipById( relId ).setProperty( PROP, "secundo" );
+            assertQueryFindsIds( db, false, "rels", "primo" );
+            assertQueryFindsIds( db, false, "rels", "secundo", relId );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustNotIncludeNodesWithRemovedIndexedProperties()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode( LABEL );
+            node.setProperty( PROP, "value" );
+            nodeId = node.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.getNodeById( nodeId ).removeProperty( PROP );
+            assertQueryFindsIds( db, true, "nodes", "value" );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustNotIncludeRelationshipsWithRemovedIndexedProperties()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleRelationshipIndex();
+            tx.success();
+        }
+        long relId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode();
+            Relationship rel = node.createRelationshipTo( node, REL );
+            rel.setProperty( PROP, "value" );
+            relId = rel.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.getRelationshipById( relId ).removeProperty( PROP );
+            assertQueryFindsIds( db, false, "rels", "value" );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustNotIncludeNodesWithRemovedIndexedLabels()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( LABEL );
+            node.setProperty( PROP, "value" );
+            nodeId = node.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.getNodeById( nodeId ).removeLabel( LABEL );
+            assertQueryFindsIds( db, true, "nodes", "nodes" );
+            tx.success();
+        }
+    }
+    // todo must include old values when modifications are undone
     // todo dropping/creating indexes?
     // todo eventually consistent indexed must not include things added or modified in this transaction
     // todo fulltext transaction state must not prevent index updates from being applied
+    // todo transaction state before the index has come online
 
     private GraphDatabaseAPI createDatabase()
     {
@@ -1363,7 +1610,7 @@ public class FulltextProceduresTest
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
             tx.success();
         }
     }
@@ -1475,5 +1722,15 @@ public class FulltextProceduresTest
     private String quoteValueForQuery( Value value )
     {
         return QueryParserUtil.escape( value.prettyPrint() ).replace( "\\", "\\\\" ).replace( "\"", "\\\"" );
+    }
+
+    private void createSimpleRelationshipIndex()
+    {
+        db.execute( format( RELATIONSHIP_CREATE, "rels", array( REL.name() ), array( PROP ) ) ).close();
+    }
+
+    private void createSimpleNodesIndex()
+    {
+        db.execute( format( NODE_CREATE, "nodes", array( LABEL.name() ), array( PROP ) ) ).close();
     }
 }

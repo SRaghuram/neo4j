@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -33,6 +34,9 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.neo4j.graphdb.TransactionTerminatedException;
+import org.neo4j.graphdb.TransientFailureException;
+import org.neo4j.graphdb.TransientInterruptException;
 import org.neo4j.graphdb.index.fulltext.AnalyzerProvider;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
@@ -46,6 +50,7 @@ import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndexProvider;
 import org.neo4j.kernel.api.impl.index.DatabaseIndex;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
@@ -64,10 +69,12 @@ import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.newapi.AllStoreHolder;
+import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
+import org.neo4j.storageengine.api.schema.IndexDescriptor;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
@@ -84,22 +91,24 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     private final String defaultAnalyzerName;
     private final String defaultEventuallyConsistentSetting;
     private final AuxiliaryTransactionStateManager auxiliaryTransactionStateManager;
+    private final Log log;
     private final IndexUpdateSink indexUpdateSink;
     private final ConcurrentMap<StoreIndexDescriptor,FulltextIndexAccessor> openOnlineAccessors;
 
     FulltextIndexProvider( IndexProviderDescriptor descriptor, IndexDirectoryStructure.Factory directoryStructureFactory,
             FileSystemAbstraction fileSystem, Config config, TokenHolders tokenHolders, DirectoryFactory directoryFactory, OperationalMode operationalMode,
-            JobScheduler scheduler, AuxiliaryTransactionStateManager auxiliaryTransactionStateManager )
+            JobScheduler scheduler, AuxiliaryTransactionStateManager auxiliaryTransactionStateManager, Log log )
     {
         super( descriptor, directoryStructureFactory, config, operationalMode, fileSystem, directoryFactory );
         this.fileSystem = fileSystem;
         this.config = config;
         this.tokenHolders = tokenHolders;
         this.operationalMode = operationalMode;
+        this.auxiliaryTransactionStateManager = auxiliaryTransactionStateManager;
+        this.log = log;
 
         defaultAnalyzerName = config.get( FulltextConfig.fulltext_default_analyzer );
         defaultEventuallyConsistentSetting = Boolean.toString( config.get( FulltextConfig.eventually_consistent ) );
-        this.auxiliaryTransactionStateManager = auxiliaryTransactionStateManager;
         indexUpdateSink = new IndexUpdateSink( scheduler, config.get( FulltextConfig.eventually_consistent_index_update_queue_max_length ) );
         openOnlineAccessors = new ConcurrentHashMap<>();
     }
@@ -154,6 +163,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         {
             throw new UnsupportedOperationException( "Can't create populator for read only index" );
         }
+        log.debug( "Creating populator for fulltext schema index: %s", descriptor );
         return new FulltextIndexPopulator( fulltextIndexDescriptor, fulltextIndex,
                 () -> FulltextIndexSettings.saveFulltextIndexSettings( fulltextIndexDescriptor, indexStorage, fileSystem ) );
     }
@@ -181,6 +191,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         Runnable onClose = () -> openOnlineAccessors.remove( descriptor );
         FulltextIndexAccessor accessor = new FulltextIndexAccessor( indexUpdateSink, fulltextIndex, fulltextIndexDescriptor, onClose );
         openOnlineAccessors.put( descriptor, accessor );
+        log.debug( "Created online accessor for fulltext schema index %s: %s", descriptor, accessor );
         return accessor;
     }
 
@@ -229,6 +240,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         KernelTransactionImplementation kti = (KernelTransactionImplementation) ktx;
         AllStoreHolder allStoreHolder = (AllStoreHolder) kti.dataRead();
         IndexReference indexReference = kti.schemaRead().indexGetForName( indexName );
+        awaitIndexOnline( kti, indexReference );
         FulltextIndexReader fulltextIndexReader;
         if ( kti.hasTxStateWithChanges() )
         {
@@ -241,6 +253,35 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
             fulltextIndexReader = (FulltextIndexReader) indexReader;
         }
         return fulltextIndexReader.query( queryString );
+    }
+
+    private void awaitIndexOnline( KernelTransactionImplementation kti, IndexReference indexReference ) throws IndexNotFoundKernelException
+    {
+        // We do the isAdded check on the transaction state first, because indexGetState will grab a schema read-lock, which can deadlock on the write-lock
+        // held by the index populator.
+        if ( !kti.txState().indexDiffSetsBySchema( indexReference.schema() ).isAdded( (IndexDescriptor) indexReference ) )
+        {
+            // If the index was not created in this transaction, then wait for it to come online before querying.
+            long iteration = 0;
+            while ( kti.schemaRead().indexGetState( indexReference ) == InternalIndexState.POPULATING )
+            {
+                Optional<Status> terminationReason;
+                if ( kti.isTerminated() && (terminationReason = kti.getReasonIfTerminated()).isPresent() )
+                {
+                    throw new TransactionTerminatedException( terminationReason.get() );
+                }
+                try
+                {
+                    Thread.sleep( iteration++ < 100 ? 10 : 100 );
+                }
+                catch ( InterruptedException e )
+                {
+                    throw new TransientInterruptException( "Interrupted while waiting for the index to come online: " + indexReference, e );
+                }
+            }
+        }
+        // If the index was created in this transaction, then we skip this check entirely.
+        // We will get an exception later, when we try to get an IndexReader, so this is fine.
     }
 
     @Override
@@ -333,6 +374,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
             provider = fulltextIndexProvider;
             descriptor = (StoreIndexDescriptor) indexReference;
             accessor = provider.getOpenOnlineAccessor( descriptor );
+            provider.log.debug( "Acquired online fulltext schema index accessor, as base accessor for transaction state: %s", accessor );
             toCloseLater = new ArrayList<>();
             updater = accessor.getTransactionStateIndexUpdater();
             schema = descriptor.schema();
