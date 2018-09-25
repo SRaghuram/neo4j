@@ -73,7 +73,7 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
         }
     }
 
-    public ScoreEntityIterator filter( Predicate<ScoreEntry> predicate )
+    ScoreEntityIterator filter( Predicate<ScoreEntry> predicate )
     {
         if ( this.predicate != null )
         {
@@ -83,12 +83,12 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
     }
 
     /**
-     * Concatenates the given iterators
+     * Merges the given iterators into a single iterator, that maintains the aggregate descending score sort order.
      *
      * @param iterators to concatenate
      * @return a {@link ScoreEntityIterator} that iterates over all of the elements in all of the given iterators
      */
-    public static ScoreEntityIterator concat( List<ScoreEntityIterator> iterators )
+    static ScoreEntityIterator mergeIterators( List<ScoreEntityIterator> iterators )
     {
         return new ConcatenatingScoreEntityIterator( iterators );
     }
@@ -164,17 +164,17 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
     /**
      * A ScoreEntry consists of an entity id together with its score.
      */
-    public static class ScoreEntry
+    static class ScoreEntry
     {
         private final long entityId;
         private final float score;
 
-        public long entityId()
+        long entityId()
         {
             return entityId;
         }
 
-        public float score()
+        float score()
         {
             return score;
         }

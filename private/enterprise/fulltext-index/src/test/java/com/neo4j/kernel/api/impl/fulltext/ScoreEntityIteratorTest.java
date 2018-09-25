@@ -18,13 +18,13 @@ import static org.junit.Assert.assertTrue;
 public class ScoreEntityIteratorTest
 {
     @Test
-    public void concatShouldReturnOrderedResults()
+    public void mergeShouldReturnOrderedResults()
     {
         ScoreEntityIterator one = iteratorOf( new ScoreEntry[]{entry( 3, 10 ), entry( 10, 3 ), entry( 12, 1 )} );
         ScoreEntityIterator two = iteratorOf( new ScoreEntry[]{entry( 1, 12 ), entry( 5, 8 ), entry( 7, 6 ), entry( 8, 5 ), entry( 11, 2 )} );
         ScoreEntityIterator three = iteratorOf( new ScoreEntry[]{entry( 2, 11 ), entry( 4, 9 ), entry( 6, 7 ), entry( 9, 4 )} );
 
-        ScoreEntityIterator concat = ScoreEntityIterator.concat( Arrays.asList( one, two, three ) );
+        ScoreEntityIterator concat = ScoreEntityIterator.mergeIterators( Arrays.asList( one, two, three ) );
 
         for ( int i = 1; i <= 12; i++ )
         {
@@ -42,13 +42,13 @@ public class ScoreEntityIteratorTest
     }
 
     @Test
-    public void concatShouldHandleEmptyIterators()
+    public void mergeShouldHandleEmptyIterators()
     {
         ScoreEntityIterator one = iteratorOf( emptyEntries() );
         ScoreEntityIterator two = iteratorOf( new ScoreEntry[]{entry( 1, 5 ), entry( 2, 4 ), entry( 3, 3 ), entry( 4, 2 ), entry( 5, 1 )} );
         ScoreEntityIterator three = iteratorOf( emptyEntries() );
 
-        ScoreEntityIterator concat = ScoreEntityIterator.concat( Arrays.asList( one, two, three ) );
+        ScoreEntityIterator concat = ScoreEntityIterator.mergeIterators( Arrays.asList( one, two, three ) );
 
         for ( int i = 1; i <= 5; i++ )
         {
@@ -61,13 +61,13 @@ public class ScoreEntityIteratorTest
     }
 
     @Test
-    public void concatShouldHandleAllEmptyIterators()
+    public void mergeShouldHandleAllEmptyIterators()
     {
         ScoreEntityIterator one = iteratorOf( emptyEntries() );
         ScoreEntityIterator two = iteratorOf( emptyEntries() );
         ScoreEntityIterator three = iteratorOf( emptyEntries() );
 
-        ScoreEntityIterator concat = ScoreEntityIterator.concat( Arrays.asList( one, two, three ) );
+        ScoreEntityIterator concat = ScoreEntityIterator.mergeIterators( Arrays.asList( one, two, three ) );
 
         assertFalse( concat.hasNext() );
     }

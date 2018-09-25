@@ -1743,7 +1743,39 @@ public class FulltextProceduresTest
             tx.success();
         }
     }
-    // todo query results from transaction state must sort together with result from base index
+
+    @Test
+    public void queryResultsFromTransactionStateMustSortTogetherWithResultFromBaseIndex()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        long firstId;
+        long secondId;
+        long thirdId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node first = db.createNode( LABEL );
+            first.setProperty( PROP, "God of War" );
+            firstId = first.getId();
+            Node third = db.createNode( LABEL );
+            third.setProperty( PROP, "God Wars: Future Past" );
+            thirdId = third.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node second = db.createNode( LABEL );
+            second.setProperty( PROP, "God of War III Remastered" );
+            secondId = second.getId();
+            assertQueryFindsIds( db, true, "nodes", "god of war", firstId, secondId, thirdId );
+            tx.success();
+        }
+    }
     // todo dropping/creating indexes?
     // todo eventually consistent indexed must not include things added or modified in this transaction
     // todo fulltext transaction state must not prevent index updates from being applied

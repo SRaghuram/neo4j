@@ -69,7 +69,7 @@ class PartitionedFulltextIndexReader extends FulltextIndexReader
         {
             results.add( indexReader.query( query ) );
         }
-        return ScoreEntityIterator.concat( results );
+        return ScoreEntityIterator.mergeIterators( results );
     }
 
     @Override

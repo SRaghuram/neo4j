@@ -76,7 +76,7 @@ import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.values.storable.Value;
 
 import static com.neo4j.kernel.api.impl.fulltext.LuceneFulltextDocumentStructure.documentRepresentingProperties;
-import static com.neo4j.kernel.api.impl.fulltext.ScoreEntityIterator.concat;
+import static com.neo4j.kernel.api.impl.fulltext.ScoreEntityIterator.mergeIterators;
 import static java.util.Arrays.asList;
 
 class FulltextIndexProvider extends AbstractLuceneIndexProvider implements FulltextAdapter, AuxiliaryTransactionStateProvider
@@ -533,7 +533,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
                 {
                     ScoreEntityIterator iterator = baseReader.query( query );
                     iterator = iterator.filter( entry -> !modifiedEntityIdsInThisTransaction.contains( entry.entityId() ) );
-                    iterator = concat( asList( iterator, nearRealTimeReader.query( query ) ) );
+                    iterator = mergeIterators( asList( iterator, nearRealTimeReader.query( query ) ) );
                     return iterator;
                 }
 
