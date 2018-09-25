@@ -5,8 +5,6 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextTestSupport;
-import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.Before;
 import org.junit.Rule;

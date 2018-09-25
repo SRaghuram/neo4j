@@ -5,7 +5,6 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextAnalyzerTest;
 import org.apache.lucene.queryparser.flexible.standard.QueryParserUtil;
 import org.eclipse.collections.api.iterator.MutableLongIterator;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;

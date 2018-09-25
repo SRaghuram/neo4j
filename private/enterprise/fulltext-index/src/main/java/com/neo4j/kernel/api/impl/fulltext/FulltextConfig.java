@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.kernel.api.impl.fulltext.lucene.analyzer.providers.Standard;
+import com.neo4j.kernel.api.impl.fulltext.analyzer.providers.Standard;
 
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.LoadableConfig;

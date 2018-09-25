@@ -5,7 +5,6 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
 import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;

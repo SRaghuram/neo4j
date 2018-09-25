@@ -5,14 +5,6 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.kernel.api.impl.fulltext.lucene.DatabaseFulltextIndex;
-import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexAccessor;
-import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexBuilder;
-import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexPopulator;
-import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
-import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure;
-import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
-import com.neo4j.kernel.api.impl.fulltext.lucene.TransactionStateLuceneIndexWriter;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.eclipse.collections.api.IntIterable;
 import org.eclipse.collections.api.set.primitive.LongSet;
@@ -83,8 +75,8 @@ import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.values.storable.Value;
 
-import static com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure.documentRepresentingProperties;
-import static com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator.concat;
+import static com.neo4j.kernel.api.impl.fulltext.LuceneFulltextDocumentStructure.documentRepresentingProperties;
+import static com.neo4j.kernel.api.impl.fulltext.ScoreEntityIterator.concat;
 import static java.util.Arrays.asList;
 
 class FulltextIndexProvider extends AbstractLuceneIndexProvider implements FulltextAdapter, AuxiliaryTransactionStateProvider
