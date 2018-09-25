@@ -62,7 +62,7 @@ public class TransactionStateLuceneIndexWriter implements LuceneIndexWriter, Clo
         writer.deleteDocuments( query );
     }
 
-    void resetWriterState() throws IOException
+    public void resetWriterState() throws IOException
     {
         if ( writer != null )
         {
@@ -77,7 +77,7 @@ public class TransactionStateLuceneIndexWriter implements LuceneIndexWriter, Clo
         writer = new IndexWriter( directory, index.createIndexWriterConfig() );
     }
 
-    FulltextIndexReader getNearRealTimeReader() throws IOException
+    public FulltextIndexReader getNearRealTimeReader() throws IOException
     {
         DirectoryReader directoryReader = DirectoryReader.open( writer, true );
         IndexSearcher searcher = new IndexSearcher( directoryReader );

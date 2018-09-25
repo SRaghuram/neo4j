@@ -45,13 +45,6 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
     @Override
     public boolean hasNext()
     {
-//        if ( predicate == null )
-//        {
-//            return iterator.hasNext();
-//        }
-//        else
-//        {
-//        }
         while ( next == null && iterator.hasNext() )
         {
             long entityId = iterator.next();
@@ -73,15 +66,6 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
             ScoreEntry tmp = next;
             next = null;
             return tmp;
-//            if ( next != null )
-//            {
-//            }
-//            else
-//            {
-//                long entityId = iterator.next();
-//                float score = iterator.currentScore();
-//                return new ScoreEntry( entityId, score );
-//            }
         }
         else
         {
@@ -104,7 +88,7 @@ public class ScoreEntityIterator implements Iterator<ScoreEntityIterator.ScoreEn
      * @param iterators to concatenate
      * @return a {@link ScoreEntityIterator} that iterates over all of the elements in all of the given iterators
      */
-    static ScoreEntityIterator concat( List<ScoreEntityIterator> iterators )
+    public static ScoreEntityIterator concat( List<ScoreEntityIterator> iterators )
     {
         return new ConcatenatingScoreEntityIterator( iterators );
     }

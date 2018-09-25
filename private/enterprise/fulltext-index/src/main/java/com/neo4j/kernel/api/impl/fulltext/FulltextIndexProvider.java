@@ -12,13 +12,17 @@ import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexPopulator;
 import com.neo4j.kernel.api.impl.fulltext.lucene.FulltextIndexReader;
 import com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure;
 import com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator;
+import com.neo4j.kernel.api.impl.fulltext.lucene.TransactionStateLuceneIndexWriter;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.eclipse.collections.api.IntIterable;
 import org.eclipse.collections.api.set.primitive.LongSet;
+import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
+import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,7 +39,6 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.neo4j.graphdb.TransactionTerminatedException;
-import org.neo4j.graphdb.TransientFailureException;
 import org.neo4j.graphdb.TransientInterruptException;
 import org.neo4j.graphdb.index.fulltext.AnalyzerProvider;
 import org.neo4j.internal.kernel.api.IndexReference;
@@ -79,6 +82,10 @@ import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.values.storable.Value;
+
+import static com.neo4j.kernel.api.impl.fulltext.lucene.LuceneFulltextDocumentStructure.documentRepresentingProperties;
+import static com.neo4j.kernel.api.impl.fulltext.lucene.ScoreEntityIterator.concat;
+import static java.util.Arrays.asList;
 
 class FulltextIndexProvider extends AbstractLuceneIndexProvider implements FulltextAdapter, AuxiliaryTransactionStateProvider
 {
@@ -357,10 +364,12 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     private static class IndexTxState implements Closeable
     {
         private final FulltextIndexProvider provider;
-        private final StoreIndexDescriptor descriptor;
+        private final FulltextIndexDescriptor descriptor;
         private final FulltextIndexAccessor accessor;
         private final List<AutoCloseable> toCloseLater;
-        private final FulltextIndexAccessor.FulltextIndexTransactionStateUpdater updater;
+        private final MutableLongSet modifiedEntityIdsInThisTransaction;
+        private final TransactionStateLuceneIndexWriter writer;
+        private final int[] entityTokenIds;
         private FulltextIndexReader currentReader;
         private long lastUpdateRevision;
         private final SchemaDescriptor schema;
@@ -372,14 +381,16 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         private IndexTxState( FulltextIndexProvider fulltextIndexProvider, IndexReference indexReference )
         {
             provider = fulltextIndexProvider;
-            descriptor = (StoreIndexDescriptor) indexReference;
-            accessor = provider.getOpenOnlineAccessor( descriptor );
+            accessor = provider.getOpenOnlineAccessor( (StoreIndexDescriptor) indexReference );
             provider.log.debug( "Acquired online fulltext schema index accessor, as base accessor for transaction state: %s", accessor );
+            descriptor = accessor.getDescriptor();
             toCloseLater = new ArrayList<>();
-            updater = accessor.getTransactionStateIndexUpdater();
+            writer = accessor.getTransactionStateIndexWriter();
+            modifiedEntityIdsInThisTransaction = new LongHashSet();
             schema = descriptor.schema();
             visitingNodes = schema.entityType() == EntityType.NODE;
             propertyIds = schema.getPropertyIds();
+            entityTokenIds = schema.getEntityTokenIds();
             propertyValues = new Value[propertyIds.length];
             propKeyToIndex = new IntIntHashMap();
             for ( int i = 0; i < propertyIds.length; i++ )
@@ -411,7 +422,8 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
 
         private void updateReader( KernelTransactionImplementation kti ) throws Exception
         {
-            updater.resetUpdaterState();
+            modifiedEntityIdsInThisTransaction.clear(); // Clear this so we don't filter out entities who have had their changes reversed since last time.
+            writer.resetWriterState();
             AllStoreHolder read = (AllStoreHolder) kti.dataRead();
             TransactionState transactionState = kti.txState();
 
@@ -449,6 +461,19 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
                     public void visitNodeLabelChanges( long id, LongSet added, LongSet removed )
                     {
                         indexNode( id );
+                        if ( visitingNodes )
+                        {
+                            // Nodes that have had their indexed labels removed will not have their properties indexed, so 'indexNode' would skip them.
+                            // However, we still need to make sure that they are not included in the result from the base index reader.
+                            for ( int entityTokenId : entityTokenIds )
+                            {
+                                if ( removed.contains( entityTokenId ) )
+                                {
+                                    modifiedEntityIdsInThisTransaction.add( id );
+                                    break;
+                                }
+                            }
+                        }
                     }
 
                     private void indexNode( long id )
@@ -492,13 +517,48 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
                                 propertyValues[index] = propertyCursor.propertyValue();
                             }
                         }
-                        updater.add( id, propertyValues );
+                        if ( modifiedEntityIdsInThisTransaction.add( id ) )
+                        {
+                            try
+                            {
+                                writer.addDocument( documentRepresentingProperties( id, descriptor.propertyNames(), propertyValues ) );
+                            }
+                            catch ( IOException e )
+                            {
+                                throw new UncheckedIOException( e );
+                            }
+                        }
                         Arrays.fill( propertyValues, null );
                     }
                 });
             }
-            IndexReader baseReader = read.indexReader( descriptor, false );
-            currentReader = updater.getTransactionStateIndexReader( (FulltextIndexReader) baseReader );
+            FulltextIndexReader baseReader = (FulltextIndexReader) read.indexReader( descriptor, false );
+            FulltextIndexReader nearRealTimeReader = writer.getNearRealTimeReader();
+            currentReader = new FulltextIndexReader()
+            {
+                @Override
+                public ScoreEntityIterator query( String query ) throws ParseException
+                {
+                    ScoreEntityIterator iterator = baseReader.query( query );
+                    iterator = iterator.filter( entry -> !modifiedEntityIdsInThisTransaction.contains( entry.entityId() ) );
+                    iterator = concat( asList( iterator, nearRealTimeReader.query( query ) ) );
+                    return iterator;
+                }
+
+                @Override
+                public long countIndexedNodes( long nodeId, int[] propertyKeyIds, Value... propertyValues )
+                {
+                    // This is only used in the Consistency Checker. We don't need to worry about this here.
+                    return 0;
+                }
+
+                @Override
+                public void close()
+                {
+                    // The 'baseReader' is managed by the kernel, so we don't need to close it here.
+                    IOUtils.closeAllUnchecked( nearRealTimeReader );
+                }
+            };
             lastUpdateRevision = kti.getTransactionDataRevision();
         }
 
@@ -506,7 +566,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         public void close() throws IOException
         {
             toCloseLater.add( currentReader );
-            toCloseLater.add( updater );
+            toCloseLater.add( writer );
             IOUtils.closeAll( toCloseLater );
         }
     }

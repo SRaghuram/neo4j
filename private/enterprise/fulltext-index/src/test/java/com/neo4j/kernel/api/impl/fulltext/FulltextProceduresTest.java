@@ -97,7 +97,7 @@ public class FulltextProceduresTest
     public static final Label LABEL = Label.label( "Label" );
     public static final RelationshipType REL = RelationshipType.withName( "REL" );
 
-    private final Timeout timeout = VerboseTimeout.builder().withTimeout( 1, TimeUnit.MINUTES ).build();
+    private final Timeout timeout = VerboseTimeout.builder().withTimeout( 1, TimeUnit.HOURS ).build();
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final ExpectedException expectedException = ExpectedException.none();
@@ -1347,11 +1347,7 @@ public class FulltextProceduresTest
             createSimpleNodesIndex();
             tx.success();
         }
-        try ( Transaction tx = db.beginTx() )
-        {
-            awaitIndexesOnline();
-            tx.success();
-        }
+        awaitIndexesOnline();
         try ( Transaction tx = db.beginTx() )
         {
             Node node = db.createNode( LABEL );
@@ -1370,11 +1366,7 @@ public class FulltextProceduresTest
             createSimpleRelationshipIndex();
             tx.success();
         }
-        try ( Transaction tx = db.beginTx() )
-        {
-            awaitIndexesOnline();
-            tx.success();
-        }
+        awaitIndexesOnline();
         try ( Transaction tx = db.beginTx() )
         {
             Node node = db.createNode();
@@ -1595,7 +1587,164 @@ public class FulltextProceduresTest
             tx.success();
         }
     }
-    // todo must include old values when modifications are undone
+
+    @Test
+    public void queryResultsMustIncludeOldNodePropertyValuesWhenModificationsAreUndone()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode( LABEL );
+            node.setProperty( PROP, "primo" );
+            nodeId = node.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.getNodeById( nodeId );
+            assertQueryFindsIds( db, true, "nodes", "primo", nodeId );
+            assertQueryFindsIds( db, true, "nodes", "secundo" );
+            node.setProperty( PROP, "secundo" );
+            assertQueryFindsIds( db, true, "nodes", "primo" );
+            assertQueryFindsIds( db, true, "nodes", "secundo", nodeId );
+            node.setProperty( PROP, "primo" );
+            assertQueryFindsIds( db, true, "nodes", "primo", nodeId );
+            assertQueryFindsIds( db, true, "nodes", "secundo" );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustIncludeOldRelationshipPropertyValuesWhenModificationsAreUndone()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleRelationshipIndex();
+            tx.success();
+        }
+        long relId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode();
+            Relationship rel = node.createRelationshipTo( node, REL );
+            rel.setProperty( PROP, "primo" );
+            relId = rel.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Relationship rel = db.getRelationshipById( relId );
+            assertQueryFindsIds( db, false, "rels", "primo", relId );
+            assertQueryFindsIds( db, false, "rels", "secundo" );
+            rel.setProperty( PROP, "secundo" );
+            assertQueryFindsIds( db, false, "rels", "primo" );
+            assertQueryFindsIds( db, false, "rels", "secundo", relId );
+            rel.setProperty( PROP, "primo" );
+            assertQueryFindsIds( db, false, "rels", "primo", relId );
+            assertQueryFindsIds( db, false, "rels", "secundo" );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustIncludeOldNodePropertyValuesWhenRemovalsAreUndone()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode( LABEL );
+            node.setProperty( PROP, "primo" );
+            nodeId = node.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.getNodeById( nodeId );
+            assertQueryFindsIds( db, true, "nodes", "primo", nodeId );
+            node.removeProperty( PROP );
+            assertQueryFindsIds( db, true, "nodes", "primo" );
+            node.setProperty( PROP, "primo" );
+            assertQueryFindsIds( db, true, "nodes", "primo", nodeId );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustIncludeOldRelationshipPropertyValuesWhenRemovalsAreUndone()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleRelationshipIndex();
+            tx.success();
+        }
+        long relId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode();
+            Relationship rel = node.createRelationshipTo( node, REL );
+            rel.setProperty( PROP, "primo" );
+            relId = rel.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Relationship rel = db.getRelationshipById( relId );
+            assertQueryFindsIds( db, false, "rels", "primo", relId );
+            rel.removeProperty( PROP );
+            assertQueryFindsIds( db, false, "rels", "primo" );
+            rel.setProperty( PROP, "primo" );
+            assertQueryFindsIds( db, false, "rels", "primo", relId );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void queryResultsMustIncludeNodesWhenNodeLabelRemovalsAreUndone()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        long nodeId;
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode( LABEL );
+            node.setProperty( PROP, "primo" );
+            nodeId = node.getId();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.getNodeById( nodeId );
+            node.removeLabel( LABEL );
+            assertQueryFindsIds( db, true, "nodes", "primo" );
+            node.addLabel( LABEL );
+            assertQueryFindsIds( db, true, "nodes", "primo", nodeId );
+            tx.success();
+        }
+    }
+    // todo query results from transaction state must sort together with result from base index
     // todo dropping/creating indexes?
     // todo eventually consistent indexed must not include things added or modified in this transaction
     // todo fulltext transaction state must not prevent index updates from being applied
@@ -1630,7 +1779,14 @@ public class FulltextProceduresTest
                 Double nextScore = (Double) entry.get( SCORE );
                 assertThat( nextScore, lessThanOrEqualTo( score ) );
                 score = nextScore;
-                assertEquals( String.format( "Result returned id %d, expected %d", nextId, ids[num] ), ids[num], nextId.longValue() );
+                if ( num < ids.length )
+                {
+                    assertEquals( format( "Result returned id %d, expected %d", nextId, ids[num] ), ids[num], nextId.longValue() );
+                }
+                else
+                {
+                    fail( format( "Result returned id %d, which is beyond the number of ids (%d) that were expected.", nextId, ids.length ) );
+                }
                 num++;
             }
             assertEquals( "Number of results differ from expected", ids.length, num );
