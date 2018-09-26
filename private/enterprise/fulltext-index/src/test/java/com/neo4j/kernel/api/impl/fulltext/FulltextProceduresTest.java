@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -93,8 +94,8 @@ public class FulltextProceduresTest
     static final String NODE = "node";
     static final String RELATIONSHIP = "relationship";
     private static final String DESCARTES_MEDITATIONES = "/meditationes--rene-descartes--public-domain.txt";
-    public static final Label LABEL = Label.label( "Label" );
-    public static final RelationshipType REL = RelationshipType.withName( "REL" );
+    private static final Label LABEL = Label.label( "Label" );
+    private static final RelationshipType REL = RelationshipType.withName( "REL" );
 
     private final Timeout timeout = VerboseTimeout.builder().withTimeout( 1, TimeUnit.HOURS ).build();
     private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
@@ -107,7 +108,8 @@ public class FulltextProceduresTest
 
     private GraphDatabaseAPI db;
     private GraphDatabaseBuilder builder;
-    public static final String PROP = "prop";
+    private static final String PROP = "prop";
+    private static final String EVENTUALLY_CONSISTENT = ", {eventually_consistent: 'true'}";
 
     @Before
     public void before()
@@ -409,13 +411,12 @@ public class FulltextProceduresTest
     public void updatesToEventuallyConsistentIndexMustEventuallyBecomeVisible()
     {
         String value = "bla bla";
-        String eventuallyConsistent = ", {eventually_consistent: 'true'}";
         db = createDatabase();
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + eventuallyConsistent ) );
-            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + eventuallyConsistent ) );
+            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + EVENTUALLY_CONSISTENT ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + EVENTUALLY_CONSISTENT ) );
             tx.success();
         }
 
@@ -463,13 +464,12 @@ public class FulltextProceduresTest
     public void updatesToEventuallyConsistentIndexMustBecomeVisibleAfterAwaitRefresh()
     {
         String value = "bla bla";
-        String eventuallyConsistent = ", {eventually_consistent: 'true'}";
         db = createDatabase();
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + eventuallyConsistent ) );
-            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + eventuallyConsistent ) );
+            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + EVENTUALLY_CONSISTENT ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + EVENTUALLY_CONSISTENT ) );
             tx.success();
         }
         awaitIndexesOnline();
@@ -500,7 +500,6 @@ public class FulltextProceduresTest
     public void eventuallyConsistentIndexMustPopulateWithExistingDataWhenCreated()
     {
         String value = "bla bla";
-        String eventuallyConsistent = ", {eventually_consistent: 'true'}";
         db = createDatabase();
 
         int entityCount = 200;
@@ -522,8 +521,8 @@ public class FulltextProceduresTest
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + eventuallyConsistent ) );
-            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + eventuallyConsistent ) );
+            db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + EVENTUALLY_CONSISTENT ) );
+            db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + EVENTUALLY_CONSISTENT ) );
             tx.success();
         }
 
@@ -537,7 +536,6 @@ public class FulltextProceduresTest
     {
         String oldValue = "red";
         String newValue = "green";
-        String eventuallyConsistent = ", {eventually_consistent: 'true'}";
         db = createDatabase();
 
         int entityCount = 200;
@@ -568,8 +566,8 @@ public class FulltextProceduresTest
             startLatch.await();
             try ( Transaction tx = db.beginTx() )
             {
-                db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + eventuallyConsistent ) );
-                db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + eventuallyConsistent ) );
+                db.execute( format( NODE_CREATE, "node", array( LABEL.name() ), array( PROP ) + EVENTUALLY_CONSISTENT ) );
+                db.execute( format( RELATIONSHIP_CREATE, "rel", array( REL.name() ), array( PROP ) + EVENTUALLY_CONSISTENT ) );
                 tx.success();
             }
         };
@@ -648,7 +646,7 @@ public class FulltextProceduresTest
             indexUpdateBlocker.release();
         }
         // And wait for them to apply.
-        db.execute( AWAIT_REFRESH );
+        db.execute( AWAIT_REFRESH ).close();
 
         // Now we should see our data.
         assertQueryFindsIds( db, true, "node", "bla", nodeIds );
@@ -1776,10 +1774,157 @@ public class FulltextProceduresTest
             tx.success();
         }
     }
-    // todo dropping/creating indexes?
-    // todo eventually consistent indexed must not include things added or modified in this transaction
-    // todo fulltext transaction state must not prevent index updates from being applied
-    // todo transaction state before the index has come online
+
+    @Test
+    public void queryingDroppedIndexForNodesInDroppingTransactionMustThrow()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            tx.success();
+        }
+        awaitIndexesOnline();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( DROP, "nodes" ) ).close();
+            expectedException.expect( QueryExecutionException.class );
+            db.execute( format( QUERY_NODES, "nodes", "blabla" ) );
+        }
+    }
+
+    @Test
+    public void queryingDroppedIndexForRelationshipsInDroppingTransactionMustThrow()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleRelationshipIndex();
+            tx.success();
+        }
+        awaitIndexesOnline();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( DROP, "rels" ) ).close();
+            expectedException.expect( QueryExecutionException.class );
+            db.execute( format( QUERY_RELS, "rels", "blabla" ) );
+        }
+    }
+
+    @Test
+    public void creatingAndDroppingIndexesInSameTransactionMustNotThrow()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            db.execute( format( DROP, "nodes" ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleRelationshipIndex();
+            db.execute( format( DROP, "rels" ) ).close();
+            tx.success();
+        }
+        awaitIndexesOnline();
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertFalse( db.schema().getIndexes().iterator().hasNext() );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void eventuallyConsistenIndexMustNotIncludeEntitiesAddedInTransaction()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.execute( format( NODE_CREATE, "nodes", array( LABEL.name() ), array( PROP ) + EVENTUALLY_CONSISTENT ) ).close();
+            db.execute( format( RELATIONSHIP_CREATE, "rels", array( REL.name() ), array( PROP ) + EVENTUALLY_CONSISTENT ) ).close();
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            awaitIndexesOnline();
+            Node node = db.createNode( LABEL );
+            node.setProperty( PROP, "value" );
+            node.createRelationshipTo( node, REL ).setProperty( PROP, "value" );
+
+            assertQueryFindsIds( db, true, "nodes", "value" );
+            assertQueryFindsIds( db, false, "rels", "value" );
+            db.execute( AWAIT_REFRESH ).close();
+            assertQueryFindsIds( db, true, "nodes", "value" );
+            assertQueryFindsIds( db, false, "rels", "value" );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void transactionStateMustNotPreventIndexUpdatesFromBeingApplied() throws Exception
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            createSimpleNodesIndex();
+            createSimpleRelationshipIndex();
+            tx.success();
+        }
+        awaitIndexesOnline();
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node = db.createNode( LABEL );
+            node.setProperty( PROP, "value" );
+            Relationship rel = node.createRelationshipTo( node, REL );
+            rel.setProperty( PROP, "value" );
+            LongHashSet nodeIds = new LongHashSet();
+            LongHashSet relIds = new LongHashSet();
+            nodeIds.add( node.getId() );
+            relIds.add( rel.getId() );
+
+            ExecutorService executor = cleanup.add( Executors.newSingleThreadExecutor() );
+            executor.submit( () ->
+            {
+                try ( Transaction forkedTx = db.beginTx() )
+                {
+                    Node node2 = db.createNode( LABEL );
+                    node2.setProperty( PROP, "value" );
+                    Relationship rel2 = node2.createRelationshipTo( node2, REL );
+                    rel2.setProperty( PROP, "value" );
+                    nodeIds.add( node2.getId() );
+                    relIds.add( rel2.getId() );
+                    forkedTx.success();
+                }
+            }).get();
+            assertQueryFindsIds( db, true, "nodes", "value", nodeIds );
+            assertQueryFindsIds( db, false, "rels", "value", relIds );
+            tx.success();
+        }
+    }
+
+    @Test
+    public void dropMustNotApplyToRegularSchemaIndexes()
+    {
+        db = createDatabase();
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().indexFor( LABEL ).on( PROP ).create();
+            tx.success();
+        }
+        awaitIndexesOnline();
+        String schemaIndexName;
+        try ( Transaction ignore = db.beginTx() )
+        {
+            try ( Result result = db.execute( "call db.indexes" ) )
+            {
+                assertTrue( result.hasNext() );
+                schemaIndexName = result.next().get( "indexName" ).toString();
+            }
+            expectedException.expect( QueryExecutionException.class );
+            db.execute( format( DROP, schemaIndexName ) ).close();
+        }
+    }
 
     private GraphDatabaseAPI createDatabase()
     {

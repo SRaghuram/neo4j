@@ -241,7 +241,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         IndexReference indexReference = kti.schemaRead().indexGetForName( indexName );
         awaitIndexOnline( kti, indexReference );
         FulltextIndexReader fulltextIndexReader;
-        if ( kti.hasTxStateWithChanges() )
+        if ( kti.hasTxStateWithChanges() && !((FulltextSchemaDescriptor) indexReference.schema()).isEventuallyConsistent() )
         {
             FulltextTransactionState auxiliaryTxState = (FulltextTransactionState) allStoreHolder.auxiliaryTxState( TX_PROVIDER_KEY );
             fulltextIndexReader = auxiliaryTxState.indexReader( indexReference, kti );
@@ -358,13 +358,13 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         private final FulltextIndexProvider provider;
         private final FulltextIndexDescriptor descriptor;
         private final FulltextIndexAccessor accessor;
+        private final SchemaDescriptor schema;
         private final List<AutoCloseable> toCloseLater;
         private final MutableLongSet modifiedEntityIdsInThisTransaction;
         private final TransactionStateLuceneIndexWriter writer;
         private final int[] entityTokenIds;
         private FulltextIndexReader currentReader;
         private long lastUpdateRevision;
-        private final SchemaDescriptor schema;
         private final boolean visitingNodes;
         private final int[] propertyIds;
         private final Value[] propertyValues;
@@ -376,10 +376,10 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
             accessor = provider.getOpenOnlineAccessor( (StoreIndexDescriptor) indexReference );
             provider.log.debug( "Acquired online fulltext schema index accessor, as base accessor for transaction state: %s", accessor );
             descriptor = accessor.getDescriptor();
+            schema = descriptor.schema();
             toCloseLater = new ArrayList<>();
             writer = accessor.getTransactionStateIndexWriter();
             modifiedEntityIdsInThisTransaction = new LongHashSet();
-            schema = descriptor.schema();
             visitingNodes = schema.entityType() == EntityType.NODE;
             propertyIds = schema.getPropertyIds();
             entityTokenIds = schema.getEntityTokenIds();

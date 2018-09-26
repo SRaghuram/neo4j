@@ -118,7 +118,7 @@ public class FulltextProcedures
     @Procedure( name = "db.index.fulltext.drop", mode = SCHEMA )
     public void drop( @Name( "indexName" ) String name ) throws InvalidTransactionTypeKernelException, SchemaKernelException
     {
-        tx.schemaWrite().indexDrop( tx.schemaRead().indexGetForName( name ) );
+        tx.schemaWrite().indexDrop( getValidIndexReference( name ) );
     }
 
     @Description( "Query the given fulltext index. Returns the matching nodes and their lucene query score, ordered by score." )
@@ -126,7 +126,7 @@ public class FulltextProcedures
     public Stream<NodeOutput> queryFulltextForNodes( @Name( "indexName" ) String name, @Name( "queryString" ) String query )
             throws ParseException, IndexNotFoundKernelException, IOException
     {
-        IndexReference indexReference = tx.schemaRead().indexGetForName( name );
+        IndexReference indexReference = getValidIndexReference( name );
         EntityType entityType = indexReference.schema().entityType();
         if ( entityType != EntityType.NODE )
         {
@@ -144,7 +144,7 @@ public class FulltextProcedures
     public Stream<RelationshipOutput> queryFulltextForRelationships( @Name( "indexName" ) String name, @Name( "queryString" ) String query )
             throws ParseException, IndexNotFoundKernelException, IOException
     {
-        IndexReference indexReference = tx.schemaRead().indexGetForName( name );
+        IndexReference indexReference = getValidIndexReference( name );
         EntityType entityType = indexReference.schema().entityType();
         if ( entityType != EntityType.RELATIONSHIP )
         {
@@ -155,6 +155,16 @@ public class FulltextProcedures
         return resultIterator.stream()
                 .map( result -> RelationshipOutput.forExistingEntityOrNull( db, result ) )
                 .filter( Objects::nonNull );
+    }
+
+    private IndexReference getValidIndexReference( @Name( "indexName" ) String name )
+    {
+        IndexReference indexReference = tx.schemaRead().indexGetForName( name );
+        if ( indexReference == IndexReference.NO_INDEX )
+        {
+            throw new IllegalArgumentException( "There is no such fulltext schema index: " + name );
+        }
+        return indexReference;
     }
 
     public static final class NodeOutput

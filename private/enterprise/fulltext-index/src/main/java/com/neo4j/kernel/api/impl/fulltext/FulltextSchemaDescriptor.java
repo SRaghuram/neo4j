@@ -117,4 +117,9 @@ class FulltextSchemaDescriptor implements SchemaDescriptor
     {
         return indexConfiguration;
     }
+
+    boolean isEventuallyConsistent()
+    {
+        return Boolean.parseBoolean( indexConfiguration.getProperty( FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT ) );
+    }
 }
