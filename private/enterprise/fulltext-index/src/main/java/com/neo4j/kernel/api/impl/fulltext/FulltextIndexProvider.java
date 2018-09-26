@@ -6,27 +6,13 @@
 package com.neo4j.kernel.api.impl.fulltext;
 
 import org.apache.lucene.queryparser.classic.ParseException;
-import org.eclipse.collections.api.IntIterable;
-import org.eclipse.collections.api.set.primitive.LongSet;
-import org.eclipse.collections.api.set.primitive.MutableLongSet;
-import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
-import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 
-import java.io.Closeable;
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -35,14 +21,9 @@ import org.neo4j.graphdb.TransientInterruptException;
 import org.neo4j.graphdb.index.fulltext.AnalyzerProvider;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
-import org.neo4j.internal.kernel.api.LabelSet;
-import org.neo4j.internal.kernel.api.NodeCursor;
-import org.neo4j.internal.kernel.api.PropertyCursor;
-import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.internal.kernel.api.schema.IndexProviderDescriptor;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
-import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -54,7 +35,6 @@ import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexDirectoryStructure;
 import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
-import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionState;
 import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionStateManager;
 import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionStateProvider;
@@ -67,21 +47,13 @@ import org.neo4j.kernel.impl.newapi.AllStoreHolder;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.EntityType;
-import org.neo4j.storageengine.api.StorageCommand;
-import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.schema.IndexDescriptor;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
-import org.neo4j.storageengine.api.txstate.TxStateVisitor;
-import org.neo4j.values.storable.Value;
-
-import static com.neo4j.kernel.api.impl.fulltext.LuceneFulltextDocumentStructure.documentRepresentingProperties;
-import static com.neo4j.kernel.api.impl.fulltext.ScoreEntityIterator.mergeIterators;
-import static java.util.Arrays.asList;
 
 class FulltextIndexProvider extends AbstractLuceneIndexProvider implements FulltextAdapter, AuxiliaryTransactionStateProvider
 {
-    private static final String TX_PROVIDER_KEY = "FULLTEXT SCHEMA INDEX TRANSACTION STATE";
+    private static final String TX_STATE_PROVIDER_KEY = "FULLTEXT SCHEMA INDEX TRANSACTION STATE";
 
     private final FileSystemAbstraction fileSystem;
     private final Config config;
@@ -194,7 +166,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         return accessor;
     }
 
-    private FulltextIndexAccessor getOpenOnlineAccessor( StoreIndexDescriptor descriptor )
+    FulltextIndexAccessor getOpenOnlineAccessor( StoreIndexDescriptor descriptor )
     {
         return openOnlineAccessors.get( descriptor );
     }
@@ -243,7 +215,7 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         FulltextIndexReader fulltextIndexReader;
         if ( kti.hasTxStateWithChanges() && !((FulltextSchemaDescriptor) indexReference.schema()).isEventuallyConsistent() )
         {
-            FulltextTransactionState auxiliaryTxState = (FulltextTransactionState) allStoreHolder.auxiliaryTxState( TX_PROVIDER_KEY );
+            FulltextAuxiliaryTransactionState auxiliaryTxState = (FulltextAuxiliaryTransactionState) allStoreHolder.auxiliaryTxState( TX_STATE_PROVIDER_KEY );
             fulltextIndexReader = auxiliaryTxState.indexReader( indexReference, kti );
         }
         else
@@ -300,266 +272,12 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     @Override
     public Object getIdentityKey()
     {
-        return TX_PROVIDER_KEY;
+        return TX_STATE_PROVIDER_KEY;
     }
 
     @Override
     public AuxiliaryTransactionState createNewAuxiliaryTransactionState()
     {
-        return new FulltextTransactionState( this );
-    }
-
-    private static class FulltextTransactionState implements AuxiliaryTransactionState, Function<IndexReference,IndexTxState>
-    {
-        private final FulltextIndexProvider fulltextIndexProvider;
-        private final Map<IndexReference,IndexTxState> indexStates;
-
-        private FulltextTransactionState( FulltextIndexProvider fulltextIndexProvider )
-        {
-            this.fulltextIndexProvider = fulltextIndexProvider;
-            indexStates = new HashMap<>();
-        }
-
-        @Override
-        public void close() throws Exception
-        {
-            IOUtils.closeAll( indexStates.values() );
-        }
-
-        @Override
-        public boolean hasChanges()
-        {
-            // We always return 'false' here, because we only use this transaction state for reading.
-            //Our index changes are already derived from the store commands, so we never have any commands of our own to extract.
-            return false;
-        }
-
-        @Override
-        public void extractCommands( Collection<StorageCommand> target )
-        {
-            // We never have any commands to extract, because this transaction state is only used for reading.
-        }
-
-        FulltextIndexReader indexReader( IndexReference indexReference, KernelTransactionImplementation kti )
-        {
-            IndexTxState state = indexStates.computeIfAbsent( indexReference, this );
-            return state.getIndexReader( kti );
-        }
-
-        @Override
-        public IndexTxState apply( IndexReference indexReference )
-        {
-            return new IndexTxState( fulltextIndexProvider, indexReference );
-        }
-    }
-
-    private static class IndexTxState implements Closeable
-    {
-        private final FulltextIndexProvider provider;
-        private final FulltextIndexDescriptor descriptor;
-        private final FulltextIndexAccessor accessor;
-        private final SchemaDescriptor schema;
-        private final List<AutoCloseable> toCloseLater;
-        private final MutableLongSet modifiedEntityIdsInThisTransaction;
-        private final TransactionStateLuceneIndexWriter writer;
-        private final int[] entityTokenIds;
-        private FulltextIndexReader currentReader;
-        private long lastUpdateRevision;
-        private final boolean visitingNodes;
-        private final int[] propertyIds;
-        private final Value[] propertyValues;
-        private final IntIntHashMap propKeyToIndex;
-
-        private IndexTxState( FulltextIndexProvider fulltextIndexProvider, IndexReference indexReference )
-        {
-            provider = fulltextIndexProvider;
-            accessor = provider.getOpenOnlineAccessor( (StoreIndexDescriptor) indexReference );
-            provider.log.debug( "Acquired online fulltext schema index accessor, as base accessor for transaction state: %s", accessor );
-            descriptor = accessor.getDescriptor();
-            schema = descriptor.schema();
-            toCloseLater = new ArrayList<>();
-            writer = accessor.getTransactionStateIndexWriter();
-            modifiedEntityIdsInThisTransaction = new LongHashSet();
-            visitingNodes = schema.entityType() == EntityType.NODE;
-            propertyIds = schema.getPropertyIds();
-            entityTokenIds = schema.getEntityTokenIds();
-            propertyValues = new Value[propertyIds.length];
-            propKeyToIndex = new IntIntHashMap();
-            for ( int i = 0; i < propertyIds.length; i++ )
-            {
-                propKeyToIndex.put( propertyIds[i], i );
-            }
-        }
-
-        FulltextIndexReader getIndexReader( KernelTransactionImplementation kti )
-        {
-            if ( currentReader == null || lastUpdateRevision != kti.getTransactionDataRevision() )
-            {
-                if ( currentReader != null )
-                {
-                    toCloseLater.add( currentReader );
-                }
-                try
-                {
-                    updateReader( kti );
-                }
-                catch ( Exception e )
-                {
-                    currentReader = null;
-                    throw new RuntimeException( "Failed to update the fulltext schema index transaction state.", e );
-                }
-            }
-            return currentReader;
-        }
-
-        private void updateReader( KernelTransactionImplementation kti ) throws Exception
-        {
-            modifiedEntityIdsInThisTransaction.clear(); // Clear this so we don't filter out entities who have had their changes reversed since last time.
-            writer.resetWriterState();
-            AllStoreHolder read = (AllStoreHolder) kti.dataRead();
-            TransactionState transactionState = kti.txState();
-
-            try ( NodeCursor nodeCursor = visitingNodes ? kti.cursors().allocateNodeCursor() : null;
-                  RelationshipScanCursor relationshipCursor = visitingNodes ? null : kti.cursors().allocateRelationshipScanCursor();
-                  PropertyCursor propertyCursor = kti.cursors().allocatePropertyCursor() )
-            {
-                transactionState.accept( new TxStateVisitor.Adapter()
-                {
-                    @Override
-                    public void visitCreatedNode( long id )
-                    {
-                        indexNode( id );
-                    }
-
-                    @Override
-                    public void visitCreatedRelationship( long id, int type, long startNode, long endNode )
-                    {
-                        indexRelationship( id );
-                    }
-
-                    @Override
-                    public void visitNodePropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed )
-                    {
-                        indexNode( id );
-                    }
-
-                    @Override
-                    public void visitRelPropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed )
-                    {
-                        indexRelationship( id );
-                    }
-
-                    @Override
-                    public void visitNodeLabelChanges( long id, LongSet added, LongSet removed )
-                    {
-                        indexNode( id );
-                        if ( visitingNodes )
-                        {
-                            // Nodes that have had their indexed labels removed will not have their properties indexed, so 'indexNode' would skip them.
-                            // However, we still need to make sure that they are not included in the result from the base index reader.
-                            for ( int entityTokenId : entityTokenIds )
-                            {
-                                if ( removed.contains( entityTokenId ) )
-                                {
-                                    modifiedEntityIdsInThisTransaction.add( id );
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    private void indexNode( long id )
-                    {
-                        if ( visitingNodes )
-                        {
-                            read.singleNode( id, nodeCursor );
-                            if ( nodeCursor.next() )
-                            {
-                                LabelSet labels = nodeCursor.labels();
-                                if ( schema.isAffected( labels.all() ) )
-                                {
-                                    nodeCursor.properties( propertyCursor );
-                                    indexProperties( id );
-                                }
-                            }
-                        }
-                    }
-
-                    private void indexRelationship( long id )
-                    {
-                        if ( !visitingNodes )
-                        {
-                            read.singleRelationship( id, relationshipCursor );
-                            if ( relationshipCursor.next() && schema.isAffected( new long[] {relationshipCursor.type()} ) )
-                            {
-                                relationshipCursor.properties( propertyCursor );
-                                indexProperties( id );
-                            }
-                        }
-                    }
-
-                    private void indexProperties( long id )
-                    {
-                        while ( propertyCursor.next() )
-                        {
-                            int propertyKey = propertyCursor.propertyKey();
-                            int index = propKeyToIndex.getIfAbsent( propertyKey, -1 );
-                            if ( index != -1 )
-                            {
-                                propertyValues[index] = propertyCursor.propertyValue();
-                            }
-                        }
-                        if ( modifiedEntityIdsInThisTransaction.add( id ) )
-                        {
-                            try
-                            {
-                                writer.addDocument( documentRepresentingProperties( id, descriptor.propertyNames(), propertyValues ) );
-                            }
-                            catch ( IOException e )
-                            {
-                                throw new UncheckedIOException( e );
-                            }
-                        }
-                        Arrays.fill( propertyValues, null );
-                    }
-                });
-            }
-            FulltextIndexReader baseReader = (FulltextIndexReader) read.indexReader( descriptor, false );
-            FulltextIndexReader nearRealTimeReader = writer.getNearRealTimeReader();
-            currentReader = new FulltextIndexReader()
-            {
-                @Override
-                public ScoreEntityIterator query( String query ) throws ParseException
-                {
-                    ScoreEntityIterator iterator = baseReader.query( query );
-                    iterator = iterator.filter( entry -> !modifiedEntityIdsInThisTransaction.contains( entry.entityId() ) );
-                    iterator = mergeIterators( asList( iterator, nearRealTimeReader.query( query ) ) );
-                    return iterator;
-                }
-
-                @Override
-                public long countIndexedNodes( long nodeId, int[] propertyKeyIds, Value... propertyValues )
-                {
-                    // This is only used in the Consistency Checker. We don't need to worry about this here.
-                    return 0;
-                }
-
-                @Override
-                public void close()
-                {
-                    // The 'baseReader' is managed by the kernel, so we don't need to close it here.
-                    IOUtils.closeAllUnchecked( nearRealTimeReader );
-                }
-            };
-            lastUpdateRevision = kti.getTransactionDataRevision();
-        }
-
-        @Override
-        public void close() throws IOException
-        {
-            toCloseLater.add( currentReader );
-            toCloseLater.add( writer );
-            IOUtils.closeAll( toCloseLater );
-        }
+        return new FulltextAuxiliaryTransactionState( this, log );
     }
 }
