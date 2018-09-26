@@ -61,15 +61,12 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
     public void shouldBeAbleToStartInSingleMode() throws Exception
     {
         // When
-        int resultCode = ServerBootstrapper.start( bootstrapper,
+        int resultCode = ServerBootstrapper.start( bootstrapper, withConnectorsOnRandomPortsConfig(
                 "--home-dir", tempDir.newFolder( "home-dir" ).getAbsolutePath(),
                 "-c", configOption( EnterpriseEditionSettings.mode, "SINGLE" ),
                 "-c", configOption( data_directory, getRelativePath( folder.getRoot(), data_directory ) ),
                 "-c", configOption( logs_directory, tempDir.getRoot().getAbsolutePath() ),
-                "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ),
-                "-c", "dbms.connector.1.type=HTTP",
-                "-c", "dbms.connector.1.encryption=NONE",
-                "-c", "dbms.connector.1.enabled=true" );
+                "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ) ) );
 
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );
@@ -82,7 +79,7 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
     {
         // When
         int clusterPort = PortAuthority.allocatePort();
-        int resultCode = ServerBootstrapper.start( bootstrapper,
+        int resultCode = ServerBootstrapper.start( bootstrapper, withConnectorsOnRandomPortsConfig(
                 "--home-dir", tempDir.newFolder( "home-dir" ).getAbsolutePath(),
                 "-c", configOption( EnterpriseEditionSettings.mode, "HA" ),
                 "-c", configOption( ClusterSettings.server_id, "1" ),
@@ -90,10 +87,7 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
                 "-c", configOption( ClusterSettings.cluster_server, "127.0.0.1:" + clusterPort ),
                 "-c", configOption( data_directory, getRelativePath( folder.getRoot(), data_directory ) ),
                 "-c", configOption( logs_directory, tempDir.getRoot().getAbsolutePath() ),
-                "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ),
-                "-c", "dbms.connector.1.type=HTTP",
-                "-c", "dbms.connector.1.encryption=NONE",
-                "-c", "dbms.connector.1.enabled=true" );
+                "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ) ) );
 
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );
@@ -108,9 +102,7 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
 
         Map<String, String> properties = stringMap();
         properties.putAll( ServerTestUtils.getDefaultRelativeProperties() );
-        properties.put( "dbms.connector.1.type", "HTTP" );
-        properties.put( "dbms.connector.1.encryption", "NONE" );
-        properties.put( "dbms.connector.1.enabled", "true" );
+        properties.putAll( connectorsOnRandomPortsConfig() );
         store( properties, configFile );
 
         // When
@@ -134,9 +126,7 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
 
         Map<String, String> properties = stringMap( store_internal_log_level.name(), "DEBUG");
         properties.putAll( ServerTestUtils.getDefaultRelativeProperties() );
-        properties.put( "dbms.connector.1.type", "HTTP" );
-        properties.put( "dbms.connector.1.encryption", "NONE" );
-        properties.put( "dbms.connector.1.enabled", "true" );
+        properties.putAll( connectorsOnRandomPortsConfig() );
         store( properties, configFile );
 
         // When
@@ -152,7 +142,7 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
         assertTrue( "Debug logging enabled by setting value.", userLogProvider.getLog( getClass() ).isDebugEnabled() );
     }
 
-    private class UncoveredCommercialBootstrapper extends CommercialBootstrapper
+    private static class UncoveredCommercialBootstrapper extends CommercialBootstrapper
     {
         private LogProvider userLogProvider;
 
