@@ -29,7 +29,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
-import static org.neo4j.kernel.api.impl.index.LuceneKernelExtensions.directoryFactory;
+import static org.neo4j.kernel.api.impl.index.storage.DirectoryFactory.directoryFactory;
 import static org.neo4j.kernel.api.index.IndexDirectoryStructure.directoriesByProvider;
 import static org.neo4j.kernel.api.index.IndexDirectoryStructure.directoriesBySubProvider;
 
@@ -78,7 +78,7 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         Config config = dependencies.getConfig();
         boolean ephemeral = config.get( GraphDatabaseSettings.ephemeral );
         FileSystemAbstraction fileSystemAbstraction = dependencies.fileSystem();
-        DirectoryFactory directoryFactory = directoryFactory( ephemeral, fileSystemAbstraction );
+        DirectoryFactory directoryFactory = directoryFactory( ephemeral );
         OperationalMode operationalMode = context.databaseInfo().operationalMode;
         JobScheduler scheduler = dependencies.scheduler();
         IndexDirectoryStructure.Factory directoryStructureFactory = subProviderDirectoryStructure( context.directory() );
