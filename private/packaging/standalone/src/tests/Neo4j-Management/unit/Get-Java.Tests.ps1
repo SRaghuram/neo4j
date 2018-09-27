@@ -40,7 +40,7 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Legacy Java install in JAVA_HOME environment variable" {
-      Mock Get-JavaVersion -Verifiable {  @{ 'isValid' = $false; 'isJava8' = $false } }
+      Mock Get-JavaVersion -Verifiable { @{ 'isValid' = $false; 'isJava8' = $false } }
 
       It "should throw if java is not supported" {
         { Get-Java -ErrorAction Stop } | Should Throw
@@ -284,8 +284,8 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Server Invoke - Enable Post Java 8 Default GC Logs" {
-      Mock Get-JavaVersion {  @{ 'isValid' = $true; 'isJava8' = $false } }
-      
+      Mock Get-JavaVersion { @{ 'isValid' = $true; 'isJava8' = $false } }
+
       $serverObject = global:New-MockNeo4jInstall -ServerVersion '3.0' -ServerType 'Community' `
          -NeoConfSettings 'dbms.logs.gc.enabled=true'
 
@@ -310,7 +310,7 @@ InModuleScope Neo4j-Management {
     }
 
     Context "Server Invoke - Enable Post Java 8 Specific GC Logs" {
-      Mock Get-JavaVersion {  @{ 'isValid' = $true; 'isJava8' = $false } }
+      Mock Get-JavaVersion { @{ 'isValid' = $true; 'isJava8' = $false } }
 
       $serverObject = global:New-MockNeo4jInstall -ServerVersion '3.0' -ServerType 'Community' `
          -NeoConfSettings 'dbms.logs.gc.enabled=true','dbms.logs.gc.options=key1=value1 key2=value2'
