@@ -476,7 +476,7 @@ public class ConfiguredQueryLoggerTest
 
         // when
         clock.forward( 11, TimeUnit.MILLISECONDS );
-        query.compilationCompleted( new CompilerInfo( "magic", "quantum", Collections.emptyList() ) );
+        query.compilationCompleted( new CompilerInfo( "magic", "quantum", Collections.emptyList() ), null );
         queryLogger.success( query );
 
         // then
