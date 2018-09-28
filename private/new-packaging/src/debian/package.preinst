@@ -11,6 +11,7 @@ case "$1" in
             2.*)
                 # this case is hit if we are ugrading from version 2.X, no longer supported as of 3.5
 
+                echo
                 echo "-----------------------------------------------------------------------------"
                 echo "It looks like you are upgrading from Neo4j 2.x. Many configuration"
                 echo "changes and improvements have been made in 3.0, including the location of"
@@ -30,19 +31,19 @@ case "$1" in
                 # exists yet (they can be named anything in the dir)
                 if which systemctl >/dev/null && [ -r /etc/default/neo4j ] && ! [ -d "${NEO4J_OVERRIDE_DIR}" ]; then
 
-                . /etc/default/neo4j
+                    . /etc/default/neo4j
 
-                # Only do it if something was actually defined in it
-                if [ -n "${NEO4J_ULIMIT_NOFILE}" ] || [ -n "${NEO4J_SHUTDOWN_TIMEOUT}" ] || [ -n "${NEO4J_USER}" ]; then
-                echo "Migrating /etc/default/neo4j settings to ${NEO4J_OVERRIDE_FILE}"
+                    # Only do it if something was actually defined in it
+                    if [ -n "${NEO4J_ULIMIT_NOFILE}" ] || [ -n "${NEO4J_SHUTDOWN_TIMEOUT}" ] || [ -n "${NEO4J_USER}" ]; then
+                        echo "Migrating /etc/default/neo4j settings to ${NEO4J_OVERRIDE_FILE}"
 
-                mkdir -p ${NEO4J_OVERRIDE_DIR}
+                        mkdir -p ${NEO4J_OVERRIDE_DIR}
 
-                echo "[Service]" >> ${NEO4J_OVERRIDE_FILE}
-                [ -n "${NEO4J_ULIMIT_NOFILE}" ] && echo "LimitNOFILE=${NEO4J_ULIMIT_NOFILE}" >> ${NEO4J_OVERRIDE_FILE}
-                [ -n "${NEO4J_SHUTDOWN_TIMEOUT}" ] && echo "TimeoutSec=${NEO4J_SHUTDOWN_TIMEOUT}" >> ${NEO4J_OVERRIDE_FILE}
-                [ -n "${NEO4J_USER}" ] && echo "User=${NEO4J_USER}" >> ${NEO4J_OVERRIDE_FILE}
-                fi
+                        echo "[Service]" >> ${NEO4J_OVERRIDE_FILE}
+                        [ -n "${NEO4J_ULIMIT_NOFILE}" ] && echo "LimitNOFILE=${NEO4J_ULIMIT_NOFILE}" >> ${NEO4J_OVERRIDE_FILE}
+                        [ -n "${NEO4J_SHUTDOWN_TIMEOUT}" ] && echo "TimeoutSec=${NEO4J_SHUTDOWN_TIMEOUT}" >> ${NEO4J_OVERRIDE_FILE}
+                        [ -n "${NEO4J_USER}" ] && echo "User=${NEO4J_USER}" >> ${NEO4J_OVERRIDE_FILE}
+                    fi
 
                 fi
                 ;;
