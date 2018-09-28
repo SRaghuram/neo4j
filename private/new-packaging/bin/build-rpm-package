@@ -70,7 +70,6 @@ script=${common_directory}/neo4j-script
 cp ${script} ${scripts_directory}/neo4j
 cp ${script} ${scripts_directory}/neo4j-admin
 cp ${script} ${scripts_directory}/neo4j-import
-cp ${script} ${scripts_directory}/neo4j-shell
 
 # Copy manpages
 rm -rf ${sources_directory}/manpages
