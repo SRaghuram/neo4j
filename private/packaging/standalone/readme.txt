@@ -7,7 +7,6 @@ the deliverable artifacts and packaging them into a downloadable installer.
 Deliverable artifacts included:
 
 * neo4j server - start/stop-able standalone neo4j server
-* neo4j shell - text based shell for accessing the server
 * neo4j libs - java library files
 
 Building
