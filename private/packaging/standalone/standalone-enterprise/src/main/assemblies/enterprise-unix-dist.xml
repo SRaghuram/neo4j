@@ -65,6 +65,14 @@
       </excludes>
       <filtered>true</filtered>
     </fileSet>
+    <!-- configuration migrator -->
+    <fileSet>
+      <directory>${project.parent.basedir}/src/main/distribution/shell-scripts</directory>
+      <outputDirectory/>
+      <includes>
+        <include>**/2.x-config-migrator.jar</include>
+      </includes>
+    </fileSet>
     <!-- filter and chmod 755 cypher-shell -->
     <fileSet>
       <directory>${project.parent.basedir}/src/main/distribution/cypher-shell</directory>
