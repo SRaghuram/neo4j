@@ -17,8 +17,8 @@ case "$1" in
                 echo "the databases. These changes cannot be handled automatically by this package"
                 echo "installation."
                 echo
-                echo "You will need to upgrade from Neo4j 2.x to Neo4j 3.2.11 and THEN to this release."
-                echo "The upgrade guide for Neo4j 3.2.11 can be found at "
+                echo "You will need to upgrade from Neo4j 2.x to Neo4j 3.2 and THEN to this release."
+                echo "The upgrade guide for Neo4j 3.2 can be found at "
                 echo "https://neo4j.com/docs/operations-manual/3.2/upgrade/"
                 echo "-----------------------------------------------------------------------------"
                 echo
