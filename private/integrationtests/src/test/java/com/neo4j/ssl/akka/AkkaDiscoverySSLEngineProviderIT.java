@@ -26,6 +26,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import scala.concurrent.duration.FiniteDuration;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -71,6 +72,8 @@ public class AkkaDiscoverySSLEngineProviderIT
     private static final String NEW_CIPHER_B = "TLS_RSA_WITH_AES_128_CBC_SHA256";
 
     private static final int UNRELATED_ID = 5; // SslContextFactory requires us to trust something
+
+    private static final FiniteDuration TIMEOUT = new FiniteDuration( 10L, TimeUnit.SECONDS );
 
     @Rule
     public TestDirectory testDir = TestDirectory.testDirectory();
@@ -323,14 +326,14 @@ public class AkkaDiscoverySSLEngineProviderIT
 
     private void accept( TestProbe serverMsgProbe, TestProbe clientLogProbe )
     {
-        serverMsgProbe.expectMsg( MSG );
+        serverMsgProbe.expectMsg( TIMEOUT, MSG );
         clientLogProbe.expectNoMessage();
     }
 
     private void decline( TestProbe serverMsgProbe, TestProbe clientLogProbe )
     {
         serverMsgProbe.expectNoMessage();
-        Logging.LogEvent log = clientLogProbe.expectMsgClass( Logging.Warning.class );
+        Logging.LogEvent log = clientLogProbe.expectMsgClass( TIMEOUT, Logging.Warning.class );
         assertThat( log.message().toString(), either( containsString( "SSLHandshakeException" ) ).or( containsString( "SSLException" ) ) );
     }
 
