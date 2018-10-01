@@ -7,8 +7,6 @@ package com.neo4j.kernel.api.impl.fulltext.lucene;
 
 import com.neo4j.kernel.api.impl.fulltext.FulltextConfig;
 import com.neo4j.kernel.api.impl.fulltext.FulltextIndexProviderFactory;
-import org.apache.lucene.analysis.en.EnglishAnalyzer;
-import org.apache.lucene.analysis.sv.SwedishAnalyzer;
 import org.junit.Test;
 
 import java.util.Optional;
@@ -38,7 +36,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
             SchemaWrite schemaWrite = transaction.schemaWrite();
-            nodes = schemaWrite.indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( "nodes" ) );
+            nodes = schemaWrite.indexCreate( descriptor, FulltextIndexProviderFactory.DESCRIPTOR.name(), Optional.of( "nodes" ) );
             transaction.success();
         }
         await( nodes );
@@ -73,7 +71,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
             SchemaWrite schemaWrite = transaction.schemaWrite();
-            nodes = schemaWrite.indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( "nodes" ) );
+            nodes = schemaWrite.indexCreate( descriptor, FulltextIndexProviderFactory.DESCRIPTOR.name(), Optional.of( "nodes" ) );
             transaction.success();
         }
         await( nodes );
@@ -110,7 +108,7 @@ public class FulltextAnalyzerTest extends LuceneFulltextTestSupport
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
             SchemaWrite schemaWrite = transaction.schemaWrite();
-            nodes = schemaWrite.indexCreate( descriptor, Optional.of( FulltextIndexProviderFactory.DESCRIPTOR.name() ), Optional.of( "nodes" ) );
+            nodes = schemaWrite.indexCreate( descriptor, FulltextIndexProviderFactory.DESCRIPTOR.name(), Optional.of( "nodes" ) );
             transaction.success();
         }
         await( nodes );

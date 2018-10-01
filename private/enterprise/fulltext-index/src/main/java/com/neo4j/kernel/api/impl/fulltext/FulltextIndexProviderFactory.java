@@ -37,7 +37,6 @@ import static org.neo4j.kernel.api.index.IndexDirectoryStructure.directoriesBySu
 public class FulltextIndexProviderFactory extends KernelExtensionFactory<FulltextIndexProviderFactory.Dependencies>
 {
     private static final String KEY = "fulltext";
-    private static final int PRIORITY = 0;
     public static final IndexProviderDescriptor DESCRIPTOR = new IndexProviderDescriptor( KEY, "1.0" );
 
     public interface Dependencies
@@ -86,7 +85,7 @@ public class FulltextIndexProviderFactory extends KernelExtensionFactory<Fulltex
         Log log = dependencies.getLogService().getInternalLog( FulltextIndexProvider.class );
 
         FulltextIndexProvider provider = new FulltextIndexProvider(
-                DESCRIPTOR, PRIORITY, directoryStructureFactory, fileSystemAbstraction, config, tokenHolders,
+                DESCRIPTOR, directoryStructureFactory, fileSystemAbstraction, config, tokenHolders,
                 directoryFactory, operationalMode, scheduler );
         try
         {

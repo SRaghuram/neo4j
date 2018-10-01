@@ -56,11 +56,11 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
     private final String defaultEventuallyConsistentSetting;
     private final IndexUpdateSink indexUpdateSink;
 
-    FulltextIndexProvider( IndexProviderDescriptor descriptor, int priority, IndexDirectoryStructure.Factory directoryStructureFactory,
+    FulltextIndexProvider( IndexProviderDescriptor descriptor, IndexDirectoryStructure.Factory directoryStructureFactory,
             FileSystemAbstraction fileSystem, Config config, TokenHolders tokenHolders, DirectoryFactory directoryFactory,
             OperationalMode operationalMode, JobScheduler scheduler )
     {
-        super( descriptor, priority, directoryStructureFactory, config, operationalMode, fileSystem, directoryFactory );
+        super( descriptor, directoryStructureFactory, config, operationalMode, fileSystem, directoryFactory );
         this.fileSystem = fileSystem;
         this.config = config;
         this.tokenHolders = tokenHolders;

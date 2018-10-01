@@ -84,7 +84,7 @@ public class FulltextProcedures
         Properties indexConfiguration = new Properties();
         indexConfiguration.putAll( indexConfigurationMap );
         SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.NODE, stringArray( labels ), indexConfiguration, stringArray( properties ) );
-        tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
+        tx.schemaWrite().indexCreate( schemaDescriptor, DESCRIPTOR.name(), Optional.of( name ) );
     }
 
     private String[] stringArray( List<String> strings )
@@ -110,7 +110,7 @@ public class FulltextProcedures
         Properties settings = new Properties();
         settings.putAll( config );
         SchemaDescriptor schemaDescriptor = accessor.schemaFor( EntityType.RELATIONSHIP, stringArray( relTypes ), settings, stringArray( properties ) );
-        tx.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( name ) );
+        tx.schemaWrite().indexCreate( schemaDescriptor, DESCRIPTOR.name(), Optional.of( name ) );
     }
 
     @Description( "Drop the specified index." )

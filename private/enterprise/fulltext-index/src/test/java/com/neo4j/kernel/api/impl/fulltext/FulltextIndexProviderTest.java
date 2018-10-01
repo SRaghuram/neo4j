@@ -122,7 +122,7 @@ public class FulltextIndexProviderTest
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
             MultiTokenSchemaDescriptor schemaDescriptor = multiToken( new int[]{0, 1, 2}, EntityType.RELATIONSHIP, 0, 1, 2, 3 );
-            indexReference = transaction.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( "fulltext" ) );
+            indexReference = transaction.schemaWrite().indexCreate( schemaDescriptor, DESCRIPTOR.name(), Optional.of( "fulltext" ) );
             transaction.success();
         }
         await( indexReference );
@@ -154,7 +154,7 @@ public class FulltextIndexProviderTest
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
             MultiTokenSchemaDescriptor schemaDescriptor = multiToken( new int[]{0, 1, 2}, EntityType.RELATIONSHIP, 0, 1, 2, 3 );
-            indexReference = transaction.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( "fulltext" ) );
+            indexReference = transaction.schemaWrite().indexCreate( schemaDescriptor, DESCRIPTOR.name(), Optional.of( "fulltext" ) );
             transaction.success();
         }
         await( indexReference );
@@ -357,7 +357,7 @@ public class FulltextIndexProviderTest
         try ( KernelTransactionImplementation transaction = getKernelTransaction() )
         {
             MultiTokenSchemaDescriptor schemaDescriptor = multiToken( entityTokens, EntityType.NODE, propertyIds );
-            fulltext = transaction.schemaWrite().indexCreate( schemaDescriptor, Optional.of( DESCRIPTOR.name() ), Optional.of( NAME ) );
+            fulltext = transaction.schemaWrite().indexCreate( schemaDescriptor, DESCRIPTOR.name(), Optional.of( NAME ) );
             transaction.success();
         }
         return fulltext;
