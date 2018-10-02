@@ -18,6 +18,7 @@ import java.io.Closeable;
 import java.io.IOException;
 
 import org.neo4j.io.IOUtils;
+import org.neo4j.kernel.api.impl.index.IndexWriterConfigs;
 import org.neo4j.kernel.api.impl.schema.writer.LuceneIndexWriter;
 
 public class TransactionStateLuceneIndexWriter implements LuceneIndexWriter, Closeable
@@ -29,7 +30,7 @@ public class TransactionStateLuceneIndexWriter implements LuceneIndexWriter, Clo
     TransactionStateLuceneIndexWriter( LuceneFulltextIndex index )
     {
         this.index = index;
-        directory = new RAMDirectory(); //index.createIndexTransactionDirectory();
+        directory = new RAMDirectory();
     }
 
     @Override
@@ -62,7 +63,7 @@ public class TransactionStateLuceneIndexWriter implements LuceneIndexWriter, Clo
         writer.deleteDocuments( query );
     }
 
-    public void resetWriterState() throws IOException
+    void resetWriterState() throws IOException
     {
         if ( writer != null )
         {
@@ -74,10 +75,10 @@ public class TransactionStateLuceneIndexWriter implements LuceneIndexWriter, Clo
 
     private void openWriter() throws IOException
     {
-        writer = new IndexWriter( directory, index.createIndexWriterConfig() );
+        writer = new IndexWriter( directory, IndexWriterConfigs.transactionState( index.getAnalyzer() ) );
     }
 
-    public FulltextIndexReader getNearRealTimeReader() throws IOException
+    FulltextIndexReader getNearRealTimeReader() throws IOException
     {
         DirectoryReader directoryReader = DirectoryReader.open( writer, true );
         IndexSearcher searcher = new IndexSearcher( directoryReader );
@@ -88,6 +89,6 @@ public class TransactionStateLuceneIndexWriter implements LuceneIndexWriter, Clo
     @Override
     public void close() throws IOException
     {
-        IOUtils.closeAll( (AutoCloseable) writer::rollback, directory );
+        IOUtils.closeAll( writer, directory );
     }
 }

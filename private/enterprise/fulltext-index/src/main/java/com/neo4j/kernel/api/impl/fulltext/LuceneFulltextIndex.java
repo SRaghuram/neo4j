@@ -31,11 +31,10 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
     private final EntityType type;
     private final Collection<String> properties;
     private final TokenHolder propertyKeyTokenHolder;
-    private final Factory<IndexWriterConfig> writerConfigFactory;
     private final File transactionsFolder;
 
     LuceneFulltextIndex( PartitionedIndexStorage storage, IndexPartitionFactory partitionFactory, FulltextIndexDescriptor descriptor,
-            TokenHolder propertyKeyTokenHolder, Factory<IndexWriterConfig> writerConfigFactory )
+            TokenHolder propertyKeyTokenHolder )
     {
         super( storage, partitionFactory, descriptor );
         this.analyzer = descriptor.analyzer();
@@ -43,7 +42,6 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
         this.type = descriptor.schema().entityType();
         this.properties = descriptor.propertyNames();
         this.propertyKeyTokenHolder = propertyKeyTokenHolder;
-        this.writerConfigFactory = writerConfigFactory;
         File indexFolder = storage.getIndexFolder();
         transactionsFolder = new File( indexFolder.getParent(), indexFolder.getName() + ".tx" );
     }
@@ -72,11 +70,6 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
                ", properties=" + properties +
                ", descriptor=" + descriptor.userDescription( SchemaUtil.idTokenNameLookup ) +
                '}';
-    }
-
-    IndexWriterConfig createIndexWriterConfig()
-    {
-        return writerConfigFactory.newInstance();
     }
 
     String[] getPropertiesArray()

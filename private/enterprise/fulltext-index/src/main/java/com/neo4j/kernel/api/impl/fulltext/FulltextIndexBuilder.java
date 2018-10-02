@@ -48,13 +48,13 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
      * @param isPopulating {@code true} if the index should be created in a populating mode.
      * @return this index builder.
      */
-    public FulltextIndexBuilder withPopulatingMode( boolean isPopulating )
+    FulltextIndexBuilder withPopulatingMode( boolean isPopulating )
     {
         this.populating = isPopulating;
         return this;
     }
 
-    public FulltextIndexBuilder withIndexUpdateSink( IndexUpdateSink indexUpdateSink )
+    FulltextIndexBuilder withIndexUpdateSink( IndexUpdateSink indexUpdateSink )
     {
         this.indexUpdateSink = indexUpdateSink;
         return this;
@@ -70,12 +70,8 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
         if ( isReadOnly() )
         {
             final ReadOnlyIndexPartitionFactory partitionFactory = new ReadOnlyIndexPartitionFactory();
-            Factory<IndexWriterConfig> writerConfigFactory = () ->
-            {
-                throw new UnsupportedOperationException( "Cannot create new partitions for read-only index" );
-            };
             LuceneFulltextIndex fulltextIndex =
-                    new LuceneFulltextIndex( storageBuilder.build(), partitionFactory, descriptor, propertyKeyTokenHolder, writerConfigFactory );
+                    new LuceneFulltextIndex( storageBuilder.build(), partitionFactory, descriptor, propertyKeyTokenHolder );
             return new ReadOnlyFulltextIndex( fulltextIndex );
         }
         else
@@ -91,7 +87,7 @@ public class FulltextIndexBuilder extends AbstractLuceneIndexBuilder<FulltextInd
             }
             WritableIndexPartitionFactory partitionFactory = new WritableIndexPartitionFactory( writerConfigFactory );
             LuceneFulltextIndex fulltextIndex =
-                    new LuceneFulltextIndex( storageBuilder.build(), partitionFactory, descriptor, propertyKeyTokenHolder, writerConfigFactory );
+                    new LuceneFulltextIndex( storageBuilder.build(), partitionFactory, descriptor, propertyKeyTokenHolder );
             return new WritableFulltextIndex( indexUpdateSink, fulltextIndex );
         }
     }
