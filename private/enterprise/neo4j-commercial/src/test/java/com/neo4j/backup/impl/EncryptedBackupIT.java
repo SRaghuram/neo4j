@@ -8,12 +8,14 @@ package com.neo4j.backup.impl;
 import com.neo4j.causalclustering.discovery.CommercialCluster;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,9 +24,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.IntSupplier;
@@ -51,72 +56,250 @@ import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.TestDirectoryClassExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.clusterDatabase;
 import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.createSomeData;
 import static org.neo4j.causalclustering.discovery.Cluster.dataMatchesEventually;
 
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
+@ExtendWith( {DefaultFileSystemExtension.class, SuppressOutputExtension.class} )
 class EncryptedBackupIT
 {
-    @Inject
-    private TestDirectory testDir;
-    @Inject
-    private DefaultFileSystemAbstraction fs;
+    @RegisterExtension
+    public static TestDirectoryClassExtension testDirectoryClassExtension = new TestDirectoryClassExtension();
 
-    private Cluster<?> cluster;
+    @Inject
+    private static DefaultFileSystemAbstraction fs;
 
     private static final int BACKUP_SSL_START = 6; // certs for backup start after 6
     private static final String backupPolicyName = "backup";
     private static final String clusterPolicyName = "cluster";
     private static final String publicKeyName = "public.crt";
 
-    private File backupHome;
-    private String backupName;
+    private static File backupHome;
+    private static String backupName;
+
+    public static List<Object[]> parameters()
+    {
+        return Arrays.asList( testCase( false, false ), testCase( false, true ), testCase( true, false ), testCase( true, true ) );
+    }
+
+    private static Object[] testCase( boolean encryptedTxPort, boolean encryptedBackupPort )
+    {
+        return new Object[]{encryptedTxPort, encryptedBackupPort};
+    }
 
     @BeforeEach
     void setup()
     {
-        backupHome = testDir.directory( "backupNeo4jHome" );
+        backupHome = testDirectoryClassExtension.getTestDirectory().directory( "backupNeo4jHome-" + UUID.randomUUID().toString() );
         backupName = "encryptedBackup";
     }
 
-    @AfterEach
-    void cleanup()
+    @ParameterizedTest( name = "Cluster with encryptedTx={0} encryptedBackup={1}" )
+    @MethodSource( "parameters" )
+    public void testNoEncryptionCluster( boolean encryptedTxPort, boolean encryptedBackupPort ) throws Throwable
     {
-        if ( cluster != null )
+        Cluster cluster = null;
+        try
         {
-            cluster.shutdown();
+            cluster = initialiseCluster( encryptedTxPort, encryptedBackupPort );
+            runAllTests( cluster, encryptedTxPort, encryptedBackupPort );
+        }
+        finally
+        {
+            if ( cluster != null )
+            {
+                cluster.shutdown();
+            }
         }
     }
 
-    @Test
-    void backupsArePossibleFromEncryptedCluster() throws Exception
+    private Cluster initialiseCluster( boolean encryptedTxPort, boolean encryptedBackupPort )
     {
-        // given there exists an encrypted cluster
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, true );
-        cluster.start();
+        Cluster cluster = aCluster( testDirectoryClassExtension.getTestDirectory() );
+        try
+        {
+            setupClusterWithEncryption( cluster, encryptedTxPort, encryptedBackupPort );
+            cluster.start();
+        }
+        catch ( IOException | InterruptedException | ExecutionException e )
+        {
+            throw new RuntimeException( e );
+        }
+        createSomeData( cluster );
+        return cluster;
+    }
 
-        // and backup client is configured
-        IntSupplier backupClient = backupClientWithClusterEncryption( CausalClusteringSettings.transaction_listen_address );
+    private void runAllTests( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort ) throws IOException, TimeoutException
+    {
+        unencryptedBackupAgainstTransactionAddress( cluster, encryptedTxPort, encryptedBackupPort );
+        unencryptedBackupAgainstReplicaTransactionAddress( cluster, encryptedTxPort, encryptedBackupPort );
+        unencryptedBackupAgainstBackupAddress( cluster, encryptedTxPort, encryptedBackupPort );
+        unencryptedBackupAgainstReplicaBackupAddress( cluster, encryptedTxPort, encryptedBackupPort );
 
+        transactionEncryptedBackupAgainstTransactionAddress( cluster, encryptedTxPort, encryptedBackupPort );
+        transactionEncryptedBackupAgainstReplicaTransactionAddress( cluster, encryptedTxPort, encryptedBackupPort );
+        transactionEncryptedBackupAgainstBackupAddress( cluster, encryptedTxPort, encryptedBackupPort );
+        transactionEncryptedBackupAgainstReplicaBackupAddress( cluster, encryptedTxPort, encryptedBackupPort );
+
+        backupEncryptedBackupAgainstTransactionAddress( cluster, encryptedTxPort, encryptedBackupPort );
+        backupEncryptedBackupAgainstReplicaTransactionAddress( cluster, encryptedTxPort, encryptedBackupPort );
+        backupEncryptedBackupAgainstBackupAddress( cluster, encryptedTxPort, encryptedBackupPort );
+        backupEncryptedBackupAgainstReplicaBackupAddress( cluster, encryptedTxPort, encryptedBackupPort );
+    }
+
+    void unencryptedBackupAgainstTransactionAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort )
+            throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithoutEncryption( cluster, CausalClusteringSettings.transaction_listen_address );
+        if ( encryptedTxPort )
+        {
+            shouldNotBeSuccessful( backupClient );
+        }
+        else
+        {
+            shouldBeSuccessful( cluster, backupClient );
+        }
+    }
+
+    void unencryptedBackupAgainstReplicaTransactionAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort )
+            throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithoutEncryptionToReplica( cluster, CausalClusteringSettings.transaction_listen_address );
+        if ( encryptedTxPort )
+        {
+            shouldNotBeSuccessful( backupClient );
+        }
+        else
+        {
+            shouldBeSuccessful( cluster, backupClient );
+        }
+    }
+
+    void unencryptedBackupAgainstBackupAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort ) throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithoutEncryption( cluster, OnlineBackupSettings.online_backup_server );
+        if ( encryptedBackupPort )
+        {
+            shouldNotBeSuccessful( backupClient );
+        }
+        else
+        {
+            shouldBeSuccessful( cluster, backupClient );
+        }
+    }
+
+    void unencryptedBackupAgainstReplicaBackupAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort )
+            throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithoutEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_server );
+        if ( encryptedBackupPort )
+        {
+            shouldNotBeSuccessful( backupClient );
+        }
+        else
+        {
+            shouldBeSuccessful( cluster, backupClient );
+        }
+    }
+
+    void transactionEncryptedBackupAgainstTransactionAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort )
+            throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithClusterEncryption( cluster, CausalClusteringSettings.transaction_listen_address );
+        if ( encryptedTxPort )
+        {
+            shouldBeSuccessful( cluster, backupClient );
+        }
+        else
+        {
+            shouldNotBeSuccessful( backupClient );
+        }
+    }
+
+    void transactionEncryptedBackupAgainstReplicaTransactionAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort )
+            throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithClusterEncryptionToReplica( cluster, CausalClusteringSettings.transaction_listen_address );
+        if ( encryptedTxPort )
+        {
+            shouldBeSuccessful( cluster, backupClient );
+        }
+        else
+        {
+            shouldNotBeSuccessful( backupClient );
+        }
+    }
+
+    void transactionEncryptedBackupAgainstBackupAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort )
+            throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithClusterEncryption( cluster, OnlineBackupSettings.online_backup_server );
+        shouldNotBeSuccessful( backupClient ); // keys shouldn't match
+    }
+
+    void transactionEncryptedBackupAgainstReplicaBackupAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort )
+            throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithClusterEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_server );
+        shouldNotBeSuccessful( backupClient ); // keys shouldn't match
+    }
+
+    void backupEncryptedBackupAgainstTransactionAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort )
+            throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithBackupEncryption( cluster, CausalClusteringSettings.transaction_listen_address );
+        shouldNotBeSuccessful( backupClient ); // keys shouldn't match
+    }
+
+    void backupEncryptedBackupAgainstReplicaTransactionAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort )
+            throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithBackupEncryptionToReplica( cluster, CausalClusteringSettings.transaction_listen_address );
+        shouldNotBeSuccessful( backupClient ); // keys shouldn't match
+    }
+
+    void backupEncryptedBackupAgainstBackupAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort ) throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithBackupEncryption( cluster, OnlineBackupSettings.online_backup_server );
+        if ( encryptedBackupPort )
+        {
+            shouldBeSuccessful( cluster, backupClient );
+        }
+        else
+        {
+            shouldNotBeSuccessful( backupClient );
+        }
+    }
+
+    void backupEncryptedBackupAgainstReplicaBackupAddress( Cluster cluster, boolean encryptedTxPort, boolean encryptedBackupPort )
+            throws IOException, TimeoutException
+    {
+        IntSupplier backupClient = backupClientWithBackupEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_server );
+        if ( encryptedBackupPort )
+        {
+            shouldBeSuccessful( cluster, backupClient );
+        }
+        else
+        {
+            shouldNotBeSuccessful( backupClient );
+        }
+    }
+
+    private static void shouldBeSuccessful( Cluster cluster, IntSupplier backupClient ) throws TimeoutException
+    {
         // when a full backup is successful
         int exitCode = backupClient.getAsInt();
         assertEquals( 0, exitCode );
 
-        // then data matches
-        backupDataMatchesDatabase( cluster, backupHome, backupName );
-
-        // when the cluster is populated with more data
+        // and the cluster is populated with more data
         createSomeData( cluster );
-        dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), cluster.coreMembers() );
+        dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), allMembers( cluster ) );
 
         // then an incremental backup is successful on that cluster
         exitCode = backupClient.getAsInt();
@@ -126,343 +309,52 @@ class EncryptedBackupIT
         backupDataMatchesDatabase( cluster, backupHome, backupName );
     }
 
-    @Test
-    void encryptedBackupsArePossibleFromBackupPort() throws Exception
+    private static void shouldNotBeSuccessful( IntSupplier backupClient )
     {
-        // given there exists an encrypted cluster with exposed backup port
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, true );
-        cluster.start();
-
-        // and backup client is configured
-        IntSupplier backupClient = backupClientWithBackupEncryption( OnlineBackupSettings.online_backup_server );
-
-        // when a full backup is successful
-        int exitCode = backupClient.getAsInt();
-        assertEquals( 0, exitCode );
-
-        // then data matches
-        backupDataMatchesDatabase( cluster, backupHome, backupName );
-
-        // when the cluster is populated with more data
-        createSomeData( cluster );
-        dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), cluster.coreMembers() );
-
-        // then an incremental backup is successful on that cluster
-        exitCode = backupClient.getAsInt();
-        assertEquals( 0, exitCode );
-
-        // and data matches
-        backupDataMatchesDatabase( cluster, backupHome, backupName );
-    }
-
-    @Test
-    void noPolicyAgainstBackupPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        // given backup port has ssl
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, true );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and backup client isn't encrypted
-        IntSupplier backupClient = backupClientWithoutEncryption( OnlineBackupSettings.online_backup_server );
-
-        // when backup against backup port
+        // when
         int exitCode = backupClient.getAsInt();
 
-        // then backup isn't possible because missing cert
+        // then backup fails because certificate is rejected
         assertEquals( 1, exitCode );
     }
 
-    @Test
-    void txPolicyAgainstBackupPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        // given backup port has ssl
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, true );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and backup client is encrypted with cluster ssl
-        IntSupplier backupClient = backupClientWithClusterEncryption( OnlineBackupSettings.online_backup_server );
-
-        // when backup against backup port
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 1, exitCode );
-    }
-
-    @Test
-    void backupPolicyAgainstBackupPortWithSslPasses() throws IOException, TimeoutException, ExecutionException, InterruptedException
-    {
-        // given backup port has ssl
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, true );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and backup client is encrypted with cluster ssl
-        IntSupplier backupClient = backupClientWithBackupEncryption( OnlineBackupSettings.online_backup_server );
-
-        // when backup against backup port
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 0, exitCode );
-        backupDataMatchesDatabase( cluster, backupHome, backupName );
-    }
-
-    @Test
-    void noPolicyAgainstTxPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        // given backup port has ssl
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, false );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and backup client is encrypted with cluster ssl
-        IntSupplier backupClient = backupClientWithoutEncryption( CausalClusteringSettings.transaction_listen_address );
-
-        // when backup against backup port
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 1, exitCode );
-    }
-
-    @Test
-    void txPolicyAgainstTxPortWithSslPasses() throws IOException, TimeoutException, ExecutionException, InterruptedException
-    {
-        // given
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, false );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and
-        IntSupplier backupClient = backupClientWithClusterEncryption( CausalClusteringSettings.transaction_listen_address );
-
-        // when
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 0, exitCode );
-        backupDataMatchesDatabase( cluster, backupHome, backupName );
-    }
-
-    @Test
-    void backupPolicyAgainstTxPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, true );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and
-        IntSupplier backupClient = backupClientWithBackupEncryption( CausalClusteringSettings.transaction_listen_address );
-
-        // when
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 1, exitCode );
-    }
-
-    @Test
-    void noPolicyAgainstUnencryptedBackupWorks() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, false );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and
-        IntSupplier backupClient = backupClientWithoutEncryption( OnlineBackupSettings.online_backup_server );
-
-        // when
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 0, exitCode );
-    }
-
-    @Test
-    void noPolicyAgainstUnencryptedTxPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, false, true );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and
-        IntSupplier backupClientFunction = backupClientWithoutEncryption( CausalClusteringSettings.transaction_listen_address );
-
-        // when
-        int exitCode = backupClientFunction.getAsInt();
-
-        // then
-        assertEquals( 0, exitCode );
-        backupDataMatchesDatabase( cluster, backupHome, backupName );
-    }
-
-    @Test
-    void backupPolicyAgainstReplicaTxPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        // given
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, true );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and
-        IntSupplier backupClient = backupClientWithBackupEncryptionToReplica( CausalClusteringSettings.transaction_listen_address );
-
-        // when
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 1, exitCode );
-    }
-
-    @Test
-    void backupPolicyAgainstReplicaBackupPortWithSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        // given
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, true );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and
-        IntSupplier backupClient = backupClientWithBackupEncryptionToReplica( OnlineBackupSettings.online_backup_server );
-
-        // when
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 0, exitCode );
-        backupDataMatchesDatabase( cluster, backupHome, backupName );
-    }
-
-    @Test
-    void txPolicyAgainstReplicaBackupPortWithSslFails() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        // given
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, true );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and
-        IntSupplier backupClient = backupClientWithClusterEncryptionToReplica( OnlineBackupSettings.online_backup_server );
-
-        // when
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 1, exitCode );
-    }
-
-    @Test
-    void txPolicyAgainstReplicaTxPortWithSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        // given
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, true );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and
-        IntSupplier backupClient = backupClientWithClusterEncryptionToReplica( CausalClusteringSettings.transaction_listen_address );
-
-        // when
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 0, exitCode );
-        backupDataMatchesDatabase( cluster, backupHome, backupName );
-    }
-
-    @Test
-    void noPolicyAgainstReplicaBackupWithoutSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        // given
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, true, false );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and
-        IntSupplier backupClient = backupClientWithoutEncryptionToReplica( OnlineBackupSettings.online_backup_server );
-
-        // when
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 0, exitCode );
-        backupDataMatchesDatabase( cluster, backupHome, backupName );
-    }
-
-    @Test
-    void noPolicyAgainstReplicaTxWithoutSslPasses() throws IOException, ExecutionException, InterruptedException, TimeoutException
-    {
-        // given
-        cluster = aCluster();
-        setupClusterWithEncryption( cluster, false, true );
-        cluster.start();
-        createSomeData( cluster );
-
-        // and
-        IntSupplier backupClient = backupClientWithoutEncryptionToReplica( CausalClusteringSettings.transaction_listen_address );
-
-        // when
-        int exitCode = backupClient.getAsInt();
-
-        // then
-        assertEquals( 0, exitCode );
-        backupDataMatchesDatabase( cluster, backupHome, backupName );
-    }
-
-    private Cluster<?> aCluster()
+    private static Cluster<?> aCluster( TestDirectory testDir )
     {
         int noOfCoreMembers = 3;
         int noOfReadReplicas = 3;
 
-        return new CommercialCluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, new SslHazelcastDiscoveryServiceFactory(), emptyMap(),
-                emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
+        return new CommercialCluster( testDir.directory( UUID.randomUUID().toString() ), noOfCoreMembers, noOfReadReplicas,
+                new SslHazelcastDiscoveryServiceFactory(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
     }
 
-    private IntSupplier backupClientWithoutEncryption( Setting addressSetting ) throws IOException, TimeoutException
+    private IntSupplier backupClientWithoutEncryption( Cluster cluster, Setting addressSetting ) throws IOException, TimeoutException
     {
-        return backupClient( addressSetting, Optional.empty(), false );
+        return backupClient( cluster, addressSetting, Optional.empty(), false );
     }
 
-    private IntSupplier backupClientWithClusterEncryption( Setting addressSetting ) throws IOException, TimeoutException
+    private IntSupplier backupClientWithClusterEncryption( Cluster cluster, Setting addressSetting ) throws IOException, TimeoutException
     {
-        return backupClient( addressSetting, Optional.of( 0 ), false );
+        return backupClient( cluster, addressSetting, Optional.of( 0 ), false );
     }
 
-    private IntSupplier backupClientWithBackupEncryption( Setting addressSetting ) throws IOException, TimeoutException
+    private IntSupplier backupClientWithBackupEncryption( Cluster cluster, Setting addressSetting ) throws IOException, TimeoutException
     {
-        return backupClient( addressSetting, Optional.of( BACKUP_SSL_START ), false );
+        return backupClient( cluster, addressSetting, Optional.of( BACKUP_SSL_START ), false );
     }
 
-    private IntSupplier backupClientWithBackupEncryptionToReplica( Setting addressSetting ) throws IOException, TimeoutException
+    private IntSupplier backupClientWithBackupEncryptionToReplica( Cluster cluster, Setting addressSetting ) throws IOException, TimeoutException
     {
-        return backupClient( addressSetting, Optional.of( BACKUP_SSL_START ), true );
+        return backupClient( cluster, addressSetting, Optional.of( BACKUP_SSL_START ), true );
     }
 
-    private IntSupplier backupClientWithClusterEncryptionToReplica( Setting addressSetting ) throws IOException, TimeoutException
+    private IntSupplier backupClientWithClusterEncryptionToReplica( Cluster cluster, Setting addressSetting ) throws IOException, TimeoutException
     {
-        return backupClient( addressSetting, Optional.of( 0 ), true );
+        return backupClient( cluster, addressSetting, Optional.of( 0 ), true );
     }
 
-    private IntSupplier backupClientWithoutEncryptionToReplica( Setting addressSetting ) throws IOException, TimeoutException
+    private IntSupplier backupClientWithoutEncryptionToReplica( Cluster cluster, Setting addressSetting ) throws IOException, TimeoutException
     {
-        return backupClient( addressSetting, Optional.empty(), true );
+        return backupClient( cluster, addressSetting, Optional.empty(), true );
     }
 
     /**
@@ -474,7 +366,8 @@ class EncryptedBackupIT
      * @return a function that can be used to invoke the client. Return integer is backup exit code
      * @throws IOException if there was an error with non-backup code
      */
-    private IntSupplier backupClient( Setting addressSetting, Optional<Integer> baseSslKeyId, boolean replicaOnly ) throws IOException, TimeoutException
+    private static IntSupplier backupClient( Cluster cluster, Setting addressSetting, Optional<Integer> baseSslKeyId, boolean replicaOnly )
+            throws IOException, TimeoutException
     {
         // and backup client is configured
         ClusterMember selectedNode;
@@ -526,7 +419,7 @@ class EncryptedBackupIT
         }
     }
 
-    private void installCryptographicObjectsToBackupHome( File neo4J_home, int keyId ) throws IOException
+    private static void installCryptographicObjectsToBackupHome( File neo4J_home, int keyId ) throws IOException
     {
         createConfigFile( neo4J_home );
         File certificatesLocation = neo4J_home.toPath().resolve( "certificates" ).resolve( backupPolicyName ).toFile();
@@ -539,17 +432,26 @@ class EncryptedBackupIT
     {
         File config = neo4J_home.toPath().resolve( "conf" + File.separator + "neo4j.conf" ).toFile();
         File backupPolicyLocation = neo4J_home.toPath().resolve( "certificates" ).resolve( "backup" ).toFile();
-        assertTrue( backupPolicyLocation.mkdirs() );
+        backupPolicyLocation.mkdirs();
         Properties properties = new Properties();
         SslPolicyConfig backupSslConfigGroup = new SslPolicyConfig( backupPolicyName );
         properties.setProperty( OnlineBackupSettings.ssl_policy.name(), backupPolicyName );
         properties.setProperty( backupSslConfigGroup.base_directory.name(), backupPolicyLocation.getAbsolutePath() );
-        assertTrue( config.getParentFile().mkdirs() );
+        config.getParentFile().mkdirs();
 
         try ( FileWriter fileWriter = new FileWriter( config ) )
         {
             properties.store( fileWriter, StringUtils.EMPTY );
         }
+        Properties debugConfig = debugConfigFile( config );
+        System.out.println( "DEBUG: saved config file was " + debugConfig );
+    }
+
+    private static Properties debugConfigFile( File config ) throws IOException
+    {
+        Properties properties = new Properties();
+        properties.load( new FileReader( config ) );
+        return properties;
     }
 
     private static void installSsl( FileSystemAbstraction fs, File baseDir, int keyId ) throws IOException
@@ -581,13 +483,12 @@ class EncryptedBackupIT
 
     private static void backupDataMatchesDatabase( Cluster<?> cluster, File backupDir, String backupName )
     {
-        assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ),
-                OnlineBackupCommandCcIT.getBackupDbRepresentation( backupName, backupDir ) );
+        assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), OnlineBackupCommandCcIT.getBackupDbRepresentation( backupName, backupDir ) );
     }
 
     // ---------------------- New functionality
 
-    private void setupClusterWithEncryption( Cluster<?> cluster, boolean encryptedTx, boolean encryptedBackup ) throws IOException
+    private static void setupClusterWithEncryption( Cluster<?> cluster, boolean encryptedTx, boolean encryptedBackup ) throws IOException
     {
         allMembers( cluster ).forEach( member -> member.config().augment( OnlineBackupSettings.online_backup_enabled, "true" ) );
         if ( encryptedTx )
@@ -630,7 +531,7 @@ class EncryptedBackupIT
         return members;
     }
 
-    private void setupEntireClusterTrusted( Cluster<?> cluster, String policyName, int baseKey ) throws IOException
+    private static void setupEntireClusterTrusted( Cluster<?> cluster, String policyName, int baseKey ) throws IOException
     {
         for ( ClusterMember clusterMember : allMembers( cluster ) )
         {
@@ -658,7 +559,7 @@ class EncryptedBackupIT
         return clusterMember.serverId() + numberOfCores;
     }
 
-    private void prepareCoreToHaveKeys( ClusterMember member, int keyId, String policyName ) throws IOException
+    private static void prepareCoreToHaveKeys( ClusterMember member, int keyId, String policyName ) throws IOException
     {
         File homeDir = member.homeDir();
         File policyDir = createPolicyDirectories( fs, homeDir, policyName );
@@ -683,24 +584,26 @@ class EncryptedBackupIT
         copySslToPolicyTrustedDirectory( sourceHome, targetHome, policyName, policyName, targetFileName );
     }
 
-    private static void copySslToPolicyTrustedDirectory( File sourceHome, File targetHome, String sourcePolicyName, String targetPolicyName,
-            String targetFileName )
-            throws IOException
+    private static boolean copySslToPolicyTrustedDirectory( File sourceHome, File targetHome, String sourcePolicyName, String targetPolicyName,
+            String targetFileName ) throws IOException
     {
         Path sourcePublicKey = Paths.get( sourceHome.getPath(), "certificates", sourcePolicyName, publicKeyName );
         Path targetPublicKey = Paths.get( targetHome.getPath(), "certificates", targetPolicyName, "trusted", targetFileName );
+        System.out.printf( "Copying from %s to %s\n", sourcePublicKey, targetPublicKey );
         targetPublicKey.toFile().getParentFile().mkdirs();
         try
         {
             Files.copy( sourcePublicKey, targetPublicKey, StandardCopyOption.REPLACE_EXISTING );
+            return true;
         }
         catch ( NoSuchFileException e )
         {
-            throw new RuntimeException( format( "Certificate is missing: %s", sourcePublicKey ), e );
+            new RuntimeException( format( "Certificate is missing: %s", sourcePublicKey ), e ).printStackTrace( System.out );
         }
         catch ( RuntimeException e )
         {
-            throw new RuntimeException( format( "\nFileA: %s\nFileB: %s\n", sourcePublicKey, targetPublicKey ), e );
+            new RuntimeException( format( "\nFileA: %s\nFileB: %s\n", sourcePublicKey, targetPublicKey ), e ).printStackTrace( System.out );
         }
+        return false;
     }
 }
