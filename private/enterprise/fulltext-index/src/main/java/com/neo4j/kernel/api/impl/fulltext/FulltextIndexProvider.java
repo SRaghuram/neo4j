@@ -17,7 +17,6 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.neo4j.graphdb.TransactionTerminatedException;
-import org.neo4j.graphdb.TransientInterruptException;
 import org.neo4j.graphdb.index.fulltext.AnalyzerProvider;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
@@ -233,7 +232,6 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         if ( !kti.txState().indexDiffSetsBySchema( indexReference.schema() ).isAdded( (IndexDescriptor) indexReference ) )
         {
             // If the index was not created in this transaction, then wait for it to come online before querying.
-            long iteration = 0;
             while ( kti.schemaRead().indexGetState( indexReference ) == InternalIndexState.POPULATING )
             {
                 Optional<Status> terminationReason;
@@ -243,11 +241,11 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
                 }
                 try
                 {
-                    Thread.sleep( iteration++ < 100 ? 10 : 100 );
+                    Thread.sleep( 100 );
                 }
                 catch ( InterruptedException e )
                 {
-                    throw new TransientInterruptException( "Interrupted while waiting for the index to come online: " + indexReference, e );
+                    // Ignore interrupted exceptions.
                 }
             }
         }
