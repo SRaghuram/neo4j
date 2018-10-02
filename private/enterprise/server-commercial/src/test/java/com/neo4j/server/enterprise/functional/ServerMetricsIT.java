@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.metrics.MetricsSettings;
@@ -75,10 +76,22 @@ class ServerMetricsIT
         }
     }
 
-    private static void assertMetricsExists( File metricsPath, String metricsName ) throws IOException, InterruptedException
+
+    private static void assertMetricsExists( File metricsPath, String metricsName ) throws InterruptedException
     {
         File file = metricsCsv( metricsPath, metricsName );
-        long threadCount = readLongValue( file );
-        assertEventually( () -> threadCount, greaterThan( 0L ), 1, TimeUnit.MINUTES );
+        assertEventually( () -> threadCountReader( file ), greaterThan( 0L ), 1, TimeUnit.MINUTES );
+    }
+
+    private static Long threadCountReader( File file ) throws InterruptedException
+    {
+        try
+        {
+            return readLongValue( file );
+        }
+        catch ( IOException io )
+        {
+            throw new UncheckedIOException( io );
+        }
     }
 }
