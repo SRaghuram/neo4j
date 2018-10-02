@@ -76,7 +76,6 @@ class ServerMetricsIT
         }
     }
 
-
     private static void assertMetricsExists( File metricsPath, String metricsName ) throws InterruptedException
     {
         File file = metricsCsv( metricsPath, metricsName );
