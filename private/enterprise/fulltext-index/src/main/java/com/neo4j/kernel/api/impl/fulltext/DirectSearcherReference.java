@@ -10,12 +10,12 @@ import org.apache.lucene.search.IndexSearcher;
 import java.io.Closeable;
 import java.io.IOException;
 
-public class DirectSearcherReference implements SearcherReference
+class DirectSearcherReference implements SearcherReference
 {
     private final IndexSearcher searcher;
     private final Closeable resource;
 
-    public DirectSearcherReference( IndexSearcher searcher, Closeable resource )
+    DirectSearcherReference( IndexSearcher searcher, Closeable resource )
     {
         this.searcher = searcher;
         this.resource = resource;

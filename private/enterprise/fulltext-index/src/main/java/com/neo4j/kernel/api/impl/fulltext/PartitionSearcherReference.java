@@ -11,7 +11,7 @@ import java.io.IOException;
 
 import org.neo4j.kernel.api.impl.index.partition.PartitionSearcher;
 
-public class PartitionSearcherReference implements SearcherReference
+class PartitionSearcherReference implements SearcherReference
 {
     private final PartitionSearcher partitionSearcher;
 

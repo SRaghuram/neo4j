@@ -9,7 +9,7 @@ import org.apache.lucene.search.IndexSearcher;
 
 import java.io.IOException;
 
-public interface SearcherReference
+interface SearcherReference
 {
     void close() throws IOException;
     IndexSearcher getIndexSearcher();

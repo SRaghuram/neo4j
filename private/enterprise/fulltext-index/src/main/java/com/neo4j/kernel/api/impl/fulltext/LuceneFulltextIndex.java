@@ -7,14 +7,12 @@ package com.neo4j.kernel.api.impl.fulltext;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.store.Directory;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.function.Factory;
 import org.neo4j.internal.kernel.api.schema.SchemaUtil;
@@ -28,7 +26,6 @@ import org.neo4j.storageengine.api.EntityType;
 
 public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader> implements Closeable
 {
-    private final AtomicLong transactionCounter;
     private final Analyzer analyzer;
     private final String identifier;
     private final EntityType type;
@@ -47,7 +44,6 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
         this.properties = descriptor.propertyNames();
         this.propertyKeyTokenHolder = propertyKeyTokenHolder;
         this.writerConfigFactory = writerConfigFactory;
-        transactionCounter = new AtomicLong();
         File indexFolder = storage.getIndexFolder();
         transactionsFolder = new File( indexFolder.getParent(), indexFolder.getName() + ".tx" );
     }
@@ -76,11 +72,6 @@ public class LuceneFulltextIndex extends AbstractLuceneIndex<FulltextIndexReader
                ", properties=" + properties +
                ", descriptor=" + descriptor.userDescription( SchemaUtil.idTokenNameLookup ) +
                '}';
-    }
-
-    Directory createIndexTransactionDirectory() throws IOException
-    {
-        return indexStorage.openDirectory( new File( transactionsFolder, String.valueOf( transactionCounter.getAndIncrement() ) ) );
     }
 
     IndexWriterConfig createIndexWriterConfig()
