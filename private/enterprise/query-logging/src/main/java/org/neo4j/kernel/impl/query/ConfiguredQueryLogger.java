@@ -7,6 +7,7 @@ package org.neo4j.kernel.impl.query;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -89,7 +90,7 @@ class ConfiguredQueryLogger implements QueryLogger
         }
 
         StringBuilder result = new StringBuilder();
-        result.append( query.elapsedTimeMillis() ).append( " ms: " );
+        result.append( TimeUnit.MICROSECONDS.toMillis( query.elapsedTimeMicros() ) ).append( " ms: " );
         if ( logDetailedTime )
         {
             QueryLogFormatter.formatDetailedTime( result, query );
