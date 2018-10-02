@@ -14,18 +14,13 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.com.Response;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.CancellationRequest;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
@@ -37,13 +32,13 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.NullLogProvider;
 
 import static java.lang.Math.max;
 import static org.neo4j.helpers.Format.bytes;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
+import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 
 /**
  * Client-side store copier. Deals with issuing a request to a source of a database, which will
@@ -69,7 +64,6 @@ public class StoreCopyClient
 
     private final DatabaseLayout databaseLayout;
     private final Config config;
-    private final Iterable<KernelExtensionFactory<?>> kernelExtensions;
     private final Log log;
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
@@ -77,18 +71,17 @@ public class StoreCopyClient
     private final boolean forensics;
     private final FileMoveProvider fileMoveProvider;
 
-    public StoreCopyClient( DatabaseLayout databaseLayout, Config config, Iterable<KernelExtensionFactory<?>> kernelExtensions, LogProvider logProvider,
+    public StoreCopyClient( DatabaseLayout databaseLayout, Config config, LogProvider logProvider,
             FileSystemAbstraction fs, PageCache pageCache, StoreCopyClientMonitor monitor, boolean forensics )
     {
-        this( databaseLayout, config, kernelExtensions, logProvider, fs, pageCache, monitor, forensics, new FileMoveProvider( fs ) );
+        this( databaseLayout, config, logProvider, fs, pageCache, monitor, forensics, new FileMoveProvider( fs ) );
     }
 
-    public StoreCopyClient( DatabaseLayout databaseLayout, Config config, Iterable<KernelExtensionFactory<?>> kernelExtensions, LogProvider logProvider,
+    public StoreCopyClient( DatabaseLayout databaseLayout, Config config, LogProvider logProvider,
             FileSystemAbstraction fs, PageCache pageCache, StoreCopyClientMonitor monitor, boolean forensics, FileMoveProvider fileMoveProvider )
     {
         this.databaseLayout = databaseLayout;
         this.config = config;
-        this.kernelExtensions = kernelExtensions;
         this.log = logProvider.getLog( getClass() );
         this.fs = fs;
         this.pageCache = pageCache;
@@ -101,6 +94,7 @@ public class StoreCopyClient
     {
         // Create a temp directory (or clean if present)
         File tempDatabaseDirectory = databaseLayout.file( StoreUtil.TEMP_COPY_DIRECTORY_NAME );
+        DatabaseLayout tempDatabaseLayout = DatabaseLayout.of( tempDatabaseDirectory );
         try
         {
             cleanDirectory( tempDatabaseDirectory );
@@ -113,7 +107,7 @@ public class StoreCopyClient
                 monitor.finishReceivingStoreFiles();
                 // Update highest archived log id
                 // Write transactions that happened during the copy to the currently active logical log
-                writeTransactionsToActiveLogFile( DatabaseLayout.of( tempDatabaseDirectory ), response );
+                writeTransactionsToActiveLogFile( tempDatabaseLayout, response );
             }
             finally
             {
@@ -124,7 +118,7 @@ public class StoreCopyClient
             checkCancellation( cancellationRequest, tempDatabaseDirectory );
 
             // Run recovery, so that the transactions we just wrote into the active log will be applied.
-            recoverDatabase( tempDatabaseDirectory );
+            recoverDatabase( tempDatabaseLayout );
 
             // All is well, move the streamed files to the real store directory.
             // Should only be record store files.
@@ -149,18 +143,10 @@ public class StoreCopyClient
         moveAfterCopy.move( moveActionStream, tempStore, destinationMapper );
     }
 
-    private void recoverDatabase( File tempStore )
+    private void recoverDatabase( DatabaseLayout databaseLayout ) throws IOException
     {
         monitor.startRecoveringStore();
-        File storeDir = tempStore.getParentFile();
-        GraphDatabaseService graphDatabaseService = newTempDatabase( tempStore );
-        graphDatabaseService.shutdown();
-        // as soon as recovery will be extracted we will not gonna need this
-        File lockFile = StoreLayout.of( storeDir ).storeLockFile();
-        if ( lockFile.exists() )
-        {
-            FileUtils.deleteFile( lockFile );
-        }
+        performRecovery( fs, pageCache, config, databaseLayout );
         monitor.finishRecoveringStore();
     }
 
@@ -237,25 +223,6 @@ public class StoreCopyClient
         {
             life.shutdown();
         }
-    }
-
-    private GraphDatabaseService newTempDatabase( File tempStore )
-    {
-        ExternallyManagedPageCache.GraphDatabaseFactoryWithPageCacheFactory factory =
-                ExternallyManagedPageCache.graphDatabaseFactoryWithPageCache( pageCache );
-        return factory
-                .setKernelExtensions( kernelExtensions )
-                .setUserLogProvider( NullLogProvider.getInstance() )
-                .newEmbeddedDatabaseBuilder( tempStore.getAbsoluteFile() )
-                .setConfig( GraphDatabaseSettings.active_database, tempStore.getName() )
-                .setConfig( "dbms.backup.enabled", Settings.FALSE )
-                .setConfig( GraphDatabaseSettings.pagecache_warmup_enabled, Settings.FALSE )
-                .setConfig( GraphDatabaseSettings.logs_directory, tempStore.getAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.keep_logical_logs, Settings.TRUE )
-                .setConfig( GraphDatabaseSettings.logical_logs_location, tempStore.getAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.allow_upgrade, config.get( GraphDatabaseSettings.allow_upgrade ).toString() )
-                .setConfig( GraphDatabaseSettings.default_schema_provider, config.get( GraphDatabaseSettings.default_schema_provider) )
-                .newGraphDatabase();
     }
 
     private StoreWriter decorateWithProgressIndicator( final StoreWriter actual )

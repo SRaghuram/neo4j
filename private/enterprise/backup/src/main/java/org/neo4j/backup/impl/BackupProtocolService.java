@@ -11,9 +11,7 @@ import java.io.OutputStream;
 import java.net.ConnectException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -34,7 +32,6 @@ import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.CancellationRequest;
-import org.neo4j.helpers.Service;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -42,7 +39,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.store.MismatchingStoreIdException;
 import org.neo4j.kernel.impl.store.UnexpectedStoreVersionException;
@@ -126,7 +122,7 @@ public class BackupProtocolService implements AutoCloseable
             long timestamp = System.currentTimeMillis();
             long lastCommittedTx = -1;
             StoreCopyClient storeCopier = new StoreCopyClient( targetLayout, tuningConfiguration,
-                    loadKernelExtensions(), logProvider, fileSystem, pageCacheContianer.getPageCache(),
+                    logProvider, fileSystem, pageCacheContianer.getPageCache(),
                     monitors.newMonitor( StoreCopyClientMonitor.class, getClass().getName() ), forensics );
             FullBackupStoreCopyRequester storeCopyRequester =
                     new FullBackupStoreCopyRequester( sourceHostNameOrIp, sourcePort, timeout, forensics, monitors );
@@ -396,21 +392,11 @@ public class BackupProtocolService implements AutoCloseable
         debugLogFile.renameTo( to );
     }
 
-    private static List<KernelExtensionFactory<?>> loadKernelExtensions()
-    {
-        List<KernelExtensionFactory<?>> kernelExtensions = new ArrayList<>();
-        for ( KernelExtensionFactory<?> factory : Service.load( KernelExtensionFactory.class ) )
-        {
-            kernelExtensions.add( factory );
-        }
-        return kernelExtensions;
-    }
-
     private static void clearIdFiles( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout ) throws IOException
     {
-        for ( File file : fileSystem.listFiles( databaseLayout.databaseDirectory() ) )
+        for ( File file : databaseLayout.idFiles() )
         {
-            if ( !fileSystem.isDirectory( file ) && file.getName().endsWith( ".id" ) )
+            if ( fileSystem.fileExists( file ) )
             {
                 long highId = IdGeneratorImpl.readHighId( fileSystem, file );
                 fileSystem.deleteFile( file );

@@ -5,11 +5,12 @@
  */
 package org.neo4j.backup.impl;
 
+import org.apache.commons.lang3.mutable.MutableLong;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -56,25 +57,23 @@ class BackupCopyService
         }
     }
 
-    void clearIdFiles( Path backupLocation ) throws IOException
+    void clearIdFiles( DatabaseLayout databaseLayout ) throws IOException
     {
         IOException exception = null;
-        File targetDirectory = backupLocation.toFile();
-        File[] files = fs.listFiles( targetDirectory );
-        for ( File file : files )
+        for ( File file : databaseLayout.idFiles() )
         {
-            if ( !fs.isDirectory( file ) && file.getName().endsWith( ".id" ) )
+            try
             {
-                try
+                if ( fs.fileExists( file ) )
                 {
                     long highId = IdGeneratorImpl.readHighId( fs, file );
                     fs.deleteFile( file );
                     IdGeneratorImpl.createGenerator( fs, file, highId, true );
                 }
-                catch ( IOException e )
-                {
-                    exception = Exceptions.chain( exception, e );
-                }
+            }
+            catch ( IOException e )
+            {
+                exception = Exceptions.chain( exception, e );
             }
         }
         if ( exception != null )
@@ -110,9 +109,8 @@ class BackupCopyService
         if ( backupExists( DatabaseLayout.of( file.toFile() ) ) )
         {
             // find alternative name
-            final AtomicLong counter = new AtomicLong( 0 );
-            Consumer<Path> countNumberOfFilesProcessedForPotentialErrorMessage =
-                    generatedBackupFile -> counter.getAndIncrement();
+            final MutableLong counter = new MutableLong();
+            Consumer<Path> countNumberOfFilesProcessedForPotentialErrorMessage = generatedBackupFile -> counter.getAndIncrement();
 
             return availableAlternativeNames( file, pattern )
                     .peek( countNumberOfFilesProcessedForPotentialErrorMessage )
@@ -123,11 +121,11 @@ class BackupCopyService
         return file;
     }
 
-    private static Supplier<RuntimeException> noFreeBackupLocation( Path file, AtomicLong counter )
+    private static Supplier<RuntimeException> noFreeBackupLocation( Path file, MutableLong counter )
     {
-        return () -> new RuntimeException( String.format(
+        return () -> new RuntimeException( format(
                 "Unable to find a free backup location for the provided %s. %d possible locations were already taken.",
-                file, counter.get() ) );
+                file, counter.longValue() ) );
     }
 
     private static Stream<Path> availableAlternativeNames( Path originalBackupDirectory, String pattern )

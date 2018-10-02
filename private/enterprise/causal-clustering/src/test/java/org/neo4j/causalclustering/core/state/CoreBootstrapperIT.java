@@ -68,7 +68,7 @@ public class CoreBootstrapperIT
         PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
         DatabaseLayout databaseLayout = DatabaseLayout.of( classicNeo4jStore );
         CoreBootstrapper bootstrapper =
-                new CoreBootstrapper( databaseLayout, pageCache, fileSystem, Config.defaults(), NullLogProvider.getInstance(), new Monitors() );
+                new CoreBootstrapper( databaseLayout, pageCache, fileSystem, Config.defaults(), NullLogProvider.getInstance() );
         bootstrapAndVerify( nodeCount, fileSystem, databaseLayout, pageCache, Config.defaults(), bootstrapper );
     }
 
@@ -89,7 +89,7 @@ public class CoreBootstrapperIT
         PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
         DatabaseLayout databaseLayout = DatabaseLayout.of( classicNeo4jStore );
         Config config = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseLayout, pageCache, fileSystem, config, NullLogProvider.getInstance(), new Monitors() );
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseLayout, pageCache, fileSystem, config, NullLogProvider.getInstance() );
 
         bootstrapAndVerify( nodeCount, fileSystem, databaseLayout, pageCache, config, bootstrapper );
     }
@@ -106,8 +106,7 @@ public class CoreBootstrapperIT
 
         PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
         DatabaseLayout databaseLayout = DatabaseLayout.of( storeInNeedOfRecovery );
-        CoreBootstrapper bootstrapper =
-                new CoreBootstrapper( databaseLayout, pageCache, fileSystem, Config.defaults(), assertableLogProvider, new Monitors() );
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseLayout, pageCache, fileSystem, Config.defaults(), assertableLogProvider );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
@@ -144,7 +143,7 @@ public class CoreBootstrapperIT
         PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
         DatabaseLayout databaseLayout = DatabaseLayout.of( storeInNeedOfRecovery );
         Config config = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
-        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseLayout, pageCache, fileSystem, config, assertableLogProvider, new Monitors() );
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseLayout, pageCache, fileSystem, config, assertableLogProvider );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );

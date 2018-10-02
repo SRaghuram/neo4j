@@ -62,7 +62,7 @@ public class ClusteringModule
         dependencies.satisfyDependency( topologyService ); // for tests
 
         CoreBootstrapper coreBootstrapper =
-                new CoreBootstrapper( databaseLayout, platformModule.pageCache, fileSystem, config, logProvider, platformModule.monitors );
+                new CoreBootstrapper( databaseLayout, platformModule.pageCache, fileSystem, config, logProvider );
 
         SimpleStorage<ClusterId> clusterIdStorage =
                 new SimpleFileStorage<>( fileSystem, clusterStateDirectory, CLUSTER_ID_NAME, new ClusterId.Marshal(),

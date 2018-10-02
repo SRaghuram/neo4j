@@ -53,7 +53,6 @@ class BackupStrategyCoordinatorFactory
         FileSystemAbstraction fs = outsideWorld.fileSystem();
         BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ) );
         ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( outsideWorld.errorStream() );
-        BackupRecoveryService recoveryService = new BackupRecoveryService();
         long timeout = onlineBackupContext.getRequiredArguments().getTimeout();
         Config config = onlineBackupContext.getConfig();
 
@@ -61,8 +60,8 @@ class BackupStrategyCoordinatorFactory
         BackupStrategy ccStrategy = new CausalClusteringBackupStrategy( backupDelegator, addressResolver, logProvider, storeFiles );
         BackupStrategy haStrategy = new HaBackupStrategy( backupProtocolService, addressResolver, logProvider, timeout );
 
-        BackupStrategyWrapper ccStrategyWrapper = wrap( ccStrategy, copyService, pageCache, config, recoveryService );
-        BackupStrategyWrapper haStrategyWrapper = wrap( haStrategy, copyService, pageCache, config, recoveryService );
+        BackupStrategyWrapper ccStrategyWrapper = wrap( ccStrategy, copyService, pageCache, config, fs );
+        BackupStrategyWrapper haStrategyWrapper = wrap( haStrategy, copyService, pageCache, config, fs );
         StrategyResolverService strategyResolverService = new StrategyResolverService( haStrategyWrapper, ccStrategyWrapper );
         List<BackupStrategyWrapper> strategies =
                 strategyResolverService.getStrategies( onlineBackupContext.getRequiredArguments().getSelectedBackupProtocol() );
@@ -71,8 +70,8 @@ class BackupStrategyCoordinatorFactory
     }
 
     private BackupStrategyWrapper wrap( BackupStrategy strategy, BackupCopyService copyService, PageCache pageCache,
-                                        Config config, BackupRecoveryService recoveryService )
+                                        Config config, FileSystemAbstraction fs )
     {
-        return new BackupStrategyWrapper( strategy, copyService, pageCache, config, recoveryService, logProvider ) ;
+        return new BackupStrategyWrapper( strategy, copyService, fs, pageCache, config, logProvider ) ;
     }
 }

@@ -226,8 +226,8 @@ public class CoreServerModule
                 new StoreCopyClient( catchUpClient, platformModule.monitors, logProvider, storeCopyBackoffStrategy ),
                 new TxPullClient( catchUpClient, platformModule.monitors ), new TransactionLogCatchUpFactory(), config, platformModule.monitors );
 
-        CopiedStoreRecovery copiedStoreRecovery = platformModule.life.add(
-                new CopiedStoreRecovery( platformModule.config, platformModule.kernelExtensionFactories, platformModule.pageCache ) );
+        CopiedStoreRecovery copiedStoreRecovery =
+                platformModule.life.add( new CopiedStoreRecovery( platformModule.config, platformModule.pageCache, platformModule.fileSystem ) );
 
         StoreCopyProcess storeCopyProcess = new StoreCopyProcess( platformModule.fileSystem, platformModule.pageCache, localDatabase,
                 copiedStoreRecovery, remoteStore, logProvider );

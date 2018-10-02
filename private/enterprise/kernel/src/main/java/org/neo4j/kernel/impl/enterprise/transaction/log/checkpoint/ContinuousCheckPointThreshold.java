@@ -5,38 +5,14 @@
  */
 package org.neo4j.kernel.impl.enterprise.transaction.log.checkpoint;
 
-import org.neo4j.kernel.impl.transaction.log.checkpoint.AbstractCheckPointThreshold;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.ReachedThreshold;
 
-class ContinuousCheckPointThreshold extends AbstractCheckPointThreshold
+class ContinuousCheckPointThreshold extends ReachedThreshold
 {
-    private volatile long nextTransactionIdTarget;
+    public static final ContinuousCheckPointThreshold INSTANCE = new ContinuousCheckPointThreshold();
 
-    ContinuousCheckPointThreshold()
+    private ContinuousCheckPointThreshold()
     {
         super( "continuous threshold" );
-    }
-
-    @Override
-    protected boolean thresholdReached( long lastCommittedTransactionId )
-    {
-        return lastCommittedTransactionId >= nextTransactionIdTarget;
-    }
-
-    @Override
-    public void initialize( long transactionId )
-    {
-        checkPointHappened( transactionId );
-    }
-
-    @Override
-    public void checkPointHappened( long transactionId )
-    {
-        nextTransactionIdTarget = transactionId + 1;
-    }
-
-    @Override
-    public long checkFrequencyMillis()
-    {
-        return 100;
     }
 }

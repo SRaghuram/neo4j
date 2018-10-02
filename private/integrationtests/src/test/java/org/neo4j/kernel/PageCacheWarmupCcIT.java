@@ -85,7 +85,8 @@ public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
         member.start();
         warmupLatch.await();
         // Check that we warmup up all right:
-        assertThat( pagesLoadedInWarmup.get(), greaterThanOrEqualTo( pagesInMemory ) );
+        // we need + 1 here because of count store file that was touched and rotated on recovery
+        assertThat( pagesLoadedInWarmup.get() + 1, greaterThanOrEqualTo( pagesInMemory ) );
     }
 
     private static BinaryLatch injectWarmupLatch( ClusterMember member, AtomicLong pagesLoadedInWarmup )

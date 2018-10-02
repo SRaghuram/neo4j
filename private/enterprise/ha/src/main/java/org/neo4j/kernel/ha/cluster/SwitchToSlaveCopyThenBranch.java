@@ -20,7 +20,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.ha.BranchedDataPolicy;
 import org.neo4j.kernel.ha.DelegateInvocationHandler;
 import org.neo4j.kernel.ha.HaSettings;
@@ -53,7 +52,7 @@ public class SwitchToSlaveCopyThenBranch extends SwitchToSlave
     public SwitchToSlaveCopyThenBranch( DatabaseLayout databaseLayout, LogService logService, FileSystemAbstraction fileSystemAbstraction, Config config,
             HaIdGeneratorFactory idGeneratorFactory, DelegateInvocationHandler<Master> masterDelegateHandler,
             ClusterMemberAvailability clusterMemberAvailability, RequestContextFactory requestContextFactory, PullerFactory pullerFactory,
-            Iterable<KernelExtensionFactory<?>> kernelExtensions, MasterClientResolver masterClientResolver, Monitor monitor,
+            MasterClientResolver masterClientResolver, Monitor monitor,
             StoreCopyClientMonitor storeCopyMonitor, Supplier<NeoStoreDataSource> neoDataSourceSupplier,
             Supplier<TransactionIdStore> transactionIdStoreSupplier, Function<Slave,SlaveServer> slaveServerFactory, UpdatePuller updatePuller,
             PageCache pageCache, Monitors monitors, Supplier<DatabaseTransactionStats> transactionStatsSupplier )
@@ -68,7 +67,7 @@ public class SwitchToSlaveCopyThenBranch extends SwitchToSlave
                 pullerFactory,
                 masterClientResolver,
                 monitor,
-                new StoreCopyClient( databaseLayout, config, kernelExtensions, logService.getUserLogProvider(),
+                new StoreCopyClient( databaseLayout, config, logService.getUserLogProvider(),
                         fileSystemAbstraction, pageCache, storeCopyMonitor, false ),
                 neoDataSourceSupplier,
                 transactionIdStoreSupplier,

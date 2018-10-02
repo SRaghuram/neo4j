@@ -31,7 +31,6 @@ import org.neo4j.com.Response;
 import org.neo4j.com.storecopy.StoreCopyClientMonitor;
 import org.neo4j.function.Suppliers;
 import org.neo4j.graphdb.DependencyResolver;
-import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -547,7 +546,7 @@ public class HighAvailabilityMemberStateMachineTest
                 handler,
                 mock( ClusterMemberAvailability.class ), mock( RequestContextFactory.class ),
                 mock( PullerFactory.class, RETURNS_MOCKS ),
-                Iterables.empty(), masterClientResolver,
+                masterClientResolver,
                 monitor,
                 new StoreCopyClientMonitor.Adapter(),
                 Suppliers.singleton( dataSource ),

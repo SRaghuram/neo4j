@@ -19,11 +19,14 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.scheduler.ThreadPoolJobScheduler;
 
 import static org.neo4j.consistency.ConsistencyCheckTool.runConsistencyCheckTool;
-import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.io.NullOutputStream.NULL_OUTPUT_STREAM;
 
-class ConsistencyHelper
+final class ConsistencyHelper
 {
+    private ConsistencyHelper()
+    {
+    }
+
     static void assertStoreConsistent( FileSystemAbstraction fs, File storeDir ) throws Exception
     {
         File parent = storeDir.getParentFile();
@@ -33,7 +36,7 @@ class ConsistencyHelper
         {
             fs.copyRecursively( storeDir, tempStore.storeDir() );
 
-            new CopiedStoreRecovery( Config.defaults(), newDependencies().kernelExtensions(), pageCache )
+            new CopiedStoreRecovery( Config.defaults(), pageCache, fs )
                     .recoverCopiedStore( tempStore.databaseLayout() );
 
             ConsistencyCheckService.Result result = runConsistencyCheckTool(

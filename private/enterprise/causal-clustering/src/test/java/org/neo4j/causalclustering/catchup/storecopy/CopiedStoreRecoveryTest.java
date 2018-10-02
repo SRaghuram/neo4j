@@ -5,39 +5,28 @@
  */
 package org.neo4j.causalclustering.catchup.storecopy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-public class CopiedStoreRecoveryTest
+class CopiedStoreRecoveryTest
 {
     @Test
-    public void shouldThrowIfAlreadyShutdown()
+    void shouldThrowIfAlreadyShutdown()
     {
-        // Given
-        CopiedStoreRecovery copiedStoreRecovery =
-                new CopiedStoreRecovery( Config.defaults(), Iterables.empty(), mock( PageCache.class ) );
+        CopiedStoreRecovery copiedStoreRecovery = new CopiedStoreRecovery( Config.defaults(), mock( PageCache.class ), new EphemeralFileSystemAbstraction() );
         copiedStoreRecovery.shutdown();
 
-        try
-        {
-            // when
-            copiedStoreRecovery.recoverCopiedStore( DatabaseLayout.of( new File( "nowhere" ) ) );
-            fail( "should have thrown" );
-        }
-        catch ( DatabaseShutdownException ex )
-        {
-            // then
-            assertEquals( "Abort store-copied store recovery due to database shutdown", ex.getMessage() );
-        }
+        Exception exception = assertThrows( Exception.class, () -> copiedStoreRecovery.recoverCopiedStore( DatabaseLayout.of( new File( "nowhere" ) ) ) );
+        assertEquals( "Abort store-copied store recovery due to database shutdown", exception.getMessage() );
     }
 }

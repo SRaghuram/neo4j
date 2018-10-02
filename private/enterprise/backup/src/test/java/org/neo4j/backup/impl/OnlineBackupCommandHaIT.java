@@ -63,7 +63,7 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -245,7 +245,7 @@ public class OnlineBackupCommandHaIT
         {
             LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( new File( backupDir, name ), fileSystem ).build();
             assertTrue( logFiles.versionExists( 0 ) );
-            assertThat( logFiles.getLogFileForVersion( 0 ).length(), greaterThan( 50L ) );
+            assertThat( logFiles.getLogFileForVersion( 0 ).length(), equalTo( 34L ) );
         }
     }
 

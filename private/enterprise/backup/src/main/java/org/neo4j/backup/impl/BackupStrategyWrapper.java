@@ -8,6 +8,7 @@ package org.neo4j.backup.impl;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
@@ -15,6 +16,8 @@ import org.neo4j.kernel.impl.util.OptionalHostnamePort;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 
 /**
  * Individual backup strategies can perform incremental backups and full backups. The logic of how and when to perform full/incremental is identical.
@@ -24,20 +27,20 @@ class BackupStrategyWrapper
 {
     private final BackupStrategy backupStrategy;
     private final BackupCopyService backupCopyService;
-    private final BackupRecoveryService backupRecoveryService;
     private final Log log;
 
+    private final FileSystemAbstraction fs;
     private final PageCache pageCache;
     private final Config config;
 
-    BackupStrategyWrapper( BackupStrategy backupStrategy, BackupCopyService backupCopyService, PageCache pageCache, Config config,
-            BackupRecoveryService backupRecoveryService, LogProvider logProvider )
+    BackupStrategyWrapper( BackupStrategy backupStrategy, BackupCopyService backupCopyService, FileSystemAbstraction fs, PageCache pageCache, Config config,
+            LogProvider logProvider )
     {
         this.backupStrategy = backupStrategy;
         this.backupCopyService = backupCopyService;
+        this.fs = fs;
         this.pageCache = pageCache;
         this.config = config;
-        this.backupRecoveryService = backupRecoveryService;
         this.log = logProvider.getLog( BackupStrategyWrapper.class );
     }
 
@@ -65,12 +68,13 @@ class BackupStrategyWrapper
         log.debug( "User specified address is %s:%s", userSpecifiedAddress.getHostname().toString(), userSpecifiedAddress.getPort().toString() );
         Config config = onlineBackupContext.getConfig();
 
-        boolean previousBackupExists = backupCopyService.backupExists( DatabaseLayout.of( backupLocation.toFile() ) );
+        DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation.toFile() );
+        boolean previousBackupExists = backupCopyService.backupExists( backupLayout );
         if ( previousBackupExists )
         {
             log.info( "Previous backup found, trying incremental backup." );
             Fallible<BackupStageOutcome> state =
-                    backupStrategy.performIncrementalBackup( DatabaseLayout.of( backupLocation.toFile() ), config, userSpecifiedAddress );
+                    backupStrategy.performIncrementalBackup( backupLayout, config, userSpecifiedAddress );
             boolean fullBackupWontWork = BackupStageOutcome.WRONG_PROTOCOL.equals( state.getState() );
             boolean incrementalWasSuccessful = BackupStageOutcome.SUCCESS.equals( state.getState() );
             if ( incrementalWasSuccessful )
@@ -80,7 +84,7 @@ class BackupStrategyWrapper
 
             if ( fullBackupWontWork || incrementalWasSuccessful )
             {
-                clearIdFiles( backupLocation );
+                clearIdFiles( backupLayout );
                 return describeOutcome( state );
             }
             if ( !onlineBackupContext.getRequiredArguments().isFallbackToFull() )
@@ -99,11 +103,11 @@ class BackupStrategyWrapper
         return new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, null );
     }
 
-    private void clearIdFiles( Path backupLocation )
+    private void clearIdFiles( DatabaseLayout databaseLayout )
     {
         try
         {
-            backupCopyService.clearIdFiles( backupLocation );
+            backupCopyService.clearIdFiles( databaseLayout );
         }
         catch ( IOException e )
         {
@@ -128,28 +132,34 @@ class BackupStrategyWrapper
         Path temporaryFullBackupLocation = backupCopyService.findAnAvailableLocationForNewFullBackup( userSpecifiedBackupLocation );
 
         OptionalHostnamePort address = onlineBackupContext.getRequiredArguments().getAddress();
-        Fallible<BackupStageOutcome> state = backupStrategy.performFullBackup( DatabaseLayout.of( temporaryFullBackupLocation.toFile() ), config, address );
+        DatabaseLayout backupLayout = DatabaseLayout.of( temporaryFullBackupLocation.toFile() );
+        Fallible<BackupStageOutcome> state = backupStrategy.performFullBackup( backupLayout, config, address );
 
         // NOTE temporaryFullBackupLocation can be equal to desired
         boolean backupWasMadeToATemporaryLocation = !userSpecifiedBackupLocation.equals( temporaryFullBackupLocation );
 
         if ( BackupStageOutcome.SUCCESS.equals( state.getState() ) )
         {
-            backupRecoveryService.recoverWithDatabase( temporaryFullBackupLocation, pageCache, config );
-            if ( backupWasMadeToATemporaryLocation )
+            try
             {
-                try
+                recoverBackup( backupLayout );
+                if ( backupWasMadeToATemporaryLocation )
                 {
                     renameTemporaryBackupToExpected( temporaryFullBackupLocation, userSpecifiedBackupLocation );
                 }
-                catch ( IOException e )
-                {
-                    return new Fallible<>( BackupStageOutcome.UNRECOVERABLE_FAILURE, e );
-                }
+                clearIdFiles( backupLayout );
             }
-            clearIdFiles( userSpecifiedBackupLocation );
+            catch ( IOException e )
+            {
+                return new Fallible<>( BackupStageOutcome.UNRECOVERABLE_FAILURE, e );
+            }
         }
         return state;
+    }
+
+    void recoverBackup( DatabaseLayout backupLayout ) throws IOException
+    {
+        performRecovery( fs, pageCache, config, backupLayout );
     }
 
     private void renameTemporaryBackupToExpected( Path temporaryFullBackupLocation, Path userSpecifiedBackupLocation ) throws IOException
@@ -162,22 +172,18 @@ class BackupStrategyWrapper
     private static Fallible<BackupStrategyOutcome> describeOutcome( Fallible<BackupStageOutcome> strategyStageOutcome )
     {
         BackupStageOutcome stageOutcome = strategyStageOutcome.getState();
-        if ( stageOutcome == BackupStageOutcome.SUCCESS )
+        switch ( stageOutcome )
         {
+        case SUCCESS:
             return new Fallible<>( BackupStrategyOutcome.SUCCESS, null );
-        }
-        if ( stageOutcome == BackupStageOutcome.WRONG_PROTOCOL )
-        {
+        case WRONG_PROTOCOL:
             return new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, strategyStageOutcome.getCause().orElse( null ) );
-        }
-        if ( stageOutcome == BackupStageOutcome.FAILURE )
-        {
+        case FAILURE:
             return new Fallible<>( BackupStrategyOutcome.CORRECT_STRATEGY_FAILED, strategyStageOutcome.getCause().orElse( null ) );
-        }
-        if ( stageOutcome == BackupStageOutcome.UNRECOVERABLE_FAILURE )
-        {
+        case UNRECOVERABLE_FAILURE:
             return new Fallible<>( BackupStrategyOutcome.ABSOLUTE_FAILURE, strategyStageOutcome.getCause().orElse( null ) );
+        default:
+            throw new RuntimeException( "Not all enums covered: " + stageOutcome );
         }
-        throw new RuntimeException( "Not all enums covered: " + stageOutcome );
     }
 }

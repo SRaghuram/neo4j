@@ -5,38 +5,35 @@
  */
 package org.neo4j.causalclustering.catchup.storecopy;
 
-import java.io.File;
+import java.io.IOException;
 
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Exceptions;
-import org.neo4j.io.fs.FileUtils;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationException;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.neo4j.com.storecopy.ExternallyManagedPageCache.graphDatabaseFactoryWithPageCache;
+import static java.lang.String.format;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.isStoreAndConfigFormatsCompatible;
+import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 
 public class CopiedStoreRecovery extends LifecycleAdapter
 {
     private final Config config;
-    private final Iterable<KernelExtensionFactory<?>> kernelExtensions;
     private final PageCache pageCache;
+    private final FileSystemAbstraction fs;
 
     private boolean shutdown;
 
-    public CopiedStoreRecovery( Config config, Iterable<KernelExtensionFactory<?>> kernelExtensions,
-                                PageCache pageCache )
+    public CopiedStoreRecovery( Config config, PageCache pageCache, FileSystemAbstraction fs )
     {
         this.config = config;
-        this.kernelExtensions = kernelExtensions;
         this.pageCache = pageCache;
+        this.fs = fs;
     }
 
     @Override
@@ -45,7 +42,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         shutdown = true;
     }
 
-    public synchronized void recoverCopiedStore( DatabaseLayout databaseLayout ) throws DatabaseShutdownException
+    public synchronized void recoverCopiedStore( DatabaseLayout databaseLayout ) throws DatabaseShutdownException, IOException
     {
         if ( shutdown )
         {
@@ -54,13 +51,10 @@ public class CopiedStoreRecovery extends LifecycleAdapter
 
         try
         {
-            GraphDatabaseService graphDatabaseService = newTempDatabase( databaseLayout.databaseDirectory() );
-            graphDatabaseService.shutdown();
-            // as soon as recovery will be extracted we will not gonna need this
-            File lockFile = databaseLayout.getStoreLayout().storeLockFile();
-            if ( lockFile.exists() )
+            performRecovery( fs, pageCache, config, databaseLayout );
+            if ( !isStoreAndConfigFormatsCompatible( config, databaseLayout, fs, pageCache, NullLogProvider.getInstance() ) )
             {
-                FileUtils.deleteFile( lockFile );
+                throw new RuntimeException( failedToStartMessage() );
             }
         }
         catch ( Exception e )
@@ -79,26 +73,10 @@ public class CopiedStoreRecovery extends LifecycleAdapter
 
     private String failedToStartMessage()
     {
-        String recordFormat = config.get( GraphDatabaseSettings.record_format );
+        String recordFormat = config.get( record_format );
 
-        return String.format( "Failed to start database with copied store. This may be because the core servers and " +
+        return format( "Failed to start database with copied store. This may be because the core servers and " +
                         "read replicas have a different record format. On this machine: `%s=%s`. Check the equivalent" +
-                        " value on the core server.",
-                GraphDatabaseSettings.record_format.name(), recordFormat );
-    }
-
-    private GraphDatabaseService newTempDatabase( File tempStore )
-    {
-        return graphDatabaseFactoryWithPageCache( pageCache )
-                .setKernelExtensions( kernelExtensions )
-                .setUserLogProvider( NullLogProvider.getInstance() )
-                .newEmbeddedDatabaseBuilder( tempStore )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .setConfig( GraphDatabaseSettings.pagecache_warmup_enabled, Settings.FALSE )
-                .setConfig( GraphDatabaseSettings.keep_logical_logs, Settings.FALSE )
-                .setConfig( GraphDatabaseSettings.allow_upgrade,
-                        config.get( GraphDatabaseSettings.allow_upgrade ).toString() )
-                .setConfig( GraphDatabaseSettings.record_format, config.get( GraphDatabaseSettings.record_format ) )
-                .newGraphDatabase();
+                        " value on the core server.", record_format.name(), recordFormat );
     }
 }

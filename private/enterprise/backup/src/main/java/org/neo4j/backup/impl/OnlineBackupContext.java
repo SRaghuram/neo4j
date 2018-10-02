@@ -23,7 +23,7 @@ class OnlineBackupContext
         this.consistencyFlags = consistencyFlags;
     }
 
-    public OnlineBackupRequiredArguments getRequiredArguments()
+    OnlineBackupRequiredArguments getRequiredArguments()
     {
         return requiredArguments;
     }
@@ -33,12 +33,12 @@ class OnlineBackupContext
         return config;
     }
 
-    public ConsistencyFlags getConsistencyFlags()
+    ConsistencyFlags getConsistencyFlags()
     {
         return consistencyFlags;
     }
 
-    public Path getResolvedLocationFromName()
+    Path getResolvedLocationFromName()
     {
         return requiredArguments.getResolvedLocationFromName();
     }

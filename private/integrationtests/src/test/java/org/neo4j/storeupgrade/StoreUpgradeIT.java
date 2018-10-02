@@ -317,11 +317,12 @@ public class StoreUpgradeIT
             File databaseDirectory = store.prepareDirectory( testDir.databaseDir() );
 
             // remove id files
-            File[] idFiles = databaseDirectory.listFiles( ( dir1, name ) -> name.endsWith( ".id" ) );
-
-            for ( File idFile : idFiles )
+            for ( File idFile : DatabaseLayout.of( databaseDirectory ).idFiles() )
             {
-                assertTrue( idFile.delete() );
+                if ( idFile.exists() )
+                {
+                    assertTrue( idFile.delete() );
+                }
             }
 
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
