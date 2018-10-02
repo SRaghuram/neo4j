@@ -16,8 +16,8 @@ public class CommercialDiscoveryServiceFactorySelector extends DiscoveryServiceF
     {
         switch ( middleware )
         {
-        case hazelcast: return new SslHazelcastDiscoveryServiceFactory();
-        case akka: return new CommercialAkkaDiscoveryServiceFactory();
+        case HAZELCAST: return new SslHazelcastDiscoveryServiceFactory();
+        case AKKA: return new CommercialAkkaDiscoveryServiceFactory();
         default: throw new IllegalArgumentException( "Should have matched a discovery service factory to " + middleware );
         }
     }
