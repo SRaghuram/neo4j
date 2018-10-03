@@ -74,6 +74,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -134,30 +135,42 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
         db.execute( format( NODE_CREATE, "test-index", array( "Label1", "Label2" ), array( "prop1", "prop2" ) ) ).close();
-        Result result = db.execute( DB_INDEXES );
-        assertTrue( result.hasNext() );
-        Map<String,Object> row = result.next();
-        assertEquals( "INDEX ON NODE:Label1, Label2(prop1, prop2)", row.get( "description" ) );
-        assertEquals( asList( "Label1", "Label2" ), row.get( "tokenNames" ) );
-        assertEquals( asList( "prop1", "prop2" ), row.get( "properties" ) );
-        assertEquals( "test-index", row.get( "indexName" ) );
-        assertFalse( result.hasNext() );
-        result.close();
-        awaitIndexesOnline();
-        result = db.execute( DB_INDEXES );
-        assertTrue( result.hasNext() );
-        assertEquals( "ONLINE", result.next().get( "state" ) );
-        assertFalse( result.hasNext() );
-        result.close();
+        Result result;
+        Map<String,Object> row;
+        try ( Transaction tx = db.beginTx() )
+        {
+            result = db.execute( DB_INDEXES );
+            assertTrue( result.hasNext() );
+            row = result.next();
+            assertEquals( "INDEX ON NODE:Label1, Label2(prop1, prop2)", row.get( "description" ) );
+            assertEquals( asList( "Label1", "Label2" ), row.get( "tokenNames" ) );
+            assertEquals( asList( "prop1", "prop2" ), row.get( "properties" ) );
+            assertEquals( "test-index", row.get( "indexName" ) );
+            assertFalse( result.hasNext() );
+            result.close();
+            awaitIndexesOnline();
+            result = db.execute( DB_INDEXES );
+            assertTrue( result.hasNext() );
+            assertEquals( "ONLINE", result.next().get( "state" ) );
+            assertFalse( result.hasNext() );
+            result.close();
+            assertNotNull( db.schema().getIndexByName( "test-index" ) );
+            tx.success();
+        }
         db.shutdown();
         db = createDatabase();
-        result = db.execute( DB_INDEXES );
-        assertTrue( result.hasNext() );
-        row = result.next();
-        assertEquals( "INDEX ON NODE:Label1, Label2(prop1, prop2)", row.get( "description" ) );
-        assertEquals( "ONLINE", row.get( "state" ) );
-        assertFalse( result.hasNext() );
-        assertFalse( result.hasNext() );
+        try ( Transaction tx = db.beginTx() )
+        {
+            result = db.execute( DB_INDEXES );
+            assertTrue( result.hasNext() );
+            row = result.next();
+            assertEquals( "INDEX ON NODE:Label1, Label2(prop1, prop2)", row.get( "description" ) );
+            assertEquals( "ONLINE", row.get( "state" ) );
+            assertFalse( result.hasNext() );
+            assertFalse( result.hasNext() );
+            assertNotNull( db.schema().getIndexByName( "test-index" ) );
+            tx.success();
+        }
     }
 
     @Test
@@ -165,30 +178,42 @@ public class FulltextProceduresTest
     {
         db = createDatabase();
         db.execute( format( RELATIONSHIP_CREATE, "test-index", array( "Reltype1", "Reltype2" ), array( "prop1", "prop2" ) ) ).close();
-        Result result = db.execute( DB_INDEXES );
-        assertTrue( result.hasNext() );
-        Map<String,Object> row = result.next();
-        assertEquals( "INDEX ON RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", row.get( "description" ) );
-        assertEquals( asList( "Reltype1", "Reltype2" ), row.get( "tokenNames" ) );
-        assertEquals( asList( "prop1", "prop2" ), row.get( "properties" ) );
-        assertEquals( "test-index", row.get( "indexName" ) );
-        assertFalse( result.hasNext() );
-        result.close();
-        awaitIndexesOnline();
-        result = db.execute( DB_INDEXES );
-        assertTrue( result.hasNext() );
-        assertEquals( "ONLINE", result.next().get( "state" ) );
-        assertFalse( result.hasNext() );
-        result.close();
+        Result result;
+        Map<String,Object> row;
+        try ( Transaction tx = db.beginTx() )
+        {
+            result = db.execute( DB_INDEXES );
+            assertTrue( result.hasNext() );
+            row = result.next();
+            assertEquals( "INDEX ON RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", row.get( "description" ) );
+            assertEquals( asList( "Reltype1", "Reltype2" ), row.get( "tokenNames" ) );
+            assertEquals( asList( "prop1", "prop2" ), row.get( "properties" ) );
+            assertEquals( "test-index", row.get( "indexName" ) );
+            assertFalse( result.hasNext() );
+            result.close();
+            awaitIndexesOnline();
+            result = db.execute( DB_INDEXES );
+            assertTrue( result.hasNext() );
+            assertEquals( "ONLINE", result.next().get( "state" ) );
+            assertFalse( result.hasNext() );
+            result.close();
+            assertNotNull( db.schema().getIndexByName( "test-index" ) );
+            tx.success();
+        }
         db.shutdown();
         db = createDatabase();
-        result = db.execute( DB_INDEXES );
-        assertTrue( result.hasNext() );
-        row = result.next();
-        assertEquals( "INDEX ON RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", row.get( "description" ) );
-        assertEquals( "ONLINE", row.get( "state" ) );
-        assertFalse( result.hasNext() );
-        assertFalse( result.hasNext() );
+        try ( Transaction tx = db.beginTx() )
+        {
+            result = db.execute( DB_INDEXES );
+            assertTrue( result.hasNext() );
+            row = result.next();
+            assertEquals( "INDEX ON RELATIONSHIP:Reltype1, Reltype2(prop1, prop2)", row.get( "description" ) );
+            assertEquals( "ONLINE", row.get( "state" ) );
+            assertFalse( result.hasNext() );
+            assertFalse( result.hasNext() );
+            assertNotNull( db.schema().getIndexByName( "test-index" ) );
+            tx.success();
+        }
     }
 
     @Test

@@ -9,14 +9,12 @@ import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.neo4j.graphdb.TransactionTerminatedException;
 import org.neo4j.graphdb.index.fulltext.AnalyzerProvider;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.InternalIndexState;
@@ -25,7 +23,6 @@ import org.neo4j.internal.kernel.api.schema.IndexProviderDescriptor;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndexProvider;
 import org.neo4j.kernel.api.impl.index.DatabaseIndex;
 import org.neo4j.kernel.api.impl.index.storage.DirectoryFactory;
@@ -46,7 +43,6 @@ import org.neo4j.kernel.impl.newapi.AllStoreHolder;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.EntityType;
-import org.neo4j.storageengine.api.schema.IndexDescriptor;
 import org.neo4j.storageengine.api.schema.IndexReader;
 import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 
@@ -210,7 +206,6 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
         KernelTransactionImplementation kti = (KernelTransactionImplementation) ktx;
         AllStoreHolder allStoreHolder = (AllStoreHolder) kti.dataRead();
         IndexReference indexReference = kti.schemaRead().indexGetForName( indexName );
-        awaitIndexOnline( kti, indexReference );
         FulltextIndexReader fulltextIndexReader;
         if ( kti.hasTxStateWithChanges() && !((FulltextSchemaDescriptor) indexReference.schema()).isEventuallyConsistent() )
         {
@@ -223,34 +218,6 @@ class FulltextIndexProvider extends AbstractLuceneIndexProvider implements Fullt
             fulltextIndexReader = (FulltextIndexReader) indexReader;
         }
         return fulltextIndexReader.query( queryString );
-    }
-
-    private void awaitIndexOnline( KernelTransactionImplementation kti, IndexReference indexReference ) throws IndexNotFoundKernelException
-    {
-        // We do the isAdded check on the transaction state first, because indexGetState will grab a schema read-lock, which can deadlock on the write-lock
-        // held by the index populator.
-        if ( !kti.txState().indexDiffSetsBySchema( indexReference.schema() ).isAdded( (IndexDescriptor) indexReference ) )
-        {
-            // If the index was not created in this transaction, then wait for it to come online before querying.
-            while ( kti.schemaRead().indexGetState( indexReference ) == InternalIndexState.POPULATING )
-            {
-                Optional<Status> terminationReason;
-                if ( kti.isTerminated() && (terminationReason = kti.getReasonIfTerminated()).isPresent() )
-                {
-                    throw new TransactionTerminatedException( terminationReason.get() );
-                }
-                try
-                {
-                    Thread.sleep( 100 );
-                }
-                catch ( InterruptedException e )
-                {
-                    // Ignore interrupted exceptions.
-                }
-            }
-        }
-        // If the index was created in this transaction, then we skip this check entirely.
-        // We will get an exception later, when we try to get an IndexReader, so this is fine.
     }
 
     @Override
