@@ -35,7 +35,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -153,8 +152,8 @@ class SystemGraphInternalsTest
 
     private void setupTwoReaders() throws InvalidArgumentsException
     {
-        realm.newUser( "Neo", password( "abc" ), false );
-        realm.newUser( "Trinity", password( "123" ), false );
+        realm.newUser( "Neo", "abc", false );
+        realm.newUser( "Trinity", "123", false );
         realm.addRoleToUser( READER, "Neo" );
         realm.addRoleToUser( READER, "Trinity" );
     }
