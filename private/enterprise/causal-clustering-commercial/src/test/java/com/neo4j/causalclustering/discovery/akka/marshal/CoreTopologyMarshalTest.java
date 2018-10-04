@@ -5,6 +5,11 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -17,12 +22,22 @@ import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.helpers.collection.Pair;
 
+@RunWith( Parameterized.class )
 public class CoreTopologyMarshalTest extends BaseMarshalTest<CoreTopology>
 {
-    public CoreTopologyMarshalTest()
+    public CoreTopologyMarshalTest( CoreTopology original )
     {
-        super( new CoreTopology( new ClusterId( UUID.randomUUID() ), true, CoreTopologyMarshalTest.coreServerInfos( 3 ) ),
-               new CoreTopologyMarshal() );
+        super( original, new CoreTopologyMarshal() );
+    }
+
+    @Parameterized.Parameters
+    public static Collection<CoreTopology> data()
+    {
+        return Arrays.asList(
+                new CoreTopology( new ClusterId( UUID.randomUUID() ), true, CoreTopologyMarshalTest.coreServerInfos( 0 ) ),
+                new CoreTopology( new ClusterId( UUID.randomUUID() ), true, CoreTopologyMarshalTest.coreServerInfos( 3 ) ),
+                new CoreTopology( null, false, CoreTopologyMarshalTest.coreServerInfos( 4 ) )
+        );
     }
 
     public static Map<MemberId,CoreServerInfo> coreServerInfos( int count )
