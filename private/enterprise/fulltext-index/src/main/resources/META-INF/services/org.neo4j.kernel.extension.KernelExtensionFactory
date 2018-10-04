@@ -1,1 +1,1 @@
-com.neo4j.kernel.api.impl.fulltext.FulltextIndexProviderFactory
+org.neo4j.kernel.api.impl.fulltext.FulltextIndexProviderFactory

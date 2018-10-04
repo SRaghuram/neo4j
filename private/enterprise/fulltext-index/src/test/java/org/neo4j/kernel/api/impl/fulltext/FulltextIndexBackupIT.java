@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.api.impl.fulltext;
+package org.neo4j.kernel.api.impl.fulltext;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -31,16 +31,16 @@ import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_RELS;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_RELS;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_server;
 
@@ -91,7 +91,7 @@ public class FulltextIndexBackupIT
     }
 
     @Test
-    public void fulltextIndexesMustBeUpdatedByIncrementalBackup() throws Exception
+    public void fulltextIndexesMustBeUpdatedByIncrementalBackup()
     {
         initializeTestData();
         File backup = dir.databaseDir( "backup" );

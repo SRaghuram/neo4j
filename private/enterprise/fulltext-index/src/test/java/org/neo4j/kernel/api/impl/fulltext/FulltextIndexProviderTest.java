@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.api.impl.fulltext;
+package org.neo4j.kernel.api.impl.fulltext;
 
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.Before;
@@ -41,11 +41,11 @@ import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EnterpriseDatabaseRule;
 import org.neo4j.test.rule.VerboseTimeout;
 
-import static com.neo4j.kernel.api.impl.fulltext.FulltextIndexProviderFactory.DESCRIPTOR;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.assertQueryFindsIds;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProviderFactory.DESCRIPTOR;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.assertQueryFindsIds;
 import static java.lang.String.format;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;

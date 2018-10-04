@@ -3,13 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.api.impl.fulltext;
+package org.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.kernel.api.impl.fulltext.ScoreEntityIterator.ScoreEntry;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Iterator;
+
+import org.neo4j.kernel.api.impl.fulltext.ScoreEntityIterator.ScoreEntry;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

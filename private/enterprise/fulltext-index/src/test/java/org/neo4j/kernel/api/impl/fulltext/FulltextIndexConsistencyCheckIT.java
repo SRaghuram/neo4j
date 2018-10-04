@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.api.impl.fulltext;
+package org.neo4j.kernel.api.impl.fulltext;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -62,13 +62,13 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.values.storable.RandomValues;
 import org.neo4j.values.storable.Values;
 
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static java.lang.String.format;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import static org.neo4j.helpers.collection.Iterables.first;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 
 public class FulltextIndexConsistencyCheckIT
 {

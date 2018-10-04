@@ -3,9 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.api.impl.fulltext;
+package org.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.kernel.api.impl.fulltext.analyzer.providers.Standard;
+import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.Standard;
 
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.LoadableConfig;

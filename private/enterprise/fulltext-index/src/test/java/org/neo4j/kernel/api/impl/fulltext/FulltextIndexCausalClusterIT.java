@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.api.impl.fulltext;
+package org.neo4j.kernel.api.impl.fulltext;
 
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
@@ -39,17 +39,17 @@ import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.causalclustering.ClusterRule;
 
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_REFRESH;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_RELS;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
-import static com.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_REFRESH;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_RELS;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 
 public class FulltextIndexCausalClusterIT
 {

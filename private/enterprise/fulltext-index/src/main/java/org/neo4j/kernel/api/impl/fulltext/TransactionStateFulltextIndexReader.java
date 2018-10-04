@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.api.impl.fulltext;
+package org.neo4j.kernel.api.impl.fulltext;
 
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
@@ -11,8 +11,8 @@ import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.neo4j.io.IOUtils;
 import org.neo4j.values.storable.Value;
 
-import static com.neo4j.kernel.api.impl.fulltext.ScoreEntityIterator.mergeIterators;
 import static java.util.Arrays.asList;
+import static org.neo4j.kernel.api.impl.fulltext.ScoreEntityIterator.mergeIterators;
 
 class TransactionStateFulltextIndexReader extends FulltextIndexReader
 {

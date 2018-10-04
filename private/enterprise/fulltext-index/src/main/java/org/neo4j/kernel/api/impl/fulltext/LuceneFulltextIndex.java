@@ -3,10 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.api.impl.fulltext;
+package org.neo4j.kernel.api.impl.fulltext;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.index.IndexWriterConfig;
 
 import java.io.Closeable;
 import java.io.File;
@@ -14,7 +13,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
-import org.neo4j.function.Factory;
 import org.neo4j.internal.kernel.api.schema.SchemaUtil;
 import org.neo4j.kernel.api.impl.index.AbstractLuceneIndex;
 import org.neo4j.kernel.api.impl.index.partition.AbstractIndexPartition;
