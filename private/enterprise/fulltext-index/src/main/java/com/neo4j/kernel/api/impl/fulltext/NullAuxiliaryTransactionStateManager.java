@@ -5,10 +5,10 @@
  */
 package com.neo4j.kernel.api.impl.fulltext;
 
-import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionStateHolder;
-import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionStateProvider;
+import org.neo4j.kernel.api.txstate.auxiliary.AuxiliaryTransactionStateHolder;
+import org.neo4j.kernel.api.txstate.auxiliary.AuxiliaryTransactionStateProvider;
 
-public class NullAuxiliaryTransactionStateManager implements org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionStateManager
+public class NullAuxiliaryTransactionStateManager implements org.neo4j.kernel.api.txstate.auxiliary.AuxiliaryTransactionStateManager
 {
     @Override
     public void registerProvider( AuxiliaryTransactionStateProvider provider )

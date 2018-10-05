@@ -12,7 +12,7 @@ import java.util.function.Function;
 
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.io.IOUtils;
-import org.neo4j.kernel.api.txstate.aux.AuxiliaryTransactionState;
+import org.neo4j.kernel.api.txstate.auxiliary.AuxiliaryTransactionState;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.logging.Log;
 import org.neo4j.storageengine.api.StorageCommand;
