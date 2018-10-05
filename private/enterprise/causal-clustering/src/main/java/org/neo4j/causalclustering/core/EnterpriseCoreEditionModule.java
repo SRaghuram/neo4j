@@ -55,6 +55,7 @@ import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import org.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
 import org.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
+import org.neo4j.causalclustering.error_handling.PanicService;
 import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import org.neo4j.causalclustering.identity.MemberId;
@@ -127,6 +128,10 @@ import org.neo4j.udc.UsageData;
 import static java.util.Arrays.asList;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_messages_log_path;
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.LAST_FLUSHED;
+import static org.neo4j.causalclustering.error_handling.PanicEventHandlers.dbHealthEventHandler;
+import static org.neo4j.causalclustering.error_handling.PanicEventHandlers.disableServerEventHandler;
+import static org.neo4j.causalclustering.error_handling.PanicEventHandlers.raiseAvailabilityGuardEventHandler;
+import static org.neo4j.causalclustering.error_handling.PanicEventHandlers.shutdownLifeCycle;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -219,6 +224,11 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
 
         AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( platformModule.clock, logging, platformModule.config );
         threadToTransactionBridge = dependencies.satisfyDependency( new ThreadToStatementContextBridge( globalGuard ) );
+
+        final PanicService panicService = new PanicService( logging.getUserLogProvider() );
+        // used by test
+        dependencies.satisfyDependencies( panicService );
+
         watcherServiceFactory = layout ->
                 createDatabaseFileSystemWatcher( platformModule.fileSystemWatcher.getFileWatcher(), layout, logging, fileWatcherFileNameFilter() );
 
@@ -282,7 +292,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         consensusModule.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStorage::getInitialState );
 
         coreStateService = new CoreStateService( identityModule.myself(), platformModule, storage, config,
-                consensusModule.raftMachine(), databaseService, replicationModule, lastFlushedStorage );
+                consensusModule.raftMachine(), databaseService, replicationModule, lastFlushedStorage, panicService );
 
         this.accessCapability = new LeaderCanWrite( consensusModule.raftMachine() );
 
@@ -292,7 +302,9 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
 
         this.coreServerModule = new CoreServerModule( identityModule, platformModule, consensusModule, coreStateService, clusteringModule,
                 replicationModule, databaseService, databaseHealthSupplier, pipelineBuilders, serverInstalledProtocolHandler,
-                handlerFactory, activeDatabaseName );
+                handlerFactory, activeDatabaseName, panicService );
+
+        addPanicEventHandlers( life, panicService, databaseHealthSupplier );
 
         TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
         defaultStrategy.inject( topologyService, config, logProvider, identityModule.myself() );
@@ -302,8 +314,8 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider =
                 new CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider( consensusModule.raftMachine(), topologyService,
                         catchupStrategySelector );
-        RaftServerModule.createAndStart( platformModule, consensusModule, identityModule, coreServerModule, databaseService, pipelineBuilders.server(),
-                messageLogger, catchupAddressProvider, supportedRaftProtocols, supportedModifierProtocols, serverInstalledProtocolHandler, activeDatabaseName );
+        RaftServerModule.createAndStart( platformModule, consensusModule, identityModule, coreServerModule, pipelineBuilders.server(), messageLogger,
+                catchupAddressProvider, supportedRaftProtocols, supportedModifierProtocols, serverInstalledProtocolHandler, activeDatabaseName, panicService );
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
         editionInvariants( platformModule, dependencies, config, life );
@@ -342,6 +354,18 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     CoreStateService coreStateComponents()
     {
         return coreStateService;
+    }
+
+    private void addPanicEventHandlers( LifeSupport life, PanicService panicService, Supplier<DatabaseHealth> databaseHealthSupplier )
+    {
+        // order matters
+        panicService.addPanicEventHandler( raiseAvailabilityGuardEventHandler( globalAvailabilityGuard ) );
+        panicService.addPanicEventHandler( dbHealthEventHandler( databaseHealthSupplier ) );
+        panicService.addPanicEventHandler( coreServerModule.commandApplicationProcess() );
+        panicService.addPanicEventHandler( consensusModule.raftMachine() );
+        panicService.addPanicEventHandler( disableServerEventHandler( coreServerModule.catchupServer() ) );
+        coreServerModule.backupServer().ifPresent( server -> panicService.addPanicEventHandler( disableServerEventHandler( server ) ) );
+        panicService.addPanicEventHandler( shutdownLifeCycle( life ) );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

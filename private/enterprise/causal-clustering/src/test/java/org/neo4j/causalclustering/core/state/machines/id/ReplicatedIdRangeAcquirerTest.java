@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.core.replication.DirectReplicator;
 import org.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
+import org.neo4j.causalclustering.error_handling.PanicService;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.id.IdType;
@@ -27,6 +28,7 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.test.rule.fs.FileSystemRule;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ReplicatedIdRangeAcquirerTest
 {
@@ -45,6 +47,7 @@ public class ReplicatedIdRangeAcquirerTest
 
     private final DirectReplicator<ReplicatedIdAllocationRequest> replicator =
             new DirectReplicator<>( idAllocationStateMachine );
+    private PanicService panicker = new PanicService( NullLogProvider.getInstance() );
 
     @Test
     public void consecutiveAllocationsFromSeparateIdGeneratorsForSameIdTypeShouldNotDuplicateWhenInitialIdIsZero()
@@ -101,7 +104,6 @@ public class ReplicatedIdRangeAcquirerTest
         ReplicatedIdRangeAcquirer acquirer = new ReplicatedIdRangeAcquirer( "graph.db", replicator, idAllocationStateMachine,
                 allocationSizes, member, NullLogProvider.getInstance() );
 
-        return new ReplicatedIdGenerator( fs, file, IdType.ARRAY_BLOCK, () -> initialHighId, acquirer,
-                NullLogProvider.getInstance(), 10, true );
+        return new ReplicatedIdGenerator( fs, file, IdType.ARRAY_BLOCK, () -> initialHighId, acquirer, NullLogProvider.getInstance(), 10, true, panicker );
     }
 }

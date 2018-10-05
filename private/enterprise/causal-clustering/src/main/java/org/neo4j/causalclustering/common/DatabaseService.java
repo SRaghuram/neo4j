@@ -53,15 +53,6 @@ public interface DatabaseService extends Lifecycle
     Map<String,? extends LocalDatabase> registeredDatabases();
 
     /**
-     * If this method is called, higher level machinery (such as {@link RaftMessageApplier}) has encountered an unrecoverable error and the database should
-     * seek to shutdown as soon as possible. Practically speaking, panicking the {@link DatabaseService} should panic an underlying, global
-     * {@link DatabaseHealth}. This will prevent future commands from being dispatched * to the tx log, amongst other things.
-     *
-     * @param cause the exception which means we must panic this database service.
-     */
-    void panic( Throwable cause );
-
-    /**
      * This method asserts that the databases service is healthy, and if it is not, attempts to throw an exception of type `E`
      *
      * @param cause The class tag for the exception we wish to be thrown if the database service is unhealthy.

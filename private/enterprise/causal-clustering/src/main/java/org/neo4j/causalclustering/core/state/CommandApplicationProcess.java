@@ -7,7 +7,6 @@ package org.neo4j.causalclustering.core.state;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.SessionTracker;
 import org.neo4j.causalclustering.core.consensus.log.RaftLog;
@@ -18,9 +17,10 @@ import org.neo4j.causalclustering.core.replication.DistributedOperation;
 import org.neo4j.causalclustering.core.replication.ProgressTracker;
 import org.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
+import org.neo4j.causalclustering.error_handling.PanicEventHandler;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.causalclustering.helper.StatUtil;
 import org.neo4j.function.ThrowingAction;
-import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -28,19 +28,19 @@ import org.neo4j.logging.LogProvider;
 import static java.lang.Math.max;
 import static java.lang.String.format;
 
-public class CommandApplicationProcess
+public class CommandApplicationProcess implements PanicEventHandler
 {
     private static final long NOTHING = -1;
     private final RaftLog raftLog;
     private final int flushEvery;
     private final ProgressTracker progressTracker;
     private final SessionTracker sessionTracker;
-    private final Supplier<DatabaseHealth> dbHealth;
     private final InFlightCache inFlightCache;
     private final Log log;
     private final CoreStateRepository coreStateRepository;
     private final RaftLogCommitIndexMonitor commitIndexMonitor;
     private final CommandBatcher batcher;
+    private final Panicker panicker;
     private final StatUtil.StatContext batchStat;
 
     private long lastFlushed = NOTHING;
@@ -48,34 +48,31 @@ public class CommandApplicationProcess
     private Thread applierThread;
     private final ApplierState applierState = new ApplierState();
 
-    public CommandApplicationProcess(
-            RaftLog raftLog,
-            int maxBatchSize,
-            int flushEvery,
-            Supplier<DatabaseHealth> dbHealth,
-            LogProvider logProvider,
-            ProgressTracker progressTracker,
-            SessionTracker sessionTracker,
-            CoreStateRepository coreStateRepository,
-            InFlightCache inFlightCache,
-            Monitors monitors )
+    public CommandApplicationProcess( RaftLog raftLog, int maxBatchSize, int flushEvery, LogProvider logProvider, ProgressTracker progressTracker,
+            SessionTracker sessionTracker, CoreStateRepository coreStateRepository, InFlightCache inFlightCache, Monitors monitors, Panicker panicker )
     {
         this.raftLog = raftLog;
         this.flushEvery = flushEvery;
         this.progressTracker = progressTracker;
         this.sessionTracker = sessionTracker;
         this.log = logProvider.getLog( getClass() );
-        this.dbHealth = dbHealth;
         this.coreStateRepository = coreStateRepository;
         this.inFlightCache = inFlightCache;
         this.commitIndexMonitor = monitors.newMonitor( RaftLogCommitIndexMonitor.class, getClass().getName() );
         this.batcher = new CommandBatcher( maxBatchSize, this::applyBatch );
+        this.panicker = panicker;
         this.batchStat = StatUtil.create( "BatchSize", log, 4096, true );
     }
 
     void notifyCommitted( long commitIndex )
     {
         applierState.notifyCommitted( commitIndex );
+    }
+
+    @Override
+    public void onPanic()
+    {
+        applierState.panic();
     }
 
     private class ApplierState
@@ -94,7 +91,7 @@ public class CommandApplicationProcess
             return lastSeenCommitIndex;
         }
 
-        void panic()
+        private void panic()
         {
             panic = true;
             keepRunning = false;
@@ -141,9 +138,8 @@ public class CommandApplicationProcess
             }
             catch ( Throwable e )
             {
-                applierState.panic();
+                panicker.panic( e );
                 log.error( "Failed to apply", e );
-                dbHealth.get().panic( e );
                 return; // LET THREAD DIE
             }
         }

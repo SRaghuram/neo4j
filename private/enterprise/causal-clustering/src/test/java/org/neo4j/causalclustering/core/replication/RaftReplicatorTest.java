@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 import org.neo4j.causalclustering.common.DatabaseService;
-import org.neo4j.causalclustering.common.StubLocalDatabaseService;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.core.consensus.LeaderLocator;
 import org.neo4j.causalclustering.core.consensus.RaftMessages;
@@ -43,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -64,11 +64,10 @@ class RaftReplicatorTest
     private DatabaseService databaseService;
 
     @BeforeEach
-    void setUp() throws Throwable
+    void setUp()
     {
         availabilityGuard = new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, Clocks.systemClock(), NullLog.getInstance() );
-        databaseService = new StubLocalDatabaseService();
-        databaseService.start();
+        databaseService = mock( DatabaseService.class );
     }
 
     @Test
@@ -216,10 +215,11 @@ class RaftReplicatorTest
     }
 
     @Test
-    void stopReplicationWhenUnHealthy() throws InterruptedException
+    void stopReplicationWhenUnHealthy() throws InterruptedException, ReplicationFailureException
     {
         CapturingProgressTracker capturedProgress = new CapturingProgressTracker();
         CapturingOutbound<RaftMessages.RaftMessage> outbound = new CapturingOutbound<>();
+        doThrow( new ReplicationFailureException( "" ) ).when( databaseService ).assertHealthy( ReplicationFailureException.class );
 
         RaftReplicator replicator = getReplicator( outbound, capturedProgress, new Monitors() );
         replicator.onLeaderSwitch( leaderInfo );
@@ -230,7 +230,6 @@ class RaftReplicatorTest
         // when
         replicatingThread.start();
 
-        databaseService.panic( new IllegalStateException( "PANIC" ) );
         replicatingThread.join();
         Assertions.assertNotNull( replicatingThread.getReplicationException() );
     }

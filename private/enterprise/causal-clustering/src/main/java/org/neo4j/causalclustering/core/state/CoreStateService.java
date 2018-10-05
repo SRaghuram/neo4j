@@ -42,6 +42,8 @@ import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionCo
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import org.neo4j.causalclustering.core.state.storage.StateStorage;
+import org.neo4j.causalclustering.error_handling.PanicService;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.graphdb.factory.EditionLocksFactories;
 import org.neo4j.graphdb.factory.module.PlatformModule;
@@ -100,6 +102,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     private final MemberId myself;
     private final Map<IdType,Integer> allocationSizes;
     private final LogService logging;
+    private final Panicker panicker;
     private final LogProvider logProvider;
     private final CommandIndexTracker commandIndexTracker;
     private final VersionContextSupplier versionContextSupplier;
@@ -111,9 +114,10 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     private final AggregateStateMachinesCommandDispatcher dispatchers;
 
     public CoreStateService( MemberId myself, PlatformModule platformModule, CoreStateStorageService storage, Config config, RaftMachine raftMachine,
-            DatabaseService databaseService, ReplicationModule replicationModule, StateStorage<Long> lastFlushedStorage )
+            DatabaseService databaseService, ReplicationModule replicationModule, StateStorage<Long> lastFlushedStorage, Panicker panicker )
     {
         this.logging = platformModule.logService;
+        this.panicker = panicker;
         this.logProvider = logging.getInternalLogProvider();
         this.lastFlushedStorage = lastFlushedStorage;
         this.storage = storage;
@@ -237,7 +241,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
                         .map( PerDatabaseCoreStateComponents::rangeAcquirer )
                         .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseName ) ) );
 
-        return new ReplicatedIdGeneratorFactory( fileSystem, rangeAcquirerFn, logProvider, idTypeConfigurationProvider, databaseName );
+        return new ReplicatedIdGeneratorFactory( fileSystem, rangeAcquirerFn, logProvider, idTypeConfigurationProvider, databaseName, panicker );
     }
 
     private Locks createLockManager( final Config config, Clock clock, final LogService logging,

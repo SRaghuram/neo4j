@@ -8,18 +8,20 @@ package org.neo4j.causalclustering.core.state.snapshot;
 import org.junit.Test;
 import org.mockito.InOrder;
 
+import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.common.DatabaseService;
+import org.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import org.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
 import org.neo4j.causalclustering.helper.Suspendable;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.function.Predicates;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
@@ -38,7 +40,9 @@ import static org.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotD
 public class PersistentSnapshotDownloaderTest
 {
     private final AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "localhost", 1234 );
-    private final CatchupAddressProvider catchupAddressProvider = fromSingleAddress( fromAddress );
+    private final CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress(
+            fromAddress );
+    private final Panicker panicker = mock( Panicker.class );
     private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
     private final NoPauseTimeoutStrategy backoffStrategy = new NoPauseTimeoutStrategy();
     private final CoreSnapshot snapshot = mock( CoreSnapshot.class );
@@ -52,7 +56,7 @@ public class PersistentSnapshotDownloaderTest
     private PersistentSnapshotDownloader createDownloader()
     {
         return new PersistentSnapshotDownloader( catchupAddressProvider, applicationProcess, auxiliaryServices, databaseService,
-                coreDownloader, snapshotService, mock( Log.class ), backoffStrategy, () -> mock( DatabaseHealth.class ), new Monitors() );
+                coreDownloader, snapshotService, mock( Log.class ), backoffStrategy, panicker, new Monitors() );
     }
 
     @Test
@@ -174,6 +178,21 @@ public class PersistentSnapshotDownloaderTest
         // then
         verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
+    }
+
+    @Test
+    public void shoulPanicOnUnknonExcpetion() throws IOException, DatabaseShutdownException
+    {
+        // given
+        RuntimeException runtimeException = new RuntimeException();
+        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenThrow( runtimeException );
+        final Log log = mock( Log.class );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
+        // when
+        persistentSnapshotDownloader.run();
+
+        // then
+        verify( panicker, times( 1 ) ).panic( runtimeException );
     }
 
     private void awaitOneIteration( NoPauseTimeoutStrategy backoffStrategy ) throws TimeoutException

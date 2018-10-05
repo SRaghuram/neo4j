@@ -15,6 +15,7 @@ import java.util.function.IntFunction;
 
 import org.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.error_handling.PanicService;
 import org.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.identity.MemberId;
@@ -47,6 +48,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     protected Monitors monitors;
     private final ThreadGroup threadGroup;
     protected final File databasesDirectory;
+    private volatile boolean hasPanicked;
 
     public ReadReplica( File parentDir, int serverId, int boltPort, int httpPort, int txPort, int backupPort,
             int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
@@ -121,6 +123,9 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     {
         database = new ReadReplicaGraphDatabase( databasesDirectory, memberConfig, GraphDatabaseDependencies.newDependencies().monitors( monitors ),
                 discoveryServiceFactory, memberId() );
+
+        PanicService panicService = database.getDependencyResolver().resolveDependency( PanicService.class );
+        panicService.addPanicEventHandler( () -> hasPanicked = true );
     }
 
     @Override
@@ -143,6 +148,12 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     public boolean isShutdown()
     {
         return database == null;
+    }
+
+    @Override
+    public boolean hasPanicked()
+    {
+        return hasPanicked;
     }
 
     public CatchupPollingProcess txPollingClient()

@@ -19,6 +19,8 @@ public interface ClusterMember<T extends GraphDatabaseAPI>
 
     void shutdown();
 
+    boolean hasPanicked();
+
     boolean isShutdown();
 
     T database();

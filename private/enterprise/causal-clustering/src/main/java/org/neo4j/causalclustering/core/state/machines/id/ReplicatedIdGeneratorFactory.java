@@ -12,6 +12,7 @@ import java.util.function.Function;
 import java.util.function.LongSupplier;
 
 import org.neo4j.helpers.collection.Pair;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
@@ -26,17 +27,19 @@ public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory
     private final FileSystemAbstraction fs;
     private final Function<String,ReplicatedIdRangeAcquirer> idRangeAcquirer;
     private final LogProvider logProvider;
+    private final Panicker panicker;
     private IdTypeConfigurationProvider idTypeConfigurationProvider;
     private final String databaseName;
 
     public ReplicatedIdGeneratorFactory( FileSystemAbstraction fs, Function<String,ReplicatedIdRangeAcquirer> idRangeAcquirer,
-            LogProvider logProvider, IdTypeConfigurationProvider idTypeConfigurationProvider, String databaseName )
+            LogProvider logProvider, IdTypeConfigurationProvider idTypeConfigurationProvider, String databaseName, Panicker panicker )
     {
         this.fs = fs;
         this.idRangeAcquirer = idRangeAcquirer;
         this.logProvider = logProvider;
         this.idTypeConfigurationProvider = idTypeConfigurationProvider;
         this.databaseName = databaseName;
+        this.panicker = panicker;
     }
 
     @Override
@@ -61,7 +64,7 @@ public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory
             other.close();
         }
         ReplicatedIdGenerator replicatedIdGenerator = new ReplicatedIdGenerator( fs, file, idType, highId,
-                idRangeAcquirer.apply( databaseName ), logProvider, grabSize, aggressiveReuse );
+                idRangeAcquirer.apply( databaseName ), logProvider, grabSize, aggressiveReuse, panicker );
 
         generators.put( Pair.of( databaseName, idType ), replicatedIdGenerator);
         return replicatedIdGenerator;

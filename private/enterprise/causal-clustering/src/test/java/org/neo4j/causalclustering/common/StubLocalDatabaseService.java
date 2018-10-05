@@ -86,12 +86,6 @@ public class StubLocalDatabaseService implements DatabaseService
     }
 
     @Override
-    public void panic( Throwable cause )
-    {
-        dbHealth.panic( cause );
-    }
-
-    @Override
     public <E extends Throwable> void assertHealthy( Class<E> cause ) throws E
     {
         dbHealth.assertHealthy( cause );

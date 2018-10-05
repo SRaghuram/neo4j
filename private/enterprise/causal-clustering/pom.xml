@@ -203,7 +203,6 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
         </dependency>
-
         <dependency>
             <groupId>co.unruly</groupId>
             <artifactId>java-8-matchers</artifactId>

@@ -9,6 +9,7 @@ import java.io.File;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.LongSupplier;
 
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.id.IdContainer;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
@@ -26,19 +27,21 @@ class ReplicatedIdGenerator implements IdGenerator
 {
     private final IdType idType;
     private final Log log;
+    private final Panicker panicker;
     private final ReplicatedIdRangeAcquirer acquirer;
     private volatile long highId;
     private volatile IdRangeIterator idQueue = EMPTY_ID_RANGE_ITERATOR;
     private final IdContainer idContainer;
     private final ReentrantLock idContainerLock = new ReentrantLock();
 
-    ReplicatedIdGenerator( FileSystemAbstraction fs, File file, IdType idType, LongSupplier highId,
-            ReplicatedIdRangeAcquirer acquirer, LogProvider logProvider, int grabSize, boolean aggressiveReuse )
+    ReplicatedIdGenerator( FileSystemAbstraction fs, File file, IdType idType, LongSupplier highId, ReplicatedIdRangeAcquirer acquirer, LogProvider logProvider,
+            int grabSize, boolean aggressiveReuse, Panicker panicker )
     {
         this.idType = idType;
         this.highId = highId.getAsLong();
         this.acquirer = acquirer;
         this.log = logProvider.getLog( getClass() );
+        this.panicker = panicker;
         idContainer = new IdContainer( fs, file, grabSize, aggressiveReuse );
         idContainer.init();
     }
@@ -225,9 +228,11 @@ class ReplicatedIdGenerator implements IdGenerator
         int rangeLength = idRange.getRangeLength() - adjustment;
         if ( rangeLength <= 0 )
         {
-            throw new IllegalStateException(
-                    "IdAllocation state is probably corrupted or out of sync with the cluster. " +
-                            "Local highId is " + highId + " and allocation range is " + idRange );
+            IdAllocationException idAllocationException = new IdAllocationException(
+                    "IdAllocation state is probably corrupted or out of sync with the cluster. Local highId is " + highId + " and allocation range is " +
+                            idRange );
+            panicker.panic( idAllocationException );
+            throw idAllocationException;
         }
         return new IdRange( idRange.getDefragIds(), rangeStart, rangeLength );
     }

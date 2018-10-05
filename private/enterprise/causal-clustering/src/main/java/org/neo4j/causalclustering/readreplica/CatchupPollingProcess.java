@@ -9,21 +9,21 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
-import java.util.function.Consumer;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import org.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
+import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import org.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import org.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
-import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import org.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
 import org.neo4j.causalclustering.discovery.TopologyService;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.causalclustering.helper.Suspendable;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.identity.StoreId;
@@ -64,11 +64,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private final Suspendable enableDisableOnStoreCopy;
     private final StoreCopyProcess storeCopyProcess;
     private final CatchupClientFactory catchUpClient;
+    private final Panicker panicker;
     private final UpstreamDatabaseStrategySelector selectionStrategy;
     private final BatchingTxApplier applier;
     private final PullRequestMonitor pullRequestMonitor;
     private final TopologyService topologyService;
-    private final Consumer<Throwable> globalPanic;
     private final Executor executor;
 
     private volatile State state = TX_PULLING;
@@ -77,7 +77,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
     public CatchupPollingProcess( Executor executor, String databaseName, DatabaseService databaseService, Suspendable enableDisableOnSoreCopy,
             CatchupClientFactory catchUpClient, UpstreamDatabaseStrategySelector selectionStrategy, BatchingTxApplier applier, Monitors monitors,
-            StoreCopyProcess storeCopyProcess, TopologyService topologyService, LogProvider logProvider, Consumer<Throwable> globalPanic )
+            StoreCopyProcess storeCopyProcess, TopologyService topologyService, LogProvider logProvider,  Panicker panicker )
 
     {
         this.databaseName = databaseName;
@@ -91,7 +91,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         this.storeCopyProcess = storeCopyProcess;
         this.topologyService = topologyService;
         this.log = logProvider.getLog( getClass() );
-        this.globalPanic = globalPanic;
+        this.panicker = panicker;
         this.executor = executor;
     }
 
@@ -163,7 +163,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         upToDateFuture.completeExceptionally( e );
         state = PANIC;
-        globalPanic.accept( e );
+        panicker.panic( e );
     }
 
     private void pullTransactions()

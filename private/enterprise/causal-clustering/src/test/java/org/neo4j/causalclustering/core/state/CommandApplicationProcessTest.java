@@ -29,8 +29,7 @@ import org.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import org.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
-import org.neo4j.kernel.internal.DatabaseHealth;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
 
@@ -61,9 +60,6 @@ public class CommandApplicationProcessTest
     private final SessionTracker sessionTracker = new SessionTracker(
             new InMemoryStateStorage<>( new GlobalSessionTrackerState() ) );
 
-    private final DatabaseHealth dbHealth = new DatabaseHealth( mock( DatabasePanicEventGenerator.class ),
-            NullLogProvider.getInstance().getLog( getClass() ) );
-
     private final GlobalSession globalSession = new GlobalSession( UUID.randomUUID(), null );
     private final int flushEvery = 10;
     private final int batchSize = 16;
@@ -73,10 +69,10 @@ public class CommandApplicationProcessTest
     private InFlightCache inFlightCache = spy( new ConsecutiveInFlightCache() );
     private final Monitors monitors = new Monitors();
     private CoreStateRepository CoreStateRepository = mock( CoreStateRepository.class );
-    private final CommandApplicationProcess applicationProcess = new CommandApplicationProcess(
-            raftLog, batchSize, flushEvery, () -> dbHealth,
-            NullLogProvider.getInstance(), new ProgressTrackerImpl( globalSession ),
-            sessionTracker, CoreStateRepository, inFlightCache, monitors );
+    private SinglePanic panicker = new SinglePanic();
+    private final CommandApplicationProcess applicationProcess =
+            new CommandApplicationProcess( raftLog, batchSize, flushEvery, NullLogProvider.getInstance(), new ProgressTrackerImpl( globalSession ),
+                    sessionTracker, CoreStateRepository, inFlightCache, monitors, panicker );
 
     private ReplicatedTransaction nullTx = ReplicatedTransaction.from( new byte[0], databaseName );
 
@@ -252,7 +248,7 @@ public class CommandApplicationProcessTest
         raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
         applicationProcess.notifyCommitted( 0 );
 
-        assertEventually( "failed apply", dbHealth::isHealthy, is( false ), 5, SECONDS );
+        assertEventually( "failed apply", () -> panicker.hasPanicked, is( true ), 5, SECONDS );
     }
 
     @Test
@@ -347,4 +343,16 @@ public class CommandApplicationProcessTest
         Consumer<Result> anyCallback = any( Consumer.class );
         return anyCallback;
     }
+
+    private class SinglePanic implements Panicker
+    {
+        boolean hasPanicked;
+
+        @Override
+        public void panic( Throwable e )
+        {
+            hasPanicked = true;
+        }
+    }
+
 }

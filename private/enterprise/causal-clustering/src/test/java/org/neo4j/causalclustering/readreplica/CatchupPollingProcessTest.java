@@ -8,12 +8,12 @@ package org.neo4j.causalclustering.readreplica;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
-import java.util.function.Consumer;
 
-import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupResult;
 import org.neo4j.causalclustering.catchup.MockCatchupClient;
 import org.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV1;
@@ -25,6 +25,7 @@ import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.StubLocalDatabaseService;
 import org.neo4j.causalclustering.discovery.TopologyService;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.causalclustering.helper.Suspendable;
 import org.neo4j.causalclustering.helpers.FakeExecutor;
 import org.neo4j.causalclustering.identity.MemberId;
@@ -74,10 +75,7 @@ public class CatchupPollingProcessTest
     private final MockCatchupClient.MockClientResponses clientResponses = MockCatchupClient.responses();
     private final CatchupClientV1 v1Client = spy( new MockClientV1( clientResponses ) );
     private final CatchupClientV2 v2Client = spy( new MockClientV2( clientResponses ) );
-    private final Consumer<Throwable> globalPanic = ( Throwable e ) ->
-    {
-        //do nothing
-    };
+    private final Panicker panicker = mock( Panicker.class );
 
     private CatchupPollingProcess txPuller;
     private MockCatchupClient catchupClient;
@@ -94,7 +92,7 @@ public class CatchupPollingProcessTest
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_1, v1Client, v2Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ) ) ).thenReturn( catchupClient );
         txPuller = new CatchupPollingProcess( executor, databaseName, databaseService, startStopOnStoreCopy, catchupClientFactory,
-                strategyPipeline, txApplier, new Monitors(), storeCopy, topologyService, NullLogProvider.getInstance(), globalPanic );
+                strategyPipeline, txApplier, new Monitors(), storeCopy, topologyService, NullLogProvider.getInstance(), panicker );
     }
 
     @Test
@@ -220,6 +218,16 @@ public class CatchupPollingProcessTest
 
         // then
         assertEquals( TX_PULLING, txPuller.state() );
+    }
+
+    @Test
+    public void shouldPanicOnException() throws ExecutionException, InterruptedException
+    {
+        when( txApplier.lastQueuedTxId() ).thenThrow( IllegalStateException.class );
+        txPuller.start();
+        txPuller.tick().get();
+
+        verify( panicker, times( 1 ) ).panic( any() );
     }
 
     @Test

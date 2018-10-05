@@ -14,6 +14,7 @@ import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 
 import java.io.File;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -34,10 +35,12 @@ import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import org.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
+import org.neo4j.causalclustering.error_handling.PanicService;
 import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import org.neo4j.causalclustering.helper.CompositeSuspendable;
 import org.neo4j.causalclustering.identity.MemberId;
+import org.neo4j.causalclustering.net.Server;
 import org.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
@@ -72,6 +75,10 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.udc.UsageData;
 
 import static org.neo4j.causalclustering.discovery.ResolutionResolverFactory.chooseResolver;
+import static org.neo4j.causalclustering.error_handling.PanicEventHandlers.dbHealthEventHandler;
+import static org.neo4j.causalclustering.error_handling.PanicEventHandlers.disableServerEventHandler;
+import static org.neo4j.causalclustering.error_handling.PanicEventHandlers.raiseAvailabilityGuardEventHandler;
+import static org.neo4j.causalclustering.error_handling.PanicEventHandlers.shutdownLifeCycle;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
@@ -103,6 +110,10 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
         Dependencies dependencies = platformModule.dependencies;
         FileSystemAbstraction fileSystem = platformModule.fileSystem;
         PageCache pageCache = platformModule.pageCache;
+
+        final PanicService panicService = new PanicService( logging.getUserLogProvider() );
+        // used in tests
+        dependencies.satisfyDependencies( panicService );
 
         LifeSupport life = platformModule.life;
 
@@ -182,6 +193,19 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
 
         life.add( serverModule.catchupServer() ); // must start last and stop first, since it handles external requests
         serverModule.backupServer().ifPresent( life::add );
+
+        addPanicEventHandlers( panicService, life, databaseHealthSupplier, serverModule.catchupServer(), serverModule.backupServer() );
+    }
+
+    private void addPanicEventHandlers( PanicService panicService, LifeSupport life, Supplier<DatabaseHealth> databaseHealthSupplier, Server catchupServer,
+            Optional<Server> backupServer )
+    {
+        // order matters
+        panicService.addPanicEventHandler( raiseAvailabilityGuardEventHandler( globalAvailabilityGuard ) );
+        panicService.addPanicEventHandler( dbHealthEventHandler( databaseHealthSupplier ) );
+        panicService.addPanicEventHandler( disableServerEventHandler( catchupServer ) );
+        backupServer.ifPresent( server -> panicService.addPanicEventHandler( disableServerEventHandler( server ) ) );
+        panicService.addPanicEventHandler( shutdownLifeCycle( life ) );
     }
 
     //TODO: Create Shared EditionModule abstract class

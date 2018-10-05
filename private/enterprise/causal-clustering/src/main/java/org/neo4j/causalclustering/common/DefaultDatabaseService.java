@@ -180,12 +180,6 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
         }
     }
 
-    public void panic( Throwable cause )
-    {
-        //TODO: Should all databases panic together?
-        getDatabaseHealth().panic( cause );
-    }
-
     public <EXCEPTION extends Throwable> void assertHealthy( Class<EXCEPTION> cause ) throws EXCEPTION
     {
         getDatabaseHealth().assertHealthy( cause );

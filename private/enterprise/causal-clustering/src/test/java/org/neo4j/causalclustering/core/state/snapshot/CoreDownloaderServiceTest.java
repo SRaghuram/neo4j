@@ -20,6 +20,7 @@ import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
 import org.neo4j.causalclustering.helper.Suspendable;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.function.Predicates;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.impl.util.CountingJobScheduler;
@@ -51,6 +52,7 @@ public class CoreDownloaderServiceTest
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
     private JobScheduler centralJobScheduler;
+    private final Panicker panicker = mock( Panicker.class );
 
     @Before
     public void create()
@@ -61,7 +63,7 @@ public class CoreDownloaderServiceTest
     private CoreDownloaderService createDownloader()
     {
         return new CoreDownloaderService( centralJobScheduler, coreDownloader, snapshotService, suspendedServices, databases, applicationProcess,
-                logProvider, new NoPauseTimeoutStrategy(), () -> dbHealth, new Monitors() );
+                logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
     }
 
     @After
@@ -93,7 +95,7 @@ public class CoreDownloaderServiceTest
         CoreDownloader coreDownloader = new BlockingCoreDownloader( blockDownloader );
 
         CoreDownloaderService coreDownloaderService = new CoreDownloaderService( countingJobScheduler, coreDownloader, snapshotService,
-                suspendedServices, databases, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), () -> dbHealth, new Monitors() );
+                suspendedServices, databases, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
 
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
         Thread.sleep( 50 );

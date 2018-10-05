@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import java.io.File;
 
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.collection.PrimitiveLongCollections;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -41,6 +42,7 @@ public class RebuildReplicatedIdGeneratorsTest
     public PageCacheRule pageCacheRule = new PageCacheRule();
     @Rule
     public DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    private Panicker panicker = mock( Panicker.class );
 
     @Test
     public void rebuildReplicatedIdGeneratorsOnRecovery() throws Exception
@@ -82,6 +84,6 @@ public class RebuildReplicatedIdGeneratorsTest
         when( idRangeAcquirer.acquireIds( IdType.NODE ) ).thenReturn( new IdAllocation( new IdRange(
                 PrimitiveLongCollections.EMPTY_LONG_ARRAY, 0, 10000 ), 0, 0 ) );
         return new ReplicatedIdGeneratorFactory( fileSystemAbstraction, ignoredDBName -> idRangeAcquirer, NullLogProvider.getInstance(),
-                new EnterpriseIdTypeConfigurationProvider( Config.defaults() ), GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+                new EnterpriseIdTypeConfigurationProvider( Config.defaults() ), GraphDatabaseSettings.DEFAULT_DATABASE_NAME, panicker );
     }
 }

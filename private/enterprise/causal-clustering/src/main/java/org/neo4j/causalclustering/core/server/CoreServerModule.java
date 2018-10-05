@@ -30,6 +30,7 @@ import org.neo4j.causalclustering.core.state.snapshot.CoreDownloader;
 import org.neo4j.causalclustering.core.state.snapshot.SnapshotDownloader;
 import org.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import org.neo4j.causalclustering.core.state.snapshot.StoreDownloader;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.causalclustering.helper.CompositeSuspendable;
 import org.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import org.neo4j.causalclustering.messaging.LifecycleMessageHandler;
@@ -60,7 +61,7 @@ public class CoreServerModule extends CatchupServersModule
     public CoreServerModule( IdentityModule identityModule, final PlatformModule platformModule, ConsensusModule consensusModule,
             CoreStateService coreStateService, ClusteringModule clusteringModule, ReplicationModule replicationModule, DatabaseService databaseService,
             Supplier<DatabaseHealth> dbHealthSupplier, PipelineBuilders pipelineBuilders, InstalledProtocolHandler installedProtocolsHandler,
-            CatchupHandlerFactory handlerFactory, String activeDatabaseName )
+            CatchupHandlerFactory handlerFactory, String activeDatabaseName, Panicker panicker )
     {
         super( databaseService, pipelineBuilders, platformModule );
         this.identityModule = identityModule;
@@ -78,12 +79,12 @@ public class CoreServerModule extends CatchupServersModule
                 consensusModule.raftLog(),
                 config.get( CausalClusteringSettings.state_machine_apply_max_batch_size ),
                 config.get( CausalClusteringSettings.state_machine_flush_window_size ),
-                dbHealthSupplier,
                 logProvider,
                 replicationModule.getProgressTracker(),
                 replicationModule.getSessionTracker(), coreStateService,
                 consensusModule.inFlightCache(),
-                platformModule.monitors );
+                platformModule.monitors,
+                panicker );
 
         platformModule.dependencies.satisfyDependency( commandApplicationProcess ); // lastApplied() for CC-robustness
 
@@ -96,7 +97,7 @@ public class CoreServerModule extends CatchupServersModule
         ExponentialBackoffStrategy backoffStrategy = new ExponentialBackoffStrategy( 1, 30, SECONDS );
 
         this.downloadService = new CoreDownloaderService( platformModule.jobScheduler, downloader, snapshotService, suspendOnStoreCopy, databaseService,
-                commandApplicationProcess, logProvider, backoffStrategy, dbHealthSupplier, platformModule.monitors );
+                commandApplicationProcess, logProvider, backoffStrategy, panicker, platformModule.monitors );
 
         this.membershipWaiterLifecycle = createMembershipWaiterLifecycle();
 

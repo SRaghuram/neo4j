@@ -5,10 +5,11 @@
  */
 package org.neo4j.causalclustering.core.state.machines.id;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -19,55 +20,61 @@ import java.util.UUID;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.consensus.state.ExposedRaftState;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.store.IdGeneratorContractTest;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdRange;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
-import org.neo4j.test.rule.fs.FileSystemRule;
 
 import static java.util.Collections.max;
 import static java.util.Collections.min;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
 {
     private NullLogProvider logProvider = NullLogProvider.getInstance();
 
-    @Rule
-    public FileSystemRule fileSystemRule = new DefaultFileSystemRule();
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    private DefaultFileSystemAbstraction fs;
+    @Inject
+    private TestDirectory testDirectory;
     private File file;
-    private FileSystemAbstraction fs;
     private MemberId myself = new MemberId( UUID.randomUUID() );
     private RaftMachine raftMachine = Mockito.mock( RaftMachine.class );
     private ExposedRaftState state = mock( ExposedRaftState.class );
     private final CommandIndexTracker commandIndexTracker = mock( CommandIndexTracker.class );
     private IdReusabilityCondition idReusabilityCondition;
     private ReplicatedIdGenerator idGenerator;
+    private Panicker panicker;
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
         file = testDirectory.file( "idgen" );
-        fs = fileSystemRule.get();
         when( raftMachine.state() ).thenReturn( state );
         idReusabilityCondition = getIdReusabilityCondition();
+        panicker = mock( Panicker.class );
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         if ( idGenerator != null )
         {
@@ -89,7 +96,7 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
     }
 
     @Test
-    public void shouldCreateIdFileForPersistence()
+    void shouldCreateIdFileForPersistence()
     {
         ReplicatedIdRangeAcquirer rangeAcquirer = simpleRangeAcquirer( IdType.NODE, 0, 1024 );
 
@@ -99,7 +106,7 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
     }
 
     @Test
-    public void shouldNotStepBeyondAllocationBoundaryWithoutBurnedId()
+    void shouldNotStepBeyondAllocationBoundaryWithoutBurnedId()
     {
         ReplicatedIdRangeAcquirer rangeAcquirer = simpleRangeAcquirer( IdType.NODE, 0, 1024 );
 
@@ -115,7 +122,7 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
     }
 
     @Test
-    public void shouldNotStepBeyondAllocationBoundaryWithBurnedId()
+    void shouldNotStepBeyondAllocationBoundaryWithBurnedId()
     {
         ReplicatedIdRangeAcquirer rangeAcquirer = simpleRangeAcquirer( IdType.NODE, 0, 1024 );
 
@@ -131,18 +138,20 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
         assertEquals( 1023, maxId );
     }
 
-    @Test( expected = IllegalStateException.class )
-    public void shouldThrowIfAdjustmentFailsDueToInconsistentValues()
+    @Test
+    void shouldThrowAndPanicIfAdjustmentFailsDueToInconsistentValues()
     {
         ReplicatedIdRangeAcquirer rangeAcquirer = mock( ReplicatedIdRangeAcquirer.class );
         when( rangeAcquirer.acquireIds( IdType.NODE ) ).thenReturn( allocation( 3, 21, 21 ) );
         idGenerator = getReplicatedIdGenerator( 10, 42L, rangeAcquirer );
 
-        idGenerator.nextId();
+        assertThrows( IdAllocationException.class, () -> idGenerator.nextId() );
+
+        verify( panicker, times( 1 ) ).panic( Matchers.isA( IdAllocationException.class ) );
     }
 
     @Test
-    public void shouldReuseIdOnlyWhenLeader()
+    void shouldReuseIdOnlyWhenLeader()
     {
         ReplicatedIdRangeAcquirer rangeAcquirer = simpleRangeAcquirer( IdType.NODE, 0, 1024 );
 
@@ -167,7 +176,7 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
     }
 
     @Test
-    public void shouldReuseIdBeforeHighId()
+    void shouldReuseIdBeforeHighId()
     {
         ReplicatedIdRangeAcquirer rangeAcquirer = simpleRangeAcquirer( IdType.NODE, 0, 1024 );
 
@@ -185,7 +194,7 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
     }
 
     @Test
-    public void freeIdOnlyWhenReusabilityConditionAllows()
+    void freeIdOnlyWhenReusabilityConditionAllows()
     {
         ReplicatedIdRangeAcquirer rangeAcquirer = simpleRangeAcquirer( IdType.NODE, 0, 1024 );
 
@@ -229,15 +238,7 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
             idsGenerated.add( nextId );
         }
 
-        try
-        {
-            idGenerator.nextId();
-            fail( "Too many ids produced, expected " + expectedIds );
-        }
-        catch ( NoMoreIds e )
-        {
-            // rock and roll!
-        }
+        assertThrows( NoMoreIds.class, idGenerator::nextId, "Too many ids produced, expected " + expectedIds );
 
         return idsGenerated;
     }
@@ -246,8 +247,7 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
     {
         ReplicatedIdRangeAcquirer rangeAcquirer = mock( ReplicatedIdRangeAcquirer.class );
         //noinspection unchecked
-        when( rangeAcquirer.acquireIds( idType ) )
-                .thenReturn( allocation( start, length, -1 ) ).thenThrow( NoMoreIds.class );
+        when( rangeAcquirer.acquireIds( idType ) ).thenReturn( allocation( start, length, -1 ) ).thenThrow( NoMoreIds.class );
         return rangeAcquirer;
     }
 
@@ -280,8 +280,6 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
 
     private ReplicatedIdGenerator getReplicatedIdGenerator( int grabSize, long l, ReplicatedIdRangeAcquirer replicatedIdRangeAcquirer )
     {
-        return new ReplicatedIdGenerator( fs, file, IdType.NODE, () -> l, replicatedIdRangeAcquirer, logProvider,
-                grabSize, true );
+        return new ReplicatedIdGenerator( fs, file, IdType.NODE, () -> l, replicatedIdRangeAcquirer, logProvider, grabSize, true, panicker );
     }
-
 }

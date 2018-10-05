@@ -28,6 +28,7 @@ import org.neo4j.causalclustering.core.consensus.term.TermState;
 import org.neo4j.causalclustering.core.consensus.vote.VoteState;
 import org.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import org.neo4j.causalclustering.core.state.storage.StateStorage;
+import org.neo4j.causalclustering.error_handling.PanicEventHandler;
 import org.neo4j.causalclustering.helper.VolatileFuture;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.messaging.Outbound;
@@ -43,10 +44,16 @@ import static org.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
  * <p>
  * The algorithm is driven by incoming messages provided to {@link #handle}.
  */
-public class RaftMachine implements LeaderLocator, CoreMetaData
+public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandler
 {
     private final RaftMessageTimerResetMonitor raftMessageTimerResetMonitor;
     private InFlightCache inFlightCache;
+
+    @Override
+    public void onPanic()
+    {
+        stopTimers();
+    }
 
     public enum Timeouts implements TimerService.TimerName
     {
@@ -118,11 +125,6 @@ public class RaftMachine implements LeaderLocator, CoreMetaData
     public void triggerElection( Clock clock ) throws IOException
     {
         handle( RaftMessages.ReceivedInstantAwareMessage.of( clock.instant(), new RaftMessages.Timeout.Election( myself ) ) );
-    }
-
-    public void panic()
-    {
-        stopTimers();
     }
 
     public synchronized RaftCoreState coreState()

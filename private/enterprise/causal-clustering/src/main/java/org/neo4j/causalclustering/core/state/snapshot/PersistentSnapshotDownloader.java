@@ -6,16 +6,15 @@
 package org.neo4j.causalclustering.core.state.snapshot;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
+import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.causalclustering.helper.Suspendable;
 import org.neo4j.causalclustering.helper.TimeoutStrategy;
-import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 
@@ -38,14 +37,14 @@ public class PersistentSnapshotDownloader implements Runnable
     private final CoreSnapshotService snapshotService;
     private final Log log;
     private final TimeoutStrategy backoffStrategy;
-    private final Supplier<DatabaseHealth> dbHealth;
+    private final Panicker panicker;
     private final Monitor monitor;
     private volatile State state;
     private volatile boolean keepRunning;
 
     PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess, Suspendable auxiliaryServices,
             DatabaseService databaseService, CoreDownloader downloader, CoreSnapshotService snapshotService, Log log, TimeoutStrategy backoffStrategy,
-            Supplier<DatabaseHealth> dbHealth, Monitors monitors )
+            Panicker panicker, Monitors monitors )
     {
         this.applicationProcess = applicationProcess;
         this.addressProvider = addressProvider;
@@ -55,7 +54,7 @@ public class PersistentSnapshotDownloader implements Runnable
         this.snapshotService = snapshotService;
         this.log = log;
         this.backoffStrategy = backoffStrategy;
-        this.dbHealth = dbHealth;
+        this.panicker = panicker;
         this.monitor = monitors.newMonitor( Monitor.class );
         this.state = State.INITIATED;
         this.keepRunning = true;
@@ -118,7 +117,7 @@ public class PersistentSnapshotDownloader implements Runnable
         catch ( Throwable e )
         {
             log.error( "Unrecoverable error during store copy", e );
-            dbHealth.get().panic( e );
+            panicker.panic( e );
         }
         finally
         {

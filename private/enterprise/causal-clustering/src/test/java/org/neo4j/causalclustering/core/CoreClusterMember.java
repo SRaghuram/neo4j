@@ -23,6 +23,7 @@ import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.causalclustering.core.state.RaftLogPruner;
 import org.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import org.neo4j.causalclustering.error_handling.PanicService;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -60,6 +61,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     private final Monitors monitors = new Monitors();
     private final String dbName;
     private final File databasesDirectory;
+    private volatile boolean hasPanicked;
 
     public CoreClusterMember( int serverId,
                               int discoveryPort,
@@ -163,6 +165,9 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     {
         database = new CoreGraphDatabase( databasesDirectory, memberConfig,
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
+
+        PanicService panicService = database.getDependencyResolver().resolveDependency( PanicService.class );
+        panicService.addPanicEventHandler( () -> hasPanicked = true );
     }
 
     @Override
@@ -185,6 +190,12 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     public boolean isShutdown()
     {
         return database == null;
+    }
+
+    @Override
+    public boolean hasPanicked()
+    {
+        return hasPanicked;
     }
 
     @Override

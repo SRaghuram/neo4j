@@ -40,6 +40,8 @@ import org.neo4j.causalclustering.core.state.machines.locks.LeaderOnlyLockManage
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.IpFamily;
+import org.neo4j.causalclustering.discovery.Topology;
+import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.helper.ErrorHandler;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
@@ -436,12 +438,29 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
 
     public int numberOfCoreMembersReportedByTopology()
     {
+        return numberOfMembersReportedByCoreTopology( TopologyService::localCoreServers );
+    }
 
-        CoreClusterMember aCoreGraphDb = coreMembers.values().stream()
-                .filter( member -> member.database() != null ).findAny().orElseThrow( IllegalArgumentException::new );
-        CoreTopologyService coreTopologyService = aCoreGraphDb.database().getDependencyResolver()
-                .resolveDependency( CoreTopologyService.class );
-        return coreTopologyService.localCoreServers().members().size();
+    public int numberOfReadReplicaMembersReportedByTopology()
+    {
+        return numberOfMembersReportedByCoreTopology( TopologyService::localReadReplicas );
+    }
+
+    private int numberOfMembersReportedByCoreTopology( Function<CoreTopologyService,Topology> topologySelector )
+    {
+        return coreMembers
+                .values()
+                .stream()
+                .filter( member -> member.database() != null )
+                .filter( member -> !member.hasPanicked() )
+                .findAny()
+                .map( coreClusterMember ->
+                {
+                    CoreTopologyService coreTopologyService =
+                            coreClusterMember.database().getDependencyResolver().resolveDependency( CoreTopologyService.class );
+                    return topologySelector.apply( coreTopologyService ).members().size();
+                } )
+                .orElse( 0 );
     }
 
     /**
