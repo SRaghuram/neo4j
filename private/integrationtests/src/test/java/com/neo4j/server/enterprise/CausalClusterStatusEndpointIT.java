@@ -10,9 +10,9 @@ import com.sun.jersey.api.client.ClientResponse;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
-import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -46,34 +46,34 @@ import org.neo4j.test.extension.TestDirectoryClassExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.core.Every.everyItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class CausalClusterStatusEndpointIT
+class CausalClusterStatusEndpointIT
 {
     @RegisterExtension
-    public static TestDirectoryClassExtension testDirectoryClassExtension = new TestDirectoryClassExtension();
+    static TestDirectoryClassExtension testDirectoryClassExtension = new TestDirectoryClassExtension();
 
     private static final LogProvider LOG_PROVIDER = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out );
 
     private static CausalClusterInProcessBuilder.CausalCluster CLUSTER;
 
     @BeforeAll
-    public static void setupClass() throws InterruptedException
+    static void setupClass() throws InterruptedException
     {
         CLUSTER = startCluster( testDirectoryClassExtension.getTestDirectory() );
     }
 
     @AfterAll
-    public static void shutdownClass() throws InterruptedException
+    static void shutdownClass() throws InterruptedException
     {
         if ( CLUSTER != null )
         {
@@ -82,7 +82,7 @@ public class CausalClusterStatusEndpointIT
     }
 
     @Test
-    public void leaderIsWritable() throws InterruptedException
+    void leaderIsWritable() throws InterruptedException
     {
         ServerControls leader = getLeader( CLUSTER );
         assertEventually( canVote( leader ), equalTo( true ), 1, TimeUnit.MINUTES );
@@ -92,7 +92,7 @@ public class CausalClusterStatusEndpointIT
     }
 
     @Test
-    public void booleanEndpointsAreReachable() throws InterruptedException
+    void booleanEndpointsAreReachable() throws InterruptedException
     {
         for ( ServerControls core : CLUSTER.getCoreControls() )
         {
@@ -101,22 +101,17 @@ public class CausalClusterStatusEndpointIT
             List<Boolean> availability = Arrays.asList( availabilityStatuses( core.httpURI() ) );
             long trues = availability.stream().filter( i -> i ).count();
             long falses = availability.stream().filter( i -> !i ).count();
-            assertEquals( availability.toString(), 1, falses );
-            assertEquals( availability.toString(), 2, trues );
+            assertEquals( 1, falses, availability.toString() );
+            assertEquals( 2, trues, availability.toString() );
         }
     }
 
-    private ThrowingSupplier<Boolean,RuntimeException> canVote( ServerControls core )
-    {
-        return () -> (Boolean) getStatus( getCcEndpoint( core.httpURI() ) ).get( "participatingInRaftGroup" );
-    }
-
     @Test
-    public void statusEndpointIsReachableAndReadable() throws Exception
+    void statusEndpointIsReachableAndReadable() throws Exception
     {
         // given there is data
         writeSomeData( CLUSTER );
-        assertEventually( allReplicaFieldValues( CLUSTER, this::getNodeCount ), everyItem( greaterThan( 1L ) ), 1, TimeUnit.MINUTES );
+        assertEventually( allReplicaFieldValues( CLUSTER, CausalClusterStatusEndpointIT::getNodeCount ), everyItem( greaterThan( 1L ) ), 1, TimeUnit.MINUTES );
 
         // then cores are valid
         CLUSTER.getCoreControls().forEach( member -> assertStatusDescriptionIsValid( member, true ) );
@@ -126,21 +121,21 @@ public class CausalClusterStatusEndpointIT
     }
 
     @Test
-    public void replicasContainTheSameRaftIndexAsCores() throws Exception
+    void replicasContainTheSameRaftIndexAsCores() throws Exception
     {
         // given starting conditions
         writeSomeData( CLUSTER );
-        assertEventually( allReplicaFieldValues( CLUSTER, this::getNodeCount ), allValuesEqual(), 1, TimeUnit.MINUTES );
+        assertEventually( allReplicaFieldValues( CLUSTER, CausalClusterStatusEndpointIT::getNodeCount ), allValuesEqual(), 1, TimeUnit.MINUTES );
         long initialLastAppliedRaftIndex =
                 Long.parseLong( getStatus( getCcEndpoint( getLeader( CLUSTER ).httpURI() ) ).get( "lastAppliedRaftIndex" ).toString() );
         assertThat( initialLastAppliedRaftIndex, greaterThan( 0L ) );
 
         // when more data is added
         writeSomeData( CLUSTER );
-        assertEventually( allReplicaFieldValues( CLUSTER, this::getNodeCount ), everyItem( greaterThan( 1L ) ), 1, TimeUnit.MINUTES );
+        assertEventually( allReplicaFieldValues( CLUSTER, CausalClusterStatusEndpointIT::getNodeCount ), everyItem( greaterThan( 1L ) ), 1, TimeUnit.MINUTES );
 
         // then all status endpoints have a matching last appliedRaftIndex
-        assertEventually( allEndpointsFieldValues( CLUSTER, this::lastAppliedRaftIndex ), allValuesEqual(), 1, TimeUnit.MINUTES );
+        assertEventually( allEndpointsFieldValues( CLUSTER, CausalClusterStatusEndpointIT::lastAppliedRaftIndex ), allValuesEqual(), 1, TimeUnit.MINUTES );
 
         // and endpoint last applied raft index has incremented
         long currentLastAppliedRaftIndex =
@@ -148,15 +143,19 @@ public class CausalClusterStatusEndpointIT
         assertThat( currentLastAppliedRaftIndex, greaterThan( initialLastAppliedRaftIndex ) );
     }
 
+    private static ThrowingSupplier<Boolean,RuntimeException> canVote( ServerControls core )
+    {
+        return () -> (Boolean) getStatus( getCcEndpoint( core.httpURI() ) ).get( "participatingInRaftGroup" );
+    }
+
     private static <T> Matcher<Collection<T>> allValuesEqual()
     {
-        return new BaseMatcher<Collection<T>>()
+        return new TypeSafeMatcher<Collection<T>>()
         {
             @Override
-            public boolean matches( Object item )
+            public boolean matchesSafely( Collection<T> item )
             {
-                Collection<T> castedItem = (Collection<T>) item;
-                return castedItem.stream().distinct().count() == 1;
+                return item.stream().distinct().count() == 1;
             }
 
             @Override
@@ -167,7 +166,7 @@ public class CausalClusterStatusEndpointIT
         };
     }
 
-    private Long getNodeCount( ServerControls serverControls )
+    private static Long getNodeCount( ServerControls serverControls )
     {
         GraphDatabaseService db = serverControls.graph();
         long count;
@@ -178,7 +177,7 @@ public class CausalClusterStatusEndpointIT
         return count;
     }
 
-    private Long lastAppliedRaftIndex( ServerControls serverControls )
+    private static Long lastAppliedRaftIndex( ServerControls serverControls )
     {
         return Long.parseLong( getStatus( getCcEndpoint( serverControls.httpURI() ) ).get( "lastAppliedRaftIndex" ).toString() );
     }
@@ -198,24 +197,24 @@ public class CausalClusterStatusEndpointIT
         return () -> cluster.getReplicaControls().stream().map( mapper ).collect( Collectors.toList() );
     }
 
-    private void assertStatusDescriptionIsValid( ServerControls member, boolean isCore )
+    private static void assertStatusDescriptionIsValid( ServerControls member, boolean isCore )
     {
         Map<String,Object> statusDescription = getStatus( getCcEndpoint( member.httpURI() ) );
         String msg = statusDescription.toString();
-        assertEquals( msg, isCore, Boolean.parseBoolean( statusDescription.get( "core" ).toString() ) );
+        assertEquals( isCore, Boolean.parseBoolean( statusDescription.get( "core" ).toString() ), msg );
         assertThat( msg, Long.valueOf( statusDescription.get( "lastAppliedRaftIndex" ).toString() ), greaterThan( 0L ) );
         assertVotingMembers( statusDescription );
         assertParticipatingInRaftGroup( statusDescription, isCore );
         assertMillisSinceLastLeaderMessage( statusDescription, isCore );
-        assertTrue( msg, Boolean.valueOf( statusDescription.get( "healthy" ).toString() ) );
-        assertTrue( msg, StringUtils.isNotEmpty( statusDescription.get( "memberId" ).toString() ) );
-        assertFalse( msg, Boolean.valueOf( statusDescription.get( "leader" ).toString() ) );
+        assertTrue( Boolean.valueOf( statusDescription.get( "healthy" ).toString() ), msg );
+        assertTrue( StringUtils.isNotEmpty( statusDescription.get( "memberId" ).toString() ), msg );
+        assertFalse( Boolean.valueOf( statusDescription.get( "leader" ).toString() ), msg );
     }
 
     private static void assertVotingMembers( Map<String,Object> statusDescription )
     {
         List<String> members = (List<String>) statusDescription.get( "votingMembers" );
-        assertEquals( statusDescription.toString(), 3, members.size() );
+        assertEquals( 3, members.size(), statusDescription.toString() );
     }
 
     private static void assertParticipatingInRaftGroup( Map<String,Object> statusDescription, boolean isCore )
@@ -245,7 +244,7 @@ public class CausalClusterStatusEndpointIT
         }
     }
 
-    private void writeSomeData( CausalClusterInProcessBuilder.CausalCluster cluster )
+    private static void writeSomeData( CausalClusterInProcessBuilder.CausalCluster cluster )
     {
         GraphDatabaseService db = getLeader( cluster ).graph();
         try ( Transaction tx = db.beginTx() )
@@ -270,7 +269,7 @@ public class CausalClusterStatusEndpointIT
         return cluster;
     }
 
-    private ServerControls getLeader( CausalClusterInProcessBuilder.CausalCluster cluster )
+    private static ServerControls getLeader( CausalClusterInProcessBuilder.CausalCluster cluster )
     {
         return cluster.getCoreControls()
                 .stream()
@@ -279,7 +278,7 @@ public class CausalClusterStatusEndpointIT
                 .orElseThrow( () -> new IllegalStateException( "Leader does not exist" ) );
     }
 
-    private Boolean[] availabilityStatuses( URI server )
+    private static Boolean[] availabilityStatuses( URI server )
     {
         Boolean writable = Boolean.parseBoolean( getStatusRaw( getWritableEndpoint( server ) ) );
         Boolean readonly = Boolean.parseBoolean( getStatusRaw( getReadOnlyEndpoint( server ) ) );
