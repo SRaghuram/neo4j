@@ -205,9 +205,9 @@ class CausalClusterStatusEndpointIT
         assertThat( msg, Long.valueOf( statusDescription.get( "lastAppliedRaftIndex" ).toString() ), greaterThan( 0L ) );
         assertVotingMembers( statusDescription );
         assertParticipatingInRaftGroup( statusDescription, isCore );
+        assertTrue( StringUtils.isNotEmpty( statusDescription.get( "memberId" ).toString() ), msg );
         assertMillisSinceLastLeaderMessage( statusDescription, isCore );
         assertTrue( Boolean.valueOf( statusDescription.get( "healthy" ).toString() ), msg );
-        assertTrue( StringUtils.isNotEmpty( statusDescription.get( "memberId" ).toString() ), msg );
         assertFalse( Boolean.valueOf( statusDescription.get( "leader" ).toString() ), msg );
     }
 
@@ -233,8 +233,13 @@ class CausalClusterStatusEndpointIT
 
     private static void assertMillisSinceLastLeaderMessage( Map<String,Object> statusDescription, boolean isCore )
     {
+        boolean isLeader = statusDescription.get( "leader" ).equals( statusDescription.get( "memberId" ) );
         Object millisSinceLastLeaderMessage = statusDescription.get( "millisSinceLastLeaderMessage" );
-        if ( isCore )
+        if ( isCore && isLeader )
+        {
+            assertEquals( 0L, Long.parseLong( millisSinceLastLeaderMessage.toString() ), statusDescription.toString() );
+        }
+        else if ( isCore )
         {
             assertThat( statusDescription.toString(), Long.parseLong( millisSinceLastLeaderMessage.toString() ), greaterThan( 0L ) );
         }
