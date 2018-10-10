@@ -16,8 +16,8 @@ import com.neo4j.causalclustering.discovery.akka.marshal.CoreTopologySerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseLeaderInfoMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.LeaderInfoSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.MemberIdSerializer;
-import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaRefreshMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaInfoSerializer;
+import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaRefreshMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaRemovalMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaTopologySerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReplicatedLeaderInfoSerializer;
@@ -95,6 +95,7 @@ public final class TypesafeConfigService
         HashMap<String,Object> configMap = new HashMap<>();
 
         configMap.put( "akka.jvm-shutdown-hooks", "off" );
+        configMap.put( "akka.cluster.run-coordinated-shutdown-when-down", "off" );
 
         return ConfigFactory.parseMap( configMap );
     }

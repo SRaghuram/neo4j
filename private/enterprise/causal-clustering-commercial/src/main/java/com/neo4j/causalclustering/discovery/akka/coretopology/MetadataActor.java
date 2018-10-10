@@ -11,6 +11,7 @@ import akka.cluster.Cluster;
 import akka.cluster.UniqueAddress;
 import akka.cluster.ddata.LWWMap;
 import akka.cluster.ddata.LWWMapKey;
+import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 
 import org.neo4j.causalclustering.discovery.CoreServerInfo;
@@ -40,6 +41,12 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     }
 
     @Override
+    protected void handleCustomEvents( ReceiveBuilder builder )
+    {
+        builder.match( CleanupMessage.class, message -> removeDataFromReplicator( message.uniqueAddress() ) );
+    }
+
+    @Override
     public void sendInitialDataToReplicator()
     {
         CoreServerInfoForMemberId metadata = new CoreServerInfoForMemberId( myself, CoreServerInfo.from( config ) );
@@ -47,9 +54,9 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     }
 
     @Override
-    public void removeDataFromReplicator()
+    public void removeDataFromReplicator( UniqueAddress uniqueAddress )
     {
-        modifyReplicatedData( key, map -> map.remove( cluster, cluster.selfUniqueAddress() ) );
+        modifyReplicatedData( key, map -> map.remove( cluster, uniqueAddress ) );
     }
 
     @Override

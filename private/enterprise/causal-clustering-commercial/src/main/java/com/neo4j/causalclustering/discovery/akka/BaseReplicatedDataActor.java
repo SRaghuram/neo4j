@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery.akka;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.cluster.Cluster;
+import akka.cluster.UniqueAddress;
 import akka.cluster.ddata.Key;
 import akka.cluster.ddata.ReplicatedData;
 import akka.cluster.ddata.Replicator;
@@ -55,10 +56,10 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     public final void postStop()
     {
         subscribeToReplicatorEvents( new Replicator.Unsubscribe<>( key, getSelf() ) );
-        removeDataFromReplicator();
+        removeDataFromReplicator( cluster.selfUniqueAddress() );
     }
 
-    protected abstract void removeDataFromReplicator();
+    protected abstract void removeDataFromReplicator( UniqueAddress uniqueAddress );
 
     @Override
     public final Receive createReceive()

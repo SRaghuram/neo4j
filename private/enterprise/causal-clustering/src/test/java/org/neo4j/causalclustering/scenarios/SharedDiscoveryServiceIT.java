@@ -20,6 +20,7 @@ import java.util.concurrent.Future;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.RaftMachine;
+import org.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
@@ -114,6 +115,7 @@ public class SharedDiscoveryServiceIT
             try
             {
                 RaftMachine raftMock = mock( RaftMachine.class );
+                RaftMembershipManager membershipMock = mock( RaftMembershipManager.class );
                 RaftCoreTopologyConnector tc = new RaftCoreTopologyConnector( topologyService,
                         raftMock, CausalClusteringSettings.database.getDefaultValue() );
                 topologyService.init();

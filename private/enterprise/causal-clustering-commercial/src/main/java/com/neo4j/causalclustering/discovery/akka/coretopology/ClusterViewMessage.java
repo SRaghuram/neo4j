@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
+import akka.actor.Address;
 import akka.cluster.ClusterEvent;
 import akka.cluster.Member;
 import akka.cluster.MemberStatus;
@@ -125,6 +126,19 @@ public class ClusterViewMessage
         return members.stream()
                 .filter( member -> !unreachable.contains( member ) )
                 .map( Member::uniqueAddress );
+    }
+
+    public Set<Member> unreachable()
+    {
+        return unreachable;
+    }
+
+    public boolean mostAreReachable()
+    {
+        int unreachableSize = this.unreachable.size();
+        int reachableSize = members.size() - unreachableSize; // members are all Up or WeaklyUp
+
+        return reachableSize > unreachableSize;
     }
 
     private boolean memberIsUp( Member m )

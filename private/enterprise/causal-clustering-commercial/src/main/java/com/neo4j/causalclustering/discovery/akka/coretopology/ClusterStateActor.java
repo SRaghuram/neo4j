@@ -5,15 +5,22 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
-import akka.actor.AbstractActor;
+import akka.actor.AbstractActorWithTimers;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.ClusterEvent;
+import akka.cluster.Member;
 import akka.japi.pf.ReceiveBuilder;
 
+import java.time.Duration;
+
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.akka_failure_detector_acceptable_heartbeat_pause;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.akka_failure_detector_heartbeat_interval;
 
 /**
  * Subscribes to events indicating a change in cluster state, maintains a view of current cluster state, and feeds it back to the {@link CoreTopologyActor}
@@ -22,23 +29,32 @@ import org.neo4j.logging.LogProvider;
  * an actor that subscribes to cluster events may receive those events before CurrentClusterState, so if CurrentClusterState is accessed on a cluster event
  * it may be stale. Furthermore if no further cluster events are received then the updated CurrentClusterState may never be accessed.
  */
-public class ClusterStateActor extends AbstractActor
+public class ClusterStateActor extends AbstractActorWithTimers
 {
-    private final Cluster cluster;
-    private final ActorRef topologyActor;
-    private final Log log;
-    private ClusterViewMessage clusterView = ClusterViewMessage.EMPTY;
-
-    static Props props( Cluster cluster, ActorRef topologyActor, LogProvider logProvider )
+    static Props props( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, Config config, LogProvider logProvider )
     {
-        return Props.create( ClusterStateActor.class, () -> new ClusterStateActor( cluster, topologyActor, logProvider ) );
+        return Props.create( ClusterStateActor.class, () -> new ClusterStateActor( cluster, topologyActor, downingActor, config, logProvider ) );
     }
 
-    public ClusterStateActor( Cluster cluster, ActorRef topologyActor, LogProvider logProvider )
+    private final Cluster cluster;
+    private final ActorRef topologyActor;
+    private final ActorRef downingActor;
+    private final Duration clusterStabilityWait;
+    private final Log log;
+
+    private ClusterViewMessage clusterView = ClusterViewMessage.EMPTY;
+
+    private static String downingTimerKey = "downingTimerKey key";
+
+    public ClusterStateActor( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, Config config, LogProvider logProvider )
     {
         this.cluster = cluster;
         this.topologyActor = topologyActor;
+        this.downingActor = downingActor;
         this.log = logProvider.getLog( getClass() );
+
+        clusterStabilityWait = config.get( akka_failure_detector_heartbeat_interval )
+                .plus( config.get( akka_failure_detector_acceptable_heartbeat_pause ) );
     }
 
     @Override
@@ -57,51 +73,99 @@ public class ClusterStateActor extends AbstractActor
     public Receive createReceive()
     {
         return ReceiveBuilder.create()
-                .match( ClusterEvent.CurrentClusterState.class, event -> {
-                    clusterView = new ClusterViewMessage( event );
-                    log.debug( "Akka initial cluster state %s", event );
-                    sendClusterView();
-                } ).match( ClusterEvent.ReachableMember.class, event ->
-                {
-                    log.debug( "Akka cluster event %s", event );
-                    clusterView = clusterView.withoutUnreachable( event.member() );
-                    sendClusterView();
-                } ).match( ClusterEvent.UnreachableMember.class, event ->
-                {
-                    log.debug( "Akka cluster event %s", event );
-                    clusterView = clusterView.withUnreachable( event.member() );
-                    sendClusterView();
-                } ).match( ClusterEvent.MemberUp.class, event ->
-                {
-                    log.debug( "Akka cluster event %s", event );
-                    clusterView = clusterView.withMember( event.member() );
-                    sendClusterView();
-                } ).match( ClusterEvent.MemberWeaklyUp.class, event ->
-                {
-                    log.debug( "Akka cluster event %s", event );
-                    clusterView = clusterView.withMember( event.member() );
-                    sendClusterView();
-                } ).match( ClusterEvent.MemberRemoved.class, event ->
-                {
-                    log.debug( "Akka cluster event %s", event );
-                    clusterView = clusterView.withoutMember( event.member() );
-                    sendClusterView();
-                } ).match( ClusterEvent.LeaderChanged.class, event ->
-                {
-                    log.debug( "Akka cluster event %s", event );
-                    clusterView = clusterView.withConverged( event.leader().isDefined() );
-                    sendClusterView();
-                } ).match( ClusterEvent.ClusterDomainEvent.class, event ->
-                {
-                    log.debug( "Ignoring Akka cluster event %s", event );
-                } ).match( ClusterEvent.MemberEvent.class, event ->
-                {
-                    log.debug( "Ignoring Akka cluster event %s", event );
-                } ).build();
+                .match( ClusterEvent.CurrentClusterState.class, this::handleCurrentClusterState )
+                .match( ClusterEvent.ReachableMember.class,     this::handleReachableMember )
+                .match( ClusterEvent.UnreachableMember.class,   this::handleUnreachableMember )
+                .match( ClusterEvent.MemberUp.class,            this::handleMemberUp )
+                .match( ClusterEvent.MemberWeaklyUp.class,      this::handleMemberWeaklyUp )
+                .match( ClusterEvent.MemberRemoved.class,       this::handleMemberRemoved )
+                .match( ClusterEvent.LeaderChanged.class,       this::handleLeaderChanged )
+                .match( ClusterEvent.ClusterDomainEvent.class,  this::handleOtherClusterEvent )
+                .match( StabilityMessage.class,                 this::notifyDowningActor )
+                .build();
+    }
+
+    private void handleCurrentClusterState( ClusterEvent.CurrentClusterState event )
+    {
+        clusterView = new ClusterViewMessage( event );
+        log.debug( "Akka initial cluster state %s", event );
+        sendClusterView();
+    }
+
+    private void handleReachableMember( ClusterEvent.ReachableMember event )
+    {
+        log.debug( "Akka cluster event %s", event );
+        clusterView = clusterView.withoutUnreachable( event.member() );
+        sendClusterView();
+    }
+
+    private void handleUnreachableMember( ClusterEvent.UnreachableMember event )
+    {
+        log.debug( "Akka cluster event %s", event );
+        clusterView = clusterView.withUnreachable( event.member() );
+        sendClusterView();
+    }
+
+    private void handleMemberUp( ClusterEvent.MemberUp event )
+    {
+        log.debug( "Akka cluster event %s", event );
+        clusterView = clusterView.withMember( event.member() );
+        sendClusterView();
+    }
+
+    private void handleMemberWeaklyUp( ClusterEvent.MemberWeaklyUp event )
+    {
+        log.debug( "Akka cluster event %s", event );
+        clusterView = clusterView.withMember( event.member() );
+        sendClusterView();
+    }
+
+    private void handleMemberRemoved( ClusterEvent.MemberRemoved event )
+    {
+        log.debug( "Akka cluster event %s", event );
+        Member member = event.member();
+        clusterView = clusterView.withoutMember( member );
+        sendClusterView();
+        topologyActor.tell( new CleanupMessage( member.uniqueAddress() ), getSelf() );
+    }
+
+    private void handleLeaderChanged( ClusterEvent.LeaderChanged event )
+    {
+        log.debug( "Akka cluster event %s", event );
+        clusterView = clusterView.withConverged( event.leader().isDefined() );
+        sendClusterView();
+    }
+
+    private void handleOtherClusterEvent( ClusterEvent.ClusterDomainEvent event )
+    {
+        log.debug( "Ignoring Akka cluster event %s", event );
+        resetDowningTimer();
+    }
+
+    private void notifyDowningActor( StabilityMessage ignored )
+    {
+        log.debug( "Cluster is stable at %s", clusterView );
+        downingActor.tell( clusterView, getSelf() );
     }
 
     private void sendClusterView()
     {
         topologyActor.tell( clusterView, getSelf() );
+        resetDowningTimer();
+    }
+
+    private void resetDowningTimer()
+    {
+        // will cancel previous timer
+        timers().startSingleTimer( downingTimerKey, StabilityMessage.INSTANCE, clusterStabilityWait );
+    }
+
+    private static class StabilityMessage
+    {
+        static StabilityMessage INSTANCE = new StabilityMessage();
+
+        private StabilityMessage()
+        {
+        }
     }
 }

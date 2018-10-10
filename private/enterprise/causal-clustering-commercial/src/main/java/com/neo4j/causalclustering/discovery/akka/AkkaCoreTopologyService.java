@@ -9,9 +9,11 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.client.ClusterClientReceptionist;
+import akka.event.EventStream;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
+import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
@@ -21,6 +23,7 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
@@ -32,8 +35,11 @@ import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;
+
+import static akka.actor.ActorRef.noSender;
 
 public class AkkaCoreTopologyService extends AbstractCoreTopologyService
 {
@@ -43,34 +49,27 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final LogProvider logProvider;
     private final TopologyServiceRetryStrategy retryStrategy;
     private final TopologyState topologyState;
+    private final ExecutorService executor;
     private final Clock clock;
     private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
 
     public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-            LogProvider userLogProvider, TopologyServiceRetryStrategy retryStrategy, Clock clock )
+            LogProvider userLogProvider, TopologyServiceRetryStrategy retryStrategy, ExecutorService executor, Clock clock )
     {
         super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
         this.retryStrategy = retryStrategy;
+        this.executor = executor;
         this.clock = clock;
         this.topologyState = new TopologyState( config, logProvider, listenerService::notifyListeners );
     }
 
     @Override
-    public void init0()
-    {
-        actorSystemLifecycle.createClusterActorSystem();
-    }
-
-    @Override
     public void start0()
     {
-        startTopologyActors();
-    }
+        actorSystemLifecycle.createClusterActorSystem();
 
-    private void startTopologyActors()
-    {
         SourceQueueWithComplete<CoreTopology> coreTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
         SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
         SourceQueueWithComplete<Map<String,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( topologyState::onDbLeaderUpdate );
@@ -80,6 +79,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         ActorRef rrTopologyActor = readReplicaTopologyActor( rrTopologySink );
         ActorRef coreTopologyActor = coreTopologyActor( cluster, replicator, coreTopologySink, rrTopologyActor );
         ActorRef directoryActor = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
+        startNeedToRestartListeningActor( cluster );
 
         coreTopologyActorRef = Optional.of( coreTopologyActor );
         directoryActorRef = Optional.of( directoryActor );
@@ -114,16 +114,20 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         return actorSystemLifecycle.applicationActorOf( readReplicaTopologyProps, ReadReplicaTopologyActor.NAME );
     }
 
-    @Override
-    public void stop0()
+    private ActorRef startNeedToRestartListeningActor( Cluster cluster )
     {
-        coreTopologyActorRef = Optional.empty();
-        directoryActorRef = Optional.empty();
+        Runnable restart = () -> executor.submit( this::restart );
+        EventStream eventStream = actorSystemLifecycle.eventStream();
+        Props props = RestartNeededListeningActor.props( restart, eventStream, cluster, logProvider );
+        return actorSystemLifecycle.applicationActorOf( props, RestartNeededListeningActor.NAME );
     }
 
     @Override
-    public void shutdown0() throws Throwable
+    public void stop0() throws Throwable
     {
+        coreTopologyActorRef = Optional.empty();
+        directoryActorRef = Optional.empty();
+
         actorSystemLifecycle.shutdown();
     }
 
@@ -133,7 +137,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         if ( coreTopologyActorRef.isPresent() )
         {
             ActorRef actor = coreTopologyActorRef.get();
-            actor.tell( new ClusterIdSettingMessage( clusterId, dbName ), ActorRef.noSender() );
+            actor.tell( new ClusterIdSettingMessage( clusterId, dbName ), noSender() );
             return true;
         }
         else
@@ -148,13 +152,37 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         return leaderInfo;
     }
 
+    @VisibleForTesting
+    public synchronized void restart()
+    {
+        if ( !SafeLifecycle.State.RUN.equals( state() ) )
+        {
+            log.info( "Not restarting because not running. State is %s", state() );
+            return;
+        }
+
+        userLog.info( "Restarting discovery system after probable network partition" );
+
+        try
+        {
+            stop();
+            start();
+            userLog.info( "Successfully restarted discovery system" );
+        }
+        catch ( Throwable t )
+        {
+            userLog.error( "Failed to restart discovery system", t );
+            throw new IllegalStateException( t );
+        }
+    }
+
     @Override
     public void setLeader0( LeaderInfo leaderInfo )
     {
         this.leaderInfo = leaderInfo;
         if ( leaderInfo.memberId() != null || leaderInfo.isSteppingDown() )
         {
-            directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, localDBName() ), ActorRef.noSender() ) );
+            directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, localDBName() ), noSender() ) );
         }
     }
 

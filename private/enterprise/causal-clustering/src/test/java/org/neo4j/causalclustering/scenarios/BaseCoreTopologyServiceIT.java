@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.UUID;
@@ -27,15 +28,16 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 public abstract class BaseCoreTopologyServiceIT
 {
-    private final DiscoveryServiceType discoveryServiceType;
+    protected final DiscoveryServiceType discoveryServiceType;
+    protected CoreTopologyService service;
 
     protected BaseCoreTopologyServiceIT( DiscoveryServiceType discoveryServiceType )
     {
         this.discoveryServiceType = discoveryServiceType;
     }
 
-    @Test( timeout = 120_000 )
-    public void shouldBeAbleToStartAndStopWithoutSuccessfulJoin() throws Throwable
+    @Before
+    public void setUp()
     {
         // Random members that does not exists, discovery will never succeed
         String initialHosts = "localhost:" + PortAuthority.allocatePort() + ",localhost:" + PortAuthority.allocatePort();
@@ -44,10 +46,10 @@ public abstract class BaseCoreTopologyServiceIT
         config.augment( CausalClusteringSettings.discovery_listen_address, "localhost:" + PortAuthority.allocatePort() );
 
         JobScheduler jobScheduler = createInitialisedScheduler();
-        InitialDiscoveryMembersResolver
-                initialDiscoveryMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
+        InitialDiscoveryMembersResolver initialDiscoveryMemberResolver =
+                new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
 
-        CoreTopologyService service = discoveryServiceType.createFactory().coreTopologyService(
+        service = discoveryServiceType.createFactory().coreTopologyService(
                 config,
                 new MemberId( UUID.randomUUID() ),
                 jobScheduler,
@@ -57,6 +59,11 @@ public abstract class BaseCoreTopologyServiceIT
                 new TopologyServiceNoRetriesStrategy(),
                 new Monitors(),
                 Clocks.systemClock() );
+    }
+
+    @Test( timeout = 120_000 )
+    public void shouldBeAbleToStartAndStopWithoutSuccessfulJoin() throws Throwable
+    {
         service.init();
         service.start();
         service.stop();

@@ -10,6 +10,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
@@ -27,6 +29,7 @@ public class CoreTopologyChangeListenerTest
 {
     MemberId myself = new MemberId( UUID.randomUUID() );
     TopologyServiceRetryStrategy  topologyServiceRetryStrategy = new TopologyServiceNoRetriesStrategy();
+    ExecutorService executor = Executors.newSingleThreadExecutor();
 
     ActorSystemLifecycle actorSystemLifecycle = Mockito.mock( ActorSystemLifecycle.class );
 
@@ -37,6 +40,7 @@ public class CoreTopologyChangeListenerTest
             NullLogProvider.getInstance(),
             NullLogProvider.getInstance(),
             topologyServiceRetryStrategy,
+            executor,
             Clocks.systemClock() );
 
     @Test
