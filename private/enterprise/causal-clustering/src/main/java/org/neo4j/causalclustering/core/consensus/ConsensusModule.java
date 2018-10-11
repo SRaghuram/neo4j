@@ -46,6 +46,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.time.Clocks;
 
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.catchup_batch_size;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.join_catch_up_timeout;
@@ -120,7 +121,7 @@ public class ConsensusModule
                 config.get( refuse_to_be_leader ),
                 supportsPreVoting, platformModule.monitors );
 
-        DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor();
+        DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor( Clocks.nanoClock() );
         platformModule.monitors.addMonitorListener( durationSinceLastMessageMonitor );
         platformModule.dependencies.satisfyDependency( durationSinceLastMessageMonitor );
 

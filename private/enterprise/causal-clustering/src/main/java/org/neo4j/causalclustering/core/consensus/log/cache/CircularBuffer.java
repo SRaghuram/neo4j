@@ -59,7 +59,7 @@ public class CircularBuffer<V>
     private int S;
     private int E;
 
-    CircularBuffer( int capacity )
+    public CircularBuffer( int capacity )
     {
         if ( capacity <= 0 )
         {

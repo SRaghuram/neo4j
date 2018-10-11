@@ -38,7 +38,7 @@ abstract class BaseStatus implements CausalClusteringStatus
     }
 
     Response statusResponse( long lastAppliedRaftIndex, boolean isParticipatingInRaftGroup, Collection<MemberId> votingMembers, boolean isHealthy,
-            MemberId memberId, MemberId leader, Duration millisSinceLastLeaderMessage, boolean isCore )
+            MemberId memberId, MemberId leader, Duration millisSinceLastLeaderMessage, Double raftIndexThroughputPerSecond, boolean isCore )
     {
         String jsonObject;
         ObjectMapper objectMapper = new ObjectMapper();
@@ -46,7 +46,7 @@ abstract class BaseStatus implements CausalClusteringStatus
         {
             jsonObject = objectMapper.writeValueAsString(
                     new ClusterStatusResponse( lastAppliedRaftIndex, isParticipatingInRaftGroup, votingMembers, isHealthy, memberId, leader,
-                            millisSinceLastLeaderMessage, isCore ) );
+                            millisSinceLastLeaderMessage, raftIndexThroughputPerSecond, isCore ) );
         }
         catch ( IOException e )
         {

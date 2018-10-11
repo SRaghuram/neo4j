@@ -17,6 +17,7 @@ import org.neo4j.causalclustering.common.DefaultDatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.PipelineBuilders;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.core.consensus.PollingThroughputMonitor;
 import org.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import org.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
@@ -159,6 +160,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
                 new ReadReplicaServerModule( databaseService, pipelineBuilders, handlerFactory, platformModule, activeDatabaseName );
 
         CommandIndexTracker commandIndexTracker = platformModule.dependencies.satisfyDependency( new CommandIndexTracker() );
+        initialiseStatusDescriptionEndpoint( platformModule, commandIndexTracker );
 
         CompositeSuspendable servicesToStopOnStoreCopy = new CompositeSuspendable();
         Executor catchupExecutor = platformModule.jobScheduler.executor( Group.CATCHUP );
@@ -208,6 +210,14 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
     public EditionDatabaseContext createDatabaseContext( String databaseName )
     {
         return new ReadReplicaDatabaseContext( platformModule, this, databaseName );
+    }
+
+    private void initialiseStatusDescriptionEndpoint( PlatformModule platformModule, CommandIndexTracker commandIndexTracker )
+    {
+        PollingThroughputMonitor pollingThroughputMonitor = new PollingThroughputMonitor( platformModule.logging.getInternalLogProvider(), platformModule.clock,
+                PollingThroughputMonitor.DEFAULT_NUMBER_OF_MEASUREMENTS, PollingThroughputMonitor.DEFAULT_REPORTED_PERIOD, platformModule.jobScheduler,
+                commandIndexTracker::getAppliedCommandIndex );
+        platformModule.dependencies.satisfyDependency( pollingThroughputMonitor );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

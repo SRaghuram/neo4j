@@ -13,11 +13,14 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -26,6 +29,7 @@ import javax.ws.rs.core.Response;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.consensus.DurationSinceLastMessageMonitor;
 import org.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
+import org.neo4j.causalclustering.core.consensus.PollingThroughputMonitor;
 import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
@@ -33,12 +37,16 @@ import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import org.neo4j.causalclustering.discovery.RoleInfo;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
+import org.neo4j.time.Clocks;
+import org.neo4j.time.FakeClock;
+import org.neo4j.time.SystemNanoClock;
 
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
@@ -57,6 +65,7 @@ public class CoreStatusTest
     private CoreGraphDatabase db;
     private Dependencies dependencyResolver = new Dependencies();
     private final LogProvider logProvider = NullLogProvider.getInstance();
+    private final FakeClock clock = new FakeClock();
 
     // Dependency resolved
     private RaftMembershipManager raftMembershipManager;
@@ -65,6 +74,7 @@ public class CoreStatusTest
     private DurationSinceLastMessageMonitor raftMessageTimerResetMonitor;
     private RaftMachine raftMachine;
     private CommandIndexTracker commandIndexTracker;
+    private PollingThroughputMonitor pollingThroughputMonitor;
 
     private final MemberId myself = new MemberId( new UUID( 0x1234, 0x5678 ) );
     private final MemberId core2 = new MemberId( UUID.randomUUID() );
@@ -86,9 +96,11 @@ public class CoreStatusTest
         topologyService = dependencyResolver.satisfyDependency(
                 new FakeTopologyService( Arrays.asList( core2, core3 ), Collections.singleton( replica ), myself, RoleInfo.FOLLOWER ) );
 
-        raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor() );
+        raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor( clock ) );
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
+        dependencyResolver.satisfyDependency( JobSchedulerFactory.createInitialisedScheduler() );
+        pollingThroughputMonitor = dependencyResolver.satisfyDependency( mock( PollingThroughputMonitor.class ) );
 
         status = CausalClusteringStatusFactory.build( output, db );
     }
@@ -166,7 +178,8 @@ public class CoreStatusTest
         commandIndexTracker.registerAppliedCommandIndex( 123 );
         when( raftMachine.getLeader() ).thenReturn( core2 );
         raftMessageTimerResetMonitor.timerReset();
-        Thread.sleep( 1 ); // Sometimes the test can be fast. This guarantees at least 1 ms since message received
+        when( pollingThroughputMonitor.throughput() ).thenReturn( OptionalDouble.of( 423.0 ) );
+        clock.forward( Duration.ofSeconds( 1 ) );
 
         // and helpers
         List<String> votingMembers =
@@ -184,6 +197,7 @@ public class CoreStatusTest
         assertThat( response, containsAndEquals( "healthy", true ) );
         assertThat( response, containsAndEquals( "memberId", myself.getUuid().toString() ) );
         assertThat( response, containsAndEquals( "leader", core2.getUuid().toString() ) );
+        assertThat( response, containsAndEquals( "raftIndexThroughputPerSecond", 423.0 ) );
         assertThat( response.toString(), Long.parseLong( response.get( "millisSinceLastLeaderMessage" ).toString() ), greaterThan( 0L ) );
     }
 
@@ -242,6 +256,17 @@ public class CoreStatusTest
         // then
         Map<String,Object> response = responseAsMap( description );
         assertFalse( description.getEntity().toString(), response.containsKey( "leader" ) );
+    }
+
+    @Test
+    public void throughputNegativeInUnknown() throws IOException
+    {
+        when( pollingThroughputMonitor.throughput() ).thenReturn( OptionalDouble.empty() );
+
+        Response description = status.description();
+
+        Map<String,Object> response = responseAsMap( description );
+        assertEquals( -1.0, response.get( "raftIndexThroughputPerSecond" ) );
     }
 
     static RaftMembershipManager fakeRaftMembershipManager( Set<MemberId> votingMembers )

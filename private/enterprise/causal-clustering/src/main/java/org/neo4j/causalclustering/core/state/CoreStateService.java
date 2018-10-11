@@ -19,6 +19,7 @@ import org.neo4j.causalclustering.SessionTracker;
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.CoreLocalDatabase;
 import org.neo4j.causalclustering.core.consensus.LeaderLocator;
+import org.neo4j.causalclustering.core.consensus.PollingThroughputMonitor;
 import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.replication.Replicator;
 import org.neo4j.causalclustering.core.state.machines.CoreStateMachines;
@@ -126,6 +127,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         sessionTracker = replicationModule.getSessionTracker();
         allocationSizes = getIdTypeAllocationSizeFromConfig( config );
         commandIndexTracker = platformModule.dependencies.satisfyDependency( new CommandIndexTracker() );
+        initialiseStatusDescriptionEndpoint( platformModule, commandIndexTracker );
 
         versionContextSupplier = platformModule.versionContextSupplier;
         cursorTracerSupplier = platformModule.tracers.pageCursorTracerSupplier;
@@ -246,6 +248,14 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         LocksFactory lockFactory = createLockFactory( config, logging );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );
         return new LeaderOnlyLockManager( myself, replicator, leaderLocator, localLocks, lockTokenStateMachine, databaseName );
+    }
+
+    private void initialiseStatusDescriptionEndpoint( PlatformModule platformModule, CommandIndexTracker commandIndexTracker )
+    {
+        PollingThroughputMonitor pollingThroughputMonitor = new PollingThroughputMonitor( platformModule.logging.getInternalLogProvider(), platformModule.clock,
+                PollingThroughputMonitor.DEFAULT_NUMBER_OF_MEASUREMENTS, PollingThroughputMonitor.DEFAULT_REPORTED_PERIOD, platformModule.jobScheduler,
+                commandIndexTracker::getAppliedCommandIndex );
+        platformModule.dependencies.satisfyDependency( pollingThroughputMonitor );
     }
 
     @Override

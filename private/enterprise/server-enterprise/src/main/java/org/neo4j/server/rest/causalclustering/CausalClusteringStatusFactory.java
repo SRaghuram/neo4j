@@ -5,9 +5,13 @@
  */
 package org.neo4j.server.rest.causalclustering;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 public class CausalClusteringStatusFactory

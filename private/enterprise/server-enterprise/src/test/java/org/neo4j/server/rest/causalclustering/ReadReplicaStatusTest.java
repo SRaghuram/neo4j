@@ -17,22 +17,29 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.ws.rs.core.Response;
 
+import org.neo4j.causalclustering.core.consensus.PauseTolerantSupplier;
+import org.neo4j.causalclustering.core.consensus.PollingThroughputMonitor;
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import org.neo4j.causalclustering.discovery.RoleInfo;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
+import org.neo4j.time.FakeClock;
+import org.neo4j.time.SystemNanoClock;
 
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
@@ -50,9 +57,11 @@ public class ReadReplicaStatusTest
     private Dependencies dependencyResolver = new Dependencies();
     private DatabaseHealth databaseHealth;
     private CommandIndexTracker commandIndexTracker;
+    private PollingThroughputMonitor pollingThroughputMonitor;
 
     private final MemberId myself = new MemberId( UUID.randomUUID() );
     private final LogProvider logProvider = NullLogProvider.getInstance();
+    private final SystemNanoClock clock = new FakeClock();
 
     @Before
     public void setup() throws Exception
@@ -61,11 +70,16 @@ public class ReadReplicaStatusTest
         ReadReplicaGraphDatabase db = mock( ReadReplicaGraphDatabase.class );
         topologyService = new FakeTopologyService( randomMembers( 3 ), randomMembers( 2 ), myself, RoleInfo.READ_REPLICA );
         dependencyResolver.satisfyDependencies( topologyService );
+        JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
+        dependencyResolver.satisfyDependency( jobScheduler );
 
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
         databaseHealth = dependencyResolver.satisfyDependency(
                 new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( DatabaseHealth.class ) ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
+        pollingThroughputMonitor = dependencyResolver.satisfyDependency(
+                new PollingThroughputMonitor( logProvider, clock, PollingThroughputMonitor.DEFAULT_NUMBER_OF_MEASUREMENTS,
+                        PollingThroughputMonitor.DEFAULT_REPORTED_PERIOD, jobScheduler, commandIndexTracker::getAppliedCommandIndex ) );
 
         status = CausalClusteringStatusFactory.build( output, db );
     }
@@ -104,7 +118,7 @@ public class ReadReplicaStatusTest
     }
 
     @Test
-    public void responseIncludesAllCoresAndReplicas() throws IOException
+    public void responseIncludesAllCores() throws IOException
     {
         Response description = status.description();
 
@@ -163,6 +177,19 @@ public class ReadReplicaStatusTest
         Response description = status.description();
         assertTrue( responseAsMap( description ).containsKey( "core" ) );
         assertEquals( false, responseAsMap( status.description() ).get( "core" ) );
+    }
+
+    @Test
+    public void throughputNegativeInUnknown() throws IOException
+    {
+        PollingThroughputMonitor pollingThroughputMonitor = mock( PollingThroughputMonitor.class );
+        when( pollingThroughputMonitor.throughput() ).thenReturn( OptionalDouble.empty() );
+        dependencyResolver.satisfyDependency( pollingThroughputMonitor );
+
+        Response description = status.description();
+
+        Map<String,Object> response = responseAsMap( description );
+        assertEquals( -1.0, response.get( "raftIndexThroughputPerSecond" ) );
     }
 
     static Collection<MemberId> randomMembers( int size )

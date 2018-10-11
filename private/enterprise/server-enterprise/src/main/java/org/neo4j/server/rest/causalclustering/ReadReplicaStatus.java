@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.Collection;
 import javax.ws.rs.core.Response;
 
+import org.neo4j.causalclustering.core.consensus.PollingThroughputMonitor;
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import org.neo4j.causalclustering.discovery.RoleInfo;
 import org.neo4j.causalclustering.discovery.TopologyService;
@@ -24,6 +25,8 @@ class ReadReplicaStatus extends BaseStatus
 {
     private final OutputFormat output;
 
+    private final PollingThroughputMonitor pollingThroughputMonitor;
+
     // Dependency resolved
     private final TopologyService topologyService;
     private final DatabaseHealth dbHealth;
@@ -38,6 +41,8 @@ class ReadReplicaStatus extends BaseStatus
         this.commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
         this.dbHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
+
+        pollingThroughputMonitor = dependencyResolver.resolveDependency( PollingThroughputMonitor.class, DependencyResolver.SelectionStrategy.FIRST );
     }
 
     @Override
@@ -79,6 +84,8 @@ class ReadReplicaStatus extends BaseStatus
         long lastAppliedRaftIndex = commandIndexTracker.getAppliedCommandIndex();
         // leader message duration is meaningless for replicas since communication is not guaranteed with leader and transactions are streamed periodically
         Duration millisSinceLastLeaderMessage = null;
-        return statusResponse( lastAppliedRaftIndex, false, votingMembers, isHealthy, memberId, leader, millisSinceLastLeaderMessage, false );
+        double raftIndexThroughputPerSecond = pollingThroughputMonitor.throughput().orElse( -1.0 );
+        return statusResponse( lastAppliedRaftIndex, false, votingMembers, isHealthy, memberId, leader, millisSinceLastLeaderMessage,
+                raftIndexThroughputPerSecond, false );
     }
 }
