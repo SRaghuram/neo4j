@@ -226,7 +226,7 @@ public class RsdrMain
 
                 try
                 {
-                    AbstractBaseRecord record = RecordStore.getRecord( store, i, CHECK );
+                    AbstractBaseRecord record = store.getRecord( i, store.newRecord(), CHECK );
                     use = record.inUse() ? "+" : "-";
                     str = record.toString();
                 }
