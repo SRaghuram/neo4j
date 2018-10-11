@@ -5,10 +5,8 @@
  */
 package org.neo4j.commandline.dbms;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.io.File;
@@ -18,37 +16,38 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
-import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 
-public class StoreInfoCommandEnterpriseTest
+@PageCacheExtension
+class StoreInfoCommandEnterpriseTest
 {
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory();
-    @Rule
-    public ExpectedException expected = ExpectedException.none();
-    @Rule
-    public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
-    @Rule
-    public PageCacheRule pageCacheRule = new PageCacheRule();
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private FileSystemAbstraction fileSystem;
+    @Inject
+    private PageCache pageCache;
 
     private Path databaseDirectory;
     private ArgumentCaptor<String> outCaptor;
     private StoreInfoCommand command;
     private Consumer<String> out;
 
-    @Before
-    public void setUp() throws Exception
+    @BeforeEach
+    void setUp() throws Exception
     {
         Path homeDir = testDirectory.directory( "home-dir" ).toPath();
         databaseDirectory = homeDir.resolve( "data/databases/foo.db" );
@@ -59,7 +58,7 @@ public class StoreInfoCommandEnterpriseTest
     }
 
     @Test
-    public void readsEnterpriseStoreVersionCorrectly() throws Exception
+    void readsEnterpriseStoreVersionCorrectly() throws Exception
     {
         prepareNeoStoreFile( HighLimitV3_0_0.RECORD_FORMATS.storeVersion() );
 
@@ -84,14 +83,14 @@ public class StoreInfoCommandEnterpriseTest
     {
         File neoStoreFile = createNeoStoreFile();
         long value = MetaDataStore.versionStringToLong( storeVersion );
-        MetaDataStore.setRecord( pageCacheRule.getPageCache( fsRule.get() ), neoStoreFile, STORE_VERSION, value );
+        MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value );
     }
 
     private File createNeoStoreFile() throws IOException
     {
-        fsRule.get().mkdir( databaseDirectory.toFile() );
+        fileSystem.mkdir( databaseDirectory.toFile() );
         File neoStoreFile = DatabaseLayout.of( databaseDirectory.toFile() ).metadataStore();
-        fsRule.get().create( neoStoreFile ).close();
+        fileSystem.create( neoStoreFile ).close();
         return neoStoreFile;
     }
 }
