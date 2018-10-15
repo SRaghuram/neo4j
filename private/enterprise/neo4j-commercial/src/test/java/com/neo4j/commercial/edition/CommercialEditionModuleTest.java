@@ -12,6 +12,9 @@ import org.mockito.InOrder;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.LogService;
+import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -36,7 +39,14 @@ class CommercialEditionModuleTest
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults();
         config.augment( auth_provider, SYSTEM_GRAPH_REALM_NAME );
-        PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, ENTERPRISE, newDependencies() );
+        PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, ENTERPRISE, newDependencies() )
+        {
+            @Override
+            protected LogService createLogService( LogProvider userLogProvider )
+            {
+                return NullLogService.getInstance();
+            }
+        };
         CommercialEditionModule editionModule = new CommercialEditionModule( platformModule );
         editionModule.createDatabases( manager, config );
 

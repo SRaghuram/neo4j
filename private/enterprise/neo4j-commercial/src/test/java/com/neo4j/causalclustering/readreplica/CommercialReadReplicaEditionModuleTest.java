@@ -18,6 +18,9 @@ import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.LogService;
+import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -42,7 +45,14 @@ class CommercialReadReplicaEditionModuleTest
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
         config.augment( auth_provider, SYSTEM_GRAPH_REALM_NAME );
-        PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() );
+        PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() )
+        {
+            @Override
+            protected LogService createLogService( LogProvider userLogProvider )
+            {
+                return NullLogService.getInstance();
+            }
+        };
         CommercialReadReplicaEditionModule editionModule = new CommercialReadReplicaEditionModule( platformModule, new SslSharedDiscoveryServiceFactory(),
                 new MemberId( UUID.randomUUID() ) );
         editionModule.createDatabases( manager, config );
