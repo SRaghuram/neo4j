@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.system;
 import akka.cluster.UniqueAddress;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
+import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.marshal.BaseAkkaSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ClusterIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.CoreServerInfoForMemberIdSerializer;
@@ -19,6 +20,7 @@ import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaInfoMessageS
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaInfoSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaRemovalMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaTopologySerializer;
+import com.neo4j.causalclustering.discovery.akka.marshal.ReplicatedLeaderInfoSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.UniqueAddressSerializer;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaInfoMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
@@ -171,6 +173,7 @@ public final class TypesafeConfigService
         addSerializer( ReadReplicaRemovalMessage.class, ReadReplicaRemovalMessageSerializer.class, configMap );
         addSerializer( ReadReplicaTopology.class, ReadReplicaTopologySerializer.class, configMap );
         addSerializer( LeaderInfoDirectoryMessage.class, DatabaseLeaderInfoMessageSerializer.class, configMap );
+        addSerializer( ReplicatedLeaderInfo.class, ReplicatedLeaderInfoSerializer.class, configMap );
 
         return ConfigFactory.parseMap( configMap );
     }

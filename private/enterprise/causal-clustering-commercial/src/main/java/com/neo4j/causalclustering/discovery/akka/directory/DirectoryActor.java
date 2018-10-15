@@ -8,18 +8,19 @@ package com.neo4j.causalclustering.discovery.akka.directory;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
-import akka.cluster.ddata.LWWMap;
-import akka.cluster.ddata.LWWMapKey;
+import akka.cluster.ddata.ORMap;
+import akka.cluster.ddata.ORMapKey;
 import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.logging.LogProvider;
 
-public class DirectoryActor extends BaseReplicatedDataActor<LWWMap<String,LeaderInfo>>
+public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,ReplicatedLeaderInfo>>
 {
     public static Props props( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink,
             ActorRef rrTopologyActor, LogProvider logProvider )
@@ -36,7 +37,7 @@ public class DirectoryActor extends BaseReplicatedDataActor<LWWMap<String,Leader
     protected DirectoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink,
             ActorRef rrTopologyActor, LogProvider logProvider )
     {
-        super( cluster, replicator, LWWMapKey.create( PER_DB_LEADER_KEY ), LWWMap::create, logProvider );
+        super( cluster, replicator, ORMapKey.create( PER_DB_LEADER_KEY ), ORMap::create, logProvider );
         this.discoveryUpdateSink = discoveryUpdateSink;
         this.rrTopologyActor = rrTopologyActor;
     }
@@ -56,16 +57,17 @@ public class DirectoryActor extends BaseReplicatedDataActor<LWWMap<String,Leader
     @Override
     protected void handleCustomEvents( ReceiveBuilder builder )
     {
-        builder.match( LeaderInfoSettingMessage.class, message -> {
-            modifyReplicatedData( key, map -> map.put( cluster, message.database(), message.leaderInfo() ) );
-        } );
+        builder.match( LeaderInfoSettingMessage.class, message ->
+            modifyReplicatedData( key, map -> map.put( cluster, message.database(), new ReplicatedLeaderInfo( message.leaderInfo() ) ) ) );
     }
 
     @Override
-    protected void handleIncomingData( LWWMap<String,LeaderInfo> newData )
+    protected void handleIncomingData( ORMap<String,ReplicatedLeaderInfo> newData )
     {
         data = data.merge( newData );
-        discoveryUpdateSink.offer( data.getEntries() );
-        rrTopologyActor.tell( new LeaderInfoDirectoryMessage( data.getEntries() ), getSelf() );
+        Map<String,LeaderInfo> leaderInfos = data.getEntries().entrySet().stream()
+                .collect( Collectors.toMap( Map.Entry::getKey, e -> e.getValue().leaderInfo() ) );
+        discoveryUpdateSink.offer( leaderInfos );
+        rrTopologyActor.tell( new LeaderInfoDirectoryMessage( leaderInfos ), getSelf() );
     }
 }

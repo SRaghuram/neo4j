@@ -10,6 +10,7 @@ import akka.actor.Address;
 import akka.actor.ExtendedActorSystem;
 import akka.cluster.UniqueAddress;
 import akka.testkit.javadsl.TestKit;
+import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -87,7 +88,8 @@ public class BaseAkkaSerializerTest
             new Object[]{new ReadReplicaRemovalMessage( system.provider().resolveActorRef( actorPath + 2 ) ),
                     new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem)system )},
             new Object[]{ReadReplicaTopologyMarshalTest.generate(), new ReadReplicaTopologySerializer()},
-            new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()}
+            new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()},
+            new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( new MemberId( UUID.randomUUID() ), 14L ) ), new ReplicatedLeaderInfoSerializer()}
         );
     }
 
