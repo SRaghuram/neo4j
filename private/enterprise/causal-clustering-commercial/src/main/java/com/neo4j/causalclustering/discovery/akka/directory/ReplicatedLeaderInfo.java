@@ -8,6 +8,8 @@ package com.neo4j.causalclustering.discovery.akka.directory;
 import akka.cluster.ddata.AbstractReplicatedData;
 import akka.cluster.ddata.ReplicatedData;
 
+import java.util.Objects;
+
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 
 /**
@@ -40,6 +42,27 @@ public class ReplicatedLeaderInfo extends AbstractReplicatedData<ReplicatedLeade
         }
 
         return that;
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( !(o instanceof ReplicatedLeaderInfo) )
+        {
+            return false;
+        }
+        ReplicatedLeaderInfo that = (ReplicatedLeaderInfo) o;
+        return Objects.equals( leaderInfo, that.leaderInfo );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( leaderInfo );
     }
 }
 

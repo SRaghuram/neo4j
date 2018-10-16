@@ -9,7 +9,7 @@ import java.util
 import java.util.{Collections, UUID}
 
 import akka.actor.ActorRef
-import akka.cluster.ddata.{Key, LWWMap, LWWMapKey, Replicator}
+import akka.cluster.ddata._
 import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
@@ -20,6 +20,7 @@ import org.neo4j.causalclustering.identity.MemberId
 import org.neo4j.logging.NullLogProvider
 
 import scala.util.Random
+import scala.collection.JavaConverters._
 
 class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
@@ -28,7 +29,7 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     "update replicated data on receipt of leader info message" in new Fixture {
       Given("leader info update")
-      val event = new LeaderInfoSettingMessage(newLeaderInfo, "dbName")
+      val event = new LeaderInfoSettingMessage(newReplicatedLeaderInfo.leaderInfo, "dbName")
 
       When("message received")
       replicatedDataActorRef ! event
@@ -39,10 +40,10 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     "send incoming data to read replica actor and outside world" in new Fixture {
       Given("an incoming update")
-      val update1 = LWWMap.empty[String,LeaderInfo].put(cluster, "db1", newLeaderInfo)
+      val update1 = ORMap.empty[String,ReplicatedLeaderInfo].put(cluster, "db1", newReplicatedLeaderInfo)
 
       And("another incoming update")
-      val update2 = LWWMap.empty[String,LeaderInfo].put(cluster, "db2", newLeaderInfo)
+      val update2 = ORMap.empty[String,ReplicatedLeaderInfo].put(cluster, "db2", newReplicatedLeaderInfo)
 
       When("first update received")
       replicatedDataActorRef ! Replicator.Changed(dataKey)(update1)
@@ -51,21 +52,21 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
       replicatedDataActorRef ! Replicator.Changed(dataKey)(update2)
 
       Then("first update sent to read replicas")
-      rrActor.expectMsg(defaultWaitTime, new LeaderInfoDirectoryMessage(update1.getEntries()))
+      rrActor.expectMsg(defaultWaitTime, new LeaderInfoDirectoryMessage(update1.entries.mapValues(_.leaderInfo).asJava))
 
       And("merged updates sent to read replicas")
       val merged = update1.merge(update2)
-      rrActor.expectMsg(defaultWaitTime, new LeaderInfoDirectoryMessage(merged.getEntries()))
+      rrActor.expectMsg(defaultWaitTime, new LeaderInfoDirectoryMessage(merged.entries.mapValues(_.leaderInfo).asJava))
 
       And("merged updates sent to outside world")
-      awaitAssert(actualLeaderPerDb shouldBe merged.getEntries())
+      awaitAssert(actualLeaderPerDb shouldBe merged.entries.mapValues(_.leaderInfo).asJava)
     }
   }
 
-  class Fixture extends ReplicatedDataActorFixture[LWWMap[String,LeaderInfo]] {
+  class Fixture extends ReplicatedDataActorFixture[ORMap[String,ReplicatedLeaderInfo]] {
     private val random = new Random()
-    def newLeaderInfo = {
-      new LeaderInfo(new MemberId(UUID.randomUUID()), random.nextLong())
+    def newReplicatedLeaderInfo = {
+      new ReplicatedLeaderInfo(new LeaderInfo(new MemberId(UUID.randomUUID()), random.nextLong()))
     }
 
     var actualLeaderPerDb = Collections.emptyMap[String, LeaderInfo]
@@ -82,6 +83,6 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     val props = DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref, NullLogProvider.getInstance())
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
-    override val dataKey: Key[LWWMap[String, LeaderInfo]] = LWWMapKey(DirectoryActor.PER_DB_LEADER_KEY)
+    override val dataKey: Key[ORMap[String,ReplicatedLeaderInfo]] = ORMapKey(DirectoryActor.PER_DB_LEADER_KEY)
   }
 }

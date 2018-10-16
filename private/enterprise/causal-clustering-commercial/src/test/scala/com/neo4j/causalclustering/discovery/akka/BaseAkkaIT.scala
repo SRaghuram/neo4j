@@ -20,8 +20,6 @@ import org.neo4j.kernel.configuration.Config
 import org.neo4j.ports.allocation.PortAuthority
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.junit.JUnitRunner
-import org.scalatest.mock.MockitoSugar
-import org.scalatest.{BeforeAndAfterAll, GivenWhenThen, Matchers, WordSpecLike}
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
@@ -44,11 +42,7 @@ object BaseAkkaIT {
 @RunWith(classOf[JUnitRunner])
 abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAkkaIT.bootstrapSetup))
     with ImplicitSender
-    with WordSpecLike
-    with Matchers
-    with BeforeAndAfterAll
-    with GivenWhenThen
-    with MockitoSugar {
+    with NeoSuite {
 
   val defaultWaitTime = Duration(3, TimeUnit.SECONDS)
 
