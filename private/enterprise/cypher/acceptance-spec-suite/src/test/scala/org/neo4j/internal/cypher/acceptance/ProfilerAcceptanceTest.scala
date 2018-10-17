@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.planDescription.{Argument, InternalPlan
 import org.neo4j.cypher.internal.runtime.{CreateTempFileTestSupport, ProfileMode}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ProfilerStatisticsNotReadyException, TxCounts}
 import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
 import org.opencypher.v9_0.util.helpers.StringHelper.RichString
 
@@ -44,6 +45,27 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         includeSomewhere.aPlan("Projection").withDBHits(3) and
         includeSomewhere.aPlan("AllNodesScan").withDBHits(4)
       )
+  }
+
+  test("track time in Projection") {
+    createNode()
+    createNode()
+    createNode()
+
+    executeWith(
+      Configs.All + Configs.Morsel,
+      "PROFILE MATCH (n) RETURN n.foo",
+      planComparisonStrategy = ComparePlansWithAssertion(
+        _ should
+          includeSomewhere.aPlan("ProduceResults").withTime()
+            .withLHS(
+              includeSomewhere.aPlan("Projection").withTime()
+                .withLHS(
+                  includeSomewhere.aPlan("AllNodesScan").withTime()
+                )
+            ),
+        Configs.Version2_3 + Configs.Version3_1 + Configs.RulePlanner + Configs.InterpretedAndSlotted)
+    )
   }
 
   test("profile standalone call") {
