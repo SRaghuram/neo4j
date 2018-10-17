@@ -45,7 +45,6 @@ import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.VerboseTimeout;
 
-import static java.util.Collections.newSetFromMap;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -124,7 +123,7 @@ public class SessionResetIT
     private void testRandomQueryTermination( boolean autoCommit ) throws Exception
     {
         ExecutorService executor = Executors.newFixedThreadPool( STRESS_IT_THREAD_COUNT, daemon( "test-worker" ) );
-        Set<Session> runningSessions = newSetFromMap( new ConcurrentHashMap<>() );
+        Set<Session> runningSessions = ConcurrentHashMap.newKeySet();
         AtomicBoolean stop = new AtomicBoolean();
         List<Future<?>> futures = new ArrayList<>();
 

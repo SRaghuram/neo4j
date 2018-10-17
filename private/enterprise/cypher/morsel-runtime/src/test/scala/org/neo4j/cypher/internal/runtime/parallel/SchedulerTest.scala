@@ -62,8 +62,7 @@ abstract class SchedulerTest extends CypherFunSuite {
 
     val s = newScheduler(2)
 
-    val result: mutable.Set[String] =
-      java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap[String, java.lang.Boolean])
+    val result: mutable.Set[String] = java.util.concurrent.ConcurrentHashMap.newKeySet[String]()
 
     val queryExecution = s.execute(
       SubTasker(List(
