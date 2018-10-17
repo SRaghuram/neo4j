@@ -24,7 +24,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.recovery.RecoveryRequiredChecker;
+import org.neo4j.kernel.impl.recovery.RecoveryRequiredException;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.StoreFactory;
@@ -43,6 +43,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static org.neo4j.kernel.impl.recovery.RecoveryRequiredChecker.assertRecoveryIsNotRequired;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN;
@@ -70,8 +71,8 @@ public class CoreBootstrapper
     private final FileSystemAbstraction fs;
     private final Config config;
     private final LogProvider logProvider;
-    private final RecoveryRequiredChecker recoveryRequiredChecker;
     private final Log log;
+    private final Monitors monitors;
 
     CoreBootstrapper( DatabaseLayout databaseLayout, PageCache pageCache, FileSystemAbstraction fs, Config config, LogProvider logProvider, Monitors monitors )
     {
@@ -81,18 +82,12 @@ public class CoreBootstrapper
         this.config = config;
         this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
-        this.recoveryRequiredChecker = new RecoveryRequiredChecker( fs, pageCache, config, monitors );
+        this.monitors = monitors;
     }
 
     public CoreSnapshot bootstrap( Set<MemberId> members ) throws Exception
     {
-        if ( recoveryRequiredChecker.isRecoveryRequiredAt( databaseLayout ) )
-        {
-            String message = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
-                    "instance of Neo4j or a Neo4j backup";
-            log.error( message );
-            throw new IllegalStateException( message );
-        }
+        checkRecovered();
         StoreFactory factory = new StoreFactory( databaseLayout, config,
                 new DefaultIdGeneratorFactory( fs ), pageCache, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
 
@@ -107,6 +102,19 @@ public class CoreBootstrapper
         coreSnapshot.add( CoreStateType.SESSION_TRACKER, new GlobalSessionTrackerState() );
         appendNullTransactionLogEntryToSetRaftIndexToMinusOne();
         return coreSnapshot;
+    }
+
+    private void checkRecovered() throws IOException, RecoveryRequiredException
+    {
+        try
+        {
+            assertRecoveryIsNotRequired( fs, pageCache, config, databaseLayout, monitors );
+        }
+        catch ( RecoveryRequiredException e )
+        {
+            log.error( e.getMessage() );
+            throw e;
+        }
     }
 
     private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne() throws IOException
