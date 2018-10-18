@@ -17,6 +17,7 @@ import akka.cluster.ddata.DistributedData;
 import akka.japi.function.Procedure;
 import akka.pattern.PatternsCS;
 import akka.stream.ActorMaterializer;
+import akka.stream.ActorMaterializerSettings;
 import akka.stream.OverflowStrategy;
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
@@ -28,7 +29,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.neo4j.logging.Log;
@@ -158,7 +158,9 @@ public class ActorSystemLifecycle
     {
         if ( materializer == null )
         {
-            materializer = ActorMaterializer.create( actorSystem );
+            ActorMaterializerSettings settings = ActorMaterializerSettings.create( actorSystem )
+                    .withDispatcher( TypesafeConfigService.DISCOVERY_SINK_DISPATCHER );
+            materializer = ActorMaterializer.create( settings, actorSystem );
         }
         return materializer;
     }

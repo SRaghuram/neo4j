@@ -48,7 +48,8 @@ import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
 public final class TypesafeConfigService
 {
-    public static final String AKKA_SCHEME = "akka://";
+    public static final String DISCOVERY_SINK_DISPATCHER = "discovery-dispatcher";
+    private static final String AKKA_SCHEME = "akka://";
 
     public enum ArteryTransport
     {
@@ -83,6 +84,7 @@ public final class TypesafeConfigService
                 .withFallback( serializationConfig() )
                 .withFallback( failureDetectorConfig() )
                 .withFallback( loggingConfig() )
+                .withFallback( dispatcherConfig() )
                 .withFallback( ConfigFactory.defaultReference() )
                 .resolve();
     }
@@ -140,6 +142,22 @@ public final class TypesafeConfigService
         configMap.put( "akka.cluster.failure-detector.monitored-by-nr-of-members", monitoredByNrOfMembers );
         long expectedResponseAfterMillis = config.get( CausalClusteringSettings.akka_failure_detector_expected_response_after ).toMillis();
         configMap.put( "akka.cluster.failure-detector.expected-response-after", expectedResponseAfterMillis + "ms" );
+
+        return ConfigFactory.parseMap( configMap );
+    }
+
+    private com.typesafe.config.Config dispatcherConfig()
+    {
+        // parallelism is processors * parallelism-factor, bounded between parallelism-min and parallelism-max
+        Integer parallelism = config.get( CausalClusteringSettings.middleware_akka_sink_parallelism_level );
+
+        Map<String,Object> configMap = new HashMap<>();
+        configMap.put( DISCOVERY_SINK_DISPATCHER + ".type", "Dispatcher" );
+        configMap.put( DISCOVERY_SINK_DISPATCHER + ".executor", "fork-join-executor" );
+        configMap.put( DISCOVERY_SINK_DISPATCHER + ".fork-join-executor.parallelism-min", parallelism );
+        configMap.put( DISCOVERY_SINK_DISPATCHER + ".fork-join-executor.parallelism-factor", 1.0);
+        configMap.put( DISCOVERY_SINK_DISPATCHER + ".fork-join-executor.parallelism-max", parallelism );
+        configMap.put( DISCOVERY_SINK_DISPATCHER + ".throughput", 10 );
 
         return ConfigFactory.parseMap( configMap );
     }

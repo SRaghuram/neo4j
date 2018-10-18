@@ -45,7 +45,7 @@ public class ActorSystemFactory
         TypesafeConfigService.ArteryTransport arteryTransport =
                 sslEngineProvider.isPresent() ? TypesafeConfigService.ArteryTransport.TLS_TCP : TypesafeConfigService.ArteryTransport.TCP;
         this.configService = new TypesafeConfigService( remoteMembersResolver, arteryTransport, config );
-        this.parallelism = config.get( CausalClusteringSettings.middleware_akka_parallelism_level );
+        this.parallelism = config.get( CausalClusteringSettings.middleware_akka_default_parallelism_level );
     }
 
     Set<ActorPath> initialClientContacts()
