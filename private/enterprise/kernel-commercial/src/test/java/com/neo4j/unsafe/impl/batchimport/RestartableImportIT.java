@@ -5,17 +5,13 @@
  */
 package com.neo4j.unsafe.impl.batchimport;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -26,86 +22,100 @@ import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.scheduler.ThreadPoolJobScheduler;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.RandomExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.unsafe.impl.batchimport.BatchImporterFactory;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
 import static java.lang.Long.max;
-import static org.junit.Assert.assertEquals;
+import static java.lang.ProcessBuilder.Redirect.appendTo;
+import static java.time.Duration.ofSeconds;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.neo4j.io.compress.ZipUtils.zip;
 import static org.neo4j.test.proc.ProcessUtil.getClassPath;
 import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
 import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
 
-public class RestartableImportIT
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, RandomExtension.class} )
+class RestartableImportIT
 {
     private static final int NODE_COUNT = 100;
     private static final int RELATIONSHIP_COUNT = 10_000;
 
-    private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
-    private final RandomRule random = new RandomRule();
-    private final TestDirectory directory = TestDirectory.testDirectory( fs );
+    @Inject
+    private TestDirectory directory;
+    @Inject
+    private DefaultFileSystemAbstraction fs;
+    @Inject
+    private RandomRule random;
 
-    @Rule
-    public final RuleChain rules = RuleChain.outerRule( random ).around( fs ).around( directory );
-
-    @Test( timeout = 300_000 )
-    public void shouldFinishDespiteUnfairShutdowns() throws Exception
+    @Test
+    void shouldFinishDespiteUnfairShutdowns() throws Exception
     {
-        File storeDir = directory.directory( "db" );
-        File databaseDirectory = directory.databaseDir( storeDir );
-        long startTime = System.currentTimeMillis();
-        int timeMeasuringImportExitCode = startImportInSeparateProcess( databaseDirectory ).waitFor();
-        long time = System.currentTimeMillis() - startTime;
-        assertEquals( 0, timeMeasuringImportExitCode );
-        fs.deleteRecursively( storeDir );
-        fs.mkdir( storeDir );
-        Process process;
-        int restartCount = 0;
-        do
+        assertTimeoutPreemptively( ofSeconds( 300 ), () ->
         {
-            process = startImportInSeparateProcess( databaseDirectory );
-            long waitTime = max( time / 4, random.nextLong( time ) + time / 20 * restartCount );
-            process.waitFor( waitTime, TimeUnit.MILLISECONDS );
-            boolean manuallyDestroyed = false;
-            if ( process.isAlive() )
+            File storeDir = directory.directory( "db" );
+            File databaseDirectory = directory.databaseDir( storeDir );
+            long startTime = System.currentTimeMillis();
+            int timeMeasuringImportExitCode = startImportInSeparateProcess( databaseDirectory ).waitFor();
+            long time = System.currentTimeMillis() - startTime;
+            assertEquals( 0, timeMeasuringImportExitCode );
+            fs.deleteRecursively( storeDir );
+            fs.mkdir( storeDir );
+            Process process;
+            int restartCount = 0;
+            do
             {
-                process.destroyForcibly();
-                manuallyDestroyed = true;
-            }
-            int exitCode = process.waitFor();
-            if ( !manuallyDestroyed )
-            {
-                assertEquals( 0, exitCode );
-            }
+                process = startImportInSeparateProcess( databaseDirectory );
+                long waitTime = max( time / 4, random.nextLong( time ) + time / 20 * restartCount );
+                process.waitFor( waitTime, TimeUnit.MILLISECONDS );
+                boolean manuallyDestroyed = false;
+                if ( process.isAlive() )
+                {
+                    process.destroyForcibly();
+                    manuallyDestroyed = true;
+                }
+                int exitCode = process.waitFor();
+                if ( !manuallyDestroyed )
+                {
+                    assertEquals( 0, exitCode );
+                }
 
-            zip( storeDir, new File( directory.directory( "snapshots" ), String.format( "killed-%02d.zip", restartCount ) ) );
-            restartCount++;
-        }
-        while ( process.exitValue() != 0 );
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
-        try
-        {
-            input( random.seed() ).verify( db );
-        }
-        finally
-        {
-            db.shutdown();
-        }
+                zip( fs, storeDir, new File( directory.directory( "snapshots" ), String.format( "killed-%02d.zip", restartCount ) ) );
+                restartCount++;
+            }
+            while ( process.exitValue() != 0 );
+            GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
+            try
+            {
+                input( random.seed() ).verify( db );
+            }
+            finally
+            {
+                db.shutdown();
+            }
+        } );
     }
 
     private Process startImportInSeparateProcess( File databaseDirectory ) throws IOException
     {
+        long seed = random.seed();
         ProcessBuilder pb = new ProcessBuilder( getJavaExecutable().toString(), "-cp", getClassPath(),
-                getClass().getCanonicalName(), databaseDirectory.getPath(), Long.toString( random.seed() ) );
+                getClass().getCanonicalName(), databaseDirectory.getPath(), Long.toString( seed ) );
         File wd = new File( "target/test-classes" ).getAbsoluteFile();
         Files.createDirectories( wd.toPath() );
-        pb.directory( wd );
-        pb.inheritIO();
-        return pb.start();
+        File reportFile = directory.createFile( "testReport" + seed );
+        return pb.directory( wd )
+                 .redirectOutput( appendTo( reportFile ) )
+                 .redirectError( appendTo( reportFile ) )
+                 .start();
     }
 
     private static SimpleRandomizedInput input( long seed )
@@ -127,37 +137,6 @@ public class RestartableImportIT
             {
                 throw e;
             }
-        }
-    }
-
-    private static void zip( File directory, File output ) throws IOException
-    {
-        try ( ZipOutputStream out = new ZipOutputStream( new FileOutputStream( output ) ) )
-        {
-            addFilesInDirectory( directory, out, "" );
-        }
-    }
-
-    private static void addFilesInDirectory( File directory, ZipOutputStream out, String path ) throws IOException
-    {
-        for ( File file : directory.listFiles() )
-        {
-            addToZip( out, file, path );
-        }
-    }
-
-    private static void addToZip( ZipOutputStream out, File file, String path ) throws IOException
-    {
-        if ( file.isDirectory() )
-        {
-            addFilesInDirectory( file, out, path + file.getName() + "/" );
-        }
-        else
-        {
-            ZipEntry entry = new ZipEntry( path + file.getName() );
-            entry.setSize( file.length() );
-            out.putNextEntry( entry );
-            Files.copy( file.toPath(), out );
         }
     }
 }
