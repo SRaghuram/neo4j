@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.queryReduction.DDmin.Oracle
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted._
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
+import org.neo4j.cypher.internal.spi.v3_5.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.{CommunityRuntimeFactory, EnterpriseRuntimeContextCreator, MasterCompiler, RewindableExecutionResult}
 import org.neo4j.cypher.{CypherRuntimeOption, GraphIcing}
 import org.neo4j.internal.kernel.api.Transaction
