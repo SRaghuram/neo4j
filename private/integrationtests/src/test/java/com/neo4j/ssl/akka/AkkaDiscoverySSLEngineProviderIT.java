@@ -73,7 +73,7 @@ public class AkkaDiscoverySSLEngineProviderIT
 
     private static final int UNRELATED_ID = 5; // SslContextFactory requires us to trust something
 
-    private static final FiniteDuration TIMEOUT = new FiniteDuration( 10L, TimeUnit.SECONDS );
+    private static final FiniteDuration TIMEOUT = new FiniteDuration( 30L, TimeUnit.SECONDS );
 
     @Rule
     public TestDirectory testDir = TestDirectory.testDirectory();
