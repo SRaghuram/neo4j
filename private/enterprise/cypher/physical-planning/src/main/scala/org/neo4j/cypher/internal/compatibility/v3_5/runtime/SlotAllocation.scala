@@ -340,8 +340,7 @@ object SlotAllocation {
            _: Limit |
            _: Skip |
            _: Sort |
-           _: Top |
-           _: ActiveRead
+           _: Top
       =>
         source
 

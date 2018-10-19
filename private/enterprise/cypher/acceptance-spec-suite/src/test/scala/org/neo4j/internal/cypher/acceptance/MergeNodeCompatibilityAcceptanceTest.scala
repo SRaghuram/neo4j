@@ -15,10 +15,6 @@ import scala.collection.Map
 class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
   with CypherComparisonSupport {
 
-  val hasActiveRead = ComparePlansWithAssertion(plan => {
-    plan should includeSomewhere.aPlan("ActiveRead")
-  }, Configs.Version2_3 + Configs.Version3_1)
-
   Seq(UniquenessConstraintCreator, NodeKeyConstraintCreator).foreach { constraintCreator =>
 
     test(s"$constraintCreator: should_match_on_merge_using_multiple_unique_indexes_if_only_found_single_node_for_both_indexes") {
@@ -30,7 +26,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when
       val results =
-        executeWith(Configs.UpdateConf, "merge (a:Person {id: 23, mail: 'emil@neo.com'}) on match set a.country='Sweden' return a", planComparisonStrategy = hasActiveRead)
+        executeWith(Configs.UpdateConf, "merge (a:Person {id: 23, mail: 'emil@neo.com'}) on match set a.country='Sweden' return a")
       val result = results.columnAs("a").next().asInstanceOf[Node]
 
       // then
@@ -51,7 +47,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when
       val results =
-        executeWith(Configs.UpdateConf, "merge (a:Person:User {id: 23, mail: 'emil@neo.com'}) on match set a.country='Sweden' return a", planComparisonStrategy = hasActiveRead)
+        executeWith(Configs.UpdateConf, "merge (a:Person:User {id: 23, mail: 'emil@neo.com'}) on match set a.country='Sweden' return a")
       val result = results.columnAs("a").next().asInstanceOf[Node]
 
       // then
@@ -72,7 +68,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when
       val results =
-        executeWith(Configs.UpdateConf, "merge (a:Person:User {id: 23}) on match set a.country='Sweden' return a", planComparisonStrategy = hasActiveRead)
+        executeWith(Configs.UpdateConf, "merge (a:Person:User {id: 23}) on match set a.country='Sweden' return a")
       val result = results.columnAs("a").next().asInstanceOf[Node]
 
       // then
@@ -104,7 +100,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when
       val results =
-        executeWith(Configs.UpdateConf, "merge (a:Person {id: 23, mail: 'emil@neo.com'}) on create set a.country='Sweden' return a.id, a.mail, a.country, labels(a)", planComparisonStrategy = hasActiveRead)
+        executeWith(Configs.UpdateConf, "merge (a:Person {id: 23, mail: 'emil@neo.com'}) on create set a.country='Sweden' return a.id, a.mail, a.country, labels(a)")
 
       // then
       results.toSet should equal(Set(Map("a.id" -> 23, "a.mail" -> "emil@neo.com", "a.country" -> "Sweden", "labels(a)" -> List("Person"))))
@@ -117,7 +113,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when
       val results =
-        executeWith(Configs.UpdateConf, "merge (a:Person:User {id: 23, mail: 'emil@neo.com'}) on create set a.country='Sweden' return a.id, a.mail, a.country, labels(a)", planComparisonStrategy = hasActiveRead)
+        executeWith(Configs.UpdateConf, "merge (a:Person:User {id: 23, mail: 'emil@neo.com'}) on create set a.country='Sweden' return a.id, a.mail, a.country, labels(a)")
 
       // then
       results.toSet should equal(Set(Map("a.id" -> 23, "a.mail" -> "emil@neo.com", "a.country" -> "Sweden", "labels(a)" -> List("Person", "User"))))
