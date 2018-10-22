@@ -10,7 +10,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
 
 class ShortestPathComplexQueryAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  test("allShortestPaths with complex LHS should be planned with exhaustive fallback and include predicate") {
+  test("allShortestPaths with complex LHS should not be planned with exhaustive fallback and inject predicate") {
     setupModel()
     val result = executeWith(Configs.InterpretedAndSlotted,
       """
@@ -22,13 +22,14 @@ class ShortestPathComplexQueryAcceptanceTest extends ExecutionEngineFunSuite wit
         |WHERE none (n IN nodes(pathx) WHERE id(n) = id(kimDeal))
         |RETURN extract(node in nodes(pathx) | id(node)) as ids
       """.stripMargin,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("AntiConditionalApply").withRHS(includeSomewhere.aPlan("VarLengthExpand(Into)"))))
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("AntiConditionalApply").withRHS(includeSomewhere.aPlan("VarLengthExpand(Into)")),
+        expectPlansToFail = Configs.Version3_4))
 
     val results = result.columnAs("ids").toList
     results should be(List(List(0, 4, 3, 2)))
   }
 
-  test("shortestPath with complex LHS should be planned with exhaustive fallback and include predicate") {
+  test("shortestPath with complex LHS should not be planned with exhaustive fallback and inject predicate") {
     setupModel()
     val result = executeWith(Configs.InterpretedAndSlotted,
       """
@@ -40,7 +41,8 @@ class ShortestPathComplexQueryAcceptanceTest extends ExecutionEngineFunSuite wit
         |WHERE none (n IN nodes(pathx) WHERE id(n) = id(kimDeal))
         |RETURN extract(node in nodes(pathx) | id(node)) as ids
       """.stripMargin,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("AntiConditionalApply").withRHS(includeSomewhere.aPlan("VarLengthExpand(Into)"))))
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("AntiConditionalApply").withRHS(includeSomewhere.aPlan("VarLengthExpand(Into)")),
+        expectPlansToFail = Configs.Version3_4))
 
     val results = result.columnAs("ids").toList
     results should be(List(List(0, 4, 3, 2)))

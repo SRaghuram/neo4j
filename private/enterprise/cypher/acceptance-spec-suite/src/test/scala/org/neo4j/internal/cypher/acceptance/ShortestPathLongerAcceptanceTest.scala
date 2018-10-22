@@ -207,6 +207,12 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   }
 
   // expanderSolverStep does not currently take on predicates using rels(p), but it should!
+  // In the regular var expand planning, ALL and NONE predicates with rels(p) are handled, but it depends on
+  // that p then is an AST PathExpression. But in the case of shortest path, p will just be a Variable.
+  // So to fix this we need another case in extractPredicates that can figure out a mapping between the variable name
+  // and the shortest path expression and then determine that the path expression does not depend on the whole path.
+  // The var expand fallback exists primarily for correctness and is expected to perform very badly, so it could be
+  // argued that this is not a very import case to optimize for.
   ignore("Fallback expander should take on rel-type predicates (using rels(p))") {
     val start = System.currentTimeMillis
     val results = executeWith(Configs.All,
@@ -251,7 +257,6 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
     // Then
     evaluateShortestPathResults(results, start, dim * 2 - 1, Set(nodesByName(s"${dMax / 2}${dMax / 2}")))
-    results.executionPlanDescription() should includeSomewhere.aPlan("VarLengthExpand(Into)")
     results.executionPlanDescription() should executeShortestPathFallbackWith(maxRows = 0)
   }
 
@@ -436,7 +441,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     val result = results.columnAs[Seq[Node]]("nodes").toList
     result.length should equal(1)
     result.head.length should equal (2 * dim - 1)
-    results.executionPlanDescription() shouldNot includeSomewhere.aPlan("ShortestPathVarLengthExpand")
+    results.executionPlanDescription() shouldNot includeSomewhere.aPlan("VarLengthExpand(Into)")
   }
 
   test("Shortest path from first to last node with ALL predicate") {
@@ -450,7 +455,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     val result = results.columnAs[List[Node]]("nodes").toList
     result.length should equal(1)
     result.head.toSet should equal (diag())
-    results.executionPlanDescription() shouldNot includeSomewhere.aPlan("ShortestPathVarLengthExpand")
+    results.executionPlanDescription() shouldNot includeSomewhere.aPlan("VarLengthExpand(Into)")
   }
 
   test("Shortest path from first to last node with NONE predicate") {
@@ -463,7 +468,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     val result = results.columnAs[Seq[Node]]("nodes").toList
     result.length should equal(1)
     result.head.length should equal (2 * dim - 1)
-    results.executionPlanDescription() shouldNot includeSomewhere.aPlan("ShortestPathVarLengthExpand")
+    results.executionPlanDescription() shouldNot includeSomewhere.aPlan("VarLengthExpand(Into)")
   }
 
   test("Shortest path from first to last node with NONE predicate with a composite predicate") {
@@ -505,8 +510,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     val result = results.columnAs[List[Node]]("nodes").toList
     result.length should equal(1)
     result.head.toSet should equal (row(0) ++ col(dMax))
-    // TODO: Stop using fallback once node predicates are supported in expander
-    results.executionPlanDescription() should includeSomewhere.aPlan("VarLengthExpand(Into)")
+    results.executionPlanDescription() shouldNot includeSomewhere.aPlan("VarLengthExpand(Into)")
   }
 
   test("Shortest path from first to last node with NONE node predicate") {
@@ -520,8 +524,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     val result = results.columnAs[List[Node]]("nodes").toList
     result.length should equal(1)
     result.head.toSet should equal (row(0) ++ col(dMax))
-    // TODO: Stop using fallback once node predicates are supported in expander
-    results.executionPlanDescription() should includeSomewhere.aPlan("VarLengthExpand(Into)")
+    results.executionPlanDescription() shouldNot includeSomewhere.aPlan("VarLengthExpand(Into)")
   }
 
   test("GH #5803 query should work with shortest path") {
