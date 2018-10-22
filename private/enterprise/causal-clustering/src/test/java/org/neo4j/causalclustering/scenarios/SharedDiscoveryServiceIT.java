@@ -33,6 +33,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.time.Clocks;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.Matchers.equalTo;
@@ -93,7 +94,7 @@ public class SharedDiscoveryServiceIT
 
         CoreTopologyService topologyService = discoveryServiceFactory.coreTopologyService( config, member,
                 jobScheduler, logProvider, userLogProvider, remoteMemberResolver, new TopologyServiceNoRetriesStrategy(),
-                new Monitors() );
+                new Monitors(), Clocks.systemClock() );
         return sharedClientStarter( topologyService, expectedTargetSet );
     }
 

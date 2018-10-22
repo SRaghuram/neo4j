@@ -39,7 +39,7 @@ import org.neo4j.logging.LogProvider;
  */
 public class ActorSystemLifecycle
 {
-    public static final int SHUTDOWN_TIMEOUT_S = 15;
+    private static final int SHUTDOWN_TIMEOUT_S = 15;
 
     private final ActorSystemFactory actorSystemFactory;
     private final Log log;
@@ -79,7 +79,11 @@ public class ActorSystemLifecycle
     {
         try
         {
-            CoordinatedShutdown.get( actorSystem ).runAll().toCompletableFuture().get( SHUTDOWN_TIMEOUT_S, TimeUnit.SECONDS );
+            CoordinatedShutdown
+                    .get( actorSystem )
+                    .runAll( CoordinatedShutdown.clusterLeavingReason() )
+                    .toCompletableFuture()
+                    .get( SHUTDOWN_TIMEOUT_S, TimeUnit.SECONDS );
         }
         catch ( Exception e )
         {
@@ -186,10 +190,24 @@ public class ActorSystemLifecycle
         return queue;
     }
 
-    public ActorRef actorOf( Props props, String name )
+    public ActorRef applicationActorOf( Props props, String name )
+    {
+        return actorOf( props, name, true );
+    }
+
+    public ActorRef systemActorOf( Props props, String name )
+    {
+        return actorOf( props, name, false );
+    }
+
+    private ActorRef actorOf( Props props, String name, boolean application )
     {
         ActorRef actor = actorSystem.actorOf( props, name );
-        actors.add( actor );
+        if ( application )
+        {
+            actors.add( actor );
+        }
         return actor;
+
     }
 }

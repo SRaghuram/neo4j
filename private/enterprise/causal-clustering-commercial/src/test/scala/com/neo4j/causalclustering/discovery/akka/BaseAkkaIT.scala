@@ -11,6 +11,7 @@ import akka.actor.{ActorRef, ActorSystem, BootstrapSetup, ProviderSelection}
 import akka.cluster.Cluster
 import akka.cluster.ddata.{Key, ReplicatedData, Replicator}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
+import akka.util.Timeout
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
@@ -21,6 +22,7 @@ import org.neo4j.ports.allocation.PortAuthority
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.junit.JUnitRunner
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 object BaseAkkaIT {
@@ -45,6 +47,8 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
     with NeoSuite {
 
   val defaultWaitTime = Duration(3, TimeUnit.SECONDS)
+  implicit val timeout = Timeout(defaultWaitTime)
+  implicit val execContext = ExecutionContext.global
 
   override protected def beforeAll(): Unit = ClusterViewMessageTest.setMemberConstructor(true)
 

@@ -14,15 +14,14 @@ import java.util.Objects;
 import org.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import org.neo4j.causalclustering.identity.MemberId;
 
-public class ReadReplicaInfoMessage
+public class ReadReplicaRefreshMessage
 {
     private final ReadReplicaInfo readReplicaInfo;
     private final MemberId memberId;
     private final ActorRef clusterClient;
     private final ActorRef topologyClient;
 
-    public ReadReplicaInfoMessage( ReadReplicaInfo readReplicaInfo, MemberId memberId, ActorRef clusterClient,
-            ActorRef topologyClient )
+    public ReadReplicaRefreshMessage( ReadReplicaInfo readReplicaInfo, MemberId memberId, ActorRef clusterClient, ActorRef topologyClient )
     {
         this.readReplicaInfo = readReplicaInfo;
         this.memberId = memberId;
@@ -59,8 +58,8 @@ public class ReadReplicaInfoMessage
     @Override
     public String toString()
     {
-        return "ReadReplicaInfoMessage{" + "readReplicaInfo=" + readReplicaInfo + ", memberId=" + memberId + ", clusterClient=" + clusterClient + "," +
-                " topologyClient=" + topologyClient + '}';
+        return "ReadReplicaRefreshMessage{" + "readReplicaInfo=" + readReplicaInfo + ", memberId=" + memberId + ", clusterClient=" + clusterClient +
+                ", topologyClient=" + topologyClient + '}';
     }
 
     @Override
@@ -74,10 +73,9 @@ public class ReadReplicaInfoMessage
         {
             return false;
         }
-        ReadReplicaInfoMessage that = (ReadReplicaInfoMessage) o;
+        ReadReplicaRefreshMessage that = (ReadReplicaRefreshMessage) o;
         return Objects.equals( readReplicaInfo, that.readReplicaInfo ) && Objects.equals( memberId, that.memberId ) &&
-                Objects.equals( clusterClient, that.clusterClient ) &&
-                Objects.equals( topologyClient, that.topologyClient );
+                Objects.equals( clusterClient, that.clusterClient ) && Objects.equals( topologyClient, that.topologyClient );
     }
 
     @Override

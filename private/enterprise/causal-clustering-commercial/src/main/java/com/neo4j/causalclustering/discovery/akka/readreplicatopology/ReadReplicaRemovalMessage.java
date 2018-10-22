@@ -11,22 +11,22 @@ import java.util.Objects;
 
 public class ReadReplicaRemovalMessage
 {
-    private final ActorRef topologyClient;
+    private final ActorRef clusterClient;
 
-    public ReadReplicaRemovalMessage( ActorRef topologyClient )
+    public ReadReplicaRemovalMessage( ActorRef clusterClient )
     {
-        this.topologyClient = topologyClient;
+        this.clusterClient = clusterClient;
     }
 
     public ActorRef clusterClient()
     {
-        return topologyClient;
+        return clusterClient;
     }
 
     @Override
     public String toString()
     {
-        return "ReadReplicaRemovalMessage{" + "topologyClient=" + topologyClient + '}';
+        return "ReadReplicaRemovalMessage{" + "clusterClient=" + clusterClient + '}';
     }
 
     @Override
@@ -41,12 +41,12 @@ public class ReadReplicaRemovalMessage
             return false;
         }
         ReadReplicaRemovalMessage that = (ReadReplicaRemovalMessage) o;
-        return Objects.equals( topologyClient, that.topologyClient );
+        return Objects.equals( clusterClient, that.clusterClient );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( topologyClient );
+        return Objects.hash( clusterClient );
     }
 }

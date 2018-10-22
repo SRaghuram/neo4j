@@ -20,6 +20,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.time.Clocks;
 
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
@@ -54,7 +55,8 @@ public abstract class BaseCoreTopologyServiceIT
                 NullLogProvider.getInstance(),
                 initialDiscoveryMemberResolver,
                 new TopologyServiceNoRetriesStrategy(),
-                new Monitors() );
+                new Monitors(),
+                Clocks.systemClock() );
         service.init();
         service.start();
         service.stop();

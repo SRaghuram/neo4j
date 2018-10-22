@@ -62,7 +62,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private void startTopologyActors()
     {
         ClusterClientSettings clusterClientSettings = actorSystemLifecycle.clusterClientSettings();
-        ActorRef clusterClient = actorSystemLifecycle.actorOf( ClusterClient.props( clusterClientSettings ), "cluster-client" );
+        ActorRef clusterClient = actorSystemLifecycle.systemActorOf( ClusterClient.props( clusterClientSettings ), "cluster-client" );
 
         SourceQueueWithComplete<CoreTopology> coreTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
         SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
@@ -76,7 +76,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
                 clusterClient,
                 config,
                 logProvider);
-        actorSystemLifecycle.actorOf( clientTopologyProps, ClientTopologyActor.NAME );
+        actorSystemLifecycle.applicationActorOf( clientTopologyProps, ClientTopologyActor.NAME );
     }
 
     @Override

@@ -29,7 +29,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
   "ClientTopologyActor" when {
     "starting" should {
       "send read replica info to cluster client" in new Fixture {
-        val msg = new ReadReplicaInfoMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef)
+        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef)
 
         expectMsg(msg)
       }
@@ -106,8 +106,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "periodically send read replica info" in new Fixture {
         Given("Info to send")
-        val msg = new ReadReplicaInfoMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef)
-        val send = new ClusterClient.Send(ClientTopologyActor.TARGET_PATH, msg)
+        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef)
+        val send = new ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
 
         When("Waiting for a multiple of refresh time")
         val repeatSends = 3
@@ -171,7 +171,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     val topologyActorRef = system.actorOf(props)
 
     def expectMsg(msg: Any) = {
-      val send = new ClusterClient.Send(ClientTopologyActor.TARGET_PATH, msg)
+      val send = new ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
       clusterClientProbe.fishForSpecificMessage(){ case `send` => }
     }
   }

@@ -55,7 +55,7 @@ public class ClusteringModule
         RemoteMembersResolver remoteMembersResolver = chooseResolver( config, platformModule.logging );
 
         topologyService = discoveryServiceFactory.coreTopologyService( config, myself, platformModule.jobScheduler,
-                logProvider, userLogProvider, remoteMembersResolver, resolveStrategy( config, logProvider ), monitors );
+                logProvider, userLogProvider, remoteMembersResolver, resolveStrategy( config, logProvider ), monitors, platformModule.clock );
 
         life.add( topologyService );
 

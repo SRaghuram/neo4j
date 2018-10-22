@@ -7,6 +7,7 @@ package org.neo4j.causalclustering.discovery;
 
 import com.hazelcast.spi.properties.GroupProperty;
 
+import java.time.Clock;
 import java.util.logging.Level;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -21,7 +22,7 @@ public class HazelcastDiscoveryServiceFactory implements DiscoveryServiceFactory
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
             LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-            TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors )
+            TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors, Clock clock )
     {
         configureHazelcast( config, logProvider );
         return new HazelcastCoreTopologyService( config, myself, jobScheduler, logProvider, userLogProvider, remoteMembersResolver,
@@ -30,8 +31,8 @@ public class HazelcastDiscoveryServiceFactory implements DiscoveryServiceFactory
 
     @Override
     public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider,
-                                            JobScheduler jobScheduler, MemberId myself, RemoteMembersResolver remoteMembersResolver,
-                                            TopologyServiceRetryStrategy topologyServiceRetryStrategy )
+            JobScheduler jobScheduler, MemberId myself, RemoteMembersResolver remoteMembersResolver,
+            TopologyServiceRetryStrategy topologyServiceRetryStrategy )
     {
         configureHazelcast( config, logProvider );
         return new HazelcastClient( new HazelcastClientConnector( config, logProvider, remoteMembersResolver ), jobScheduler,

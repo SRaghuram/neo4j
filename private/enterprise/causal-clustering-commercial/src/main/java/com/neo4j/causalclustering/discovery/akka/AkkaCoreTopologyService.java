@@ -15,9 +15,10 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
-import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicatorTopologyActor;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 
+import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
 
@@ -42,15 +43,17 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final LogProvider logProvider;
     private final TopologyServiceRetryStrategy retryStrategy;
     private final TopologyState topologyState;
+    private final Clock clock;
     private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
 
     public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-            LogProvider userLogProvider, TopologyServiceRetryStrategy retryStrategy )
+            LogProvider userLogProvider, TopologyServiceRetryStrategy retryStrategy, Clock clock )
     {
         super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
         this.retryStrategy = retryStrategy;
+        this.clock = clock;
         this.topologyState = new TopologyState( config, logProvider, listenerService::notifyListeners );
     }
 
@@ -74,7 +77,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
 
         Cluster cluster = actorSystemLifecycle.cluster();
         ActorRef replicator = actorSystemLifecycle.replicator();
-        ActorRef rrTopologyActor = readReplicaTopologyActor( cluster, replicator, rrTopologySink );
+        ActorRef rrTopologyActor = readReplicaTopologyActor( rrTopologySink );
         ActorRef coreTopologyActor = coreTopologyActor( cluster, replicator, coreTopologySink, rrTopologyActor );
         ActorRef directoryActor = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
 
@@ -94,21 +97,21 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
                 topologyBuilder,
                 config,
                 logProvider);
-        return actorSystemLifecycle.actorOf( coreTopologyProps, CoreTopologyActor.NAME );
+        return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
     private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> directorySink,
             ActorRef rrTopologyActor )
     {
         Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, logProvider );
-        return actorSystemLifecycle.actorOf( directoryProps, DirectoryActor.NAME );
+        return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
     }
 
-    private ActorRef readReplicaTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReadReplicaTopology> topologySink )
+    private ActorRef readReplicaTopologyActor( SourceQueueWithComplete<ReadReplicaTopology> topologySink )
     {
         ClusterClientReceptionist receptionist = actorSystemLifecycle.clusterClientReceptionist();
-        Props readReplicaTopologyProps = ReadReplicatorTopologyActor.props( topologySink, cluster, replicator, receptionist, logProvider );
-        return actorSystemLifecycle.actorOf( readReplicaTopologyProps, ReadReplicatorTopologyActor.NAME );
+        Props readReplicaTopologyProps = ReadReplicaTopologyActor.props( topologySink, receptionist, logProvider, config, clock );
+        return actorSystemLifecycle.applicationActorOf( readReplicaTopologyProps, ReadReplicaTopologyActor.NAME );
     }
 
     @Override

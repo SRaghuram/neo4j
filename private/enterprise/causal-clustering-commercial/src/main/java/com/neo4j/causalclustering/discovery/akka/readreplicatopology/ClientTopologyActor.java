@@ -27,7 +27,6 @@ import org.neo4j.logging.LogProvider;
 
 public class ClientTopologyActor extends AbstractActorWithTimers
 {
-    static final String TARGET_PATH = "/user/" + ReadReplicatorTopologyActor.NAME;
     private static final String REFRESH = "topology refresh";
 
     public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopology> coreTopologySink,
@@ -82,7 +81,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     private void sendInfo()
     {
-        ReadReplicaInfoMessage msg = new ReadReplicaInfoMessage( readReplicaInfo, myself, clusterClient, getSelf() );
+        ReadReplicaRefreshMessage msg = new ReadReplicaRefreshMessage( readReplicaInfo, myself, clusterClient, getSelf() );
         sendToCore( msg );
     }
 
@@ -90,12 +89,13 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     public void postStop()
     {
         ReadReplicaRemovalMessage msg = new ReadReplicaRemovalMessage( clusterClient );
+        log.debug( "Shutting down and sending removal message: %s", msg );
         sendToCore( msg );
     }
 
     private void sendToCore( Object msg )
     {
-        clusterClient.tell( new ClusterClient.Send( TARGET_PATH, msg ), getSelf() );
+        clusterClient.tell( new ClusterClient.Publish( ReadReplicaViewActor.READ_REPLICA_TOPIC, msg ), getSelf() );
     }
 
     private static final class Refresh

@@ -18,6 +18,7 @@ import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.time.Clocks;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -35,7 +36,8 @@ public class CoreTopologyChangeListenerTest
             actorSystemLifecycle,
             NullLogProvider.getInstance(),
             NullLogProvider.getInstance(),
-            topologyServiceRetryStrategy );
+            topologyServiceRetryStrategy,
+            Clocks.systemClock() );
 
     @Test
     public void shouldNotifyListenersOnTopologyChange()

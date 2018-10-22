@@ -5,13 +5,16 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
+import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
+import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
+
+import java.time.Clock;
+
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
-import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
-import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -26,7 +29,7 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
             LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, TopologyServiceRetryStrategy topologyServiceRetryStrategy,
-            Monitors monitors )
+            Monitors monitors, Clock clock )
     {
         return new AkkaCoreTopologyService(
                 config,
@@ -34,8 +37,8 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
                 new ActorSystemLifecycle( actorSystemFactory( remoteMembersResolver, jobScheduler, config, logProvider ), logProvider ),
                 logProvider,
                 userLogProvider,
-                topologyServiceRetryStrategy
-        );
+                topologyServiceRetryStrategy,
+                clock );
     }
 
     @Override
@@ -46,8 +49,7 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
                 config,
                 logProvider,
                 myself,
-                new ActorSystemLifecycle( actorSystemFactory( remoteMembersResolver, jobScheduler, config, logProvider ), logProvider )
-        );
+                new ActorSystemLifecycle( actorSystemFactory( remoteMembersResolver, jobScheduler, config, logProvider ), logProvider ) );
     }
 
 }

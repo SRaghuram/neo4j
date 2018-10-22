@@ -231,6 +231,37 @@ public abstract class BaseClusterOverviewIT
     }
 
     @Test
+    public void shouldDiscoverRemovalOfReadReplicaThatWasInitiallyAssociatedWithACoreThatWasAlsoRemoved() throws Throwable
+    {
+        int coreMembers = 3;
+        int readReplicas = 6;
+
+        Cluster<?> cluster = clusterRule
+                .withNumberOfCoreMembers( coreMembers )
+                .withNumberOfReadReplicas( readReplicas )
+                .startCluster();
+
+        assertAllEventualOverviews( cluster, allOf(
+                containsRole( LEADER, 1 ),
+                containsRole( FOLLOWER, coreMembers - 1 ),
+                containsRole( READ_REPLICA, readReplicas ) ) );
+
+        cluster.removeCoreMemberWithServerId( 0 );
+
+        assertAllEventualOverviews( cluster, allOf(
+                containsRole( LEADER, 1 ),
+                containsRole( FOLLOWER, coreMembers - 2 ),
+                containsRole( READ_REPLICA, readReplicas ) ) );
+
+        IntStream.range( 0, readReplicas ).parallel().forEach( cluster::removeReadReplicaWithMemberId );
+
+        assertAllEventualOverviews( cluster, allOf(
+                containsRole( LEADER, 1 ),
+                containsRole( FOLLOWER, coreMembers - 2 ),
+                containsRole( READ_REPLICA, 0 ) ) );
+    }
+
+    @Test
     public void shouldDiscoverTimeoutBasedLeaderStepdown() throws Exception
     {
         clusterRule.withNumberOfCoreMembers( 3 );

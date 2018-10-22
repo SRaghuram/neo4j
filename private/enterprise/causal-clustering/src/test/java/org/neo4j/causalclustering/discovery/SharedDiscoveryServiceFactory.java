@@ -5,6 +5,8 @@
  */
 package org.neo4j.causalclustering.discovery;
 
+import java.time.Clock;
+
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -19,7 +21,7 @@ public class SharedDiscoveryServiceFactory implements DiscoveryServiceFactory
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
             LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-            TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors )
+            TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors, Clock clock )
     {
         return new SharedDiscoveryCoreClient( discoveryService, myself, logProvider, config );
     }

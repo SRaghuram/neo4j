@@ -10,7 +10,10 @@ import akka.actor.Address;
 import akka.actor.ExtendedActorSystem;
 import akka.cluster.UniqueAddress;
 import akka.testkit.javadsl.TestKit;
+import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -24,9 +27,6 @@ import java.util.UUID;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.TestTopology;
-import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
-import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaInfoMessage;
-import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 
@@ -73,12 +73,12 @@ public class BaseAkkaSerializerTest
                     new UniqueAddressSerializer()},
             new Object[]{new CoreServerInfoForMemberId( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( 1, false ) ),
                     new CoreServerInfoForMemberIdSerializer()},
-            new Object[]{new ReadReplicaInfoMessage(
+            new Object[]{new ReadReplicaRefreshMessage(
                         TestTopology.addressesForReadReplica( 432 ),
                         new MemberId( UUID.randomUUID() ),
                         system.provider().resolveActorRef( actorPath + 1 ),
                         system.provider().resolveActorRef( actorPath + 2 ) ),
-                    new ReadReplicaInfoMessageSerializer( (ExtendedActorSystem)system )},
+                    new ReadReplicaRefreshMessageSerializer( (ExtendedActorSystem)system )},
             new Object[]{new MemberId( UUID.randomUUID() ),
                     new MemberIdSerializer()},
             new Object[]{TestTopology.addressesForReadReplica( 74839 ),
