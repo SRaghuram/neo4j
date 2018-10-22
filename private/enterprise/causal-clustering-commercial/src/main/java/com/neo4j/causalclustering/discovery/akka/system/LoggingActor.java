@@ -13,6 +13,7 @@ import akka.event.Logging;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -32,6 +33,8 @@ public class LoggingActor extends AbstractActor implements RequiresMessageQueue<
     static void enable( ActorSystem system, LogProvider logProvider )
     {
         LoggingActor.logProviders.put( system, logProvider );
+        logProvider.getLog( LoggingActor.class )
+                .debug( "Added logProvider for %s. %n logProviders and Actor systems remaining.", system.name(), logProviders.size() );
     }
 
     /**
@@ -42,6 +45,18 @@ public class LoggingActor extends AbstractActor implements RequiresMessageQueue<
     static void enable( LogProvider logProvider )
     {
         LoggingActor.defaultLogProvider = logProvider;
+    }
+
+    /**
+     * Remove association of ActorSystem to LogProvider. This is usually performed during actor system shutdown.
+     * Failure to call this in integration tests may cause a memory leak.
+     * @param system the actor system for which to disable logging
+     */
+    static void disable( ActorSystem system )
+    {
+        Optional<LogProvider> removed = Optional.ofNullable( logProviders.remove( system ) );
+        removed.ifPresent( log -> log.getLog( LoggingActor.class )
+                .debug( "Removed logProvider for %s. %n logProviders and Actor systems remaining.", system.name(), logProviders.size() ) );
     }
 
     @Override

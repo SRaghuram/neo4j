@@ -88,6 +88,7 @@ public class ActorSystemLifecycle
         }
         finally
         {
+            LoggingActor.disable( actorSystem );
             actorSystem = null;
         }
     }
