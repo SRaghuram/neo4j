@@ -20,6 +20,7 @@ import org.neo4j.kernel.impl.api.TransactionExecutionStatistic;
 import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo;
 
 import static java.lang.String.format;
+import static org.neo4j.helpers.Exceptions.stringify;
 import static org.neo4j.kernel.enterprise.builtinprocs.QueryId.ofInternalId;
 
 @SuppressWarnings( "WeakerAccess" )
@@ -53,6 +54,7 @@ public class TransactionStatusResult
     public final long pageFaults;
     /** @since Neo4j 3.5 */
     public final String connectionId;
+    public final String initializationStackTrace;
 
     public TransactionStatusResult( KernelTransactionHandle transaction,
             TransactionDependenciesResolver transactionDependenciesResolver,
@@ -97,17 +99,18 @@ public class TransactionStatusResult
         this.resourceInformation = transactionDependenciesResolver.describeBlockingLocks( transaction );
         this.status = getStatus( transaction, terminationReason, transactionDependenciesResolver );
         this.metaData = transaction.getMetaData();
+
+        this.initializationStackTrace = stringify( transaction.transactionInitialisationTrace() );
     }
 
-    private String getStatus( KernelTransactionHandle handle, Optional<Status> terminationReason,
+    private static String getStatus( KernelTransactionHandle handle, Optional<Status> terminationReason,
             TransactionDependenciesResolver transactionDependenciesResolver )
     {
         return terminationReason.map( reason -> format( TERMINATED_STATE, reason.code() ) )
                 .orElseGet( () -> getExecutingStatus( handle, transactionDependenciesResolver ) );
     }
 
-    private String getExecutingStatus( KernelTransactionHandle handle,
-            TransactionDependenciesResolver transactionDependenciesResolver )
+    private static String getExecutingStatus( KernelTransactionHandle handle, TransactionDependenciesResolver transactionDependenciesResolver )
     {
         return transactionDependenciesResolver.isBlocked( handle ) ? "Blocked by: " +
                 transactionDependenciesResolver.describeBlockingTransactions( handle ) : RUNNING_STATE;

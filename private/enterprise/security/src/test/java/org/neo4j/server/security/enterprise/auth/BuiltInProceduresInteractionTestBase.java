@@ -13,6 +13,7 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -36,6 +37,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.enterprise.builtinprocs.QueryId;
+import org.neo4j.kernel.impl.api.transaction.trace.TransactionTracingLevel;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.newapi.Operations;
@@ -124,7 +126,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         blockedModifierLatch.finishAndWaitForAllToFinish();
     }
 
-    private void waitTransactionToStartWaitingForTheLock() throws InterruptedException
+    private static void waitTransactionToStartWaitingForTheLock() throws InterruptedException
     {
         while ( Thread.getAllStackTraces().keySet().stream().noneMatch(
                 ThreadingRule.waitingWhileIn( Operations.class, "acquireExclusiveNodeLock" ) ) )
@@ -192,6 +194,35 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
         read1.closeAndAssertSuccess();
         read2.closeAndAssertSuccess();
+    }
+
+    @Test
+    public void listTransactionInitialisationTraceWhenAvailable() throws Throwable
+    {
+        neo.tearDown();
+        neo = setUpNeoServer( stringMap( GraphDatabaseSettings.transaction_tracing_level.name(), TransactionTracingLevel.ALL.name(),
+                                                 GraphDatabaseSettings.auth_enabled.name(), "false" ) );
+        DoubleLatch latch = new DoubleLatch( 2, true );
+        try
+        {
+            ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+            String q1 = read1.execute( threading, neo.login( "user1", "" ), "UNWIND [1,2,3] AS x RETURN x" );
+            latch.startAndWaitForAllToStart();
+
+            String query = "CALL dbms.listTransactions()";
+            assertSuccess( neo.login( "admin", "" ), query, r ->
+            {
+                List<Object> results = getObjectsAsList( r, "initializationStackTrace" );
+                for ( Object result : results )
+                {
+                    assertThat( result.toString(), Matchers.containsString( "Transaction initialization stacktrace" ) );
+                }
+            } );
+        }
+        finally
+        {
+            latch.finishAndWaitForAllToFinish();
+        }
     }
 
     @Test

@@ -469,8 +469,7 @@ public abstract class ProcedureInteractionTestBase<S>
     {
         List<Object> results = getObjectsAsList( r, key );
         assertEquals( Arrays.asList( items ).size(), results.size() );
-        assertThat( results, containsInAnyOrder( Arrays.stream( items ).map( this::valueOf ).toArray()
-        ) );
+        assertThat( results, containsInAnyOrder( Arrays.stream( items ).map( this::valueOf ).toArray() ) );
     }
 
     static void assertKeyIsMap( ResourceIterator<Map<String,Object>> r, String keyKey, String valueKey,

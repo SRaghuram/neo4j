@@ -5,7 +5,7 @@
  */
 package org.neo4j.kernel.enterprise.builtinprocs;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.time.ZoneId;
@@ -37,6 +37,7 @@ import org.neo4j.kernel.impl.api.TransactionExecutionStatistic;
 import org.neo4j.kernel.impl.api.TransactionHooks;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
+import org.neo4j.kernel.impl.api.transaction.trace.TransactionInitializationTrace;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.impl.factory.CanWrite;
 import org.neo4j.kernel.impl.index.ExplicitIndexStore;
@@ -61,22 +62,24 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier.ON_HEAP;
 import static org.neo4j.test.MockedNeoStores.mockedTokenHolders;
 
-public class TransactionStatusResultTest
+class TransactionStatusResultTest
 {
 
     private TestKernelTransactionHandle transactionHandle =
             new TransactionHandleWithLocks( new StubKernelTransaction() );
-    private HashMap<KernelTransactionHandle,List<QuerySnapshot>> snapshotsMap = new HashMap<>();
-    private TransactionDependenciesResolver blockerResolver = new TransactionDependenciesResolver( snapshotsMap );
+    private final HashMap<KernelTransactionHandle,List<QuerySnapshot>> snapshotsMap = new HashMap<>();
+    private final TransactionDependenciesResolver blockerResolver = new TransactionDependenciesResolver( snapshotsMap );
 
     @Test
-    public void statusOfTransactionWithSingleQuery() throws InvalidArgumentsException
+    void statusOfTransactionWithSingleQuery() throws InvalidArgumentsException
     {
         snapshotsMap.put( transactionHandle, singletonList( createQuerySnapshot( 7L ) ) );
         TransactionStatusResult statusResult =
@@ -86,7 +89,7 @@ public class TransactionStatusResultTest
     }
 
     @Test
-    public void statusOfTransactionWithoutRunningQuery() throws InvalidArgumentsException
+    void statusOfTransactionWithoutRunningQuery() throws InvalidArgumentsException
     {
         snapshotsMap.put( transactionHandle, emptyList() );
         TransactionStatusResult statusResult =
@@ -96,7 +99,7 @@ public class TransactionStatusResultTest
     }
 
     @Test
-    public void statusOfTransactionWithMultipleQueries() throws InvalidArgumentsException
+    void statusOfTransactionWithMultipleQueries() throws InvalidArgumentsException
     {
         snapshotsMap.put( transactionHandle, asList( createQuerySnapshot( 7L ), createQuerySnapshot( 8L ) ) );
         TransactionStatusResult statusResult =
@@ -106,7 +109,7 @@ public class TransactionStatusResultTest
     }
 
     @Test
-    public void statusOfTransactionWithDifferentTimeZone() throws InvalidArgumentsException
+    void statusOfTransactionWithDifferentTimeZone() throws InvalidArgumentsException
     {
         snapshotsMap.put( transactionHandle, singletonList( createQuerySnapshot( 7L ) ) );
         TransactionStatusResult statusResult =
@@ -115,7 +118,24 @@ public class TransactionStatusResultTest
         checkTransactionStatus( statusResult, "testQuery", "query-7", "1970-01-01T01:00:01.984+01:00" );
     }
 
-    private void checkTransactionStatusWithoutQueries( TransactionStatusResult statusResult )
+    @Test
+    void emptyInitialisationStacktraceWhenTraceNotAvailable() throws InvalidArgumentsException
+    {
+        snapshotsMap.put( transactionHandle, emptyList() );
+        TransactionStatusResult statusResult = new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
+        assertEquals( EMPTY, statusResult.initializationStackTrace );
+    }
+
+    @Test
+    void includeInitialisationStacktraceWhenTraceAvailable() throws InvalidArgumentsException
+    {
+        transactionHandle = new TransactionHandleWithLocks( new StubKernelTransaction(), true );
+        snapshotsMap.put( transactionHandle, emptyList() );
+        TransactionStatusResult statusResult = new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
+        assertThat( statusResult.initializationStackTrace, containsString( "Transaction initialization stacktrace." ) );
+    }
+
+    private static void checkTransactionStatusWithoutQueries( TransactionStatusResult statusResult )
     {
         assertEquals( "transaction-8", statusResult.transactionId );
         assertEquals( "testUser", statusResult.username );
@@ -140,8 +160,7 @@ public class TransactionStatusResultTest
         assertEquals( 0L, statusResult.pageFaults );
     }
 
-    private void checkTransactionStatus( TransactionStatusResult statusResult, String currentQuery,
-            String currentQueryId, String startTime )
+    private static void checkTransactionStatus( TransactionStatusResult statusResult, String currentQuery, String currentQueryId, String startTime )
     {
         assertEquals( "transaction-8", statusResult.transactionId );
         assertEquals( "testUser", statusResult.username );
@@ -172,7 +191,7 @@ public class TransactionStatusResultTest
         return executingQuery.snapshot();
     }
 
-    private ExecutingQuery createExecutingQuery( long queryId )
+    private static ExecutingQuery createExecutingQuery( long queryId )
     {
         return new ExecutingQuery( queryId, getTestConnectionInfo(), "testUser", "testQuery", VirtualValues.EMPTY_MAP,
                 Collections.emptyMap(), () -> 1L, PageCursorTracer.NULL,
@@ -180,7 +199,7 @@ public class TransactionStatusResultTest
                 new CountingNanoClock(), new CountingCpuClock(), new CountingHeapAllocation() );
     }
 
-    private HttpConnectionInfo getTestConnectionInfo()
+    private static HttpConnectionInfo getTestConnectionInfo()
     {
         return new HttpConnectionInfo( "https-42", "https", new InetSocketAddress( "localhost", 1000 ),
                 new InetSocketAddress( "localhost", 1001 ), "/path" );
@@ -188,10 +207,27 @@ public class TransactionStatusResultTest
 
     private static class TransactionHandleWithLocks extends TestKernelTransactionHandle
     {
+        boolean hasInitTrace;
 
         TransactionHandleWithLocks( KernelTransaction tx )
         {
             super( tx );
+        }
+
+        TransactionHandleWithLocks( KernelTransaction tx, boolean hasInitTrace )
+        {
+            super( tx );
+            this.hasInitTrace = hasInitTrace;
+        }
+
+        @Override
+        public TransactionInitializationTrace transactionInitialisationTrace()
+        {
+            if ( hasInitTrace )
+            {
+                return new TransactionInitializationTrace();
+            }
+            return super.transactionInitialisationTrace();
         }
 
         @Override
