@@ -150,7 +150,10 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     public void setLeader0( LeaderInfo leaderInfo )
     {
         this.leaderInfo = leaderInfo;
-        directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, localDBName() ), ActorRef.noSender() ) );
+        if ( leaderInfo.memberId() != null || leaderInfo.isSteppingDown() )
+        {
+            directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, localDBName() ), ActorRef.noSender() ) );
+        }
     }
 
     @Override
