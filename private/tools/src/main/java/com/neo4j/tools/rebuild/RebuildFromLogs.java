@@ -261,6 +261,7 @@ class RebuildFromLogs
 
         private void checkConsistency() throws ConsistencyCheckIncompleteException, InconsistentStoreException
         {
+            PageCache pageCache = graphdb.getDependencyResolver().resolveDependency( PageCache.class );
             RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
             StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
             DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders, indexStatisticsStore, idGeneratorFactory );
@@ -268,7 +269,7 @@ class RebuildFromLogs
                     Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber() );
 
             ConsistencySummaryStatistics summaryStatistics =
-                    fullCheck.execute( stores, () -> (CountsStore) storageEngine.countsAccessor(), FormattedLog.toOutputStream( System.err ) );
+                    fullCheck.execute( pageCache, stores, () -> (CountsStore) storageEngine.countsAccessor(), FormattedLog.toOutputStream( System.err ) );
             if ( !summaryStatistics.isConsistent() )
             {
                 throw new InconsistentStoreException( summaryStatistics );
