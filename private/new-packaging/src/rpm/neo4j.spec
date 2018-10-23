@@ -122,8 +122,10 @@ mkdir -p %{buildroot}/%{_bindir}
 mkdir -p %{buildroot}/%{_datadir}/neo4j/lib
 mkdir -p %{buildroot}/%{_datadir}/neo4j/bin/tools
 mkdir -p %{buildroot}/%{_datadir}/doc/neo4j
+mkdir -p %{buildroot}/%{neo4jhome}/certificates
 mkdir -p %{buildroot}/%{neo4jhome}/plugins
 mkdir -p %{buildroot}/%{neo4jhome}/data/databases
+mkdir -p %{buildroot}/%{neo4jhome}/data/dbms
 mkdir -p %{buildroot}/%{neo4jhome}/import
 mkdir -p %{buildroot}/%{_sysconfdir}/neo4j
 mkdir -p %{buildroot}/%{_localstatedir}/log/neo4j

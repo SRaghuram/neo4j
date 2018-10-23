@@ -3,8 +3,10 @@
 # (see http://people.debian.org/~seanius/policy/dbapp-policy.html/)
 var/lib/neo4j
 var/lib/neo4j/data/databases
+var/lib/neo4j/data/dbms
 var/lib/neo4j/import
 var/lib/neo4j/plugins
+var/lib/neo4j/certificates
 
 # Store neo4j log file in it's own directory, since log rotation is in place, so there will be
 # many of them.
@@ -15,3 +17,6 @@ usr/share/neo4j
 
 # Configuration
 etc/neo4j
+
+# Run folder for PID
+var/run/neo4j
