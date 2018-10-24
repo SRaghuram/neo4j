@@ -160,6 +160,45 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         Map("name" -> "Toc", "label" -> "C")))
   }
 
+  test("should get count for labels") {
+    // Given
+    createLabeledNode(Map("name" -> "Tic"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "A")
+    createLabeledNode(Map("name" -> "Toc"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "B")
+    createLabeledNode(Map("name" -> "Toc"), "C")
+
+    //When
+    val result = executeWith(combinedCallconfiguration, "CALL db.labels() YIELD label, count RETURN *")
+
+    // Then
+    result.toList should equal(
+      List(
+        Map("label" -> "A", "count" -> 3),
+        Map("label" -> "B", "count" -> 1),
+        Map("label" -> "C", "count" -> 1)))
+  }
+
+  test("should get correct count for labels when removed") {
+    // Given
+    createLabeledNode(Map("name" -> "Tic"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "A")
+    createLabeledNode(Map("name" -> "Toc"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "B")
+    createLabeledNode(Map("name" -> "Toc"), "C")
+
+    execute("MATCH (c:C) REMOVE c:C")
+
+    //When
+    val result = executeWith(combinedCallconfiguration, "CALL db.labels() YIELD label, count RETURN *")
+
+    // Then
+    result.toList should equal(
+      List(
+        Map("label" -> "A", "count" -> 3),
+        Map("label" -> "B", "count" -> 1)))
+  }
+
   test("db.labels works on an empty database") {
     // Given an empty database
     //When
