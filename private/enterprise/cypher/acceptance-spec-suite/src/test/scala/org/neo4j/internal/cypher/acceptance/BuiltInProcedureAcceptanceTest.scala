@@ -169,7 +169,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     createLabeledNode(Map("name" -> "Toc"), "C")
 
     //When
-    val result = executeWith(combinedCallconfiguration, "CALL db.labels() YIELD label, count RETURN *")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label, count RETURN *")
 
     // Then
     result.toList should equal(
@@ -190,7 +190,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     execute("MATCH (c:C) REMOVE c:C")
 
     //When
-    val result = executeWith(combinedCallconfiguration, "CALL db.labels() YIELD label, count RETURN *")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label, count RETURN *")
 
     // Then
     result.toList should equal(
@@ -245,6 +245,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // Given
     relate(createNode(), createNode(), "A")
     relate(createNode(), createNode(), "B")
+    relate(createNode(), createNode(), "B")
     relate(createNode(), createNode(), "C")
 
     // When
@@ -253,9 +254,9 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // Then
     result.toList should equal(
       List(
-        Map("relationshipType" -> "A"),
-        Map("relationshipType" -> "B"),
-        Map("relationshipType" -> "C")))
+        Map("relationshipType" -> "A", "count" -> 1),
+        Map("relationshipType" -> "B", "count" -> 2),
+        Map("relationshipType" -> "C", "count" -> 1)))
   }
 
   test("db.relationshipType work on an empty database") {
