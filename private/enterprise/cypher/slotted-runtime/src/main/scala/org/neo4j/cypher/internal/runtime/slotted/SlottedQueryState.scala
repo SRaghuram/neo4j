@@ -24,18 +24,19 @@ class SlottedQueryState(query: QueryContext,
                         triadicState: mutable.Map[String, LongSet] = mutable.Map.empty,
                         repeatableReads: mutable.Map[Pipe, Seq[ExecutionContext]] = mutable.Map.empty,
                         cachedIn: SingleThreadedLRUCache[Any, InCheckContainer] = new SingleThreadedLRUCache(maxSize = 16),
-                        lenientCreateRelationship: Boolean = false)
+                        lenientCreateRelationship: Boolean = false,
+                        prePopulateResults: Boolean = false)
   extends QueryState(query, resources, params, decorator, initialContext, triadicState,
-    repeatableReads, cachedIn, lenientCreateRelationship) {
+    repeatableReads, cachedIn, lenientCreateRelationship, prePopulateResults) {
 
   override def withDecorator(decorator: PipeDecorator) =
-    new SlottedQueryState(query, resources, params, decorator, initialContext, triadicState, repeatableReads, cachedIn, lenientCreateRelationship)
+    new SlottedQueryState(query, resources, params, decorator, initialContext, triadicState, repeatableReads, cachedIn, lenientCreateRelationship, prePopulateResults)
 
   override def withInitialContext(initialContext: ExecutionContext) =
-    new SlottedQueryState(query, resources, params, decorator, Some(initialContext), triadicState, repeatableReads, cachedIn, lenientCreateRelationship)
+    new SlottedQueryState(query, resources, params, decorator, Some(initialContext), triadicState, repeatableReads, cachedIn, lenientCreateRelationship, prePopulateResults)
 
   override def withQueryContext(query: QueryContext) =
-    new SlottedQueryState(query, resources, params, decorator, initialContext, triadicState, repeatableReads, cachedIn, lenientCreateRelationship)
+    new SlottedQueryState(query, resources, params, decorator, initialContext, triadicState, repeatableReads, cachedIn, lenientCreateRelationship, prePopulateResults)
 }
 
 case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends ExecutionContextFactory {

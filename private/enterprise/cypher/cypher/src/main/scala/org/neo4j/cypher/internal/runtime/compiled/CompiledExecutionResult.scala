@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.executionplan.GeneratedQueryExecution
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
-import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
+import org.neo4j.cypher.result.{QueryProfile, QueryResult, RuntimeResult}
 import org.neo4j.graphdb.ResourceIterator
 
 /**
@@ -19,7 +19,8 @@ import org.neo4j.graphdb.ResourceIterator
   */
 class CompiledExecutionResult(context: QueryContext,
                               compiledCode: GeneratedQueryExecution,
-                              override val queryProfile: QueryProfile)
+                              override val queryProfile: QueryProfile,
+                              prePopulateResults: Boolean)
   extends RuntimeResult {
 
   private var resultRequested = false
@@ -29,7 +30,20 @@ class CompiledExecutionResult(context: QueryContext,
   override def fieldNames(): Array[String] = compiledCode.fieldNames()
 
   override def accept[EX <: Exception](visitor: QueryResultVisitor[EX]): Unit = {
-    compiledCode.accept(visitor)
+    if (prePopulateResults)
+      compiledCode.accept(new QueryResultVisitor[EX] {
+        override def visit(row: QueryResult.Record): Boolean = {
+          val fields = row.fields()
+          var i = 0
+          while (i < fields.length) {
+            ValuePopulation.populate(fields(i))
+            i+=1
+          }
+          visitor.visit(row)
+        }
+      })
+    else
+      compiledCode.accept(visitor)
     resultRequested = true
   }
 

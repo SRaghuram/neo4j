@@ -21,7 +21,8 @@ trait RunnablePlan {
   def apply(queryContext: QueryContext,
             execMode: ExecutionMode,
             tracer: Option[ProfilingTracer],
-            params: MapValue): RuntimeResult
+            params: MapValue,
+            prePopulateResults: Boolean): RuntimeResult
 
   def metadata: Seq[Argument]
 }

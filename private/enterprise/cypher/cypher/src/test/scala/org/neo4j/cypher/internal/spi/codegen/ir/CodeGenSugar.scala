@@ -63,7 +63,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
           "no query text exists for this test", EMPTY_MAP))
       val queryContext = new TransactionBoundQueryContext(transactionalContext)(mock[IndexSearchMonitor])
       val tracer = Some(new ProfilingTracer(queryContext.transactionalContext.kernelStatisticProvider))
-      val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP)
+      val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP, false)
       result.accept(new QueryResultVisitor[Exception] {
         override def visit(row: QueryResult.Record): Boolean = true
       })
@@ -109,7 +109,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
                                   tracer.getOrElse(QueryExecutionTracer.NONE),
                                   params)
 
-    val runtimeResult = new CompiledExecutionResult(queryContext, generated, tracer.getOrElse(QueryProfile.NONE))
+    val runtimeResult = new CompiledExecutionResult(queryContext, generated, tracer.getOrElse(QueryProfile.NONE), false)
     RewindableExecutionResult(runtimeResult, queryContext)
   }
 

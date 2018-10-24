@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.neo4j.cypher.internal.runtime.ValuePopulation
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -37,6 +38,22 @@ case class ArrayResultExecutionContextFactory(columns: Seq[(String, Expression)]
     var index = 0
     while (index < columnArraySize) {
       resultArray(index) = columnExpressionArray(index).apply(context, state)
+      index += 1
+    }
+    result
+  }
+
+  def newPopulatedResult(context: ExecutionContext, state: QueryState): ArrayResultExecutionContext = {
+    val result = allocateExecutionContext
+
+    // Apply the expressions that materializes the result values and fill in the result array
+    val resultArray = result.resultArray
+    var index = 0
+    while (index < columnArraySize) {
+      val value = columnExpressionArray(index).apply(context, state)
+      if (state.prePopulateResults)
+        ValuePopulation.populate(value)
+      resultArray(index) = value
       index += 1
     }
     result

@@ -78,7 +78,8 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
-                     params: MapValue): RuntimeResult = {
+                     params: MapValue,
+                     prePopulateResults: Boolean): RuntimeResult = {
 
       new VectorizedRuntimeResult(operators,
                                   logicalPlan,

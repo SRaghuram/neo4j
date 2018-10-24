@@ -188,7 +188,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
 
     val queryContext = new TransactionBoundQueryContext(txContextWrapper)(CypherReductionSupport.searchMonitor)
 
-    val runtimeResult = executionPlan.run(queryContext, doProfile = false, ValueConversion.asValues(baseState.extractedParams()))
+    val runtimeResult = executionPlan.run(queryContext, doProfile = false, ValueConversion.asValues(baseState.extractedParams()), false)
     RewindableExecutionResult(runtimeResult, queryContext)
   }
 

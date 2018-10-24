@@ -70,7 +70,8 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
           def apply(queryContext: QueryContext,
                     execMode: ExecutionMode,
                     tracer: Option[ProfilingTracer],
-                    params: MapValue): RuntimeResult = {
+                    params: MapValue,
+                    prePopulateResults: Boolean): RuntimeResult = {
             val explodingProvider =
               new Provider[InternalPlanDescription] {
                 override def get(): InternalPlanDescription = ???
@@ -78,7 +79,7 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
 
             val execution: GeneratedQueryExecution = query.query.execute(queryContext, execMode, explodingProvider,
                                                                          tracer.getOrElse(QueryExecutionTracer.NONE),params)
-            new CompiledExecutionResult(queryContext, execution, tracer.getOrElse(QueryProfile.NONE))
+            new CompiledExecutionResult(queryContext, execution, tracer.getOrElse(QueryProfile.NONE), prePopulateResults)
           }
 
           def metadata: Seq[Argument] = query.code

@@ -28,14 +28,15 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
   override def create(queryContext: QueryContext): ExecutionResultBuilder = SlottedExecutionWorkflowBuilder(queryContext)
 
   case class SlottedExecutionWorkflowBuilder(queryContext: QueryContext) extends BaseExecutionWorkflowBuilder {
-    override protected def createQueryState(params: MapValue): SlottedQueryState = {
+    override protected def createQueryState(params: MapValue, prePopulateResults: Boolean): SlottedQueryState = {
       new SlottedQueryState(queryContext,
                             externalResource,
                             params,
                             pipeDecorator,
                             triadicState = mutable.Map.empty,
                             repeatableReads = mutable.Map.empty,
-                            lenientCreateRelationship = lenientCreateRelationship)
+                            lenientCreateRelationship = lenientCreateRelationship,
+                            prePopulateResults = prePopulateResults)
     }
 
     override def buildResultIterator(results: Iterator[ExecutionContext], readOnly: Boolean): IteratorBasedResult = {

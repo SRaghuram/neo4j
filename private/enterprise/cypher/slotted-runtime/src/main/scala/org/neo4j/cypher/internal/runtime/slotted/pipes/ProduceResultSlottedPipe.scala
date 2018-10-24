@@ -21,10 +21,13 @@ case class ProduceResultSlottedPipe(source: Pipe, columns: Seq[(String, Expressi
     // create one resultFactory per execution, to avoid synchronization problems.
     val resultFactory = ArrayResultExecutionContextFactory(columns)
 
-    input.map {
-      original =>
-        val result = resultFactory.newResult(original, state)
-        result
-    }
+    if (state.prePopulateResults)
+      input.map {
+        original => resultFactory.newPopulatedResult(original, state)
+      }
+    else
+      input.map {
+        original => resultFactory.newResult(original, state)
+      }
   }
 }
