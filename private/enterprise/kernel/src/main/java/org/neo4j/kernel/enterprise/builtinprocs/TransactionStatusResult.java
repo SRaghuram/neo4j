@@ -20,7 +20,6 @@ import org.neo4j.kernel.impl.api.TransactionExecutionStatistic;
 import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo;
 
 import static java.lang.String.format;
-import static org.neo4j.helpers.Exceptions.stringify;
 import static org.neo4j.kernel.enterprise.builtinprocs.QueryId.ofInternalId;
 
 @SuppressWarnings( "WeakerAccess" )
@@ -99,8 +98,7 @@ public class TransactionStatusResult
         this.resourceInformation = transactionDependenciesResolver.describeBlockingLocks( transaction );
         this.status = getStatus( transaction, terminationReason, transactionDependenciesResolver );
         this.metaData = transaction.getMetaData();
-
-        this.initializationStackTrace = stringify( transaction.transactionInitialisationTrace() );
+        this.initializationStackTrace = transaction.transactionInitialisationTrace().getTrace();
     }
 
     private static String getStatus( KernelTransactionHandle handle, Optional<Status> terminationReason,
