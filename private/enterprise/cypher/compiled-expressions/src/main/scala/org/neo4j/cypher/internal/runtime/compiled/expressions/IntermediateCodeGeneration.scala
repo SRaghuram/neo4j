@@ -902,7 +902,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
         val lazySet = oneTime(assign(variableName,
-                                     nullCheck(l, r)(invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("lessThan"), l.ir, r.ir))))
+                                    invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("lessThan"), l.ir, r.ir)))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -915,7 +915,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
         val lazySet = oneTime(assign(variableName,
-                                     nullCheck(l, r)(invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("lessThanOrEqual"), l.ir, r.ir))))
+                                    invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("lessThanOrEqual"), l.ir, r.ir)))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -928,7 +928,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
         val lazySet = oneTime(assign(variableName,
-                                     nullCheck(l, r)(invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("greaterThan"), l.ir, r.ir))))
+                                    invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("greaterThan"), l.ir, r.ir)))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -941,7 +941,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
         val lazySet = oneTime(assign(variableName,
-                                     nullCheck(l, r)(invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("greaterThanOrEqual"), l.ir, r.ir))))
+                                    invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("greaterThanOrEqual"), l.ir, r.ir)))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1875,6 +1875,10 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     val nullChecks = if (nullable) Seq(declare[Boolean](seenNull), assign(seenNull, constant(false))) else Seq.empty
     val nullCheckAssign = if (firstExpression.nullCheck.nonEmpty) Seq(assign(seenNull, equal(load(returnValue), noValue))) else Seq.empty
     val exceptionName = namer.nextVariableName()
+    //otherwise check if we have seen a null which implicitly also mean we never seen a FALSE
+    //if we seen a null we should return null otherwise we return whatever currently
+    //stored in returnValue
+    val actualReturnValue = if (nullable) ternary(load(seenNull), noValue, load(returnValue)) else load(returnValue)
     val ir =
       block(
         //set up all temp variables
@@ -1890,10 +1894,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           //checks if there was an error and that we never evaluated to breakValue, if so throw
           condition(and(notEqual(load(error), constant(null)), notEqual(load(returnValue), breakValue)))(
             fail(load(error))),
-          //otherwise check if we have seen a null which implicitly also mean we never seen a FALSE
-          //if we seen a null we should return null otherwise we return whatever currently
-          //stored in returnValue
-          if (nullable) ternary(load(seenNull), noValue, load(returnValue)) else load(returnValue)): _*)
+          actualReturnValue): _*)
     IntermediateExpression(ir,
                            expressions.foldLeft(Seq.empty[Field])((a,b) => a ++ b.fields),
                            expressions.foldLeft(Seq.empty[LocalVariable])((a,b) => a ++ b.variables) :+ local,
