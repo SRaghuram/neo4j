@@ -5,6 +5,7 @@
  */
 package com.neo4j.ssl.akka;
 
+import akka.Done;
 import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
@@ -33,11 +34,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import javax.net.ssl.SSLEngine;
 
 import org.neo4j.kernel.configuration.Config;
@@ -287,13 +291,13 @@ public class AkkaDiscoverySSLEngineProviderIT
     }
 
     private void testConnection( SslResource clientSslResource, SslResource serverSslResource, BiConsumer<TestProbe,TestProbe> verify )
-            throws InterruptedException, ExecutionException, TimeoutException
+            throws InterruptedException, ExecutionException
     {
         testConnection( makeSslPolicy( clientSslResource ), makeSslPolicy( serverSslResource ), verify );
     }
 
     private void testConnection( SslPolicy clientSslPolicy, SslPolicy serverSslPolicy, BiConsumer<TestProbe,TestProbe> verify )
-            throws InterruptedException, ExecutionException, TimeoutException
+            throws InterruptedException, ExecutionException
     {
         SSLEngineProvider clientSslProvider = sslEngineProviderFactory.apply( clientSslPolicy );
         ActorSystem clientActorSystem = createActorSystem( "client", clientSslProvider );
@@ -319,8 +323,20 @@ public class AkkaDiscoverySSLEngineProviderIT
         }
         finally
         {
-            CoordinatedShutdown.get( clientActorSystem ).runAll().toCompletableFuture().get( 10, TimeUnit.SECONDS );
-            CoordinatedShutdown.get( serverActorSystem ).runAll().toCompletableFuture().get( 10, TimeUnit.SECONDS );
+            CompletableFuture[] cleanup = Stream.of( clientActorSystem, serverActorSystem )
+                    .map( CoordinatedShutdown::get )
+                    .map( CoordinatedShutdown::runAll )
+                    .map( CompletionStage::toCompletableFuture )
+                    .toArray( CompletableFuture[]::new );
+
+            try
+            {
+                CompletableFuture.allOf( cleanup ).get( 60, TimeUnit.SECONDS );
+            }
+            catch ( TimeoutException e )
+            {
+                e.printStackTrace();
+            }
         }
     }
 
