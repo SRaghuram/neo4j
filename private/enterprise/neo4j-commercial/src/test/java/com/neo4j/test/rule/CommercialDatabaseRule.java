@@ -13,11 +13,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 public class CommercialDatabaseRule extends EmbeddedDatabaseRule
 {
-    public CommercialDatabaseRule()
-    {
-        super();
-    }
-
     public CommercialDatabaseRule( TestDirectory testDirectory )
     {
         super( testDirectory );
