@@ -76,8 +76,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     result.executionPlanDescription() should includeSomewhere.aPlan("ProcedureCall")
       .withRows(2)
       .withDBHits(1)
-      .withExactVariables("label")
-      .containingArgument("db.labels() :: (label :: String)")
+      .withExactVariables("label", "nodeCount")
+      .containingArgument("db.labels() :: (label :: String, nodeCount :: Integer)")
   }
 
   test("profile call in query") {

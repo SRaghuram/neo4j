@@ -169,14 +169,14 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     createLabeledNode(Map("name" -> "Toc"), "C")
 
     //When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label, count RETURN *")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label, nodeCount RETURN *")
 
     // Then
     result.toList should equal(
       List(
-        Map("label" -> "A", "count" -> 3),
-        Map("label" -> "B", "count" -> 1),
-        Map("label" -> "C", "count" -> 1)))
+        Map("label" -> "A", "nodeCount" -> 3),
+        Map("label" -> "B", "nodeCount" -> 1),
+        Map("label" -> "C", "nodeCount" -> 1)))
   }
 
   test("should get correct count for labels when removed") {
@@ -190,13 +190,13 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     execute("MATCH (c:C) REMOVE c:C")
 
     //When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label, count RETURN *")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label, nodeCount RETURN *")
 
     // Then
     result.toList should equal(
       List(
-        Map("label" -> "A", "count" -> 3),
-        Map("label" -> "B", "count" -> 1)))
+        Map("label" -> "A", "nodeCount" -> 3),
+        Map("label" -> "B", "nodeCount" -> 1)))
   }
 
   test("db.labels works on an empty database") {
@@ -254,9 +254,9 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // Then
     result.toList should equal(
       List(
-        Map("relationshipType" -> "A", "count" -> 1),
-        Map("relationshipType" -> "B", "count" -> 2),
-        Map("relationshipType" -> "C", "count" -> 1)))
+        Map("relationshipType" -> "A", "relationshipCount" -> 1),
+        Map("relationshipType" -> "B", "relationshipCount" -> 2),
+        Map("relationshipType" -> "C", "relationshipCount" -> 1)))
   }
 
   test("db.relationshipType work on an empty database") {
