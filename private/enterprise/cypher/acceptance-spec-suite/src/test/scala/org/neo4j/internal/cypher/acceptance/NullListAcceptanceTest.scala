@@ -18,9 +18,9 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("equality between list and literal should return false") {
     val query = "WITH [1, 2] AS l1, 'foo' AS l2 RETURN l1 = l2 AS res"
 
-    val result = executeWith(Configs.All + Configs.Morsel, query)
+    val result = executeWith(Configs.All + Configs.Morsel, query, expectedDifferentResults = nullInListConfigOld)
 
-    result.toList should equal(List(Map("res" -> false)))
+    result.toList should equal(List(Map("res" -> null)))
   }
 
   // Equality between lists with null
@@ -36,9 +36,9 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("equality between different lists with null should return false") {
     val query = "WITH [1, 2] AS l1, [null, 'foo'] AS l2 RETURN l1 = l2 AS res"
 
-    val result = executeWith(Configs.All + Configs.Morsel, query)
+    val result = executeWith(Configs.All + Configs.Morsel, query, expectedDifferentResults = nullInListConfigOld)
 
-    result.toList should equal(List(Map("res" -> false)))
+    result.toList should equal(List(Map("res" -> null)))
   }
 
   test("equality between almost equal lists with null should return null") {
@@ -61,9 +61,9 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("equality between different nested lists with null should return false") {
     val query = "WITH [[1, 2], [1, 3]] AS l1, [[1, 2], [null, 'foo']] AS l2 RETURN l1 = l2 AS res"
 
-    val result = executeWith(Configs.All + Configs.Morsel, query)
+    val result = executeWith(Configs.All + Configs.Morsel, query, expectedDifferentResults = nullInListConfigOld)
 
-    result.toList should equal(List(Map("res" -> false)))
+    result.toList should equal(List(Map("res" -> null)))
   }
 
   test("equality between almost equal nested lists with null should return null") {
@@ -111,7 +111,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   }
 
   test("IN should return false if no match can be found, despite nulls") {
-    val query = "WITH [1,2] AS l1, [[null, 'foo']] AS l2 RETURN l1 IN l2 as res"
+    val query = "WITH [1,2] AS l1, [[null, 'foo', 'bar']] AS l2 RETURN l1 IN l2 as res"
 
     val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, query)
 
