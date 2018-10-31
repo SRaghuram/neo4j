@@ -31,7 +31,6 @@ import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.impl.coreapi.PropertyContainerLocker
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory
-import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo
 import org.neo4j.time.Clocks
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
@@ -60,7 +59,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
       val locker: PropertyContainerLocker = new PropertyContainerLocker
       val contextFactory = Neo4jTransactionalContextFactory.create(graphDb, locker)
       transactionalContext = TransactionalContextWrapper(
-        contextFactory.newContext(ClientConnectionInfo.EMBEDDED_CONNECTION, tx,
+        contextFactory.newContext( tx,
           "no query text exists for this test", EMPTY_MAP))
       val queryContext = new TransactionBoundQueryContext(transactionalContext)(mock[IndexSearchMonitor])
       val tracer = Some(new ProfilingTracer(queryContext.transactionalContext.kernelStatisticProvider))

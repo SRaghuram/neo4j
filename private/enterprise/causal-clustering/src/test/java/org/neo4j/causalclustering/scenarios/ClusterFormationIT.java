@@ -62,10 +62,7 @@ public class ClusterFormationIT
             }
 
             // (2) BuiltInProcedures from enterprise
-            try ( InternalTransaction tx = gdb.beginTransaction(
-                    KernelTransaction.Type.explicit,
-                    EnterpriseLoginContext.AUTH_DISABLED
-            ) )
+            try ( InternalTransaction tx = gdb.beginTransaction( KernelTransaction.Type.explicit, EnterpriseLoginContext.AUTH_DISABLED ) )
             {
                 Result result = gdb.execute( tx, "CALL dbms.listQueries()", EMPTY_MAP );
                 assertTrue( result.hasNext() );

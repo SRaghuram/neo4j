@@ -23,7 +23,6 @@ import org.neo4j.cypher.{CypherRuntimeOption, GraphIcing}
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.impl.coreapi.{InternalTransaction, PropertyContainerLocker}
-import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo.EMBEDDED_CONNECTION
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContextFactory}
 import org.neo4j.kernel.monitoring.Monitors
 import org.neo4j.logging.NullLog
@@ -159,7 +158,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
                           implicitTx: InternalTransaction,
                           enterprise: Boolean
                          ): RewindableExecutionResult = {
-    val neo4jtxContext = contextFactory.newContext(EMBEDDED_CONNECTION, implicitTx, query, EMPTY_MAP)
+    val neo4jtxContext = contextFactory.newContext(implicitTx, query, EMPTY_MAP)
     val txContextWrapper = TransactionalContextWrapper(neo4jtxContext)
     val planContext = TransactionBoundPlanContext(txContextWrapper, devNullLogger)
 

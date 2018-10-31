@@ -26,6 +26,7 @@ import org.neo4j.internal.kernel.api.Token;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.kernel.api.Write;
+import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
@@ -158,6 +159,12 @@ class StubKernelTransaction implements KernelTransaction
         SecurityContext securityContext = mock( SecurityContext.class, Answers.RETURNS_DEEP_STUBS );
         when( securityContext.subject().username() ).thenReturn( "testUser" );
         return securityContext;
+    }
+
+    @Override
+    public ClientConnectionInfo clientInfo()
+    {
+        return null;
     }
 
     @Override

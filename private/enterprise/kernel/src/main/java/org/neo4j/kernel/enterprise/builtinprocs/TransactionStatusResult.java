@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.api.TransactionExecutionStatistic;
-import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo;
 
 import static java.lang.String.format;
 import static org.neo4j.kernel.enterprise.builtinprocs.QueryId.ofInternalId;
@@ -78,23 +78,19 @@ public class TransactionStatusResult
         if ( !querySnapshots.isEmpty() )
         {
             QuerySnapshot snapshot = querySnapshots.get( 0 );
-            ClientConnectionInfo clientConnectionInfo = snapshot.clientConnection();
             this.currentQueryId = ofInternalId( snapshot.internalQueryId() ).toString();
             this.currentQuery = snapshot.queryText();
-            this.protocol = clientConnectionInfo.protocol();
-            this.clientAddress = clientConnectionInfo.clientAddress();
-            this.requestUri = clientConnectionInfo.requestURI();
-            this.connectionId = clientConnectionInfo.connectionId();
         }
         else
         {
             this.currentQueryId = StringUtils.EMPTY;
             this.currentQuery = StringUtils.EMPTY;
-            this.protocol = StringUtils.EMPTY;
-            this.clientAddress = StringUtils.EMPTY;
-            this.requestUri = StringUtils.EMPTY;
-            this.connectionId = StringUtils.EMPTY;
         }
+        ClientConnectionInfo clientInfo = transaction.clientInfo();
+        this.protocol = clientInfo.protocol();
+        this.clientAddress = clientInfo.clientAddress();
+        this.requestUri = clientInfo.requestURI();
+        this.connectionId = clientInfo.connectionId();
         this.resourceInformation = transactionDependenciesResolver.describeBlockingLocks( transaction );
         this.status = getStatus( transaction, terminationReason, transactionDependenciesResolver );
         this.metaData = transaction.getMetaData();

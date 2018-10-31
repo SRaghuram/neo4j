@@ -56,8 +56,7 @@ public class CausalClusteringProceduresIT
             Optional<CoreClusterMember> firstCore = cluster.coreMembers().stream().findFirst();
             assert firstCore.isPresent();
             CoreGraphDatabase database = firstCore.get().database();
-            InternalTransaction tx =
-                    database.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED );
+            InternalTransaction tx = database.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED );
             Result coreResult = database.execute( "CALL " + procedure + "()" );
             assertTrue( "core with procedure " + procedure, coreResult.hasNext() );
             coreResult.close();
@@ -82,8 +81,7 @@ public class CausalClusteringProceduresIT
             Optional<ReadReplica> firstReadReplica = cluster.readReplicas().stream().findFirst();
             assert firstReadReplica.isPresent();
             ReadReplicaGraphDatabase database = firstReadReplica.get().database();
-            InternalTransaction tx =
-                    database.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED );
+            InternalTransaction tx = database.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED );
             Result readReplicaResult = database.execute( "CALL " + procedure + "()" );
 
             // then

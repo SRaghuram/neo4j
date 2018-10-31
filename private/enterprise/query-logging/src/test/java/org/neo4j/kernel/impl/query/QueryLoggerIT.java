@@ -43,7 +43,6 @@ import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogTimeZone;
 import org.neo4j.server.security.enterprise.auth.EmbeddedInteraction;
@@ -68,6 +67,7 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries_max_ar
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries_rotation_threshold;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo.EMBEDDED_CONNECTION;
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
 import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 
@@ -485,7 +485,7 @@ public class QueryLoggerIT
 
     private static String clientConnectionInfo()
     {
-        return ClientConnectionInfo.EMBEDDED_CONNECTION.withUsername( AUTH_DISABLED.username() ).asConnectionDetails();
+        return EMBEDDED_CONNECTION.withUsername( AUTH_DISABLED.username() ).asConnectionDetails();
     }
 
     private List<String> readAllLinesSilent( File logFilename )

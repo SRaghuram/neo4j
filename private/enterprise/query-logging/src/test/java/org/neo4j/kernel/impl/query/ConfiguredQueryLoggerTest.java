@@ -16,12 +16,12 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorCounters;
 import org.neo4j.kernel.api.query.CompilerInfo;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.query.clientconnection.BoltConnectionInfo;
-import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
