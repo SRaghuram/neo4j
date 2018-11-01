@@ -215,7 +215,7 @@ public class QueryLoggerIT
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
-        assertThat( logLines.get( 0 ), endsWith( String.format( " ms: %s - %s - {}", clientConnectionInfo(), QUERY ) ) );
+        assertThat( logLines.get( 0 ), endsWith( String.format( " ms: %s - %s - {}", connectionAndUserDetails(), QUERY ) ) );
         assertThat( logLines.get( 0 ), containsString( AUTH_DISABLED.username() ) );
     }
 
@@ -243,7 +243,7 @@ public class QueryLoggerIT
         assertThat( logLines.get( 0 ), endsWith( String.format(
                 " ms: %s - %s - {props: {name: 'Roland', position: 'Gunslinger', followers: ['Jake', 'Eddie', 'Susannah']}}"
                         + " - {}",
-                clientConnectionInfo(),
+                connectionAndUserDetails(),
                 query ) ) );
         assertThat( logLines.get( 0 ), containsString( AUTH_DISABLED.username() ) );
     }
@@ -263,7 +263,7 @@ public class QueryLoggerIT
         assertEquals( 1, logLines.size() );
         assertThat( logLines.get( 0 ), endsWith( String.format(
                 " ms: %s - %s - {} - runtime=interpreted - {}",
-                clientConnectionInfo(),
+                connectionAndUserDetails(),
                 query ) ) );
     }
 
@@ -282,7 +282,7 @@ public class QueryLoggerIT
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
         assertThat( logLines.get( 0 ),
-                endsWith( String.format( " ms: %s - %s - {ids: [0, 1, 2]} - {}", clientConnectionInfo(), query ) ) );
+                endsWith( String.format( " ms: %s - %s - {ids: [0, 1, 2]} - {}", connectionAndUserDetails(), query ) ) );
         assertThat( logLines.get( 0 ), containsString( AUTH_DISABLED.username() ) );
     }
 
@@ -483,9 +483,9 @@ public class QueryLoggerIT
         database.shutdown();
     }
 
-    private static String clientConnectionInfo()
+    private static String connectionAndUserDetails()
     {
-        return EMBEDDED_CONNECTION.withUsername( AUTH_DISABLED.username() ).asConnectionDetails();
+        return EMBEDDED_CONNECTION.asConnectionDetails() + "\t";
     }
 
     private List<String> readAllLinesSilent( File logFilename )
@@ -505,7 +505,7 @@ public class QueryLoggerIT
         return readAllLines( fileSystem.get(), logFilename );
     }
 
-    static List<String> readAllLines( FileSystemAbstraction fs, File logFilename ) throws IOException
+    private static List<String> readAllLines( FileSystemAbstraction fs, File logFilename ) throws IOException
     {
         List<String> logLines = new ArrayList<>();
         // this is needed as the EphemeralFSA is broken, and creates a new file when reading a non-existent file from

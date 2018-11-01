@@ -9,13 +9,13 @@ import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.time.ZoneId;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.pool.Pool;
+import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
@@ -59,6 +59,7 @@ import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -73,8 +74,7 @@ import static org.neo4j.test.MockedNeoStores.mockedTokenHolders;
 class TransactionStatusResultTest
 {
 
-    private TestKernelTransactionHandle transactionHandle =
-            new TransactionHandleWithLocks( new StubKernelTransaction() );
+    private TestKernelTransactionHandle transactionHandle = new TransactionHandleWithLocks( new StubKernelTransaction() );
     private final HashMap<KernelTransactionHandle,List<QuerySnapshot>> snapshotsMap = new HashMap<>();
     private final TransactionDependenciesResolver blockerResolver = new TransactionDependenciesResolver( snapshotsMap );
 
@@ -139,17 +139,17 @@ class TransactionStatusResultTest
     {
         assertEquals( "transaction-8", statusResult.transactionId );
         assertEquals( "testUser", statusResult.username );
-        assertEquals( Collections.emptyMap(), statusResult.metaData );
+        assertEquals( emptyMap(), statusResult.metaData );
         assertEquals( "1970-01-01T00:00:01.984Z", statusResult.startTime );
-        assertEquals( EMPTY, statusResult.protocol );
-        assertEquals( EMPTY, statusResult.connectionId );
-        assertEquals( EMPTY, statusResult.clientAddress );
-        assertEquals( EMPTY, statusResult.requestUri );
+        assertEquals( "https", statusResult.protocol );
+        assertEquals( "https-42", statusResult.connectionId );
+        assertEquals( "localhost:1000", statusResult.clientAddress );
+        assertEquals( "https://localhost:1001/path", statusResult.requestUri );
         assertEquals( EMPTY, statusResult.currentQueryId );
         assertEquals( EMPTY, statusResult.currentQuery );
         assertEquals( 1, statusResult.activeLockCount );
         assertEquals( "Running", statusResult.status );
-        assertEquals( Collections.emptyMap(), statusResult.resourceInformation );
+        assertEquals( emptyMap(), statusResult.resourceInformation );
         assertEquals( 1810L, statusResult.elapsedTimeMillis );
         assertEquals( Long.valueOf( 1L ), statusResult.cpuTimeMillis );
         assertEquals( 0L, statusResult.waitTimeMillis );
@@ -164,7 +164,7 @@ class TransactionStatusResultTest
     {
         assertEquals( "transaction-8", statusResult.transactionId );
         assertEquals( "testUser", statusResult.username );
-        assertEquals( Collections.emptyMap(), statusResult.metaData );
+        assertEquals( emptyMap(), statusResult.metaData );
         assertEquals( startTime, statusResult.startTime );
         assertEquals( "https", statusResult.protocol );
         assertEquals( "https-42", statusResult.connectionId );
@@ -174,7 +174,7 @@ class TransactionStatusResultTest
         assertEquals( currentQuery, statusResult.currentQuery );
         assertEquals( 1, statusResult.activeLockCount );
         assertEquals( "Running", statusResult.status );
-        assertEquals( Collections.emptyMap(), statusResult.resourceInformation );
+        assertEquals( emptyMap(), statusResult.resourceInformation );
         assertEquals( 1810, statusResult.elapsedTimeMillis );
         assertEquals( Long.valueOf( 1 ), statusResult.cpuTimeMillis );
         assertEquals( 0L, statusResult.waitTimeMillis );
@@ -185,7 +185,7 @@ class TransactionStatusResultTest
         assertEquals( 0, statusResult.pageFaults );
     }
 
-    private QuerySnapshot createQuerySnapshot( long queryId )
+    private static QuerySnapshot createQuerySnapshot( long queryId )
     {
         ExecutingQuery executingQuery = createExecutingQuery( queryId );
         return executingQuery.snapshot();
@@ -194,7 +194,7 @@ class TransactionStatusResultTest
     private static ExecutingQuery createExecutingQuery( long queryId )
     {
         return new ExecutingQuery( queryId, getTestConnectionInfo(), "testUser", "testQuery", VirtualValues.EMPTY_MAP,
-                Collections.emptyMap(), () -> 1L, PageCursorTracer.NULL,
+                emptyMap(), () -> 1L, PageCursorTracer.NULL,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
                 new CountingNanoClock(), new CountingCpuClock(), new CountingHeapAllocation() );
     }
@@ -262,6 +262,12 @@ class TransactionStatusResultTest
                 }
             };
             return new TransactionExecutionStatistic( transaction, Clocks.fakeClock().forward( 2010, MILLISECONDS ), 200 );
+        }
+
+        @Override
+        public ClientConnectionInfo clientInfo()
+        {
+            return getTestConnectionInfo();
         }
     }
 

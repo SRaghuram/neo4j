@@ -61,6 +61,7 @@ import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.isA;
+import static org.hamcrest.core.Every.everyItem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
@@ -159,6 +160,30 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                     listedTransactionWithMetaData( startTime, "writeSubject", matchQuery,  map( "realUser", "MyMan" ) );
 
             assertThat( maps, matchesOneToOneInAnyOrder( thisTransaction, matchQueryTransactionMatcher ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+        tx.closeAndAssertSuccess();
+    }
+
+    @Test
+    public void listTransactionsWithConnectionsDetail() throws Throwable
+    {
+        String matchQuery = "MATCH (n) RETURN n";
+        String listTransactionsQuery = "CALL dbms.listTransactions()";
+
+        DoubleLatch latch = new DoubleLatch( 2 );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> tx = new ThreadedTransaction<>( neo, latch );
+        tx.execute( threading, writeSubject, matchQuery );
+
+        latch.startAndWaitForAllToStart();
+
+        assertSuccess( adminSubject, listTransactionsQuery, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+            assertThat( maps, everyItem( hasProtocol( neo.getConnectionProtocol() ) ) );
         } );
 
         latch.finishAndWaitForAllToFinish();
@@ -313,6 +338,29 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                     listedQueryWithMetaData( startTime, "writeSubject", matchQuery, map( "realUser", "MyMan" ) );
 
             assertThat( maps, matchesOneToOneInAnyOrder( thisQuery, matchQueryMatcher ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+        tx.closeAndAssertSuccess();
+    }
+
+    @Test
+    public void shouldListAllQueryWithConnectionDetails() throws Throwable
+    {
+        String matchQuery = "MATCH (n) RETURN n";
+        String listQueriesQuery = "CALL dbms.listQueries()";
+
+        DoubleLatch latch = new DoubleLatch( 2 );
+
+        ThreadedTransaction<S> tx = new ThreadedTransaction<>( neo, latch );
+        tx.execute( threading, writeSubject, matchQuery );
+
+        latch.startAndWaitForAllToStart();
+
+        assertSuccess( adminSubject, listQueriesQuery, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+            assertThat( maps, everyItem( hasProtocol( neo.getConnectionProtocol() ) ) );
         } );
 
         latch.finishAndWaitForAllToFinish();

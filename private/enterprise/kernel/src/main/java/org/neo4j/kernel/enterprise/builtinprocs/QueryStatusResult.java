@@ -25,7 +25,6 @@ import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.virtual.MapValue;
 
 import static java.util.Collections.singletonList;
-import static org.neo4j.kernel.enterprise.builtinprocs.ProceduresTimeFormatHelper.formatInterval;
 import static org.neo4j.kernel.enterprise.builtinprocs.ProceduresTimeFormatHelper.formatTime;
 import static org.neo4j.kernel.enterprise.builtinprocs.QueryId.ofInternalId;
 
@@ -43,10 +42,6 @@ public class QueryStatusResult
     /** @since Neo4j 3.2 */
     public final List<Map<String,String>> indexes;
     public final String startTime;
-    @Deprecated
-    public final String elapsedTime;
-    @Deprecated
-    public final String connectionDetails;
     /** @since Neo4j 3.2 */
     public final String protocol;
     /** @since Neo4j 3.2 */
@@ -89,9 +84,7 @@ public class QueryStatusResult
         this.parameters = asRawMap( query.queryParameters(), new ParameterWriter( manager ) );
         this.startTime = formatTime( query.startTimestampMillis(), zoneId );
         this.elapsedTimeMillis = query.elapsedTimeMillis();
-        this.elapsedTime = formatInterval( elapsedTimeMillis );
         ClientConnectionInfo clientConnection = query.clientConnection();
-        this.connectionDetails = clientConnection.asConnectionDetails();
         this.protocol = clientConnection.protocol();
         this.clientAddress = clientConnection.clientAddress();
         this.requestUri = clientConnection.requestURI();
@@ -111,7 +104,7 @@ public class QueryStatusResult
         this.connectionId = clientConnection.connectionId();
     }
 
-    private Map<String,Object> asRawMap( MapValue mapValue, ParameterWriter writer )
+    private static Map<String,Object> asRawMap( MapValue mapValue, ParameterWriter writer )
     {
         HashMap<String,Object> map = new HashMap<>();
         mapValue.foreach( ( s, value ) ->

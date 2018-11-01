@@ -8,7 +8,6 @@ package org.neo4j.kernel.impl.query;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,6 +29,7 @@ import org.neo4j.test.FakeHeapAllocation;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
+import static io.netty.channel.local.LocalAddress.ANY;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.Matchers.containsString;
@@ -41,12 +41,9 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class ConfiguredQueryLoggerTest
 {
-    private static final SocketAddress DUMMY_ADDRESS = new SocketAddress()
-    {
-    };
-    private static final ClientConnectionInfo SESSION_1 = new BoltConnectionInfo( "bolt-1", "{session one}", "client", DUMMY_ADDRESS, DUMMY_ADDRESS );
-    private static final ClientConnectionInfo SESSION_2 = new BoltConnectionInfo( "bolt-2", "{session two}", "client", DUMMY_ADDRESS, DUMMY_ADDRESS );
-    private static final ClientConnectionInfo SESSION_3 = new BoltConnectionInfo( "bolt-3", "{session three}", "client", DUMMY_ADDRESS, DUMMY_ADDRESS );
+    private static final ClientConnectionInfo SESSION_1 = new BoltConnectionInfo( "bolt-1", "client", ANY, ANY );
+    private static final ClientConnectionInfo SESSION_2 = new BoltConnectionInfo( "bolt-2", "client", ANY, ANY );
+    private static final ClientConnectionInfo SESSION_3 = new BoltConnectionInfo( "bolt-3", "client", ANY, ANY );
     private static final String QUERY_1 = "MATCH (n) RETURN n";
     private static final String QUERY_2 = "MATCH (a)--(b) RETURN b.name";
     private static final String QUERY_3 = "MATCH (c)-[:FOO]->(d) RETURN d.size";
@@ -59,6 +56,7 @@ public class ConfiguredQueryLoggerTest
     private long pageHits;
     private long pageFaults;
     private long thresholdInMillis = 10;
+    private int queryId;
 
     @Test
     public void shouldLogQuerySlowerThanThreshold()
@@ -509,10 +507,8 @@ public class ConfiguredQueryLoggerTest
 
     private String sessionConnectionDetails( ClientConnectionInfo sessionInfo, String username )
     {
-        return sessionInfo.withUsername( username ).asConnectionDetails();
+        return sessionInfo.asConnectionDetails()  + "\t" + username;
     }
-
-    private int queryId;
 
     private ExecutingQuery query(
             ClientConnectionInfo sessionInfo,
@@ -523,7 +519,7 @@ public class ConfiguredQueryLoggerTest
     {
         Thread thread = Thread.currentThread();
         return new ExecutingQuery( queryId++,
-                sessionInfo.withUsername( username ),
+                sessionInfo,
                 username,
                 queryText,
                 ValueUtils.asMapValue( params ),

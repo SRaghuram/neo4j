@@ -38,6 +38,7 @@ import org.neo4j.storageengine.api.schema.IndexDescriptor;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo.EMBEDDED_CONNECTION;
 
 class StubKernelTransaction implements KernelTransaction
 {
@@ -164,7 +165,7 @@ class StubKernelTransaction implements KernelTransaction
     @Override
     public ClientConnectionInfo clientInfo()
     {
-        return null;
+        return EMBEDDED_CONNECTION;
     }
 
     @Override

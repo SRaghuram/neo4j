@@ -34,6 +34,7 @@ import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.query.clientconnection.HttpConnectionInfo;
 import org.neo4j.server.helpers.CommunityServerBuilder;
 import org.neo4j.server.rest.domain.JsonHelper;
 import org.neo4j.server.rest.domain.JsonParseException;
@@ -43,6 +44,7 @@ import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 import org.neo4j.test.server.HTTP;
 
+import static io.netty.channel.local.LocalAddress.ANY;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
@@ -118,7 +120,8 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
             throws Throwable
     {
         LoginContext loginContext = authManager.login( newBasicAuthToken( subject.username, subject.password ) );
-        return getLocalGraph().beginTransaction( txType, loginContext );
+        HttpConnectionInfo clientInfo = new HttpConnectionInfo( "testConnection", "http", ANY, ANY, "db/rest" );
+        return getLocalGraph().beginTransaction( txType, loginContext, clientInfo );
     }
 
     @Override

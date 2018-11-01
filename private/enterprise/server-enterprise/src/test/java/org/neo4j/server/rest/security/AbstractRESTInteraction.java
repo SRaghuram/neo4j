@@ -33,6 +33,7 @@ import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.query.clientconnection.HttpConnectionInfo;
 import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
 import org.neo4j.server.helpers.CommunityServerBuilder;
 import org.neo4j.server.rest.domain.JsonHelper;
@@ -42,6 +43,7 @@ import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 import org.neo4j.test.server.HTTP;
 
+import static io.netty.channel.local.LocalAddress.ANY;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
@@ -53,7 +55,9 @@ import static org.neo4j.kernel.configuration.BoltConnector.EncryptionLevel.OPTIO
 abstract class AbstractRESTInteraction extends CommunityServerTestBase implements NeoInteractionLevel<RESTSubject>
 {
 
-    private ConnectorPortRegister connectorPortRegister;
+    static final String POST = "POST";
+    private final ConnectorPortRegister connectorPortRegister;
+    private final EnterpriseAuthManager authManager;
 
     abstract String commitPath();
 
@@ -62,10 +66,6 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     abstract HTTP.RawPayload constructQuery( String query );
 
     protected abstract HTTP.Response authenticate( String principalCredentials );
-
-    static final String POST = "POST";
-
-    private EnterpriseAuthManager authManager;
 
     AbstractRESTInteraction( Map<String,String> config ) throws IOException
     {
@@ -117,7 +117,8 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
             throws Throwable
     {
         LoginContext loginContext = authManager.login( newBasicAuthToken( subject.username, subject.password ) );
-        return getLocalGraph().beginTransaction( txType, loginContext );
+        HttpConnectionInfo clientInfo = new HttpConnectionInfo( "testConnection", "http", ANY, ANY, "db/rest" );
+        return getLocalGraph().beginTransaction( txType, loginContext, clientInfo );
     }
 
     @Override
@@ -217,7 +218,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         return connectorPortRegister.getLocalAddress( connectorKey );
     }
 
-    private String parseErrorMessage( HTTP.Response response )
+    private static String parseErrorMessage( HTTP.Response response )
     {
         try
         {
@@ -245,8 +246,8 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
 
     abstract class AbstractRESTResult implements ResourceIterator<Map<String,Object>>
     {
-        private JsonNode data;
-        private JsonNode columns;
+        private final JsonNode data;
+        private final JsonNode columns;
         private int index;
 
         AbstractRESTResult( JsonNode fullResult )

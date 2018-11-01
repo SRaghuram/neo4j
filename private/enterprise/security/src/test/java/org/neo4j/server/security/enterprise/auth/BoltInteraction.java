@@ -40,6 +40,7 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.query.clientconnection.BoltConnectionInfo;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.values.AnyValue;
@@ -48,6 +49,7 @@ import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.MapValue;
 
+import static io.netty.channel.local.LocalAddress.ANY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -121,7 +123,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
             throws Throwable
     {
         LoginContext loginContext = authManager.login( newBasicAuthToken( subject.username, subject.password ) );
-        return getLocalGraph().beginTransaction( txType, loginContext );
+        return getLocalGraph().beginTransaction( txType, loginContext, new BoltConnectionInfo( "testSConnection", "test", ANY, ANY ) );
     }
 
     @Override
