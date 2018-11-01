@@ -75,8 +75,6 @@ class TemporalIndexAcceptanceTest extends IndexingTestSupport {
 
     graph.createIndex("Runner", "results")
     resampleIndexes()
-    // TODO this should not be necessary. Creating an index should invalidate the caches.
-    eengine.clearQueryCaches()
 
     val resultIndex = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.Version3_1, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
