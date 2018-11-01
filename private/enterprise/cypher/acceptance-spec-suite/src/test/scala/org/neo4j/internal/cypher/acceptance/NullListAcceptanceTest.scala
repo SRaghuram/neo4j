@@ -18,9 +18,9 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("equality between list and literal should return false") {
     val query = "WITH [1, 2] AS l1, 'foo' AS l2 RETURN l1 = l2 AS res"
 
-    val result = executeWith(Configs.All + Configs.Morsel, query, expectedDifferentResults = nullInListConfigOld)
+    val result = executeWith(Configs.All + Configs.Morsel, query)
 
-    result.toList should equal(List(Map("res" -> null)))
+    result.toList should equal(List(Map("res" -> false)))
   }
 
   // Equality between lists with null
@@ -36,9 +36,9 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("equality between different lists with null should return false") {
     val query = "WITH [1, 2] AS l1, [null, 'foo'] AS l2 RETURN l1 = l2 AS res"
 
-    val result = executeWith(Configs.All + Configs.Morsel, query, expectedDifferentResults = nullInListConfigOld)
+    val result = executeWith(Configs.All + Configs.Morsel, query)
 
-    result.toList should equal(List(Map("res" -> null)))
+    result.toList should equal(List(Map("res" -> false)))
   }
 
   test("equality between almost equal lists with null should return null") {
@@ -61,9 +61,9 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("equality between different nested lists with null should return false") {
     val query = "WITH [[1, 2], [1, 3]] AS l1, [[1, 2], [null, 'foo']] AS l2 RETURN l1 = l2 AS res"
 
-    val result = executeWith(Configs.All + Configs.Morsel, query, expectedDifferentResults = nullInListConfigOld)
+    val result = executeWith(Configs.All + Configs.Morsel, query)
 
-    result.toList should equal(List(Map("res" -> null)))
+    result.toList should equal(List(Map("res" -> false)))
   }
 
   test("equality between almost equal nested lists with null should return null") {
