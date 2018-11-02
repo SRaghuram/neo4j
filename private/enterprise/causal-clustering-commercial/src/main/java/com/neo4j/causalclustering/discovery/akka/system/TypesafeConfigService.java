@@ -79,6 +79,7 @@ public final class TypesafeConfigService
     public com.typesafe.config.Config generate()
     {
         return ConfigFactory.empty()
+                .withFallback( shutdownConfig() )
                 .withFallback( clusterConfig() )
                 .withFallback( transportConfig() )
                 .withFallback( serializationConfig() )
@@ -87,6 +88,15 @@ public final class TypesafeConfigService
                 .withFallback( dispatcherConfig() )
                 .withFallback( ConfigFactory.defaultReference() )
                 .resolve();
+    }
+
+    private com.typesafe.config.Config shutdownConfig()
+    {
+        HashMap<String,Object> configMap = new HashMap<>();
+
+        configMap.put( "akka.jvm-shutdown-hooks", "off" );
+
+        return ConfigFactory.parseMap( configMap );
     }
 
     private com.typesafe.config.Config clusterConfig()
