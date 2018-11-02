@@ -32,6 +32,7 @@
     <module>auth-plugin-api</module>
     <module>query-logging</module>
     <module>procedure-compiler-enterprise-tests</module>
+    <module>neo4j-harness-enterprise</module>
   </modules>
 
   <licenses>
