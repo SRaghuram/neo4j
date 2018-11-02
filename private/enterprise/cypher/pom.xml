@@ -9,6 +9,7 @@
     <relativePath>../../../public/community/cypher/</relativePath>
   </parent>
 
+  <groupId>com.neo4j</groupId>
   <artifactId>cypher-enterprise-parent</artifactId>
   <version>3.5.0-SNAPSHOT</version>
   <packaging>pom</packaging>
@@ -17,9 +18,19 @@
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
   <properties>
-    <licensing.prepend.text>licensing/notice-agpl-prefix.txt</licensing.prepend.text>
-    <license-text.header>headers/AGPL-3-header.txt</license-text.header>
+    <license-text.header>commercial-license-header.txt</license-text.header>
   </properties>
+
+  <licenses>
+    <license>
+      <name>Neo4j Commercial license</name>
+      <comments>
+        Copyright (c) 2002-2018 "Neo Technology,"
+        Network Engine for Objects in Lund AB [http://neotechnology.com]
+        This file is a commercial add-on to Neo4j Enterprise Edition.
+      </comments>
+    </license>
+  </licenses>
 
   <scm>
     <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
@@ -56,6 +67,43 @@
           <configuration>
             <configLocation>${project.basedir}/../../../../public/community/cypher/scalastyle_config.xml</configLocation>
           </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.neo4j.build.plugins</groupId>
+          <artifactId>licensing-maven-plugin</artifactId>
+          <configuration>
+            <excludedGroups>
+              ^((org.neo4j){1}|(org.neo4j.app){1}|(org.neo4j.server.plugin){1}|(org.neo4j.assembly){1}|(org.neo4j.bolt){1}|(org.neo4j.build){1}|(org.neo4j.test){1}|(com.neo4j){1}|(com.neo4j.app){1}|(com.neo4j.server.plugin){1}|(com.neo4j.assembly){1}|(com.neo4j.bolt){1}|(com.neo4j.build){1}|(com.neo4j.test){1})$
+            </excludedGroups>
+          </configuration>
+          <executions>
+            <execution>
+              <id>list-all-licenses</id>
+              <configuration>
+                <prependText>commercial-notice.txt</prependText>
+                <checkExistingNoticeFile combine.self="override" />
+              </configuration>
+            </execution>
+          </executions>
+          <dependencies>
+            <dependency>
+              <groupId>com.neo4j.build</groupId>
+              <artifactId>build-resources-commercial</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>com.mycila</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <dependencies>
+            <dependency>
+              <groupId>com.neo4j.build</groupId>
+              <artifactId>build-resources-commercial</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+          </dependencies>
         </plugin>
       </plugins>
     </pluginManagement>
