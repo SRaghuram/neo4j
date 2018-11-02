@@ -30,6 +30,7 @@
     <module>neo4j-commercial</module>
     <module>security-commercial</module>
     <module>auth-plugin-api</module>
+    <module>query-logging</module>
   </modules>
 
   <licenses>
