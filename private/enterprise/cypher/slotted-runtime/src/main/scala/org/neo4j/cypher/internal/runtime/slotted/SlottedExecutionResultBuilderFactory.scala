@@ -15,8 +15,6 @@ import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.values.virtual.MapValue
 
-import scala.collection.mutable
-
 class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                                            readOnly: Boolean,
                                            columns: List[String],
@@ -33,8 +31,6 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                             externalResource,
                             params,
                             pipeDecorator,
-                            triadicState = mutable.Map.empty,
-                            repeatableReads = mutable.Map.empty,
                             lenientCreateRelationship = lenientCreateRelationship,
                             prePopulateResults = prePopulateResults)
     }
