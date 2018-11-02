@@ -22,11 +22,33 @@
  */
 package org.neo4j.com;
 
-import java.io.IOException;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 
-public interface Serializer
+import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
+
+import org.neo4j.kernel.monitoring.ByteCounterMonitor;
+import org.neo4j.kernel.monitoring.Monitors;
+
+public class ToChannelBufferWriter implements MadeUpWriter
 {
-    void write( ChannelBuffer buffer ) throws IOException;
+    private final ChannelBuffer target;
+
+    public ToChannelBufferWriter( ChannelBuffer target )
+    {
+        this.target = target;
+    }
+
+    @Override
+    public void write( ReadableByteChannel data )
+    {
+        try ( BlockLogBuffer blockBuffer = new BlockLogBuffer( target, new Monitors().newMonitor( ByteCounterMonitor.class ) ) )
+        {
+            blockBuffer.write( data );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
 }

@@ -22,10 +22,9 @@
  */
 package org.neo4j.com;
 
-import java.io.Flushable;
-import java.io.IOException;
-
 import org.jboss.netty.buffer.ChannelBuffer;
+
+import java.io.Flushable;
 
 import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
 

@@ -43,6 +43,7 @@
     <module>cluster</module>
     <module>neo4j-enterprise</module>
     <module>security</module>
+    <module>com</module>
   </modules>
 
   <licenses>

@@ -31,7 +31,6 @@ import java.io.IOException;
 import org.neo4j.com.RequestContext;
 import org.neo4j.com.Response;
 import org.neo4j.com.TransactionObligationResponse;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.function.Suppliers;
 import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.io.fs.FileSystemAbstraction;

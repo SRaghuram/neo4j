@@ -24,7 +24,6 @@ package org.neo4j.com.storecopy;
 
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.com.RequestContext;
