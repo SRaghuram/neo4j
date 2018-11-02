@@ -39,6 +39,7 @@
     <module>ha</module>
     <module>server-enterprise</module>
     <module>backup</module>
+    <module>causal-clustering</module>
   </modules>
 
   <licenses>
