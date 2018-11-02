@@ -46,6 +46,13 @@
       <plugin>
         <groupId>org.revapi</groupId>
         <artifactId>revapi-maven-plugin</artifactId>
+          <configuration>
+              <oldArtifacts>
+                  <oldArtifact>
+                      org.neo4j:neo4j-management:jar:LATEST
+                  </oldArtifact>
+              </oldArtifacts>
+          </configuration>
       </plugin>
     </plugins>
   </build>

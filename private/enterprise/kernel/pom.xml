@@ -43,6 +43,13 @@
       <plugin>
         <groupId>org.revapi</groupId>
         <artifactId>revapi-maven-plugin</artifactId>
+          <configuration>
+              <oldArtifacts>
+                  <oldArtifact>
+                      org.neo4j:neo4j-enterprise-kernel:jar:LATEST
+                  </oldArtifact>
+              </oldArtifacts>
+          </configuration>
       </plugin>
       <plugin>
         <groupId>net.alchim31.maven</groupId>
