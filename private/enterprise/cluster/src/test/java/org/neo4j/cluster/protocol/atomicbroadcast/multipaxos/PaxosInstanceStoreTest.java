@@ -22,10 +22,10 @@
  */
 package org.neo4j.cluster.protocol.atomicbroadcast.multipaxos;
 
+import org.junit.Test;
+
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
-
-import org.junit.Test;
 
 public class PaxosInstanceStoreTest
 {

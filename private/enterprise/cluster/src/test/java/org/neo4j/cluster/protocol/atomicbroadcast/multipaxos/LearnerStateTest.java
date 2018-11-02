@@ -22,6 +22,9 @@
  */
 package org.neo4j.cluster.protocol.atomicbroadcast.multipaxos;
 
+import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,9 +32,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-
-import org.junit.Test;
-import org.mockito.ArgumentMatchers;
 
 import org.neo4j.cluster.com.message.Message;
 import org.neo4j.cluster.com.message.MessageHolder;
