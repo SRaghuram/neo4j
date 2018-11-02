@@ -32,7 +32,6 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.graphite.Graphite;
 import com.codahale.metrics.graphite.GraphiteReporter;
 
-import java.io.IOException;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 
