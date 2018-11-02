@@ -82,7 +82,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     @Override
     public void stop0()
     {
-        actorSystemLifecycle.stop();
     }
 
     @Override

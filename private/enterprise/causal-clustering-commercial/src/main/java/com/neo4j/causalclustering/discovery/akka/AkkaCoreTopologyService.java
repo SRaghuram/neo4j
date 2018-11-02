@@ -117,7 +117,6 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     @Override
     public void stop0()
     {
-        actorSystemLifecycle.stop();
         coreTopologyActorRef = Optional.empty();
         directoryActorRef = Optional.empty();
     }

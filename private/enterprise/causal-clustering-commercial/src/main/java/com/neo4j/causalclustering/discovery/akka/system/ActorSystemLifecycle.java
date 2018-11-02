@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.system;
 
+import akka.Done;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.CoordinatedShutdown;
@@ -24,18 +25,15 @@ import akka.stream.javadsl.Source;
 import akka.stream.javadsl.SourceQueueWithComplete;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.UUID;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 /**
- * Wraps an actor system and top level actors and streams. Gracefully stops everything. Create an actor system first.
+ * Wraps an actor system and top level actors and streams. Gracefully stops everything on shutdown. Create an actor system first.
  */
 public class ActorSystemLifecycle
 {
@@ -44,14 +42,13 @@ public class ActorSystemLifecycle
     private final ActorSystemFactory actorSystemFactory;
     private final Log log;
 
-    private List<SourceQueueWithComplete<?>> queues = new ArrayList<>();
-    private List<ActorRef> actors = new ArrayList<>();
     private Cluster cluster;
     private ActorRef replicator;
     private ActorMaterializer materializer;
     private ActorSystem actorSystem;
     private ClusterClientReceptionist clusterClientReceptionist;
     private ClusterClientSettings clusterClientSettings;
+    private CoordinatedShutdown coordinatedShutdown;
 
     public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, LogProvider logProvider )
     {
@@ -61,18 +58,18 @@ public class ActorSystemLifecycle
 
     public void createClusterActorSystem()
     {
-        this.actorSystem =  actorSystemFactory.createActorSystem( ProviderSelection.cluster() );
+        createActorSystem(ProviderSelection.cluster() );
     }
 
     public void createClientActorSystem()
     {
-        this.actorSystem = actorSystemFactory.createActorSystem( ProviderSelection.remote() );
+        createActorSystem( ProviderSelection.remote() );
     }
 
-    public void stop()
+    private void createActorSystem( ProviderSelection remote )
     {
-        gracefullyStopActors();
-        completeQueues();
+        this.actorSystem = actorSystemFactory.createActorSystem( remote );
+        this.coordinatedShutdown = CoordinatedShutdown.get( actorSystem );
     }
 
     public void shutdown() throws Throwable
@@ -81,7 +78,7 @@ public class ActorSystemLifecycle
         {
             CoordinatedShutdown
                     .get( actorSystem )
-                    .runAll( CoordinatedShutdown.clusterLeavingReason() )
+                    .runAll( ShutdownByNeo4jLifecycle.INSTANCE )
                     .toCompletableFuture()
                     .get( SHUTDOWN_TIMEOUT_S, TimeUnit.SECONDS );
         }
@@ -94,41 +91,6 @@ public class ActorSystemLifecycle
         {
             LoggingActor.disable( actorSystem );
             actorSystem = null;
-        }
-    }
-
-    private void gracefullyStopActors()
-    {
-        List<CompletableFuture<Boolean>> futures = actors.stream()
-                .map( this::startGracefulShutdown )
-                .collect( Collectors.toList() );
-
-        futures.forEach( this::completeGracefulShutdown );
-
-        actors.clear();
-    }
-
-    private void completeQueues()
-    {
-        queues.forEach( SourceQueueWithComplete::complete );
-
-        queues.clear();
-    }
-
-    private CompletableFuture<Boolean> startGracefulShutdown( ActorRef actor )
-    {
-        return PatternsCS.gracefulStop( actor, Duration.ofSeconds( SHUTDOWN_TIMEOUT_S ) ).toCompletableFuture();
-    }
-
-    private void completeGracefulShutdown( CompletableFuture<Boolean> future )
-    {
-        try
-        {
-            future.get();
-        }
-        catch ( InterruptedException | ExecutionException e )
-        {
-            log.warn( "Exception gracefully shutting down actor", e );
         }
     }
 
@@ -185,29 +147,36 @@ public class ActorSystemLifecycle
                 .to( Sink.foreach( sink ) )
                 .run( materializer() );
 
-        queues.add( queue );
+        coordinatedShutdown.addTask( CoordinatedShutdown.PhaseServiceStop(), "queue-" + UUID.randomUUID(), () -> completeQueue( queue ) );
 
         return queue;
     }
 
+    private <T> CompletionStage<Done> completeQueue( SourceQueueWithComplete<T> queue )
+    {
+        queue.complete();
+        return queue.watchCompletion();
+    }
+
     public ActorRef applicationActorOf( Props props, String name )
     {
-        return actorOf( props, name, true );
+        ActorRef actorRef = actorSystem.actorOf( props, name );
+        coordinatedShutdown.addTask( CoordinatedShutdown.PhaseServiceUnbind(), name + "-shutdown", () -> gracefulShutdown( actorRef ) );
+        return actorRef;
     }
 
     public ActorRef systemActorOf( Props props, String name )
     {
-        return actorOf( props, name, false );
+        return actorSystem.actorOf( props, name );
     }
 
-    private ActorRef actorOf( Props props, String name, boolean application )
+    private CompletionStage<Done> gracefulShutdown( ActorRef actor )
     {
-        ActorRef actor = actorSystem.actorOf( props, name );
-        if ( application )
-        {
-            actors.add( actor );
-        }
-        return actor;
+        return PatternsCS.gracefulStop( actor, Duration.ofSeconds( SHUTDOWN_TIMEOUT_S ) ).thenApply( ignored -> Done.done() );
+    }
 
+    private static class ShutdownByNeo4jLifecycle implements CoordinatedShutdown.Reason
+    {
+        public static ShutdownByNeo4jLifecycle INSTANCE = new ShutdownByNeo4jLifecycle();
     }
 }
