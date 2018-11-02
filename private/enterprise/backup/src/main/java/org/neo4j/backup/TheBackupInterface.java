@@ -22,8 +22,8 @@
  */
 package org.neo4j.backup;
 
-import org.neo4j.com.Response;
 import org.neo4j.com.RequestContext;
+import org.neo4j.com.Response;
 import org.neo4j.com.storecopy.StoreWriter;
 
 @Deprecated
