@@ -22,6 +22,7 @@
     <module>enterprise</module>
     <module>packaging</module>
     <module>integrationtests</module>
+    <module>stresstests</module>
     <module>tools</module>
   </modules>
 
