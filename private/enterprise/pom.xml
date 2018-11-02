@@ -29,6 +29,7 @@
     <module>server-commercial</module>
     <module>neo4j-commercial</module>
     <module>security-commercial</module>
+    <module>auth-plugin-api</module>
   </modules>
 
   <licenses>
