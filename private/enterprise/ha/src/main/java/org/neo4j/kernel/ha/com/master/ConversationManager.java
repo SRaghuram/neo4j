@@ -30,12 +30,12 @@ import org.neo4j.com.RequestContext;
 import org.neo4j.function.Factory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.ha.cluster.ConversationSPI;
-import org.neo4j.scheduler.Group;
-import org.neo4j.scheduler.JobHandle;
 import org.neo4j.kernel.impl.util.collection.ConcurrentAccessException;
 import org.neo4j.kernel.impl.util.collection.NoSuchEntryException;
 import org.neo4j.kernel.impl.util.collection.TimedRepository;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobHandle;
 import org.neo4j.time.Clocks;
 
 import static org.neo4j.kernel.ha.HaSettings.lock_read_timeout;

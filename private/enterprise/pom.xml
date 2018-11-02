@@ -36,6 +36,7 @@
     <module>management</module>
     <module>metrics</module>
     <module>deferred-locks</module>
+    <module>ha</module>
   </modules>
 
   <licenses>

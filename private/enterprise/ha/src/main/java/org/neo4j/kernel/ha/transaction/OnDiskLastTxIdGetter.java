@@ -23,6 +23,7 @@
 package org.neo4j.kernel.ha.transaction;
 
 import java.util.function.LongSupplier;
+
 import org.neo4j.kernel.impl.core.LastTxIdGetter;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 
