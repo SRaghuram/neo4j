@@ -23,7 +23,6 @@
 package org.neo4j.server.rest.causalclustering;
 
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import java.io.IOException;
 import java.time.Duration;

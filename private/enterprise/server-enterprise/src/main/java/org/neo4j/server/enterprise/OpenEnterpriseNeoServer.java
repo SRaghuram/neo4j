@@ -38,7 +38,6 @@ import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.ha.HaSettings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.metrics.source.server.ServerThreadView;
 import org.neo4j.metrics.source.server.ServerThreadViewSetter;
 import org.neo4j.server.CommunityNeoServer;

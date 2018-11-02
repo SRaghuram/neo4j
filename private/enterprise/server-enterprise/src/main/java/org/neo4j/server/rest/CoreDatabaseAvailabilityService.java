@@ -31,7 +31,6 @@ import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.server.rest.management.AdvertisableService;
-import org.neo4j.server.rest.repr.BadInputException;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;

@@ -26,8 +26,8 @@ import org.neo4j.server.rest.repr.MappingRepresentation;
 import org.neo4j.server.rest.repr.MappingSerializer;
 
 import static org.neo4j.server.rest.causalclustering.CausalClusteringService.AVAILABLE;
-import static org.neo4j.server.rest.causalclustering.CausalClusteringService.READ_ONLY;
 import static org.neo4j.server.rest.causalclustering.CausalClusteringService.DESCRIPTION;
+import static org.neo4j.server.rest.causalclustering.CausalClusteringService.READ_ONLY;
 import static org.neo4j.server.rest.causalclustering.CausalClusteringService.WRITABLE;
 
 public class CausalClusteringDiscovery extends MappingRepresentation
