@@ -20,6 +20,7 @@ import org.apache.directory.server.core.api.interceptor.BaseInterceptor;
 import org.apache.directory.server.core.api.interceptor.Interceptor;
 import org.apache.directory.server.core.api.interceptor.context.SearchOperationContext;
 import org.apache.directory.server.core.integ.FrameworkRunner;
+import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.apache.shiro.realm.ldap.JndiLdapContextFactory;
 import org.junit.Before;
@@ -79,8 +80,8 @@ interface TimeoutTests
                 @LoadSchema( name = "nis" ),
         } )
 @CreateLdapServer(
-        transports = {@CreateTransport( protocol = "LDAP", port = 10389, address = "0.0.0.0" ),
-                @CreateTransport( protocol = "LDAPS", port = 10636, address = "0.0.0.0", ssl = true )
+        transports = {@CreateTransport( protocol = "LDAP", address = "0.0.0.0" ),
+                @CreateTransport( protocol = "LDAPS", address = "0.0.0.0", ssl = true )
         },
 
         saslMechanisms = {
@@ -99,13 +100,18 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
 {
     private static final String LDAP_ERROR_MESSAGE_INVALID_CREDENTIALS = "LDAP: error code 49 - INVALID_CREDENTIALS";
     private static final String REFUSED_IP = "127.0.0.1"; // "0.6.6.6";
+    private int ldapPort;
+    private int sslLdapPort;
 
     @Before
     @Override
     public void setup() throws Exception
     {
+        LdapServer ldapServer = getLdapServer();
+        ldapPort = ldapServer.getPort();
+        sslLdapPort = ldapServer.getPortSSL();
+        ldapServer.setConfidentialityRequired( false );
         super.setup();
-        getLdapServer().setConfidentialityRequired( false );
     }
 
     @Override
@@ -113,7 +119,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     {
         Map<Setting<?>,String> settings = new HashMap<>();
         settings.put( SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME );
-        settings.put( SecuritySettings.ldap_server, "0.0.0.0:10389" );
+        settings.put( SecuritySettings.ldap_server, "0.0.0.0:" + ldapPort );
         settings.put( SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=users,dc=example,dc=com" );
         settings.put( SecuritySettings.ldap_authentication_cache_enabled, "true" );
         settings.put( SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system" );
@@ -506,7 +512,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         try ( EmbeddedTestCertificates ignore = new EmbeddedTestCertificates() )
         {
             // When
-            restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldaps://localhost:10636" );
+            restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldaps://localhost:" + sslLdapPort );
 
             // Then
             assertAuth( "tank", "abc123" );
@@ -535,7 +541,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         try ( EmbeddedTestCertificates ignore = new EmbeddedTestCertificates() )
         {
             // When
-            restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldaps://localhost:10636" );
+            restartServerWithOverriddenSettings( SecuritySettings.ldap_server.name(), "ldaps://localhost:" + sslLdapPort );
 
             // Then
             try ( Driver driver = connectDriver( "tank", "abc123" ) )
@@ -574,7 +580,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         String principal = String.format( "cn=%s,ou=users,dc=example,dc=com", username );
         String principal1 = String.format( "cn=%s,ou=users,dc=example,dc=com", username );
         JndiLdapContextFactory contextFactory = new JndiLdapContextFactory();
-        contextFactory.setUrl( "ldaps://localhost:10636" );
+        contextFactory.setUrl( "ldaps://localhost:" + sslLdapPort );
         LdapContext ctx = contextFactory.getLdapContext( principal1, credentials );
 
         ModificationItem[] mods = new ModificationItem[1];
