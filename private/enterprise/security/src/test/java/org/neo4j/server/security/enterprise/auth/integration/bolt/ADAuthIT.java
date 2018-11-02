@@ -14,6 +14,7 @@ import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
 import org.apache.directory.server.core.annotations.LoadSchema;
 import org.apache.directory.server.core.integ.FrameworkRunner;
+import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,8 +50,8 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 @CreateLdapServer(
         transports =
         {
-                @CreateTransport( protocol = "LDAP", port = 10389, address = "0.0.0.0" ),
-                @CreateTransport( protocol = "LDAPS", port = 10636, address = "0.0.0.0", ssl = true )
+                @CreateTransport( protocol = "LDAP", address = "0.0.0.0" ),
+                @CreateTransport( protocol = "LDAPS", address = "0.0.0.0", ssl = true )
         },
 
         saslMechanisms =
@@ -68,12 +69,17 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 @ApplyLdifFiles( {"ad_schema.ldif", "ad_test_data.ldif"} )
 public class ADAuthIT extends EnterpriseAuthenticationTestBase
 {
+
+    private int ldapPort;
+
     @Before
     @Override
     public void setup() throws Exception
     {
+        LdapServer ldapServer = getLdapServer();
+        ldapPort = ldapServer.getPort();
+        ldapServer.setConfidentialityRequired( false );
         super.setup();
-        getLdapServer().setConfidentialityRequired( false );
     }
 
     @SuppressWarnings( "deprecation" )
@@ -86,7 +92,7 @@ public class ADAuthIT extends EnterpriseAuthenticationTestBase
         settings.put( SecuritySettings.native_authorization_enabled, "false" );
         settings.put( SecuritySettings.ldap_authentication_enabled, "true" );
         settings.put( SecuritySettings.ldap_authorization_enabled, "true" );
-        settings.put( SecuritySettings.ldap_server, "0.0.0.0:10389" );
+        settings.put( SecuritySettings.ldap_server, "0.0.0.0:" + ldapPort );
         settings.put( SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=local,ou=users,dc=example,dc=com" );
         settings.put( SecuritySettings.ldap_authentication_cache_enabled, "true" );
         settings.put( SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system" );
