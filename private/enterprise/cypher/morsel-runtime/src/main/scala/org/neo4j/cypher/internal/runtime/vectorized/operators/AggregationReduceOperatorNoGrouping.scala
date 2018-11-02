@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.vectorized._
 
 /*
@@ -13,17 +14,12 @@ Responsible for reducing the output of AggregationMapperOperatorNoGrouping
  */
 class AggregationReduceOperatorNoGrouping(aggregations: Array[AggregationOffsets]) extends ReduceOperator {
 
-  override def init(queryContext: QueryContext,
-                    state: QueryState,
-                    inputMorsels: Seq[MorselExecutionContext]
-                   ): ContinuableOperatorTask =
+  override def init(queryContext: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask =
     new OTask(inputMorsels.toArray)
 
   class OTask(inputMorsels: Array[MorselExecutionContext]) extends ContinuableOperatorTask {
 
-    override def operate(currentRow: MorselExecutionContext,
-                         context: QueryContext,
-                         state: QueryState): Unit = {
+    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
       val incomingSlots = aggregations.map(_.mapperOutputSlot)
       val reducers = aggregations.map(_.aggregation.createAggregationReducer)

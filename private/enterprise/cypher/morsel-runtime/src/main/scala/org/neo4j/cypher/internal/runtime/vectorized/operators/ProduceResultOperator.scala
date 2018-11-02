@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.values.AnyValue
@@ -15,7 +16,7 @@ import org.opencypher.v9_0.util.symbols
 
 class ProduceResultOperator(slots: SlotConfiguration, fieldNames: Array[String]) extends StatelessOperator {
 
-  override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+  override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
     val resultRow = new MorselResultRow(currentRow, slots, fieldNames, context)
 
     while (currentRow.hasMoreRows) {

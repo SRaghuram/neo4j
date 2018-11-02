@@ -13,7 +13,7 @@ case class DataPoint(id: Long,
                      executionThreadId: Long,
                      startTime: Long,
                      stopTime: Long,
-                     task: Task) {
+                     task: Task[_ <: AutoCloseable]) {
 
   def withTimeZero(t0: Long): DataPoint =
     DataPoint(id,

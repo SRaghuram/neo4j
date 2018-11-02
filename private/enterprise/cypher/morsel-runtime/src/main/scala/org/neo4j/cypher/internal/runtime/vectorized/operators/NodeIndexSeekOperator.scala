@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeek, IndexSeekMode, NodeIndexSeeker, QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeek, IndexSeekMode, NodeIndexSeeker, ExpressionCursors, QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.v4_0.logical.plans.{IndexOrder, QueryExpression}
 import org.neo4j.internal.kernel.api._
@@ -28,8 +28,8 @@ class NodeIndexSeekOperator(offset: Int,
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  override def init(context: QueryContext, state: QueryState, currentRow: MorselExecutionContext): ContinuableOperatorTask = {
-    val queryState = new OldQueryState(context, resources = null, params = state.params)
+  override def init(context: QueryContext, state: QueryState, currentRow: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
+    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
     val indexReference = reference(context)
     val nodeCursor = indexSeek(queryState, indexReference, needsValues, indexOrder, currentRow)
     new OTask(nodeCursor)
@@ -65,9 +65,7 @@ class NodeIndexSeekOperator(offset: Int,
       false // because scala compiler doesn't realize that this line is unreachable
     }
 
-    override def operate(currentRow: MorselExecutionContext,
-                         context: QueryContext,
-                         state: QueryState): Unit = {
+    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
       while (currentRow.hasMoreRows && next()) {
         currentRow.setLongAt(offset, nodeCursor.nodeReference())

@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.parallel
 
 import java.util.concurrent._
+import java.util.function.Supplier
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
@@ -13,25 +14,31 @@ import scala.concurrent.duration.Duration
 /**
   * A simple implementation of the Scheduler trait
   */
-class SimpleScheduler(executor: Executor, waitTimeout: Duration) extends Scheduler {
+class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executor: Executor,
+                                                              waitTimeout: Duration,
+                                                              threadLocalResourceFactory: () => THREAD_LOCAL_RESOURCE
+                                                             ) extends Scheduler[THREAD_LOCAL_RESOURCE] {
 
-  private val executionService = new ExecutorCompletionService[TaskResult](executor)
+  private val executionService = new ExecutorCompletionService[TaskResult[THREAD_LOCAL_RESOURCE]](executor)
+  private val threadLocalResource = ThreadLocal.withInitial(new Supplier[THREAD_LOCAL_RESOURCE] {
+    override def get(): THREAD_LOCAL_RESOURCE = threadLocalResourceFactory()
+  })
 
-  override def execute(task: Task, tracer: SchedulerTracer): QueryExecution = {
+  override def execute(task: Task[THREAD_LOCAL_RESOURCE], tracer: SchedulerTracer): QueryExecution = {
     val queryTracer: QueryExecutionTracer = tracer.traceQuery()
     new SimpleQueryExecution(schedule(task, None, queryTracer), this, queryTracer, waitTimeout.toMillis)
   }
 
   def isMultiThreaded: Boolean = true
 
-  def schedule(task: Task, upstreamWorkUnit: Option[WorkUnitEvent], queryTracer: QueryExecutionTracer): Future[TaskResult] = {
+  def schedule(task: Task[THREAD_LOCAL_RESOURCE], upstreamWorkUnit: Option[WorkUnitEvent], queryTracer: QueryExecutionTracer): Future[TaskResult[THREAD_LOCAL_RESOURCE]] = {
     val scheduledWorkUnitEvent = queryTracer.scheduleWorkUnit(task, upstreamWorkUnit)
     val callableTask =
-      new Callable[TaskResult] {
-        override def call(): TaskResult = {
+      new Callable[TaskResult[THREAD_LOCAL_RESOURCE]] {
+        override def call(): TaskResult[THREAD_LOCAL_RESOURCE] = {
           val workUnitEvent = scheduledWorkUnitEvent.start()
           try {
-            TaskResult(task, workUnitEvent, task.executeWorkUnit())
+            TaskResult(task, workUnitEvent, task.executeWorkUnit(threadLocalResource.get()))
           } finally {
             workUnitEvent.stop()
           }
@@ -41,17 +48,17 @@ class SimpleScheduler(executor: Executor, waitTimeout: Duration) extends Schedul
     executionService.submit(callableTask)
   }
 
-  class SimpleQueryExecution(initialTask: Future[TaskResult],
-                             scheduler: SimpleScheduler,
+  class SimpleQueryExecution(initialTask: Future[TaskResult[THREAD_LOCAL_RESOURCE]],
+                             scheduler: SimpleScheduler[THREAD_LOCAL_RESOURCE],
                              queryTracer: QueryExecutionTracer,
                              waitTimeoutMilli: Long) extends QueryExecution {
 
-    var inFlightTasks = new ArrayBuffer[Future[TaskResult]]
+    var inFlightTasks = new ArrayBuffer[Future[TaskResult[THREAD_LOCAL_RESOURCE]]]
     inFlightTasks += initialTask
 
     override def await(): Option[Throwable] = {
       while (inFlightTasks.nonEmpty) {
-        val newInFlightTasks = new ArrayBuffer[Future[TaskResult]]
+        val newInFlightTasks = new ArrayBuffer[Future[TaskResult[THREAD_LOCAL_RESOURCE]]]
         for (future <- inFlightTasks) {
           try {
             val taskResult = future.get(waitTimeoutMilli, TimeUnit.MILLISECONDS)
@@ -81,4 +88,6 @@ class SimpleScheduler(executor: Executor, waitTimeout: Duration) extends Schedul
 
 }
 
-case class TaskResult(task: Task, workUnitEvent: WorkUnitEvent, newDownstreamTasks: Seq[Task])
+case class TaskResult[THREAD_LOCAL_RESOURCE <: AutoCloseable](task: Task[THREAD_LOCAL_RESOURCE],
+                                                              workUnitEvent: WorkUnitEvent,
+                                                              newDownstreamTasks: Seq[Task[THREAD_LOCAL_RESOURCE]])

@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api._
 import org.neo4j.values.storable.{TextValue, Values}
@@ -21,9 +21,7 @@ class NodeIndexContainsScanOperator(nodeOffset: Int,
                                     argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, property.maybeCachedNodePropertySlot) {
 
-  override def init(context: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselExecutionContext): ContinuableOperatorTask = {
+  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
     val valueIndexCursor: NodeValueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
     val index = context.transactionalContext.schemaRead.index(label, property.propertyKeyId)
     new OTask(valueIndexCursor, index)
@@ -32,16 +30,14 @@ class NodeIndexContainsScanOperator(nodeOffset: Int,
   class OTask(valueIndexCursor: NodeValueIndexCursor, index: IndexReference) extends ContinuableOperatorTask {
 
     var hasMore = false
-    override def operate(currentRow: MorselExecutionContext,
-                         context: QueryContext,
-                         state: QueryState): Unit = {
+    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
       val read = context.transactionalContext.dataRead
 
       var nullExpression: Boolean = false
 
       if (!hasMore) {
-        val queryState = new OldQueryState(context, resources = null, params = state.params)
+        val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
         val value = valueExpr(currentRow, queryState)
 
         value match {

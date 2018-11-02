@@ -9,7 +9,7 @@ import java.util.{Comparator, PriorityQueue}
 
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.values.storable.NumberValue
@@ -25,7 +25,7 @@ class MergeSortOperator(orderBy: Seq[ColumnOrder],
     .map(MorselSorting.createMorselComparator)
     .reduce((a: Comparator[MorselExecutionContext], b: Comparator[MorselExecutionContext]) => a.thenComparing(b))
 
-  override def init(queryContext: QueryContext, state: QueryState, inputs: Seq[MorselExecutionContext]): ContinuableOperatorTask = {
+  override def init(queryContext: QueryContext, state: QueryState, inputs: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask = {
 
     val sortedInputs = new PriorityQueue[MorselExecutionContext](inputs.length, comparator)
     inputs.foreach { row =>
@@ -34,7 +34,7 @@ class MergeSortOperator(orderBy: Seq[ColumnOrder],
 
     val limit = countExpression.map { count =>
       val firstRow = sortedInputs.peek()
-      val queryState = new OldQueryState(queryContext, resources = null, params = state.params)
+      val queryState = new OldQueryState(queryContext, resources = null, params = state.params, cursors)
       count(firstRow, queryState).asInstanceOf[NumberValue].longValue()
     }
 
@@ -50,7 +50,7 @@ class MergeSortOperator(orderBy: Seq[ColumnOrder],
 
     var totalPos = 0
 
-    override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+    override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
       while(!sortedInputs.isEmpty && outputRow.hasMoreRows && totalPos < limit) {
         val nextRow: MorselExecutionContext = sortedInputs.poll()

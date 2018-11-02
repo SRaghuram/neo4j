@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.{AggregationHelper, AggregationReducer}
 import org.neo4j.values.AnyValue
@@ -24,9 +25,7 @@ class AggregationReduceOperator(aggregations: Array[AggregationOffsets],
 
   type GroupingKey = AnyValue
 
-  override def init(queryContext: QueryContext,
-                    state: QueryState,
-                    inputMorsels: Seq[MorselExecutionContext]): ContinuableOperatorTask = {
+  override def init(queryContext: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask = {
     new OTask(inputMorsels.toArray)
   }
 
@@ -35,7 +34,7 @@ class AggregationReduceOperator(aggregations: Array[AggregationOffsets],
     private val outgoingSlots = aggregations.map(_.reducerOutputSlot)
     private var aggregates: Iterator[(GroupingKey, Array[AggregationReducer])] = _
 
-    override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+    override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
       if (null == aggregates) {
         aggregates = aggregateInputs(inputMorsels)
       }

@@ -10,19 +10,21 @@ import scala.collection.mutable
 /**
   * Single threaded implementation of the Scheduler trait
   */
-class SingleThreadScheduler() extends Scheduler {
+class SingleThreadScheduler[T <: AutoCloseable](threadLocalResourceFactory: () => T) extends Scheduler[T] {
 
-  override def execute(task: Task, tracer: SchedulerTracer): QueryExecution =
+  override def execute(task: Task[T], tracer: SchedulerTracer): QueryExecution =
     new SingleThreadQueryExecution(task, tracer.traceQuery())
 
   def isMultiThreaded: Boolean = false
 
-  class SingleThreadQueryExecution(initialTask: Task, tracer: QueryExecutionTracer) extends QueryExecution {
+  class SingleThreadQueryExecution(initialTask: Task[T], tracer: QueryExecutionTracer) extends QueryExecution {
 
-    private val jobStack: mutable.Stack[(Task,ScheduledWorkUnitEvent)] = new mutable.Stack()
+    private val jobStack: mutable.Stack[(Task[T],ScheduledWorkUnitEvent)] = new mutable.Stack()
     schedule(initialTask, None)
 
     override def await(): Option[Throwable] = {
+
+      val threadLocalResource = threadLocalResourceFactory()
 
       try {
         while (jobStack.nonEmpty) {
@@ -33,7 +35,7 @@ class SingleThreadScheduler() extends Scheduler {
           val workUnitEvent = nextTaskScheduledEvent.start()
           val downstreamTasks =
             try {
-              nextTask.executeWorkUnit()
+              nextTask.executeWorkUnit(threadLocalResource)
             } finally {
               workUnitEvent.stop()
             }
@@ -47,10 +49,12 @@ class SingleThreadScheduler() extends Scheduler {
         None
       } catch {
         case t: Throwable => Some(t)
+      } finally {
+        threadLocalResource.close()
       }
     }
 
-    private def schedule(task: Task, upstreamWorkUnitEvent: Option[WorkUnitEvent]) = {
+    private def schedule(task: Task[T], upstreamWorkUnitEvent: Option[WorkUnitEvent]) = {
       val scheduledWorkUnitEvent = tracer.scheduleWorkUnit(task, upstreamWorkUnitEvent)
       jobStack.push((task,scheduledWorkUnitEvent))
     }

@@ -23,7 +23,7 @@ trait QueryExecutionTracer {
   /**
     * Trace the scheduling of a work unit for this query execution
     */
-  def scheduleWorkUnit(task: Task, upstreamWorkUnitEvent: Option[WorkUnitEvent]): ScheduledWorkUnitEvent
+  def scheduleWorkUnit(task: Task[_ <: AutoCloseable], upstreamWorkUnitEvent: Option[WorkUnitEvent]): ScheduledWorkUnitEvent
 
   /**
     * End of query execution
@@ -64,7 +64,7 @@ object SchedulerTracer {
   }
 
   val NoQueryExecutionTracer: QueryExecutionTracer = new QueryExecutionTracer {
-    override def scheduleWorkUnit(task: Task, upstreamWorkUnitEvent: Option[WorkUnitEvent]): ScheduledWorkUnitEvent = NoScheduledWorkUnitEvent
+    override def scheduleWorkUnit(task: Task[_ <: AutoCloseable], upstreamWorkUnitEvent: Option[WorkUnitEvent]): ScheduledWorkUnitEvent = NoScheduledWorkUnitEvent
     override def stopQuery(): Unit = {}
   }
 

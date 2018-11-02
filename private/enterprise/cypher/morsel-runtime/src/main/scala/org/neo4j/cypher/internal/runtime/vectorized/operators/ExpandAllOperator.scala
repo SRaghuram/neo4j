@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyTypes
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyTypes, ExpressionCursors}
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
@@ -18,7 +18,7 @@ class ExpandAllOperator(fromOffset: Int,
                         dir: SemanticDirection,
                         types: LazyTypes) extends StreamingOperator {
 
-  override def init(queryContext: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext): ContinuableOperatorTask =
+  override def init(queryContext: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask =
     new OTask(inputMorsel)
 
   class OTask(val inputRow: MorselExecutionContext) extends ContinuableOperatorTask {
@@ -31,9 +31,7 @@ class ExpandAllOperator(fromOffset: Int,
     var readPos = 0
     var relationships: RelationshipSelectionCursor = _
 
-    override def operate(outputRow: MorselExecutionContext,
-                         context: QueryContext,
-                         state: QueryState): Unit = {
+    override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
       while (inputRow.hasMoreRows && outputRow.hasMoreRows) {
 

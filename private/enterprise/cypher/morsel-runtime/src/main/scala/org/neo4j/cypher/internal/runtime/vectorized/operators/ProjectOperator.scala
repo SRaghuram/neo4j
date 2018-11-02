@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
 
 class ProjectOperator(val projectionOps: Map[Slot, Expression]) extends StatelessOperator {
@@ -25,10 +25,8 @@ class ProjectOperator(val projectionOps: Map[Slot, Expression]) extends Stateles
         ctx.setRefAt(offset, result)
   }.toArray
 
-  override def operate(currentRow: MorselExecutionContext,
-                       context: QueryContext,
-                       state: QueryState): Unit = {
-    val queryState = new OldQueryState(context, resources = null, params = state.params)
+  override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
+    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
 
     while (currentRow.hasMoreRows) {
       project.foreach(p => p(currentRow, queryState))

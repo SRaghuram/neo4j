@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.values.AnyValue
@@ -15,6 +16,8 @@ import org.neo4j.values.storable.Values
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class AllNodeScanOperatorTest extends CypherFunSuite {
+
+  private val cursors = new ExpressionCursors
 
   test("should copy argument over for every row") {
     // Given
@@ -55,7 +58,7 @@ class AllNodeScanOperatorTest extends CypherFunSuite {
     when(context.transactionalContext.cursors.allocateNodeCursor()).thenReturn(cursor1, cursor2)
 
     // When
-    operator.init(context, null, inputRow).operate(outputRow, context, QueryState.EMPTY)
+    operator.init(context, null, inputRow, cursors).operate(outputRow, context, QueryState.EMPTY, cursors)
 
     // Then
     outputMorsel.longs should equal(Array(
@@ -75,7 +78,7 @@ class AllNodeScanOperatorTest extends CypherFunSuite {
     // And when
     inputRow.moveToNextRow()
     outputRow.resetToFirstRow()
-    operator.init(context, null, inputRow).operate(outputRow, context, QueryState.EMPTY)
+    operator.init(context, null, inputRow, cursors).operate(outputRow, context, QueryState.EMPTY, cursors)
 
     // Then
     outputMorsel.longs should equal(Array(

@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.RefSlot
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -14,6 +15,8 @@ import org.opencypher.v9_0.util.symbols.CTAny
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class AggregationMapperOperatorTest extends CypherFunSuite {
+
+  private val cursors = new ExpressionCursors
 
   test("single grouping key aggregation") {
     // Given
@@ -29,7 +32,7 @@ class AggregationMapperOperatorTest extends CypherFunSuite {
     val data = new Morsel(longs, refs, longs.length)
 
     // When
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY)
+    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
 
     data.refs(0) should equal(stringValue("A"))
     data.refs(1) should equal(Values.longArray(Array(0, 2, 4, 6, 8)))
@@ -56,7 +59,7 @@ class AggregationMapperOperatorTest extends CypherFunSuite {
     val data = new Morsel(longs, refs, longs.length)
 
     // When
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY)
+    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
 
     data.refs.take(3 * 6) should equal(Array(
       stringValue("A"),
@@ -107,7 +110,7 @@ class AggregationMapperOperatorTest extends CypherFunSuite {
     val data = new Morsel(longs, refs, longs.length)
 
     // When
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY)
+    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
 
     data.refs(0) should equal(stringValue("A"))
     data.refs(1) should equal(stringValue("C"))
@@ -149,7 +152,7 @@ class AggregationMapperOperatorTest extends CypherFunSuite {
     val data = new Morsel(longs, refs, longs.length)
 
     // When
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY)
+    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
 
     data.refs(0) should equal(stringValue("A"))
     data.refs(1) should equal(stringValue("C"))

@@ -19,7 +19,7 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
 
   case class QueryTracer(queryId: Int) extends QueryExecutionTracer {
     private final val NO_UPSTREAM : Long = -1
-    override def scheduleWorkUnit(task: Task, upstreamWorkUnit: Option[WorkUnitEvent]): ScheduledWorkUnitEvent = {
+    override def scheduleWorkUnit(task: Task[_ <: AutoCloseable], upstreamWorkUnit: Option[WorkUnitEvent]): ScheduledWorkUnitEvent = {
       val scheduledTime = currentTime()
       val schedulingThread = Thread.currentThread().getId
       val upstreamWorkUnitId = upstreamWorkUnit.map(_.id).getOrElse(NO_UPSTREAM)
@@ -30,7 +30,12 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
       dataPointWriter.flush()
   }
 
-  case class ScheduledWorkUnit(upstreamWorkUnitId: Long, queryId: Int, scheduledTime: Long, schedulingThreadId: Long, task: Task) extends ScheduledWorkUnitEvent {
+  case class ScheduledWorkUnit(upstreamWorkUnitId: Long,
+                               queryId: Int,
+                               scheduledTime: Long,
+                               schedulingThreadId: Long,
+                               task: Task[_ <: AutoCloseable]) extends ScheduledWorkUnitEvent {
+
     override def start(): WorkUnitEvent = {
       val startTime = currentTime()
       WorkUnit(workUnitId,
@@ -53,7 +58,7 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
                       scheduledTime: Long,
                       executionThreadId: Long,
                       startTime: Long,
-                      task: Task) extends WorkUnitEvent {
+                      task: Task[_ <: AutoCloseable]) extends WorkUnitEvent {
 
     override def stop(): Unit = {
       val stopTime = currentTime()

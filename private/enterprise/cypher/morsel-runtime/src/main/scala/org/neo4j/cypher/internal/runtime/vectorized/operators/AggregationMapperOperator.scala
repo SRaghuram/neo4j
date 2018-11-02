@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.{AggregationHelper, AggregationMapper}
 import org.neo4j.values.AnyValue
@@ -26,13 +26,11 @@ class AggregationMapperOperator(aggregations: Array[AggregationOffsets],
   private val groupingFunction = AggregationHelper.groupingFunction(groupings)
   private val addGroupingValuesToResult = AggregationHelper.computeGroupingSetter(groupings)(_.mapperOutputSlot)
 
-  override def operate(currentRow: MorselExecutionContext,
-                       context: QueryContext,
-                       state: QueryState): Unit = {
+  override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
     val result = mutable.LinkedHashMap[AnyValue, Array[(Int,AggregationMapper)]]()
 
-    val queryState = new OldQueryState(context, resources = null, params = state.params)
+    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
 
     //loop over the entire morsel and apply the aggregation
     while (currentRow.hasMoreRows) {

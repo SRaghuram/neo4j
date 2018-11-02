@@ -134,8 +134,8 @@ class ThreadSafeDataWriterTest extends CypherFunSuite {
     }
   }
 
-  case object NOP extends Task {
-    override def executeWorkUnit(): Seq[Task] = Nil
+  case object NOP extends Task[Resource.type] {
+    override def executeWorkUnit(resource: Resource.type): Seq[Task[Resource.type]] = Nil
 
     override def canContinue: Boolean = false
   }

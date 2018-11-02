@@ -9,7 +9,7 @@ import org.mockito.Mockito.{RETURNS_DEEP_STUBS, when}
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.interpreted.ImplicitDummyPos
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexMockingHelp
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, IndexMockingHelp}
 import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
 import org.neo4j.cypher.internal.runtime.{NodeValueHit, QueryContext}
 import org.neo4j.internal.kernel.api.helpers.StubNodeValueIndexCursor
@@ -22,6 +22,8 @@ import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.util.{LabelId, PropertyKeyId}
 
 class NodeIndexContainsScanOperatorTest extends CypherFunSuite with ImplicitDummyPos with IndexMockingHelp {
+
+  private val cursors = new ExpressionCursors
 
   private val label = LabelToken(LabelName("LabelName") _, LabelId(11))
   private val propertyKey = PropertyKeyToken(PropertyKeyName("PropertyName") _, PropertyKeyId(10))
@@ -59,7 +61,7 @@ class NodeIndexContainsScanOperatorTest extends CypherFunSuite with ImplicitDumm
       SlottedIndexedProperty(propertyKey.nameId.id, Some(slots.getReferenceOffsetFor(nDotProp))), Literal("hell"), slots.size())
 
     // When
-    operator.init(queryContext, QueryState.EMPTY, inputRow).operate(outputRow, queryContext, QueryState.EMPTY)
+    operator.init(queryContext, QueryState.EMPTY, inputRow, cursors).operate(outputRow, queryContext, QueryState.EMPTY, cursors)
 
     // then
     outputMorsel.longs should equal(Array(

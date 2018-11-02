@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.ListSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => InterpretedQueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, QueryState => InterpretedQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.values.AnyValue
 
@@ -16,8 +16,8 @@ class UnwindOperator(collection: Expression,
                      offset: Int)
   extends StreamingOperator with ListSupport {
 
-  override def init(context: QueryContext, state: QueryState, inputRow: MorselExecutionContext): ContinuableOperatorTask = {
-    val queryState = new InterpretedQueryState(context, resources = null, params = state.params)
+  override def init(context: QueryContext, state: QueryState, inputRow: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
+    val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors)
     val value = collection(inputRow, queryState)
     val unwoundValues = makeTraversable(value).iterator
     new OTask(inputRow, unwoundValues)
@@ -27,11 +27,9 @@ class UnwindOperator(collection: Expression,
               var unwoundValues: java.util.Iterator[AnyValue]
              ) extends ContinuableOperatorTask {
 
-    override def operate(outputRow: MorselExecutionContext,
-                         context: QueryContext,
-                         state: QueryState): Unit = {
+    override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
-      val queryState = new InterpretedQueryState(context, resources = null, params = state.params)
+      val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors)
 
       do {
         if (unwoundValues == null) {

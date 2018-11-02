@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
 
 
@@ -17,12 +17,10 @@ the subsequent reduce steps these local aggregations are merged into a single gl
  */
 class AggregationMapperOperatorNoGrouping(aggregations: Array[AggregationOffsets]) extends StatelessOperator {
 
-  override def operate(currentRow: MorselExecutionContext,
-                       context: QueryContext,
-                       state: QueryState): Unit = {
+  override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
     val aggregationMappers = aggregations.map(_.aggregation.createAggregationMapper)
-    val queryState = new OldQueryState(context, resources = null, params = state.params)
+    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
 
     //loop over the entire morsel and apply the aggregation
     while (currentRow.hasMoreRows) {

@@ -7,14 +7,14 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyLabel, ExpressionCursors}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 
 class LabelScanOperator(offset: Int, label: LazyLabel, argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperator[NodeLabelIndexCursor](offset) {
 
-  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext): ContinuableOperatorTask = {
+  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
     val cursor = context.transactionalContext.cursors.allocateNodeLabelIndexCursor()
     val read = context.transactionalContext.dataRead
     val labelId = label.getOptId(context)
@@ -25,9 +25,7 @@ class LabelScanOperator(offset: Int, label: LazyLabel, argumentSize: SlotConfigu
   class OTask(nodeCursor: NodeLabelIndexCursor) extends ContinuableOperatorTask {
 
     var hasMore = false
-    override def operate(currentRow: MorselExecutionContext,
-                         context: QueryContext,
-                         state: QueryState): Unit = {
+    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
       hasMore = iterate(currentRow, nodeCursor, argumentSize)
     }
 

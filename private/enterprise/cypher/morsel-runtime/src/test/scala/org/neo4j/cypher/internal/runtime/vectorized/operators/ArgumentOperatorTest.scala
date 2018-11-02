@@ -6,12 +6,15 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class ArgumentOperatorTest extends CypherFunSuite {
+
+  private val cursors = new ExpressionCursors
 
   test("should copy argument over and produce a single row") {
     // Given
@@ -39,7 +42,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     val operator = new ArgumentOperator(SlotConfiguration.Size(1, 1))
 
     // When
-    operator.init(null, null, inputRow).operate(outputRow, null, QueryState.EMPTY)
+    operator.init(null, null, inputRow, cursors).operate(outputRow, null, QueryState.EMPTY, cursors)
 
     // Then
     outputMorsel.longs should equal(Array(1, 0))
@@ -49,7 +52,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     // And when
     inputRow.moveToNextRow()
     outputRow.resetToFirstRow()
-    operator.init(null, null, inputRow).operate(outputRow, null, QueryState.EMPTY)
+    operator.init(null, null, inputRow, cursors).operate(outputRow, null, QueryState.EMPTY, cursors)
 
     // Then
     outputMorsel.longs should equal(Array(4, 0))
@@ -59,7 +62,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     // And when
     inputRow.moveToNextRow()
     outputRow.resetToFirstRow()
-    operator.init(null, null, inputRow).operate(outputRow, null, QueryState.EMPTY)
+    operator.init(null, null, inputRow, cursors).operate(outputRow, null, QueryState.EMPTY, cursors)
 
     // Then
     outputMorsel.longs should equal(Array(7, 0))

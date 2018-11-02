@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.slotted.pipes.Ascending
 import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
 import org.neo4j.values.AnyValue
@@ -15,6 +16,8 @@ import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class PreSortOperatorTest extends CypherFunSuite {
+
+  private val cursors = new ExpressionCursors
 
   test("sort a morsel with a single long column") {
     val numberOfLongs = 1
@@ -26,7 +29,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val longs = Array[Long](9, 8, 7, 6, 5, 4, 3, 2, 1)
     val data = new Morsel(longs, Array[AnyValue](), longs.length)
 
-    sortOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, null)
+    sortOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, null, cursors)
 
     data.longs should equal(Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9))
   }
@@ -49,7 +52,7 @@ class PreSortOperatorTest extends CypherFunSuite {
       intValue(3), intValue(2), intValue(1))
     val data = new Morsel(longs, refs, longs.length)
 
-    sortOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, null)
+    sortOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, null, cursors)
 
     data.longs should equal(Array[Long](
       1, 2, 3,
@@ -84,7 +87,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val rows = longs.length / 2 // Since we have two columns per row
     val data = new Morsel(longs, Array[AnyValue](), rows)
 
-    sortOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, null)
+    sortOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, null, cursors)
 
     data.longs should equal(Array[Long](
       1, 8,
@@ -109,7 +112,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val longs = new Array[Long](10)
     val data = new Morsel(longs, Array[AnyValue](), 0)
 
-    sortOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, null)
+    sortOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, null, cursors)
 
     data.longs should equal(Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
   }
@@ -123,7 +126,7 @@ class PreSortOperatorTest extends CypherFunSuite {
 
     val data = new Morsel(Array.empty, Array[AnyValue](), 0)
 
-    sortOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, null)
+    sortOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, null, cursors)
 
     data.longs shouldBe empty
   }
@@ -138,7 +141,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val longs = Array[Long](9, 8, 7, 6, 5, 4, 3, 2, 1)
     val data = new Morsel(longs, Array[AnyValue](), longs.length)
 
-    topOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY)
+    topOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
 
     data.longs.take(3) should equal(Array[Long](1, 2, 3))
     data.validRows shouldBe 3
@@ -154,7 +157,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val longs = Array[Long](9, 8, 7, 6, 5, 4, 3, 2, 1)
     val data = new Morsel(longs, Array[AnyValue](), longs.length)
 
-    topOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY)
+    topOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
 
     data.longs should equal(Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9))
     data.validRows shouldBe longs.length
@@ -178,7 +181,7 @@ class PreSortOperatorTest extends CypherFunSuite {
       intValue(3), intValue(2), intValue(1))
     val data = new Morsel(longs, refs, longs.length)
 
-    topOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY)
+    topOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
 
     data.longs.take(3) should equal(Array[Long](
       1, 2, 3))
@@ -198,7 +201,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val longs = new Array[Long](10)
     val data = new Morsel(longs, Array[AnyValue](), 0)
 
-    topOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY)
+    topOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
 
     data.longs should equal(Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
     data.validRows shouldBe 0
@@ -213,7 +216,7 @@ class PreSortOperatorTest extends CypherFunSuite {
 
     val data = new Morsel(Array.empty, Array[AnyValue](), 0)
 
-    topOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY)
+    topOperator.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
 
     data.longs shouldBe empty
     data.validRows shouldBe 0

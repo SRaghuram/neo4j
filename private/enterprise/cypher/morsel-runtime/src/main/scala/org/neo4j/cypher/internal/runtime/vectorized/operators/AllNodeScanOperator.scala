@@ -7,14 +7,13 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.NodeCursor
 
 class AllNodeScanOperator(offset: Int, argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override def init(queryContext: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselExecutionContext): ContinuableOperatorTask = {
+  override def init(queryContext: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
     val nodeCursor = queryContext.transactionalContext.cursors.allocateNodeCursor()
     queryContext.transactionalContext.dataRead.allNodesScan(nodeCursor)
     new OTask(nodeCursor, inputMorsel)
@@ -24,9 +23,7 @@ class AllNodeScanOperator(offset: Int, argumentSize: SlotConfiguration.Size) ext
 
     var cursorHasMore = true
 
-    override def operate(currentRow: MorselExecutionContext,
-                         context: QueryContext,
-                         state: QueryState): Unit = {
+    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
       while (currentRow.hasMoreRows && cursorHasMore) {
         cursorHasMore = nodeCursor.next()

@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.parallel.Task
 
 import scala.collection.JavaConverters._
@@ -29,7 +30,7 @@ abstract class Pipeline() {
 
   // abstract
   def upstream: Option[Pipeline]
-  def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState): Seq[Task]
+  def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Seq[Task[ExpressionCursors]]
   def slots: SlotConfiguration
 
   // operators
@@ -96,19 +97,19 @@ case class PipelineTask(start: ContinuableOperatorTask,
                         name: String,
                         originalQueryContext: QueryContext,
                         state: QueryState,
-                        downstream: Option[Pipeline]) extends Task {
+                        downstream: Option[Pipeline]) extends Task[ExpressionCursors] {
 
-  override def executeWorkUnit(): Seq[Task] = {
+  override def executeWorkUnit(cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
     val outputMorsel = Morsel.create(slots, state.morselSize)
     val currentRow = new MorselExecutionContext(outputMorsel, slots.numberOfLongs, slots.numberOfReferences, 0)
     val queryContext =
       if (state.singeThreaded) originalQueryContext
       else originalQueryContext.createNewQueryContext()
-    start.operate(currentRow, queryContext, state)
+    start.operate(currentRow, queryContext, state, cursors)
 
     for (op <- operators) {
       currentRow.resetToFirstRow()
-      op.operate(currentRow, queryContext, state)
+      op.operate(currentRow, queryContext, state, cursors)
     }
 
     if (org.neo4j.cypher.internal.runtime.vectorized.Pipeline.DEBUG) {
@@ -129,11 +130,11 @@ case class PipelineTask(start: ContinuableOperatorTask,
     }
 
     currentRow.resetToFirstRow()
-    val downstreamTasks = downstream.map(_.acceptMorsel(currentRow, queryContext, state)).getOrElse(Nil)
+    val downstreamTasks = downstream.map(_.acceptMorsel(currentRow, queryContext, state, cursors)).getOrElse(Nil)
 
     state.reduceCollector match {
       case Some(x) if !start.canContinue =>
-        downstreamTasks ++ x.produceTaskCompleted(name, queryContext, state)
+        downstreamTasks ++ x.produceTaskCompleted(name, queryContext, state, cursors)
 
       case _ =>
         downstreamTasks
@@ -152,12 +153,12 @@ class StreamingPipeline(start: StreamingOperator,
                         override val slots: SlotConfiguration,
                         override val upstream: Option[Pipeline]) extends Pipeline {
 
-  def init(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState): PipelineTask = {
-    initTask(start.init(context, state, inputMorsel), context, state)
+  def init(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): PipelineTask = {
+    initTask(start.init(context, state, inputMorsel, cursors), context, state)
   }
 
-  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState): Seq[Task] =
-    List(pipelineTask(start.init(context, state, inputMorsel), context, state))
+  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] =
+    List(pipelineTask(start.init(context, state, inputMorsel, cursors), context, state))
 
   override def toString: String = {
     val x = (start +: operators).map(x => x.getClass.getSimpleName)
@@ -177,7 +178,7 @@ class ReducePipeline(start: ReduceOperator,
     s"ReducePipeline(${x.mkString(",")})"
   }
 
-  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState): Seq[Task] = {
+  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
 
     state.reduceCollector.get.acceptMorsel(inputMorsel)
     Nil
@@ -200,14 +201,14 @@ class ReducePipeline(start: ReduceOperator,
         println("taskCount [%3d]: scheduled %s".format(tasks, task))
     }
 
-    def produceTaskCompleted(task: String, context: QueryContext, state: QueryState): Option[Task] = {
+    def produceTaskCompleted(task: String, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
       val tasksLeft = taskCount.decrementAndGet()
       if (Pipeline.DEBUG)
         println("taskCount [%3d]: completed %s".format(tasksLeft, task))
 
       if (tasksLeft == 0) {
         val inputMorsels: Array[MorselExecutionContext] = eagerData.asScala.toArray
-        Some(initTask(start.init(context, state, inputMorsels), context, state))
+        Some(initTask(start.init(context, state, inputMorsels, cursors), context, state))
       }
       else if (tasksLeft < 0) {
         throw new IllegalStateException("Reference counting of tasks has failed: now at task count " + tasksLeft)

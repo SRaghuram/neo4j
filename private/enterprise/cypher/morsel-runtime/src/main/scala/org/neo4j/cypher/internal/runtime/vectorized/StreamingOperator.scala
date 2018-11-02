@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.parallel.Task
 
 /**
@@ -16,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.parallel.Task
   * results in a new task.
   */
 trait StreamingOperator {
-  def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext): ContinuableOperatorTask
+  def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask
 }
 
 /**
@@ -27,7 +28,7 @@ trait StreamingOperator {
   * upfront and then provided to the operator in one collection.
   */
 trait ReduceOperator {
-  def init(context: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext]): ContinuableOperatorTask
+  def init(context: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask
 }
 
 /**
@@ -40,9 +41,7 @@ trait StatelessOperator extends OperatorTask
   * Operator related task.
   */
 trait OperatorTask {
-  def operate(data: MorselExecutionContext,
-              context: QueryContext,
-              state: QueryState): Unit
+  def operate(data: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit
 }
 
 /**
@@ -70,5 +69,5 @@ trait ReduceCollector {
 
   def produceTaskScheduled(task: String): Unit
 
-  def produceTaskCompleted(task: String, context: QueryContext, state: QueryState): Option[Task]
+  def produceTaskCompleted(task: String, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]]
 }

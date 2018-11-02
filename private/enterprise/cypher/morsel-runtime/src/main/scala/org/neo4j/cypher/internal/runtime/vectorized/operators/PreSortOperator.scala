@@ -10,7 +10,7 @@ import java.util.Comparator
 import org.neo4j.cypher.internal.DefaultComparatorTopTable
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.values.storable.NumberValue
@@ -24,9 +24,7 @@ import scala.collection.JavaConverters._
 class PreSortOperator(orderBy: Seq[ColumnOrder],
                       countExpression: Option[Expression] = None) extends StatelessOperator {
 
-    override def operate(currentRow: MorselExecutionContext,
-                         context: QueryContext,
-                         state: QueryState): Unit = {
+    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
       val rowCloneForComparators = currentRow.createClone()
       val comparator: Comparator[Integer] = orderBy
@@ -39,7 +37,7 @@ class PreSortOperator(orderBy: Seq[ColumnOrder],
 
       // potentially calculate the limit
       val maybeLimit = countExpression.map { count =>
-        val queryState = new OldQueryState(context, resources = null, params = state.params)
+        val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
         count(currentRow, queryState).asInstanceOf[NumberValue].longValue().toInt
       }
 

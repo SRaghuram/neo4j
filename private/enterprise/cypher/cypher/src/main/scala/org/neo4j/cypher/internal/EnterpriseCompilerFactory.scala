@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.parallel._
 import org.neo4j.cypher.internal.runtime.vectorized.Dispatcher
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
@@ -79,7 +80,7 @@ case class RuntimeEnvironment(config:CypherRuntimeConfiguration, jobScheduler: J
 
   def getDispatcher(debugOptions: Set[String]): Dispatcher =
     if (singleThreadedRequested(debugOptions) && !isAlreadySingleThreaded)
-      new Dispatcher(config.morselSize, new SingleThreadScheduler())
+      new Dispatcher(config.morselSize, new SingleThreadScheduler(() => new ExpressionCursors))
     else
       dispatcher
 
@@ -89,11 +90,11 @@ case class RuntimeEnvironment(config:CypherRuntimeConfiguration, jobScheduler: J
 
   private def createDispatcher(): Dispatcher = {
     val scheduler =
-      if (config.workers == 1) new SingleThreadScheduler()
+      if (config.workers == 1) new SingleThreadScheduler(() => new ExpressionCursors)
       else {
         val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
         val executorService = jobScheduler.workStealingExecutor(Group.CYPHER_WORKER, numberOfThreads)
-        new SimpleScheduler(executorService, config.waitTimeout)
+        new SimpleScheduler(executorService, config.waitTimeout, () => new ExpressionCursors)
       }
     new Dispatcher(config.morselSize, scheduler)
   }

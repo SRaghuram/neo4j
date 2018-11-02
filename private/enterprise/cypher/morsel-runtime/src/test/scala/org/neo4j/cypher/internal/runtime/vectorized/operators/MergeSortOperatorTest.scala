@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.LongSlot
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.slotted.pipes.Ascending
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.values.AnyValue
@@ -14,6 +15,8 @@ import org.opencypher.v9_0.util.symbols.CTNode
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class MergeSortOperatorTest extends CypherFunSuite {
+
+  private val cursors = new ExpressionCursors
 
   test("sort a single morsel") {
     val numberOfLongs = 1
@@ -26,8 +29,8 @@ class MergeSortOperatorTest extends CypherFunSuite {
     val out = new Morsel(new Array[Long](longs.length), Array[AnyValue](), longs.length)
 
     val operator = new MergeSortOperator(columnOrdering)
-    val task = operator.init(null, null, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences)))
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    val task = operator.init(null, null, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences)), cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(false)
     out.longs should equal(longs)
   }
@@ -43,8 +46,8 @@ class MergeSortOperatorTest extends CypherFunSuite {
     val out = new Morsel(new Array[Long](longs.length), Array[AnyValue](), longs.length)
 
     val operator = new MergeSortOperator(columnOrdering, Some(Literal(3)))
-    val task = operator.init(null, QueryState.EMPTY, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences)))
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, QueryState.EMPTY )
+    val task = operator.init(null, QueryState.EMPTY, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences)), cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
     task.canContinue should be(false)
     out.longs.take(3) should equal(Array[Long](1, 2, 3))
     out.validRows shouldBe 3
@@ -64,18 +67,18 @@ class MergeSortOperatorTest extends CypherFunSuite {
 
     val operator = new MergeSortOperator(columnOrdering)
 
-    val task = operator.init(null, null, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)))
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    val task = operator.init(null, null, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)), cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(true)
     out.longs should equal(Array(1, 2, 3, 4, 5))
     out.validRows shouldBe 5
 
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(true)
     out.longs should equal(Array(6, 7, 7, 8, 9))
     out.validRows shouldBe 5
 
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(false)
     out.longs.take(4) should equal(Array(9, 14, 86,92))
     out.validRows shouldBe 4
@@ -111,18 +114,18 @@ class MergeSortOperatorTest extends CypherFunSuite {
 
     val operator = new MergeSortOperator(columnOrdering)
 
-    val task = operator.init(null, null, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)))
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    val task = operator.init(null, null, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)), cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(true)
     out.longs should equal(Array(1, 101, 2, 102, 3, 103, 4, 104))
     out.validRows shouldBe outputRowsPerMorsel
 
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(true)
     out.longs should equal(Array(5, 105, 6, 106, 7, 107, 8, 108))
     out.validRows shouldBe outputRowsPerMorsel
 
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(false)
     out.longs.take(4) should equal(Array(9, 109, 10, 110))
     out.validRows shouldBe 2
@@ -158,18 +161,18 @@ class MergeSortOperatorTest extends CypherFunSuite {
 
     val operator = new MergeSortOperator(columnOrdering)
 
-    val task = operator.init(null, null, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)))
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    val task = operator.init(null, null, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)), cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(true)
     out.longs should equal(Array(1, 101, 1, 102, 1, 103, 2, 201))
     out.validRows shouldBe outputRowsPerMorsel
 
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(true)
     out.longs should equal(Array(2, 202, 3, 301, 5, 501, 5, 502))
     out.validRows shouldBe outputRowsPerMorsel
 
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(false)
     out.longs.take(4) should equal(Array(5, 503, 7, 701))
     out.validRows shouldBe 2
@@ -189,13 +192,13 @@ class MergeSortOperatorTest extends CypherFunSuite {
 
     val operator = new MergeSortOperator(columnOrdering, Some(Literal(9)))
 
-    val task = operator.init(null, QueryState.EMPTY, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)))
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, QueryState.EMPTY )
+    val task = operator.init(null, QueryState.EMPTY, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)), cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
     task.canContinue should be(true)
     out.longs should equal(Array(1, 2, 3, 4, 5))
     out.validRows shouldBe 5
 
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, QueryState.EMPTY )
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
     task.canContinue should be(false)
     out.longs.take(4) should equal(Array(6, 7, 7, 8))
     out.validRows shouldBe 4
@@ -214,8 +217,8 @@ class MergeSortOperatorTest extends CypherFunSuite {
     val out = new Morsel(new Array[Long](9), Array[AnyValue](), 9)
 
     val operator = new MergeSortOperator(columnOrdering)
-    val task = operator.init(null, null, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)))
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    val task = operator.init(null, null, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)), cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(false)
     out.longs should equal(long1)
   }
@@ -231,8 +234,8 @@ class MergeSortOperatorTest extends CypherFunSuite {
     val out = new Morsel(new Array[Long](longs.length + 5), Array[AnyValue](), longs.length + 5)
 
     val operator = new MergeSortOperator(columnOrdering)
-    val task = operator.init(null, null, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences)))
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null )
+    val task = operator.init(null, null, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences)), cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, null, cursors)
     task.canContinue should be(false)
     out.longs should equal(Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0))
     out.validRows should equal(longs.length)

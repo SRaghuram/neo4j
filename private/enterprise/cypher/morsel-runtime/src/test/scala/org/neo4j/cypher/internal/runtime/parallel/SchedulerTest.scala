@@ -13,11 +13,13 @@ import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
+case object Resource extends AutoCloseable { override def close(): Unit = {} }
+
 abstract class SchedulerTest extends CypherFunSuite {
 
   private val tracer = SchedulerTracer.NoSchedulerTracer
 
-  def newScheduler(maxConcurrency: Int): Scheduler
+  def newScheduler(maxConcurrency: Int): Scheduler[Resource.type]
 
   test("execute simple task") {
 
@@ -94,12 +96,12 @@ abstract class SchedulerTest extends CypherFunSuite {
 
   // HELPER TASKS
 
-  case class SumAggregator() extends Task {
+  case class SumAggregator() extends Task[Resource.type] {
 
     val buffer = new ConcurrentLinkedQueue[Integer]
     val sum = new AtomicInteger()
 
-    override def executeWorkUnit(): Seq[Task] = {
+    override def executeWorkUnit(resource: Resource.type): Seq[Task[Resource.type]] = {
       var value = buffer.poll()
       while (value != null) {
         sum.addAndGet(value)
@@ -111,11 +113,11 @@ abstract class SchedulerTest extends CypherFunSuite {
     override def canContinue: Boolean = buffer.nonEmpty
   }
 
-  case class PushToEager(subResults: Seq[Int], eager: SumAggregator) extends Task {
+  case class PushToEager(subResults: Seq[Int], eager: SumAggregator) extends Task[Resource.type] {
 
     private val resultSequence = subResults.iterator
 
-    override def executeWorkUnit(): Seq[Task] = {
+    override def executeWorkUnit(resource: Resource.type): Seq[Task[Resource.type]] = {
       if (resultSequence.hasNext)
         eager.buffer.add(resultSequence.next())
 
@@ -126,19 +128,19 @@ abstract class SchedulerTest extends CypherFunSuite {
     override def canContinue: Boolean = resultSequence.hasNext
   }
 
-  case class SubTasker(subtasks: Seq[Task]) extends Task {
+  case class SubTasker(subtasks: Seq[Task[Resource.type]]) extends Task[Resource.type] {
 
     private val taskSequence = subtasks.iterator
 
-    override def executeWorkUnit(): Seq[Task] =
+    override def executeWorkUnit(resource: Resource.type): Seq[Task[Resource.type]] =
       if (taskSequence.hasNext) List(taskSequence.next())
       else Nil
 
     override def canContinue: Boolean = taskSequence.nonEmpty
   }
 
-  case class NoopTask(f: () => Any) extends Task {
-    override def executeWorkUnit(): Seq[Task] = {
+  case class NoopTask(f: () => Any) extends Task[Resource.type] {
+    override def executeWorkUnit(resource: Resource.type): Seq[Task[Resource.type]] = {
       f()
       Nil
     }

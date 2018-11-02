@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.parallel
 /**
   * A Spatula (scheduler)
   */
-trait Scheduler {
+trait Scheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable] {
 
   /**
     * Execute the provided task by calling [[Task#executeWorkUnit()]] repeatedly until
@@ -19,7 +19,7 @@ trait Scheduler {
     * @param task the initial task to execute
     * @return QueryExecution representing the ongoing execution
     */
-  def execute(task: Task, tracer: SchedulerTracer): QueryExecution
+  def execute(task: Task[THREAD_LOCAL_RESOURCE], tracer: SchedulerTracer): QueryExecution
 
   def isMultiThreaded: Boolean
 }
@@ -27,7 +27,7 @@ trait Scheduler {
 /**
   * A single task
   */
-trait Task {
+trait Task[THREAD_LOCAL_RESOURCE <: AutoCloseable] {
 
   /**
     * Execute the next work-unit of this task. After the first call, [[executeWorkUnit]] will be
@@ -35,7 +35,7 @@ trait Task {
     *
     * @return A collection of additional tasks that should also be executed. Can be empty.
     */
-  def executeWorkUnit(): Seq[Task]
+  def executeWorkUnit(threadLocalResource: THREAD_LOCAL_RESOURCE): Seq[Task[THREAD_LOCAL_RESOURCE]]
 
   /**
     * Returns true if there is another work unit to execute.
@@ -52,7 +52,7 @@ trait QueryExecution {
   /**
     * Wait for this QueryExecution to complete.
     *
-    * @return An optional error if anything when wrong with the query execution.
+    * @return An optional error if anything went wrong with the query execution.
     */
   def await(): Option[Throwable]
 }
