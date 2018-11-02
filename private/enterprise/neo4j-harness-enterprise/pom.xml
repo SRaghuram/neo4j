@@ -10,7 +10,7 @@
         <relativePath>../..</relativePath>
     </parent>
 
-    <groupId>org.neo4j.test</groupId>
+    <groupId>com.neo4j.test</groupId>
     <artifactId>neo4j-harness-enterprise</artifactId>
 
     <packaging>jar</packaging>
@@ -46,7 +46,7 @@
         </dependency>
 
         <dependency>
-            <groupId>org.neo4j.app</groupId>
+            <groupId>com.neo4j.app</groupId>
             <artifactId>neo4j-server-enterprise</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -116,7 +116,7 @@
         </dependency>
 
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-com</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>

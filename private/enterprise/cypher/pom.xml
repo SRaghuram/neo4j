@@ -68,6 +68,19 @@
             <configLocation>${project.basedir}/../../../../public/community/cypher/scalastyle_config.xml</configLocation>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <configuration combine.self="override">
+            <rules>
+              <evaluateBeanshell>
+                <message>Maven module has to be in a "groupId" beginning with "com.neo4j"</message>
+                <condition>{String s = "${project.groupId}"; s.startsWith("com.neo4j");}</condition>
+              </evaluateBeanshell>
+            </rules>
+            <fail>true</fail>
+          </configuration>
+        </plugin>
 
         <plugin>
           <groupId>org.neo4j.build.plugins</groupId>

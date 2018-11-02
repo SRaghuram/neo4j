@@ -41,12 +41,12 @@
             <artifactId>annotations</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-causal-clustering</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-com</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -63,7 +63,7 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-cluster</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -99,7 +99,7 @@
             <artifactId>junit-jupiter-engine</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-causal-clustering</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
@@ -141,7 +141,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise-kernel</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
@@ -167,7 +167,7 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-com</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>

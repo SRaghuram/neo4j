@@ -6,7 +6,6 @@
     <groupId>com.neo4j</groupId>
     <artifactId>cypher-enterprise-parent</artifactId>
     <version>3.5.0-SNAPSHOT</version>
-    <relativePath>../</relativePath>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -81,12 +80,12 @@
     <!-- neo4j -->
 
     <dependency>
-      <groupId>org.neo4j</groupId>
+      <groupId>com.neo4j</groupId>
       <artifactId>neo4j-cypher-slotted-runtime</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.neo4j</groupId>
+      <groupId>com.neo4j</groupId>
       <artifactId>neo4j-cypher-physical-planning</artifactId>
       <version>${project.version}</version>
     </dependency>
