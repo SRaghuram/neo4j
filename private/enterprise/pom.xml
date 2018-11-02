@@ -31,6 +31,7 @@
     <module>security-commercial</module>
     <module>auth-plugin-api</module>
     <module>query-logging</module>
+    <module>procedure-compiler-enterprise-tests</module>
   </modules>
 
   <licenses>
