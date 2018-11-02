@@ -16,10 +16,20 @@
   <packaging>jar</packaging>
 
   <properties>
-    <license-text.header>headers/AGPL-3-header.txt</license-text.header>
     <prometheus.client.version>0.4.0</prometheus.client.version>
     <moduleName>org.neo4j.metrics</moduleName>
   </properties>
+
+    <licenses>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
+                Copyright (c) 2002-2018 "Neo Technology,"
+                Network Engine for Objects in Lund AB [http://neotechnology.com]
+                This file is a commercial add-on to Neo4j Enterprise Edition.
+            </comments>
+        </license>
+    </licenses>
 
     <dependencies>
         <dependency>
