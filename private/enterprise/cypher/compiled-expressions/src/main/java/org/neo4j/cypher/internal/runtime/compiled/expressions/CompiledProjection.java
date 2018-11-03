@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext;
+import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.values.virtual.MapValue;
 
 /**
@@ -20,6 +21,7 @@ public interface CompiledProjection
      * @param context the current context.
      * @param dbAccess used for accessing the database
      * @param params the parameters of the query
+     * @param nodeCursor TODO
      */
-    void project( ExecutionContext context, DbAccess dbAccess, MapValue params );
+    void project( ExecutionContext context, DbAccess dbAccess, MapValue params, NodeCursor nodeCursor );
 }

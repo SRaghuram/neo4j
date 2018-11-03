@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Litera
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.slotted.pipes.Ascending
 import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
+import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.intValue
 import org.opencypher.v9_0.util.symbols._
@@ -17,7 +18,7 @@ import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class PreSortOperatorTest extends CypherFunSuite {
 
-  private val cursors = new ExpressionCursors
+  private val cursors = new ExpressionCursors(mock[CursorFactory])
 
   test("sort a morsel with a single long column") {
     val numberOfLongs = 1

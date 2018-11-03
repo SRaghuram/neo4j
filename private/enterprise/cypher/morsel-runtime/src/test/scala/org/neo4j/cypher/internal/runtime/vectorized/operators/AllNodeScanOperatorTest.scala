@@ -10,14 +10,14 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.{CursorFactory, NodeCursor}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class AllNodeScanOperatorTest extends CypherFunSuite {
 
-  private val cursors = new ExpressionCursors
+  private val cursors = new ExpressionCursors(mock[CursorFactory])
 
   test("should copy argument over for every row") {
     // Given

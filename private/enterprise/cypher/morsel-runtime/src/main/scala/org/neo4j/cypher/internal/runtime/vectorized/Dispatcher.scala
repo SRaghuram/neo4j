@@ -25,7 +25,7 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[ExpressionCursors]) {
     // instead of creating new cursors here only for initializing the query, we could
     //    a) delegate the task of finding the initial task to the scheduler, and use the schedulers cursors
     //    b) attempt some lazy cursor creation here, because they will usually not be needed
-    val initExpressionCursors = new ExpressionCursors
+    val initExpressionCursors = new ExpressionCursors(queryContext.transactionalContext.cursors)
     val initialTask =
       try {
         leaf.init(MorselExecutionContext.EMPTY, queryContext, state, initExpressionCursors)

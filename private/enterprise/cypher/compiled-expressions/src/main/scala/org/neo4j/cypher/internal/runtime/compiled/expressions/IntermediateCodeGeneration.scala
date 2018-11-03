@@ -1471,7 +1471,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case functions.Labels =>
       internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
-       invokeStatic(method[CypherFunctions, ListValue, AnyValue, DbAccess]("labels"), in.ir, DB_ACCESS),
+       invokeStatic(method[CypherFunctions, ListValue, AnyValue, DbAccess]("labels"), in.ir, DB_ACCESS, NODE_CURSOR),
        in.fields, in.variables, in.nullCheck))
 
     case functions.Type =>
@@ -1957,4 +1957,5 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 object IntermediateCodeGeneration {
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
   private val DB_ACCESS = load("dbAccess")
+  private val NODE_CURSOR = load("nodeCursor")
 }

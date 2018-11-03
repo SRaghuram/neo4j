@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.parallel._
 import org.neo4j.cypher.internal.runtime.vectorized.Dispatcher
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.{CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy, CypherVersion}
+import org.neo4j.internal.kernel.api.{CursorFactory, Kernel}
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
 import org.neo4j.logging.{Log, LogProvider}
@@ -36,7 +37,12 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
   Each compiler contains a runtime instance, and each morsel runtime instance requires a dispatcher instance.
   This ensures only one (shared) dispatcher/tracer instance is created, even when there are multiple morsel runtime instances.
    */
-  private val runtimeEnvironment = RuntimeEnvironment(runtimeConfig, graph.getDependencyResolver.resolveDependency(classOf[JobScheduler]))
+  private val runtimeEnvironment = {
+    val resolver = graph.getDependencyResolver
+    val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
+    val kernel = resolver.resolveDependency(classOf[Kernel])
+    RuntimeEnvironment(runtimeConfig, jobScheduler, kernel.cursors())
+  }
 
   override def createCompiler(cypherVersion: CypherVersion,
                               cypherPlanner: CypherPlannerOption,
@@ -74,13 +80,13 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
   }
 }
 
-case class RuntimeEnvironment(config:CypherRuntimeConfiguration, jobScheduler: JobScheduler) {
+case class RuntimeEnvironment(config:CypherRuntimeConfiguration, jobScheduler: JobScheduler, cursors: CursorFactory) {
   private val dispatcher: Dispatcher = createDispatcher()
   val tracer: SchedulerTracer = createTracer()
 
   def getDispatcher(debugOptions: Set[String]): Dispatcher =
     if (singleThreadedRequested(debugOptions) && !isAlreadySingleThreaded)
-      new Dispatcher(config.morselSize, new SingleThreadScheduler(() => new ExpressionCursors))
+      new Dispatcher(config.morselSize, new SingleThreadScheduler(() => new ExpressionCursors(cursors)))
     else
       dispatcher
 
@@ -90,11 +96,11 @@ case class RuntimeEnvironment(config:CypherRuntimeConfiguration, jobScheduler: J
 
   private def createDispatcher(): Dispatcher = {
     val scheduler =
-      if (config.workers == 1) new SingleThreadScheduler(() => new ExpressionCursors)
+      if (config.workers == 1) new SingleThreadScheduler(() => new ExpressionCursors(cursors))
       else {
         val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
         val executorService = jobScheduler.workStealingExecutor(Group.CYPHER_WORKER, numberOfThreads)
-        new SimpleScheduler(executorService, config.waitTimeout, () => new ExpressionCursors)
+        new SimpleScheduler(executorService, config.waitTimeout, () => new ExpressionCursors(cursors))
       }
     new Dispatcher(config.morselSize, scheduler)
   }

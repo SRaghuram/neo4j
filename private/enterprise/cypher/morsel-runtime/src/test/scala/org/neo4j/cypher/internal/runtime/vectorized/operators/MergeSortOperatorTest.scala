@@ -10,13 +10,14 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Litera
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.slotted.pipes.Ascending
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
 import org.opencypher.v9_0.util.symbols.CTNode
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class MergeSortOperatorTest extends CypherFunSuite {
 
-  private val cursors = new ExpressionCursors
+  private val cursors = new ExpressionCursors(mock[CursorFactory])
 
   test("sort a single morsel") {
     val numberOfLongs = 1

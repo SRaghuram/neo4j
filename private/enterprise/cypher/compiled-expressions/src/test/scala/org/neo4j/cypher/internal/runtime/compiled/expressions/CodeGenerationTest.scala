@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, SlotConfi
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, MapExecutionContext}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CoerceToPredicate
+import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.CoordinateReferenceSystem.{Cartesian, WGS84}
 import org.neo4j.values.storable.LocalTimeValue.localTime
@@ -41,6 +42,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   private val ctx = mock[ExecutionContext]
   private val db = mock[DbAccess]
+  private val nodeCursor = mock[NodeCursor]
   when(db.relationshipGetStartNode(any[RelationshipValue])).thenAnswer(new Answer[NodeValue] {
     override def answer(in: InvocationOnMock): NodeValue = in.getArgument[RelationshipValue](0).startNode()
   })
@@ -51,8 +53,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   private val random = ThreadLocalRandom.current()
 
   test("round function") {
-    compile(function("round", literalFloat(PI))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(3.0))
-    compile(function("round", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("round", literalFloat(PI))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(3.0))
+    compile(function("round", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("rand function") {
@@ -63,158 +65,158 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    val value = compiled.evaluate(ctx, db, EMPTY_MAP).asInstanceOf[DoubleValue].doubleValue()
+    val value = compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor).asInstanceOf[DoubleValue].doubleValue()
     value should (be >= 0.0 and be <1.0)
   }
 
   test("sin function") {
     val arg = random.nextDouble()
-    compile(function("sin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.sin(arg)))
-    compile(function("sin", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("sin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.sin(arg)))
+    compile(function("sin", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("asin function") {
     val arg = random.nextDouble()
-    compile(function("asin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.asin(arg)))
-    compile(function("asin", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("asin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.asin(arg)))
+    compile(function("asin", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("haversin function") {
     val arg = random.nextDouble()
-    compile(function("haversin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue((1.0 - Math.cos(arg)) / 2))
-    compile(function("haversin", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("haversin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue((1.0 - Math.cos(arg)) / 2))
+    compile(function("haversin", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("acos function") {
     val arg = random.nextDouble()
-    compile(function("acos", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.acos(arg)))
-    compile(function("acos", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("acos", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.acos(arg)))
+    compile(function("acos", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("cos function") {
     val arg = random.nextDouble()
-    compile(function("cos", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.cos(arg)))
-    compile(function("cos", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("cos", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.cos(arg)))
+    compile(function("cos", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("cot function") {
     val arg = random.nextDouble()
-    compile(function("cot", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(1 / Math.tan(arg)))
-    compile(function("cot", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("cot", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(1 / Math.tan(arg)))
+    compile(function("cot", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("atan function") {
     val arg = random.nextDouble()
-    compile(function("atan", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.atan(arg)))
-    compile(function("atan", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("atan", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.atan(arg)))
+    compile(function("atan", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("atan2 function") {
     val arg1 = random.nextDouble()
     val arg2 = random.nextDouble()
-    compile(function("atan2", literalFloat(arg1), literalFloat(arg2))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.atan2(arg1, arg2)))
-    compile(function("atan2", noValue,literalFloat(arg1))).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
-    compile(function("atan2", literalFloat(arg1), noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
-    compile(function("atan2", noValue, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("atan2", literalFloat(arg1), literalFloat(arg2))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.atan2(arg1, arg2)))
+    compile(function("atan2", noValue,literalFloat(arg1))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
+    compile(function("atan2", literalFloat(arg1), noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
+    compile(function("atan2", noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("tan function") {
     val arg = random.nextDouble()
-    compile(function("tan", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.tan(arg)))
-    compile(function("tan", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("tan", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.tan(arg)))
+    compile(function("tan", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("ceil function") {
     val arg = random.nextDouble()
-    compile(function("ceil", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.ceil(arg)))
-    compile(function("ceil", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("ceil", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.ceil(arg)))
+    compile(function("ceil", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("floor function") {
     val arg = random.nextDouble()
-    compile(function("floor", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.floor(arg)))
-    compile(function("floor", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("floor", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.floor(arg)))
+    compile(function("floor", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("abs function") {
-    compile(function("abs", literalFloat(3.2))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(3.2))
-    compile(function("abs", literalFloat(-3.2))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(3.2))
-    compile(function("abs", literalInt(3))).evaluate(ctx, db, EMPTY_MAP) should equal(longValue(3))
-    compile(function("abs", literalInt(-3))).evaluate(ctx, db, EMPTY_MAP) should equal(longValue(3))
-    compile(function("abs", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
+    compile(function("abs", literalFloat(3.2))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(3.2))
+    compile(function("abs", literalFloat(-3.2))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(3.2))
+    compile(function("abs", literalInt(3))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(longValue(3))
+    compile(function("abs", literalInt(-3))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(longValue(3))
+    compile(function("abs", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
   }
 
   test("radians function") {
     val arg = random.nextDouble()
-    compile(function("radians", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.toRadians(arg)))
-    compile(function("radians", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("radians", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.toRadians(arg)))
+    compile(function("radians", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("degrees function") {
     val arg = random.nextDouble()
-    compile(function("degrees", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.toDegrees(arg)))
-    compile(function("degrees", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("degrees", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.toDegrees(arg)))
+    compile(function("degrees", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("exp function") {
     val arg = random.nextDouble()
-    compile(function("exp", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.exp(arg)))
-    compile(function("exp", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("exp", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.exp(arg)))
+    compile(function("exp", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("log function") {
     val arg = random.nextDouble()
-    compile(function("log", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.log(arg)))
-    compile(function("log", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("log", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.log(arg)))
+    compile(function("log", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("log10 function") {
     val arg = random.nextDouble()
-    compile(function("log10", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.log10(arg)))
-    compile(function("log10", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("log10", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.log10(arg)))
+    compile(function("log10", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("sign function") {
     val arg = random.nextInt()
-    compile(function("sign", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.signum(arg)))
-    compile(function("sign", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("sign", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.signum(arg)))
+    compile(function("sign", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("sqrt function") {
     val arg = random.nextDouble()
-    compile(function("sqrt", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP) should equal(doubleValue(Math.sqrt(arg)))
-    compile(function("sqrt", noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("sqrt", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(doubleValue(Math.sqrt(arg)))
+    compile(function("sqrt", noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("pi function") {
-    compile(function("pi")).evaluate(ctx, db, EMPTY_MAP) should equal(Values.PI)
+    compile(function("pi")).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.PI)
   }
 
   test("e function") {
-    compile(function("e")).evaluate(ctx, db, EMPTY_MAP) should equal(Values.E)
+    compile(function("e")).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.E)
   }
 
   test("range function with no step") {
     val range = function("range", literalInt(5), literalInt(9))
-    compile(range).evaluate(ctx, db, EMPTY_MAP) should equal(list(longValue(5), longValue(6), longValue(7),
+    compile(range).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(list(longValue(5), longValue(6), longValue(7),
                                                                   longValue(8), longValue(9)))
   }
 
   test("range function with step") {
     val range = function("range", literalInt(5), literalInt(9), literalInt(2))
-    compile(range).evaluate(ctx, db, EMPTY_MAP) should equal(list(longValue(5), longValue(7), longValue(9)))
+    compile(range).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(list(longValue(5), longValue(7), longValue(9)))
   }
 
   test("coalesce function") {
-    compile(function("coalesce", noValue, noValue, literalInt(2), noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(longValue(2))
-    compile(function("coalesce", noValue, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compile(function("coalesce", noValue, noValue, literalInt(2), noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(longValue(2))
+    compile(function("coalesce", noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("coalesce function with parameters") {
     val compiled = compile(function("coalesce", parameter("a"), parameter("b"), parameter("c")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b", "c"), Array(NO_VALUE, longValue(2), NO_VALUE))) should equal(longValue(2))
-    compiled.evaluate(ctx, db, map(Array("a", "b", "c"), Array(NO_VALUE, NO_VALUE, NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b", "c"), Array(NO_VALUE, longValue(2), NO_VALUE)), nodeCursor) should equal(longValue(2))
+    compiled.evaluate(ctx, db, map(Array("a", "b", "c"), Array(NO_VALUE, NO_VALUE, NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("distance function") {
@@ -222,13 +224,13 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val keys = Array("p1", "p2")
     compiled.evaluate(ctx, db, map(keys,
                                    Array(pointValue(Cartesian, 0.0, 0.0),
-                                         pointValue(Cartesian, 1.0, 1.0)))) should equal(doubleValue(Math.sqrt(2)))
+                                         pointValue(Cartesian, 1.0, 1.0))), nodeCursor) should equal(doubleValue(Math.sqrt(2)))
     compiled.evaluate(ctx, db, map(keys,
                                    Array(pointValue(Cartesian, 0.0, 0.0),
-                                         NO_VALUE))) should equal(NO_VALUE)
+                                         NO_VALUE)), nodeCursor) should equal(NO_VALUE)
     compiled.evaluate(ctx, db, map(keys,
                                    Array(pointValue(Cartesian, 0.0, 0.0),
-                                         pointValue(WGS84, 1.0, 1.0)))) should equal(NO_VALUE)
+                                         pointValue(WGS84, 1.0, 1.0))), nodeCursor) should equal(NO_VALUE)
 
   }
 
@@ -238,8 +240,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 nodeValue(1, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), EMPTY_MAP)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel))) should equal(rel.startNode())
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), nodeCursor) should equal(rel.startNode())
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("endNode") {
@@ -248,8 +250,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 nodeValue(1, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), EMPTY_MAP)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel))) should equal(rel.endNode())
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), nodeCursor) should equal(rel.endNode())
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
 
   }
 
@@ -260,8 +262,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.propertyKey("prop")).thenReturn(42)
     when(db.nodeHasProperty(1, 42)).thenReturn(true)
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(node))) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(node)), nodeCursor) should equal(Values.TRUE)
   }
 
   test("exists on relationship") {
@@ -274,70 +276,70 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.propertyKey("prop")).thenReturn(42)
     when(db.relationshipHasProperty(43, 42)).thenReturn(true)
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel))) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), nodeCursor) should equal(Values.TRUE)
   }
 
   test("exists on map") {
     val compiled = compile(function("exists", property(parameter("a"), "prop")))
 
     val mapValue = map(Array("prop"), Array(stringValue("hello")))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(mapValue))) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(mapValue)), nodeCursor) should equal(Values.TRUE)
   }
 
   test("head function") {
     val compiled = compile(function("head", parameter("a")))
     val listValue = list(stringValue("hello"), intValue(42))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(listValue))) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(EMPTY_LIST))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(listValue)), nodeCursor) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(EMPTY_LIST)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("last function") {
     val compiled = compile(function("last", parameter("a")))
     val listValue = list(intValue(42), stringValue("hello"))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(listValue))) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(EMPTY_LIST))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(listValue)), nodeCursor) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(EMPTY_LIST)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("left function") {
     val compiled = compile(function("left", parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(4)))) should
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(4))), nodeCursor) should
       equal(stringValue("HELL"))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(17)))) should
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(17))), nodeCursor) should
       equal(stringValue("HELLO"))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(4)))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(4))), nodeCursor) should equal(NO_VALUE)
 
-    an[IndexOutOfBoundsException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(-1))))
+    an[IndexOutOfBoundsException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(-1))), nodeCursor)
   }
 
   test("ltrim function") {
     val compiled = compile(function("ltrim", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("  HELLO  ")))) should
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("  HELLO  "))), nodeCursor) should
       equal(stringValue("HELLO  "))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("rtrim function") {
     val compiled = compile(function("rtrim", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("  HELLO  ")))) should
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("  HELLO  "))), nodeCursor) should
       equal(stringValue("  HELLO"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("trim function") {
     val compiled = compile(function("trim", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("  HELLO  ")))) should
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("  HELLO  "))), nodeCursor) should
       equal(stringValue("HELLO"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("replace function") {
@@ -346,82 +348,82 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compiled.evaluate(ctx, db, map(Array("a", "b", "c"),
                                    Array(stringValue("HELLO"),
                                          stringValue("LL"),
-                                         stringValue("R")))) should equal(stringValue("HERO"))
+                                         stringValue("R"))), nodeCursor) should equal(stringValue("HERO"))
     compiled.evaluate(ctx, db, map(Array("a", "b", "c"),
                                    Array(NO_VALUE,
                                          stringValue("LL"),
-                                         stringValue("R")))) should equal(NO_VALUE)
+                                         stringValue("R"))), nodeCursor) should equal(NO_VALUE)
     compiled.evaluate(ctx, db, map(Array("a", "b", "c"),
                                    Array(stringValue("HELLO"),
                                          NO_VALUE,
-                                         stringValue("R")))) should equal(NO_VALUE)
+                                         stringValue("R"))), nodeCursor) should equal(NO_VALUE)
     compiled.evaluate(ctx, db, map(Array("a", "b", "c"),
                                    Array(stringValue("HELLO"),
                                          stringValue("LL"),
-                                         NO_VALUE))) should equal(NO_VALUE)
+                                         NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("reverse function") {
     val compiled = compile(function("reverse", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("PARIS")))) should equal(stringValue("SIRAP"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("PARIS"))), nodeCursor) should equal(stringValue("SIRAP"))
     val original = list(intValue(1), intValue(2), intValue(3))
     val reversed = list(intValue(3), intValue(2), intValue(1))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(original))) should equal(reversed)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(original)), nodeCursor) should equal(reversed)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("right function") {
     val compiled = compile(function("right", parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(4)))) should
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(4))), nodeCursor) should
       equal(stringValue("ELLO"))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(4)))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(4))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("split function") {
     val compiled = compile(function("split", parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), stringValue("LL")))) should
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), stringValue("LL"))), nodeCursor) should
       equal(list(stringValue("HE"), stringValue("O")))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, stringValue("LL")))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), EMPTY_STRING))) should
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, stringValue("LL"))), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), EMPTY_STRING)), nodeCursor) should
       equal(list(stringValue("H"), stringValue("E"), stringValue("L"), stringValue("L"), stringValue("O")))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(EMPTY_STRING, stringValue("LL")))) should equal(list(EMPTY_STRING))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(EMPTY_STRING, stringValue("LL"))), nodeCursor) should equal(list(EMPTY_STRING))
 
   }
 
   test("substring function no length") {
     val compiled = compile(function("substring", parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(1)))) should
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(1))), nodeCursor) should
       equal(stringValue("ELLO"))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(1)))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(1))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("substring function with length") {
     val compiled = compile(function("substring", parameter("a"), parameter("b"), parameter("c")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b", "c"), Array(stringValue("HELLO"), intValue(1), intValue(2)))) should
+    compiled.evaluate(ctx, db, map(Array("a", "b", "c"), Array(stringValue("HELLO"), intValue(1), intValue(2))), nodeCursor) should
       equal(stringValue("EL"))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(1)))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(1))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("toLower function") {
     val compiled = compile(function("toLower", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("HELLO")))) should
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("HELLO"))), nodeCursor) should
       equal(stringValue("hello"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("toUpper function") {
     val compiled = compile(function("toUpper", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("hello")))) should
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("hello"))), nodeCursor) should
       equal(stringValue("HELLO"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("nodes function") {
@@ -434,8 +436,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                       relationshipValue(12, nodes(1), nodes(2), stringValue("R"), EMPTY_MAP))
     val path = VirtualValues.path(nodes, rels)
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(path))) should equal(list(nodes:_*))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(path)), nodeCursor) should equal(list(nodes:_*))
   }
 
   test("relationships function") {
@@ -448,8 +450,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                       relationshipValue(12, nodes(1), nodes(2), stringValue("R"), EMPTY_MAP))
     val path = VirtualValues.path(nodes, rels)
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(path))) should equal(list(rels:_*))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(path)), nodeCursor) should equal(list(rels:_*))
   }
 
   test("id on node") {
@@ -457,8 +459,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val node = nodeValue(1, EMPTY_TEXT_ARRAY, EMPTY_MAP)
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(node))) should equal(longValue(1))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(node)), nodeCursor) should equal(longValue(1))
   }
 
   test("id on relationship") {
@@ -470,8 +472,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 stringValue("R"),EMPTY_MAP)
 
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel))) should equal(longValue(43))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), nodeCursor) should equal(longValue(43))
   }
 
   test("labels function") {
@@ -479,10 +481,10 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val labels = Values.stringArray("A", "B", "C")
     val node = nodeValue(1, labels, EMPTY_MAP)
-    when(db.getLabelsForNode(node.id())).thenReturn(VirtualValues.fromArray(labels))
+    when(db.getLabelsForNode(node.id(), any[NodeCursor])).thenReturn(VirtualValues.fromArray(labels))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(node))) should equal(labels)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(node)), nodeCursor) should equal(labels)
   }
 
   test("type function") {
@@ -492,8 +494,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), EMPTY_MAP)
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel))) should equal(stringValue("R"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), nodeCursor) should equal(stringValue("R"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("points from node") {
@@ -515,8 +517,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       }
     })
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(node))) should equal(PointValue.fromMap(pointMap))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(node)), nodeCursor) should equal(PointValue.fromMap(pointMap))
   }
 
   test("points from relationship") {
@@ -541,8 +543,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       }
     })
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel))) should equal(PointValue.fromMap(pointMap))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), nodeCursor) should equal(PointValue.fromMap(pointMap))
   }
 
   test("points from map") {
@@ -550,8 +552,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val pointMap = map(Array("x", "y", "crs"),
                        Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(pointMap))) should equal(PointValue.fromMap(pointMap))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(pointMap)), nodeCursor) should equal(PointValue.fromMap(pointMap))
   }
 
   test("keys on node") {
@@ -563,8 +565,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.getPropertyKeyName(2)).thenReturn("B")
     when(db.getPropertyKeyName(3)).thenReturn("C")
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(node))) should equal(Values.stringArray("A", "B", "C"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(node)), nodeCursor) should equal(Values.stringArray("A", "B", "C"))
   }
 
   test("keys on relationship") {
@@ -581,8 +583,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.getPropertyKeyName(3)).thenReturn("C")
 
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel))) should equal(Values.stringArray("A", "B", "C"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), nodeCursor) should equal(Values.stringArray("A", "B", "C"))
   }
 
   test("keys on map") {
@@ -590,15 +592,15 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val mapValue = map(Array("x", "y", "crs"),
                        Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(mapValue))) should equal(mapValue.keys())
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(mapValue)), nodeCursor) should equal(mapValue.keys())
   }
 
   test("size function") {
     val compiled = compile(function("size", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("HELLO")))) should equal(intValue(5))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(4)))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("HELLO"))), nodeCursor) should equal(intValue(5))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(4))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("length function") {
@@ -610,62 +612,62 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                       relationshipValue(12, nodes(1), nodes(2), stringValue("R"), EMPTY_MAP))
     val path = VirtualValues.path(nodes, rels)
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(path))) should equal(intValue(2))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(4)))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(path)), nodeCursor) should equal(intValue(2))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(4))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("tail function") {
     val compiled = compile(function("tail", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(list(intValue(1), intValue(2), intValue(3))))) should equal(list(intValue(2), intValue(3)))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(list(intValue(1), intValue(2), intValue(3)))), nodeCursor) should equal(list(intValue(2), intValue(3)))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("toBoolean function") {
     val compiled = compile(function("toBoolean", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(Values.TRUE))) should equal(Values.TRUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(Values.FALSE))) should equal(Values.FALSE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("false")))) should equal(Values.FALSE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("true")))) should equal(Values.TRUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("uncertain")))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(Values.TRUE)), nodeCursor) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(Values.FALSE)), nodeCursor) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("false"))), nodeCursor) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("true"))), nodeCursor) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("uncertain"))), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("toFloat function") {
     val compiled = compile(function("toFloat", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(doubleValue(3.2)))) should equal(doubleValue(3.2))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(intValue(3)))) should equal(doubleValue(3))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("3.2")))) should equal(doubleValue(3.2))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("three dot two")))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(doubleValue(3.2))), nodeCursor) should equal(doubleValue(3.2))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(intValue(3))), nodeCursor) should equal(doubleValue(3))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("3.2"))), nodeCursor) should equal(doubleValue(3.2))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("three dot two"))), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("toInteger function") {
     val compiled = compile(function("toInteger", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(doubleValue(3.2)))) should equal(longValue(3))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(intValue(3)))) should equal(intValue(3))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("3")))) should equal(longValue(3))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("three")))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(doubleValue(3.2))), nodeCursor) should equal(longValue(3))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(intValue(3))), nodeCursor) should equal(intValue(3))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("3"))), nodeCursor) should equal(longValue(3))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("three"))), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("toString function") {
     val compiled = compile(function("toString", parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(doubleValue(3.2)))) should equal(stringValue("3.2"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(Values.TRUE))) should equal(stringValue("true"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("hello")))) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(pointValue(Cartesian, 0.0, 0.0)))) should
+    compiled.evaluate(ctx, db, map(Array("a"), Array(doubleValue(3.2))), nodeCursor) should equal(stringValue("3.2"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(Values.TRUE)), nodeCursor) should equal(stringValue("true"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("hello"))), nodeCursor) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(pointValue(Cartesian, 0.0, 0.0))), nodeCursor) should
       equal(stringValue("point({x: 0.0, y: 0.0, crs: 'cartesian'})"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(durationValue(Duration.ofHours(3))))) should
+    compiled.evaluate(ctx, db, map(Array("a"), Array(durationValue(Duration.ofHours(3)))), nodeCursor) should
       equal(stringValue("PT3H"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(temporalValue(localTime(20, 0, 0, 0))))) should
+    compiled.evaluate(ctx, db, map(Array("a"), Array(temporalValue(localTime(20, 0, 0, 0)))), nodeCursor) should
       equal(stringValue("20:00:00"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    a [ParameterWrongTypeException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a"), Array(intArray(Array(1,2,3)))))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    a [ParameterWrongTypeException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a"), Array(intArray(Array(1,2,3)))), nodeCursor)
   }
 
   test("properties function on node") {
@@ -674,8 +676,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val node = nodeValue(1, EMPTY_TEXT_ARRAY, mapValue)
     when(db.nodeAsMap(1)).thenReturn(mapValue)
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(node))) should equal(mapValue)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(node)), nodeCursor) should equal(mapValue)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("properties function on relationship") {
@@ -687,16 +689,16 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 stringValue("R"), mapValue)
     when(db.relationshipAsMap(43)).thenReturn(mapValue)
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel))) should equal(mapValue)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), nodeCursor) should equal(mapValue)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("properties function on map") {
     val compiled = compile(function("properties", parameter("a")))
     val mapValue = map(Array("prop"), Array(longValue(42)))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(mapValue))) should equal(mapValue)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(mapValue)), nodeCursor) should equal(mapValue)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("add numbers") {
@@ -707,7 +709,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(longValue(52))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(longValue(52))
   }
 
   test("add temporals") {
@@ -715,17 +717,17 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     // temporal + duration
     compiled.evaluate(ctx, db, map(Array("a", "b"), Array(temporalValue(localTime(0)),
-                                   durationValue(Duration.ofHours(10))))) should
+                                   durationValue(Duration.ofHours(10)))), nodeCursor) should
       equal(localTime(10, 0, 0, 0))
 
     // duration + temporal
     compiled.evaluate(ctx, db, map(Array("a", "b"), Array(durationValue(Duration.ofHours(10)),
-                                         temporalValue(localTime(0))))) should
+                                         temporalValue(localTime(0)))), nodeCursor) should
       equal(localTime(10, 0, 0, 0))
 
     //duration + duration
     compiled.evaluate(ctx, db, map(Array("a", "b"), Array(durationValue(Duration.ofHours(10)),
-                                                          durationValue(Duration.ofHours(10))))) should
+                                                          durationValue(Duration.ofHours(10)))), nodeCursor) should
       equal(durationValue(Duration.ofHours(20)))
   }
 
@@ -737,8 +739,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("add strings") {
@@ -747,17 +749,17 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     // string1 + string2
     compiled.evaluate(ctx, db,
-                      map(Array("a", "b"), Array(stringValue("hello "), stringValue("world")))) should
+                      map(Array("a", "b"), Array(stringValue("hello "), stringValue("world"))), nodeCursor) should
       equal(stringValue("hello world"))
     //string + other
     compiled.evaluate(ctx, db,
                       map(Array("a", "b"),
-                          Array(stringValue("hello "), longValue(1337)))) should
+                          Array(stringValue("hello "), longValue(1337))), nodeCursor) should
       equal(stringValue("hello 1337"))
     //other + string
     compiled.evaluate(ctx, db,
                       map(Array("a", "b"),
-                          Array(longValue(1337), stringValue(" hello")))) should
+                          Array(longValue(1337), stringValue(" hello"))), nodeCursor) should
       equal(stringValue("1337 hello"))
 
   }
@@ -772,7 +774,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     // Then
     compiled.evaluate(ctx, db, map(Array("a", "b"),
                                    Array(longArray(Array(42, 43)),
-                                        longArray(Array(44, 45))))) should
+                                        longArray(Array(44, 45)))), nodeCursor) should
       equal(list(longValue(42), longValue(43), longValue(44), longValue(45)))
   }
 
@@ -783,18 +785,18 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     // [a1,a2 ..] + [b1,b2 ..]
     compiled.evaluate(ctx, db, map(Array("a", "b"),
                                    Array(list(longValue(42), longValue(43)),
-                                         list(longValue(44), longValue(45))))) should
+                                         list(longValue(44), longValue(45)))), nodeCursor) should
       equal(list(longValue(42), longValue(43), longValue(44), longValue(45)))
 
     // [a1,a2 ..] + b
     compiled.evaluate(ctx, db, map(Array("a", "b"),
-                                   Array(list(longValue(42), longValue(43)), longValue(44)))) should
+                                   Array(list(longValue(42), longValue(43)), longValue(44))), nodeCursor) should
       equal(list(longValue(42), longValue(43), longValue(44)))
 
     // a + [b1,b2 ..]
     compiled.evaluate(ctx, db, map(Array("a", "b"),
                                    Array(longValue(43),
-                                         list(longValue(44), longValue(45))))) should
+                                         list(longValue(44), longValue(45)))), nodeCursor) should
       equal(list(longValue(43), longValue(44), longValue(45)))
   }
 
@@ -806,7 +808,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(longValue(42))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(longValue(42))
   }
 
   test("subtract numbers") {
@@ -817,7 +819,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(longValue(32))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(longValue(32))
   }
 
   test("subtract with NO_VALUE") {
@@ -828,8 +830,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("subtract temporals") {
@@ -837,12 +839,12 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     // temporal - duration
     compiled.evaluate(ctx, db, map(Array("a", "b"), Array(temporalValue(localTime(20, 0, 0, 0)),
-                                                          durationValue(Duration.ofHours(10))))) should
+                                                          durationValue(Duration.ofHours(10)))), nodeCursor) should
       equal(localTime(10, 0, 0, 0))
 
     //duration - duration
     compiled.evaluate(ctx, db, map(Array("a", "b"), Array(durationValue(Duration.ofHours(10)),
-                                                          durationValue(Duration.ofHours(10))))) should
+                                                          durationValue(Duration.ofHours(10)))), nodeCursor) should
       equal(durationValue(Duration.ofHours(0)))
   }
 
@@ -854,7 +856,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(longValue(-42))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(longValue(-42))
   }
 
   test("multiply function") {
@@ -865,7 +867,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(longValue(420))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(longValue(420))
   }
 
   test("multiply with NO_VALUE") {
@@ -876,56 +878,56 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("division") {
     val compiled = compile(divide(parameter("a"), parameter("b")))
 
     // Then
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(6), longValue(3)))) should equal(longValue(2))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(5), doubleValue(2)))) should equal(doubleValue(2.5))
-    an[ArithmeticException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(5), longValue(0))))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(doubleValue(3.0), doubleValue(0.0)))) should equal(doubleValue(Double.PositiveInfinity))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(durationValue(Duration.ofHours(4)), longValue(2)))) should equal(durationValue(Duration.ofHours(2)))
-    an[ArithmeticException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(0))))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(6), longValue(3))), nodeCursor) should equal(longValue(2))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(5), doubleValue(2))), nodeCursor) should equal(doubleValue(2.5))
+    an[ArithmeticException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(5), longValue(0))), nodeCursor)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(doubleValue(3.0), doubleValue(0.0))), nodeCursor) should equal(doubleValue(Double.PositiveInfinity))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(durationValue(Duration.ofHours(4)), longValue(2))), nodeCursor) should equal(durationValue(Duration.ofHours(2)))
+    an[ArithmeticException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(0))), nodeCursor)
   }
 
   test("modulo") {
     val compiled = compile(modulo(parameter("a"), parameter("b")))
 
     // Then
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(doubleValue(8.0), longValue(6)))) should equal(doubleValue(2.0))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(8), doubleValue(6)))) should equal(doubleValue(2.0))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(8), longValue(6)))) should equal(longValue(2))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(doubleValue(8.0), longValue(6))), nodeCursor) should equal(doubleValue(2.0))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(8), doubleValue(6))), nodeCursor) should equal(doubleValue(2.0))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(8), longValue(6))), nodeCursor) should equal(longValue(2))
   }
 
   test("pow") {
     val compiled = compile(pow(parameter("a"), parameter("b")))
 
     // Then
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(doubleValue(2), longValue(3)))) should equal(doubleValue(8.0))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(2), longValue(3)))) should equal(doubleValue(8.0))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(doubleValue(2), longValue(3))), nodeCursor) should equal(doubleValue(8.0))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(2), longValue(3))), nodeCursor) should equal(doubleValue(8.0))
   }
 
   test("extract parameter") {
-    compile(parameter("prop")).evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
-    compile(parameter("prop")).evaluate(ctx, db, map(Array("prop"), Array(stringValue("foo")))) should equal(stringValue("foo"))
-    compile(parameter("    AUTOBLAH BLAH BLAHA   ")).evaluate(ctx, db, map(Array("    AUTOBLAH BLAH BLAHA   "), Array(stringValue("foo")))) should equal(stringValue("foo"))
+    compile(parameter("prop")).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
+    compile(parameter("prop")).evaluate(ctx, db, map(Array("prop"), Array(stringValue("foo"))), nodeCursor) should equal(stringValue("foo"))
+    compile(parameter("    AUTOBLAH BLAH BLAHA   ")).evaluate(ctx, db, map(Array("    AUTOBLAH BLAH BLAHA   "), Array(stringValue("foo"))), nodeCursor) should equal(stringValue("foo"))
   }
 
   test("extract multiple parameters with whitespaces") {
     compile(add(parameter(" A "), parameter("\tA\t")))
-      .evaluate(ctx, db, map(Array(" A ", "\tA\t"), Array(longValue(1), longValue(2) ))) should equal(longValue(3))
+      .evaluate(ctx, db, map(Array(" A ", "\tA\t"), Array(longValue(1), longValue(2) )), nodeCursor) should equal(longValue(3))
     compile(add(parameter(" A "), parameter("_A_")))
-      .evaluate(ctx, db, map(Array(" A ", "_A_"), Array(longValue(1), longValue(2) ))) should equal(longValue(3))
+      .evaluate(ctx, db, map(Array(" A ", "_A_"), Array(longValue(1), longValue(2) )), nodeCursor) should equal(longValue(3))
   }
 
   test("NULL") {
@@ -936,7 +938,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("TRUE") {
@@ -947,7 +949,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
   }
 
   test("FALSE") {
@@ -958,206 +960,206 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
   }
 
   test("OR") {
-    compile(or(t, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(or(f, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(or(t, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(or(f, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
+    compile(or(t, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(or(f, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(or(t, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(or(f, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
 
-    compile(or(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(or(noValue, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(or(t, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(or(noValue, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(or(f, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
+    compile(or(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(or(noValue, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(or(t, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(or(noValue, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(or(f, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
   }
 
   test("XOR") {
-    compile(xor(t, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
-    compile(xor(f, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(xor(t, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(xor(f, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
+    compile(xor(t, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(xor(f, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(xor(t, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(xor(f, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
 
-    compile(xor(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(xor(noValue, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(xor(t, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(xor(noValue, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(xor(f, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
+    compile(xor(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(xor(noValue, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(xor(t, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(xor(noValue, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(xor(f, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
   }
 
   test("OR should throw on non-boolean input") {
-    a [CypherTypeException] should be thrownBy compile(or(literalInt(42), f)).evaluate(ctx, db, EMPTY_MAP)
-    a [CypherTypeException] should be thrownBy compile(or(f, literalInt(42))).evaluate(ctx, db, EMPTY_MAP)
-    compile(or(t, literalInt(42))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(or(literalInt(42), t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
+    a [CypherTypeException] should be thrownBy compile(or(literalInt(42), f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor)
+    a [CypherTypeException] should be thrownBy compile(or(f, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, nodeCursor)
+    compile(or(t, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(or(literalInt(42), t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
   }
 
   test("OR should handle coercion") {
     val expression =  compile(or(parameter("a"), parameter("b")))
-    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.FALSE, EMPTY_LIST))) should equal(Values.FALSE)
-    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.FALSE, list(stringValue("hello"))))) should equal(Values.TRUE)
+    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.FALSE, EMPTY_LIST)), nodeCursor) should equal(Values.FALSE)
+    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.FALSE, list(stringValue("hello")))), nodeCursor) should equal(Values.TRUE)
   }
 
   test("ORS") {
-    compile(ors(f, f, f, f, f, f, t, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(ors(f, f, f, f, f, f, f, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
-    compile(ors(f, f, f, f, noValue, f, f, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(ors(f, f, f, t, noValue, t, f, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
+    compile(ors(f, f, f, f, f, f, t, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(ors(f, f, f, f, f, f, f, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(ors(f, f, f, f, noValue, f, f, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(ors(f, f, f, t, noValue, t, f, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
   }
 
   test("ORS should throw on non-boolean input") {
     val compiled = compile(ors(parameter("a"), parameter("b"), parameter("c"), parameter("d"), parameter("e")))
     val keys = Array("a", "b", "c", "d", "e")
     compiled.evaluate(ctx, db,
-                      map(keys, Array(Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE))) should equal(Values.FALSE)
+                      map(keys, Array(Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE)), nodeCursor) should equal(Values.FALSE)
 
     compiled.evaluate(ctx, db,
-                      map(keys, Array(Values.FALSE, Values.FALSE, Values.TRUE, Values.FALSE, Values.FALSE))) should equal(Values.TRUE)
+                      map(keys, Array(Values.FALSE, Values.FALSE, Values.TRUE, Values.FALSE, Values.FALSE)), nodeCursor) should equal(Values.TRUE)
 
     compiled.evaluate(ctx, db,
-                      map(keys, Array(intValue(42), Values.FALSE, Values.TRUE, Values.FALSE, Values.FALSE))) should equal(Values.TRUE)
+                      map(keys, Array(intValue(42), Values.FALSE, Values.TRUE, Values.FALSE, Values.FALSE)), nodeCursor) should equal(Values.TRUE)
 
     a [CypherTypeException] should be thrownBy compiled.evaluate(ctx, db,
-                                                                 map(keys, Array(intValue(42), Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE)))
+                                                                 map(keys, Array(intValue(42), Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE)), nodeCursor)
   }
 
   test("ORS should handle coercion") {
     val expression =  compile(ors(parameter("a"), parameter("b")))
-    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.FALSE, EMPTY_LIST))) should equal(Values.FALSE)
-    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.FALSE, list(stringValue("hello"))))) should equal(Values.TRUE)
+    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.FALSE, EMPTY_LIST)), nodeCursor) should equal(Values.FALSE)
+    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.FALSE, list(stringValue("hello")))), nodeCursor) should equal(Values.TRUE)
   }
 
   test("AND") {
-    compile(and(t, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(and(f, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
-    compile(and(t, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
-    compile(and(f, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
+    compile(and(t, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(and(f, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(and(t, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(and(f, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
 
-    compile(and(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(and(noValue, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(and(t, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(and(noValue, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
-    compile(and(f, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
+    compile(and(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(and(noValue, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(and(t, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(and(noValue, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(and(f, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
   }
 
   test("AND should throw on non-boolean input") {
-    a [CypherTypeException] should be thrownBy compile(and(literalInt(42), t)).evaluate(ctx, db, EMPTY_MAP)
-    a [CypherTypeException] should be thrownBy compile(and(t, literalInt(42))).evaluate(ctx, db, EMPTY_MAP)
-    compile(and(f, literalInt(42))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
-    compile(and(literalInt(42), f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
+    a [CypherTypeException] should be thrownBy compile(and(literalInt(42), t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor)
+    a [CypherTypeException] should be thrownBy compile(and(t, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, nodeCursor)
+    compile(and(f, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(and(literalInt(42), f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
   }
 
   test("AND should handle coercion") {
     val expression =  compile(and(parameter("a"), parameter("b")))
-   expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.TRUE, EMPTY_LIST))) should equal(Values.FALSE)
-   expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.TRUE, list(stringValue("hello"))))) should equal(Values.TRUE)
+   expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.TRUE, EMPTY_LIST)), nodeCursor) should equal(Values.FALSE)
+   expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.TRUE, list(stringValue("hello")))), nodeCursor) should equal(Values.TRUE)
   }
 
   test("ANDS") {
-    compile(ands(t, t, t, t, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(ands(t, t, t, t, t, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
-    compile(ands(t, t, t, t, noValue, t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(ands(t, t, t, f, noValue, f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
+    compile(ands(t, t, t, t, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(ands(t, t, t, t, t, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(ands(t, t, t, t, noValue, t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(ands(t, t, t, f, noValue, f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
   }
 
   test("ANDS should throw on non-boolean input") {
     val compiled = compile(ands(parameter("a"), parameter("b"), parameter("c"), parameter("d"), parameter("e")))
     val keys = Array("a", "b", "c", "d", "e")
     compiled.evaluate(ctx, db,
-                      map(keys, Array(Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE))) should equal(Values.TRUE)
+                      map(keys, Array(Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE)), nodeCursor) should equal(Values.TRUE)
 
     compiled.evaluate(ctx, db,
-                      map(keys, Array(Values.TRUE, Values.TRUE, Values.FALSE, Values.TRUE, Values.TRUE))) should equal(Values.FALSE)
+                      map(keys, Array(Values.TRUE, Values.TRUE, Values.FALSE, Values.TRUE, Values.TRUE)), nodeCursor) should equal(Values.FALSE)
 
     compiled.evaluate(ctx, db,
-                      map(keys, Array(intValue(42), Values.TRUE, Values.FALSE, Values.TRUE, Values.TRUE))) should equal(Values.FALSE)
+                      map(keys, Array(intValue(42), Values.TRUE, Values.FALSE, Values.TRUE, Values.TRUE)), nodeCursor) should equal(Values.FALSE)
 
     a [CypherTypeException] should be thrownBy compiled.evaluate(ctx, db,
-                                    map(keys, Array(intValue(42), Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE)))
+                                    map(keys, Array(intValue(42), Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE)), nodeCursor)
   }
 
   test("ANDS should handle coercion") {
     val expression =  compile(ands(parameter("a"), parameter("b")))
-    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.TRUE, EMPTY_LIST))) should equal(Values.FALSE)
-    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.TRUE, list(stringValue("hello"))))) should equal(Values.TRUE)
+    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.TRUE, EMPTY_LIST)), nodeCursor) should equal(Values.FALSE)
+    expression.evaluate(ctx, db, map(Array("a", "b"), Array(Values.TRUE, list(stringValue("hello")))), nodeCursor) should equal(Values.TRUE)
   }
 
   test("NOT") {
-    compile(not(f)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(not(t)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
-    compile(not(noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
+    compile(not(f)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(not(t)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(not(noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
   }
 
   test("NOT should handle coercion") {
     val expression =  compile(not(parameter("a")))
-    expression.evaluate(ctx, db, map(Array("a"), Array(EMPTY_LIST))) should equal(Values.TRUE)
-    expression.evaluate(ctx, db, map(Array("a"), Array(list(stringValue("hello"))))) should equal(Values.FALSE)
+    expression.evaluate(ctx, db, map(Array("a"), Array(EMPTY_LIST)), nodeCursor) should equal(Values.TRUE)
+    expression.evaluate(ctx, db, map(Array("a"), Array(list(stringValue("hello")))), nodeCursor) should equal(Values.FALSE)
   }
 
   test("EQUALS") {
-    compile(equals(literalInt(42), literalInt(42))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(equals(literalInt(42), literalInt(43))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
-    compile(equals(noValue, literalInt(43))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(equals(literalInt(42), noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(equals(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(equals(TRUE, equals(TRUE, equals(TRUE, noValue)))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
+    compile(equals(literalInt(42), literalInt(42))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(equals(literalInt(42), literalInt(43))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(equals(noValue, literalInt(43))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(equals(literalInt(42), noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(equals(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(equals(TRUE, equals(TRUE, equals(TRUE, noValue)))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
   }
 
   test("NOT EQUALS") {
-    compile(notEquals(literalInt(42), literalInt(42))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
-    compile(notEquals(literalInt(42), literalInt(43))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(notEquals(noValue, literalInt(43))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(notEquals(literalInt(42), noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(notEquals(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(notEquals(TRUE, notEquals(TRUE, notEquals(TRUE, noValue)))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
+    compile(notEquals(literalInt(42), literalInt(42))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(notEquals(literalInt(42), literalInt(43))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(notEquals(noValue, literalInt(43))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(notEquals(literalInt(42), noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(notEquals(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(notEquals(TRUE, notEquals(TRUE, notEquals(TRUE, noValue)))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
   }
 
   test("regex match on literal pattern") {
     val compiled= compile(regex(parameter("a"), literalString("hell.*")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("hello")))) should equal(Values.TRUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("helo")))) should equal(Values.FALSE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(Values.NO_VALUE))) should equal(Values.NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(longValue(42)))) should equal(Values.NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("hello"))), nodeCursor) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("helo"))), nodeCursor) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(Values.NO_VALUE)), nodeCursor) should equal(Values.NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(longValue(42))), nodeCursor) should equal(Values.NO_VALUE)
   }
 
   test("regex match on general expression") {
     val compiled= compile(regex(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hell.*")))) should equal(Values.TRUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("helo") , stringValue("hell.*")))) should equal(Values.FALSE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(Values.NO_VALUE, stringValue("hell.*")))) should equal(Values.NO_VALUE)
-    a [CypherTypeException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("forty-two"), longValue(42))))
-    an [InvalidSemanticsException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("["))))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hell.*"))), nodeCursor) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("helo") , stringValue("hell.*"))), nodeCursor) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(Values.NO_VALUE, stringValue("hell.*"))), nodeCursor) should equal(Values.NO_VALUE)
+    a [CypherTypeException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("forty-two"), longValue(42))), nodeCursor)
+    an [InvalidSemanticsException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("["))), nodeCursor)
   }
 
   test("startsWith") {
     val compiled= compile(startsWith(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hell")))) should equal(Values.TRUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi")))) should equal(Values.FALSE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi")))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hell"))), nodeCursor) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi"))), nodeCursor) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi"))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("endsWith") {
     val compiled= compile(endsWith(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("ello")))) should equal(Values.TRUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi")))) should equal(Values.FALSE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi")))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("ello"))), nodeCursor) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi"))), nodeCursor) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi"))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("contains") {
     val compiled= compile(contains(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("ell")))) should equal(Values.TRUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi")))) should equal(Values.FALSE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi")))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("ell"))), nodeCursor) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi"))), nodeCursor) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi"))), nodeCursor) should equal(NO_VALUE)
   }
 
   test("should compare values using <") {
@@ -1191,24 +1193,24 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   test("isNull") {
     val compiled= compile(isNull(parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("hello")))) should equal(Values.FALSE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("hello"))), nodeCursor) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(Values.TRUE)
   }
 
   test("isNotNull") {
     val compiled= compile(isNotNull(parameter("a")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("hello")))) should equal(Values.TRUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(stringValue("hello"))), nodeCursor) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(Values.FALSE)
   }
 
   test("CoerceToPredicate") {
     val coerced = CoerceToPredicate(parameter("a"))
 
-    compile(coerced).evaluate(ctx, db, map(Array("a"), Array(Values.FALSE))) should equal(Values.FALSE)
-    compile(coerced).evaluate(ctx, db, map(Array("a"), Array(Values.TRUE))) should equal(Values.TRUE)
-    compile(coerced).evaluate(ctx, db, map(Array("a"), Array(list(stringValue("A"))))) should equal(Values.TRUE)
-    compile(coerced).evaluate(ctx, db, map(Array("a"), Array(list(EMPTY_LIST)))) should equal(Values.TRUE)
+    compile(coerced).evaluate(ctx, db, map(Array("a"), Array(Values.FALSE)), nodeCursor) should equal(Values.FALSE)
+    compile(coerced).evaluate(ctx, db, map(Array("a"), Array(Values.TRUE)), nodeCursor) should equal(Values.TRUE)
+    compile(coerced).evaluate(ctx, db, map(Array("a"), Array(list(stringValue("A")))), nodeCursor) should equal(Values.TRUE)
+    compile(coerced).evaluate(ctx, db, map(Array("a"), Array(list(EMPTY_LIST))), nodeCursor) should equal(Values.TRUE)
   }
 
   test("ReferenceFromSlot") {
@@ -1221,7 +1223,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(stringValue("hello"))
   }
 
   test("IdFromSlot") {
@@ -1234,15 +1236,15 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(expression, SlotConfiguration(Map("a" -> LongSlot(offset, nullable = false, symbols.CTNode)), 1, 0))
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(longValue(42))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(longValue(42))
   }
 
   test("PrimitiveEquals") {
     val compiled = compile(PrimitiveEquals(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), longValue(42)))) should
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), longValue(42))), nodeCursor) should
       equal(Values.TRUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), longValue(1337)))) should
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(longValue(42), longValue(1337))), nodeCursor) should
       equal(Values.FALSE)
   }
 
@@ -1252,8 +1254,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(ctx.getLongAt(nullOffset)).thenReturn(-1L)
     when(ctx.getLongAt(offset)).thenReturn(42L)
 
-    compile(NullCheck(nullOffset, literalFloat(PI))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.NO_VALUE)
-    compile(NullCheck(offset, literalFloat(PI))).evaluate(ctx, db, EMPTY_MAP) should equal(Values.PI)
+    compile(NullCheck(nullOffset, literalFloat(PI))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.NO_VALUE)
+    compile(NullCheck(offset, literalFloat(PI))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.PI)
   }
 
   test("NullCheckVariable") {
@@ -1264,9 +1266,9 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(ctx.getRefAt(nullOffset)).thenReturn(NO_VALUE)
     when(ctx.getRefAt(offset)).thenReturn(stringValue("hello"))
 
-    compile(NullCheckVariable(nullOffset, ReferenceFromSlot(offset, "a"))).evaluate(ctx, db, EMPTY_MAP) should
+    compile(NullCheckVariable(nullOffset, ReferenceFromSlot(offset, "a"))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should
       equal(Values.NO_VALUE)
-    compile(NullCheckVariable(offset, ReferenceFromSlot(offset, "a"))).evaluate(ctx, db, EMPTY_MAP) should
+    compile(NullCheckVariable(offset, ReferenceFromSlot(offset, "a"))).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should
       equal(stringValue("hello"))
   }
 
@@ -1276,8 +1278,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(ctx.getLongAt(nullOffset)).thenReturn(-1L)
     when(ctx.getLongAt(offset)).thenReturn(77L)
 
-    compile(IsPrimitiveNull(nullOffset)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.TRUE)
-    compile(IsPrimitiveNull(offset)).evaluate(ctx, db, EMPTY_MAP) should equal(Values.FALSE)
+    compile(IsPrimitiveNull(nullOffset)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
+    compile(IsPrimitiveNull(offset)).evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
   }
 
   test("containerIndex on node") {
@@ -1286,8 +1288,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.nodeProperty(1, 42)).thenReturn(stringValue("hello"))
     val compiled = compile(containerIndex(parameter("a"), literalString("prop")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(node))) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(node)), nodeCursor) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("containerIndex on relationship") {
@@ -1299,27 +1301,27 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.relationshipProperty(43, 42)).thenReturn(stringValue("hello"))
     val compiled = compile(containerIndex(parameter("a"), literalString("prop")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel))) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), nodeCursor) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("containerIndex on map") {
     val mapValue = map(Array("prop"), Array(stringValue("hello")))
     val compiled = compile(containerIndex(parameter("a"), literalString("prop")))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(mapValue))) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(mapValue)), nodeCursor) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
   }
 
   test("containerIndex on list") {
     val listValue = list(longValue(42), stringValue("hello"), intValue(42))
     val compiled = compile(containerIndex(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(listValue, intValue(1)))) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(listValue, intValue(-1)))) should equal(intValue(42))
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(listValue, intValue(3)))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(1)))) should equal(NO_VALUE)
-    an [InvalidArgumentException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(listValue, longValue(Int.MaxValue + 1L))))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(listValue, intValue(1))), nodeCursor) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(listValue, intValue(-1))), nodeCursor) should equal(intValue(42))
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(listValue, intValue(3))), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(1))), nodeCursor) should equal(NO_VALUE)
+    an [InvalidArgumentException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a", "b"), Array(listValue, longValue(Int.MaxValue + 1L))), nodeCursor)
   }
 
   test("handle list literals") {
@@ -1327,7 +1329,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val compiled = compile(literal)
 
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(list(Values.TRUE, intValue(5), NO_VALUE, Values.FALSE))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(list(Values.TRUE, intValue(5), NO_VALUE, Values.FALSE))
   }
 
   test("handle map literals") {
@@ -1336,7 +1338,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(literal)
 
     import scala.collection.JavaConverters._
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(ValueUtils.asMapValue(Map("foo" -> 1, "bar" -> 2, "baz" -> 3).asInstanceOf[Map[String, AnyRef]].asJava))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(ValueUtils.asMapValue(Map("foo" -> 1, "bar" -> 2, "baz" -> 3).asInstanceOf[Map[String, AnyRef]].asJava))
   }
 
   test("handle map literals with null") {
@@ -1345,7 +1347,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(literal)
 
     import scala.collection.JavaConverters._
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(ValueUtils.asMapValue(Map("foo" -> 1, "bar" -> null, "baz" -> "three").asInstanceOf[Map[String, AnyRef]].asJava))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(ValueUtils.asMapValue(Map("foo" -> 1, "bar" -> null, "baz" -> "three").asInstanceOf[Map[String, AnyRef]].asJava))
   }
 
   test("handle empty map literals") {
@@ -1353,43 +1355,43 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val compiled = compile(literal)
 
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(EMPTY_MAP)
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(EMPTY_MAP)
   }
 
   test("from slice") {
     val slice = compile(sliceFrom(parameter("a"), parameter("b")))
     val list = VirtualValues.list(intValue(1), intValue(2), intValue(3))
 
-    slice.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(3)))) should equal(NO_VALUE)
-    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, NO_VALUE))) should equal(NO_VALUE)
-    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(2)))) should equal(VirtualValues.list(intValue(3)))
-    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(-2)))) should equal(VirtualValues.list(intValue(2), intValue(3)))
-    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(0)))) should equal(list)
+    slice.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(3))), nodeCursor) should equal(NO_VALUE)
+    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(2))), nodeCursor) should equal(VirtualValues.list(intValue(3)))
+    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(-2))), nodeCursor) should equal(VirtualValues.list(intValue(2), intValue(3)))
+    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(0))), nodeCursor) should equal(list)
   }
 
   test("to slice") {
     val slice = compile(sliceTo(parameter("a"), parameter("b")))
     val list = VirtualValues.list(intValue(1), intValue(2), intValue(3))
 
-    slice.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(1)))) should equal(NO_VALUE)
-    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, NO_VALUE))) should equal(NO_VALUE)
-    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(2)))) should equal(VirtualValues.list(intValue(1), intValue(2)))
-    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(-2)))) should equal(VirtualValues.list(intValue(1)))
-    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(0)))) should equal(EMPTY_LIST)
+    slice.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, intValue(1))), nodeCursor) should equal(NO_VALUE)
+    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(2))), nodeCursor) should equal(VirtualValues.list(intValue(1), intValue(2)))
+    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(-2))), nodeCursor) should equal(VirtualValues.list(intValue(1)))
+    slice.evaluate(ctx, db, map(Array("a", "b"), Array(list, intValue(0))), nodeCursor) should equal(EMPTY_LIST)
   }
 
   test("full slice") {
     val slice = compile(sliceFull(parameter("a"), parameter("b"), parameter("c")))
     val list = VirtualValues.list(intValue(1), intValue(2), intValue(3), intValue(4), intValue(5))
 
-    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(NO_VALUE, intValue(1), intValue(3)))) should equal(NO_VALUE)
-    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, NO_VALUE, intValue(3)))) should equal(NO_VALUE)
-    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(3), NO_VALUE))) should equal(NO_VALUE)
-    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(1), intValue(3)))) should equal(VirtualValues.list(intValue(2), intValue(3)))
-    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(1), intValue(-2)))) should equal(VirtualValues.list(intValue(2), intValue(3)))
-    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(-4), intValue(3)))) should equal(VirtualValues.list(intValue(2), intValue(3)))
-    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(-4), intValue(-2)))) should equal(VirtualValues.list(intValue(2), intValue(3)))
-    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(0), intValue(0)))) should equal(EMPTY_LIST)
+    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(NO_VALUE, intValue(1), intValue(3))), nodeCursor) should equal(NO_VALUE)
+    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, NO_VALUE, intValue(3))), nodeCursor) should equal(NO_VALUE)
+    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(3), NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(1), intValue(3))), nodeCursor) should equal(VirtualValues.list(intValue(2), intValue(3)))
+    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(1), intValue(-2))), nodeCursor) should equal(VirtualValues.list(intValue(2), intValue(3)))
+    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(-4), intValue(3))), nodeCursor) should equal(VirtualValues.list(intValue(2), intValue(3)))
+    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(-4), intValue(-2))), nodeCursor) should equal(VirtualValues.list(intValue(2), intValue(3)))
+    slice.evaluate(ctx, db, map(Array("a", "b", "c"), Array(list, intValue(0), intValue(0))), nodeCursor) should equal(EMPTY_LIST)
   }
 
   test("handle variables") {
@@ -1397,7 +1399,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(variable)
     when(ctx.contains("key")).thenReturn(true)
     when(ctx.apply("key")).thenReturn(stringValue("hello"))
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(stringValue("hello"))
   }
 
   test("handle variables with whitespace ") {
@@ -1406,7 +1408,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(variable)
     when(ctx.contains(varName)).thenReturn(true)
     when(ctx.apply(varName)).thenReturn(stringValue("hello"))
-    compiled.evaluate(ctx, db, EMPTY_MAP) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, EMPTY_MAP, nodeCursor) should equal(stringValue("hello"))
   }
 
   test("coerceTo tests") {
@@ -1496,8 +1498,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.propertyKey("prop")).thenReturn(42)
     when(db.nodeProperty(1, 42)).thenReturn(stringValue("hello"))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(node))) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(node)), nodeCursor) should equal(stringValue("hello"))
   }
 
   test("access property on relationship") {
@@ -1510,31 +1512,31 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.propertyKey("prop")).thenReturn(42)
     when(db.relationshipProperty(43, 42)).thenReturn(stringValue("hello"))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel))) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), nodeCursor) should equal(stringValue("hello"))
   }
 
   test("access property on map") {
     val compiled = compile(property(parameter("a"), "prop"))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(map(Array("prop"), Array(stringValue("hello")))))) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(map(Array("prop"), Array(stringValue("hello"))))), nodeCursor) should equal(stringValue("hello"))
   }
 
   test("access property on temporal") {
     val value = TimeValue.now(Clock.systemUTC())
     val compiled = compile(property(parameter("a"), "timezone"))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(value))) should equal(value.get("timezone"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(value)), nodeCursor) should equal(value.get("timezone"))
   }
 
   test("access property on duration") {
     val value = durationValue(Duration.ofHours(3))
     val compiled = compile(property(parameter("a"), "seconds"))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(value))) should equal(value.get("seconds"))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(value)), nodeCursor) should equal(value.get("seconds"))
   }
 
   test("access property on point") {
@@ -1542,8 +1544,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val compiled = compile(property(parameter("a"), "x"))
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
-    compiled.evaluate(ctx, db, map(Array("a"), Array(value))) should equal(doubleValue(1.0))
+    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), nodeCursor) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a"), Array(value)), nodeCursor) should equal(doubleValue(1.0))
   }
 
   test("access property on point with invalid key") {
@@ -1551,7 +1553,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val compiled = compile(property(parameter("a"), "foobar"))
 
-    an[InvalidArgumentException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a"), Array(value)))
+    an[InvalidArgumentException] should be thrownBy compiled.evaluate(ctx, db, map(Array("a"), Array(value)), nodeCursor)
   }
 
   test("should project") {
@@ -1561,7 +1563,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compileProjection(projections)
 
     //when
-    compiled.project(context, db, map(Array("param"), Array(NO_VALUE)))
+    compiled.project(context, db, map(Array("param"), Array(NO_VALUE)), nodeCursor)
 
     //then
     Mockito.verify(context).setRefAt(0, stringValue("hello"))
@@ -1585,9 +1587,9 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       startsWith(varFor("bar"), literalString("a"))))
 
     //Then
-    compiledNone.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
-    compiledSingle.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledMany.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledNone.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
+    compiledSingle.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledMany.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("single in list function accessing outer scope") {
@@ -1609,9 +1611,9 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       startsWith(varFor("bar"), varFor("a"))))
 
     //Then
-    compiledNone.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
-    compiledSingle.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledMany.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledNone.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
+    compiledSingle.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledMany.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("single in list on null") {
@@ -1623,7 +1625,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       equals(varFor("bar"), varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("single in list with null predicate") {
@@ -1635,7 +1637,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       equals(varFor("bar"), noValue)))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("single function accessing same variable in inner and outer") {
@@ -1647,7 +1649,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                       equals(function("size", varFor("bar")), function("size", varFor("foo")))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(Values.TRUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
   }
 
   test("single function accessing the same parameter in inner and outer") {
@@ -1660,7 +1662,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                       equals(function("size", varFor("bar")), function("size", parameter("a")))))
 
     //Then
-    compiled.evaluate(context, db, map(Array("a"), Array(list))) should equal(Values.TRUE)
+    compiled.evaluate(context, db, map(Array("a"), Array(list)), nodeCursor) should equal(Values.TRUE)
   }
 
   test("single on empty list") {
@@ -1671,7 +1673,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(singleInList("bar", literalList(), equals(literalInt(42), varFor("bar"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(Values.FALSE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
   }
 
 
@@ -1688,8 +1690,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       equals(varFor("bar"), literalString("a"))))
 
     //Then
-    compiledTrue.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledTrue.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledFalse.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("none in list function accessing outer scope") {
@@ -1705,8 +1707,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       equals(varFor("bar"), varFor("a"))))
 
     //Then
-    compiledTrue.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledTrue.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledFalse.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("none in list on null") {
@@ -1718,7 +1720,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       equals(varFor("bar"), varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("none in list with null predicate") {
@@ -1730,7 +1732,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       equals(varFor("bar"), noValue )))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("none function accessing same variable in inner and outer") {
@@ -1742,7 +1744,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   equals(function("size", varFor("bar")), function("size", varFor("foo")))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(FALSE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(FALSE)
   }
 
   test("none function accessing the same parameter in inner and outer") {
@@ -1755,7 +1757,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   equals(function("size", varFor("bar")), function("size", parameter("a")))))
 
     //Then
-    compiled.evaluate(context, db, map(Array("a"), Array(list))) should equal(FALSE)
+    compiled.evaluate(context, db, map(Array("a"), Array(list)), nodeCursor) should equal(FALSE)
   }
 
   test("none on empty list") {
@@ -1767,7 +1769,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(Values.TRUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
   }
 
   test("any in list function local access only") {
@@ -1783,8 +1785,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       equals(varFor("bar"), literalString("b"))))
 
     //Then
-    compiledTrue.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledTrue.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledFalse.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("any in list function accessing outer scope") {
@@ -1800,8 +1802,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       equals(varFor("bar"), varFor("b"))))
 
     //Then
-    compiledTrue.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledTrue.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledFalse.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("any in list on null") {
@@ -1813,7 +1815,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       equals(varFor("bar"), varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("any in list with null predicate") {
@@ -1825,7 +1827,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       equals(varFor("bar"), noValue)))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("any function accessing same variable in inner and outer") {
@@ -1837,7 +1839,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   equals(function("size", varFor("bar")), function("size", varFor("foo")))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(Values.TRUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
   }
 
   test("any function accessing the same parameter in inner and outer") {
@@ -1850,7 +1852,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   equals(function("size", varFor("bar")), function("size", parameter("a")))))
 
     //Then
-    compiled.evaluate(context, db, map(Array("a"), Array(list))) should equal(Values.TRUE)
+    compiled.evaluate(context, db, map(Array("a"), Array(list)), nodeCursor) should equal(Values.TRUE)
   }
 
   test("any on empty list") {
@@ -1862,7 +1864,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(Values.FALSE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
   }
 
   test("all in list function local access only") {
@@ -1878,8 +1880,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       startsWith(varFor("bar"), literalString("aa"))))
 
     //Then
-    compiledTrue.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledTrue.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledFalse.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("all in list function accessing outer scope") {
@@ -1895,8 +1897,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       startsWith(varFor("bar"), varFor("aa"))))
 
     //Then
-    compiledTrue.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledTrue.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledFalse.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("all in list on null") {
@@ -1908,7 +1910,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       startsWith(varFor("bar"), varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("all in list with null predicate") {
@@ -1920,7 +1922,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       startsWith(varFor("bar"), noValue)))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("all function accessing same variable in inner and outer") {
@@ -1932,7 +1934,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   equals(function("size", varFor("bar")), function("size", varFor("foo")))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(FALSE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(FALSE)
   }
 
   test("all function accessing the same parameter in inner and outer") {
@@ -1945,7 +1947,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   equals(function("size", varFor("bar")), function("size", parameter("a")))))
 
     //Then
-    compiled.evaluate(context, db, map(Array("a"), Array(list))) should equal(Values.FALSE)
+    compiled.evaluate(context, db, map(Array("a"), Array(list)), nodeCursor) should equal(Values.FALSE)
   }
 
   test("all on empty list") {
@@ -1957,7 +1959,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(Values.TRUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
   }
 
   test("filter function local access only") {
@@ -1969,7 +1971,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       startsWith(varFor("bar"), literalString("aa"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(list(stringValue("aa"), stringValue("aaa")))
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(list(stringValue("aa"), stringValue("aaa")))
   }
 
   test("filter function accessing outer scope") {
@@ -1981,7 +1983,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       startsWith(varFor("bar"), varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(list(stringValue("aa"), stringValue("aaa")))
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(list(stringValue("aa"), stringValue("aaa")))
   }
 
   test("filter on null") {
@@ -1993,7 +1995,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       startsWith(varFor("bar"), varFor("aa"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("filter with null predicate") {
@@ -2005,7 +2007,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       startsWith(varFor("bar"), noValue)))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(list())
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(list())
   }
 
   test("filter function accessing same variable in inner and outer") {
@@ -2017,7 +2019,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                    equals(function("size", varFor("bar")), function("size", varFor("foo")))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(VirtualValues.list(stringValue("aaa")))
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(VirtualValues.list(stringValue("aaa")))
   }
 
   test("filter function accessing the same parameter in inner and outer") {
@@ -2030,7 +2032,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   equals(function("size", varFor("bar")), function("size", parameter("a")))))
 
     //Then
-    compiled.evaluate(context, db, map(Array("a"), Array(list))) should equal(VirtualValues.list(stringValue("aaa")))
+    compiled.evaluate(context, db, map(Array("a"), Array(list)), nodeCursor) should equal(VirtualValues.list(stringValue("aaa")))
   }
 
   test("filter on empty list") {
@@ -2042,7 +2044,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(VirtualValues.EMPTY_LIST)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(VirtualValues.EMPTY_LIST)
   }
 
   test("nested list expressions local access only") {
@@ -2070,8 +2072,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
           predicate = equals(varFor("bar"), varFor("foo")))))
 
     //Then
-    compiledTrue.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledTrue.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledFalse.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("nested list expressions, outer expression accessing outer scope") {
@@ -2099,8 +2101,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
           predicate = equals(varFor("bar"), varFor("foo")))))
 
     //Then
-    compiledTrue.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledTrue.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledFalse.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("nested list expressions, inner expression accessing outer scope") {
@@ -2128,8 +2130,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
           predicate = equals(varFor("bar"), varFor("foo")))))
 
     //Then
-    compiledTrue.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledTrue.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledFalse.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("nested list expressions, both accessing outer scope") {
@@ -2157,8 +2159,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
           predicate = equals(varFor("bar"), varFor("foo")))))
 
     //Then
-    compiledTrue.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, db, EMPTY_MAP) should equal(booleanValue(false))
+    compiledTrue.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(true))
+    compiledFalse.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(booleanValue(false))
   }
 
   test("extract function local access only") {
@@ -2170,7 +2172,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                    function("size", varFor("bar"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(list(intValue(1), intValue(2), intValue(3)))
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(list(intValue(1), intValue(2), intValue(3)))
   }
 
   test("extract function accessing outer scope") {
@@ -2182,7 +2184,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                    add(varFor("foo"), varFor("bar"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(list(intValue(11), intValue(12), intValue(13)))
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(list(intValue(11), intValue(12), intValue(13)))
   }
 
   test("extract on null") {
@@ -2194,7 +2196,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                    function("size", varFor("bar"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("extract function accessing same variable in inner and outer") {
@@ -2206,7 +2208,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   function("size", varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
   }
 
   test("extract function accessing the same parameter in inner and outer") {
@@ -2219,7 +2221,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                    function("size", parameter("a"))))
 
     //Then
-    compiled.evaluate(context, db, map(Array("a"), Array(list))) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
+    compiled.evaluate(context, db, map(Array("a"), Array(list)), nodeCursor) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
   }
 
   test("extract on empty list") {
@@ -2230,7 +2232,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(extract("bar", literalList(), literalInt(42)))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(VirtualValues.EMPTY_LIST)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(VirtualValues.EMPTY_LIST)
   }
 
 
@@ -2243,7 +2245,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                    add(function("size", varFor("bar")), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(intValue(6))
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(intValue(6))
   }
 
   test("reduce function accessing outer scope") {
@@ -2255,7 +2257,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                    add(add(varFor("foo"), varFor("bar")), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(intValue(36))
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(intValue(36))
   }
 
   test("reduce on null") {
@@ -2267,7 +2269,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   add(function("size", varFor("bar")), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(NO_VALUE)
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(NO_VALUE)
   }
 
   test("reduce function accessing same variable in inner and outer") {
@@ -2279,7 +2281,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   add(function("size", varFor("foo")), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(intValue(9))
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(intValue(9))
   }
 
   test("reduce function accessing the same parameter in inner and outer") {
@@ -2292,7 +2294,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   add(function("size", parameter("a")), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, db, map(Array("a"), Array(list))) should equal(intValue(9))
+    compiled.evaluate(context, db, map(Array("a"), Array(list)), nodeCursor) should equal(intValue(9))
   }
 
   test("reduce on empty list") {
@@ -2304,7 +2306,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                   add(literalInt(3), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP) should equal(Values.intValue(42))
+    compiled.evaluate(context, db, EMPTY_MAP, nodeCursor) should equal(Values.intValue(42))
   }
 
   private def path(size: Int) =
@@ -2412,7 +2414,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   private def coerceTo(expression: Expression, typ: CypherType) = CoerceTo(expression, typ)
 
   private def coerce(value: AnyValue, ct: CypherType) =
-    compile(coerceTo(parameter("a"), ct)).evaluate(ctx,db, map(Array("a"), Array(value) ))
+    compile(coerceTo(parameter("a"), ct)).evaluate(ctx,db, map(Array("a"), Array(value)), nodeCursor)
 
   private def isNull(expression: Expression) = expressions.IsNull(expression)(pos)
 
@@ -2501,7 +2503,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   class compareUsing(left: Any, right: Any, operator: String) extends Matcher[Expression] {
     def apply(predicate: Expression): MatchResult = {
-      val actual = compile(predicate).evaluate(ctx, db, EMPTY_MAP)
+      val actual = compile(predicate).evaluate(ctx, db, EMPTY_MAP, nodeCursor)
 
       if (isIncomparable(left, right))
         buildResult(actual == NO_VALUE, actual)

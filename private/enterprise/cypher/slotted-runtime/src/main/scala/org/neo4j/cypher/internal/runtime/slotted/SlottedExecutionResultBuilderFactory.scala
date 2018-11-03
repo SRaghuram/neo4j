@@ -27,7 +27,7 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
 
   case class SlottedExecutionWorkflowBuilder(queryContext: QueryContext) extends BaseExecutionWorkflowBuilder {
 
-    val cursors = new ExpressionCursors
+    val cursors = new ExpressionCursors(queryContext.transactionalContext.cursors)
 
     override protected def createQueryState(params: MapValue, prePopulateResults: Boolean): SlottedQueryState = {
       new SlottedQueryState(queryContext,

@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.ImplicitDummyPos
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, IndexMockingHelp}
 import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
 import org.neo4j.cypher.internal.runtime.{NodeValueHit, QueryContext}
+import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.NodeValue
@@ -21,7 +22,7 @@ import org.opencypher.v9_0.util.{LabelId, PropertyKeyId}
 
 class NodeIndexScanOperatorTest extends CypherFunSuite with ImplicitDummyPos with IndexMockingHelp {
 
-  private val cursors = new ExpressionCursors
+  private val cursors = new ExpressionCursors(mock[CursorFactory])
 
   private val label = LabelToken(LabelName("LabelName") _, LabelId(11))
   private val propertyKey = PropertyKeyToken(PropertyKeyName("PropertyName") _, PropertyKeyId(10))

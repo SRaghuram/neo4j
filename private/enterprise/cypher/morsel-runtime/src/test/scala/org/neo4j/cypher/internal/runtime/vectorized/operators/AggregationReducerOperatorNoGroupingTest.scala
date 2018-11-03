@@ -7,13 +7,14 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
+import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class AggregationReducerOperatorNoGroupingTest extends CypherFunSuite {
 
-  private val cursors = new ExpressionCursors
+  private val cursors = new ExpressionCursors(mock[CursorFactory])
 
   test("reduce from single morsel") {
     // Given
