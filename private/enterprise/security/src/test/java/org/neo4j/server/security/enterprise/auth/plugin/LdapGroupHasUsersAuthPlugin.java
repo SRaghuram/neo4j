@@ -24,6 +24,8 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthInfo;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthPlugin;
 
+import static org.apache.directory.server.core.integ.AbstractLdapTestUnit.getLdapServer;
+
 public class LdapGroupHasUsersAuthPlugin extends AuthPlugin.Adapter
 {
     private static final String GROUP_SEARCH_BASE = "ou=groups,dc=example,dc=com";
@@ -55,11 +57,11 @@ public class LdapGroupHasUsersAuthPlugin extends AuthPlugin.Adapter
         }
     }
 
-    private LdapContext authenticate( String username, char[] password ) throws NamingException
+    private static LdapContext authenticate( String username, char[] password ) throws NamingException
     {
         Hashtable<String,Object> env = new Hashtable<>();
         env.put( Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory" );
-        env.put( Context.PROVIDER_URL, "ldap://0.0.0.0:10389" );
+        env.put( Context.PROVIDER_URL, "ldap://0.0.0.0:" + getLdapServer().getPort() );
 
         env.put( Context.SECURITY_PRINCIPAL, String.format( "cn=%s,ou=users,dc=example,dc=com", username ) );
         env.put( Context.SECURITY_CREDENTIALS, password );

@@ -45,8 +45,8 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
                 @LoadSchema( name = "nis", enabled = true ),
         } )
 @CreateLdapServer(
-        transports = { @CreateTransport( protocol = "LDAP", port = 10389, address = "0.0.0.0" ),
-                @CreateTransport( protocol = "LDAPS", port = 10636, address = "0.0.0.0", ssl = true )
+        transports = { @CreateTransport( protocol = "LDAP", address = "0.0.0.0" ),
+                @CreateTransport( protocol = "LDAPS", address = "0.0.0.0", ssl = true )
         },
 
         saslMechanisms = {
