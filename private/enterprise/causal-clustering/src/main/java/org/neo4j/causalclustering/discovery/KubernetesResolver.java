@@ -208,7 +208,7 @@ public class KubernetesResolver implements RemoteMembersResolver
                         .accept( MimeTypes.Type.APPLICATION_JSON.asString() )
                         .send();
 
-                log.info( "Received from k8s api \n" + response.getContentAsString() );
+                log.info( "Received from k8s api: " + response.getContentAsString() );
 
                 KubernetesType serviceList = objectMapper.readValue( response.getContent(), KubernetesType.class );
 
