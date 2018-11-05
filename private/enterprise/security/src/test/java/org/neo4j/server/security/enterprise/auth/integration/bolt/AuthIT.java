@@ -80,7 +80,7 @@ public class AuthIT extends AuthTestBase
     public static Collection<Object[]> configurations()
     {
         return Arrays.asList( new Object[][]{
-                {"Ldap", "abc123", false, false,
+                {"Ldap", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -91,7 +91,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Ldaps", "abc123", true, true,
+                {"Ldaps", "abc123", true, true, "localhost",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -102,7 +102,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"StartTLS", "abc123", true, false,
+                {"StartTLS", "abc123", true, false, "localhost",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "true",
@@ -113,7 +113,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"LdapSystemAccount", "abc123", false, false,
+                {"LdapSystemAccount", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -126,7 +126,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
                         )
                 },
-                {"Ldaps SystemAccount", "abc123", true, true,
+                {"Ldaps SystemAccount", "abc123", true, true, "localhost",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -139,7 +139,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
                         )
                 },
-                {"StartTLS SystemAccount", "abc123", true, false,
+                {"StartTLS SystemAccount", "abc123", true, false, "localhost",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "true",
@@ -152,7 +152,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
                         )
                 },
-                {"Ldap authn cache disabled", "abc123", false, false,
+                {"Ldap authn cache disabled", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -164,7 +164,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authentication_cache_enabled, "false"
                         )
                 },
-                {"Ldap Digest MD5", "{MD5}6ZoYxCjLONXyYIU2eJIuAw==", false, false,
+                {"Ldap Digest MD5", "{MD5}6ZoYxCjLONXyYIU2eJIuAw==", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -177,7 +177,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authentication_user_dn_template, "{0}"
                         )
                 },
-                {"Ldap Cram MD5", "{MD5}6ZoYxCjLONXyYIU2eJIuAw==", false, false,
+                {"Ldap Cram MD5", "{MD5}6ZoYxCjLONXyYIU2eJIuAw==", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -190,7 +190,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authentication_user_dn_template, "{0}"
                         )
                 },
-                {"Ldap authn Native authz", "abc123", false, false,
+                {"Ldap authn Native authz", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -201,7 +201,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Ldap authz Native authn", "abc123", false, false,
+                {"Ldap authz Native authn", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -214,7 +214,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
                         )
                 },
-                {"Ldap with Native authn", "abc123", false, false,
+                {"Ldap with Native authn", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -225,7 +225,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Ldap with Native authz", "abc123", false, false,
+                {"Ldap with Native authz", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -236,7 +236,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Ldap and Native", "abc123", false, false,
+                {"Ldap and Native", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -247,7 +247,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Native with unresponsive ldap", "abc123", false, false,
+                {"Native with unresponsive ldap", "abc123", false, false, "127.0.0.1",
                         Arrays.asList(
                                 SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
                                 SecuritySettings.ldap_use_starttls, "false",
@@ -258,7 +258,7 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Native", "abc123", false, false,
+                {"Native", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME,
                                 SecuritySettings.native_authentication_enabled, "true",
@@ -273,12 +273,11 @@ public class AuthIT extends AuthTestBase
     private final boolean confidentialityRequired;
 
     @SuppressWarnings( "unused" )
-    public AuthIT( String suiteName, String password, boolean confidentialityRequired, boolean secureLdap, List<Object> settings )
+    public AuthIT( String suiteName, String password, boolean confidentialityRequired, boolean secureLdap, String host, List<Object> settings )
     {
         this.password = password;
         this.confidentialityRequired = confidentialityRequired;
         this.configMap = new HashMap<>();
-        String host = confidentialityRequired ? "localhost" : "0.0.0.0";
         configMap.put( SecuritySettings.ldap_server, getLdapServerUri( secureLdap, host ) );
         for ( int i = 0; i < settings.size() - 1; i += 2 )
         {
