@@ -89,7 +89,7 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
       val statement = kernelTransaction.acquireStatement()
       val context = PlannerContextCreator.create(tracer, logger, planContext(kernelTransaction, statement), parsed.queryText, Set.empty,
                                                  None, monitors, metricsFactory, createQueryGraphSolver(), configuration, defaultUpdateStrategy, Clock.systemUTC(), new SequentialIdGen(),
-                                                 simpleExpressionEvaluator(mock[QueryContext]))
+                                                 simpleExpressionEvaluator)
 
       try {
         val normalized = compiler.normalizeQuery(parsed, context)
