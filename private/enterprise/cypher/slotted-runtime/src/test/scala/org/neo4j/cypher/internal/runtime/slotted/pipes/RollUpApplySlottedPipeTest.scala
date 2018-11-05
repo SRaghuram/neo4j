@@ -15,11 +15,11 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.FakeEn
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeTestSupport, QueryState}
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, QueryStateHelper}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeFromSlot, ReferenceFromSlot}
-import org.neo4j.cypher.internal.runtime.{Operations, QueryContext}
+import org.neo4j.cypher.internal.runtime.{NodeOperations, QueryContext}
 import org.neo4j.kernel.impl.util.ValueUtils.fromNodeProxy
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.NO_VALUE
-import org.neo4j.values.virtual.{NodeValue, VirtualValues}
+import org.neo4j.values.virtual.VirtualValues
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
@@ -105,7 +105,7 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
     val node1 = new FakeNode {
       override def getId(): Long = 1L
     }
-    val nodeOps = Mockito.mock(classOf[Operations[NodeValue]])
+    val nodeOps = Mockito.mock(classOf[NodeOperations])
     when(queryContext.nodeOps).thenReturn(nodeOps)
     when(nodeOps.getById(0)).thenReturn(fromNodeProxy(node0))
     when(nodeOps.getById(1)).thenReturn(fromNodeProxy(node1))

@@ -566,7 +566,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(function("keys", parameter("a")))
 
     val node = nodeValue(1, EMPTY_TEXT_ARRAY, EMPTY_MAP)
-    when(db.nodePropertyIds(1)).thenReturn(Array(1,2,3))
+    when(db.nodePropertyIds(1, nodeCursor, propertyCursor)).thenReturn(Array(1,2,3))
     when(db.getPropertyKeyName(1)).thenReturn("A")
     when(db.getPropertyKeyName(2)).thenReturn("B")
     when(db.getPropertyKeyName(3)).thenReturn("C")
@@ -583,7 +583,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 nodeValue(1, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), EMPTY_MAP)
-    when(db.relationshipPropertyIds(43)).thenReturn(Array(1,2,3))
+    when(db.relationshipPropertyIds(43, relationshipScanCursor, propertyCursor)).thenReturn(Array(1,2,3))
     when(db.getPropertyKeyName(1)).thenReturn("A")
     when(db.getPropertyKeyName(2)).thenReturn("B")
     when(db.getPropertyKeyName(3)).thenReturn("C")

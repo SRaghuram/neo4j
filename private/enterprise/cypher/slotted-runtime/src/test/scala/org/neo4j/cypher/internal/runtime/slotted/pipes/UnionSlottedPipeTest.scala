@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, SlotConfi
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder.computeUnionMapping
-import org.neo4j.cypher.internal.runtime.{Operations, QueryContext}
+import org.neo4j.cypher.internal.runtime.{NodeOperations, QueryContext, RelationshipOperations}
 import org.neo4j.graphdb.{Node, Relationship}
 import org.neo4j.kernel.impl.util.ValueUtils.{fromNodeProxy, fromRelationshipProxy}
 import org.neo4j.values.storable.Values.{longValue, stringArray, stringValue}
@@ -34,13 +34,13 @@ class UnionSlottedPipeTest extends CypherFunSuite {
     val rhs = FakeSlottedPipe(rhsData, rhsSlots)
     val union = UnionSlottedPipe(lhs, rhs, computeUnionMapping(lhsSlots, out), computeUnionMapping(rhsSlots, out) )()
     val context = mock[QueryContext]
-    val nodeOps = mock[Operations[NodeValue]]
+    val nodeOps = mock[NodeOperations]
     when(nodeOps.getById(any())).thenAnswer(new Answer[NodeValue] {
       override def answer(invocation: InvocationOnMock): NodeValue =
         fromNodeProxy(newMockedNode(invocation.getArgument[Long](0)))
     })
     when(context.nodeOps).thenReturn(nodeOps)
-    val relOps = mock[Operations[RelationshipValue]]
+    val relOps = mock[RelationshipOperations]
     when(relOps.getById(any())).thenAnswer(new Answer[RelationshipValue] {
       override def answer(invocation: InvocationOnMock): RelationshipValue =
         fromRelationshipProxy(newMockedRelationship(invocation.getArgument[Long](0)))

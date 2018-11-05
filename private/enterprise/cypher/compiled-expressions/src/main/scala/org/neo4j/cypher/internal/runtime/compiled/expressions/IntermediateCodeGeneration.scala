@@ -1226,7 +1226,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           Some(
             IntermediateExpression(
               invokeStatic(method[Values, IntValue, Int]("intValue"),
-                           invoke(DB_ACCESS, method[DbAccess, Int, Long](methodName), getLongAt(offset, currentContext))),
+                           invoke(DB_ACCESS, method[DbAccess, Int, Long, NodeCursor](methodName), getLongAt(offset, currentContext), NODE_CURSOR)),
               Seq.empty, Seq.empty, Set.empty))
 
         case Some(t) =>
@@ -1606,7 +1606,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case functions.Keys =>
       for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
         IntermediateExpression(
-          invokeStatic(method[CypherFunctions, ListValue, AnyValue, DbAccess]("keys"), in.ir, DB_ACCESS),
+          invokeStatic(method[CypherFunctions, ListValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("keys"),
+            in.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_SCAN_CURSOR, PROPERTY_CURSOR),
           in.fields, in.variables, in.nullCheck)
       }
 
