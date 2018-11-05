@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue

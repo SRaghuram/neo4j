@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
-import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.values.storable.Values
@@ -29,13 +29,13 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(stringValue("hello"))
   }
 
   test("late node property access") {
-    compile(NodePropertyLate(nodeOffset, "prop", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(NodePropertyLate(nodeOffset, "prop", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(stringValue("hello"))
-    compile(NodePropertyLate(nodeOffset, "notThere", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(NodePropertyLate(nodeOffset, "notThere", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(NO_VALUE)
   }
 
@@ -47,13 +47,13 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should equal(stringValue("hello"))
+    compiled.evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(stringValue("hello"))
   }
 
   test("late relationship property access") {
-    compile(RelationshipPropertyLate(relOffset, "prop", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(RelationshipPropertyLate(relOffset, "prop", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(stringValue("hello"))
-    compile(RelationshipPropertyLate(relOffset, "notThere", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(RelationshipPropertyLate(relOffset, "notThere", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(NO_VALUE)
   }
 
@@ -66,7 +66,7 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, dbAccess, EMPTY_MAP) should equal(stringValue("hello from tx state"))
+    compiled.evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(stringValue("hello from tx state"))
   }
 
   test("late cached node property access") {
@@ -77,59 +77,59 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, dbAccess, EMPTY_MAP) should equal(stringValue("hello from cache"))
+    compiled.evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(stringValue("hello from cache"))
   }
 
   test("getDegree without type") {
-    compile(GetDegreePrimitive(nodeOffset, None, SemanticDirection.OUTGOING)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(GetDegreePrimitive(nodeOffset, None, SemanticDirection.OUTGOING)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.longValue(3))
-    compile(GetDegreePrimitive(nodeOffset, None, SemanticDirection.INCOMING)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(GetDegreePrimitive(nodeOffset, None, SemanticDirection.INCOMING)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.longValue(2))
-    compile(GetDegreePrimitive(nodeOffset, None, SemanticDirection.BOTH)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(GetDegreePrimitive(nodeOffset, None, SemanticDirection.BOTH)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.longValue(5))
   }
 
   test("getDegree with type") {
     compile(GetDegreePrimitive(nodeOffset, Some(relType), SemanticDirection.OUTGOING))
-      .evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+          .evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.longValue(2))
     compile(GetDegreePrimitive(nodeOffset, Some(relType), SemanticDirection.INCOMING))
-      .evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+          .evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.longValue(1))
     compile(GetDegreePrimitive(nodeOffset, Some(relType), SemanticDirection.BOTH))
-      .evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+          .evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.longValue(3))
   }
 
   test("NodePropertyExists") {
-    compile(NodePropertyExists(nodeOffset, property, "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(NodePropertyExists(nodeOffset, property, "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.TRUE)
     compile(NodePropertyExists(nodeOffset, nonExistingProperty, "otherProp")(null))
-      .evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+          .evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.FALSE)
   }
 
   test("NodePropertyExistsLate") {
-    compile(NodePropertyExistsLate(nodeOffset, "prop", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(NodePropertyExistsLate(nodeOffset, "prop", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.TRUE)
     compile(NodePropertyExistsLate(nodeOffset, "otherProp", "otherProp")(null))
-      .evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+          .evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.FALSE)
   }
 
   test("RelationshipPropertyExists") {
-    compile(RelationshipPropertyExists(relOffset, property, "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(RelationshipPropertyExists(relOffset, property, "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.TRUE)
     compile(RelationshipPropertyExists(relOffset, nonExistingProperty, "otherProp")(null))
-      .evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+          .evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.FALSE)
   }
 
   test("RelationshipPropertyExistsLate") {
-    compile(RelationshipPropertyExistsLate(relOffset, "prop", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+    compile(RelationshipPropertyExistsLate(relOffset, "prop", "prop")(null)).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.TRUE)
     compile(RelationshipPropertyExistsLate(relOffset, "otherProp", "otherProp")(null))
-      .evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should
+          .evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should
       equal(Values.FALSE)
   }
 
@@ -141,7 +141,7 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should equal(nodeValue)
+    compiled.evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(nodeValue)
   }
 
   test("RelationshipFromSlot") {
@@ -152,15 +152,15 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should equal(relationshipValue)
+    compiled.evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(relationshipValue)
   }
 
   test("HasLabels") {
-    compile(checkLabels("L1")).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
-    compile(checkLabels("L1", "L2")).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should equal(Values.TRUE)
-    compile(checkLabels("L1", "L3")).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
-    compile(checkLabels("L2", "L3")).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
-    compile(checkLabels("L1", "L2", "L3")).evaluate(ctx, dbAccess, EMPTY_MAP, nodeCursor) should equal(Values.FALSE)
+    compile(checkLabels("L1")).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(checkLabels("L1", "L2")).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(checkLabels("L1", "L3")).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(checkLabels("L2", "L3")).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(checkLabels("L1", "L2", "L3")).evaluate(ctx, dbAccess, EMPTY_MAP, cursors) should equal(Values.FALSE)
   }
 
   private def checkLabels(labels: String*) =
@@ -188,6 +188,9 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
   private val ctx = mock[ExecutionContext]
   private val dbAccess = mock[DbAccess]
   private val nodeCursor = mock[NodeCursor]
+  private val cursors = mock[ExpressionCursors]
+  when(cursors.nodeCursor).thenReturn(nodeCursor)
+
   when(ctx.getLongAt(nodeOffset)).thenReturn(node)
   when(ctx.getLongAt(relOffset)).thenReturn(relationship)
   when(ctx.getCachedPropertyAt(cachedPropertyOffset)).thenReturn(stringValue("hello from cache"))
@@ -207,9 +210,9 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
   when(dbAccess.nodeGetOutgoingDegree(node)).thenReturn(3)
   when(dbAccess.nodeGetIncomingDegree(node)).thenReturn(2)
   when(dbAccess.nodeGetTotalDegree(node)).thenReturn(5)
-  when(dbAccess.nodeGetOutgoingDegree(node, relTypeId)).thenReturn(2)
-  when(dbAccess.nodeGetIncomingDegree(node, relTypeId)).thenReturn(1)
-  when(dbAccess.nodeGetTotalDegree(node, relTypeId)).thenReturn(3)
+  when(dbAccess.nodeGetOutgoingDegree(node, relTypeId, nodeCursor)).thenReturn(2)
+  when(dbAccess.nodeGetIncomingDegree(node, relTypeId, nodeCursor)).thenReturn(1)
+  when(dbAccess.nodeGetTotalDegree(node, relTypeId, nodeCursor)).thenReturn(3)
   when(nodeValue.id()).thenReturn(node)
   when(dbAccess.nodeById(node)).thenReturn(nodeValue)
   when(dbAccess.relationshipById(relationship)).thenReturn(relationshipValue)
@@ -217,9 +220,9 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
   when(dbAccess.nodeLabel("L1")).thenReturn(label1)
   when(dbAccess.nodeLabel("L2")).thenReturn(label2)
   when(dbAccess.nodeLabel("L3")).thenReturn(label3)
-  when(dbAccess.isLabelSetOnNode(label1, node)).thenReturn(true)
-  when(dbAccess.isLabelSetOnNode(label2, node)).thenReturn(true)
-  when(dbAccess.isLabelSetOnNode(label3, node)).thenReturn(false)
+  when(dbAccess.isLabelSetOnNode(label1, node, nodeCursor)).thenReturn(true)
+  when(dbAccess.isLabelSetOnNode(label2, node, nodeCursor)).thenReturn(true)
+  when(dbAccess.isLabelSetOnNode(label3, node, nodeCursor)).thenReturn(false)
   when(dbAccess.getTxStateNodePropertyOrNull(node, txStateProperty)).thenReturn(stringValue("hello from tx state"))
   when(dbAccess.getTxStateNodePropertyOrNull(node, cachedProperty)).thenReturn(null)
 

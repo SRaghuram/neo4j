@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot}
+import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.slotted.pipes.Ascending
 import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
 import org.neo4j.internal.kernel.api.CursorFactory

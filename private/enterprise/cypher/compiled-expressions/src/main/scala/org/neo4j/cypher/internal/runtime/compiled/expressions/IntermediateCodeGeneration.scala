@@ -10,12 +10,13 @@ import java.util.regex
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.compiler.v4_0.helpers.PredicateHelper.isPredicate
-import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{load, method}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.v4_0.logical.plans.{CoerceToPredicate, NestedPlanExpression}
 import org.neo4j.cypher.operations.{CypherBoolean, CypherCoercions, CypherFunctions, CypherMath}
+import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
 import org.neo4j.values.AnyValue
@@ -979,15 +980,16 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               e.fields, e.variables, e.nullCheck)
           case CTMap =>
             IntermediateExpression(
-              invokeStatic(method[CypherCoercions, MapValue, AnyValue, DbAccess]("asMapValue"), e.ir, DB_ACCESS),
+              invokeStatic(method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("asMapValue"),
+                e.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_SCAN_CURSOR, PROPERTY_CURSOR),
               e.fields, e.variables, e.nullCheck)
 
           case l: ListType =>
             val typ = asNeoType(l.innerType)
 
             IntermediateExpression(
-              invokeStatic(method[CypherCoercions, ListValue, AnyValue, AnyType, DbAccess]("asList"), e.ir, typ,
-                           DB_ACCESS),
+              invokeStatic(method[CypherCoercions, ListValue, AnyValue, AnyType, DbAccess, ExpressionCursors]("asList"),
+                e.ir, typ, DB_ACCESS, CURSORS),
               e.fields, e.variables, e.nullCheck)
 
           case CTBoolean =>
@@ -1195,7 +1197,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
         val predicate: IntermediateRepresentation = ternary(tokensAndNames.map { token =>
           invokeStatic(method[CypherFunctions, Boolean, AnyValue, Int, DbAccess]("hasLabel"),
-                       node.ir, loadField(token._1), DB_ACCESS)
+                       node.ir, loadField(token._1), DB_ACCESS, NODE_CURSOR)
         }.reduceLeft(and), truthValue, falseValue)
 
         IntermediateExpression(block(init :+ predicate:_*), node.fields ++ tokensAndNames.map(_._1), node.variables, node.nullCheck)
@@ -1235,8 +1237,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                 condition(equal(loadField(f), constant(-1)))(
                   setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(t)))),
                 invokeStatic(method[Values, IntValue, Int]("intValue"),
-                           invoke(DB_ACCESS, method[DbAccess, Int, Long, Int](methodName),
-                                  getLongAt(offset, currentContext), loadField(f)))), Seq(f), Seq.empty, Set.empty))
+                           invoke(DB_ACCESS, method[DbAccess, Int, Long, Int, NodeCursor](methodName),
+                                  getLongAt(offset, currentContext), loadField(f), NODE_CURSOR))
+              ), Seq(f), Seq.empty, Set.empty))
       }
 
     //slotted operations
@@ -1673,7 +1676,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName, noValue)
-        val lazySet = oneTime(assign(variableName, nullCheck(in)(invokeStatic(method[CypherFunctions, MapValue, AnyValue, DbAccess]("properties"), in.ir, DB_ACCESS))))
+        val lazySet = oneTime(assign(variableName, nullCheck(in)(invokeStatic(
+          method[CypherFunctions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("properties"),
+          in.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_SCAN_CURSOR, PROPERTY_CURSOR))))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1957,5 +1962,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 object IntermediateCodeGeneration {
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
   private val DB_ACCESS = load("dbAccess")
+  private val CURSORS = load("cursors")
+  // TODO create these fields, so that we can load stuff
   private val NODE_CURSOR = load("nodeCursor")
+  private val RELATIONSHIP_SCAN_CURSOR = load("relationshipScanCursor")
+  private val PROPERTY_CURSOR = load("propertyCursor")
 }

@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.values.storable.Values
 

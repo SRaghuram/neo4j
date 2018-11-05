@@ -9,9 +9,9 @@ import org.mockito.Mockito.{RETURNS_DEEP_STUBS, when}
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.interpreted.ImplicitDummyPos
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExpressionCursors, IndexMockingHelp}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexMockingHelp
 import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
-import org.neo4j.cypher.internal.runtime.{NodeValueHit, QueryContext}
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, NodeValueHit, QueryContext}
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.helpers.StubNodeValueIndexCursor
 import org.neo4j.values.AnyValue

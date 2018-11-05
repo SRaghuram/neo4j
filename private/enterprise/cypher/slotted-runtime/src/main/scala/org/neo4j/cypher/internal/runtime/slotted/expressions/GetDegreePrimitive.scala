@@ -20,7 +20,7 @@ case class GetDegreePrimitive(offset: Int, typ: Option[String], direction: Seman
     case None => Values.longValue(state.query.nodeGetDegree(ctx.getLongAt(offset), direction))
     case Some(t) => state.query.getOptRelTypeId(t) match {
       case None => Values.ZERO_INT
-      case Some(relTypeId) => Values.longValue(state.query.nodeGetDegree(ctx.getLongAt(offset), direction, relTypeId))
+      case Some(relTypeId) => Values.longValue(state.query.nodeGetDegree(ctx.getLongAt(offset), direction, relTypeId, state.cursors.nodeCursor))
     }
   }
 

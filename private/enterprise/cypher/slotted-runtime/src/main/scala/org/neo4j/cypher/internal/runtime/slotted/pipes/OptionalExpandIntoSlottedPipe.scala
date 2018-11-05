@@ -52,7 +52,7 @@ case class OptionalExpandIntoSlottedPipe(source: Pipe,
           Iterator(withNulls(inputRow))
         } else {
           val relationships: LongIterator = relCache.get(fromNode, toNode, dir)
-            .getOrElse(findRelationships(state.query, fromNode, toNode, relCache, dir, lazyTypes.types(state.query)))
+            .getOrElse(findRelationships(state, fromNode, toNode, relCache, dir, lazyTypes.types(state.query)))
 
           val matchIterator = PrimitiveLongHelper.map(relationships, relId => {
             val outputRow = SlottedExecutionContext(slots)

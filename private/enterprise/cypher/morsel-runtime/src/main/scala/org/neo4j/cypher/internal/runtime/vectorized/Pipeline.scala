@@ -9,8 +9,7 @@ import java.util
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.parallel.Task
 
 import scala.collection.JavaConverters._

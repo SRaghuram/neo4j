@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.eclipse.collections.api.iterator.LongIterator
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.kernel.impl.api.store.RelationshipIterator
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.opencypher.v9_0.expressions.SemanticDirection
@@ -29,35 +30,39 @@ trait PrimitiveCachingExpandInto {
   /**
     * Finds all relationships connecting fromNode and toNode.
     */
-  protected def findRelationships(query: QueryContext, fromNode: Long, toNode: Long,
-                                  relCache: PrimitiveRelationshipsCache, dir: SemanticDirection, relTypes: => Option[Array[Int]]): LongIterator = {
+  protected def findRelationships(state: QueryState,
+                                  fromNode: Long,
+                                  toNode: Long,
+                                  relCache: PrimitiveRelationshipsCache,
+                                  dir: SemanticDirection,
+                                  relTypes: => Option[Array[Int]]): LongIterator = {
 
-    val fromNodeIsDense = query.nodeIsDense(fromNode)
-    val toNodeIsDense = query.nodeIsDense(toNode)
+    val fromNodeIsDense = state.query.nodeIsDense(fromNode, state.cursors.nodeCursor)
+    val toNodeIsDense = state.query.nodeIsDense(toNode, state.cursors.nodeCursor)
 
     //if both nodes are dense, start from the one with the lesser degree
     if (fromNodeIsDense && toNodeIsDense) {
       //check degree and iterate from the node with smaller degree
-      val fromDegree = getDegree(fromNode, relTypes, dir, query)
+      val fromDegree = getDegree(fromNode, relTypes, dir, state)
       if (fromDegree == 0) {
         return RelationshipIterator.EMPTY
       }
 
-      val toDegree = getDegree(toNode, relTypes, dir.reversed, query)
+      val toDegree = getDegree(toNode, relTypes, dir.reversed, state)
       if (toDegree == 0) {
         return RelationshipIterator.EMPTY
       }
 
-      relIterator(query, fromNode, toNode, preserveDirection = fromDegree < toDegree, relTypes, relCache, dir)
+      relIterator(state.query, fromNode, toNode, preserveDirection = fromDegree < toDegree, relTypes, relCache, dir)
     }
     // iterate from a non-dense node
     else if (toNodeIsDense)
-      relIterator(query, fromNode, toNode, preserveDirection = true, relTypes, relCache, dir)
+      relIterator(state.query, fromNode, toNode, preserveDirection = true, relTypes, relCache, dir)
     else if (fromNodeIsDense)
-      relIterator(query, fromNode, toNode, preserveDirection = false, relTypes, relCache, dir)
+      relIterator(state.query, fromNode, toNode, preserveDirection = false, relTypes, relCache, dir)
     //both nodes are non-dense, choose a random starting point
     else
-      relIterator(query, fromNode, toNode, alternate(), relTypes, relCache, dir)
+      relIterator(state.query, fromNode, toNode, alternate(), relTypes, relCache, dir)
   }
 
   private var alternateState = false
@@ -117,14 +122,14 @@ trait PrimitiveCachingExpandInto {
     }
   }
 
-  private def getDegree(node: Long, relTypes: Option[Array[Int]], direction: SemanticDirection, query: QueryContext) = {
+  private def getDegree(node: Long, relTypes: Option[Array[Int]], direction: SemanticDirection, state: QueryState) = {
     relTypes.map {
-      case rels if rels.isEmpty => query.nodeGetDegree(node, direction)
-      case rels if rels.length == 1 => query.nodeGetDegree(node, direction, rels.head)
+      case rels if rels.isEmpty => state.query.nodeGetDegree(node, direction)
+      case rels if rels.length == 1 => state.query.nodeGetDegree(node, direction, rels.head, state.cursors.nodeCursor)
       case rels => rels.foldLeft(0)(
-        (acc, rel) => acc + query.nodeGetDegree(node, direction, rel)
+        (acc, rel) => acc + state.query.nodeGetDegree(node, direction, rel, state.cursors.nodeCursor)
       )
-    }.getOrElse(query.nodeGetDegree(node, direction))
+    }.getOrElse(state.query.nodeGetDegree(node, direction))
   }
 }
 
