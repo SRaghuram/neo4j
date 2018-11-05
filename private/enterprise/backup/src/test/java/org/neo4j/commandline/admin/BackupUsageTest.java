@@ -86,7 +86,7 @@ public class BackupUsageTest
     {
         ParameterisedOutsideWorld outsideWorld = // ParameterisedOutsideWorld used for suppressing #close() doing System.exit()
                 new ParameterisedOutsideWorld( System.console(), System.out, System.err, System.in, new DefaultFileSystemAbstraction() );
-        AdminTool subject = new AdminTool( commandLocator, cmd -> new ArrayList<>(), outsideWorld, debug );
+        AdminTool subject = new AdminTool( commandLocator, outsideWorld, debug );
         Path homeDir = HERE;
         Path configDir = HERE;
         List<String> params = new ArrayList();

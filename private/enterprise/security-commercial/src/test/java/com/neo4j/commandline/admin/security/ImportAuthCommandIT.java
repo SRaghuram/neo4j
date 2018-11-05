@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.neo4j.commandline.admin.AdminTool;
-import org.neo4j.commandline.admin.BlockerLocator;
 import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
@@ -24,11 +23,11 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
+import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
 import org.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import org.neo4j.server.security.enterprise.auth.RoleRecord;
@@ -75,7 +74,7 @@ public class ImportAuthCommandIT
         out = mock( OutsideWorld.class );
         resetOutsideWorldMock();
         resetSystemDatabaseDirectory();
-        tool = new AdminTool( CommandLocator.fromServiceLocator(), BlockerLocator.fromServiceLocator(), out, true );
+        tool = new AdminTool( CommandLocator.fromServiceLocator(), out, true );
     }
 
     @Test

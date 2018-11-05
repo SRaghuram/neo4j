@@ -13,7 +13,6 @@ import java.nio.file.Path;
 
 import org.neo4j.backup.OnlineBackup;
 import org.neo4j.commandline.admin.AdminTool;
-import org.neo4j.commandline.admin.BlockerLocator;
 import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.RealOutsideWorld;
 import org.neo4j.ext.udc.UdcSettings;
@@ -160,7 +159,6 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         AdminTool adminTool = new AdminTool(
                 CommandLocator.fromServiceLocator(),
-                BlockerLocator.fromServiceLocator(),
                 new RealOutsideWorld()
                 {
                     @Override
