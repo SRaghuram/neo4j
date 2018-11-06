@@ -216,15 +216,6 @@ class OnlineBackupContextFactory
 
     private Config loadAdditionalConfigFile( Path path )
     {
-        try ( InputStream in = Files.newInputStream( path ) )
-        {
-            return Config.fromSettings( MapUtil.load( in ) ).build();
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException(
-                    "Could not read additional configuration from " + path + ". " +
-                    "The file either does not exist, is not a regular file, or is not readable.", e );
-        }
+        return Config.fromFile( path ).withThrowOnFileLoadFailure().build();
     }
 }

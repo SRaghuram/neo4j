@@ -214,23 +214,20 @@ public class BackupTool
 
     private static Config readConfiguration( Args arguments ) throws ToolFailureException
     {
-        Map<String, String> specifiedConfig = stringMap();
-
         String configFilePath = arguments.get( CONFIG, null );
         if ( configFilePath != null )
         {
             File configFile = new File( configFilePath );
             try
             {
-                specifiedConfig = MapUtil.load( configFile );
+                return Config.fromFile( configFile ).withThrowOnFileLoadFailure().build();
             }
-            catch ( IOException e )
+            catch ( Exception e )
             {
-                throw new ToolFailureException( String.format( "Could not read configuration file [%s]",
-                        configFilePath ), e );
+                throw new ToolFailureException( String.format( "Could not read configuration file [%s]", configFilePath ), e );
             }
         }
-        return Config.defaults( specifiedConfig );
+        return Config.defaults();
     }
 
     private static URI resolveBackupUri( String from, Args arguments, Config config ) throws ToolFailureException
