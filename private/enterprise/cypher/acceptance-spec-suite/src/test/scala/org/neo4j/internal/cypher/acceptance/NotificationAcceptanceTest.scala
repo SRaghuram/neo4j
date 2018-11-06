@@ -533,12 +533,6 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
       UNBOUNDED_SHORTEST_PATH.notification(new graphdb.InputPosition(34, 1, 35)))
   }
 
-  test("2.3 can warn about bare nodes") {
-    val res = executeSingle("EXPLAIN CYPHER 2.3 MATCH n RETURN n", Map.empty)
-
-    res.notifications should not be empty
-  }
-
   test("should not warn about literal maps") {
     val res = executeSingle("explain return { id: 42 } ", Map.empty)
 
@@ -627,13 +621,6 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   test("should warn when using START in newer runtimes") {
     createNode()
     val query = "EXPLAIN CYPHER runtime=slotted START n=node(0) RETURN n"
-    val result = executeSingle(query, Map.empty)
-    val notifications = result.notifications
-    notifications should contain(RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty))
-  }
-
-  test("should warn when using CREATE UNIQUE in newer runtimes") {
-    val query = "EXPLAIN CYPHER runtime=slotted MATCH (root { name: 'root' }) CREATE UNIQUE (root)-[:LOVES]-(someone) RETURN someone"
     val result = executeSingle(query, Map.empty)
     val notifications = result.notifications
     notifications should contain(RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty))

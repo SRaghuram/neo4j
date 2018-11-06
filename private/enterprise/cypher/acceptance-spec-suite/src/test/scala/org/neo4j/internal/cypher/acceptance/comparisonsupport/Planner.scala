@@ -10,7 +10,7 @@ case class Planners(planners: Planner*)
 object Planners {
   implicit def plannerToPlanners(planner: Planner): Planners = Planners(planner)
 
-  val all = Planners(Cost, Rule)
+  val all = Planners(Cost)
 
   def definedBy(preParserArgs: Array[String]): Planners = {
     val planners = all.planners.filter(_.isDefinedBy(preParserArgs))
@@ -18,8 +18,6 @@ object Planners {
   }
 
   object Cost extends Planner(Set("COST", "IDP", "PROCEDURE"), "planner=cost")
-
-  object Rule extends Planner(Set("RULE", "PROCEDURE"), "planner=rule")
 
 }
 

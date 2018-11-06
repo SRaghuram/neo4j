@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V2_3, V3_4}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_4
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 /**
@@ -447,7 +447,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     resampleIndexes()
 
     // When
-    val plansToFail = TestConfiguration(V2_3 -> V3_4, Planners.all, Runtimes.all)
+    val plansToFail = TestConfiguration(V3_4, Planners.all, Runtimes.all)
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":L1(prop3) < m.prop4"),
         expectPlansToFail = plansToFail))

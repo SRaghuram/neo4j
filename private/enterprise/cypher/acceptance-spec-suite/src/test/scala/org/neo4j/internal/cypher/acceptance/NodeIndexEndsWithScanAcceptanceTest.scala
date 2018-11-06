@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_1
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 /**
@@ -169,7 +168,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     graph.createConstraint("Location", "name")
 
-    val config = Configs.All - Configs.Compiled - TestConfiguration(V3_1, Planners.Rule, Runtimes.all)
+    val config = Configs.All - Configs.Compiled
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH {param} RETURN l"
     val message = List("Expected a string value, but got 42","Expected a string value, but got Int(42)","Expected two strings, but got London and 42")
 

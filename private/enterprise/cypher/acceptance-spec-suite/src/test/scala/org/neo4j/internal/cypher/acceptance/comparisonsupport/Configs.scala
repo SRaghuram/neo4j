@@ -5,48 +5,55 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Planners.{Cost, Rule}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{CompiledBytecode, CompiledSource, Interpreted, Slotted, SlottedWithCompiledExpressions}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V2_3, V3_1, V3_4, v4_0}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Planners.Cost
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.CompiledBytecode
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.CompiledSource
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Interpreted
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Slotted
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.SlottedWithCompiledExpressions
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_4
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V4_0
 
 object Configs {
 
-  // Configurations with runtimes
-  def Compiled: TestConfiguration = TestConfiguration(V3_4 -> v4_0, Planners.all, Runtimes(CompiledSource, CompiledBytecode))
+  // TODO clean up
 
-  def Morsel: TestConfiguration = TestConfiguration(V3_4 -> v4_0, Planners.all, Runtimes(Runtimes.Morsel))
+  // Configurations with runtimes
+  def Compiled: TestConfiguration = TestConfiguration(V3_4 -> V4_0, Planners.all, Runtimes(CompiledSource, CompiledBytecode))
+
+  def Morsel: TestConfiguration = TestConfiguration(V3_4 -> V4_0, Planners.all, Runtimes(Runtimes.Morsel))
 
   def InterpretedRuntime: TestConfiguration =
     TestConfiguration(Versions.all, Planners.all, Runtimes(Interpreted))
 
-  def SlottedRuntime: TestConfiguration = TestConfiguration(V3_4 -> v4_0, Planners.all, Runtimes(Slotted, SlottedWithCompiledExpressions))
+  def SlottedRuntime: TestConfiguration = TestConfiguration(V3_4 -> V4_0, Planners.all, Runtimes(Slotted, SlottedWithCompiledExpressions))
 
   def InterpretedAndSlotted: TestConfiguration = InterpretedRuntime + SlottedRuntime
 
   // Configurations for planners
-  def RulePlanner: TestConfiguration = TestConfiguration(Versions.all, Rule, Runtimes.all)
+  def RulePlanner: TestConfiguration = TestConfiguration.empty
 
   def CostPlanner: TestConfiguration = TestConfiguration(Versions.all, Cost, Runtimes.all)
 
   // Configurations for versions + planners
-  def Cost2_3: TestConfiguration = TestConfiguration(V2_3, Cost, Runtimes.all)
+  def Cost2_3: TestConfiguration = TestConfiguration.empty
 
-  def Cost3_1: TestConfiguration = TestConfiguration(V3_1, Cost, Runtimes.all)
+  def Cost3_1: TestConfiguration = TestConfiguration.empty
 
   def Cost3_4: TestConfiguration = TestConfiguration(V3_4, Cost, Runtimes.all)
 
-  def Rule2_3: TestConfiguration = TestConfiguration(V2_3, Rule, Runtimes.all)
+  def Rule2_3: TestConfiguration = TestConfiguration.empty
 
-  def Rule3_1: TestConfiguration = TestConfiguration(V3_1, Rule, Runtimes.all)
+  def Rule3_1: TestConfiguration = TestConfiguration.empty
 
   // Configurations for versions
-  def Version2_3: TestConfiguration = TestConfiguration(V2_3, Planners.all, Runtimes.all)
+  def Version2_3: TestConfiguration = TestConfiguration.empty
 
-  def Version3_1: TestConfiguration = TestConfiguration(V3_1, Planners.all, Runtimes.all)
+  def Version3_1: TestConfiguration = TestConfiguration.empty
 
   def Version3_4: TestConfiguration = TestConfiguration(V3_4, Planners.all, Runtimes.all)
 
-  def Version4_0: TestConfiguration = TestConfiguration(v4_0, Planners.all, Runtimes.all)
+  def Version4_0: TestConfiguration = TestConfiguration(V4_0, Planners.all, Runtimes.all)
 
   /**
     * Configs which support CREATE, DELETE, SET, REMOVE, MERGE etc.
@@ -60,14 +67,9 @@ object Configs {
     */
   def All: TestConfiguration =
     TestConfiguration(Versions.all, Planners.all, Runtimes.all) -
-      // No rule planner after 3.1
-      TestConfiguration(V3_4 -> v4_0, Rule, Runtimes.all) -
-      // No slotted runtime before 3.4
-      TestConfiguration(V2_3 -> V3_1, Planners.all, Runtimes(Slotted, SlottedWithCompiledExpressions)) -
+  // TODO remove when 3.5ing
       // No slotted runtime with compiled expressions before 3.5
-      TestConfiguration(V3_4, Planners.all, Runtimes(SlottedWithCompiledExpressions)) -
-      // No compiled runtime before 3.4
-      TestConfiguration(V2_3 -> V3_1, Planners.all, Runtimes(CompiledSource, CompiledBytecode))
+      TestConfiguration(V3_4, Planners.all, Runtimes(SlottedWithCompiledExpressions))
 
   /**
     * These experimental configurations will only be executed if you explicitly specify them in the test expectation.

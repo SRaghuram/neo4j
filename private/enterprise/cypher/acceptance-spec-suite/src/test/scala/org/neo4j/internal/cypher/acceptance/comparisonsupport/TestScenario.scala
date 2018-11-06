@@ -7,11 +7,15 @@ package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.planDescription.Argument
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{Planner => IPDPlanner, PlannerVersion => IPDPlannerVersion, Runtime => IPDRuntime, RuntimeVersion => IPDRuntimeVersion}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V2_3, V3_1}
+import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{PlannerVersion => IPDPlannerVersion}
+import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{RuntimeVersion => IPDRuntimeVersion}
+import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{Planner => IPDPlanner}
+import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{Runtime => IPDRuntime}
 import org.scalatest.Assertions
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 /**
   * A single scenario, which can be composed to configurations.
@@ -71,16 +75,7 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
     val reportedPlannerVersion = arguments.collectFirst {
       case IPDPlannerVersion(reported) => reported
     }
-
-    // Neo4j versions 3.2 and earlier do not accurately report when they used procedure runtime/planner,
-    // in executionPlanDescription. In those versions, a missing runtime/planner is assumed to mean procedure
-    val versionsWithUnreportedProcedureUsage = V2_3 -> V3_1
-    val (reportedRuntimeName, reportedPlannerName, reportedVersionName, reportedPlannerVersionName) =
-      if (versionsWithUnreportedProcedureUsage.versions.contains(version))
-        (reportedRuntime.getOrElse("PROCEDURE"), reportedPlanner.getOrElse("PROCEDURE"), reportedVersion.getOrElse("NONE"), reportedPlannerVersion.getOrElse("NONE"))
-      else
-        (reportedRuntime.get, reportedPlanner.get, reportedVersion.get, reportedPlannerVersion.get)
-    ScenarioConfig(reportedRuntimeName, reportedPlannerName, reportedVersionName, reportedPlannerVersionName)
+    ScenarioConfig(reportedRuntime.get, reportedPlanner.get, reportedVersion.get, reportedPlannerVersion.get)
   }
 
   def +(other: TestConfiguration): TestConfiguration = other + this

@@ -52,16 +52,6 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
       "START is deprecated"))
   }
 
-  test("should not fail when using compatible runtime with START") {
-    createNode()
-    val query = "START n=node(0) RETURN n"
-    val conf = TestConfiguration(
-      Versions(Versions.V2_3, Versions.V3_1),
-      Planners.Rule,
-      Runtimes.Interpreted)
-    executeWith(conf, query) // should not fail
-  }
-
   test("should provide sensible error message for CREATE UNIQUE in newer runtimes") {
     val query = "MATCH (root { name: 'root' }) CREATE UNIQUE (root)-[:LOVES]-(someone) RETURN someone"
     failWithError(Configs.All - Configs.RulePlanner, query, Seq(
