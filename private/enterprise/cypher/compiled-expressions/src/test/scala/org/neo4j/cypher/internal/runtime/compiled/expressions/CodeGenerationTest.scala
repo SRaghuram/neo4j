@@ -266,7 +266,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val node = nodeValue(1, EMPTY_TEXT_ARRAY, map(Array("prop"), Array(stringValue("hello"))))
     when(db.propertyKey("prop")).thenReturn(42)
-    when(db.nodeHasProperty(1, 42)).thenReturn(true)
+    when(db.nodeHasProperty(1, 42, nodeCursor, propertyCursor)).thenReturn(true)
 
     compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
     compiled.evaluate(ctx, db, map(Array("a"), Array(node)), cursors) should equal(Values.TRUE)
@@ -280,7 +280,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), map(Array("prop"), Array(stringValue("hello"))))
     when(db.propertyKey("prop")).thenReturn(42)
-    when(db.relationshipHasProperty(43, 42)).thenReturn(true)
+    when(db.relationshipHasProperty(43, 42, relationshipScanCursor, propertyCursor)).thenReturn(true)
 
     compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
     compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), cursors) should equal(Values.TRUE)
@@ -514,7 +514,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.propertyKey("y")).thenReturn(2)
     when(db.propertyKey("crs")).thenReturn(3)
 
-    when(db.nodeProperty(any[Long], any[Int])).thenAnswer(new Answer[AnyValue] {
+    when(db.nodeProperty(any[Long], any[Int], nodeCursor, propertyCursor)).thenAnswer(new Answer[AnyValue] {
       override def answer(in: InvocationOnMock): AnyValue = in.getArgument[Int](1) match {
         case 1 => pointMap.get("x")
         case 2 => pointMap.get("y")
@@ -540,7 +540,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.propertyKey("y")).thenReturn(2)
     when(db.propertyKey("crs")).thenReturn(3)
 
-    when(db.relationshipProperty(any[Long], any[Int])).thenAnswer(new Answer[AnyValue] {
+    when(db.relationshipProperty(any[Long], any[Int], relationshipScanCursor, propertyCursor)).thenAnswer(new Answer[AnyValue] {
       override def answer(in: InvocationOnMock): AnyValue = in.getArgument[Int](1) match {
         case 1 => pointMap.get("x")
         case 2 => pointMap.get("y")
@@ -1280,7 +1280,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   test("containerIndex on node") {
     val node =  nodeValue(1, EMPTY_TEXT_ARRAY, map(Array("prop"), Array(stringValue("hello"))))
     when(db.propertyKey("prop")).thenReturn(42)
-    when(db.nodeProperty(1, 42)).thenReturn(stringValue("hello"))
+    when(db.nodeProperty(1, 42, nodeCursor, propertyCursor)).thenReturn(stringValue("hello"))
     val compiled = compile(containerIndex(parameter("a"), literalString("prop")))
 
     compiled.evaluate(ctx, db, map(Array("a"), Array(node)), cursors) should equal(stringValue("hello"))
@@ -1293,7 +1293,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), map(Array("prop"), Array(stringValue("hello"))))
     when(db.propertyKey("prop")).thenReturn(42)
-    when(db.relationshipProperty(43, 42)).thenReturn(stringValue("hello"))
+    when(db.relationshipProperty(43, 42, relationshipScanCursor, propertyCursor)).thenReturn(stringValue("hello"))
     val compiled = compile(containerIndex(parameter("a"), literalString("prop")))
 
     compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), cursors) should equal(stringValue("hello"))
@@ -1491,7 +1491,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val node = nodeValue(1, EMPTY_TEXT_ARRAY, map(Array("prop"), Array(stringValue("hello"))))
     when(db.propertyKey("prop")).thenReturn(42)
-    when(db.nodeProperty(1, 42)).thenReturn(stringValue("hello"))
+    when(db.nodeProperty(1, 42, nodeCursor, propertyCursor)).thenReturn(stringValue("hello"))
 
     compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
     compiled.evaluate(ctx, db, map(Array("a"), Array(node)), cursors) should equal(stringValue("hello"))
@@ -1505,7 +1505,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), map(Array("prop"), Array(stringValue("hello"))))
     when(db.propertyKey("prop")).thenReturn(42)
-    when(db.relationshipProperty(43, 42)).thenReturn(stringValue("hello"))
+    when(db.relationshipProperty(43, 42, relationshipScanCursor, propertyCursor)).thenReturn(stringValue("hello"))
 
     compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
     compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), cursors) should equal(stringValue("hello"))

@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
-import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.{NO_VALUE, stringValue}
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
@@ -188,25 +188,27 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
   private val ctx = mock[ExecutionContext]
   private val dbAccess = mock[DbAccess]
   private val nodeCursor = mock[NodeCursor]
+  private val relationshipScanCursor = mock[RelationshipScanCursor]
+  private val propertyCursor = mock[PropertyCursor]
   private val cursors = mock[ExpressionCursors]
   when(cursors.nodeCursor).thenReturn(nodeCursor)
 
   when(ctx.getLongAt(nodeOffset)).thenReturn(node)
   when(ctx.getLongAt(relOffset)).thenReturn(relationship)
   when(ctx.getCachedPropertyAt(cachedPropertyOffset)).thenReturn(stringValue("hello from cache"))
-  when(dbAccess.nodeProperty(node, property)).thenReturn(stringValue("hello"))
+  when(dbAccess.nodeProperty(node, property, nodeCursor, propertyCursor)).thenReturn(stringValue("hello"))
   when(dbAccess.propertyKey("prop")).thenReturn(property)
   when(dbAccess.propertyKey("notThere")).thenReturn(nonExistingProperty)
   when(dbAccess.propertyKey("cachedProp")).thenReturn(cachedProperty)
   when(dbAccess.propertyKey("txStateProp")).thenReturn(txStateProperty)
-  when(dbAccess.relationshipProperty(relationship, property)).thenReturn(stringValue("hello"))
-  when(dbAccess.relationshipProperty(relationship, nonExistingProperty)).thenReturn(NO_VALUE)
-  when(dbAccess.nodeProperty(node, property)).thenReturn(stringValue("hello"))
-  when(dbAccess.nodeProperty(node, nonExistingProperty)).thenReturn(NO_VALUE)
-  when(dbAccess.nodeHasProperty(node, property)).thenReturn(true)
-  when(dbAccess.nodeHasProperty(node, nonExistingProperty)).thenReturn(false)
-  when(dbAccess.relationshipHasProperty(relationship, property)).thenReturn(true)
-  when(dbAccess.relationshipHasProperty(relationship, nonExistingProperty)).thenReturn(false)
+  when(dbAccess.relationshipProperty(relationship, property, relationshipScanCursor, propertyCursor)).thenReturn(stringValue("hello"))
+  when(dbAccess.relationshipProperty(relationship, nonExistingProperty, relationshipScanCursor, propertyCursor)).thenReturn(NO_VALUE)
+  when(dbAccess.nodeProperty(node, property, nodeCursor, propertyCursor)).thenReturn(stringValue("hello"))
+  when(dbAccess.nodeProperty(node, nonExistingProperty, nodeCursor, propertyCursor)).thenReturn(NO_VALUE)
+  when(dbAccess.nodeHasProperty(node, property, nodeCursor, propertyCursor)).thenReturn(true)
+  when(dbAccess.nodeHasProperty(node, nonExistingProperty, nodeCursor, propertyCursor)).thenReturn(false)
+  when(dbAccess.relationshipHasProperty(relationship, property, relationshipScanCursor, propertyCursor)).thenReturn(true)
+  when(dbAccess.relationshipHasProperty(relationship, nonExistingProperty, relationshipScanCursor, propertyCursor)).thenReturn(false)
   when(dbAccess.nodeGetOutgoingDegree(node, nodeCursor)).thenReturn(3)
   when(dbAccess.nodeGetIncomingDegree(node, nodeCursor)).thenReturn(2)
   when(dbAccess.nodeGetTotalDegree(node, nodeCursor)).thenReturn(5)

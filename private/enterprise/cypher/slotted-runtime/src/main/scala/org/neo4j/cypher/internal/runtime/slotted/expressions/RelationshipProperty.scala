@@ -15,7 +15,10 @@ import org.neo4j.values.storable.Values
 case class RelationshipProperty(offset: Int, token: Int) extends Expression with SlottedExpression {
 
   override def apply(ctx: ExecutionContext, state: QueryState): AnyValue =
-    state.query.relationshipOps.getProperty(ctx.getLongAt(offset), token)
+    state.query.relationshipOps.getProperty(ctx.getLongAt(offset),
+                                            token,
+                                            state.cursors.relationshipScanCursor,
+                                            state.cursors.propertyCursor)
 
 }
 
@@ -26,7 +29,10 @@ case class RelationshipPropertyLate(offset: Int, propKey: String) extends Expres
     if (maybeToken.isEmpty)
       Values.NO_VALUE
     else
-      state.query.relationshipOps.getProperty(ctx.getLongAt(offset), maybeToken.get)
+      state.query.relationshipOps.getProperty(ctx.getLongAt(offset),
+                                              maybeToken.get,
+                                              state.cursors.relationshipScanCursor,
+                                              state.cursors.propertyCursor)
   }
 
 }
@@ -34,7 +40,10 @@ case class RelationshipPropertyLate(offset: Int, propKey: String) extends Expres
 case class RelationshipPropertyExists(offset: Int, token: Int) extends Predicate with SlottedExpression {
 
   override def isMatch(m: ExecutionContext, state: QueryState): Option[Boolean] = {
-    Some(state.query.relationshipOps.hasProperty(m.getLongAt(offset), token))
+    Some(state.query.relationshipOps.hasProperty(m.getLongAt(offset),
+                                                 token,
+                                                 state.cursors.relationshipScanCursor,
+                                                 state.cursors.propertyCursor))
   }
 
   override def containsIsNull = false
@@ -47,7 +56,10 @@ case class RelationshipPropertyExistsLate(offset: Int, propKey: String) extends 
     val result = if (maybeToken.isEmpty)
       false
     else
-      state.query.relationshipOps.hasProperty(m.getLongAt(offset), maybeToken.get)
+      state.query.relationshipOps.hasProperty(m.getLongAt(offset),
+                                              maybeToken.get,
+                                              state.cursors.relationshipScanCursor,
+                                              state.cursors.propertyCursor)
     Some(result)
   }
 

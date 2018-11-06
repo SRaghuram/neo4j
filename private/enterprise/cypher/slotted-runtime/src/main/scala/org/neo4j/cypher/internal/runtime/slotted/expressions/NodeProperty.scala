@@ -17,7 +17,7 @@ import org.neo4j.values.storable.Values
 case class NodeProperty(offset: Int, token: Int) extends Expression with SlottedExpression {
 
   override def apply(ctx: ExecutionContext, state: QueryState): AnyValue =
-    state.query.nodeOps.getProperty(ctx.getLongAt(offset), token)
+    state.query.nodeOps.getProperty(ctx.getLongAt(offset), token, state.cursors.nodeCursor, state.cursors.propertyCursor)
 }
 
 case class NodePropertyLate(offset: Int, propKey: String) extends Expression with SlottedExpression {
@@ -27,7 +27,7 @@ case class NodePropertyLate(offset: Int, propKey: String) extends Expression wit
     if (maybeToken.isEmpty)
       Values.NO_VALUE
     else
-      state.query.nodeOps.getProperty(ctx.getLongAt(offset), maybeToken.get)
+      state.query.nodeOps.getProperty(ctx.getLongAt(offset), maybeToken.get, state.cursors.nodeCursor, state.cursors.propertyCursor)
   }
 
 }
@@ -35,7 +35,7 @@ case class NodePropertyLate(offset: Int, propKey: String) extends Expression wit
 case class NodePropertyExists(offset: Int, token: Int) extends Predicate with SlottedExpression {
 
   override def isMatch(m: ExecutionContext, state: QueryState): Option[Boolean] = {
-    Some(state.query.nodeOps.hasProperty(m.getLongAt(offset), token))
+    Some(state.query.nodeOps.hasProperty(m.getLongAt(offset), token, state.cursors.nodeCursor, state.cursors.propertyCursor))
   }
 
   override def containsIsNull = false
@@ -48,7 +48,7 @@ case class NodePropertyExistsLate(offset: Int, propKey: String) extends Predicat
     val result = if (maybeToken.isEmpty)
       false
     else
-      state.query.nodeOps.hasProperty(m.getLongAt(offset), maybeToken.get)
+      state.query.nodeOps.hasProperty(m.getLongAt(offset), maybeToken.get, state.cursors.nodeCursor, state.cursors.propertyCursor)
     Some(result)
   }
 
