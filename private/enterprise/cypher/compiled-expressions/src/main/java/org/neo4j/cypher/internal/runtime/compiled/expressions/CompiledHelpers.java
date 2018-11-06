@@ -7,8 +7,10 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
 import org.opencypher.v9_0.util.CypherTypeException;
 
+import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext;
 import org.neo4j.graphdb.NotFoundException;
+import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.Value;
@@ -43,5 +45,24 @@ public final class CompiledHelpers
             throw new NotFoundException( String.format( "Unknown variable `%s`.", name ) );
         }
         return ctx.apply( name );
+    }
+
+    public static Value cachedProperty( ExecutionContext ctx, DbAccess dbAccess, int nodeOffset, int propertyKey,
+            int propertyOffset )
+    {
+        long nodeId = ctx.getLongAt( nodeOffset );
+        if ( nodeId == StatementConstants.NO_SUCH_NODE || propertyKey == StatementConstants.NO_SUCH_PROPERTY_KEY )
+        {
+            return NO_VALUE;
+        }
+        else
+        {
+            Value propertyOrNull = dbAccess.getTxStateNodePropertyOrNull( nodeId, propertyKey );
+            if ( propertyOrNull == null )
+            {
+                return ctx.getCachedPropertyAt( propertyOffset );
+            }
+            return propertyOrNull;
+        }
     }
 }

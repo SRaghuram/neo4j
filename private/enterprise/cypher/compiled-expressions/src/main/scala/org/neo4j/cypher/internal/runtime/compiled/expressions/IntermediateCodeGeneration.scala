@@ -1081,6 +1081,17 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(local), Set(nullChecks)))
 
+    case CachedNodeProperty(offset, token, cachedPropertyOffset) =>
+      val variableName = namer.nextVariableName()
+      val local = variable[Value](variableName, noValue)
+      val lazySet = oneTime(assign(variableName, invokeStatic(
+        method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int]("cachedProperty"),
+        loadContext(currentContext), DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset))))
+
+      val ops = block(lazySet, load(variableName))
+      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      Some(IntermediateExpression(ops, Seq.empty, Seq(local), Set(nullChecks)))
+
     case NodePropertyLate(offset, key, _) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
@@ -1090,6 +1101,20 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
           invoke(DB_ACCESS, method[DbAccess, Value, Long, Int]("nodeProperty"),
                  getLongAt(offset, currentContext), loadField(f)))))
+
+      val ops = block(lazySet, load(variableName))
+      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      Some(IntermediateExpression(ops, Seq(f), Seq(local), Set(nullChecks)))
+
+    case CachedNodePropertyLate(offset, propKey, cachedPropertyOffset) =>
+      val f = field[Int](namer.nextVariableName(), constant(-1))
+      val variableName = namer.nextVariableName()
+      val local = variable[Value](variableName, noValue)
+      val lazySet = oneTime(assign(variableName, block(
+        condition(equal(loadField(f), constant(-1)))(
+          setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(propKey)))),
+                                   invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int]("cachedProperty"),
+        loadContext(currentContext), DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset)))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))

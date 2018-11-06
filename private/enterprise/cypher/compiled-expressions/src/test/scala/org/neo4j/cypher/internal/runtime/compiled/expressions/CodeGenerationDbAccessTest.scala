@@ -56,6 +56,29 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
       equal(NO_VALUE)
   }
 
+
+  test("late cached node property access from tx state") {
+    // Given
+    val expression = CachedNodePropertyLate(nodeOffset, "txStateProp", cachedPropertyOffset)
+
+    // When
+    val compiled = compile(expression)
+
+    // Then
+    compiled.evaluate(ctx, dbAccess, EMPTY_MAP) should equal(stringValue("hello from tx state"))
+  }
+
+  test("late cached node property access") {
+    // Given
+    val expression = CachedNodePropertyLate(nodeOffset, "cachedProp", cachedPropertyOffset)
+
+    // When
+    val compiled = compile(expression)
+
+    // Then
+    compiled.evaluate(ctx, dbAccess, EMPTY_MAP) should equal(stringValue("hello from cache"))
+  }
+
   test("getDegree without type") {
     compile(GetDegreePrimitive(nodeOffset, None, SemanticDirection.OUTGOING)).evaluate(ctx, dbAccess, EMPTY_MAP) should
       equal(Values.longValue(3))
@@ -156,15 +179,21 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
   private val label2 = 101
   private val label3 = 102
   private val nonExistingProperty = 1338
+  private val cachedProperty = 1339
+  private val txStateProperty = 1340
   private val nodeOffset = 42
   private val relOffset = 43
+  private val cachedPropertyOffset = 44
   private val ctx = mock[ExecutionContext]
   private val dbAccess = mock[DbAccess]
   when(ctx.getLongAt(nodeOffset)).thenReturn(node)
   when(ctx.getLongAt(relOffset)).thenReturn(relationship)
+  when(ctx.getCachedPropertyAt(cachedPropertyOffset)).thenReturn(stringValue("hello from cache"))
   when(dbAccess.nodeProperty(node, property)).thenReturn(stringValue("hello"))
   when(dbAccess.propertyKey("prop")).thenReturn(property)
   when(dbAccess.propertyKey("notThere")).thenReturn(nonExistingProperty)
+  when(dbAccess.propertyKey("cachedProp")).thenReturn(cachedProperty)
+  when(dbAccess.propertyKey("txStateProp")).thenReturn(txStateProperty)
   when(dbAccess.relationshipProperty(relationship, property)).thenReturn(stringValue("hello"))
   when(dbAccess.relationshipProperty(relationship, nonExistingProperty)).thenReturn(NO_VALUE)
   when(dbAccess.nodeProperty(node, property)).thenReturn(stringValue("hello"))
@@ -189,5 +218,7 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
   when(dbAccess.isLabelSetOnNode(label1, node)).thenReturn(true)
   when(dbAccess.isLabelSetOnNode(label2, node)).thenReturn(true)
   when(dbAccess.isLabelSetOnNode(label3, node)).thenReturn(false)
+  when(dbAccess.getTxStateNodePropertyOrNull(node, txStateProperty)).thenReturn(stringValue("hello from tx state"))
+  when(dbAccess.getTxStateNodePropertyOrNull(node, cachedProperty)).thenReturn(null)
 
 }
