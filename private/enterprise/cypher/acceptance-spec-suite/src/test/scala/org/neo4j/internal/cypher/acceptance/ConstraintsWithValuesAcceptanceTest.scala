@@ -105,7 +105,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result.toList should equal(List(Map("n.prop1" -> 40), Map("n.prop1" -> 41), Map("n.prop1" -> 42), Map("n.prop1" -> 43), Map("n.prop1" -> 44)))
   }
 
-  test("should not use index when no existence constraint") {
+  test("should not use index when no constraint") {
     // Given
     createSingleIndexes()
 
@@ -118,7 +118,33 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result.toList should equal(List(Map("n.prop1" -> 40), Map("n.prop1" -> 41), Map("n.prop1" -> 42), Map("n.prop1" -> 43), Map("n.prop1" -> 44)))
   }
 
-  test("composite index still uses label scan") {
+  test("should not use index when unique constraint") {
+    // Given
+    graph.execute("CREATE CONSTRAINT ON (n:Awesome) ASSERT (n.prop1) IS UNIQUE")
+
+    // When
+    val query = "MATCH (n:Awesome) RETURN n.prop1"
+    val result = executeSingle(query)
+
+    // Then
+    result.executionPlanDescription() should includeSomewhere.aPlan("NodeByLabelScan")
+    result.toList should equal(List(Map("n.prop1" -> 40), Map("n.prop1" -> 41), Map("n.prop1" -> 42), Map("n.prop1" -> 43), Map("n.prop1" -> 44)))
+  }
+
+  test("no support for using index when composite node key constraint") {
+    // Given
+    graph.execute("CREATE CONSTRAINT ON (n:Awesome) ASSERT (n.prop1, n.prop2) IS NODE KEY")
+
+    // When
+    val query = "MATCH (n:Awesome) RETURN n.prop1"
+    val result = executeSingle(query)
+
+    // Then
+    result.executionPlanDescription() should includeSomewhere.aPlan("NodeByLabelScan")
+    result.toList should equal(List(Map("n.prop1" -> 40), Map("n.prop1" -> 41), Map("n.prop1" -> 42), Map("n.prop1" -> 43), Map("n.prop1" -> 44)))
+  }
+
+  test("no support for using composite index") {
     // Given
     graph.createIndex("Awesome", "prop1", "prop2")
     graph.createExistenceConstraint("Awesome", "prop1")
