@@ -510,12 +510,31 @@ public class SystemGraphRealmTest
     private static void assertAuthenticationSucceeds( SystemGraphRealm realm, String username )
     {
         // NOTE: Password is the same as username
+        // Try twice to rule out differences if authentication info has been cached or not
+        assertNotNull( realm.getAuthenticationInfo( testAuthenticationToken( username, username ) ) );
+        assertNotNull( realm.getAuthenticationInfo( testAuthenticationToken( username, username ) ) );
+
+        // Also test the non-cached result explicitly
         assertNotNull( realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) );
     }
 
     private static void assertAuthenticationFails( SystemGraphRealm realm, String username )
     {
         // NOTE: Password is the same as username
+        // Try twice to rule out differences if authentication info has been cached or not
+        for ( int i = 0; i < 2; i++ )
+        {
+            try
+            {
+                assertNull( realm.getAuthenticationInfo( testAuthenticationToken( username, username ) ) );
+            }
+            catch ( AuthenticationException e )
+            {
+                // This is expected
+            }
+        }
+
+        // Also test the non-cached result explicitly
         try
         {
             assertNull( realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) );
