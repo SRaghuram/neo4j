@@ -43,8 +43,7 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
                               cypherUpdateStrategy: CypherUpdateStrategy): Compiler = {
 
     val log = logProvider.getLog(getClass)
-    // TODO not a partial function
-    val createPlanner: PartialFunction[CypherVersion, CypherPlanner] = {
+    val planner = cypherVersion match {
       case CypherVersion.v3_4 =>
         Cypher34Planner(
           plannerConfig,
@@ -64,19 +63,13 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
           cypherPlanner,
           cypherUpdateStrategy,
           LastCommittedTxIdProvider(graph))
-      }
+    }
 
-    if (createPlanner.isDefinedAt(cypherVersion)) {
-      val planner = createPlanner(cypherVersion)
-
-      CypherCurrentCompiler(
-        planner,
-        EnterpriseRuntimeFactory.getRuntime(cypherRuntime, plannerConfig.useErrorsOverWarnings),
-        EnterpriseRuntimeContextCreator(GeneratedQueryStructure, log, plannerConfig, runtimeEnvironment),
-        kernelMonitors)
-
-    } else // TODO remove
-      community.createCompiler(cypherVersion, cypherPlanner, cypherRuntime, cypherUpdateStrategy)
+    CypherCurrentCompiler(
+      planner,
+      EnterpriseRuntimeFactory.getRuntime(cypherRuntime, plannerConfig.useErrorsOverWarnings),
+      EnterpriseRuntimeContextCreator(GeneratedQueryStructure, log, plannerConfig, runtimeEnvironment),
+      kernelMonitors)
   }
 }
 
