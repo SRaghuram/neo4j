@@ -6,6 +6,7 @@
 package com.neo4j.security;
 
 import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authc.ExcessiveAttemptsException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,14 +66,16 @@ public class SystemGraphRealmTest
     SystemGraphExecutor executor;
     private AssertableLogProvider log;
     private SecurityLog securityLog;
+    private int maxFailedAttemps;
 
     @BeforeEach
     void setUp()
     {
         dbManager = new TestDatabaseManager();
-        executor =  new TestSystemGraphExecutor( dbManager );
+        executor = new TestSystemGraphExecutor( dbManager );
         log = new AssertableLogProvider();
         securityLog = new SecurityLog( log.getLog( getClass() ) );
+        maxFailedAttemps = Config.defaults().get( GraphDatabaseSettings.auth_max_failed_attempts );
     }
 
     @AfterEach
@@ -204,6 +207,23 @@ public class SystemGraphRealmTest
         log.assertExactly(
                 info( "Completed import of %s %s and %s %s into system graph.", "1", "user", "1", "role" )
         );
+    }
+
+    @Test
+    void shouldRateLimitAuthentication() throws Throwable
+    {
+        SystemGraphRealm realm = testRealmWithImportOptions( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .build() );
+
+        // First make sure one of the users will have a cached successful authentication result for variation
+        assertAuthenticationSucceeds( realm, "alice" );
+
+        assertAuthenticationFailsWithTooManyAttempts( realm, "alice", maxFailedAttemps + 1 );
+        assertAuthenticationFailsWithTooManyAttempts( realm, "bob", maxFailedAttemps + 1 );
     }
 
     private void prePopulateUsers( String... usernames ) throws Throwable
@@ -543,5 +563,27 @@ public class SystemGraphRealmTest
         {
             // This is expected
         }
+    }
+
+    private static void assertAuthenticationFailsWithTooManyAttempts( SystemGraphRealm realm, String username, int attempts )
+    {
+        // NOTE: Password is the same as username
+        for ( int i = 0; i < attempts; i++ )
+        {
+            try
+            {
+                assertNull( realm.getAuthenticationInfo( testAuthenticationToken( username, "wrong_password" ) ) );
+            }
+            catch ( ExcessiveAttemptsException e )
+            {
+                // This is what we were really looking for
+                return;
+            }
+            catch ( AuthenticationException e )
+            {
+                // This is expected
+            }
+        }
+        fail( "Did not get an ExcessiveAttemptsException after " + attempts + " attempts." );
     }
 }
