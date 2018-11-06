@@ -58,7 +58,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
 {
     private static final Config config = Config.build().withLogging( DEV_NULL_LOGGING ).toConfig();
 
-    private TestDirectory testDirectory = TestDirectory.testDirectory( getClass() );
+    private final TestDirectory testDirectory = TestDirectory.testDirectory();
 
     protected DatabaseRule dbRule = getDatabaseTestRule( testDirectory );
 

@@ -30,7 +30,7 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 @RunWith( FrameworkRunner.class )
 @CreateDS(
-        name = "Test",
+        name = "PluginAuthTest",
         partitions = { @CreatePartition(
                 name = "example",
                 suffix = "dc=example,dc=com",

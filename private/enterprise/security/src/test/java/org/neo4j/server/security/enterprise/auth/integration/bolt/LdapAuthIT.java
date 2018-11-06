@@ -65,7 +65,7 @@ interface TimeoutTests
 @SuppressWarnings( "deprecation" )
 @RunWith( FrameworkRunner.class )
 @CreateDS(
-        name = "Test",
+        name = "LdapAuthTest",
         partitions = {@CreatePartition(
                 name = "example",
                 suffix = "dc=example,dc=com",
