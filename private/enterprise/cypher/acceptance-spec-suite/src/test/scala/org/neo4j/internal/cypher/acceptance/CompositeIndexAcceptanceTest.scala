@@ -407,8 +407,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     graph.createIndex("User", "name", "city")
     resampleIndexes()
-    // TODO this should not be necessary. Creating an index should invalidate the caches.
-    eengine.clearQueryCaches()
 
     val resultIndex = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.Version3_1, query,
       planComparisonStrategy = ComparePlansWithAssertion((plan) => {
@@ -440,8 +438,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     graph.createIndex("Label", "date", "time")
     resampleIndexes()
-    // TODO this should not be necessary. Creating an index should invalidate the caches.
-    eengine.clearQueryCaches()
 
     val resultIndex = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.Version3_1, query,
       planComparisonStrategy = ComparePlansWithAssertion((plan) => {
@@ -472,8 +468,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     graph.createIndex("Runner", "name", "result")
     resampleIndexes()
-    // TODO this should not be necessary. Creating an index should invalidate the caches.
-    eengine.clearQueryCaches()
 
     val resultIndex = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.Version3_1, query,
       planComparisonStrategy = ComparePlansWithAssertion((plan) => {
