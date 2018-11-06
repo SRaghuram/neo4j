@@ -5,6 +5,9 @@
  */
 package org.neo4j.causalclustering.core;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.ListenSocketAddress;
@@ -13,9 +16,17 @@ import org.neo4j.kernel.configuration.Settings;
 
 class HostnamePortAsListenAddress
 {
+    private static final Pattern portRange = Pattern.compile( "(:\\d+)(-\\d+)?$" );
+
     static ListenSocketAddress resolve( Config config, Setting<HostnamePort> setting )
     {
         HostnamePort hostnamePort = config.get( setting );
-        return Settings.LISTEN_SOCKET_ADDRESS.apply( hostnamePort.toString() );
+        return Settings.LISTEN_SOCKET_ADDRESS.compose( HostnamePortAsListenAddress::stripPortRange ).apply( hostnamePort.toString() );
+    }
+
+    private static String stripPortRange( String address )
+    {
+        Matcher m = portRange.matcher( address );
+        return m.find() ? m.replaceAll( "$1" ) : address;
     }
 }

@@ -13,7 +13,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.OptionalInt;
 
-import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
@@ -85,16 +84,16 @@ public class HostnamePortAsListenAddressTest
         assertEquals( new ListenSocketAddress( getSanitizedHostname(), port ), listenSocketAddress );
     }
 
-    @Test( expected = InvalidSettingException.class )
-    public void shouldThrowInvalidSettingsExceptionOnEmptyConfig()
+    @Test( expected = IllegalArgumentException.class )
+    public void shouldThrowInvalidArgumentExceptionOnEmptyConfig()
     {
         Config config = Config.builder().withSetting( OnlineBackupSettings.online_backup_server, "" ).build();
         ListenSocketAddress listenSocketAddress = HostnamePortAsListenAddress.resolve( config, OnlineBackupSettings.online_backup_server );
         assertEquals( OnlineBackupSettings.online_backup_server.getDefaultValue(), listenSocketAddress.toString() );
     }
 
-    @Test( expected = InvalidSettingException.class )
-    public void shouldThrowInvalidSettingsExceptionOnBadFormat()
+    @Test( expected = IllegalArgumentException.class )
+    public void shouldThrowInvalidArgumentExceptionOnBadFormat()
     {
         Config config = Config.builder().withSetting( OnlineBackupSettings.online_backup_server, "localhost" ).build();
         ListenSocketAddress listenSocketAddress = HostnamePortAsListenAddress.resolve( config, OnlineBackupSettings.online_backup_server );
