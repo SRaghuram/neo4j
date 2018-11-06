@@ -50,11 +50,9 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.neo4j.kernel.impl.recovery.RecoveryRequiredChecker;
 import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.DbRepresentation;
@@ -75,6 +73,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.backup.impl.OnlineBackupContextFactory.ARG_NAME_FALLBACK_FULL;
 import static org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_server;
+import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
 
 @RunWith( Parameterized.class )
 public class OnlineBackupCommandCcIT
@@ -253,9 +252,7 @@ public class OnlineBackupCommandCcIT
                 "--name=" + name ) );
 
         // then
-        assertFalse( "Store should not require recovery",
-                new RecoveryRequiredChecker( fileSystemRule, pageCacheRule.getPageCache( fileSystemRule ), Config.defaults(),
-                        new Monitors() ).isRecoveryRequiredAt( backupLayout ) );
+        assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults() ) );
         ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true );
         assertTrue( "Consistency check failed", new ConsistencyCheckService()
                 .runFullConsistencyCheck( backupLayout, Config.defaults(), ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), false, consistencyFlags )
@@ -284,9 +281,7 @@ public class OnlineBackupCommandCcIT
                 "--name=" + name, arg( ARG_NAME_FALLBACK_FULL, false ) ) );
 
         // then
-        assertFalse( "Store should not require recovery",
-                new RecoveryRequiredChecker( fileSystemRule, pageCacheRule.getPageCache( fileSystemRule ), Config.defaults(),
-                        new Monitors() ).isRecoveryRequiredAt( backupLayout ) );
+        assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults() ) );
         ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true );
         assertTrue( "Consistency check failed", new ConsistencyCheckService()
                 .runFullConsistencyCheck( backupLayout, Config.defaults(), ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), false, consistencyFlags )

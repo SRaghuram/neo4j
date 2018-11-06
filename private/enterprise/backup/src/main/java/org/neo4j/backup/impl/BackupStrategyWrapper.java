@@ -79,7 +79,14 @@ class BackupStrategyWrapper
             boolean incrementalWasSuccessful = BackupStageOutcome.SUCCESS.equals( state.getState() );
             if ( incrementalWasSuccessful )
             {
-                backupRecoveryService.recoverWithDatabase( backupLocation, pageCache, config );
+                try
+                {
+                    performRecovery( fs, pageCache, config, backupLayout );
+                }
+                catch ( IOException e )
+                {
+                    return new Fallible<>( BackupStrategyOutcome.CORRECT_STRATEGY_FAILED, e );
+                }
             }
 
             if ( fullBackupWontWork || incrementalWasSuccessful )

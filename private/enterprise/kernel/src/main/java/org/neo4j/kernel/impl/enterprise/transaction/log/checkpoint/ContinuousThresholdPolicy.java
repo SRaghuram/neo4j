@@ -26,6 +26,6 @@ public class ContinuousThresholdPolicy extends CheckPointThresholdPolicy
     public CheckPointThreshold createThreshold(
             Config config, Clock clock, LogPruning logPruning, LogProvider logProvider )
     {
-        return ContinuousCheckPointThreshold.INSTANCE;
+        return new ContinuousCheckPointThreshold();
     }
 }
