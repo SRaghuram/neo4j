@@ -6,10 +6,10 @@
 package org.neo4j.cypher.internal
 
 import org.bitbucket.inkytonik.kiama.output.PrettyPrinter._
-import org.neo4j.cypher.internal.compatibility.v3_5.runtime.PhysicalPlanningAttributes.SlotConfigurations
-import org.neo4j.cypher.internal.compiler.v3_5.phases.LogicalPlanState
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.compiler.v4_0.phases.LogicalPlanState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
-import org.neo4j.cypher.internal.v3_5.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.opencypher.v9_0.util.attribution.Id
 import org.opencypher.v9_0.util.{CypherException, InternalException}
 

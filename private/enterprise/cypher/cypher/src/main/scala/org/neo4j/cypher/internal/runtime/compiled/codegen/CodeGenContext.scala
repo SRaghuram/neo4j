@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen
 import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.JoinData
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
-import org.neo4j.cypher.internal.v3_5.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.opencypher.v9_0.ast.semantics.SemanticTable
 import org.opencypher.v9_0.util.attribution.Id
 

@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled
 
-import org.neo4j.cypher.internal.v3_5.logical.plans._
+import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.opencypher.v9_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
 import org.opencypher.v9_0.util.attribution.SameId
 import org.opencypher.v9_0.util.symbols.CTNode

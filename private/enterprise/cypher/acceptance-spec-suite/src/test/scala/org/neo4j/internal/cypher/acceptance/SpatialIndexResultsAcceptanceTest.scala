@@ -53,7 +53,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
           .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Place(location)"))
-      }, expectPlansToFail = Configs.All - Configs.Version3_5 - Configs.Version3_4))
+      }, expectPlansToFail = Configs.All - Configs.Version4_0 - Configs.Version3_4))
 
     // Then
     val point = result.columnAs("point").toList.head.asInstanceOf[Point]
@@ -77,7 +77,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
           .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Place(location)"))
 
-      }, expectPlansToFail = Configs.All - Configs.Version3_5 - Configs.Version3_4),
+      }, expectPlansToFail = Configs.All - Configs.Version4_0 - Configs.Version3_4),
       params = ImmutableMap("param" -> wgsPoint(12.78, 56.7)))
 
     // Then
@@ -101,7 +101,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
           .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Place(location)"))
-      }, expectPlansToFail = Configs.All - Configs.Version3_5 - Configs.Version3_4),
+      }, expectPlansToFail = Configs.All - Configs.Version4_0 - Configs.Version3_4),
       params = ImmutableMap("param" -> Array(wgsPoint(12.78, 56.7))))
 
     // Then
@@ -129,7 +129,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
           .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Place(location)"))
-      }, expectPlansToFail = Configs.All - Configs.Version3_5 - Configs.Version3_4),
+      }, expectPlansToFail = Configs.All - Configs.Version4_0 - Configs.Version3_4),
       params = ImmutableMap("param" ->
         Array(wgsPoint(12.78, 56.7),
           wgsPoint(13.78, 56.7))))
@@ -163,7 +163,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
           .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Place(location)"))
-      }, expectPlansToFail = Configs.All - Configs.Version3_5 - Configs.Version3_4),
+      }, expectPlansToFail = Configs.All - Configs.Version4_0 - Configs.Version3_4),
       params = ImmutableMap("param" ->
         List(wgsPoint(12.78, 56.7),
           wgsPoint(13.78, 56.7))))
@@ -203,7 +203,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
     graph.execute("CREATE (p:Place) SET p.location = point({latitude: 40.7, longitude: -35.78, crs: 'WGS-84'})")
 
-    val configuration = TestConfiguration(Versions(Versions.V3_4, Versions.V3_5), Planners.Cost,
+    val configuration = TestConfiguration(Versions(Versions.V3_4, Versions.v4_0), Planners.Cost,
                                           Runtimes(Runtimes.Interpreted, Runtimes.Slotted, Runtimes.SlottedWithCompiledExpressions))
     val query = "MATCH (p:Place) WHERE p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point"
 
@@ -232,7 +232,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
           .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Place(location)"))
-      }, expectPlansToFail = Configs.All - Configs.Version3_5 - Configs.Version3_4))
+      }, expectPlansToFail = Configs.All - Configs.Version4_0 - Configs.Version3_4))
 
     // Then
     val point = result.columnAs("point").toList.head.asInstanceOf[Point]
@@ -248,7 +248,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point")
     graph.execute("CREATE (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.601})")
 
-    val configuration = TestConfiguration(Versions(Versions.V3_4, Versions.V3_5),
+    val configuration = TestConfiguration(Versions(Versions.V3_4, Versions.v4_0),
                                           Planners(Planners.Cost),
                                           Runtimes(Runtimes.Interpreted, Runtimes.Slotted, Runtimes.SlottedWithCompiledExpressions))
     // When

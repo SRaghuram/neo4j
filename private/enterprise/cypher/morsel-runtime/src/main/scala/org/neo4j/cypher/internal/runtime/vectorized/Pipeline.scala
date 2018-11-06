@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized
 import java.util
 import java.util.concurrent.atomic.AtomicInteger
 
-import org.neo4j.cypher.internal.compatibility.v3_5.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.Task
 

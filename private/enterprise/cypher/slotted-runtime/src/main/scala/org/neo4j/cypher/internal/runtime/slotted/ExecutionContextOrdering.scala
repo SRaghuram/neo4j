@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import java.util.Comparator
 
-import org.neo4j.cypher.internal.compatibility.v3_5.runtime.{LongSlot, RefSlot}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ColumnOrder
 

@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen
 
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.v4_0.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.Instruction
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.JoinTableType
-import org.neo4j.cypher.internal.v3_5.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 
 trait CodeGenPlan {
 

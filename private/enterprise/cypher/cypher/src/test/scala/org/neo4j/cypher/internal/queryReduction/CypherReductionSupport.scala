@@ -6,14 +6,14 @@
 package org.neo4j.cypher.internal.queryReduction
 
 import org.neo4j.cypher.internal.compatibility.CommunityRuntimeContextCreator
-import org.neo4j.cypher.internal.compatibility.v3_5.WrappedMonitors
-import org.neo4j.cypher.internal.compiler.v3_5._
-import org.neo4j.cypher.internal.compiler.v3_5.phases.{LogicalPlanState, PlannerContextCreator}
-import org.neo4j.cypher.internal.compiler.v3_5.planner.logical.idp.{IDPQueryGraphSolver, IDPQueryGraphSolverMonitor, SingleComponentPlanner, cartesianProductsOrValueJoins}
-import org.neo4j.cypher.internal.compiler.v3_5.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory}
+import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
+import org.neo4j.cypher.internal.compiler.v4_0._
+import org.neo4j.cypher.internal.compiler.v4_0.phases.{LogicalPlanState, PlannerContextCreator}
+import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.idp.{IDPQueryGraphSolver, IDPQueryGraphSolverMonitor, SingleComponentPlanner, cartesianProductsOrValueJoins}
+import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
-import org.neo4j.cypher.internal.planner.v3_5.spi.{IDPPlannerName, PlanContext, PlannerNameFor, PlanningAttributes}
+import org.neo4j.cypher.internal.planner.v4_0.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
+import org.neo4j.cypher.internal.planner.v4_0.spi.{IDPPlannerName, PlanContext, PlannerNameFor, PlanningAttributes}
 import org.neo4j.cypher.internal.queryReduction.DDmin.Oracle
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted._

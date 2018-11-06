@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.compiler.v3_5.PlannerUnsupportedNotification
+import org.neo4j.cypher.internal.compiler.v4_0.PlannerUnsupportedNotification
 import org.neo4j.cypher.internal.javacompat.DeprecationAcceptanceTest.ChangedResults
 import org.neo4j.graphdb
 import org.neo4j.graphdb.config.Setting

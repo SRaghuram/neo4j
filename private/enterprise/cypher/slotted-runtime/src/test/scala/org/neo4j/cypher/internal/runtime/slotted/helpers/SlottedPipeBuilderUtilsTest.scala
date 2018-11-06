@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.helpers
 
-import org.neo4j.cypher.internal.compatibility.v3_5.runtime.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils._
 import org.neo4j.values.AnyValue

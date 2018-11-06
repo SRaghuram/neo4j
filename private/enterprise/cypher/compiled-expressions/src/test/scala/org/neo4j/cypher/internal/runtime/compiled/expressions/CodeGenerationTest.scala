@@ -14,11 +14,11 @@ import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.neo4j.cypher.internal.compatibility.v3_5.runtime.ast._
-import org.neo4j.cypher.internal.compatibility.v3_5.runtime.{LongSlot, SlotConfiguration}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, MapExecutionContext}
-import org.neo4j.cypher.internal.v3_5.logical.plans.CoerceToPredicate
+import org.neo4j.cypher.internal.v4_0.logical.plans.CoerceToPredicate
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.CoordinateReferenceSystem.{Cartesian, WGS84}
 import org.neo4j.values.storable.LocalTimeValue.localTime

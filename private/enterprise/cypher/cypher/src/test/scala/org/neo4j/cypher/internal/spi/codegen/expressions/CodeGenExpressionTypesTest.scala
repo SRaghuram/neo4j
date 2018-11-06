@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.compiled_runtime.v3_5.codegen.expressions
+package org.neo4j.cypher.internal.compiled_runtime.v4_0.codegen.expressions
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}

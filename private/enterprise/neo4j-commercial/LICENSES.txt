@@ -27,7 +27,6 @@ Apache Software License, Version 2.0
   Apache Shiro :: Event
   Apache Shiro :: Lang
   Caffeine cache
-  ConcurrentLinkedHashMap
   config
   Data Mapper for Jackson
   hazelcast-all

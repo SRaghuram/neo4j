@@ -6,14 +6,14 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V3_4, V3_5}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V3_4, v4_0}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 class CompositeUniquenessConstraintAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   test("should be able to create and remove single property uniqueness constraint") {
 
-    val testconfiguration = Configs.Version3_4 + Configs.Version3_5
+    val testconfiguration = Configs.Version3_4 + Configs.Version4_0
     // When
     executeWith(testconfiguration, "CREATE CONSTRAINT ON (n:Person) ASSERT (n.email) IS UNIQUE")
 
@@ -28,7 +28,7 @@ class CompositeUniquenessConstraintAcceptanceTest extends ExecutionEngineFunSuit
   }
 
   val singlePropertyUniquenessFailConf =
-    TestConfiguration(Versions(V3_5, V3_4), Planners.Cost, Runtimes.all)
+    TestConfiguration(Versions(v4_0, V3_4), Planners.Cost, Runtimes.all)
 
   test("should fail to to create composite uniqueness constraints") {
     // When

@@ -35,7 +35,7 @@ object CodeGeneration {
   private val LONG = classOf[LongValue]
   private val DOUBLE = classOf[DoubleValue]
   private val TEXT = classOf[TextValue]
-  private val PACKAGE_NAME = "org.neo4j.cypher.internal.compiler.v3_5.generated"
+  private val PACKAGE_NAME = "org.neo4j.cypher.internal.compiler.v4_0.generated"
   private val EXPRESSION = classOf[CompiledExpression]
   private val PROJECTION = classOf[CompiledProjection]
   private val COMPUTE_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "evaluate",

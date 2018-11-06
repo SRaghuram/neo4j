@@ -8,11 +8,11 @@ package org.neo4j.cypher.internal
 import java.time.Clock
 
 import org.neo4j.cypher.internal.compatibility.v3_4.Cypher34Planner
-import org.neo4j.cypher.internal.compatibility.v3_5.Cypher35Planner
+import org.neo4j.cypher.internal.compatibility.v4_0.Cypher35Planner
 import org.neo4j.cypher.internal.compatibility.{CypherPlanner, _}
-import org.neo4j.cypher.internal.compiler.v3_5._
+import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
-import org.neo4j.cypher.internal.planner.v3_5.spi.TokenContext
+import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.parallel._
 import org.neo4j.cypher.internal.runtime.vectorized.Dispatcher
@@ -31,7 +31,7 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
                                 runtimeConfig: CypherRuntimeConfiguration
                                ) extends CompilerFactory {
   /*
-  One compiler is created for every Planner:Runtime:Version combination, e.g., Cost-Morsel-3.4 & Cost-Morsel-3.5.
+  One compiler is created for every Planner:Runtime:Version combination, e.g., Cost-Morsel-3.4 & Cost-Morsel-4.0.
   Each compiler contains a runtime instance, and each morsel runtime instance requires a dispatcher instance.
   This ensures only one (shared) dispatcher/tracer instance is created, even when there are multiple morsel runtime instances.
    */
@@ -43,6 +43,7 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
                               cypherUpdateStrategy: CypherUpdateStrategy): Compiler = {
 
     val log = logProvider.getLog(getClass)
+    // TODO not a partial function
     val createPlanner: PartialFunction[CypherVersion, CypherPlanner] = {
       case CypherVersion.v3_4 =>
         Cypher34Planner(
@@ -54,7 +55,7 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
           cypherUpdateStrategy,
           LastCommittedTxIdProvider(graph))
 
-      case CypherVersion.v3_5 =>
+      case CypherVersion.`v4_0` =>
         Cypher35Planner(
           plannerConfig,
           MasterCompiler.CLOCK,
@@ -65,7 +66,7 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
           LastCommittedTxIdProvider(graph))
       }
 
-    if (cypherPlanner != CypherPlannerOption.rule && createPlanner.isDefinedAt(cypherVersion)) {
+    if (createPlanner.isDefinedAt(cypherVersion)) {
       val planner = createPlanner(cypherVersion)
 
       CypherCurrentCompiler(
@@ -74,7 +75,7 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
         EnterpriseRuntimeContextCreator(GeneratedQueryStructure, log, plannerConfig, runtimeEnvironment),
         kernelMonitors)
 
-    } else
+    } else // TODO remove
       community.createCompiler(cypherVersion, cypherPlanner, cypherRuntime, cypherUpdateStrategy)
   }
 }

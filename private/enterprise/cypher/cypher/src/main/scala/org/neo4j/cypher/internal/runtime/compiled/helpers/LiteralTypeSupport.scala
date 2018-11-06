@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.helpers
 
-import org.neo4j.cypher.internal.compiler.v3_5.helpers.IsList
+import org.neo4j.cypher.internal.compiler.v4_0.helpers.IsList
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{AnyValueType, BoolType, CypherCodeGenType, ListReferenceType, LongType, ReferenceType, RepresentationType, ValueType}
 import org.neo4j.cypher.internal.runtime.interpreted.IsMap

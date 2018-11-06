@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.tracing.TimingCompilationTracer.QueryEvent
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V2_3, V3_1, V3_5}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V2_3, V3_1, v4_0}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.io.fs.FileUtils
@@ -457,8 +457,8 @@ order by a.COL1""".format(a, b))
     val errorMessage = List("Index `missingIndex` does not exist")
 
     // Version 3.5 silently falls back to 3.1
-    val conf = TestConfiguration(Versions(V2_3, V3_1, V3_5), Planners.all, Runtimes.Interpreted)
-    val conf2 = TestConfiguration(Versions(V2_3, V3_1, V3_5), Planners.Rule, Runtimes.Interpreted)
+    val conf = TestConfiguration(Versions(V2_3, V3_1, v4_0), Planners.all, Runtimes.Interpreted)
+    val conf2 = TestConfiguration(Versions(V2_3, V3_1, v4_0), Planners.Rule, Runtimes.Interpreted)
     failWithError(conf, "start a=node:missingIndex(key='value') return a", errorMessage)
     failWithError(conf, "start a=node:missingIndex('value') return a", errorMessage)
     failWithError(conf2, "start a=relationship:missingIndex(key='value') return a", errorMessage)
@@ -707,10 +707,8 @@ order by a.COL1""".format(a, b))
 
     val testConfiguration =
       TestConfiguration(
-        """2.3 planner=rule
-          |3.1
-          |3.4
-          |3.5
+        """3.4
+          |4.0
         """.stripMargin)
 
     // WHEN

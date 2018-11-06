@@ -11,7 +11,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
 /**
  * These tests are testing the actual index implementation, thus they should all check the actual result.
  * If you only want to verify that plans using indexes are actually planned, please use
- * [[org.neo4j.cypher.internal.compiler.v3_5.planner.logical.LeafPlanningIntegrationTest]]
+ * [[org.neo4j.cypher.internal.compiler.v4_0.planner.logical.LeafPlanningIntegrationTest]]
  */
 class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport{
   val expectedToSucceed = Configs.InterpretedAndSlotted

@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.util
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.compatibility.v3_5.runtime.{CompiledRuntimeName, InterpretedRuntimeName, SlottedRuntimeName}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{CompiledRuntimeName, InterpretedRuntimeName, SlottedRuntimeName}
 import org.neo4j.graphdb.QueryExecutionException
 
 class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {

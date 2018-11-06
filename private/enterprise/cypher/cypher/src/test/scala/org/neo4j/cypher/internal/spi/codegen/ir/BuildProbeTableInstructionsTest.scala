@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.compiled_runtime.v3_5.codegen.ir
+package org.neo4j.cypher.internal.compiled_runtime.v4_0.codegen.ir
 
 import java.util
 import java.util.concurrent.atomic.AtomicInteger

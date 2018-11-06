@@ -7,14 +7,14 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 
 import java.util.regex
 
-import org.neo4j.cypher.internal.compatibility.v3_5.runtime.ast._
-import org.neo4j.cypher.internal.compatibility.v3_5.runtime.{LongSlot, RefSlot, SlotConfiguration}
-import org.neo4j.cypher.internal.compiler.v3_5.helpers.PredicateHelper.isPredicate
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
+import org.neo4j.cypher.internal.compiler.v4_0.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{load, method}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
-import org.neo4j.cypher.internal.v3_5.logical.plans.{CoerceToPredicate, NestedPlanExpression}
+import org.neo4j.cypher.internal.v4_0.logical.plans.{CoerceToPredicate, NestedPlanExpression}
 import org.neo4j.cypher.operations.{CypherBoolean, CypherCoercions, CypherFunctions, CypherMath}
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType

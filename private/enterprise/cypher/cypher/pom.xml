@@ -165,7 +165,7 @@
 
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-cypher-planner-3.5</artifactId>
+      <artifactId>neo4j-cypher-planner-4.0</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -180,7 +180,7 @@
 
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-cypher-planner-3.5</artifactId>
+      <artifactId>neo4j-cypher-planner-4.0</artifactId>
       <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>

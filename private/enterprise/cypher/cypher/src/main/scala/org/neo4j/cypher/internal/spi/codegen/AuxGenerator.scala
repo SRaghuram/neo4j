@@ -11,7 +11,7 @@ import org.neo4j.codegen.FieldReference.field
 import org.neo4j.codegen.Parameter.param
 import org.neo4j.codegen._
 import org.neo4j.cypher.internal.codegen.CompiledEquivalenceUtils
-import org.neo4j.cypher.internal.compiler.v3_5.common.CypherOrderability
+import org.neo4j.cypher.internal.compiler.v4_0.common.CypherOrderability
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi._

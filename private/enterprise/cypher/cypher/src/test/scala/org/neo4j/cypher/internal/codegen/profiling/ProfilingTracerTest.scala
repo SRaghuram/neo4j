@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.codegen.profiling
 
-import org.neo4j.cypher.internal.planner.v3_5.spi.{EmptyKernelStatisticProvider, KernelStatisticProvider}
+import org.neo4j.cypher.internal.planner.v4_0.spi.{EmptyKernelStatisticProvider, KernelStatisticProvider}
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.opencypher.v9_0.util.attribution.Id
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite

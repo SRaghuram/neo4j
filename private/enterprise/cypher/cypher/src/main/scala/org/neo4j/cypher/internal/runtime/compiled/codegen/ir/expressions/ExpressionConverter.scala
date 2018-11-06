@@ -5,12 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
-import org.neo4j.cypher.internal.compiler.v3_5.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.functions.functionConverter
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.v3_5.logical.plans.{CachedNodeProperty, CoerceToPredicate}
+import org.neo4j.cypher.internal.v4_0.logical.plans.{CachedNodeProperty, CoerceToPredicate}
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.{expressions => ast}
 

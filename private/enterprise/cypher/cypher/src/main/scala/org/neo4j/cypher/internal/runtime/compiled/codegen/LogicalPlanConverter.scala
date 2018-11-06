@@ -5,16 +5,19 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen
 
-import org.neo4j.cypher.internal.compiler.v3_5.planner.CantCompileQueryException
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.planner.v4_0.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.aggregation.AggregationConverter.aggregateExpressionConverter
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.aggregation.Distinct
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ExpressionConverter.createExpression
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.SortItem
-import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.logical.plans.ColumnOrder
+import org.neo4j.cypher.internal.v4_0.logical.plans
+import org.neo4j.cypher.internal.v4_0.logical.plans.ColumnOrder
+import org.neo4j.cypher.internal.v4_0.logical
+import org.neo4j.cypher.internal.v4_0.logical
+import org.neo4j.cypher.internal.v4_0.logical
 import org.opencypher.v9_0.expressions.{Expression, FunctionInvocation, functions => ast_functions}
 import org.opencypher.v9_0.util.Eagerly.immutableMapValues
 import org.opencypher.v9_0.util.Foldable._
@@ -51,7 +54,7 @@ object LogicalPlanConverter {
     case p: plans.Distinct => distinctAsCodeGenPlan(p)
     case p: plans.NodeCountFromCountStore => nodeCountFromCountStore(p)
     case p: plans.RelationshipCountFromCountStore => relCountFromCountStore(p)
-    case p: plans.UnwindCollection => unwindAsCodeGenPlan(p)
+    case p: logical.plans.UnwindCollection => unwindAsCodeGenPlan(p)
     case p: plans.Sort if hasStandaloneLimit(p) => throw new CantCompileQueryException(s"Not able to combine LIMIT and $p")
     case p: plans.Sort => sortAsCodeGenPlan(p)
     case p: plans.Apply => applyAsCodeGenPlan(p)
@@ -544,9 +547,9 @@ object LogicalPlanConverter {
     }
   }
 
-  private def unwindAsCodeGenPlan(unwind: plans.UnwindCollection) = new CodeGenPlan with SingleChildPlan {
+  private def unwindAsCodeGenPlan(unwind: logical.plans.UnwindCollection) = new CodeGenPlan with SingleChildPlan {
 
-    override val logicalPlan: plans.UnwindCollection = unwind
+    override val logicalPlan: logical.plans.UnwindCollection = unwind
 
     override def consume(context: CodeGenContext, child: CodeGenPlan, cardinalities: Cardinalities) = {
       val collection: CodeGenExpression = ExpressionConverter.createExpression(unwind.expression)(context)

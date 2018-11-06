@@ -17,7 +17,7 @@
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
   <properties>
-    <moduleName>org.neo4j.cypher.internal.compatibility.v3_5.runtime</moduleName>
+    <moduleName>org.neo4j.cypher.internal.compatibility.v4_0.runtime</moduleName>
   </properties>
 
   <scm>
@@ -121,7 +121,7 @@
 
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-cypher-planner-3.5</artifactId>
+      <artifactId>neo4j-cypher-planner-4.0</artifactId>
       <version>${project.version}</version>
     </dependency>
 
@@ -129,7 +129,7 @@
 
     <dependency>
       <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-cypher-planner-3.5</artifactId>
+      <artifactId>neo4j-cypher-planner-4.0</artifactId>
       <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
