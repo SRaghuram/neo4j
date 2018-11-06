@@ -24,7 +24,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -97,13 +96,6 @@ public class SessionResetIT
     public void tearDown()
     {
         IOUtils.closeAllSilently( driver );
-    }
-
-    @Test
-    public void name() throws InterruptedException
-    {
-        System.out.println(db.boltURI());
-        TimeUnit.HOURS.sleep( 5 );
     }
 
     @Test
