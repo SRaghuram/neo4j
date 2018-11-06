@@ -19,13 +19,14 @@ import org.neo4j.graphdb.security.URLAccessRule
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 import org.neo4j.test.{TestEnterpriseGraphDatabaseFactory, TestGraphDatabaseFactory}
 import org.opencypher.v9_0.util.helpers.StringHelper.RichString
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import scala.collection.JavaConverters._
 
 class LoadCsvAcceptanceTest
   extends ExecutionEngineFunSuite
     with BeforeAndAfterAll
+    with BeforeAndAfterEach
     with QueryStatisticsTestSupport
     with CreateTempFileTestSupport
     with CypherComparisonSupport
@@ -708,7 +709,11 @@ class LoadCsvAcceptanceTest
     builder.onPathTransformResponse(CSV_REDIRECT_PATH, HttpServerTestSupport.setCookie(MAGIC_COOKIE))
 
     httpServer = builder.build()
-    httpServer.start()
+  }
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    httpServer.restart()
     port = httpServer.boundInfo.getPort
     assert(port > 0)
   }
