@@ -74,6 +74,23 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     assertIndexScan(standardResult,"Awesome")
   }
 
+  test("should use single property index when composite node key constraint") {
+    // Given
+    createSingleIndexes()
+    graph.createNodeKeyConstraint("Awesome", "prop1", "prop2")
+
+    // Then
+    assertIndexScan(standardResult, "Awesome")
+  }
+
+  test("index scan does not support composite index") {
+    // Given
+    graph.createNodeKeyConstraint("Awesome", "prop1", "prop2")
+
+    // Then
+    assertNodeByLabelScan(standardResult)
+  }
+
   test("should not use index when no constraint") {
     // Given
     createSingleIndexes()
@@ -115,23 +132,6 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     // When
     graph.execute( "DROP INDEX ON :Awesome(prop1)" )
-
-    // Then
-    assertNodeByLabelScan(standardResult)
-  }
-
-  test("no support for using index when composite node key constraint") {
-    // Given
-    graph.createNodeKeyConstraint("Awesome", "prop1", "prop2")
-
-    // Then
-    assertNodeByLabelScan(standardResult)
-  }
-
-  test("no support for using composite index") {
-    // Given
-    graph.createIndex("Awesome", "prop1", "prop2")
-    graph.createExistenceConstraint("Awesome", "prop1")
 
     // Then
     assertNodeByLabelScan(standardResult)
