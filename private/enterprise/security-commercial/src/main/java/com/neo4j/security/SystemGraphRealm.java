@@ -13,6 +13,7 @@ import org.apache.shiro.authc.DisabledAccountException;
 import org.apache.shiro.authc.ExcessiveAttemptsException;
 import org.apache.shiro.authc.IncorrectCredentialsException;
 import org.apache.shiro.authc.UnknownAccountException;
+import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.authc.pam.UnsupportedTokenException;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
@@ -79,7 +80,7 @@ import static org.neo4j.helpers.collection.MapUtil.map;
 /**
  * Shiro realm using a Neo4j graph to store users and roles
  */
-class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, EnterpriseUserManager, ShiroAuthorizationInfoProvider
+class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, EnterpriseUserManager, ShiroAuthorizationInfoProvider, CredentialsMatcher
 {
     private final SystemGraphImportOptions importOptions;
     private final PasswordPolicy passwordPolicy;
@@ -114,7 +115,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         this.systemGraphExecutor = systemGraphExecutor;
         setAuthenticationCachingEnabled( true );
         setAuthorizationCachingEnabled( true );
-        setCredentialsMatcher( secureHasher.getHashedCredentialsMatcher() );
+        setCredentialsMatcher( this );
         setRolePermissionResolver( PredefinedRolesBuilder.rolePermissionResolver );
     }
 
@@ -172,11 +173,9 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         ShiroAuthToken shiroAuthToken = (ShiroAuthToken) token;
 
         String username;
-        byte[] password;
         try
         {
             username = AuthToken.safeCast( AuthToken.PRINCIPAL, shiroAuthToken.getAuthTokenMap() );
-            password = AuthToken.safeCastCredentials( AuthToken.CREDENTIALS, shiroAuthToken.getAuthTokenMap() );
         }
         catch ( InvalidAuthTokenException e )
         {
@@ -193,8 +192,34 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             throw new UnknownAccountException();
         }
 
+        // Stash the user record in the AuthenticationInfo that will be cached.
+        // The credentials will then be checked when Shiro calls doCredentialsMatch()
+        return new SystemGraphShiroAuthenticationInfo( user, getName() /* Realm name */ );
+    }
+
+    @Override
+    public boolean doCredentialsMatch( AuthenticationToken token, AuthenticationInfo info )
+    {
+        // We assume that the given info originated from this class, so we can get the user record from it
+        SystemGraphShiroAuthenticationInfo ourInfo = (SystemGraphShiroAuthenticationInfo) info;
+        User user = ourInfo.getUserRecord();
+
+        // Get the password from the token
+        byte[] password;
+        try
+        {
+            ShiroAuthToken shiroAuthToken = (ShiroAuthToken) token;
+            password = AuthToken.safeCastCredentials( AuthToken.CREDENTIALS, shiroAuthToken.getAuthTokenMap() );
+        }
+        catch ( InvalidAuthTokenException e )
+        {
+            throw new UnsupportedTokenException( e );
+        }
+
+        // Authenticate using our strategy (i.e. with rate limiting)
         AuthenticationResult result = authenticationStrategy.authenticate( user, password );
 
+        // Map failures to exceptions
         switch ( result )
         {
         case SUCCESS:
@@ -209,6 +234,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             throw new AuthenticationException();
         }
 
+        // We also need to look at the user record flags
         if ( user.hasFlag( IS_SUSPENDED ) )
         {
             throw new DisabledAccountException( "User '" + user.name() + "' is suspended." );
@@ -219,12 +245,10 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
             result = AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
         }
 
-        // Extract the hashed credentials so that it can be cached in the authentication cache
-        SystemGraphCredential existingCredentials = (SystemGraphCredential) user.credentials();
-        SimpleHash hashedCredentials = existingCredentials.hashedCredentials();
-
-        return new ShiroAuthenticationInfo( user.name(), hashedCredentials.getBytes(),
-                hashedCredentials.getSalt(), getName() /* Realm name */, result );
+        // Ok, if no exception was thrown by now it was a match.
+        // Modify the given AuthenticationInfo with the final result and return with success.
+        ourInfo.setAuthenticationResult( result );
+        return true;
     }
 
     @Override
