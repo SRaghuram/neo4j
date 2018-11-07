@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.{CachedMetricsFac
 import org.neo4j.cypher.internal.planner.v4_0.spi.{IDPPlannerName, PlanContext}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, TransactionalContextWrapper}
-import org.neo4j.cypher.internal.spi.v3_5.TransactionBoundPlanContext
+import org.neo4j.cypher.internal.spi.v4_0.TransactionBoundPlanContext
 import org.neo4j.kernel.api.{KernelTransaction, Statement}
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.opencypher.v9_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
