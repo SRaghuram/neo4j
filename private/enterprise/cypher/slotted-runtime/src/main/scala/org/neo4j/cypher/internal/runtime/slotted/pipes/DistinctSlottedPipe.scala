@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfigura
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.VirtualValues
@@ -47,7 +46,8 @@ case class DistinctSlottedPipe(source: Pipe,
                                       state: QueryState): Iterator[ExecutionContext] = {
     // For each incoming row, run expression and put it into the correct slot in the context
     val result = input.map(incoming => {
-      val outgoing = SlottedExecutionContext(slots)
+      val outgoing = executionContextFactory.newExecutionContext()
+      outgoing.setLinenumber(incoming.getLinenumber)
       groupingSetInSlotFunctions.foreach { _(incoming, state, outgoing) }
       outgoing
     })

@@ -10,7 +10,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{AggregationExpression, Expression}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{ListValue, MapValue, VirtualValues}
@@ -63,12 +62,12 @@ case class EagerAggregationSlottedPipe(source: Pipe,
   }
 
   // This is assigned a specialized update function at compile time
-  private val addGroupingValuesToResult = {
+  private val addGroupingValuesToResult: (ExecutionContext, AnyValue) => Unit = {
     val setInSlotFunctions = expressionOrder.map {
       case (slot, _) =>
         SlottedPipeBuilderUtils.makeSetValueInSlotFunctionFor(slot)
     }
-    val unusedSetInSlotFunction = (context: SlottedExecutionContext, groupingKey: AnyValue) => ???
+    val unusedSetInSlotFunction = (context: ExecutionContext, groupingKey: AnyValue) => ???
     val setInSlotFunction1 = if (groupingExpressions.size >= 1) setInSlotFunctions(0) else unusedSetInSlotFunction
     val setInSlotFunction2 = if (groupingExpressions.size >= 2) setInSlotFunctions(1) else unusedSetInSlotFunction
     val setInSlotFunction3 = if (groupingExpressions.size >= 3) setInSlotFunctions(2) else unusedSetInSlotFunction
@@ -77,20 +76,20 @@ case class EagerAggregationSlottedPipe(source: Pipe,
       case 1 =>
         setInSlotFunction1
       case 2 =>
-        (context: SlottedExecutionContext, groupingKey: AnyValue) => {
+        (context: ExecutionContext, groupingKey: AnyValue) => {
           val t2 = groupingKey.asInstanceOf[ListValue]
           setInSlotFunction1(context, t2.head())
           setInSlotFunction2(context, t2.last())
         }
       case 3 =>
-        (context: SlottedExecutionContext, groupingKey: AnyValue) => {
+        (context: ExecutionContext, groupingKey: AnyValue) => {
           val t3 = groupingKey.asInstanceOf[ListValue]
           setInSlotFunction1(context, t3.value(0))
           setInSlotFunction2(context, t3.value(1))
           setInSlotFunction3(context, t3.value(2))
         }
       case _ =>
-        (context: SlottedExecutionContext, groupingKey: AnyValue) => {
+        (context: ExecutionContext, groupingKey: AnyValue) => {
           val listOfValues = groupingKey.asInstanceOf[ListValue]
           for (i <- 0 until groupingExpressions.size) {
             val value: AnyValue = listOfValues.value(i)
@@ -107,7 +106,7 @@ case class EagerAggregationSlottedPipe(source: Pipe,
 
     // Used when we have no input and no grouping expressions. In this case, we'll return a single row
     def createEmptyResult(params: MapValue): Iterator[ExecutionContext] = {
-      val context = SlottedExecutionContext(slots)
+      val context = executionContextFactory.newExecutionContext()
       val aggregationOffsetsAndFunctions = aggregationOffsets zip aggregations
         .map(_._2.createAggregationFunction.result(state))
 
@@ -118,7 +117,7 @@ case class EagerAggregationSlottedPipe(source: Pipe,
     }
 
     def writeAggregationResultToContext(groupingKey: AnyValue, aggregator: Seq[AggregationFunction]): ExecutionContext = {
-      val context = SlottedExecutionContext(slots)
+      val context = executionContextFactory.newExecutionContext()
       addGroupingValuesToResult(context, groupingKey)
       (aggregationOffsets zip aggregator.map(_.result(state))).foreach {
         case (offset, value) => context.setRefAt(offset, value)

@@ -10,7 +10,6 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.helpers.PrimitiveLon
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.opencypher.v9_0.expressions.SemanticDirection
@@ -62,8 +61,7 @@ case class ExpandIntoSlottedPipe(source: Pipe,
             .getOrElse(findRelationships(state, fromNode, toNode, relCache, dir, lazyTypes.types(state.query)))
 
           PrimitiveLongHelper.map(relationships, (relId: Long) => {
-            val outputRow = SlottedExecutionContext(slots)
-            inputRow.copyTo(outputRow)
+            val outputRow = executionContextFactory.copyWith(inputRow)
             outputRow.setLongAt(relOffset, relId)
             outputRow
           })

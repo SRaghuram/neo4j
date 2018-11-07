@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
+import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
@@ -137,4 +137,10 @@ class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow
   private def refsAtCurrentRow: Int = currentRow * refsPerRow
 
   private def fail(): Nothing = throw new InternalException("Tried using a wrong context.")
+
+  override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = ???
+
+  override def setLinenumber(line: Option[ResourceLinenumber]): Unit = ???
+
+  override def getLinenumber: Option[ResourceLinenumber] = ???
 }

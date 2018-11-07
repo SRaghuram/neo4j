@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.values.storable.Values
 import org.opencypher.v9_0.util.attribution.Id
@@ -31,8 +30,7 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
           rhs.createResults(rhsState)
         }
         else {
-          val output = SlottedExecutionContext(slots)
-          lhsContext.copyTo(output)
+          val output = executionContextFactory.copyWith(lhsContext)
           Iterator.single(output)
         }
     }

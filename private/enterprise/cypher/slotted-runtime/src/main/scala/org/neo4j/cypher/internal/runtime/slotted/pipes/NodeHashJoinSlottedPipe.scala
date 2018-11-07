@@ -13,7 +13,6 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.opencypher.v9_0.util.attribution.Id
 
 case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
@@ -73,8 +72,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
         // If we have already found matches, we'll first exhaust these
         if (matches.hasNext) {
           val lhs = matches.next()
-          val newRow = SlottedExecutionContext(slots)
-          lhs.copyTo(newRow)
+          val newRow = executionContextFactory.copyWith(lhs)
           copyDataFromRhs(newRow, currentRhsRow)
           return Some(newRow)
         }
@@ -112,7 +110,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
       key(0) = -1 // We flag the null in this cryptic way to avoid creating objects
   }
 
-  private def copyDataFromRhs(newRow: SlottedExecutionContext, rhs: ExecutionContext): Unit = {
+  private def copyDataFromRhs(newRow: ExecutionContext, rhs: ExecutionContext): Unit = {
     longsToCopy foreach {
       case (from, to) => newRow.setLongAt(to, rhs.getLongAt(from))
     }

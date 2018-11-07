@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.helpers.PrimitiveLongHelper
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyLabel, Pipe, QueryState}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.opencypher.v9_0.util.attribution.Id
 
 case class NodesByLabelScanSlottedPipe(ident: String,
@@ -24,8 +23,7 @@ case class NodesByLabelScanSlottedPipe(ident: String,
     label.getOptId(state.query) match {
       case Some(labelId) =>
         PrimitiveLongHelper.map(state.query.getNodesByLabelPrimitive(labelId.id), { nodeId =>
-          val context = SlottedExecutionContext(slots)
-          state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
+          val context = state.newExecutionContextWithArgumentState(executionContextFactory, argumentSize.nLongs, argumentSize.nReferences)
           context.setLongAt(offset, nodeId)
           context
         })

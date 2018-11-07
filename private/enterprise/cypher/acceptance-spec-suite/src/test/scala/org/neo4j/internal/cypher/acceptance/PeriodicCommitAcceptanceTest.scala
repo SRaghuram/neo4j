@@ -213,8 +213,9 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
     // when executing 5 updates
     val e = intercept[CypherException](execute(queryText))
 
+    val errorMessage = "csv' on line 3"
     // then
-    e.getMessage should include("on line 3. Possibly the last row committed during import is line 2. Note that this information might not be accurate.")
+    e.getMessage should include(errorMessage)
     resourceMonitor.assertClosedAndClear(1)
   }
 

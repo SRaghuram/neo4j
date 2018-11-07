@@ -57,6 +57,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
         else {
           System.arraycopy(longs, fromLongOffset, other.longs, toLongOffset, slots.numberOfLongs - fromLongOffset)
           System.arraycopy(refs, fromRefOffset, other.refs, toRefOffset, slots.numberOfReferences - fromRefOffset)
+          other.setLinenumber(getLinenumber)
         }
       case _ => fail()
     }
@@ -68,6 +69,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
       else {
         System.arraycopy(other.longs, 0, longs, 0, nLongs)
         System.arraycopy(other.refs, 0, refs, 0, nRefs)
+        setLinenumber(other.getLinenumber)
       }
     case _ => fail()
   }
@@ -246,6 +248,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
         case (cachedNodeProperty, refSlot) =>
           setCachedProperty(cachedNodeProperty, other.getCachedPropertyAt(refSlot.offset))
       })
+      setLinenumber(slottedOther.getLinenumber)
 
     case _ =>
       throw new InternalException("Well well, isn't this a delicate situation?")

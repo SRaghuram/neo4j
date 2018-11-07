@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.runtime.ValuePopulation
-import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.values.AnyValue
@@ -157,4 +157,10 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
   override def getCachedProperty(key: CachedNodeProperty): Value = fail()
 
   override def getCachedPropertyAt(offset: Int): Value = fail()
+
+  override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = fail()
+
+  override def setLinenumber(line: Option[ResourceLinenumber]): Unit = fail()
+
+  override def getLinenumber: Option[ResourceLinenumber] = fail()
 }
