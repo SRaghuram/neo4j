@@ -21,7 +21,7 @@ import static org.neo4j.internal.kernel.api.security.AuthenticationResult.TOO_MA
 
 public class ShiroAuthenticationInfo extends SimpleAuthenticationInfo
 {
-    private AuthenticationResult authenticationResult;
+    protected AuthenticationResult authenticationResult;
     private List<Throwable> throwables;
 
     public ShiroAuthenticationInfo()
