@@ -203,6 +203,11 @@ public class ListQueriesProcedureTest
     {
         // given
         String query = "MATCH (x:X) SET x.v = 5 WITH count(x) AS num MATCH (y:Y) SET y.c = num";
+
+        // Run the query one time first so that the plan is cached and
+        // locks taken during planning is not counted in
+        db.execute( query );
+
         Set<Long> locked = new HashSet<>();
         try ( Resource<Node> test = test( () ->
         {
