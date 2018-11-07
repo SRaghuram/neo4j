@@ -29,7 +29,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
       planComparisonStrategy = ComparePlansWithAssertion((plan) => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexScan")
-      }, expectPlansToFail = Configs.RulePlanner))
+      }))
 
     // Then
     result.toList should equal(List(Map("p" -> person)))
@@ -47,7 +47,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
       planComparisonStrategy = ComparePlansWithAssertion((plan) => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexScan")
-      }, expectPlansToFail = Configs.RulePlanner))
+      }))
 
     // Then
     result.toList should equal(List(Map("p" -> person)))
@@ -90,7 +90,7 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         | merge (pm)-[:Call]->(f);
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     result.toList should be(empty)
   }
 }

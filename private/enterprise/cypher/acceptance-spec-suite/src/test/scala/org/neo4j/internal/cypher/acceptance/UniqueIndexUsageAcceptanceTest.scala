@@ -11,20 +11,19 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
 import org.neo4j.internal.kernel.api.IndexReference
 
 class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
-  val expectPlansToFail = Configs.RulePlanner
 
   test("should be able to use indexes") {
     given()
 
     // When
     val result = executeWith(Configs.All, "MATCH (n:Crew) WHERE n.name = 'Neo' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion((planDescription) => {
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString should include("NodeUniqueIndexSeek")
-      }, expectPlansToFail))
+      }))
 
     // Then
     result should have size 1
-    assertNoLockingHappened
+    assertNoLockingHappened()
   }
 
   test("should not forget predicates") {
@@ -32,13 +31,13 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.All, "MATCH (n:Crew) WHERE n.name = 'Neo' AND n.name = 'Morpheus' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion((planDescription) => {
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString should include("NodeUniqueIndexSeek")
-      }, expectPlansToFail))
+      }))
 
     // Then
     result shouldBe empty
-    assertNoLockingHappened
+    assertNoLockingHappened()
   }
 
   test("should use index when there are multiple labels on the node") {
@@ -46,13 +45,13 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.All, "MATCH (n:Matrix:Crew) WHERE n.name = 'Cypher' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion((planDescription) => {
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString should include("NodeUniqueIndexSeek")
-      }, expectPlansToFail))
+      }))
 
     // Then
     result should have size 1
-    assertNoLockingHappened
+    assertNoLockingHappened()
   }
 
   test("should be able to use value coming from UNWIND for index seek") {
@@ -65,13 +64,13 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.All, "unwind [1,2,3] as x match (n:Prop) where n.id = x return n;",
-      planComparisonStrategy = ComparePlansWithAssertion((planDescription) => {
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString should include("NodeUniqueIndexSeek")
-      }, expectPlansToFail))
+      }))
 
     // Then
     result.toList should equal(List(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3)))
-    assertNoLockingHappened
+    assertNoLockingHappened()
   }
 
   test("should handle nulls in index lookup") {
@@ -97,7 +96,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // Then
     result.toList should equal(List(Map("p" -> null, "placeName" -> null)))
-    assertNoLockingHappened
+    assertNoLockingHappened()
   }
 
   test("should not use indexes when RHS of property comparison depends on the node searched for (equality)") {
@@ -122,7 +121,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
       Map("m" -> n2),
       Map("m" -> n3)
     ))
-    assertNoLockingHappened
+    assertNoLockingHappened()
   }
 
   var lockingIndexSearchCalled = false

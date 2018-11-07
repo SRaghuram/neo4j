@@ -28,8 +28,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       """.stripMargin
 
     val result = executeWith(Configs.All, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f")),
-        expectPlansToFail = Configs.RulePlanner))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))))
 
     result.columnAs[Node]("f").toList should equal(List(node))
   }
@@ -46,9 +45,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         | RETURN f
       """.stripMargin
 
-    val result = executeWith(Configs.All - Configs.Version2_3, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f")),
-        expectPlansToFail = Configs.RulePlanner))
+    val result = executeWith(Configs.All, query,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))))
 
     result.columnAs[Node]("f").toSet should equal(Set(nodes(123)))
   }
@@ -67,8 +65,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       """.stripMargin
 
     val result = executeWith(Configs.All, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f")),
-        expectPlansToFail = Configs.RulePlanner))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))))
 
     result.columnAs[Node]("f").toList should equal(List(node))
   }
@@ -86,7 +83,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     graph.createIndex("Person", "name")
 
     // WHEN
-    failWithError(Configs.All + Configs.Morsel - Configs.Version2_3, "match n-->() using index n:Person(name) where n.name = 'kabam' return n",
+    failWithError(Configs.All + Configs.Morsel, "match n-->() using index n:Person(name) where n.name = 'kabam' return n",
       List("Unknown variable `n`.", "Parentheses are required to identify nodes in patterns, i.e. (n)"))
   }
 
@@ -128,7 +125,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     graph.createIndex("Person", "name")
 
     // WHEN
-    failWithError(Configs.All + Configs.Morsel - Configs.Version2_3, "match n-->() using index n:Person(name) where n.name = 'kabam' OR n.name = 'kaboom' return n",
+    failWithError(Configs.All + Configs.Morsel, "match n-->() using index n:Person(name) where n.name = 'kabam' OR n.name = 'kaboom' return n",
       List("Parentheses are required to identify nodes in patterns, i.e. (n)"))
   }
 
@@ -367,9 +364,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |USING JOIN ON a
          |RETURN a.prop AS res""".stripMargin
 
-    val result = executeWith(Configs.Version4_0 + Configs.Version3_4 + Configs.RulePlanner, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("a")),
-        expectPlansToFail = Configs.RulePlanner))
+    val result = executeWith(Configs.Version4_0 + Configs.Version3_4, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("a"))))
 
     result.toList should equal (List(Map("res" -> "foo")))
   }
@@ -384,9 +380,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
           |USING JOIN ON b
           |RETURN b.prop AS res""".stripMargin
 
-    val result = executeWith(Configs.Version4_0 + Configs.Version3_4 + Configs.RulePlanner, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b")),
-        expectPlansToFail = Configs.RulePlanner))
+    val result = executeWith(Configs.Version4_0 + Configs.Version3_4, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b"))))
 
     result.toList should equal (List(Map("res" -> "bar")))
   }
@@ -445,8 +440,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
            |USING JOIN ON c
            |WHERE a.prop = e.prop
            |RETURN c""".stripMargin,
-        planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("c")),
-          expectPlansToFail = Configs.RulePlanner))
+        planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("c"))))
 
       result.toList should equal(List(Map("c" -> c)))
     }
@@ -469,8 +463,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
            |USING JOIN ON b
            |WHERE a.prop = c.prop
            |RETURN c""".stripMargin,
-        planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b")),
-          expectPlansToFail = Configs.RulePlanner))
+        planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b"))))
 
       result.toList should equal(List(Map("c" -> e)))
     }
@@ -499,7 +492,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
           planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b"))
           planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("c"))
           planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("d"))
-        }, expectPlansToFail = Configs.RulePlanner))
+        }))
     }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b)") {
@@ -517,8 +510,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
             |RETURN x""".stripMargin
 
       executeWith(Configs.All, query,
-        planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x")),
-          expectPlansToFail = Configs.RulePlanner))
+        planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))))
     }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where a and b can use an index") {
@@ -584,7 +576,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
           planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
           planDescription.toString should not include "AllNodesScan"
-        }, expectPlansToFail = Configs.RulePlanner))
+        }))
     }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where using index hints on a and b") {
@@ -622,7 +614,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
           planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
           planDescription.toString should not include "AllNodesScan"
-        }, expectPlansToFail = Configs.RulePlanner))
+        }))
     }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where x can use an index") {
@@ -658,7 +650,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
           planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
           planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("x"))
-        }, expectPlansToFail = Configs.RulePlanner))
+        }))
   }
 
   test("should handle using index hint on both ends of pattern") {
@@ -694,7 +686,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
         planDescription.toString should not include "AllNodesScan"
-      }, expectPlansToFail = Configs.RulePlanner))
+      }))
   }
 
   test("Using index hints with two indexes should produce cartesian product"){
@@ -711,13 +703,13 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         |RETURN count(p)
         |""".stripMargin
 
-    executeWith(Configs.InterpretedAndSlotted  - Configs.Cost3_1 - Configs.Cost2_3, query,
+    executeWith(Configs.InterpretedAndSlotted , query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("k"))
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("t"))
         planDescription should includeSomewhere.nTimes(1, aPlan("CartesianProduct"))
         planDescription.toString should not include "AllNodesScan"
-      }, expectPlansToFail = Configs.RulePlanner))
+      }))
   }
 
   test("USING INDEX hint should not clash with used variables") {
@@ -743,11 +735,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         |USING INDEX a:PERSON(prop)
         |USING INDEX b:PERSON(prop)
         |RETURN a, b""".stripMargin
-    val result = executeWith(Configs.All  - Configs.Cost3_1 - Configs.Cost2_3, query,
+    val result = executeWith(Configs.All , query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("a"))
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("b"))
-    }, expectPlansToFail = Configs.RulePlanner))
+    }))
 
     result.toList should equal(List(Map("a" -> startNode, "b" -> endNode)))
   }
@@ -764,11 +756,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
           |WHERE a.prop = 'foo' and b.prop = 'bar'
           |RETURN b.prop AS res""".stripMargin
 
-    val result = executeWith(Configs.All  - Configs.Cost3_1 - Configs.Cost2_3, query,
+    val result = executeWith(Configs.All , query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("a"))
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("b"))
-      }, expectPlansToFail = Configs.RulePlanner))
+      }))
 
     result.toList should equal (List(Map("res" -> "bar")))
   }
@@ -786,7 +778,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     val result = executeWith(Configs.Version4_0 + Configs.Version3_4 - Configs.Compiled, query,
                              planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))
-      }, expectPlansToFail = Configs.RulePlanner))
+      }))
 
     result.columnAs[Node]("f").toList should equal(List(node))
     result.executionPlanDescription() should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))
@@ -803,7 +795,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
     val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = ComparePlansWithAssertion({ plan =>
       plan should includeSomewhere.nTimes(3, aPlan("NodeHashJoin"))
-    }, expectPlansToFail = Configs.Version2_3 + Configs.Version3_1))
+    }))
 
     result.toList should equal (List(Map("c" -> 4)))
   }

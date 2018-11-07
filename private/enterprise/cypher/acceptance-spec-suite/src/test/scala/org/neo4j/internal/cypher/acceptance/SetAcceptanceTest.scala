@@ -10,7 +10,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 
 class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  val expectedToFail = Configs.InterpretedAndSlotted - Configs.Cost2_3
+  val expectedToFail = Configs.InterpretedAndSlotted
 
   test("optional match and set") {
     val n1 = createLabeledNode("L1")
@@ -18,7 +18,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     relate(n1, n2, "R1")
 
     // only fails when returning distinct...
-    val result = executeWith(Configs.UpdateConf,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |MATCH (n1:L1)-[:R1]->(n2:L2)
         |OPTIONAL MATCH (n3)<-[r:R2]-(n2)
@@ -34,7 +34,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     createNode("prop" -> 1337)
 
     // when
-    executeWith(Configs.UpdateConf, "MATCH (n) SET n.prop = tofloat(n.prop)")
+    executeWith(Configs.InterpretedAndSlotted, "MATCH (n) SET n.prop = tofloat(n.prop)")
 
     executeWith(Configs.All, "MATCH (n) RETURN n.prop").head("n.prop") shouldBe a[java.lang.Double]
   }
@@ -44,7 +44,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     relate(createNode(), createNode(), "prop" -> 1337)
 
     // when
-    executeWith(Configs.UpdateConf, "MATCH ()-[r]->() SET r.prop = tofloat(r.prop)")
+    executeWith(Configs.InterpretedAndSlotted, "MATCH ()-[r]->() SET r.prop = tofloat(r.prop)")
 
     executeWith(Configs.All, "MATCH ()-[r]->() RETURN r.prop").head("r.prop") shouldBe a[java.lang.Double]
   }
@@ -54,7 +54,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val node = createNode()
 
     // when
-    val result = executeWith(Configs.UpdateConf, "MATCH (n) SET n.property = ['foo','bar'] RETURN n.property")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) SET n.property = ['foo','bar'] RETURN n.property")
 
     // then
     assertStats(result, propertiesWritten = 1)
@@ -90,7 +90,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val a = createNode()
 
     // when
-    val result = executeWith(Configs.UpdateConf, "MATCH (n) SET (CASE WHEN true THEN n END).name = 'neo4j' RETURN count(*)")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) SET (CASE WHEN true THEN n END).name = 'neo4j' RETURN count(*)")
 
     // then
     assertStats(result, propertiesWritten = 1)
@@ -103,7 +103,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val r = relate(createNode(), createNode())
 
     // when
-    val result = executeWith(Configs.UpdateConf, "MATCH ()-[r]->() SET (CASE WHEN true THEN r END).name = 'neo4j' RETURN count(*)")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH ()-[r]->() SET (CASE WHEN true THEN r END).name = 'neo4j' RETURN count(*)")
 
     // then
     assertStats(result, propertiesWritten = 1)
@@ -117,7 +117,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val n3 = createNode()
 
     val query = "MATCH (n) WITH collect(n) AS nodes, {param} AS data FOREACH (idx IN range(0,size(nodes)-1) | SET (nodes[idx]).num = data[idx])"
-    val result = executeWith(Configs.UpdateConf, query, params = Map("param" ->  Array("1", "2", "3")))
+    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("param" ->  Array("1", "2", "3")))
 
     assertStats(result, propertiesWritten = 3)
     n1 should haveProperty("num").withValue("1")
@@ -132,7 +132,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val r3 = relate(createNode(), createNode())
 
     val query = "MATCH ()-[r]->() WITH collect(r) AS rels, {param} as data FOREACH (idx IN range(0,size(rels)-1) | SET (rels[idx]).num = data[idx])"
-    val result = executeWith(Configs.UpdateConf, query, params = Map("param" ->  Array("1", "2", "3")))
+    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("param" ->  Array("1", "2", "3")))
 
     assertStats(result, propertiesWritten = 3)
     r1 should haveProperty("num").withValue("1")
@@ -159,7 +159,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     // when
     val q = "MATCH p=(a)-->(b)-->(c) WHERE id(a) = 0 AND id(c) = 2 WITH p FOREACH(n IN nodes(p) | SET n.marked = true)"
 
-    executeWith(Configs.UpdateConf, q)
+    executeWith(Configs.InterpretedAndSlotted, q)
 
     // then
     a should haveProperty("marked").withValue(true)
@@ -175,7 +175,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val c = createNode("c"->"C")
 
     // when
-    val result = executeWith(Configs.UpdateConf, "MATCH (n) WITH collect(n) AS nodes FOREACH(x IN nodes | SET x += {x:'X'})")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) WITH collect(n) AS nodes FOREACH(x IN nodes | SET x += {x:'X'})")
 
     // then
     a should haveProperty("a").withValue("A")
@@ -194,7 +194,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val c = createNode("c"->"C")
 
     // when
-   executeWith(Configs.UpdateConf, "MATCH (n) WITH collect(n) as nodes FOREACH(x IN nodes | SET x = {a:'D', x:'X'})")
+   executeWith(Configs.InterpretedAndSlotted, "MATCH (n) WITH collect(n) as nodes FOREACH(x IN nodes | SET x = {a:'D', x:'X'})")
 
     // then
     a should haveProperty("a").withValue("D")

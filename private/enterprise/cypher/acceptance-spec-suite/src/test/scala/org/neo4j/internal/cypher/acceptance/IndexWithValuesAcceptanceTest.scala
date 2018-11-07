@@ -152,7 +152,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should correctly project cached node property through ORDER BY") {
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Version3_1 - Configs.Version2_3,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds",
       executeBefore = createSomeNodes)
 
@@ -304,54 +304,54 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("index-backed property values should be updated on property write") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 SET n.prop1 = 'newValue' RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> "newValue")))
   }
 
   test("index-backed property values should be removed on property remove") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 REMOVE n.prop1 RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> null)))
   }
 
   test("index-backed property values should be removed on node delete") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 DETACH DELETE n RETURN n.prop1"
-    failWithError(Configs.InterpretedAndSlotted - Configs.Cost2_3, query, Seq(/* Node with id 4 */ "has been deleted in this transaction"))
+    failWithError(Configs.InterpretedAndSlotted, query, Seq(/* Node with id 4 */ "has been deleted in this transaction"))
   }
 
   test("index-backed property values should not exist after node deleted") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 DETACH DELETE n RETURN exists(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("exists(n.prop1)" -> false)))
   }
 
   test("index-backed property values should not exist after node deleted - optional match case") {
     val query = "OPTIONAL MATCH (n:Awesome) WHERE n.prop1 = 42 DETACH DELETE n RETURN exists(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("exists(n.prop1)" -> false)))
   }
 
   test("existance of index-backed property values of optional node from an empty index, where the node is deleted") {
     val query = "OPTIONAL MATCH (n:Awesome) WHERE n.emptyProp = 42 DETACH DELETE n RETURN exists(n.emptyProp)"
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertIndexSeekWithValues(result, "n.emptyProp")
     result.toList should equal(List(Map("exists(n.emptyProp)" -> null)))
   }
 
   test("index-backed property values should be updated on map property write") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 SET n = {decoy1: 1, prop1: 'newValue', decoy2: 2} RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> "newValue")))
   }
 
   test("index-backed property values should be removed on map property remove") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 SET n = {decoy1: 1, decoy2: 2} RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> null)))
   }
@@ -359,7 +359,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   test("index-backed property values should be updated on procedure property write") {
     registerTestProcedures()
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 CALL org.neo4j.setProperty(n, 'prop1', 'newValue') YIELD node RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.RulePlanner, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertIndexSeek(result)
     result.toList should equal(List(Map("n.prop1" -> "newValue")))
   }
@@ -367,7 +367,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   test("index-backed property values should be updated on procedure property remove") {
     registerTestProcedures()
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 CALL org.neo4j.setProperty(n, 'prop1', null) YIELD node RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.RulePlanner, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     assertIndexSeek(result)
     result.toList should equal(List(Map("n.prop1" -> null)))
   }

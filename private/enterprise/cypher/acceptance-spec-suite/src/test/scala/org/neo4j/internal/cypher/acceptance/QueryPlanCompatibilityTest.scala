@@ -15,7 +15,7 @@ class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComp
     val query = "MATCH (n:Person) RETURN n"
     val expectedPlan = generateExpectedPlan(query)
     executeWith(Configs.All, query,
-      planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan), expectPlansToFail = Configs.RulePlanner))
+      planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
   }
 
   test("should produce compatible plans for simple MATCH relationship query") {
@@ -31,7 +31,7 @@ class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComp
       """.stripMargin
     val expectedPlan = generateExpectedPlan(query)
     executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan), expectPlansToFail = Configs.RulePlanner))
+      planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
   }
 
   test("should produce compatible plans with unwind") {
@@ -44,7 +44,7 @@ class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComp
       """.stripMargin
     val expectedPlan = generateExpectedPlan(query)
     executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan), expectPlansToFail = Configs.RulePlanner))
+      planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
   }
 
   // Too much has changed from 2.3, only compare plans for newer versions
@@ -59,7 +59,7 @@ class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComp
       """.stripMargin
     val expectedPlan = generateExpectedPlan(query)
     executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan), expectPlansToFail = Configs.RulePlanner + Configs.Version2_3))
+      planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
   }
 
   private def assertSimilarPlans(plan: InternalPlanDescription, expected: InternalPlanDescription): Unit = {

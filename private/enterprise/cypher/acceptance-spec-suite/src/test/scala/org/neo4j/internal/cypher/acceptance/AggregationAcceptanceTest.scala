@@ -12,7 +12,7 @@ import org.neo4j.values.storable.DurationValue
 
 class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  private val INTERPRETED_34_35 = Configs.InterpretedAndSlotted - Configs.Version3_1 - Configs.Version2_3
+  private val INTERPRETED_34_35 = Configs.InterpretedAndSlotted
 
   // Non-deterministic query -- needs TCK design
   test("should aggregate using as grouping key expressions using variables in scope and nothing else") {
@@ -179,7 +179,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     val r1 = relate(node1, node2)
 
     val query = "MATCH (a)-[r]-(b) RETURN a, r, b, count(a) ORDER BY a, r, b"
-    val result = executeWith(Configs.All - Configs.Version2_3 - Configs.Version3_1, query) // Neo4j version <= 3.1 cannot order by nodes
+    val result = executeWith(Configs.All, query) // Neo4j version <= 3.1 cannot order by nodes
     result.toList should equal(List(
       Map("a" -> node1, "r" -> r1, "b" -> node2, "count(a)" -> 1),
       Map("a" -> node2, "r" -> r1, "b" -> node1, "count(a)" -> 1)
@@ -192,7 +192,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     val r1 = relate(node1, node2)
 
     val query = "MATCH (a)-[r]-(b) RETURN a, r, b, a.prop as s, count(a) ORDER BY a, r, b, s"
-    val result = executeWith(Configs.All - Configs.Version2_3 - Configs.Version3_1, query) // Neo4j version <= 3.1 cannot order by nodes
+    val result = executeWith(Configs.All, query) // Neo4j version <= 3.1 cannot order by nodes
     result.toList should equal(List(
       Map("a" -> node1, "r" -> r1, "b" -> node2, "s" -> "alice", "count(a)" -> 1),
       Map("a" -> node2, "r" -> r1, "b" -> node1, "s" -> "bob", "count(a)" -> 1)
@@ -253,9 +253,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   test("Aggregations should keep LHS order") {
     // Please don't remove the ORDER BY, this will make CypherComparisonSupport check that results come in the sam order across runtimes
     val query = "UNWIND [1, 2, 2, 3, 3, 4, 5, 5, 5, 6, 7, 8, 9, 99] AS n WITH n ORDER BY n RETURN n, count(n)"
-    val result = executeWith(Configs.All, query,
-      // The order of aggregation has been changed in 3.5
-      expectedDifferentResults = Configs.Version3_1 + Configs.Version2_3)
+    val result = executeWith(Configs.All, query)
 
     result.toList should be(List(
       Map("n" -> 1, "count(n)" -> 1),

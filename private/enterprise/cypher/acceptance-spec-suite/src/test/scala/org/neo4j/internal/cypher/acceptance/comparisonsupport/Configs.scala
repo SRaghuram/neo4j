@@ -5,7 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Planners.Cost
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.CompiledBytecode
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.CompiledSource
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Interpreted
@@ -15,8 +14,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_4
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V4_0
 
 object Configs {
-
-  // TODO clean up
 
   // Configurations with runtimes
   def Compiled: TestConfiguration = TestConfiguration(V3_4 -> V4_0, Planners.all, Runtimes(CompiledSource, CompiledBytecode))
@@ -30,35 +27,10 @@ object Configs {
 
   def InterpretedAndSlotted: TestConfiguration = InterpretedRuntime + SlottedRuntime
 
-  // Configurations for planners
-  def RulePlanner: TestConfiguration = TestConfiguration.empty
-
-  def CostPlanner: TestConfiguration = TestConfiguration(Versions.all, Cost, Runtimes.all)
-
-  // Configurations for versions + planners
-  def Cost2_3: TestConfiguration = TestConfiguration.empty
-
-  def Cost3_1: TestConfiguration = TestConfiguration.empty
-
-  def Cost3_4: TestConfiguration = TestConfiguration(V3_4, Cost, Runtimes.all)
-
-  def Rule2_3: TestConfiguration = TestConfiguration.empty
-
-  def Rule3_1: TestConfiguration = TestConfiguration.empty
-
   // Configurations for versions
-  def Version2_3: TestConfiguration = TestConfiguration.empty
-
-  def Version3_1: TestConfiguration = TestConfiguration.empty
-
   def Version3_4: TestConfiguration = TestConfiguration(V3_4, Planners.all, Runtimes.all)
 
   def Version4_0: TestConfiguration = TestConfiguration(V4_0, Planners.all, Runtimes.all)
-
-  /**
-    * Configs which support CREATE, DELETE, SET, REMOVE, MERGE etc.
-    */
-  def UpdateConf: TestConfiguration = InterpretedAndSlotted - Cost2_3
 
   /**
     * These are all configurations that will be executed even if not explicitly expected to succeed or fail.

@@ -45,7 +45,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    val result = executeWith(expectedToSucceed - Configs.Version2_3, query).columnAs[List[Node]]("nodes(x)").toList
+    val result = executeWith(expectedToSucceed, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(List(nodeA, nodeB)))
   }
@@ -61,7 +61,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    val result = executeWith(expectedToSucceed - Configs.Version2_3, query).columnAs[List[Node]]("nodes(x)").toList
+    val result = executeWith(expectedToSucceed, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(null))
   }
@@ -78,7 +78,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    val result = executeWith(expectedToSucceed - Configs.Version2_3, query).columnAs[List[Node]]("nodes(x)").toList
+    val result = executeWith(expectedToSucceed, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(List(nodeA, nodeB)))
   }
@@ -95,7 +95,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    val result = executeWith(expectedToSucceed - Configs.Version2_3, query).columnAs[List[Node]]("nodes(x)").toList
+    val result = executeWith(expectedToSucceed, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List.empty)
   }
@@ -459,7 +459,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                   |RETURN nodes(p1) AS nodes1, nodes(p2) as nodes2
                 """.stripMargin
 
-    val result = executeWith(expectedToSucceed, query, expectedDifferentResults = Configs.RulePlanner)
+    val result = executeWith(expectedToSucceed, query)
 
     result.toList should equal(List(Map("nodes1" -> List(nodes("source"), nodes("node3"), nodes("node4"), nodes("target")),
       "nodes2" -> List(nodes("source"), nodes("target")))))
@@ -494,7 +494,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                   |RETURN nodes(p1) AS nodes1, nodes(p2) as nodes2
                 """.stripMargin
 
-    val result = executeWith(expectedToSucceed, query, expectedDifferentResults = Configs.RulePlanner)
+    val result = executeWith(expectedToSucceed, query)
 
     result.toList should equal(List(Map("nodes1" -> List(nodes("Donald"), nodes("Huey"), nodes("Dewey"), nodes("Louie"), nodes("Daisy")),
       "nodes2" -> List(nodes("Donald"), nodes("Huey"), nodes("Dewey"), nodes("Louie"), nodes("Daisy")))))
@@ -745,7 +745,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     relate(intermediate, p2, "KNOWS", Map("prop" -> 42))
 
     // When
-    val result = executeWith(expectedToSucceed - Configs.Cost2_3,
+    val result = executeWith(expectedToSucceed,
       """MATCH (person1:Person {id:1}), (person2:Person {id:2})
         |OPTIONAL MATCH path = shortestPath((person1)-[k:KNOWS*0..]-(person2))
         |WHERE all(r in k WHERE r.prop IN [42])

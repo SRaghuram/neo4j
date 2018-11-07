@@ -11,7 +11,7 @@ import org.neo4j.kernel.impl.proc.Procedures
 
 class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  private val expectSucceed = Configs.InterpretedAndSlotted - Configs.RulePlanner - Configs.Version2_3
+  private val expectSucceed = Configs.InterpretedAndSlotted
 
   test("should return result") {
     registerTestProcedures()
@@ -139,9 +139,8 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     graph.execute("UNWIND [1,2,3] AS i CREATE (a:Cat)")
 
-    val result = executeWith(Configs.All - Configs.Version2_3,
-      "CALL org.neo4j.aNodeWithLabel", params = Map("label" -> "Cat"),
-      expectedDifferentResults = Configs.Cost3_1 + Configs.RulePlanner) // this bugfix is not backported to 3.1?
+    val result = executeWith(Configs.All,
+      "CALL org.neo4j.aNodeWithLabel", params = Map("label" -> "Cat"))
 
     result.size should equal(1)
   }

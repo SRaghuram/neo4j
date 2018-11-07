@@ -18,7 +18,7 @@ class HintAcceptanceTest
 
   test("should use a simple hint") {
     val query = "MATCH (a)--(b)--(c) USING JOIN ON b RETURN a,b,c"
-    executeWith(Configs.All, query, planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeHashJoin"), expectPlansToFail = Configs.RulePlanner))
+    executeWith(Configs.All, query, planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeHashJoin")))
   }
 
   test("should not plan multiple joins for one hint - left outer join") {
@@ -33,11 +33,11 @@ class HintAcceptanceTest
                   |USING JOIN ON a
                   |RETURN a.name, b.name""".stripMargin
 
-    executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3 - Configs.Cost3_1, query,
+    executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion((p) => {
       p should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
       p should not(includeSomewhere.aPlan("NodeHashJoin"))
-    }, expectPlansToFail = Configs.Version2_3 + Configs.Version3_1))
+    }))
   }
 
   test("should not plan multiple joins for one hint - right outer join") {
@@ -52,10 +52,10 @@ class HintAcceptanceTest
                   |USING JOIN ON a
                   |RETURN a.name, b.name""".stripMargin
 
-    executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3 - Configs.Cost3_1, query, planComparisonStrategy = ComparePlansWithAssertion((p) => {
+    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = ComparePlansWithAssertion((p) => {
       p should includeSomewhere.aPlan("NodeRightOuterHashJoin")
       p should not(includeSomewhere.aPlan("NodeHashJoin"))
-    }, expectPlansToFail = Configs.Version2_3 + Configs.Version3_1))
+    }))
   }
 
   test("should solve join hint on 1 variable with join on more, if possible") {
@@ -67,10 +67,10 @@ class HintAcceptanceTest
         |USING JOIN ON pB
         |RETURN *""".stripMargin
 
-    executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3 - Configs.Cost3_1, query,
+    executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion((p) => {
         p should includeSomewhere.aPlan("NodeRightOuterHashJoin")
-      }, expectPlansToFail = Configs.Version2_3 + Configs.Version3_1))
+      }))
   }
 
   test("should do index seek instead of index scan with explicit index seek hint") {
@@ -94,10 +94,10 @@ class HintAcceptanceTest
                   |RETURN a.prop, b.prop
                 """.stripMargin
 
-    executeWith(Configs.InterpretedAndSlotted - Configs.RulePlanner - Configs.Cost2_3 - Configs.Cost3_1, query,
+    executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion((p) => {
         p should includeSomewhere.nTimes(2, aPlan("NodeIndexSeek"))
-      }, expectPlansToFail = Configs.Version2_3 + Configs.Version3_1))
+      }))
   }
 
   test("should accept hint on spatial index with distance function") {

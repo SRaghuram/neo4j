@@ -11,7 +11,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 
 class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  val expectedToSucceed = Configs.InterpretedAndSlotted - Configs.Version2_3
+  val expectedToSucceed = Configs.InterpretedAndSlotted
 
   var aNode: Node = null
   var bNode: Node = null

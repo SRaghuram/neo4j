@@ -98,7 +98,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     }
 
     test(s"$cypherToken: Order by index backed property in a plan with an Apply") {
-      val result = executeWith(Configs.InterpretedAndSlotted - Configs.Version3_1 - Configs.Version2_3,
+      val result = executeWith(Configs.InterpretedAndSlotted,
         s"MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds $cypherToken", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should (
@@ -215,7 +215,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
   // Only tested in ASC mode because it's hard to make compatibility check out otherwise
   test("ASC: Order by index backed property in a plan with an outer join") {
     // Be careful with what is created in createSomeNodes. It underwent careful cardinality tuning to get exactly the plan we want here.
-    val result =  executeWith(Configs.InterpretedAndSlotted - Configs.Cost3_1 - Configs.Cost2_3,
+    val result =  executeWith(Configs.InterpretedAndSlotted,
       """MATCH (b:B {foo:1, bar:1})
         |OPTIONAL MATCH (a:Awesome)-[r]->(b) USING JOIN ON b
         |WHERE a.prop3 > 'foo'

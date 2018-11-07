@@ -14,7 +14,7 @@ class MergeNodeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisti
 
   test("multiple merges after each other") {
     1 to 100 foreach { prop =>
-      val result = executeWith(Configs.UpdateConf, s"merge (a:Label {prop: $prop}) return a.prop")
+      val result = executeWith(Configs.InterpretedAndSlotted, s"merge (a:Label {prop: $prop}) return a.prop")
       assertStats(result, nodesCreated = 1, propertiesWritten = 1, labelsAdded = 1)
     }
   }
@@ -48,19 +48,19 @@ class MergeNodeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisti
 
   test("Merging with self loop and relationship uniqueness") {
     graph.execute("CREATE (a) CREATE (a)-[:X]->(a)")
-    val result = executeWith(Configs.UpdateConf, "MERGE (a)-[:X]->(b)-[:X]->(c) RETURN 42")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MERGE (a)-[:X]->(b)-[:X]->(c) RETURN 42")
     assertStats(result, relationshipsCreated = 2, nodesCreated = 3)
   }
 
   test("Merging with self loop and relationship uniqueness - no stats") {
     graph.execute("CREATE (a) CREATE (a)-[:X]->(a)")
-    val result = executeWith(Configs.UpdateConf, "MERGE (a)-[r1:X]->(b)-[r2:X]->(c) RETURN id(r1) = id(r2) as sameEdge")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MERGE (a)-[r1:X]->(b)-[r2:X]->(c) RETURN id(r1) = id(r2) as sameEdge")
     result.columnAs[Boolean]("sameEdge").toList should equal(List(false))
   }
 
   test("Merging with self loop and relationship uniqueness - no stats - reverse direction") {
     graph.execute("CREATE (a) CREATE (a)-[:X]->(a)")
-    val result = executeWith(Configs.UpdateConf, "MERGE (a)-[r1:X]->(b)<-[r2:X]-(c) RETURN id(r1) = id(r2) as sameEdge")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MERGE (a)-[r1:X]->(b)<-[r2:X]-(c) RETURN id(r1) = id(r2) as sameEdge")
     result.columnAs[Boolean]("sameEdge").toList should equal(List(false))
   }
 
@@ -68,7 +68,7 @@ class MergeNodeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisti
     val a = createLabeledNode(Map("name" -> "a"), "A")
     val b = createLabeledNode(Map("name" -> "b"), "B")
     relate(a, b, "X")
-    val result = executeWith(Configs.UpdateConf, "MERGE (a)-[r1:X]->(b)<-[r2:X]-(c) RETURN id(r1) = id(r2) as sameEdge, c.name as name")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MERGE (a)-[r1:X]->(b)<-[r2:X]-(c) RETURN id(r1) = id(r2) as sameEdge, c.name as name")
     result.toList should equal(List(Map("sameEdge" -> false, "name" -> null)))
   }
 
@@ -78,7 +78,7 @@ class MergeNodeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisti
         |MERGE (a)-[r:X]->()
       """.stripMargin
 
-    failWithError(Configs.All - Configs.Compiled - Configs.Cost2_3, query, Seq(
+    failWithError(Configs.All - Configs.Compiled, query, Seq(
       "Expected to find a node, but found instead: null",
       "Expected to find a node at a but found nothing Some(null)",
       "Failed to create relationship `r`, node `a` is missing. " +

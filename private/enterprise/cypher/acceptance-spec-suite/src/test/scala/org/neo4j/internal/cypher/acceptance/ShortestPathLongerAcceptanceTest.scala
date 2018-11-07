@@ -156,8 +156,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE ANY(n in nodes(p) WHERE n:$topRight)
          |RETURN nodes(p) AS nodes""".stripMargin,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("VarLengthExpand(Into)"),
-        expectPlansToFail = Configs.RulePlanner + Configs.Cost2_3))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("VarLengthExpand(Into)")))
 
     dprintln(s"Query took ${(System.currentTimeMillis - start)/1000.0}s")
 
@@ -176,8 +175,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE ANY(n in nodes(p) WHERE n:$bottomLeft)
          |RETURN nodes(p) AS nodes""".stripMargin,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("VarLengthExpand(Into)"),
-        expectPlansToFail = Configs.RulePlanner + Configs.Cost2_3))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("VarLengthExpand(Into)")))
 
     val result = results.columnAs[List[Node]]("nodes").toList
 
@@ -197,8 +195,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
          |WHERE ALL(r in rels WHERE type(r) = "DOWN")
          |  AND ANY(n in nodes(p) WHERE n:$bottomLeft)
          |RETURN nodes(p) AS nodes""".stripMargin,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("VarLengthExpand(Into)"),
-        expectPlansToFail = Configs.RulePlanner + Configs.Cost2_3))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("VarLengthExpand(Into)")))
 
     val result = results.columnAs[List[Node]]("nodes").toList
 
@@ -217,7 +214,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
          |WHERE ALL(r in rels(p) WHERE type(r) = "DOWN")
          |  AND ANY(n in nodes(p) WHERE n:$bottomLeft)
          |RETURN nodes(p) AS nodes""".stripMargin,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("VarLengthExpand(Into)"), expectPlansToFail = Configs.RulePlanner))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("VarLengthExpand(Into)")))
 
     val result = results.columnAs[List[Node]]("nodes").toList
 
@@ -599,8 +596,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
                   |WHERE ALL(id IN wps WHERE id IN EXTRACT(n IN nodes(p) | n.id))
                   |WITH p, size(nodes(p)) as length order by length DESC limit 1
                   |RETURN EXTRACT(n IN nodes(p) | n.id) as nodes""".stripMargin
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
-      expectedDifferentResults = Configs.RulePlanner + Configs.Cost2_3)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     result.toList should equal(List(Map("nodes" -> List(3, 2, 1, 11, 12, 13, 26, 27, 14))))
   }

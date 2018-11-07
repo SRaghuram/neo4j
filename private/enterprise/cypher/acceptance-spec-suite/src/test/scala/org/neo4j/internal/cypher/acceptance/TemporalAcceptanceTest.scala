@@ -15,8 +15,8 @@ import org.neo4j.values.storable.{DateValue, DurationValue}
 
 class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  private val failConf1 = Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.Version3_1
-  private val failConf2 = Configs.InterpretedAndSlotted - Configs.Version2_3
+  private val failConf1 = Configs.InterpretedAndSlotted
+  private val failConf2 = Configs.InterpretedAndSlotted
 
   // Getting current value of a temporal
 
@@ -55,7 +55,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val dateValue = DateValue.date(2018, 5, 5).asObject()
     createNode(Map("prop" -> dateValue))
 
-    val config = Configs.All - Configs.Version2_3 - Configs.Version3_1
+    val config = Configs.All
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
     val result = executeWith(config, query, params = Map("param" -> dateValue))
 
@@ -70,7 +70,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
     createNode(Map("prop" -> javaDateArray))
 
-    val config = Configs.All - Configs.Version2_3 - Configs.Version3_1
+    val config = Configs.All
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
     val result = executeWith(config, query, params = Map("param" -> javaDateArray))
 
@@ -89,7 +89,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val dateArray = new Array[LocalDate](javaDateList.size)
     createNode(Map("prop" -> javaDateList.toArray(dateArray)))
 
-    val config = Configs.All - Configs.Version2_3 - Configs.Version3_1
+    val config = Configs.All
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
     val result = executeWith(config, query, params = Map("param" -> javaDateList))
 
@@ -107,7 +107,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
     graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava)
 
-    val config = Configs.All - Configs.Version2_3 - Configs.Version3_1
+    val config = Configs.All
     val query = "MATCH (n) WHERE n.a = $param.a RETURN n.a as a, n.b as b"
     val result = executeWith(config, query, params = Map("param" -> dateMap))
 
@@ -124,7 +124,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
     graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava)
 
-    val config = Configs.All - Configs.Version2_3 - Configs.Version3_1
+    val config = Configs.All
     val query = "MATCH (n) RETURN $param, n.a as a, n.b as b"
     val result = executeWith(config, query, params = Map("param" -> dateMap))
 
@@ -140,7 +140,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
     // When
-    val localConfig = Configs.All - Configs.Version2_3 - Configs.Version3_1
+    val localConfig = Configs.All
     val result = executeWith(localConfig,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
@@ -165,7 +165,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
     // When
-    val localConfig = Configs.All - Configs.Version2_3 - Configs.Version3_1
+    val localConfig = Configs.All
     val result = executeWith(localConfig,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
@@ -191,7 +191,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
     // When
-    val localConfig = Configs.All - Configs.Version2_3 - Configs.Version3_1
+    val localConfig = Configs.All
     val result = executeWith(localConfig,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
@@ -218,7 +218,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
     // When
-    val localConfig = Configs.All - Configs.Version2_3 - Configs.Version3_1
+    val localConfig = Configs.All
     val result = executeWith(localConfig,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
@@ -249,10 +249,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val dateValue2 = DateValue.date(2018, 4, 2).asObject()
     createLabeledNode(Map("date1" -> dateValue1, "date2" -> dateValue2), "Date")
 
-    // When
-    val config = Configs.All - Configs.Version2_3 - Configs.Version3_1 + Configs.Cost2_3
     val query = "MATCH (n:Date) WITH [n.date1, n.date2] as dateList MATCH (m:Occasion) WHERE m.timeSpan = dateList RETURN m.timeSpan as timeSpan"
-    val result = executeWith(config, query)
+    val result = executeWith(Configs.All, query)
 
     // Then
     val dateList = result.columnAs("timeSpan").toList.head.asInstanceOf[Iterable[LocalDate]].toList
@@ -267,7 +265,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val duration = DurationValue.duration(11, 12, 13, 14).asObject()
     createNode(Map("prop" -> duration))
 
-    val config = Configs.All - Configs.Version2_3 - Configs.Version3_1
+    val config = Configs.All
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
     val result = executeWith(config, query, params = Map("param" -> duration))
 
@@ -354,7 +352,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   test("should not create date time with conflicting time zones") {
     val query = "WITH datetime('1984-07-07T12:34+03:00[Europe/Stockholm]') as d RETURN d"
     val errorMsg = "Timezone and offset do not match"
-    failWithError(Configs.InterpretedAndSlotted - Configs.Version2_3, query, Seq(errorMsg), Seq("InvalidArgumentException"))
+    failWithError(Configs.InterpretedAndSlotted, query, Seq(errorMsg), Seq("InvalidArgumentException"))
   }
 
   // Failing when providing wrong values
@@ -819,7 +817,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
           *  Version 3.3 returns null instead due to running with 3.5 runtime
           *  SyntaxException come from the 3.5 planner and IncomparableValuesException from earlier runtimes
           */
-        failWithError(Configs.Version4_0 - Configs.RulePlanner, query, Seq("Type mismatch"))
+        failWithError(Configs.Version4_0, query, Seq("Type mismatch"))
       }
     }
   }
@@ -841,7 +839,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (func <- Seq("time", "localtime", "date", "datetime", "localdatetime", "duration")) {
       val query = s"RETURN $func('', '', '', '')"
       withClue(s"Executing $query") {
-        failWithError(Configs.All - Configs.Version2_3, query,
+        failWithError(Configs.All, query,
           Seq("Function call does not provide the required number of arguments"))
       }
     }
@@ -885,7 +883,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN time({hour: 12, minute: 34, second: 56, timezone:'Europe/Stockholm'}) = currentCorrectTime as comparison
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.Version3_1, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     result.toList should equal(List(Map("comparison" -> true)))
   }
 
@@ -896,7 +894,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN toString(time({time:dt})) as t1, toString(time.truncate('second', dt)) as t2
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.Version3_1, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     result.toList should equal(List(Map("t1" -> "12:31:14+02:00", "t2" -> "12:31:14+02:00")))
   }
 
@@ -910,7 +908,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |        time.truncate('second', ld, {timezone: 'Europe/Stockholm'}) = currentCorrectTime as comp2
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.Version3_1, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     result.toList should equal(List(Map("comp1" -> true, "comp2" -> true)))
   }
 

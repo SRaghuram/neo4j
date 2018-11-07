@@ -352,9 +352,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   test("should single predicate on values -- multiple true with null case") {
     val result = executeWith(Configs.InterpretedAndSlotted,
       query = "RETURN " +
-        " single(s IN ['1',null,'1','333'] WHERE s = '1') AS twoTrueWithNull",
-      expectedDifferentResults =
-        Configs.Version2_3 + Configs.Version3_1)
+        " single(s IN ['1',null,'1','333'] WHERE s = '1') AS twoTrueWithNull")
 
     result.toList.head should equal(Map(
       "twoTrueWithNull" -> false))

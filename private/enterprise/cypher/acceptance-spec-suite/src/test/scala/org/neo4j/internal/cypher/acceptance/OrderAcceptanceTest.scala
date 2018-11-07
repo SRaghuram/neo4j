@@ -97,7 +97,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("ORDER BY renamed column old name in WITH and project and return that column") {
     // 3.1 and older is buggy here
-    val result = executeWith(Configs.All - Configs.Version2_3 - Configs.Version3_1,
+    val result = executeWith(Configs.All,
       """
       MATCH (a:A)
       WITH a AS b, a.age AS age
@@ -127,7 +127,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("ORDER BY renamed column new name in WITH and project and return that column") {
     // 3.1 and older is buggy here
-    val result = executeWith(Configs.All - Configs.Version2_3 - Configs.Version3_1,
+    val result = executeWith(Configs.All,
       """
       MATCH (a:A)
       WITH a AS b, a.age AS age

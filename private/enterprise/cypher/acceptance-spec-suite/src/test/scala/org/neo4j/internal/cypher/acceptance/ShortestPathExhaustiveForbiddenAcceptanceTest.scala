@@ -22,7 +22,7 @@ class ShortestPathExhaustiveForbiddenAcceptanceTest extends ExecutionEngineFunSu
 
   test("should fail at run time when using the shortest path fallback") {
     // when
-    failWithError(Configs.All - Configs.RulePlanner - Configs.Cost2_3,
+    failWithError(Configs.All,
       s"""MATCH p = shortestPath((src:$topLeft)-[*0..]-(dst:$topLeft))
          |WHERE ANY(n in nodes(p) WHERE n:$topRight)
          |RETURN nodes(p) AS nodes""".stripMargin,

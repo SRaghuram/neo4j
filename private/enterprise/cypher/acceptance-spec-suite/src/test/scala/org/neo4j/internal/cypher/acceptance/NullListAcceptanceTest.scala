@@ -10,9 +10,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 
 class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  // Changed behaviour to comply with opencypher in 3.3
-  val nullInListConfigOld = Configs.Version2_3 + Configs.Version3_1
-
   // Comparison between lists and non-lists
 
   test("equality between list and literal should return false") {
@@ -44,7 +41,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("equality between almost equal lists with null should return null") {
     val query = "WITH [1, 2] AS l1, [null, 2] AS l2 RETURN l1 = l2 AS res"
 
-    val result = executeWith(Configs.All + Configs.Morsel, query, expectedDifferentResults = nullInListConfigOld)
+    val result = executeWith(Configs.All + Configs.Morsel, query)
 
     result.toList should equal(List(Map("res" -> null)))
   }
@@ -69,7 +66,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("equality between almost equal nested lists with null should return null") {
     val query = "WITH [[1, 2], ['foo', 'bar']] AS l1, [[1, 2], [null, 'bar']] AS l2 RETURN l1 = l2 AS res"
 
-    val result = executeWith(Configs.All + Configs.Morsel, query, expectedDifferentResults = nullInListConfigOld)
+    val result = executeWith(Configs.All + Configs.Morsel, query)
 
     result.toList should equal(List(Map("res" -> null)))
   }
@@ -121,7 +118,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("IN should return null if comparison with null is required, list version") {
     val query = "WITH [1,2] AS l1, [[null, 2]] AS l2 RETURN l1 IN l2 as res"
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, query, expectedDifferentResults = nullInListConfigOld)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, query)
 
     result.toList should equal(List(Map("res" -> null)))
   }
@@ -137,7 +134,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("IN should return null if comparison with null is required, list version 2") {
     val query = "WITH [1,2] AS l1, [[null, 2], [1, 3]] AS l2 RETURN l1 IN l2 as res"
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, query, expectedDifferentResults = nullInListConfigOld)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, query)
 
     result.toList should equal(List(Map("res" -> null)))
   }

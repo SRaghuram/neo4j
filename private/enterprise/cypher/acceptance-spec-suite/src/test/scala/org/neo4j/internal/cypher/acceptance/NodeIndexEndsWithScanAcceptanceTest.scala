@@ -15,7 +15,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport._
  */
 class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport{
   private val expectedToSucceed = Configs.InterpretedAndSlotted
-  private val expectPlansToFail = Configs.RulePlanner + Configs.Cost2_3
 
   test("should be case sensitive for ENDS WITH with indexes") {
     val london = createLabeledNode(Map("name" -> "London"), "Location")
@@ -34,7 +33,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' RETURN l"
 
     val result = executeWith(expectedToSucceed, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan"), expectPlansToFail))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -56,7 +55,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' RETURN l"
 
     val result = executeWith(expectedToSucceed, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan"), expectPlansToFail))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -79,7 +78,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' AND l.country = 'UK' RETURN l"
 
     val result = executeWith(expectedToSucceed, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan"), expectPlansToFail))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -102,7 +101,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' AND l.country = 'UK' RETURN l"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek"), expectPlansToFail = Configs.RulePlanner))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -125,7 +124,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) USING INDEX l:Location(name) WHERE l.name ENDS WITH 'ondon' AND l.country = 'UK' RETURN l"
 
     // RULE has bug with this query
-    val result = executeWith(expectedToSucceed - Configs.Version2_3 - Configs.RulePlanner, query,
+    val result = executeWith(expectedToSucceed, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")))
 
     result.toList should equal(List(Map("l" -> london)))
@@ -148,7 +147,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH {param} RETURN l"
 
     val result = executeWith(expectedToSucceed, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan"), expectPlansToFail),
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")),
       params = Map("param" -> null))
 
     result.toList should equal(List.empty)

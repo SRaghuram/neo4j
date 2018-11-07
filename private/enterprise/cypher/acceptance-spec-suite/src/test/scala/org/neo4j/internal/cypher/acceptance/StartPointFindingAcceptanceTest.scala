@@ -97,7 +97,7 @@ class StartPointFindingAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
     val r = relate(a, b)
 
     val result = executeWith(Configs.InterpretedAndSlotted, s"PROFILE UNWIND [${r.getId}] as rId match (a)-[r]->(b) where id(r) = rId return a,r,b",
-      planComparisonStrategy = ComparePlansWithAssertion(_.toString should include("RelationshipById"), expectPlansToFail = Configs.RulePlanner))
+      planComparisonStrategy = ComparePlansWithAssertion(_.toString should include("RelationshipById")))
 
     result.toList should equal(List(Map("r" -> r, "a" -> a, "b" -> b)))
   }

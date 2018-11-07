@@ -17,7 +17,7 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
   )
 
   private val createConf = Configs.Version4_0 + Configs.Version3_4 - Configs.Compiled
-  private val mergeConf = Configs.Version4_0 + Configs.Version3_4 - Configs.Compiled + Configs.RulePlanner
+  private val mergeConf = Configs.Version4_0 + Configs.Version3_4 - Configs.Compiled
 
   // No CLG decision on this AFAIK, so not TCK material
   test("should silently not CREATE relationship if start-point is missing") {

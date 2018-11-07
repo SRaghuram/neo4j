@@ -20,7 +20,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNode("id" -> 0)
     for (i <- 1 to 1000) createNode("id" -> i)
     val result = executeWith(
-      Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.Version3_1,
+      Configs.InterpretedAndSlotted,
       "MATCH (n) WHERE id(n) IN {ids} RETURN n.id",
       params = Map("ids" -> List(-2, -3, 0, -4)))
     result.executionPlanDescription() should includeSomewhere.aPlan("NodeByIdSeek")
@@ -117,7 +117,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("OPTIONAL MATCH, DISTINCT and DELETE in an unfortunate combination") {
     val start = createLabeledNode("Start")
     createLabeledNode("End")
-    val result = executeWith(Configs.UpdateConf,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |MATCH (start:Start),(end:End)
         |OPTIONAL MATCH (start)-[rel]->(end)
@@ -386,8 +386,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("should be able to set properties with a literal map twice in the same transaction") {
     val node = createLabeledNode("FOO")
 
-    executeWith(Configs.UpdateConf, "MATCH (n:FOO) SET n = { first: 'value' }")
-    executeWith(Configs.UpdateConf, "MATCH (n:FOO) SET n = { second: 'value' }")
+    executeWith(Configs.InterpretedAndSlotted, "MATCH (n:FOO) SET n = { first: 'value' }")
+    executeWith(Configs.InterpretedAndSlotted, "MATCH (n:FOO) SET n = { second: 'value' }")
 
     graph.inTx {
       node.getProperty("first", null) should equal(null)
@@ -622,8 +622,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN project.p""".stripMargin
 
     //WHEN
-    val first = executeWith(Configs.UpdateConf, query).size
-    val second = executeWith(Configs.UpdateConf, query).size
+    val first = executeWith(Configs.InterpretedAndSlotted, query).size
+    val second = executeWith(Configs.InterpretedAndSlotted, query).size
     val check = executeWith(Configs.All, "MATCH (f:Folder) RETURN f.name").toSet
 
     //THEN
@@ -657,8 +657,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     //WHEN
 
-    val first = executeWith(Configs.UpdateConf, query).size
-    val second = executeWith(Configs.UpdateConf, query).size
+    val first = executeWith(Configs.InterpretedAndSlotted, query).size
+    val second = executeWith(Configs.InterpretedAndSlotted, query).size
     val check = executeWith(Configs.All, "MATCH (f:Folder) RETURN f.name").toSet
 
     //THEN
@@ -704,7 +704,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     val query = "MATCH (a) MERGE (b) WITH * OPTIONAL MATCH (a)--(b) RETURN count(*)"
 
-    val result = executeWith(Configs.UpdateConf, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     result.columnAs[Long]("count(*)").next shouldBe 6
   }
@@ -1013,7 +1013,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |    ))
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3, query, params = Map("position" -> "2", "folderId" -> 0, "videoId" -> 0))
+    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("position" -> "2", "folderId" -> 0, "videoId" -> 0))
 
     result.toList should equal(List.empty)
   }
@@ -1035,7 +1035,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate(a, b, "T2")
 
     //When
-    val result = executeWith(Configs.All - Configs.Version2_3,
+    val result = executeWith(Configs.All,
                              "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
 
     //Then
@@ -1051,7 +1051,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     1 to 100 foreach(_ => relate(a, createNode(), "T3"))
 
     //When
-    val result = executeWith(Configs.All - Configs.Version2_3,
+    val result = executeWith(Configs.All,
                              "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
 
     //Then
@@ -1067,7 +1067,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     1 to 100 foreach(_ => relate(b, createNode(), "T3"))
 
     //When
-    val result = executeWith(Configs.All - Configs.Version2_3,
+    val result = executeWith(Configs.All,
                              "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
 
     //Then
@@ -1086,7 +1086,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     })
 
     //When
-    val result = executeWith(Configs.All - Configs.Version2_3,
+    val result = executeWith(Configs.All,
                              "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
 
     //Then

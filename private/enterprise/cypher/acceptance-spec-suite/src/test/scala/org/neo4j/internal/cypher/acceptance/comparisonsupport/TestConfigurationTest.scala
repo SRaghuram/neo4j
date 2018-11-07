@@ -54,6 +54,6 @@ class TestConfigurationTest extends CypherFunSuite {
       TestConfiguration(Versions(V3_4, V4_0),
         Planners.all,
         Runtimes.all
-      ) + Configs.Rule2_3)
+      ))
   }
 }

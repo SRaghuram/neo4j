@@ -29,7 +29,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.toList should equal(List(Map("p" -> person)))
@@ -48,7 +48,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result should be(empty)
@@ -74,7 +74,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -90,7 +90,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
         |CREATE (L:Location {name: toUpper(l.name)})
         |RETURN L.name AS NAME""".stripMargin
 
-    val result = executeWith(Configs.UpdateConf, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     result.toList should equal(List(Map("NAME" -> "LONDON")))
   }
@@ -119,7 +119,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -150,7 +150,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner), params = Map("apa" -> 43))
+                             }), params = Map("apa" -> 43))
 
     result.toSet should equal(Set(Map("a" -> a1), Map("a" -> a2)))
     result.executionPlanDescription().toString should include("prop STARTS WITH \"www\"")
@@ -176,7 +176,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     result.toSet should equal(Set(Map("a" -> a1), Map("a" -> a2)))
   }
@@ -202,7 +202,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(UniqueIndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     result.toSet should equal(Set(Map("a" -> a1), Map("a" -> a2)))
   }
@@ -234,7 +234,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.toList should equal(List(
@@ -272,7 +272,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.toList should
@@ -312,7 +312,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.toList should
@@ -354,7 +354,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.toList should equal(List(
@@ -395,7 +395,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     val values = result.columnAs[Number]("prop").toSeq
@@ -432,7 +432,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     val values = result.columnAs[Number]("prop").toSeq
@@ -469,7 +469,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     val values = result.columnAs[Number]("prop").toSeq
@@ -506,7 +506,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     val values = result.columnAs[Number]("prop").toSeq
@@ -541,7 +541,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.columnAs[String]("prop").toList should equal(Seq("", "-5", "0", "10", "14whatever"))
@@ -573,7 +573,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.columnAs[String]("prop").toSet should equal(Set("", "-5", "0", "10", "15", "14whatever"))
@@ -607,7 +607,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.columnAs[String]("prop").toList should equal(Seq(smallValue, "5", "5"))
@@ -641,7 +641,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.columnAs[String]("prop").toList should equal(Seq("15", smallValue, "5", "5"))
@@ -674,7 +674,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
 
@@ -703,7 +703,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result should be(empty)
@@ -731,7 +731,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result should be(empty)
@@ -765,7 +765,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.toList should equal(List(
@@ -804,7 +804,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.toList should equal(List(
@@ -840,7 +840,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result should be(empty)
@@ -872,7 +872,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result should be(empty)
@@ -906,7 +906,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.toList should equal(List(
@@ -943,7 +943,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result.toList should equal(List(
@@ -969,7 +969,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     result should be(empty)
@@ -1012,7 +1012,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                 planComparisonStrategy = ComparePlansWithAssertion(plan => {
                   //THEN
                   plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                }, Configs.RulePlanner))
+                }))
 
     an[IllegalArgumentException] should be thrownBy {
       executeWith(Configs.Empty, query).toList
@@ -1036,7 +1036,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     val query = "MATCH (n:Label) WHERE n.prop >= {param} RETURN n.prop AS prop"
 
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Version2_3 - Configs.Version3_1, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
@@ -1057,7 +1057,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner), params = Map("param" -> Array[Int](1, 2, 3)))
+                             }), params = Map("param" -> Array[Int](1, 2, 3)))
 
     result should be(empty)
   }
@@ -1081,7 +1081,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner), params = Map("param" -> matchingChar))
+                             }), params = Map("param" -> matchingChar))
 
     result.toSet should equal(Set(Map("prop" -> matchingChar), Map("prop" -> matchingChar.toString)))
   }
@@ -1105,7 +1105,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner), params = Map("param" -> matchingChar.toString))
+                             }), params = Map("param" -> matchingChar.toString))
 
     result.toSet should equal(Set(Map("prop" -> matchingChar), Map("prop" -> matchingChar.toString)))
   }
@@ -1119,11 +1119,11 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     val query = "MATCH (n:Label) WHERE n.prop < 10 CREATE () RETURN n.prop"
 
-    val result = executeWith(Configs.UpdateConf, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     result.toList should equal(List(Map("n.prop" -> 1), Map("n.prop" -> 5)))
   }
@@ -1199,7 +1199,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     assert(size > 20)
@@ -1216,7 +1216,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }, Configs.RulePlanner))
+                             }))
 
     // Then
     assert(size > 20)
@@ -1267,7 +1267,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                 planComparisonStrategy = ComparePlansWithAssertion(plan => {
                   //THEN
                   plan should includeSomewhere.aPlan(IndexSeekByRange.name).containingVariables("n", "cached[n.prop1]")
-                }, Configs.Version2_3 + Configs.Version3_1 + Configs.Version3_4))
+                }, Configs.Version3_4))
   }
 
   private def createTestModelBigEnoughToConsiderPickingIndexSeek: Int = {
