@@ -334,7 +334,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
   test("should handle list properties in unique index") {
     // Given
-    graph.createConstraint("L", "prop")
+    graph.createUniqueConstraint("L", "prop")
     val node1 = createLabeledNode(Map("prop" -> Array(1,2,3)), "L")
     val node2 = createLabeledNode(Map("prop" -> Array(3,2,1)), "L")
 

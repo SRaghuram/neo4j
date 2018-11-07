@@ -120,7 +120,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should not use index when unique constraint") {
     // Given
-    graph.execute("CREATE CONSTRAINT ON (n:Awesome) ASSERT (n.prop1) IS UNIQUE")
+    graph.createUniqueConstraint( "Awesome", "prop1")
 
     // When
     val query = "MATCH (n:Awesome) RETURN n.prop1"
@@ -133,7 +133,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("no support for using index when composite node key constraint") {
     // Given
-    graph.execute("CREATE CONSTRAINT ON (n:Awesome) ASSERT (n.prop1, n.prop2) IS NODE KEY")
+    graph.createNodeKeyConstraint("Awesome", "prop1", "prop2")
 
     // When
     val query = "MATCH (n:Awesome) RETURN n.prop1"

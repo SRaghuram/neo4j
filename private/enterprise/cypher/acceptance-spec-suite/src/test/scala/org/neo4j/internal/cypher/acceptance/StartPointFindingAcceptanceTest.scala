@@ -129,7 +129,7 @@ class StartPointFindingAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
 
   test("Seek index with property given in where") {
     createLabeledNode("Person")
-    graph.createConstraint("Person", "prop")
+    graph.createUniqueConstraint("Person", "prop")
 
     val node = createLabeledNode(Map("prop" -> 42), "Person")
     val result = executeWith(Configs.All, s"match (n:Person) where n.prop = 42 return n")
@@ -138,7 +138,7 @@ class StartPointFindingAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
 
   test("Seek index with property given in node pattern") {
     createLabeledNode("Person")
-    graph.createConstraint("Person", "prop")
+    graph.createUniqueConstraint("Person", "prop")
 
     val node = createLabeledNode(Map("prop" -> 42), "Person")
     val result = executeWith(Configs.All, s"match (n:Person {prop: 42}) return n")

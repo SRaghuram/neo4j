@@ -50,7 +50,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
       }
     }
 
-    graph.createConstraint("Location", "name")
+    graph.createUniqueConstraint("Location", "name")
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' RETURN l"
 
@@ -142,7 +142,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
       }
     }
 
-    graph.createConstraint("Location", "name")
+    graph.createUniqueConstraint("Location", "name")
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH {param} RETURN l"
 
@@ -165,7 +165,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
       }
     }
 
-    graph.createConstraint("Location", "name")
+    graph.createUniqueConstraint("Location", "name")
 
     val config = Configs.All - Configs.Compiled
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH {param} RETURN l"

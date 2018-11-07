@@ -50,7 +50,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
       }
     }
 
-    graph.createConstraint("Location", "name")
+    graph.createUniqueConstraint("Location", "name")
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' RETURN l"
 
@@ -140,7 +140,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
       }
     }
 
-    graph.createConstraint("Location", "name")
+    graph.createUniqueConstraint("Location", "name")
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS {param} RETURN l"
 
@@ -163,7 +163,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
       }
     }
 
-    graph.createConstraint("Location", "name")
+    graph.createUniqueConstraint("Location", "name")
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS {param} RETURN l"
 

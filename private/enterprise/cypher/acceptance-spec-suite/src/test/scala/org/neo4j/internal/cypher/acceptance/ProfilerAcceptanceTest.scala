@@ -424,7 +424,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createLabeledNode(Map("name" -> "Dummy2"), "Person")
     createLabeledNode(Map("name" -> "Dummy3"), "Person")
 
-    graph.createConstraint("Person", "name")
+    graph.createUniqueConstraint("Person", "name")
 
     //WHEN
     val result = profileWithExecute(Configs.InterpretedAndSlotted, "match (p:Person {name:'Seymour'}) return (p)-[:RELATED_TO]->()")

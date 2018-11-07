@@ -1908,7 +1908,7 @@ class EagerizationAcceptanceTest
   }
 
   test("matching property via index and writing same property should not be eager") {
-    graph.createConstraint("Book", "isbn")
+    graph.createUniqueConstraint("Book", "isbn")
     createLabeledNode(Map("isbn" -> "123"), "Book")
 
     val query = "MATCH (b :Book {isbn : '123'}) SET b.isbn = '456' RETURN count(*)"
@@ -1920,7 +1920,7 @@ class EagerizationAcceptanceTest
   }
 
   test("matching property via index and writing same property should be eager") {
-    graph.createConstraint("Book", "isbn")
+    graph.createUniqueConstraint("Book", "isbn")
     createLabeledNode(Map("isbn" -> "123"), "Book")
 
     val query = "MATCH (a), (b :Book {isbn : '123'}) SET a.isbn = '456' RETURN count(*)"

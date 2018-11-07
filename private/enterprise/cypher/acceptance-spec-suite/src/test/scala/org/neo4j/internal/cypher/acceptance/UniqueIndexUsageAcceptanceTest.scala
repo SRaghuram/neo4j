@@ -56,7 +56,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("should be able to use value coming from UNWIND for index seek") {
     // Given
-    graph.createConstraint("Prop", "id")
+    graph.createUniqueConstraint("Prop", "id")
     val n1 = createLabeledNode(Map("id" -> 1), "Prop")
     val n2 = createLabeledNode(Map("id" -> 2), "Prop")
     val n3 = createLabeledNode(Map("id" -> 3), "Prop")
@@ -82,7 +82,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     // create many nodes with label 'Place' to make sure index seek is planned
     (1 to 100).foreach(i => createLabeledNode(Map("name" -> s"Area $i"), "Place"))
 
-    graph.createConstraint("Place", "name")
+    graph.createUniqueConstraint("Place", "name")
 
     // When
     val result = executeWith(Configs.All - Configs.Compiled,
@@ -106,7 +106,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     val n3 = createLabeledNode(Map("a" -> 2, "b" -> 2), "MyNodes")
     val n4 = createLabeledNode(Map("a" -> 3, "b" -> 5), "MyNodes")
 
-    graph.createConstraint("MyNodes", "a")
+    graph.createUniqueConstraint("MyNodes", "a")
 
     val query =
       """|MATCH (m:MyNodes)
@@ -159,7 +159,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     for (i <- 1 to 10) createLabeledNode(Map("name" -> ("Smith" + i)), "Matrix")
 
-    graph.createConstraint("Crew", "name")
+    graph.createUniqueConstraint("Crew", "name")
   }
 
   private def assertNoLockingHappened(): Unit = {

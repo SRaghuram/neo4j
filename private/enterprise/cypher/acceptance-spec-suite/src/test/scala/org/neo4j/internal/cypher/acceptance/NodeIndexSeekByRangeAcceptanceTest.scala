@@ -196,7 +196,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     val a2 = createLabeledNode(Map("prop" -> "www"), "Address")
     val a3 = createLabeledNode(Map("prop" -> "ww"), "Address")
 
-    graph.createConstraint("Address", "prop")
+    graph.createUniqueConstraint("Address", "prop")
 
     val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (a:Address) WHERE a.prop STARTS WITH 'www' RETURN a",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {

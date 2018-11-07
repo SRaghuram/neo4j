@@ -154,7 +154,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("merge and update using nested parameters list") {
 
-    graph.createConstraint("Person", "name")
+    graph.createUniqueConstraint("Person", "name")
     createLabeledNode(Map("name" -> "Agneta"), "Person")
 
     val config = Configs.InterpretedAndSlotted
