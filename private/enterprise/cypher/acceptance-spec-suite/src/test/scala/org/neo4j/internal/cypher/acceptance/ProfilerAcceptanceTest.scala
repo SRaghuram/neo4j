@@ -123,15 +123,21 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       )
   }
 
-  test("PROFILE for Cypher 2.3") {
-    val result = graph.execute("cypher 2.3 profile match (n) where (n)-[:FOO]->() return *")
+  test("PROFILE for Cypher 3.4") {
+    val result = graph.execute("cypher 3.4 profile match (n) where (n)-[:FOO]->() return *")
+
+    // materialize
+    result.resultAsString()
 
     assert(result.getQueryExecutionType.requestedExecutionPlanDescription, "result not marked with planDescriptionRequested")
     result.getExecutionPlanDescription.toString should include("DB Hits")
   }
 
-  test("PROFILE for Cypher 3.1") {
-    val result = graph.execute("cypher 3.1 profile match (n) where (n)-[:FOO]->() return *")
+  test("PROFILE for Cypher 4.0") {
+    val result = graph.execute("cypher 4.0 profile match (n) where (n)-[:FOO]->() return *")
+
+    // materialize
+    result.resultAsString()
 
     assert(result.getQueryExecutionType.requestedExecutionPlanDescription, "result not marked with planDescriptionRequested")
     result.getExecutionPlanDescription.toString should include("DB Hits")

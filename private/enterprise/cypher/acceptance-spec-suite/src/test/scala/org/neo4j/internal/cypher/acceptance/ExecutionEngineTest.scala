@@ -117,53 +117,6 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     dumpToString(s"match (node)-[rel:KNOWS]->(x) where id(node) = ${n1.getId} return x, node")
   }
 
-  test("should Find Nodes By Exact Index Lookup") {
-    val n = createNode()
-    val idxName = "idxName"
-    val key = "key"
-    val value = "andres"
-    indexNode(n, idxName, key, value)
-
-    val query = s"start n=node:$idxName($key = '$value') return n"
-
-    executeWith(startConf, query).toList should equal(List(Map("n" -> n)))
-  }
-
-  test("shouldFindNodesByIndexQuery") {
-    val n = createNode()
-    val idxName = "idxName"
-    val key = "key"
-    val value = "andres"
-    indexNode(n, idxName, key, value)
-
-    val query = s"start n=node:$idxName('$key: $value') return n"
-
-    executeWith(startConf, query).toList should equal(List(Map("n" -> n)))
-  }
-
-  test("shouldFindNodesByIndexParameters") {
-    val n = createNode()
-    val idxName = "idxName"
-    val key = "key"
-    indexNode(n, idxName, key, "Andres")
-
-    val query = s"start n=node:$idxName(key = {value}) return n"
-
-    executeWith(startConf, query, params = Map("value" -> "Andres")).toList should equal(List(Map("n" -> n)))
-  }
-
-  test("shouldFindNodesByIndexWildcardQuery") {
-    val n = createNode()
-    val idxName = "idxName"
-    val key = "key"
-    val value = "andres"
-    indexNode(n, idxName, key, value)
-
-    val query = s"start n=node:$idxName('$key:andr*') return n"
-
-    executeWith(startConf, query).toList should equal(List(Map("n" -> n)))
-  }
-
   test("shouldHandleOrFilters") {
     val n1 = createNode(Map("name" -> "boy"))
     val n2 = createNode(Map("name" -> "girl"))
@@ -455,19 +408,10 @@ order by a.COL1""".format(a, b))
     result.toList should equal(List(Map("apa" -> 1)))
   }
 
-  test("shouldReturnASimplePath") {
-    val errorMessage = List("Index `missingIndex` does not exist")
-
-    // Version 3.5 silently falls back to 3.1
-    val conf = TestConfiguration(Versions(V4_0), Planners.all, Runtimes.Interpreted)
-    failWithError(conf, "start a=node:missingIndex(key='value') return a", errorMessage)
-    failWithError(conf, "start a=node:missingIndex('value') return a", errorMessage)
-  }
-
   test("createEngineWithSpecifiedParserVersion") {
     val db: GraphDatabaseService = new TestGraphDatabaseFactory()
                             .newImpermanentDatabaseBuilder(new File("target/engineWithSpecifiedParser"))
-                            .setConfig(GraphDatabaseSettings.cypher_parser_version, "2.3")
+                            .setConfig(GraphDatabaseSettings.cypher_parser_version, "3.4")
                             .newGraphDatabase()
     val engine = createEngine(db)
 
@@ -515,16 +459,6 @@ order by a.COL1""".format(a, b))
     val result = executeWith(Configs.InterpretedAndSlotted, "create (a{x:8}) with a.x as foo return sum(foo)")
 
     result.toList should equal(List(Map("sum(foo)" -> 8)))
-  }
-
-  test("with should not forget parameters") {
-    graph.inTx(graph.index().forNodes("test"))
-    val id = "bar"
-    val result = executeWith(startConf, "start n=node:test(name={id}) with count(*) as c where c=0 create (x{name:{id}}) return c, x.name as name", params = Map("id" -> id)).toList
-
-    result should have size 1
-    result.head("c").asInstanceOf[Long] should equal(0)
-    result.head("name").asInstanceOf[String] should equal(id)
   }
 
   test("with should not forget parameters2") {
@@ -821,20 +755,6 @@ order by a.COL1""".format(a, b))
     result.toList should equal(List(Map("n" -> n)))
   }
 
-  test("multiple start points should still honor predicates") {
-    val e = createNode()
-    val p1 = createNode("value"->567)
-    val p2 = createNode("value"->0)
-    relate(p1,e)
-    relate(p2,e)
-
-    indexNode(p1, "stuff", "key", "value")
-    indexNode(p2, "stuff", "key", "value")
-
-    val result = executeWith(startConf, "start p1=node:stuff('key:*'), p2=node:stuff('key:*') match (p1)--(e), (p2)--(e) where p1.value = 0 and p2.value = 0 AND p1 <> p2 return p1,p2,e")
-    result.toList shouldBe empty
-  }
-
   test("doctest gone wild") {
     // given
     executeWith(Configs.InterpretedAndSlotted, "CREATE (n:Actor {name:'Tom Hanks'})")
@@ -934,7 +854,7 @@ order by a.COL1""".format(a, b))
       writer.println("1,2,3")
       writer.println("4,5,6")
     }
-    val result = executeOfficial(s"cypher 2.3 using periodic commit load csv from '$url' as line create x return x")
+    val result = executeOfficial(s"using periodic commit load csv from '$url' as line create (x) return x")
     result.asScala should have size 2
   }
 
