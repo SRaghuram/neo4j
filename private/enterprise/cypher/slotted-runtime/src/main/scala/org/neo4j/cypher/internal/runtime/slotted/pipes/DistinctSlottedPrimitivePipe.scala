@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils
 import org.opencypher.v9_0.util.attribution.Id
 
@@ -54,7 +55,7 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
 
           if (seen.add(new Key(keys))) {
             // Found something! Set it as the next element to yield, and exit
-            val outgoing = executionContextFactory.newExecutionContext()
+            val outgoing = SlottedExecutionContext(slots)
             outgoing.setLinenumber(next.getLinenumber)
             for (setter <- setValuesInOutput) {
               setter(next, state, outgoing)

@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.opencypher.v9_0.util.attribution.Id
 
 case class CartesianProductSlottedPipe(lhs: Pipe, rhs: Pipe,
@@ -21,7 +22,7 @@ case class CartesianProductSlottedPipe(lhs: Pipe, rhs: Pipe,
       lhsCtx =>
         rhs.createResults(state) map {
           rhsCtx =>
-            val context = executionContextFactory.newExecutionContext()
+            val context = SlottedExecutionContext(slots)
             lhsCtx.copyTo(context)
             rhsCtx.copyTo(context,
               fromLongOffset = argumentSize.nLongs, fromRefOffset = argumentSize.nReferences, // Skip over arguments since they should be identical to lhsCtx

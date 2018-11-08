@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexIteratorBase, Pipe, QueryState}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 
 /**
@@ -31,15 +32,16 @@ trait IndexSlottedPipeWithValues extends Pipe {
 
     override protected def fetchNext(): ExecutionContext = {
       if (cursor.next()) {
-        val context = state.newExecutionContextWithArgumentState(executionContextFactory, argumentSize.nLongs, argumentSize.nReferences)
-        context.setLongAt(offset, cursor.nodeReference())
+        val slottedContext = SlottedExecutionContext(slots)
+        state.copyArgumentStateTo(slottedContext, argumentSize.nLongs, argumentSize.nReferences)
+        slottedContext.setLongAt(offset, cursor.nodeReference())
         var i = 0
         while (i < indexPropertyIndices.length) {
           val value = cursor.propertyValue(indexPropertyIndices(i))
-          context.setCachedPropertyAt(indexPropertySlotOffsets(i), value)
+          slottedContext.setCachedPropertyAt(indexPropertySlotOffsets(i), value)
           i += 1
         }
-        context
+        slottedContext
       } else null
     }
   }

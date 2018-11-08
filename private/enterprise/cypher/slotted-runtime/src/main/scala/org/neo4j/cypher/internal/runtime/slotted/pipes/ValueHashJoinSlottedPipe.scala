@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.NO_VALUE
 import org.opencypher.v9_0.util.attribution.Id
@@ -32,7 +33,7 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
       Some(value)
   }
 
-  override def copyDataFromRhs(newRow: ExecutionContext, rhs: ExecutionContext): Unit =
+  override def copyDataFromRhs(newRow: SlottedExecutionContext, rhs: ExecutionContext): Unit =
     rhs.copyTo(newRow,
       fromLongOffset = argumentSize.nLongs, fromRefOffset = argumentSize.nReferences,
       toLongOffset = longOffset, toRefOffset = refsOffset)

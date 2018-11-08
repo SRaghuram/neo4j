@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, ListSupport}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.values.AnyValue
 import org.opencypher.v9_0.util.attribution.Id
 
@@ -26,7 +27,7 @@ case class UnwindSlottedPipe(source: Pipe,
   private class UnwindIterator(input: Iterator[ExecutionContext], state: QueryState) extends Iterator[ExecutionContext] {
     private var currentInputRow: ExecutionContext = _
     private var unwindIterator: Iterator[AnyValue] = _
-    private var nextItem: ExecutionContext = _
+    private var nextItem: SlottedExecutionContext = _
 
     prefetch()
 
@@ -45,7 +46,8 @@ case class UnwindSlottedPipe(source: Pipe,
     private def prefetch() {
       nextItem = null
       if (unwindIterator != null && unwindIterator.hasNext) {
-        nextItem = executionContextFactory.copyWith(currentInputRow)
+        nextItem = SlottedExecutionContext(slots)
+        currentInputRow.copyTo(nextItem)
         nextItem.setRefAt(offset, unwindIterator.next())
       } else {
         if (input.hasNext) {

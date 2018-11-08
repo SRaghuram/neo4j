@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.values.storable.Values
 import org.opencypher.v9_0.util.attribution.Id
 
@@ -32,13 +33,14 @@ case class OptionalSlottedPipe(source: Pipe,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  private def setNullableSlotsToNull(context: ExecutionContext) =
+  private def setNullableSlotsToNull(context: ExecutionContext): Unit =
     setNullableSlotToNullFunctions.foreach { f =>
       f(context)
     }
 
   private def notFoundExecutionContext(state: QueryState): ExecutionContext = {
-    val context = state.newExecutionContextWithArgumentState(executionContextFactory, argumentSize.nLongs, argumentSize.nReferences)
+    val context = SlottedExecutionContext(slots)
+    state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
     setNullableSlotsToNull(context)
     context
   }
