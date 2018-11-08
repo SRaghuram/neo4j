@@ -20,7 +20,7 @@
     <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
     <properties>
-        <moduleName>org.neo4j.harness.commercial</moduleName>
+        <moduleName>com.neo4j.harness.commercial</moduleName>
     </properties>
 
     <licenses>
