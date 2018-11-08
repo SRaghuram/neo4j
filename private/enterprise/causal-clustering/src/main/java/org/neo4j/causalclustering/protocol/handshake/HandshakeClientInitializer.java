@@ -9,13 +9,13 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 
+import java.nio.channels.ClosedChannelException;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import org.neo4j.causalclustering.helper.TimeoutStrategy;
-import org.neo4j.causalclustering.messaging.ReconnectingChannel;
 import org.neo4j.causalclustering.messaging.SimpleNettyChannel;
 import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import org.neo4j.causalclustering.protocol.ProtocolInstaller;
@@ -25,6 +25,7 @@ import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.neo4j.causalclustering.protocol.handshake.ChannelAttribute.PROTOCOL_STACK;
 
 public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel>
 {
@@ -51,6 +52,31 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
         this.handshakeDelay = new ExponentialBackoffStrategy( 1, 2000, MILLISECONDS );
     }
 
+    @Override
+    protected void initChannel( SocketChannel channel )
+    {
+        HandshakeClient handshakeClient = new HandshakeClient();
+
+        /* We store the Future<ProtocolStack> in a Netty channel attr to give us access to it at a higher level. For example,
+        we need to know which protocol has been agreed upon when deciding which version of a catchup request to execute (see CatchupClient). */
+        channel.attr( PROTOCOL_STACK ).set( handshakeClient.protocol() );
+        channel.closeFuture().addListener( ignored -> handshakeClient.protocol().completeExceptionally( new ClosedChannelException().fillInStackTrace() ) );
+
+        try
+        {
+            installHandlers( channel, handshakeClient );
+        }
+        catch ( Exception e )
+        {
+            handshakeClient.protocol().completeExceptionally( e );
+        }
+
+        debugLog.info( "Scheduling handshake (and timeout) local %s remote %s", channel.localAddress(), channel.remoteAddress() );
+
+        scheduleHandshake( channel, handshakeClient, handshakeDelay.newTimeout() );
+        scheduleTimeout( channel, handshakeClient );
+    }
+
     private void installHandlers( Channel channel, HandshakeClient handshakeClient ) throws Exception
     {
         pipelineBuilderFactory.client( channel, debugLog )
@@ -62,20 +88,8 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
                 .install();
     }
 
-    @Override
-    protected void initChannel( SocketChannel channel ) throws Exception
-    {
-        HandshakeClient handshakeClient = new HandshakeClient();
-        installHandlers( channel, handshakeClient );
-
-        debugLog.info( "Scheduling handshake (and timeout) local %s remote %s", channel.localAddress(), channel.remoteAddress() );
-
-        scheduleHandshake( channel, handshakeClient, handshakeDelay.newTimeout() );
-        scheduleTimeout( channel, handshakeClient );
-    }
-
     /**
-     * schedules the handshake initiation after the connection attempt
+     * Schedules the handshake initiation after the connection attempt.
      */
     private void scheduleHandshake( SocketChannel ch, HandshakeClient handshakeClient, TimeoutStrategy.Timeout handshakeDelay )
     {
@@ -90,20 +104,14 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
                 handshakeDelay.increment();
                 scheduleHandshake( ch, handshakeClient, handshakeDelay );
             }
-            else
-            {
-                handshakeClient.failIfNotDone( "Channel closed" );
-            }
         }, handshakeDelay.getMillis(), MILLISECONDS );
     }
 
     private void scheduleTimeout( SocketChannel ch, HandshakeClient handshakeClient )
     {
-        ch.eventLoop().schedule( () -> {
-            if ( handshakeClient.failIfNotDone( "Timed out after " + timeout ) )
-            {
-                debugLog.warn( "Failed handshake after timeout" );
-            }
+        ch.eventLoop().schedule( () ->
+        {
+            handshakeClient.protocol().completeExceptionally( new TimeoutException( "Handshake timed out after " + timeout ) );
         }, timeout.toMillis(), TimeUnit.MILLISECONDS );
     }
 
@@ -112,9 +120,8 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
         debugLog.info( "Initiating handshake local %s remote %s", channel.localAddress(), channel.remoteAddress() );
 
         SimpleNettyChannel channelWrapper = new SimpleNettyChannel( channel, debugLog );
-        CompletableFuture<ProtocolStack> handshake = handshakeClient.initiate( channelWrapper, applicationProtocolRepository, modifierProtocolRepository );
-
-        handshake.whenComplete( ( protocolStack, failure ) -> onHandshakeComplete( protocolStack, channel, failure ) );
+        handshakeClient.initiate( channelWrapper, applicationProtocolRepository, modifierProtocolRepository );
+        handshakeClient.protocol().whenComplete( ( protocolStack, failure ) -> onHandshakeComplete( protocolStack, channel, failure ) );
     }
 
     private void onHandshakeComplete( ProtocolStack protocolStack, Channel channel, Throwable failure )
@@ -133,7 +140,6 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
 
                 debugLog.info( "Installing " + protocolStack );
                 protocolInstaller.installerFor( protocolStack ).install( channel );
-                channel.attr( ReconnectingChannel.PROTOCOL_STACK_KEY ).set( protocolStack );
 
                 channel.pipeline().fireUserEventTriggered( GateEvent.getSuccess() );
                 channel.flush();

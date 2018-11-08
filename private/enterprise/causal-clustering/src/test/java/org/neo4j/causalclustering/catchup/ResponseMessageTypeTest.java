@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.causalclustering.catchup.ResponseMessageType.CORE_SNAPSHOT;
+import static org.neo4j.causalclustering.catchup.ResponseMessageType.ERROR;
 import static org.neo4j.causalclustering.catchup.ResponseMessageType.FILE;
 import static org.neo4j.causalclustering.catchup.ResponseMessageType.INDEX_SNAPSHOT_RESPONSE;
 import static org.neo4j.causalclustering.catchup.ResponseMessageType.PREPARE_STORE_COPY_RESPONSE;
@@ -28,17 +29,17 @@ public class ResponseMessageTypeTest
     {
         ResponseMessageType[] givenStates = ResponseMessageType.values();
 
-        ResponseMessageType[] exepctedStates =
+        ResponseMessageType[] expectedStates =
                 new ResponseMessageType[]{TX, STORE_ID, FILE, STORE_COPY_FINISHED, CORE_SNAPSHOT, TX_STREAM_FINISHED, PREPARE_STORE_COPY_RESPONSE,
-                        INDEX_SNAPSHOT_RESPONSE, UNKNOWN};
+                        INDEX_SNAPSHOT_RESPONSE, ERROR, UNKNOWN};
 
-        byte[] expectedValues = new byte[]{1, 2, 3, 4, 5, 6, 7, 8, (byte) 200};
+        byte[] expectedValues = new byte[]{1, 2, 3, 4, 5, 6, 7, 8, (byte) 199, (byte) 200};
 
-        assertEquals( exepctedStates.length, givenStates.length );
+        assertEquals( expectedStates.length, givenStates.length );
         assertEquals( givenStates.length, expectedValues.length );
         for ( int i = 0; i < givenStates.length; i++ )
         {
-            assertEquals( givenStates[i].messageType(), exepctedStates[i].messageType() );
+            assertEquals( givenStates[i].messageType(), expectedStates[i].messageType() );
             assertEquals( givenStates[i].messageType(), expectedValues[i] );
         }
     }

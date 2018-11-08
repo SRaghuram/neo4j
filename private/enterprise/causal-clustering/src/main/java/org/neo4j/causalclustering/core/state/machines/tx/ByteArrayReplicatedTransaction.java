@@ -12,13 +12,17 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.OptionalLong;
 
+import org.neo4j.causalclustering.messaging.marshalling.ByteArrayTransactionChunker;
 import org.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
-import org.neo4j.storageengine.api.WritableChannel;
 
-public class ByteArrayReplicatedTransaction implements ReplicatedTransaction
+/**
+ * A transaction represented as an immutable byte array.
+ */
+public class ByteArrayReplicatedTransaction extends ReplicatedTransaction
 {
     private final byte[] txBytes;
+    private final String databaseName;
 
     @Override
     public OptionalLong size()
@@ -27,17 +31,19 @@ public class ByteArrayReplicatedTransaction implements ReplicatedTransaction
     }
 
     @Override
-    public void handle( ReplicatedContentHandler contentHandler ) throws IOException
+    public void dispatch( ReplicatedContentHandler contentHandler ) throws IOException
     {
         contentHandler.handle( this );
     }
 
-    ByteArrayReplicatedTransaction( byte[] txBytes )
+    ByteArrayReplicatedTransaction( byte[] txBytes, String databaseName )
     {
+        super( databaseName );
         this.txBytes = txBytes;
+        this.databaseName = databaseName;
     }
 
-    byte[] getTxBytes()
+    public byte[] getTxBytes()
     {
         return txBytes;
     }
@@ -66,18 +72,18 @@ public class ByteArrayReplicatedTransaction implements ReplicatedTransaction
     @Override
     public ChunkedInput<ByteBuf> encode()
     {
-        return ReplicatedTransactionSerializer.encode( this );
-    }
-
-    @Override
-    public void marshal( WritableChannel channel ) throws IOException
-    {
-        ReplicatedTransactionSerializer.marshal( channel, this );
+        return new ByteArrayTransactionChunker( this );
     }
 
     @Override
     public TransactionRepresentation extract( TransactionRepresentationExtractor extractor )
     {
         return extractor.extract( this );
+    }
+
+    @Override
+    public String databaseName()
+    {
+        return databaseName;
     }
 }

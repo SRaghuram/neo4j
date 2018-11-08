@@ -10,9 +10,12 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
+import org.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequestMarshalV1;
 import org.neo4j.causalclustering.identity.StoreId;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class GetIndexFilesRequestMarshalTest
 {
@@ -21,7 +24,8 @@ public class GetIndexFilesRequestMarshalTest
     @Before
     public void setup()
     {
-        embeddedChannel = new EmbeddedChannel( new GetIndexFilesRequest.Encoder(), new GetIndexFilesRequest.Decoder() );
+        embeddedChannel = new EmbeddedChannel( new GetIndexFilesRequestMarshalV1.Encoder(),
+                new GetIndexFilesRequestMarshalV1.Decoder( DEFAULT_DATABASE_NAME ) );
     }
 
     private static final StoreId expectedStore = new StoreId( 1, 2, 3, 4 );
@@ -32,7 +36,8 @@ public class GetIndexFilesRequestMarshalTest
     public void getsTransmitted()
     {
         // given
-        GetIndexFilesRequest expectedIndexSnapshotRequest = new GetIndexFilesRequest( expectedStore, exepctedIndexId, expectedLastTransaction );
+        GetIndexFilesRequest expectedIndexSnapshotRequest = new GetIndexFilesRequest( expectedStore, exepctedIndexId,
+                expectedLastTransaction, DEFAULT_DATABASE_NAME );
 
         // when
         sendToChannel( expectedIndexSnapshotRequest, embeddedChannel );

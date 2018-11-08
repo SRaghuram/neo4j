@@ -9,8 +9,8 @@ import java.io.File;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 
 import static org.neo4j.causalclustering.BackupUtil.createBackupFromCore;
 

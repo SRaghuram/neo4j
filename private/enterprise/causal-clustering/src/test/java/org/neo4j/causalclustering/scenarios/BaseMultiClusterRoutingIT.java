@@ -27,8 +27,8 @@ import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.routing.Endpoint;
 import org.neo4j.causalclustering.routing.multi_cluster.MultiClusterRoutingResult;
 import org.neo4j.causalclustering.routing.multi_cluster.procedure.MultiClusterRoutingResultFormat;

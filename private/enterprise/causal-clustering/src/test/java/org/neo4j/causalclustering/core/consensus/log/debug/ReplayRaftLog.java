@@ -14,7 +14,7 @@ import org.neo4j.causalclustering.core.consensus.log.segmented.SegmentedRaftLog;
 import org.neo4j.causalclustering.core.replication.ReplicatedContent;
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionFactory;
-import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
+import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
 import org.neo4j.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
@@ -26,6 +26,7 @@ import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_reader_pool_size;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
 import static org.neo4j.causalclustering.core.consensus.log.RaftLogHelper.readLogEntry;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
@@ -40,10 +41,9 @@ public class ReplayRaftLog
         Args arg = Args.parse( args );
 
         String from = arg.get( "from" );
-        System.out.println("From is " + from);
+        System.out.println( "From is " + from );
         String to = arg.get( "to" );
-        System.out.println("to is " + to);
-
+        System.out.println( "To is " + to );
         File logDirectory = new File( from );
         System.out.println( "logDirectory = " + logDirectory );
         Config config = Config.defaults( stringMap() );
@@ -53,8 +53,10 @@ public class ReplayRaftLog
             LogProvider logProvider = getInstance();
             CoreLogPruningStrategy pruningStrategy =
                     new CoreLogPruningStrategyFactory( config.get( raft_log_pruning_strategy ), logProvider ).newInstance();
+
+            // TODO: Marshal map and database name.
             SegmentedRaftLog log = new SegmentedRaftLog( fileSystem, logDirectory, config.get( raft_log_rotation_size ),
-                    CoreReplicatedContentMarshal.marshaller(), logProvider, config.get( raft_log_reader_pool_size ),
+                    ignored -> CoreReplicatedContentMarshalFactory.marshalV1( DEFAULT_DATABASE_NAME ), logProvider, config.get( raft_log_reader_pool_size ),
                     Clocks.systemClock(), new ThreadPoolJobScheduler(), pruningStrategy );
 
             long totalCommittedEntries = log.appendIndex(); // Not really, but we need to have a way to pass in the commit index

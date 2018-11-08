@@ -61,7 +61,7 @@ public class ReplicatedInteger implements ReplicatedContent
     }
 
     @Override
-    public void handle( ReplicatedContentHandler contentHandler )
+    public void dispatch( ReplicatedContentHandler contentHandler )
     {
         throw new UnsupportedOperationException( "No handler for this " + this.getClass() );
     }

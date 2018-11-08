@@ -8,7 +8,7 @@ package org.neo4j.causalclustering.catchup.storecopy;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import org.neo4j.causalclustering.catchup.CatchUpResponseHandler;
+import org.neo4j.causalclustering.catchup.CatchupResponseHandler;
 import org.neo4j.causalclustering.catchup.CatchupClientProtocol;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -18,10 +18,10 @@ import static org.neo4j.causalclustering.catchup.CatchupClientProtocol.State;
 public class FileHeaderHandler extends SimpleChannelInboundHandler<FileHeader>
 {
     private final CatchupClientProtocol protocol;
-    private final CatchUpResponseHandler handler;
+    private final CatchupResponseHandler handler;
     private final Log log;
 
-    public FileHeaderHandler( CatchupClientProtocol protocol, CatchUpResponseHandler handler, LogProvider logProvider )
+    public FileHeaderHandler( CatchupClientProtocol protocol, CatchupResponseHandler handler, LogProvider logProvider )
     {
         this.protocol = protocol;
         this.handler = handler;

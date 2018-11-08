@@ -6,9 +6,9 @@
 package org.neo4j.causalclustering.core.state.snapshot;
 
 import org.neo4j.causalclustering.catchup.RequestMessageType;
-import org.neo4j.causalclustering.messaging.CatchUpRequest;
+import org.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
-public class CoreSnapshotRequest implements CatchUpRequest
+public class CoreSnapshotRequest implements CatchupProtocolMessage
 {
     @Override
     public RequestMessageType messageType()

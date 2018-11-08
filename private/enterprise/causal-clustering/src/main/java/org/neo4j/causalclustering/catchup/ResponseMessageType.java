@@ -17,6 +17,7 @@ public enum ResponseMessageType
     TX_STREAM_FINISHED( (byte) 6 ),
     PREPARE_STORE_COPY_RESPONSE( (byte) 7 ),
     INDEX_SNAPSHOT_RESPONSE( (byte) 8 ),
+    ERROR( (byte) 199 ),
     UNKNOWN( (byte) 200 );
 
     private byte messageType;

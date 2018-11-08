@@ -10,14 +10,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.catchup.storecopy.LocalDatabase;
-import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import org.neo4j.causalclustering.common.DatabaseService;
+import org.neo4j.causalclustering.common.StubLocalDatabaseService;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.core.consensus.LeaderLocator;
 import org.neo4j.causalclustering.core.consensus.RaftMessages;
@@ -29,15 +27,10 @@ import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
 import org.neo4j.causalclustering.helper.TimeoutStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.messaging.Message;
 import org.neo4j.causalclustering.messaging.Outbound;
-import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
-import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
-import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
@@ -56,7 +49,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -70,17 +62,15 @@ class RaftReplicatorTest
     private GlobalSession session = new GlobalSession( UUID.randomUUID(), myself );
     private LocalSessionPool sessionPool = new LocalSessionPool( session );
     private TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
-    private DatabaseAvailabilityGuard databaseAvailabilityGuard;
-    private DatabaseHealth databaseHealth;
-    private LocalDatabase localDatabase;
+    private DatabaseAvailabilityGuard availabilityGuard;
+    private DatabaseService databaseService;
 
     @BeforeEach
-    void setUp() throws IOException
+    void setUp() throws Throwable
     {
-        databaseAvailabilityGuard = new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, Clocks.systemClock(), NullLog.getInstance() );
-        databaseHealth = new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), NullLog.getInstance() );
-        localDatabase = StubLocalDatabase.create( () -> databaseHealth, databaseAvailabilityGuard );
-        localDatabase.start();
+        availabilityGuard = new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, Clocks.systemClock(), NullLog.getInstance() );
+        databaseService = new StubLocalDatabaseService();
+        databaseService.start();
     }
 
     @Test
@@ -195,7 +185,7 @@ class RaftReplicatorTest
         // when
         replicatingThread.start();
 
-        databaseAvailabilityGuard.shutdown();
+        availabilityGuard.shutdown();
         replicatingThread.join();
         assertThat( replicatingThread.getReplicationException().getCause(), Matchers.instanceOf( UnavailableException.class ) );
 
@@ -220,7 +210,7 @@ class RaftReplicatorTest
         // when
         replicatingThread.start();
 
-        databaseAvailabilityGuard.require( () -> "Database not unavailable" );
+        availabilityGuard.require( () -> "Database not unavailable" );
         replicatingThread.join();
         assertThat( replicatingThread.getReplicationException().getCause(), Matchers.instanceOf( UnavailableException.class ) );
     }
@@ -240,7 +230,7 @@ class RaftReplicatorTest
         // when
         replicatingThread.start();
 
-        databaseHealth.panic( new IllegalStateException( "PANIC" ) );
+        databaseService.panic( new IllegalStateException( "PANIC" ) );
         replicatingThread.join();
         Assertions.assertNotNull( replicatingThread.getReplicationException() );
     }
@@ -308,8 +298,8 @@ class RaftReplicatorTest
 
     private RaftReplicator getReplicator( CapturingOutbound<RaftMessages.RaftMessage> outbound, ProgressTracker progressTracker, Monitors monitors )
     {
-        return new RaftReplicator( leaderLocator, myself, outbound, sessionPool, progressTracker, noWaitTimeoutStrategy, 10, databaseAvailabilityGuard,
-                NullLogProvider.getInstance(), localDatabase, monitors );
+        return new RaftReplicator( leaderLocator, myself, outbound, sessionPool, progressTracker, noWaitTimeoutStrategy, 10, availabilityGuard,
+                NullLogProvider.getInstance(), databaseService, monitors );
     }
 
     private ReplicatingThread replicatingThread( RaftReplicator replicator, ReplicatedInteger content, boolean trackResult )
@@ -434,23 +424,5 @@ class RaftReplicatorTest
             this.count++;
         }
 
-    }
-
-    private static class StubLocalDatabase extends LocalDatabase
-    {
-        static LocalDatabase create( Supplier<DatabaseHealth> databaseHealthSupplier, AvailabilityGuard availabilityGuard ) throws IOException
-        {
-            StoreFiles storeFiles = mock( StoreFiles.class );
-            when( storeFiles.readStoreId( any() ) ).thenReturn( new StoreId( 1, 2, 3, 4 ) );
-
-            DataSourceManager dataSourceManager = mock( DataSourceManager.class );
-            return new StubLocalDatabase( storeFiles, dataSourceManager, databaseHealthSupplier, availabilityGuard );
-        }
-
-        StubLocalDatabase( StoreFiles storeFiles, DataSourceManager dataSourceManager, Supplier<DatabaseHealth> databaseHealthSupplier,
-                AvailabilityGuard availabilityGuard )
-        {
-            super( null, storeFiles, null, dataSourceManager, databaseHealthSupplier, availabilityGuard, NullLogProvider.getInstance() );
-        }
     }
 }

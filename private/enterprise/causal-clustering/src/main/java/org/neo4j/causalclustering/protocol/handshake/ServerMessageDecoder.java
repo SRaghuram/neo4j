@@ -59,8 +59,7 @@ public class ServerMessageDecoder extends ByteToMessageDecoder
             return;
         }
         default:
-            // TODO
-            return;
+            throw new IllegalStateException();
         }
     }
 

@@ -6,12 +6,17 @@
 package org.neo4j.causalclustering.core.state.snapshot;
 
 import org.junit.Test;
+import org.mockito.InOrder;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.state.CommandApplicationProcess;
+import org.neo4j.causalclustering.core.state.CoreSnapshotService;
+import org.neo4j.causalclustering.helper.Suspendable;
 import org.neo4j.function.Predicates;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.internal.DatabaseHealth;
@@ -22,38 +27,57 @@ import org.neo4j.logging.NullLogProvider;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
+import static org.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
 import static org.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.OPERATION_NAME;
 
 public class PersistentSnapshotDownloaderTest
 {
     private final AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "localhost", 1234 );
-    private final CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress(
-            fromAddress );
-    private final DatabaseHealth dbHealth = mock( DatabaseHealth.class );
+    private final CatchupAddressProvider catchupAddressProvider = fromSingleAddress( fromAddress );
+    private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
+    private final NoPauseTimeoutStrategy backoffStrategy = new NoPauseTimeoutStrategy();
+    private final CoreSnapshot snapshot = mock( CoreSnapshot.class );
+
+    private CoreDownloader coreDownloader = mock( CoreDownloader.class );
+    private CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
+
+    private final DatabaseService databaseService = mock( DatabaseService.class );
+    private final Suspendable auxiliaryServices = mock( Suspendable.class );
+
+    private PersistentSnapshotDownloader createDownloader()
+    {
+        return new PersistentSnapshotDownloader( catchupAddressProvider, applicationProcess, auxiliaryServices, databaseService,
+                coreDownloader, snapshotService, mock( Log.class ), backoffStrategy, () -> mock( DatabaseHealth.class ), new Monitors() );
+    }
 
     @Test
-    public void shouldPauseAndResumeApplicationProcessIfDownloadIsSuccessful() throws Exception
+    public void shouldHaltServicesDuringDownload() throws Throwable
     {
         // given
-        CoreStateDownloader coreStateDownloader = mock( CoreStateDownloader.class );
-        when( coreStateDownloader.downloadSnapshot( any() ) ).thenReturn( true );
-        final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
-        final Log log = mock( Log.class );
-        PersistentSnapshotDownloader persistentSnapshotDownloader = new PersistentSnapshotDownloader(
-                catchupAddressProvider, applicationProcess, coreStateDownloader, log, new NoTimeout(), () -> dbHealth,
-                new Monitors() );
+        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.of( snapshot ) );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
         persistentSnapshotDownloader.run();
 
         // then
-        verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
-        verify( coreStateDownloader, times( 1 ) ).downloadSnapshot( any() );
+        InOrder inOrder = inOrder( applicationProcess, databaseService, auxiliaryServices, coreDownloader );
+
+        inOrder.verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
+        inOrder.verify( auxiliaryServices, times( 1 ) ).disable();
+        inOrder.verify( databaseService, times( 1 ) ).stopForStoreCopy();
+
+        inOrder.verify( coreDownloader, times( 1 ) ).downloadSnapshotAndStores( any() );
+
+        inOrder.verify( databaseService, times( 1 ) ).start();
+        inOrder.verify( auxiliaryServices, times( 1 ) ).enable();
+        inOrder.verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
+
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
     }
 
@@ -61,20 +85,13 @@ public class PersistentSnapshotDownloaderTest
     public void shouldResumeCommandApplicationProcessIfInterrupted() throws Exception
     {
         // given
-        CoreStateDownloader coreStateDownloader = mock( CoreStateDownloader.class );
-        when( coreStateDownloader.downloadSnapshot( any() ) ).thenReturn( false );
-        final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
-
-        final Log log = mock( Log.class );
-        NoTimeout timeout = new NoTimeout();
-        PersistentSnapshotDownloader persistentSnapshotDownloader = new PersistentSnapshotDownloader(
-                catchupAddressProvider, applicationProcess, coreStateDownloader, log, timeout, () -> dbHealth,
-                new Monitors() );
+        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.empty() );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
         Thread thread = new Thread( persistentSnapshotDownloader );
         thread.start();
-        awaitOneIteration( timeout );
+        awaitOneIteration( backoffStrategy );
         thread.interrupt();
         thread.join();
 
@@ -88,20 +105,13 @@ public class PersistentSnapshotDownloaderTest
     public void shouldResumeCommandApplicationProcessIfDownloaderIsStopped() throws Exception
     {
         // given
-        CoreStateDownloader coreStateDownloader = mock( CoreStateDownloader.class );
-        when( coreStateDownloader.downloadSnapshot( any() ) ).thenReturn( false );
-
-        final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
-
-        final Log log = mock( Log.class );
-        NoTimeout timeout = new NoTimeout();
-        PersistentSnapshotDownloader persistentSnapshotDownloader = new PersistentSnapshotDownloader( null,
-                applicationProcess, coreStateDownloader, log, timeout, () -> dbHealth, new Monitors() );
+        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.empty() );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
         Thread thread = new Thread( persistentSnapshotDownloader );
         thread.start();
-        awaitOneIteration( timeout );
+        awaitOneIteration( backoffStrategy );
         persistentSnapshotDownloader.stop();
         thread.join();
 
@@ -115,14 +125,8 @@ public class PersistentSnapshotDownloaderTest
     public void shouldEventuallySucceed()
     {
         // given
-        CoreStateDownloader coreStateDownloader = new EventuallySuccessfulDownloader( 3 );
-
-        final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
-        final Log log = mock( Log.class );
-        NoTimeout timeout = new NoTimeout();
-        PersistentSnapshotDownloader persistentSnapshotDownloader = new PersistentSnapshotDownloader(
-                catchupAddressProvider, applicationProcess, coreStateDownloader, log, timeout, () -> dbHealth,
-                new Monitors() );
+        coreDownloader = new EventuallySuccessfulDownloader( 3 );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
         persistentSnapshotDownloader.run();
@@ -130,7 +134,7 @@ public class PersistentSnapshotDownloaderTest
         // then
         verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
-        assertEquals( 3, timeout.currentCount() );
+        assertEquals( 3, backoffStrategy.invocationCount() );
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
     }
 
@@ -138,21 +142,16 @@ public class PersistentSnapshotDownloaderTest
     public void shouldNotStartDownloadIfAlreadyCompleted() throws Exception
     {
         // given
-        CoreStateDownloader coreStateDownloader = mock( CoreStateDownloader.class );
-        when( coreStateDownloader.downloadSnapshot( any() ) ).thenReturn( true );
-        final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
+        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.of( snapshot ) );
 
-        final Log log = mock( Log.class );
-        PersistentSnapshotDownloader persistentSnapshotDownloader = new PersistentSnapshotDownloader(
-                catchupAddressProvider, applicationProcess, coreStateDownloader, log, new NoTimeout(), () -> dbHealth,
-                new Monitors() );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
         persistentSnapshotDownloader.run();
         persistentSnapshotDownloader.run();
 
         // then
-        verify( coreStateDownloader, times( 1 ) ).downloadSnapshot( catchupAddressProvider );
+        verify( coreDownloader, times( 1 ) ).downloadSnapshotAndStores( catchupAddressProvider );
         verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
     }
@@ -161,21 +160,13 @@ public class PersistentSnapshotDownloaderTest
     public void shouldNotStartIfCurrentlyRunning() throws Exception
     {
         // given
-        CoreStateDownloader coreStateDownloader = mock( CoreStateDownloader.class );
-        final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
-        when( coreStateDownloader.downloadSnapshot( any() ) ).thenReturn( false );
-
-        final Log log = mock( Log.class );
-        NoTimeout timeout = new NoTimeout();
-        PersistentSnapshotDownloader persistentSnapshotDownloader = new PersistentSnapshotDownloader(
-                catchupAddressProvider, applicationProcess, coreStateDownloader, log, timeout, () -> dbHealth,
-                new Monitors() );
-
+        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.empty() );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
         Thread thread = new Thread( persistentSnapshotDownloader );
 
         // when
         thread.start();
-        awaitOneIteration( timeout );
+        awaitOneIteration( backoffStrategy );
         persistentSnapshotDownloader.run();
         persistentSnapshotDownloader.stop();
         thread.join();
@@ -185,25 +176,25 @@ public class PersistentSnapshotDownloaderTest
         verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
     }
 
-    private void awaitOneIteration( NoTimeout timeout ) throws TimeoutException
+    private void awaitOneIteration( NoPauseTimeoutStrategy backoffStrategy ) throws TimeoutException
     {
-        Predicates.await( () -> timeout.currentCount() > 0, 2, TimeUnit.SECONDS );
+        Predicates.await( () -> backoffStrategy.invocationCount() > 0, 2, TimeUnit.SECONDS );
     }
 
-    private class EventuallySuccessfulDownloader extends CoreStateDownloader
+    private class EventuallySuccessfulDownloader extends CoreDownloader
     {
         private int after;
 
         private EventuallySuccessfulDownloader( int after )
         {
-            super( null, null, null, null, NullLogProvider.getInstance(), null, null, null, null );
+            super( null, null, null, NullLogProvider.getInstance() );
             this.after = after;
         }
 
         @Override
-        boolean downloadSnapshot( CatchupAddressProvider addressProvider )
+        Optional<CoreSnapshot> downloadSnapshotAndStores( CatchupAddressProvider addressProvider )
         {
-            return after-- <= 0;
+            return after-- <= 0 ? Optional.of( snapshot ) : Optional.empty();
         }
     }
 }

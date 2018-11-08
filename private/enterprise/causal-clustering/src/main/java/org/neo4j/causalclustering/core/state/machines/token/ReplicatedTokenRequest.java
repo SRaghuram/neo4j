@@ -19,12 +19,14 @@ public class ReplicatedTokenRequest implements CoreReplicatedContent
     private final TokenType type;
     private final String tokenName;
     private final byte[] commandBytes;
+    private final String databaseName;
 
-    public ReplicatedTokenRequest( TokenType type, String tokenName, byte[] commandBytes )
+    public ReplicatedTokenRequest( String databaseName, TokenType type, String tokenName, byte[] commandBytes )
     {
         this.type = type;
         this.tokenName = tokenName;
         this.commandBytes = commandBytes;
+        this.databaseName = databaseName;
     }
 
     public TokenType type()
@@ -91,8 +93,13 @@ public class ReplicatedTokenRequest implements CoreReplicatedContent
     }
 
     @Override
-    public void handle( ReplicatedContentHandler contentHandler ) throws IOException
+    public void dispatch( ReplicatedContentHandler contentHandler ) throws IOException
     {
         contentHandler.handle( this );
+    }
+
+    public String databaseName()
+    {
+        return databaseName;
     }
 }

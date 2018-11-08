@@ -13,5 +13,12 @@ public interface TimeoutStrategy
     {
         long getMillis();
         void increment();
+
+        default long getAndIncrement()
+        {
+            long current = getMillis();
+            increment();
+            return current;
+        }
     }
 }

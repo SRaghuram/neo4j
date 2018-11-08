@@ -36,7 +36,7 @@ public class FileNamesTest
         // when asking for a given version...
         for ( int i = 0; i < 100; i++ )
         {
-            File forVersion = fileNames.getForVersion( i );
+            File forVersion = fileNames.getForSegment( i );
             // ...then the expected thing is returned
             assertEquals( forVersion, new File( base, FileNames.BASE_FILE_NAME + i ) );
         }
@@ -57,7 +57,7 @@ public class FileNamesTest
         // the files are added in reverse order, so we can verify that FileNames orders based on version
         for ( int i = upper; i >= lower; i-- )
         {
-            filesPresent.add( fileNames.getForVersion( i ) );
+            filesPresent.add( fileNames.getForSegment( i ) );
         }
         when( fsa.listFiles( base ) ).thenReturn( filesPresent.toArray( new File[]{} ) );
 
@@ -72,7 +72,7 @@ public class FileNamesTest
         for ( Map.Entry<Long, File> longFileEntry : allFiles.entrySet() )
         {
             assertEquals( currentVersion, longFileEntry.getKey().longValue() );
-            assertEquals( fileNames.getForVersion( currentVersion ), longFileEntry.getValue() );
+            assertEquals( fileNames.getForSegment( currentVersion ), longFileEntry.getValue() );
             currentVersion++;
         }
     }
@@ -88,10 +88,10 @@ public class FileNamesTest
         Log log = mock( Log.class );
         List<File> filesPresent = new LinkedList<>();
 
-        filesPresent.add( fileNames.getForVersion( 0 ) ); // should be included
-        filesPresent.add( fileNames.getForVersion( 1 ) ); // should be included
-        filesPresent.add( fileNames.getForVersion( 10 ) ); // should be included
-        filesPresent.add( fileNames.getForVersion( 11 ) ); // should be included
+        filesPresent.add( fileNames.getForSegment( 0 ) ); // should be included
+        filesPresent.add( fileNames.getForSegment( 1 ) ); // should be included
+        filesPresent.add( fileNames.getForSegment( 10 ) ); // should be included
+        filesPresent.add( fileNames.getForSegment( 11 ) ); // should be included
         filesPresent.add( new File( base, FileNames.BASE_FILE_NAME + "01" ) ); // should be ignored
         filesPresent.add( new File( base, FileNames.BASE_FILE_NAME + "001" ) ); // should be ignored
         filesPresent.add( new File( base, FileNames.BASE_FILE_NAME ) ); // should be ignored
@@ -109,10 +109,10 @@ public class FileNamesTest
         // Then
         // only valid things should be returned
         assertEquals( 4, allFiles.size() );
-        assertEquals( allFiles.get( 0L ), fileNames.getForVersion( 0 ) );
-        assertEquals( allFiles.get( 1L ), fileNames.getForVersion( 1 ) );
-        assertEquals( allFiles.get( 10L ), fileNames.getForVersion( 10 ) );
-        assertEquals( allFiles.get( 11L ), fileNames.getForVersion( 11 ) );
+        assertEquals( allFiles.get( 0L ), fileNames.getForSegment( 0 ) );
+        assertEquals( allFiles.get( 1L ), fileNames.getForSegment( 1 ) );
+        assertEquals( allFiles.get( 10L ), fileNames.getForSegment( 10 ) );
+        assertEquals( allFiles.get( 11L ), fileNames.getForSegment( 11 ) );
 
         // and the invalid ones should be logged
         verify( log, times( 7 ) ).warn( anyString() );

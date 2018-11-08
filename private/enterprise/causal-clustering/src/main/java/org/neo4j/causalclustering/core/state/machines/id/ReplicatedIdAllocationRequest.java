@@ -25,13 +25,15 @@ public class ReplicatedIdAllocationRequest implements CoreReplicatedContent
     private final IdType idType;
     private final long idRangeStart;
     private final int idRangeLength;
+    private final String databaseName;
 
-    public ReplicatedIdAllocationRequest( MemberId owner, IdType idType, long idRangeStart, int idRangeLength )
+    public ReplicatedIdAllocationRequest( MemberId owner, IdType idType, long idRangeStart, int idRangeLength, String databaseName )
     {
         this.owner = owner;
         this.idType = idType;
         this.idRangeStart = idRangeStart;
         this.idRangeLength = idRangeLength;
+        this.databaseName = databaseName;
     }
 
     @Override
@@ -73,6 +75,12 @@ public class ReplicatedIdAllocationRequest implements CoreReplicatedContent
         return result;
     }
 
+    @Override
+    public String databaseName()
+    {
+        return databaseName;
+    }
+
     public MemberId owner()
     {
         return owner;
@@ -107,7 +115,7 @@ public class ReplicatedIdAllocationRequest implements CoreReplicatedContent
     }
 
     @Override
-    public void handle( ReplicatedContentHandler contentHandler ) throws IOException
+    public void dispatch( ReplicatedContentHandler contentHandler ) throws IOException
     {
         contentHandler.handle( this );
     }

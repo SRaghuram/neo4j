@@ -17,8 +17,8 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.test.DbRepresentation;
@@ -31,7 +31,7 @@ import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
-import static org.neo4j.causalclustering.discovery.Cluster.dataOnMemberEventuallyLooksLike;
+import static org.neo4j.causalclustering.common.Cluster.dataOnMemberEventuallyLooksLike;
 import static org.neo4j.causalclustering.scenarios.SampleData.createData;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 

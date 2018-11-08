@@ -8,7 +8,6 @@ package org.neo4j.management.impl;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
@@ -16,6 +15,7 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageReader;
 
@@ -50,11 +50,11 @@ public class IndexSamplingManagerBeanTest
         when( tokenHolders.propertyKeyTokens().getIdByName( EXISTING_PROPERTY ) ).thenReturn( PROPERTY_ID );
         when( tokenHolders.propertyKeyTokens().getIdByName( NON_EXISTING_PROPERTY ) ).thenReturn( -1 );
         when( tokenHolders.labelTokens().getIdByName( NON_EXISTING_LABEL ) ).thenReturn( NO_TOKEN );
-        DependencyResolver resolver = mock( DependencyResolver.class );
-        when( resolver.resolveDependency( IndexingService.class ) ).thenReturn( indexingService );
-        when( resolver.resolveDependency( StorageEngine.class ) ).thenReturn( storageEngine );
-        when( resolver.resolveDependency( TokenHolders.class ) ).thenReturn( tokenHolders );
-        when( dataSource.getDependencyResolver() ).thenReturn( resolver );
+        Dependencies dependencies = mock( Dependencies.class );
+        when( dependencies.resolveDependency( IndexingService.class ) ).thenReturn( indexingService );
+        when( dependencies.resolveDependency( StorageEngine.class ) ).thenReturn( storageEngine );
+        when( dependencies.resolveDependency( TokenHolders.class ) ).thenReturn( tokenHolders );
+        when( dataSource.getDependencyResolver() ).thenReturn( dependencies );
     }
 
     @Test

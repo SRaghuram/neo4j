@@ -17,8 +17,9 @@ import java.util.function.Supplier;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
+import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
+import org.neo4j.causalclustering.helpers.FakeJobScheduler;
 import org.neo4j.causalclustering.identity.StoreId;
-import org.neo4j.causalclustering.messaging.StoreCopyRequest;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -31,9 +32,7 @@ import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.Group;
-import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.scheduler.JobSchedulerAdapter;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
 import static org.junit.Assert.assertEquals;
@@ -41,7 +40,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
+//TODO: Update tests with database name related cases.
 public class StoreCopyRequestHandlerTest
 {
     private static final StoreId STORE_ID_MISMATCHING = new StoreId( 1, 1, 1, 1 );
@@ -52,7 +53,7 @@ public class StoreCopyRequestHandlerTest
     private final FakeCheckPointer checkPointer = new FakeCheckPointer();
     private EmbeddedChannel embeddedChannel;
     private CatchupServerProtocol catchupServerProtocol;
-    private JobScheduler jobScheduler = new FakeSingleThreadedJobScheduler();
+    private JobScheduler jobScheduler = new FakeJobScheduler();
     private CheckPointerService checkPointerService =
             new CheckPointerService( () -> checkPointer, jobScheduler, Group.CHECKPOINT );
 
@@ -74,7 +75,8 @@ public class StoreCopyRequestHandlerTest
     @Test
     public void shouldGiveProperErrorOnStoreIdMismatch()
     {
-        embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MISMATCHING, new File( "some-file" ), 1 ) );
+        embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MISMATCHING,
+                new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH );
@@ -86,7 +88,8 @@ public class StoreCopyRequestHandlerTest
     @Test
     public void shouldGiveProperErrorOnTxBehind()
     {
-        embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 2 ) );
+        embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING,
+                new File( "some-file" ), 2, DEFAULT_DATABASE_NAME ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND );
@@ -102,7 +105,8 @@ public class StoreCopyRequestHandlerTest
 
         try
         {
-            embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1 ) );
+            embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING,
+                    new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) );
             fail();
         }
         catch ( IllegalStateException ignore )
@@ -124,7 +128,8 @@ public class StoreCopyRequestHandlerTest
                         fileSystemAbstraction, NullLogProvider.getInstance() ) );
         try
         {
-            alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1 ) );
+            alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING,
+                    new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) );
             fail();
         }
         catch ( IllegalStateException ignore )
@@ -147,7 +152,8 @@ public class StoreCopyRequestHandlerTest
         // when
         try
         {
-            embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 123 ) );
+            embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING,
+                    new File( "some-file" ), 123, DEFAULT_DATABASE_NAME ) );
             fail();
         }
         catch ( RuntimeException e )
@@ -163,32 +169,32 @@ public class StoreCopyRequestHandlerTest
         assertEquals( 1, checkPointer.failCounter.get() );
     }
 
-    private class NiceStoreCopyRequestHandler extends StoreCopyRequestHandler<StoreCopyRequest>
+    private class NiceStoreCopyRequestHandler extends StoreCopyRequestHandler<GetStoreFileRequest>
     {
         private NiceStoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<NeoStoreDataSource> dataSource,
                 StoreFileStreamingProtocol storeFileStreamingProtocol,
                 FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider );
+            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
-        ResourceIterator<StoreFileMetadata> files( StoreCopyRequest request, NeoStoreDataSource neoStoreDataSource )
+        ResourceIterator<StoreFileMetadata> files( GetStoreFileRequest request, NeoStoreDataSource neoStoreDataSource )
         {
             return Iterators.emptyResourceIterator();
         }
     }
 
-    private class EvilStoreCopyRequestHandler extends StoreCopyRequestHandler<StoreCopyRequest>
+    private class EvilStoreCopyRequestHandler extends StoreCopyRequestHandler<GetStoreFileRequest>
     {
         private EvilStoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<NeoStoreDataSource> dataSource,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider );
+            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
-        ResourceIterator<StoreFileMetadata> files( StoreCopyRequest request, NeoStoreDataSource neoStoreDataSource )
+        ResourceIterator<StoreFileMetadata> files( GetStoreFileRequest request, NeoStoreDataSource neoStoreDataSource )
         {
             throw new IllegalStateException( "I am evil" );
         }
@@ -240,16 +246,6 @@ public class StoreCopyRequestHandlerTest
                 return;
             }
             failCounter.getAndIncrement();
-        }
-    }
-
-    static class FakeSingleThreadedJobScheduler extends JobSchedulerAdapter
-    {
-        @Override
-        public JobHandle schedule( Group group, Runnable job )
-        {
-            job.run();
-            return mock( JobHandle.class );
         }
     }
 }

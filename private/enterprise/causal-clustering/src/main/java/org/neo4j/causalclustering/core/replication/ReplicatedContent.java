@@ -20,5 +20,5 @@ public interface ReplicatedContent
         return OptionalLong.empty();
     }
 
-    void handle( ReplicatedContentHandler contentHandler ) throws IOException;
+    void dispatch( ReplicatedContentHandler contentHandler ) throws IOException;
 }

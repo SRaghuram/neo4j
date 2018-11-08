@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.function.Function;
 
 import org.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import org.neo4j.causalclustering.core.replication.ReplicatedContent;
@@ -38,18 +39,18 @@ class RecoveryProtocol
 
     private final FileSystemAbstraction fileSystem;
     private final FileNames fileNames;
-    private final ChannelMarshal<ReplicatedContent> contentMarshal;
+    private final Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector;
     private final LogProvider logProvider;
     private final Log log;
     private ReaderPool readerPool;
 
     RecoveryProtocol( FileSystemAbstraction fileSystem, FileNames fileNames, ReaderPool readerPool,
-            ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider )
+            Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider )
     {
         this.fileSystem = fileSystem;
         this.fileNames = fileNames;
         this.readerPool = readerPool;
-        this.contentMarshal = contentMarshal;
+        this.marshalSelector = marshalSelector;
         this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
     }
@@ -61,7 +62,7 @@ class RecoveryProtocol
 
         if ( files.entrySet().isEmpty() )
         {
-            state.segments = new Segments( fileSystem, fileNames, readerPool, emptyList(), contentMarshal, logProvider, -1 );
+            state.segments = new Segments( fileSystem, fileNames, readerPool, emptyList(), marshalSelector, logProvider, -1 );
             state.segments.rotate( -1, -1, -1 );
             state.terms = new Terms( -1, -1 );
             return state;
@@ -70,26 +71,26 @@ class RecoveryProtocol
         List<SegmentFile> segmentFiles = new ArrayList<>();
         SegmentFile segment = null;
 
-        long expectedVersion = files.firstKey();
+        long expectedSegmentNumber = files.firstKey();
         boolean mustRecoverLastHeader = false;
         boolean skip = true; // the first file is treated the same as a skip
 
         for ( Map.Entry<Long,File> entry : files.entrySet() )
         {
-            long fileNameVersion = entry.getKey();
+            long fileSegmentNumber = entry.getKey();
             File file = entry.getValue();
             SegmentHeader header;
 
-            checkVersionSequence( fileNameVersion, expectedVersion );
+            checkSegmentNumberSequence( fileSegmentNumber, expectedSegmentNumber );
 
             try
             {
                 header = loadHeader( fileSystem, file );
-                checkVersionMatches( header.version(), fileNameVersion );
+                checkSegmentNumberMatches( header.segmentNumber(), fileSegmentNumber );
             }
             catch ( EndOfStreamException e )
             {
-                if ( files.lastKey() != fileNameVersion )
+                if ( files.lastKey() != fileSegmentNumber )
                 {
                     throw new DamagedLogStorageException( e, "Intermediate file with incomplete or no header found: %s", file );
                 }
@@ -103,7 +104,7 @@ class RecoveryProtocol
                 break;
             }
 
-            segment = new SegmentFile( fileSystem, file, readerPool, fileNameVersion, contentMarshal, logProvider, header );
+            segment = new SegmentFile( fileSystem, file, readerPool, fileSegmentNumber, marshalSelector.apply( header.formatVersion() ), logProvider, header );
             segmentFiles.add( segment );
 
             if ( segment.header().prevIndex() != segment.header().prevFileLastIndex() )
@@ -120,7 +121,7 @@ class RecoveryProtocol
                 skip = false;
             }
 
-            expectedVersion++;
+            expectedSegmentNumber++;
         }
 
         assert segment != null;
@@ -140,18 +141,19 @@ class RecoveryProtocol
 
         if ( mustRecoverLastHeader )
         {
-            SegmentHeader header = new SegmentHeader( state.appendIndex, expectedVersion, state.appendIndex, state.terms.latest() );
+            SegmentHeader header = new SegmentHeader( state.appendIndex, expectedSegmentNumber, state.appendIndex, state.terms.latest() );
             log.warn( "Recovering last file based on next-to-last file. " + header );
 
-            File file = fileNames.getForVersion( expectedVersion );
+            File file = fileNames.getForSegment( expectedSegmentNumber );
             writeHeader( fileSystem, file, header );
 
-            segment = new SegmentFile( fileSystem, file, readerPool, expectedVersion, contentMarshal, logProvider, header );
+            segment = new SegmentFile( fileSystem, file, readerPool, expectedSegmentNumber,
+                    marshalSelector.apply( header.formatVersion() ), logProvider, header );
             segmentFiles.add( segment );
         }
 
-        state.segments = new Segments( fileSystem, fileNames, readerPool, segmentFiles, contentMarshal, logProvider,
-                segment.header().version() );
+        state.segments = new Segments( fileSystem, fileNames, readerPool, segmentFiles, marshalSelector, logProvider,
+                segment.header().segmentNumber() );
 
         return state;
     }
@@ -162,7 +164,7 @@ class RecoveryProtocol
     {
         try ( StoreChannel channel = fileSystem.open( file, OpenMode.READ ) )
         {
-            return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, SegmentHeader.SIZE ) );
+            return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, SegmentHeader.CURRENT_RECORD_OFFSET ) );
         }
     }
 
@@ -174,27 +176,27 @@ class RecoveryProtocol
         try ( StoreChannel channel = fileSystem.open( file, OpenMode.READ_WRITE ) )
         {
             channel.position( 0 );
-            PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, SegmentHeader.SIZE );
+            PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, SegmentHeader.CURRENT_RECORD_OFFSET );
             headerMarshal.marshal( header, writer );
             writer.prepareForFlush().flush();
         }
     }
 
-    private static void checkVersionSequence( long fileNameVersion, long expectedVersion ) throws DamagedLogStorageException
+    private static void checkSegmentNumberSequence( long fileNameSegmentNumber, long expectedSegmentNumber ) throws DamagedLogStorageException
     {
-        if ( fileNameVersion != expectedVersion )
+        if ( fileNameSegmentNumber != expectedSegmentNumber )
         {
-            throw new DamagedLogStorageException( "File versions not strictly monotonic. Expected: %d but found: %d",
-                    expectedVersion, fileNameVersion );
+            throw new DamagedLogStorageException( "Segment numbers not strictly monotonic. Expected: %d but found: %d",
+                    expectedSegmentNumber, fileNameSegmentNumber );
         }
     }
 
-    private static void checkVersionMatches( long headerVersion, long fileNameVersion ) throws DamagedLogStorageException
+    private static void checkSegmentNumberMatches( long headerSegmentNumber, long fileNameSegmentNumber ) throws DamagedLogStorageException
     {
-        if ( headerVersion != fileNameVersion )
+        if ( headerSegmentNumber != fileNameSegmentNumber )
         {
             throw new DamagedLogStorageException(
-                    "File version does not match header version. Expected: %d but found: %d", headerVersion, fileNameVersion );
+                    "File segment number does not match header. Expected: %d but found: %d", headerSegmentNumber, fileNameSegmentNumber );
         }
     }
 }

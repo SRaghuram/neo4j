@@ -38,7 +38,7 @@ public class CommandApplicationProcess
     private final Supplier<DatabaseHealth> dbHealth;
     private final InFlightCache inFlightCache;
     private final Log log;
-    private final CoreState coreState;
+    private final CoreStateRepository coreStateRepository;
     private final RaftLogCommitIndexMonitor commitIndexMonitor;
     private final CommandBatcher batcher;
     private final StatUtil.StatContext batchStat;
@@ -56,7 +56,7 @@ public class CommandApplicationProcess
             LogProvider logProvider,
             ProgressTracker progressTracker,
             SessionTracker sessionTracker,
-            CoreState coreState,
+            CoreStateRepository coreStateRepository,
             InFlightCache inFlightCache,
             Monitors monitors )
     {
@@ -66,7 +66,7 @@ public class CommandApplicationProcess
         this.sessionTracker = sessionTracker;
         this.log = logProvider.getLog( getClass() );
         this.dbHealth = dbHealth;
-        this.coreState = coreState;
+        this.coreStateRepository = coreStateRepository;
         this.inFlightCache = inFlightCache;
         this.commitIndexMonitor = monitors.newMonitor( RaftLogCommitIndexMonitor.class, getClass().getName() );
         this.batcher = new CommandBatcher( maxBatchSize, this::applyBatch );
@@ -218,7 +218,7 @@ public class CommandApplicationProcess
 
     private long handleOperations( long commandIndex, List<DistributedOperation> operations )
     {
-        try ( CommandDispatcher dispatcher = coreState.commandDispatcher() )
+        try ( CommandDispatcher dispatcher = coreStateRepository.commandDispatcher() )
         {
             for ( DistributedOperation operation : operations )
             {
@@ -244,7 +244,7 @@ public class CommandApplicationProcess
     {
         if ( (applierState.lastApplied - lastFlushed) > flushEvery )
         {
-            coreState.flush( applierState.lastApplied );
+            coreStateRepository.flush( applierState.lastApplied );
             lastFlushed = applierState.lastApplied;
         }
     }
@@ -256,7 +256,7 @@ public class CommandApplicationProcess
 
         if ( lastFlushed == NOTHING )
         {
-            lastFlushed = coreState.getLastFlushed();
+            lastFlushed = coreStateRepository.getLastFlushed();
         }
         applierState.lastApplied = lastFlushed;
 
@@ -266,7 +266,7 @@ public class CommandApplicationProcess
         /* Considering the order in which state is flushed, the state machines will
          * always be furthest ahead and indicate the furthest possible state to
          * which we must replay to reach a consistent state. */
-        long lastPossiblyApplying = max( coreState.getLastAppliedIndex(), applierState.getLastSeenCommitIndex() );
+        long lastPossiblyApplying = max( coreStateRepository.getLastAppliedIndex(), applierState.getLastSeenCommitIndex() );
 
         if ( lastPossiblyApplying > applierState.lastApplied )
         {
@@ -280,7 +280,7 @@ public class CommandApplicationProcess
     public synchronized void stop() throws IOException
     {
         pauseApplier( "shutdown" );
-        coreState.flush( applierState.lastApplied );
+        coreStateRepository.flush( applierState.lastApplied );
     }
 
     private void spawnApplierThread()
@@ -343,4 +343,5 @@ public class CommandApplicationProcess
             log.warn( "Unexpected interrupt", e );
         }
     }
+
 }

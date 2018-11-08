@@ -16,7 +16,7 @@ import org.neo4j.causalclustering.messaging.Channel;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import org.neo4j.causalclustering.protocol.Protocol.ModifierProtocol;
 import org.neo4j.helpers.collection.Pair;
-import org.neo4j.stream.Streams;
+import org.neo4j.helpers.collection.Streams;
 
 import static org.neo4j.causalclustering.protocol.handshake.StatusCode.SUCCESS;
 
@@ -30,10 +30,17 @@ public class HandshakeClient implements ClientMessageHandler
     private ApplicationProtocol negotiatedApplicationProtocol;
     private List<Pair<String,Optional<ModifierProtocol>>> negotiatedModifierProtocols;
     private ProtocolStack protocolStack;
-    private CompletableFuture<ProtocolStack> future = new CompletableFuture<>();
     private boolean magicReceived;
 
-    public CompletableFuture<ProtocolStack> initiate( Channel channel, ApplicationProtocolRepository applicationProtocolRepository,
+    private final CompletableFuture<ProtocolStack> fProtocol;
+
+    HandshakeClient()
+    {
+        this.fProtocol = new CompletableFuture<>();
+    }
+
+    public void initiate( Channel channel,
+            ApplicationProtocolRepository applicationProtocolRepository,
             ModifierProtocolRepository modifierProtocolRepository )
     {
         this.channel = channel;
@@ -49,8 +56,6 @@ public class HandshakeClient implements ClientMessageHandler
         channel.write( InitialMagicMessage.instance() );
 
         sendProtocolRequests( channel, supportedApplicationProtocol, supportedModifierProtocols );
-
-        return future;
     }
 
     private void sendProtocolRequests( Channel channel, ApplicationSupportedProtocols applicationProtocols,
@@ -72,7 +77,7 @@ public class HandshakeClient implements ClientMessageHandler
     {
         if ( !magicReceived )
         {
-            decline( "Magic value not received." );
+            fail( "Magic value not received." );
             throw new IllegalStateException( "Magic value not received." );
         }
     }
@@ -82,7 +87,7 @@ public class HandshakeClient implements ClientMessageHandler
     {
         if ( !magicMessage.isCorrectMagic() )
         {
-            decline( "Incorrect magic value received" );
+            fail( "Incorrect magic value received" );
         }
         // TODO: check clusterId as well
 
@@ -95,7 +100,7 @@ public class HandshakeClient implements ClientMessageHandler
         ensureMagic();
         if ( applicationProtocolResponse.statusCode() != SUCCESS )
         {
-            decline( "Unsuccessful application protocol response" );
+            fail( "Unsuccessful application protocol response" );
             return;
         }
 
@@ -106,7 +111,7 @@ public class HandshakeClient implements ClientMessageHandler
         {
             ProtocolSelection<Integer,ApplicationProtocol> knownApplicationProtocolVersions =
                     applicationProtocolRepository.getAll( supportedApplicationProtocol.identifier(), supportedApplicationProtocol.versions() );
-            decline( String.format(
+            fail( String.format(
                     "Mismatch of application protocols between client and server: Server protocol %s version %d: Client protocol %s versions %s",
                     applicationProtocolResponse.protocolName(), applicationProtocolResponse.version(),
                     knownApplicationProtocolVersions.identifier(), knownApplicationProtocolVersions.versions() ) );
@@ -168,30 +173,25 @@ public class HandshakeClient implements ClientMessageHandler
         ensureMagic();
         if ( protocolStack == null )
         {
-            decline( "Attempted to switch over when protocol stack not established" );
+            fail( "Attempted to switch over when protocol stack not established" );
         }
         else if ( response.status() != StatusCode.SUCCESS )
         {
-            decline( "Server failed to switch over" );
+            fail( "Server failed to switch over" );
         }
         else
         {
-            future.complete( protocolStack );
+            fProtocol.complete( protocolStack );
         }
     }
 
-    boolean failIfNotDone( String message )
+    private void fail( String message )
     {
-        if ( !future.isDone() )
-        {
-            decline( message );
-            return true;
-        }
-        return false;
+        fProtocol.completeExceptionally( new ClientHandshakeException( message, negotiatedApplicationProtocol, negotiatedModifierProtocols ) );
     }
 
-    private void decline( String message )
+    public CompletableFuture<ProtocolStack> protocol()
     {
-        future.completeExceptionally( new ClientHandshakeException( message, negotiatedApplicationProtocol, negotiatedModifierProtocols ) );
+        return fProtocol;
     }
 }

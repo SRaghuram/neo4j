@@ -14,7 +14,8 @@ public class StoreCopyFinishedResponse
         SUCCESS,
         E_STORE_ID_MISMATCH,
         E_TOO_FAR_BEHIND,
-        E_UNKNOWN
+        E_UNKNOWN,
+        E_DATABASE_UNKNOWN
     }
 
     private final Status status;
@@ -24,7 +25,7 @@ public class StoreCopyFinishedResponse
         this.status = status;
     }
 
-    Status status()
+    public Status status()
     {
         return status;
     }

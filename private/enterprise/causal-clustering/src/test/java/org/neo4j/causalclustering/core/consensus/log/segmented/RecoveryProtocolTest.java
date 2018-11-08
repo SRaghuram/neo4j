@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.function.Function;
 
 import org.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import org.neo4j.causalclustering.core.replication.ReplicatedContent;
@@ -34,7 +35,7 @@ public class RecoveryProtocolTest
     public final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
 
     private EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-    private ChannelMarshal<ReplicatedContent> contentMarshal = new DummyRaftableContentSerializer();
+    private Function<Integer,ChannelMarshal<ReplicatedContent>> contentMarshal = ignored -> new DummyRaftableContentSerializer();
     private final File root = new File( "root" );
     private FileNames fileNames = new FileNames( root );
     private SegmentHeader.Marshal headerMarshal = new SegmentHeader.Marshal();
@@ -60,7 +61,7 @@ public class RecoveryProtocolTest
         assertEquals( -1, state.terms.latest() );
         assertEquals( -1, state.prevIndex );
         assertEquals( -1, state.prevTerm );
-        assertEquals( 0, state.segments.last().header().version() );
+        assertEquals( 0, state.segments.last().header().segmentNumber() );
     }
 
     @Test
@@ -139,7 +140,7 @@ public class RecoveryProtocolTest
         protocol.run();
 
         // then
-        assertNotEquals( 0, fsa.getFileSize( fileNames.getForVersion( 1 ) ) );
+        assertNotEquals( 0, fsa.getFileSize( fileNames.getForSegment( 1 ) ) );
     }
 
     @Test
@@ -158,7 +159,7 @@ public class RecoveryProtocolTest
 
         // then
         assertEquals( 20, newFile.header().prevFileLastIndex() );
-        assertEquals(  3, newFile.header().version() );
+        assertEquals(  3, newFile.header().segmentNumber() );
         assertEquals( 20, newFile.header().prevIndex() );
         assertEquals(  1, newFile.header().prevTerm() );
     }
@@ -179,7 +180,7 @@ public class RecoveryProtocolTest
 
         // then
         assertEquals( 20, newFile.header().prevFileLastIndex() );
-        assertEquals(  3, newFile.header().version() );
+        assertEquals(  3, newFile.header().segmentNumber() );
         assertEquals( 15, newFile.header().prevIndex() );
         assertEquals(  0, newFile.header().prevTerm() );
     }
@@ -200,7 +201,7 @@ public class RecoveryProtocolTest
 
         // then
         assertEquals( 20, newFile.header().prevFileLastIndex() );
-        assertEquals(  3, newFile.header().version() );
+        assertEquals(  3, newFile.header().segmentNumber() );
         assertEquals( 40, newFile.header().prevIndex() );
         assertEquals(  2, newFile.header().prevTerm() );
     }
@@ -273,7 +274,7 @@ public class RecoveryProtocolTest
     private void createLogFile( EphemeralFileSystemAbstraction fsa, long prevFileLastIndex, long fileNameVersion,
             long headerVersion, long prevIndex, long prevTerm ) throws IOException
     {
-        StoreChannel channel = fsa.open( fileNames.getForVersion( fileNameVersion ), OpenMode.READ_WRITE );
+        StoreChannel channel = fsa.open( fileNames.getForSegment( fileNameVersion ), OpenMode.READ_WRITE );
         PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel );
         headerMarshal.marshal( new SegmentHeader( prevFileLastIndex, headerVersion, prevIndex, prevTerm ), writer );
         writer.prepareForFlush().flush();
@@ -282,7 +283,7 @@ public class RecoveryProtocolTest
 
     private void createEmptyLogFile( EphemeralFileSystemAbstraction fsa, long fileNameVersion ) throws IOException
     {
-        StoreChannel channel = fsa.open( fileNames.getForVersion( fileNameVersion ), OpenMode.READ_WRITE );
+        StoreChannel channel = fsa.open( fileNames.getForSegment( fileNameVersion ), OpenMode.READ_WRITE );
         channel.close();
     }
 }

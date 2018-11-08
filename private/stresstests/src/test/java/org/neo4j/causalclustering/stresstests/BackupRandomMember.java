@@ -8,8 +8,8 @@ package org.neo4j.causalclustering.stresstests;
 import java.io.File;
 import java.util.Optional;
 
-import org.neo4j.causalclustering.discovery.ClusterMember;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.logging.Log;
 
 class BackupRandomMember extends RepeatOnRandomMember

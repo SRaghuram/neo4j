@@ -9,7 +9,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Promise;
 
 import java.time.Clock;
@@ -26,11 +25,10 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.CappedLogger;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.neo4j.causalclustering.protocol.handshake.ChannelAttribute.PROTOCOL_STACK;
 
 public class ReconnectingChannel implements Channel
 {
-    public static final AttributeKey<ProtocolStack> PROTOCOL_STACK_KEY = AttributeKey.valueOf( "PROTOCOL_STACK" );
-
     private final Log log;
     private final Bootstrap bootstrap;
     private final EventLoop eventLoop;
@@ -217,9 +215,9 @@ public class ReconnectingChannel implements Channel
         } );
     }
 
-    public Optional<ProtocolStack> installedProtocolStack()
+    Optional<ProtocolStack> installedProtocolStack()
     {
-        return Optional.ofNullable( channel.attr( PROTOCOL_STACK_KEY ).get() );
+        return Optional.ofNullable( channel.attr( PROTOCOL_STACK ).get().getNow( null ) );
     }
 
     @Override

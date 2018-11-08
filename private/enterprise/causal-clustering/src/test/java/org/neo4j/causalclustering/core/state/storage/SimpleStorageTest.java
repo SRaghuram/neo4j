@@ -11,6 +11,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.UUID;
 
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
@@ -26,8 +27,8 @@ public class SimpleStorageTest
     public void shouldWriteAndReadState() throws Exception
     {
         // given
-        SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fsa.get(), new File( "state-dir" ),
-                "member-id-a", new MemberId.Marshal(), NullLogProvider.getInstance() );
+        File dummyState = new File( CoreStateFiles.DUMMY( MemberId.Marshal.INSTANCE ).directoryFullName() );
+        SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fsa.get(), dummyState, new MemberId.Marshal(), NullLogProvider.getInstance() );
 
         // when
         MemberId idA = new MemberId( UUID.randomUUID() );

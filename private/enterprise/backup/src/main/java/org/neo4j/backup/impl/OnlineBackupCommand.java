@@ -13,6 +13,7 @@ import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.admin.OutsideWorld;
 
 import static java.lang.String.format;
+import static org.neo4j.backup.impl.SelectedBackupProtocol.CATCHUP;
 
 class OnlineBackupCommand implements AdminCommand
 {
@@ -43,8 +44,8 @@ class OnlineBackupCommand implements AdminCommand
     public void execute( String[] args ) throws IncorrectUsage, CommandFailed
     {
         OnlineBackupContext onlineBackupContext = contextBuilder.createContext( args );
-        protocolWarn( onlineBackupContext );
-        try ( BackupSupportingClasses backupSupportingClasses = backupSupportingClassesFactory.createSupportingClasses( onlineBackupContext.getConfig() ) )
+        validateArguments( onlineBackupContext.getRequiredArguments() );
+        try ( BackupSupportingClasses backupSupportingClasses = backupSupportingClassesFactory.createSupportingClasses( onlineBackupContext ) )
         {
             // Make sure destination exists
             checkDestination( onlineBackupContext.getRequiredArguments().getDirectory() );
@@ -59,17 +60,32 @@ class OnlineBackupCommand implements AdminCommand
         }
     }
 
-    private void checkDestination( Path path ) throws CommandFailed
+    private void validateArguments( OnlineBackupRequiredArguments arguments ) throws IncorrectUsage
     {
-        if ( !outsideWorld.fileSystem().isDirectory( path.toFile() ) )
+        checkProtocolCompatibilityWithMultiDatabase( arguments );
+        informAboutProtocolApplicability( arguments );
+    }
+
+    /**
+     * Remote database names cannot be specified in the common protocol.
+     */
+    private void checkProtocolCompatibilityWithMultiDatabase( OnlineBackupRequiredArguments arguments ) throws IncorrectUsage
+    {
+        if ( arguments.getDatabaseName().isPresent() )
         {
-            throw new CommandFailed( format( "Directory '%s' does not exist.", path ) );
+            if ( !arguments.getSelectedBackupProtocol().equals( CATCHUP ) )
+            {
+                throw new IncorrectUsage( "Only the catchup protocol supports specifying the remote database name." );
+            }
         }
     }
 
-    private void protocolWarn( OnlineBackupContext onlineBackupContext )
+    /**
+     * A soft warning to users of the backup client.
+     */
+    private void informAboutProtocolApplicability( OnlineBackupRequiredArguments arguments )
     {
-        SelectedBackupProtocol selectedBackupProtocol = onlineBackupContext.getRequiredArguments().getSelectedBackupProtocol();
+        SelectedBackupProtocol selectedBackupProtocol = arguments.getSelectedBackupProtocol();
         if ( !SelectedBackupProtocol.ANY.equals( selectedBackupProtocol ) )
         {
             final String compatibleProducts;
@@ -86,6 +102,14 @@ class OnlineBackupCommand implements AdminCommand
             }
             outsideWorld.stdOutLine( format( "The selected protocol `%s` means that it is only compatible with %s instances", selectedBackupProtocol.getName(),
                     compatibleProducts ) );
+        }
+    }
+
+    private void checkDestination( Path path ) throws CommandFailed
+    {
+        if ( !outsideWorld.fileSystem().isDirectory( path.toFile() ) )
+        {
+            throw new CommandFailed( format( "Directory '%s' does not exist.", path ) );
         }
     }
 }

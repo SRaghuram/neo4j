@@ -5,7 +5,7 @@
  */
 package org.neo4j.causalclustering.stresstests;
 
-import org.neo4j.causalclustering.discovery.ClusterMember;
+import org.neo4j.causalclustering.common.ClusterMember;
 
 class StartStopRandomMember extends RepeatOnRandomMember
 {

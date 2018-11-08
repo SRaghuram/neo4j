@@ -5,7 +5,7 @@
  */
 package org.neo4j.causalclustering.cluster_load;
 
-import org.neo4j.causalclustering.discovery.Cluster;
+import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.helpers.DataCreator;
 
 public class SmallBurst implements ClusterLoad

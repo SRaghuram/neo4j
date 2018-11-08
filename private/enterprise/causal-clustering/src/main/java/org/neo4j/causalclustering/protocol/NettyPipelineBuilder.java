@@ -6,15 +6,16 @@
 package org.neo4j.causalclustering.protocol;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,7 @@ import org.neo4j.logging.Log;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static org.neo4j.util.FeatureToggles.flag;
 
 /**
  * Builder and installer of pipelines.
@@ -37,6 +39,8 @@ import static java.util.Arrays.asList;
  */
 public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientation, BUILDER extends NettyPipelineBuilder<O, BUILDER>>
 {
+    private static final boolean DEBUG = flag( NettyPipelineBuilder.class, "DEBUG", false );
+
     static final String MESSAGE_GATE_NAME = "message_gate";
     static final String ERROR_HANDLER_TAIL = "error_handler_tail";
     static final String ERROR_HANDLER_HEAD = "error_handler_head";
@@ -218,6 +222,7 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
             public void exceptionCaught( ChannelHandlerContext ctx, Throwable cause )
             {
                 swallow( () -> log.error( format( "Exception in inbound for channel: %s", ctx.channel() ), cause ) );
+                ReferenceCountUtil.release( cause );
                 swallow( ctx::close );
             }
 
@@ -225,6 +230,7 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
             public void channelRead( ChannelHandlerContext ctx, Object msg )
             {
                 log.error( "Unhandled inbound message: %s for channel: %s", msg, ctx.channel() );
+                ReferenceCountUtil.release( msg );
                 ctx.close();
             }
 
@@ -232,9 +238,13 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
             @Override
             public void write( ChannelHandlerContext ctx, Object msg, ChannelPromise promise )
             {
+                if ( DEBUG )
+                {
+                    log.info( "OUTBOUND: " + msg );
+                }
+
                 // if the promise is a void-promise, then exceptions will instead propagate to the
                 // exceptionCaught handler on the outbound handler further below
-
                 if ( !promise.isVoid() )
                 {
                     promise.addListener( (ChannelFutureListener) future -> {
@@ -259,13 +269,21 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
             }
         } );
 
-        pipeline.addFirst( ERROR_HANDLER_HEAD, new ChannelOutboundHandlerAdapter()
+        pipeline.addFirst( ERROR_HANDLER_HEAD, new ChannelDuplexHandler()
         {
+            @Override
+            public void channelRead( ChannelHandlerContext ctx, Object msg )
+            {
+                logByteBuf( ctx, "INBOUND", msg );
+                ctx.fireChannelRead( msg );
+            }
+
             // exceptions which did not get fulfilled on the promise of a write, etc.
             @Override
             public void exceptionCaught( ChannelHandlerContext ctx, Throwable cause )
             {
                 swallow( () -> log.error( format( "Exception in outbound for channel: %s", ctx.channel() ), cause ) );
+                ReferenceCountUtil.release( cause );
                 swallow( ctx::close );
             }
 
@@ -277,10 +295,12 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
                 if ( !(msg instanceof ByteBuf) )
                 {
                     log.error( "Unhandled outbound message: %s for channel: %s", msg, ctx.channel() );
+                    ReferenceCountUtil.release( msg );
                     ctx.close();
                 }
                 else
                 {
+                    logByteBuf( ctx, "OUTBOUND", msg );
                     ctx.write( msg, promise );
                 }
             }
@@ -298,6 +318,17 @@ public abstract class NettyPipelineBuilder<O extends ProtocolInstaller.Orientati
         }
         catch ( Throwable ignored )
         {
+
+        }
+    }
+
+    private void logByteBuf( ChannelHandlerContext ctx, String prefix, Object msg )
+    {
+        if ( DEBUG )
+        {
+            log.info( prefix + ": " + ctx.channel() +
+                    "\n" + msg.toString() +
+                    "\n" + ByteBufUtil.prettyHexDump( (ByteBuf) msg ) );
         }
     }
 

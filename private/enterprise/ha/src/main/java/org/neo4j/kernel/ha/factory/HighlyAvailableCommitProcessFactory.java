@@ -26,8 +26,7 @@ class HighlyAvailableCommitProcessFactory implements CommitProcessFactory
     }
 
     @Override
-    public TransactionCommitProcess create( TransactionAppender appender, StorageEngine storageEngine,
-            Config config )
+    public TransactionCommitProcess create( TransactionAppender appender, StorageEngine storageEngine, Config config )
     {
         if ( config.get( GraphDatabaseSettings.read_only ) )
         {

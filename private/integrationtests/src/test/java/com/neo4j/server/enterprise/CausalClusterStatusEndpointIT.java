@@ -39,6 +39,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.CausalClusterInProcessBuilder;
 import org.neo4j.harness.PortAuthorityPortPickingStrategy;
 import org.neo4j.harness.ServerControls;
+import org.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
@@ -263,6 +264,7 @@ class CausalClusterStatusEndpointIT
     {
         File clusterDirectory = testDirectory.directory( "CLUSTER" );
         CausalClusterInProcessBuilder.CausalCluster cluster = CausalClusterInProcessBuilder.init()
+                .withBuilder( EnterpriseInProcessServerBuilder::new )
                 .withCores( 3 )
                 .withReplicas( 2 )
                 .withLogger( LOG_PROVIDER )

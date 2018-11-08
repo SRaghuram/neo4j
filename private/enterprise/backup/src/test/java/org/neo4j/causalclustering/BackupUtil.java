@@ -8,8 +8,8 @@ package org.neo4j.causalclustering;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.causalclustering.discovery.ClusterMember;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.ClusterMember;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;

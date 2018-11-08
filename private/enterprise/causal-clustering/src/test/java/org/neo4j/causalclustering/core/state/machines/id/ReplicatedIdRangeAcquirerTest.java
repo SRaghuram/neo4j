@@ -40,8 +40,8 @@ public class ReplicatedIdRangeAcquirerTest
     private final MemberId memberB =
             new MemberId( UUID.randomUUID() );
 
-    private final ReplicatedIdAllocationStateMachine idAllocationStateMachine = new ReplicatedIdAllocationStateMachine(
-            new InMemoryStateStorage<>( new IdAllocationState() ) );
+    private final ReplicatedIdAllocationStateMachine idAllocationStateMachine =
+            new ReplicatedIdAllocationStateMachine( new InMemoryStateStorage<>( new IdAllocationState() ) );
 
     private final DirectReplicator<ReplicatedIdAllocationRequest> replicator =
             new DirectReplicator<>( idAllocationStateMachine );
@@ -68,7 +68,7 @@ public class ReplicatedIdRangeAcquirerTest
         File generatorFile1 = testDirectory.file( "gen1" );
         File generatorFile2 = testDirectory.file( "gen2" );
         try ( ReplicatedIdGenerator generatorOne = createForMemberWithInitialIdAndRangeLength( memberA, initialHighId, idRangeLength, fs, generatorFile1 );
-              ReplicatedIdGenerator generatorTwo = createForMemberWithInitialIdAndRangeLength( memberB, initialHighId, idRangeLength, fs, generatorFile2 ); )
+              ReplicatedIdGenerator generatorTwo = createForMemberWithInitialIdAndRangeLength( memberB, initialHighId, idRangeLength, fs, generatorFile2 ) )
         {
             // First iteration is bootstrapping the set, so we do it outside the loop to avoid an if check in there
             long newId = generatorOne.nextId();
@@ -98,7 +98,7 @@ public class ReplicatedIdRangeAcquirerTest
     {
         Map<IdType,Integer> allocationSizes =
                 Arrays.stream( IdType.values() ).collect( Collectors.toMap( idType -> idType, idType -> idRangeLength ) );
-        ReplicatedIdRangeAcquirer acquirer = new ReplicatedIdRangeAcquirer( replicator, idAllocationStateMachine,
+        ReplicatedIdRangeAcquirer acquirer = new ReplicatedIdRangeAcquirer( "graph.db", replicator, idAllocationStateMachine,
                 allocationSizes, member, NullLogProvider.getInstance() );
 
         return new ReplicatedIdGenerator( fs, file, IdType.ARRAY_BLOCK, () -> initialHighId, acquirer,

@@ -13,13 +13,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.protocol.Protocol;
+import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import org.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import org.neo4j.helpers.collection.Pair;
+import org.neo4j.helpers.collection.Streams;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.stream.Streams;
 
 import static java.lang.String.format;
 import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
@@ -37,14 +38,48 @@ public class SupportedProtocolCreator
         this.log = logProvider.getLog( getClass() );
     }
 
-    public ApplicationSupportedProtocols createSupportedCatchupProtocol()
+    public ApplicationSupportedProtocols getSupportedCatchupProtocolsFromConfiguration()
     {
         return getApplicationSupportedProtocols( config.get( CausalClusteringSettings.catchup_implementations ), CATCHUP );
     }
 
-    public ApplicationSupportedProtocols createSupportedRaftProtocol()
+    public ApplicationSupportedProtocols getSupportedRaftProtocolsFromConfiguration()
     {
         return getApplicationSupportedProtocols( config.get( CausalClusteringSettings.raft_implementations ), RAFT );
+    }
+
+    public ApplicationSupportedProtocols getAllCatchupProtocols()
+    {
+        return new ApplicationSupportedProtocols( CATCHUP, Collections.emptyList() );
+    }
+
+    public ApplicationSupportedProtocols getAllRaftProtocols()
+    {
+        return new ApplicationSupportedProtocols( RAFT, Collections.emptyList() );
+    }
+
+    public ApplicationSupportedProtocols getMinimumCatchupProtocols( int minimumVersion )
+    {
+        return filterProtocols( minimumVersion, CATCHUP );
+    }
+
+    public ApplicationSupportedProtocols getMinimumRaftProtocols( int minimumVersion )
+    {
+        return filterProtocols( minimumVersion, RAFT );
+    }
+
+    private ApplicationSupportedProtocols filterProtocols( int minimumVersion, Protocol.ApplicationProtocolCategory category )
+    {
+        List<Integer> protocolVersions = ApplicationProtocols.filterByVersion( category, version -> version >= minimumVersion )
+                .stream().map( Protocol::implementation ).collect( Collectors.toList() );
+
+        if ( protocolVersions.isEmpty() )
+        {
+            throw new IllegalStateException(
+                    format( "No known implementations of the %s protocol have a version >= %d", category.canonicalName(), minimumVersion ) );
+        }
+
+        return new ApplicationSupportedProtocols( category, protocolVersions );
     }
 
     private ApplicationSupportedProtocols getApplicationSupportedProtocols( List<Integer> configVersions, Protocol.ApplicationProtocolCategory category )
@@ -55,7 +90,7 @@ public class SupportedProtocolCreator
         }
         else
         {
-            List<Integer> knownVersions = protocolsForConfig( category, configVersions, version -> Protocol.ApplicationProtocols.find( category, version ) );
+            List<Integer> knownVersions = protocolsForConfig( category, configVersions, version -> ApplicationProtocols.find( category, version ) );
             if ( knownVersions.isEmpty() )
             {
                 throw new IllegalArgumentException( format( "None of configured %s implementations %s are known", category.canonicalName(), configVersions ) );

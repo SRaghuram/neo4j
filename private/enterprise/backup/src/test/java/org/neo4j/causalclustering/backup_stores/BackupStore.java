@@ -8,7 +8,7 @@ package org.neo4j.causalclustering.backup_stores;
 import java.io.File;
 import java.util.Optional;
 
-import org.neo4j.causalclustering.discovery.Cluster;
+import org.neo4j.causalclustering.common.Cluster;
 
 public interface BackupStore
 {

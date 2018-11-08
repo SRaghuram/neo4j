@@ -6,43 +6,51 @@
 package org.neo4j.causalclustering.core;
 
 import java.io.File;
-import java.util.function.Function;
 
-import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.PlatformModule;
-import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.util.VisibleForTesting;
 
 public class CoreGraphDatabase extends GraphDatabaseFacade
 {
-    private EnterpriseCoreEditionModule editionModule;
-
-    protected CoreGraphDatabase()
-    {
-    }
+    protected EnterpriseCoreEditionModule editionModule;
 
     public CoreGraphDatabase( File storeDir, Config config,
             GraphDatabaseFacadeFactory.Dependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory )
     {
-        Function<PlatformModule,AbstractEditionModule> factory = platformModule ->
-        {
-            editionModule = new EnterpriseCoreEditionModule( platformModule, discoveryServiceFactory );
-            return editionModule;
-        };
-        new GraphDatabaseFacadeFactory( DatabaseInfo.CORE, factory ).initFacade( storeDir, config, dependencies, this );
+        new GraphDatabaseFacadeFactory( DatabaseInfo.CORE, platformModule -> cachingFactory( platformModule, discoveryServiceFactory ) )
+                .initFacade( storeDir, config, dependencies, this );
+    }
+
+    //TODO: Refactor - the interaction between this and CommercialCoreGraphDatabase is gross
+    protected CoreGraphDatabase()
+    { //no-op
     }
 
     public Role getRole()
     {
-        return getDependencyResolver().resolveDependency( RaftMachine.class ).currentRole();
+        return editionModule
+                .consensusModule()
+                .raftMachine()
+                .currentRole();
     }
 
-    public void disableCatchupServer() throws Throwable
+    private EnterpriseCoreEditionModule cachingFactory( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory )
+    {
+        if ( editionModule == null )
+        {
+            editionModule = new EnterpriseCoreEditionModule( platformModule, discoveryServiceFactory );
+        }
+        return editionModule;
+    }
+
+    @VisibleForTesting
+    void disableCatchupServer() throws Throwable
     {
         editionModule.disableCatchupServer();
     }

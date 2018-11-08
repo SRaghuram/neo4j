@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import java.nio.file.Path;
 
+import org.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -26,6 +27,7 @@ public class CausalClusterInProcessRunnerIT
 
         CausalClusterInProcessBuilder.CausalCluster cluster =
                 CausalClusterInProcessBuilder.init()
+                        .withBuilder( EnterpriseInProcessServerBuilder::new )
                         .withCores( 3 )
                         .withReplicas( 3 )
                         .withLogger( NullLogProvider.getInstance() )

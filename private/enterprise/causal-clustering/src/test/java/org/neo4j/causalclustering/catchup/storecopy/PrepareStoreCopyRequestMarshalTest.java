@@ -10,9 +10,13 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
+import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequestDecoder;
+import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequestEncoder;
 import org.neo4j.causalclustering.identity.StoreId;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class PrepareStoreCopyRequestMarshalTest
 {
@@ -21,7 +25,7 @@ public class PrepareStoreCopyRequestMarshalTest
     @Before
     public void setup()
     {
-        embeddedChannel = new EmbeddedChannel( new PrepareStoreCopyRequestEncoder(), new PrepareStoreCopyRequestDecoder() );
+        embeddedChannel = new EmbeddedChannel( new PrepareStoreCopyRequestEncoder(), new PrepareStoreCopyRequestDecoder( DEFAULT_DATABASE_NAME ) );
     }
 
     @Test
@@ -29,7 +33,7 @@ public class PrepareStoreCopyRequestMarshalTest
     {
         // given store id requests transmit store id
         StoreId storeId = new StoreId( 1, 2, 3, 4 );
-        PrepareStoreCopyRequest prepareStoreCopyRequest = new PrepareStoreCopyRequest( storeId );
+        PrepareStoreCopyRequest prepareStoreCopyRequest = new PrepareStoreCopyRequest( storeId, DEFAULT_DATABASE_NAME );
 
         // when transmitted
         sendToChannel( prepareStoreCopyRequest, embeddedChannel );

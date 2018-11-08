@@ -6,47 +6,71 @@
 package org.neo4j.causalclustering.catchup.tx;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.catchup.CatchUpClient;
-import org.neo4j.causalclustering.catchup.CatchUpClientException;
-import org.neo4j.causalclustering.catchup.CatchUpResponseAdaptor;
-import org.neo4j.causalclustering.catchup.TxPullRequestResult;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
+import org.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
 
 public class TxPullClient
 {
-    private final CatchUpClient catchUpClient;
-    private PullRequestMonitor pullRequestMonitor;
+    private final CatchupClientFactory catchUpClient;
+    private final String databaseName;
+    private final Supplier<Monitors> monitors;
 
-    public TxPullClient( CatchUpClient catchUpClient, Monitors monitors )
+    private PullRequestMonitor pullRequestMonitor = new PullRequestMonitor();
+
+    public TxPullClient( CatchupClientFactory catchUpClient, String databaseName, Supplier<Monitors> monitors )
     {
         this.catchUpClient = catchUpClient;
-        this.pullRequestMonitor = monitors.newMonitor( PullRequestMonitor.class );
+        this.databaseName = databaseName;
+        this.monitors = monitors;
     }
 
-    public TxPullRequestResult pullTransactions( AdvertisedSocketAddress fromAddress, StoreId storeId, long previousTxId,
-                                                 TxPullResponseListener txPullResponseListener )
-            throws CatchUpClientException
+    public TxPullResult pullTransactions( AdvertisedSocketAddress fromAddress, StoreId storeId, long previousTxId,
+                                                 TxPullResponseListener txPullResponseListener ) throws Exception
     {
-        pullRequestMonitor.txPullRequest( previousTxId );
-        return catchUpClient.makeBlockingRequest( fromAddress, new TxPullRequest( previousTxId, storeId ), new CatchUpResponseAdaptor<TxPullRequestResult>()
+        CatchupResponseAdaptor<TxPullResult> responseHandler = new CatchupResponseAdaptor<TxPullResult>()
         {
             private long lastTxIdReceived = previousTxId;
 
             @Override
-            public void onTxPullResponse( CompletableFuture<TxPullRequestResult> signal, TxPullResponse response )
+            public void onTxPullResponse( CompletableFuture<TxPullResult> signal, TxPullResponse response )
             {
                 this.lastTxIdReceived = response.tx().getCommitEntry().getTxId();
                 txPullResponseListener.onTxReceived( response );
             }
 
             @Override
-            public void onTxStreamFinishedResponse( CompletableFuture<TxPullRequestResult> signal, TxStreamFinishedResponse response )
+            public void onTxStreamFinishedResponse( CompletableFuture<TxPullResult> signal, TxStreamFinishedResponse response )
             {
-                signal.complete( new TxPullRequestResult( response.status(), lastTxIdReceived ) );
+                signal.complete( new TxPullResult( response.status(), lastTxIdReceived ) );
             }
-        } );
+        };
+
+        pullRequestMonitor.get().txPullRequest( previousTxId );
+
+        return catchUpClient.getClient( fromAddress )
+                .v1( c -> c.pullTransactions( storeId, previousTxId ) )
+                .v2( c -> c.pullTransactions( storeId, previousTxId, databaseName ) )
+                .withResponseHandler( responseHandler )
+                .request()
+                .get();
+    }
+
+    private class PullRequestMonitor
+    {
+        private org.neo4j.causalclustering.catchup.tx.PullRequestMonitor pullRequestMonitor;
+
+        private org.neo4j.causalclustering.catchup.tx.PullRequestMonitor get()
+        {
+            if ( pullRequestMonitor == null )
+            {
+                pullRequestMonitor = monitors.get().newMonitor( org.neo4j.causalclustering.catchup.tx.PullRequestMonitor.class );
+            }
+            return pullRequestMonitor;
+        }
     }
 }

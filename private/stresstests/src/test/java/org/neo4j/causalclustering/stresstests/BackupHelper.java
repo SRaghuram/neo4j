@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.backup.impl.OnlineBackupCommandBuilder;
-import org.neo4j.causalclustering.discovery.ClusterMember;
+import org.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;

@@ -6,16 +6,23 @@
 package org.neo4j.causalclustering.readreplica;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
+import org.neo4j.causalclustering.catchup.CatchupComponentsRepository;
+import org.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabaseCatchupComponents;
 import org.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import org.neo4j.causalclustering.catchup.storecopy.LocalDatabase;
 import org.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
-import org.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import org.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import org.neo4j.causalclustering.common.DatabaseService;
+import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
 import org.neo4j.causalclustering.discovery.TopologyService;
+import org.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import org.neo4j.causalclustering.helper.TimeoutStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.identity.StoreId;
@@ -30,39 +37,47 @@ import static java.lang.String.format;
 
 class ReadReplicaStartupProcess implements Lifecycle
 {
-    private final RemoteStore remoteStore;
-    private final LocalDatabase localDatabase;
-    private final Lifecycle txPulling;
+    private final Executor executor;
+    private final Lifecycle catchupProcessManager;
     private final Log debugLog;
     private final Log userLog;
-
-    private final TimeoutStrategy timeoutStrategy;
+    private final TimeoutStrategy syncRetryStrategy;
     private final UpstreamDatabaseStrategySelector selectionStrategy;
     private final TopologyService topologyService;
 
     private String lastIssue;
-    private final StoreCopyProcess storeCopyProcess;
 
-    ReadReplicaStartupProcess( RemoteStore remoteStore, LocalDatabase localDatabase, Lifecycle txPulling,
-            UpstreamDatabaseStrategySelector selectionStrategy, TimeoutStrategy timeoutStrategy, LogProvider debugLogProvider,
-            LogProvider userLogProvider, StoreCopyProcess storeCopyProcess, TopologyService topologyService )
+    private final CatchupComponentsRepository catchupComponents;
+    private final DatabaseService databaseService;
+
+    ReadReplicaStartupProcess( Executor executor, DatabaseService databaseService, Lifecycle catchupProcessManager,
+            UpstreamDatabaseStrategySelector selectionStrategyPipeline, LogProvider debugLogProvider, LogProvider userLogProvider,
+            TopologyService topologyService, CatchupComponentsRepository catchupComponents )
     {
-        this.remoteStore = remoteStore;
-        this.localDatabase = localDatabase;
-        this.txPulling = txPulling;
+        this( executor, databaseService, catchupProcessManager, selectionStrategyPipeline, debugLogProvider, userLogProvider, topologyService,
+                catchupComponents, new ExponentialBackoffStrategy( 1, 30, TimeUnit.SECONDS ) );
+    }
+
+    ReadReplicaStartupProcess( Executor executor, DatabaseService databaseService, Lifecycle catchupProcessManager,
+            UpstreamDatabaseStrategySelector selectionStrategy, LogProvider debugLogProvider, LogProvider userLogProvider,
+            TopologyService topologyService, CatchupComponentsRepository catchupComponents, TimeoutStrategy syncRetryStrategy )
+    {
+        this.executor = executor;
+        this.catchupComponents = catchupComponents;
+        this.databaseService = databaseService;
+        this.catchupProcessManager = catchupProcessManager;
         this.selectionStrategy = selectionStrategy;
-        this.timeoutStrategy = timeoutStrategy;
+        this.syncRetryStrategy = syncRetryStrategy;
         this.debugLog = debugLogProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
-        this.storeCopyProcess = storeCopyProcess;
         this.topologyService = topologyService;
     }
 
     @Override
     public void init() throws Throwable
     {
-        localDatabase.init();
-        txPulling.init();
+        databaseService.init();
+        catchupProcessManager.init();
     }
 
     private String issueOf( String operation, int attempt )
@@ -71,66 +86,56 @@ class ReadReplicaStartupProcess implements Lifecycle
     }
 
     @Override
-    public void start() throws IOException, DatabaseShutdownException
+    public void start()
     {
         boolean syncedWithUpstream = false;
-        TimeoutStrategy.Timeout timeout = timeoutStrategy.newTimeout();
+        TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
         int attempt = 0;
         while ( !syncedWithUpstream )
         {
             attempt++;
-            MemberId source = null;
+            MemberId source;
             try
             {
                 source = selectionStrategy.bestUpstreamDatabase();
-                syncStoreWithUpstream( source );
-                syncedWithUpstream = true;
+                MemberId thisSource = source;
+                int thisAttempt = attempt;
+                CompletableFuture<Boolean> sync = syncStoresWithUpstream( source ).handle( ( ignored, errors ) -> {
+                    if ( errors != null )
+                    {
+                        //TODO: Consider what happens when there are several exceptions thrown
+                        logOrRethrowSyncException( errors, thisSource, thisAttempt );
+                        return false;
+                    }
+                    return true;
+                } );
+                syncedWithUpstream = sync.join();
             }
             catch ( UpstreamDatabaseSelectionException e )
             {
                 lastIssue = issueOf( "finding upstream member", attempt );
                 debugLog.warn( lastIssue );
             }
-            catch ( StoreCopyFailedException e )
-            {
-                lastIssue = issueOf( format( "copying store files from %s", source ), attempt );
-                debugLog.warn( lastIssue );
-            }
-            catch ( StoreIdDownloadFailedException e )
-            {
-                lastIssue = issueOf( format( "getting store id from %s", source ), attempt );
-                debugLog.warn( lastIssue );
-            }
-            catch ( TopologyLookupException e )
-            {
-                lastIssue = issueOf( format( "getting address of %s", source ), attempt );
-                debugLog.warn( lastIssue );
-            }
 
             try
             {
-                Thread.sleep( timeout.getMillis() );
-                timeout.increment();
+                Thread.sleep( syncRetryWaitPeriod.getMillis() );
+                syncRetryWaitPeriod.increment();
             }
             catch ( InterruptedException e )
             {
-                Thread.interrupted();
+                Thread.currentThread().interrupt();
                 lastIssue = "Interrupted while trying to start read replica";
                 debugLog.warn( lastIssue );
-                break;
+                userLog.error( lastIssue );
+                throw new RuntimeException( lastIssue );
             }
-        }
-
-        if ( !syncedWithUpstream )
-        {
-            userLog.error( lastIssue );
-            throw new RuntimeException( lastIssue );
         }
 
         try
         {
-            localDatabase.start();
-            txPulling.start();
+            databaseService.start();
+            catchupProcessManager.start();
         }
         catch ( Throwable e )
         {
@@ -138,30 +143,81 @@ class ReadReplicaStartupProcess implements Lifecycle
         }
     }
 
-    private void syncStoreWithUpstream( MemberId source ) throws IOException, StoreIdDownloadFailedException,
-            StoreCopyFailedException, TopologyLookupException, DatabaseShutdownException
+    private void logOrRethrowSyncException( Throwable e, MemberId source, int attempt )
     {
+        if ( e instanceof StoreCopyFailedException )
+        {
+            lastIssue = issueOf( format( "copying store files from %s", source ), attempt );
+            debugLog.warn( lastIssue );
+        }
+        else if ( e instanceof StoreIdDownloadFailedException )
+        {
+            lastIssue = issueOf( format( "getting store id from %s", source ), attempt );
+            debugLog.warn( lastIssue );
+        }
+        else if ( e instanceof TopologyLookupException )
+        {
+            lastIssue = issueOf( format( "getting address of %s", source ), attempt );
+            debugLog.warn( lastIssue );
+        }
+        else if ( e instanceof CompletionException )
+        {
+            throw (CompletionException) e;
+        }
+        else
+        {
+            //Should be impossible
+            throw new RuntimeException( e );
+        }
+    }
+
+    private CompletableFuture<Void> syncStoresWithUpstream( MemberId source )
+    {
+        CompletableFuture[] syncRequests = databaseService.registeredDatabases().entrySet().stream().map( entry -> CompletableFuture.runAsync( () ->
+        {
+            try
+            {
+                //TODO: a few levels down this actually wraps a future which we immediately block on. Is it worth building Async methods on CatchupClients
+                // to pass the future all the way up to this level and then only block at the top?
+                syncStoreWithUpstream( entry.getKey(), entry.getValue(), source );
+            }
+            catch ( Exception e )
+            {
+                throw new CompletionException( e );
+            }
+        }, executor ) ).toArray( CompletableFuture[]::new );
+
+        return CompletableFuture.allOf( syncRequests );
+    }
+
+    private void syncStoreWithUpstream( String databaseName, LocalDatabase localDatabase, MemberId source ) throws IOException,
+            StoreIdDownloadFailedException, StoreCopyFailedException, TopologyLookupException, DatabaseShutdownException
+    {
+        PerDatabaseCatchupComponents catchup = catchupComponents.componentsFor( databaseName )
+                .orElseThrow( () -> new IllegalStateException( String.format( "No per database catchup components exist for database %s.", databaseName ) ) );
+
         if ( localDatabase.isEmpty() )
         {
             debugLog.info( "Local database is empty, attempting to replace with copy from upstream server %s", source );
 
             debugLog.info( "Finding store id of upstream server %s", source );
             AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source ).orElseThrow( () -> new TopologyLookupException( source ) );
-            StoreId storeId = remoteStore.getStoreId( fromAddress );
+            StoreId storeId = catchup.remoteStore().getStoreId( fromAddress );
 
             debugLog.info( "Copying store from upstream server %s", source );
             localDatabase.delete();
-            storeCopyProcess.replaceWithStoreFrom( new SingleAddressProvider( fromAddress ), storeId );
+            catchup.storeCopyProcess().replaceWithStoreFrom( new SingleAddressProvider( fromAddress ), storeId );
 
             debugLog.info( "Restarting local database after copy.", source );
         }
         else
         {
-            ensureSameStoreIdAs( source );
+            ensureStoreIsPresentAt( databaseName, localDatabase, catchup.remoteStore(), source );
         }
     }
 
-    private void ensureSameStoreIdAs( MemberId upstream ) throws StoreIdDownloadFailedException, TopologyLookupException
+    private void ensureStoreIsPresentAt( String databaseName, LocalDatabase localDatabase, RemoteStore remoteStore, MemberId upstream )
+            throws StoreIdDownloadFailedException, TopologyLookupException
     {
         StoreId localStoreId = localDatabase.storeId();
         AdvertisedSocketAddress advertisedSocketAddress =
@@ -170,21 +226,22 @@ class ReadReplicaStartupProcess implements Lifecycle
         if ( !localStoreId.equals( remoteStoreId ) )
         {
             throw new IllegalStateException( format( "This read replica cannot join the cluster. " +
-                    "The local database is not empty and has a mismatching storeId: expected %s actual %s.", remoteStoreId, localStoreId ) );
+                    "The local version of database %s is not empty and has a mismatching storeId: " +
+                    "expected %s actual %s.", databaseName, remoteStoreId, localStoreId ) );
         }
     }
 
     @Override
     public void stop() throws Throwable
     {
-        txPulling.stop();
-        localDatabase.stop();
+        catchupProcessManager.stop();
+        databaseService.stop();
     }
 
     @Override
     public void shutdown() throws Throwable
     {
-        txPulling.shutdown();
-        localDatabase.shutdown();
+        catchupProcessManager.shutdown();
+        databaseService.shutdown();
     }
 }

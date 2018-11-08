@@ -13,8 +13,9 @@ import static org.junit.Assert.assertEquals;
 
 public class PositionCacheTest
 {
-    private final PositionCache cache = new PositionCache();
-    private final LogPosition BEGINNING = new LogPosition( 0, SegmentHeader.SIZE );
+    private final long recordOffset = SegmentHeader.CURRENT_RECORD_OFFSET;
+    private final PositionCache cache = new PositionCache( recordOffset );
+    private final LogPosition FIRST = new LogPosition( 0, recordOffset );
 
     @Test
     public void shouldReturnSaneDefaultPosition()
@@ -23,7 +24,7 @@ public class PositionCacheTest
         LogPosition position = cache.lookup( 5 );
 
         // then
-        assertEquals( BEGINNING, position );
+        assertEquals( FIRST, position );
     }
 
     @Test
@@ -88,7 +89,7 @@ public class PositionCacheTest
         }
 
         int index = count - PositionCache.CACHE_SIZE - 1;
-        assertEquals( BEGINNING, cache.lookup( index ) );
+        assertEquals( FIRST, cache.lookup( index ) );
     }
 
     private LogPosition pos( int i )

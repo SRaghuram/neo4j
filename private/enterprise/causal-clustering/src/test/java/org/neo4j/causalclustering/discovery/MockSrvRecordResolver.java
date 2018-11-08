@@ -14,7 +14,6 @@ import java.util.stream.Stream;
 
 public class MockSrvRecordResolver extends SrvRecordResolver
 {
-
     private final HashMap<String,List<SrvRecord>> records;
 
     public MockSrvRecordResolver( HashMap<String,List<SrvRecord>> records )

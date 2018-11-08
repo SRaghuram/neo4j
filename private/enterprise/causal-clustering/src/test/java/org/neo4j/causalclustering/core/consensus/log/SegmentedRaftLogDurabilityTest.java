@@ -15,6 +15,7 @@ import org.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import org.neo4j.causalclustering.core.consensus.ReplicatedString;
 import org.neo4j.causalclustering.core.consensus.log.segmented.CoreLogPruningStrategyFactory;
 import org.neo4j.causalclustering.core.consensus.log.segmented.SegmentedRaftLog;
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.NullLogProvider;
@@ -26,7 +27,6 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
-import static org.neo4j.causalclustering.core.consensus.log.RaftLog.RAFT_LOG_DIRECTORY_NAME;
 import static org.neo4j.causalclustering.core.consensus.log.RaftLogHelper.hasNoContent;
 import static org.neo4j.causalclustering.core.consensus.log.RaftLogHelper.readLogEntry;
 import static org.neo4j.logging.NullLogProvider.getInstance;
@@ -38,7 +38,7 @@ public class SegmentedRaftLogDurabilityTest
 
     private final RaftLogFactory logFactory = fileSystem ->
     {
-        File directory = new File( RAFT_LOG_DIRECTORY_NAME );
+        File directory = new File( CoreStateFiles.RAFT_LOG.directoryFullName() );
         fileSystem.mkdir( directory );
 
         long rotateAtSizeBytes = 128;
@@ -46,7 +46,7 @@ public class SegmentedRaftLogDurabilityTest
 
         NullLogProvider logProvider = getInstance();
         SegmentedRaftLog log =
-                new SegmentedRaftLog( fileSystem, directory, rotateAtSizeBytes, new DummyRaftableContentSerializer(),
+                new SegmentedRaftLog( fileSystem, directory, rotateAtSizeBytes, ignored -> new DummyRaftableContentSerializer(),
                         logProvider, readerPoolSize, Clocks.fakeClock(), new OnDemandJobScheduler(),
                         new CoreLogPruningStrategyFactory( "1 size", logProvider ).newInstance() );
         log.start();

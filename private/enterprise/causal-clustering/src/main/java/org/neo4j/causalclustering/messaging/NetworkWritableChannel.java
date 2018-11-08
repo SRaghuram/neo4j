@@ -5,8 +5,11 @@
  */
 package org.neo4j.causalclustering.messaging;
 
+import java.io.Flushable;
+
 import io.netty.buffer.ByteBuf;
 
+import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
 import org.neo4j.storageengine.api.WritableChannel;
 
 public class NetworkWritableChannel implements WritableChannel, ByteBufBacked

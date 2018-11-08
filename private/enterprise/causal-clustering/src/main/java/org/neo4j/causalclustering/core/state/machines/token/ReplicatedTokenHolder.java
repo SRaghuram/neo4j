@@ -37,9 +37,9 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     private final TokenType type;
     private final Supplier<StorageEngine> storageEngineSupplier;
     private final ReplicatedTokenCreator tokenCreator;
+    private final String databaseName;
 
-    // TODO: Clean up all the resolving, which now happens every time with special selection strategies.
-    ReplicatedTokenHolder( TokenRegistry tokenRegistry, Replicator replicator,
+    ReplicatedTokenHolder( String databaseName, TokenRegistry tokenRegistry, Replicator replicator,
                            IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
                            Supplier<StorageEngine> storageEngineSupplier, TokenType type,
                            ReplicatedTokenCreator tokenCreator )
@@ -51,12 +51,13 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         this.type = type;
         this.storageEngineSupplier = storageEngineSupplier;
         this.tokenCreator = tokenCreator;
+        this.databaseName = databaseName;
     }
 
     @Override
     public void getOrCreateIds( String[] names, int[] ids )
     {
-        // todo This could be optimised, but doing so requires a protocol change.
+        // TODO: This could be optimised, but doing so requires a protocol change.
         for ( int i = 0; i < names.length; i++ )
         {
             ids[i] = getOrCreateId( names[i] );
@@ -66,7 +67,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     @Override
     protected int createToken( String tokenName )
     {
-        ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( type, tokenName, createCommands( tokenName ) );
+        ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( databaseName, type, tokenName, createCommands( tokenName ) );
         try
         {
             Future<Object> future = replicator.replicate( tokenRequest, true );
@@ -98,6 +99,6 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
             throw new RuntimeException( "Unable to create token '" + tokenName + "'", e );
         }
 
-        return ReplicatedTokenRequestSerializer.commandBytes( commands );
+        return ReplicatedTokenRequestMarshalV1.commandBytes( commands );
     }
 }

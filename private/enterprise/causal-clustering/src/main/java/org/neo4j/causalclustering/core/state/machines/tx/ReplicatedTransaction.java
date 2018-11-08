@@ -8,35 +8,44 @@ package org.neo4j.causalclustering.core.state.machines.tx;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.stream.ChunkedInput;
 
-import java.io.IOException;
 import java.util.function.Consumer;
 
 import org.neo4j.causalclustering.core.state.CommandDispatcher;
 import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
-import org.neo4j.storageengine.api.WritableChannel;
 
-public interface ReplicatedTransaction extends CoreReplicatedContent
+public abstract class ReplicatedTransaction implements CoreReplicatedContent
 {
-    static TransactionRepresentationReplicatedTransaction from( TransactionRepresentation tx )
+    private final String databaseName;
+
+    public ReplicatedTransaction( String databaseName )
     {
-        return new TransactionRepresentationReplicatedTransaction( tx );
+        this.databaseName = databaseName;
     }
 
-    static ByteArrayReplicatedTransaction from( byte[] bytes )
+    public static TransactionRepresentationReplicatedTransaction from( TransactionRepresentation tx, String databaseName )
     {
-        return new ByteArrayReplicatedTransaction( bytes );
+        return new TransactionRepresentationReplicatedTransaction( tx, databaseName );
+    }
+
+    public static ByteArrayReplicatedTransaction from( byte[] bytes, String databaseName )
+    {
+        return new ByteArrayReplicatedTransaction( bytes, databaseName );
     }
 
     @Override
-    default void dispatch( CommandDispatcher commandDispatcher, long commandIndex, Consumer<Result> callback )
+    public void dispatch( CommandDispatcher commandDispatcher, long commandIndex, Consumer<Result> callback )
     {
         commandDispatcher.dispatch( this, commandIndex, callback );
     }
 
-    ChunkedInput<ByteBuf> encode();
+    @Override
+    public String databaseName()
+    {
+        return databaseName;
+    }
 
-    void marshal( WritableChannel writableChannel ) throws IOException;
+    public abstract ChunkedInput<ByteBuf> encode();
 
-    TransactionRepresentation extract( TransactionRepresentationExtractor extractor );
+    public abstract TransactionRepresentation extract( TransactionRepresentationExtractor extractor );
 }

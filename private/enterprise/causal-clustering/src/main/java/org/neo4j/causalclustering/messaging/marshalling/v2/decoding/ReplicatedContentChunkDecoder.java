@@ -14,11 +14,11 @@ import java.util.List;
 
 import org.neo4j.causalclustering.core.replication.ReplicatedContent;
 import org.neo4j.causalclustering.messaging.marshalling.Codec;
-import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
+import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
 
 public class ReplicatedContentChunkDecoder extends ByteToMessageDecoder
 {
-    private final Codec<ReplicatedContent> codec = CoreReplicatedContentMarshal.codec();
+    private final Codec<ReplicatedContent> codec = CoreReplicatedContentMarshalFactory.codecV2();
     private boolean expectingNewContent = true;
     private boolean isLast;
 

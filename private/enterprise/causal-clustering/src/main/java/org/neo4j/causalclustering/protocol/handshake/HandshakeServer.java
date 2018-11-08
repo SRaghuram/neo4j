@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 import org.neo4j.causalclustering.messaging.Channel;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import org.neo4j.causalclustering.protocol.Protocol.ModifierProtocol;
-import org.neo4j.stream.Streams;
+import org.neo4j.helpers.collection.Streams;
 
 import static org.neo4j.causalclustering.protocol.handshake.StatusCode.SUCCESS;
 

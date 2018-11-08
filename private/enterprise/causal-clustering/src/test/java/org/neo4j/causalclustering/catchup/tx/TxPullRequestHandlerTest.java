@@ -12,9 +12,9 @@ import org.junit.Test;
 
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
+import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.cursor.Cursor;
-import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.command.Commands;
@@ -25,6 +25,7 @@ import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.AssertableLogProvider;
 
@@ -38,6 +39,8 @@ import static org.neo4j.causalclustering.catchup.CatchupResult.E_STORE_ID_MISMAT
 import static org.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
 import static org.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static org.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
+import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
 import static org.neo4j.kernel.impl.transaction.command.Commands.createNode;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
@@ -57,10 +60,10 @@ public class TxPullRequestHandlerTest
     @Before
     public void setUp()
     {
-        DependencyResolver dependencyResolver = mock( DependencyResolver.class );
-        when( datasource.getDependencyResolver() ).thenReturn( dependencyResolver );
-        when( dependencyResolver.resolveDependency( LogicalTransactionStore.class ) ).thenReturn( logicalTransactionStore );
-        when( dependencyResolver.resolveDependency( TransactionIdStore.class ) ).thenReturn( transactionIdStore );
+        Dependencies dependencies = mock( Dependencies.class );
+        when( datasource.getDependencyResolver() ).thenReturn( dependencies );
+        when( dependencies.resolveDependency( LogicalTransactionStore.class, ONLY ) ).thenReturn( logicalTransactionStore );
+        when( dependencies.resolveDependency( TransactionIdStore.class, ONLY ) ).thenReturn( transactionIdStore );
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
         txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), () -> storeId, () -> true,
                 () -> datasource, new Monitors(), logProvider );
@@ -76,7 +79,7 @@ public class TxPullRequestHandlerTest
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DEFAULT_DATABASE_NAME ) );
 
         // then
         verify( context ).writeAndFlush( isA( ChunkedTransactionStream.class ) );
@@ -89,7 +92,7 @@ public class TxPullRequestHandlerTest
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 14L );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 14, storeId ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 14, storeId, DEFAULT_DATABASE_NAME ) );
 
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
@@ -104,7 +107,7 @@ public class TxPullRequestHandlerTest
         when( logicalTransactionStore.getTransactions( 14L ) ).thenThrow( new NoSuchTransactionException( 14 ) );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DEFAULT_DATABASE_NAME ) );
 
         // then
         verify( context, never() ).write( isA( ChunkedTransactionStream.class ) );
@@ -128,7 +131,7 @@ public class TxPullRequestHandlerTest
                         () -> datasource, new Monitors(), logProvider );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, clientStoreId ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, clientStoreId, DEFAULT_DATABASE_NAME ) );
 
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
@@ -149,7 +152,7 @@ public class TxPullRequestHandlerTest
                         () -> datasource, new Monitors(), logProvider );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, storeId ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, storeId, DEFAULT_DATABASE_NAME ) );
 
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );

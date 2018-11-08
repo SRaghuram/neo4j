@@ -12,7 +12,7 @@ import java.io.IOException;
 
 import org.neo4j.causalclustering.catchup.CatchUpClientException;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import org.neo4j.causalclustering.catchup.TxPullRequestResult;
+import org.neo4j.causalclustering.catchup.tx.TxPullResult;
 import org.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import org.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import org.neo4j.causalclustering.catchup.tx.TxPullClient;
@@ -46,11 +46,11 @@ public class RemoteStoreTest
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         TxPullClient txPullClient = mock( TxPullClient.class );
         when( txPullClient.pullTransactions( any(), any(), anyLong(), any() ) )
-                .thenReturn( new TxPullRequestResult( SUCCESS_END_OF_STREAM, 13 ) );
+                .thenReturn( new TxPullResult( SUCCESS_END_OF_STREAM, 13 ) );
         TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ),
-                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), new Monitors() );
+                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), Monitors::new );
 
         // when
         AdvertisedSocketAddress localhost = new AdvertisedSocketAddress( "127.0.0.1", 1234 );
@@ -77,12 +77,12 @@ public class RemoteStoreTest
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         when( txPullClient.pullTransactions( eq( localhost ), eq( wantedStoreId ), anyLong(), any() ) )
-                .thenReturn( new TxPullRequestResult( SUCCESS_END_OF_STREAM, 13 ) );
+                .thenReturn( new TxPullResult( SUCCESS_END_OF_STREAM, 13 ) );
 
         TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ),
-                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), new Monitors() );
+                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), Monitors::new );
 
         // when
         remoteStore.copy( catchupAddressProvider, wantedStoreId, DatabaseLayout.of( new File( "destination" ) ), true );
@@ -104,8 +104,7 @@ public class RemoteStoreTest
         CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( null );
 
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ),
-                null,
-                storeCopyClient, txPullClient, factory( writer ), Config.defaults(), new Monitors() );
+                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), Monitors::new );
 
         doThrow( CatchUpClientException.class ).when( txPullClient )
                 .pullTransactions( isNull(), eq( storeId ), anyLong(), any() );

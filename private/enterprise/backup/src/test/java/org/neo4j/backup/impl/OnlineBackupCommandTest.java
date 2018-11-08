@@ -40,6 +40,9 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.backup.impl.SelectedBackupProtocol.ANY;
+import static org.neo4j.backup.impl.SelectedBackupProtocol.CATCHUP;
+import static org.neo4j.backup.impl.SelectedBackupProtocol.COMMON;
 
 public class OnlineBackupCommandTest
 {
@@ -88,8 +91,8 @@ public class OnlineBackupCommandTest
         when( backupSupportingClassesFactory.createSupportingClasses( any() ) ).thenReturn( backupSupportingClasses );
 
         requiredArguments =
-                new OnlineBackupRequiredArguments( address, backupDirectory, backupName, SelectedBackupProtocol.ANY, fallbackToFull, doConsistencyCheck,
-                        timeout, reportDirectory );
+                new OnlineBackupRequiredArguments( address, null, backupDirectory, backupName, ANY, fallbackToFull,
+                        doConsistencyCheck, timeout, reportDirectory );
         OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
 
         when( backupStrategyCoordinatorFactory.backupStrategyCoordinator( any(), any(), any(), any() ) ).thenReturn( backupStrategyCoordinator );
@@ -128,13 +131,14 @@ public class OnlineBackupCommandTest
     }
 
     @Test
-    public void shouldPrintNiceHelp() throws Throwable
+    public void shouldPrintNiceHelp()
     {
         Usage usage = new Usage( "neo4j-admin", mock( CommandLocator.class ) );
         usage.printUsageForCommand( new OnlineBackupCommandProvider(), stdout::println );
 
         assertEquals( format( "usage: neo4j-admin backup --backup-dir=<backup-path> --name=<graph.db-backup>%n" +
-                "                          [--from=<address>] [--protocol=<any|catchup|common>]%n" +
+                "                          [--from=<address>] [--database=<graph.db>]%n" +
+                "                          [--protocol=<any|catchup|common>]%n" +
                 "                          [--fallback-to-full[=<true|false>]]%n" +
                 "                          [--timeout=<timeout>] [--pagecache=<8m>]%n" +
                 "                          [--check-consistency[=<true|false>]]%n" +
@@ -169,6 +173,10 @@ public class OnlineBackupCommandTest
                 "                                           backup will be attempted.%n" +
                 "  --from=<address>                         Host and port of Neo4j.%n" +
                 "                                           [default:localhost:6362]%n" +
+                "  --database=<graph.db>                    Name of the remote database to%n" +
+                "                                           backup. Only supported with latest%n" +
+                "                                           version of the catchup protocol.%n" +
+                "                                           [default:null]%n" +
                 "  --protocol=<any|catchup|common>          Preferred backup protocol%n" +
                 "                                           [default:any]%n" +
                 "  --fallback-to-full=<true|false>          If an incremental backup fails backup%n" +
@@ -207,14 +215,14 @@ public class OnlineBackupCommandTest
         List<Object[]> cases = asList(
                 new Object[]{SelectedBackupProtocol.CATCHUP,
                         String.format( "The selected protocol `catchup` means that it is only compatible with causal clustering instances%n" )},
-                new Object[]{SelectedBackupProtocol.COMMON,
+                new Object[]{COMMON,
                         String.format( "The selected protocol `common` means that it is only compatible with HA and single instances%n" )}
         );
         for ( Object[] thisCase : cases )
         {
             // given
-            requiredArguments = new OnlineBackupRequiredArguments( address, backupDirectory, backupName, (SelectedBackupProtocol) thisCase[0], fallbackToFull,
-                    doConsistencyCheck, timeout, reportDirectory );
+            requiredArguments = new OnlineBackupRequiredArguments( address, null, backupDirectory, backupName, (SelectedBackupProtocol) thisCase[0],
+                    fallbackToFull, doConsistencyCheck, timeout, reportDirectory );
             OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
             subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
 
@@ -225,6 +233,49 @@ public class OnlineBackupCommandTest
             assertThat( baosOut.toString(), containsString( (String) thisCase[1] ) );
             baosOut.reset();
         }
+    }
+
+    @Test
+    public void protocolNotSupportingDatabaseNameComplains() throws CommandFailed
+    {
+        // with
+        String expectedMessage = "Only the catchup protocol supports specifying the remote database name";
+        List<SelectedBackupProtocol> protocols = asList( ANY, COMMON );
+
+        for ( SelectedBackupProtocol protocol : protocols )
+        {
+            // given
+            requiredArguments = new OnlineBackupRequiredArguments( address, "graph.db", backupDirectory, backupName, protocol,
+                    fallbackToFull, doConsistencyCheck, timeout, reportDirectory );
+            OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
+            subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
+
+            try
+            {
+                // when
+                execute();
+            }
+            catch ( IncorrectUsage incorrectUsage )
+            {
+                // then
+                assertThat( incorrectUsage.getMessage(), containsString( expectedMessage ) );
+            }
+        }
+    }
+
+    @Test
+    public void protocolSupportingDatabaseNameWorksFine() throws CommandFailed, IncorrectUsage
+    {
+        // given
+        requiredArguments = new OnlineBackupRequiredArguments( address, "graph.db", backupDirectory, backupName, CATCHUP,
+                fallbackToFull, doConsistencyCheck, timeout, reportDirectory );
+        OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
+        subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
+
+        // when
+        execute();
+
+        // then: does not throw
     }
 
     private static OnlineBackupCommand newOnlineBackupCommand( OutsideWorld outsideWorld, OnlineBackupContext onlineBackupContext,

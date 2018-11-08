@@ -8,7 +8,6 @@ package org.neo4j.kernel.impl.enterprise.id;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.store.id.IdType;
@@ -26,7 +25,6 @@ import org.neo4j.kernel.impl.store.id.configuration.IdTypeConfiguration;
  */
 public class EnterpriseIdTypeConfigurationProvider extends CommunityIdTypeConfigurationProvider
 {
-
     private final Set<IdType> typesToReuse;
 
     public EnterpriseIdTypeConfigurationProvider( Config config )

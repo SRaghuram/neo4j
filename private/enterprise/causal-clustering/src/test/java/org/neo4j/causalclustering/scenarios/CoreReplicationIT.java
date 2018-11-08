@@ -16,10 +16,11 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -34,7 +35,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.neo4j.causalclustering.discovery.Cluster.dataMatchesEventually;
+import static org.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static org.neo4j.causalclustering.helpers.DataCreator.countNodes;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.graphdb.Label.label;
@@ -46,6 +47,7 @@ public class CoreReplicationIT
     public final ClusterRule clusterRule =
             new ClusterRule()
                     .withNumberOfCoreMembers( 3 )
+                    .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
                     .withNumberOfReadReplicas( 0 )
                     .withTimeout( 1000, SECONDS );
 

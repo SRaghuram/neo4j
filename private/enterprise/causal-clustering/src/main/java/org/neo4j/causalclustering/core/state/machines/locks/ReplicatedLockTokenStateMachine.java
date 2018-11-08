@@ -19,6 +19,7 @@ import org.neo4j.causalclustering.core.state.storage.StateStorage;
 public class ReplicatedLockTokenStateMachine implements StateMachine<ReplicatedLockTokenRequest>
 {
     private final StateStorage<ReplicatedLockTokenState> storage;
+
     private ReplicatedLockTokenState state;
 
     public ReplicatedLockTokenStateMachine( StateStorage<ReplicatedLockTokenState> storage )
@@ -35,7 +36,7 @@ public class ReplicatedLockTokenStateMachine implements StateMachine<ReplicatedL
             return;
         }
 
-        boolean requestAccepted = tokenRequest.id() == LockToken.nextCandidateId( currentToken().id() );
+        boolean requestAccepted = tokenRequest.id() == LockToken.nextCandidateId( state.candidateId() );
         if ( requestAccepted )
         {
             state().set( tokenRequest, commandIndex );
@@ -75,11 +76,4 @@ public class ReplicatedLockTokenStateMachine implements StateMachine<ReplicatedL
         state = snapshot;
     }
 
-    /**
-     * @return The currently valid token.
-     */
-    public synchronized ReplicatedLockTokenRequest currentToken()
-    {
-        return state().get();
-    }
 }

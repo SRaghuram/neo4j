@@ -19,10 +19,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import org.neo4j.causalclustering.core.state.storage.SimpleStorage;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -42,7 +43,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.causalclustering.TestStoreId.assertAllStoresHaveTheSameStoreId;
-import static org.neo4j.causalclustering.core.server.CoreServerModule.CLUSTER_ID_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 
@@ -257,8 +257,8 @@ public class ClusterBindingIT
 
     private void changeClusterId( CoreClusterMember coreMember ) throws IOException
     {
-        SimpleStorage<ClusterId> clusterIdStorage = new SimpleFileStorage<>( fs, coreMember.clusterStateDirectory(),
-                CLUSTER_ID_NAME, new ClusterId.Marshal(), NullLogProvider.getInstance() );
+        File clusterIdState = CoreStateFiles.CLUSTER_ID.at( coreMember.clusterStateDirectory() );
+        SimpleStorage<ClusterId> clusterIdStorage = new SimpleFileStorage<>( fs, clusterIdState, new ClusterId.Marshal(), NullLogProvider.getInstance() );
         clusterIdStorage.writeState( new ClusterId( UUID.randomUUID() ) );
     }
 

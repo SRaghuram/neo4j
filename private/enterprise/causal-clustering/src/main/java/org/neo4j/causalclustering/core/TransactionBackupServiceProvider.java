@@ -30,11 +30,11 @@ public class TransactionBackupServiceProvider
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final NettyPipelineBuilderFactory serverPipelineBuilderFactory;
     private final CatchupServerHandler catchupServerHandler;
+    private String activeDatabaseName;
 
     public TransactionBackupServiceProvider( LogProvider logProvider, LogProvider userLogProvider, ApplicationSupportedProtocols catchupProtocols,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, NettyPipelineBuilderFactory serverPipelineBuilderFactory,
-            CatchupServerHandler catchupServerHandler,
-            ChannelInboundHandler parentHandler )
+            CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, String activeDatabaseName )
     {
         this.logProvider = logProvider;
         this.userLogProvider = userLogProvider;
@@ -43,6 +43,7 @@ public class TransactionBackupServiceProvider
         this.supportedModifierProtocols = supportedModifierProtocols;
         this.serverPipelineBuilderFactory = serverPipelineBuilderFactory;
         this.catchupServerHandler = catchupServerHandler;
+        this.activeDatabaseName = activeDatabaseName;
     }
 
     public Optional<Server> resolveIfBackupEnabled( Config config )
@@ -51,16 +52,19 @@ public class TransactionBackupServiceProvider
         {
             ListenSocketAddress backupAddress = HostnamePortAsListenAddress.resolve( config, OnlineBackupSettings.online_backup_server );
             logProvider.getLog( TransactionBackupServiceProvider.class ).info( "Binding backup service on address %s", backupAddress );
-            return Optional.of( new CatchupServerBuilder( catchupServerHandler )
-                    .serverHandler( parentHandler )
+            Server catchupServer = CatchupServerBuilder.builder()
+                    .catchupServerHandler( catchupServerHandler )
+                    .defaultDatabaseName( activeDatabaseName )
                     .catchupProtocols( catchupProtocols )
                     .modifierProtocols( supportedModifierProtocols )
                     .pipelineBuilder( serverPipelineBuilderFactory )
+                    .installedProtocolsHandler( parentHandler )
+                    .listenAddress( backupAddress )
                     .userLogProvider( userLogProvider )
                     .debugLogProvider( logProvider )
-                    .listenAddress( backupAddress )
                     .serverName( "backup-server" )
-                    .build());
+                    .build();
+            return Optional.of( catchupServer );
         }
         else
         {

@@ -38,7 +38,7 @@ public class ClientConnectorAddresses implements Iterable<ClientConnectorAddress
         this.connectorUris = connectorUris;
     }
 
-    static ClientConnectorAddresses extractFromConfig( Config config )
+    public static ClientConnectorAddresses extractFromConfig( Config config )
     {
         List<ConnectorUri> connectorUris = new ArrayList<>();
 

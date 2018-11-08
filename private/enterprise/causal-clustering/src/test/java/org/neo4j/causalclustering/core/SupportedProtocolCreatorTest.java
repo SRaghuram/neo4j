@@ -21,7 +21,10 @@ import org.neo4j.logging.NullLogProvider;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_SNAPPY;
 
 public class SupportedProtocolCreatorTest
@@ -36,7 +39,7 @@ public class SupportedProtocolCreatorTest
         Config config = Config.defaults();
 
         // when
-        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).createSupportedRaftProtocol();
+        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
         assertThat( supportedRaftProtocol.identifier(), equalTo( Protocol.ApplicationProtocolCategory.RAFT ) );
@@ -49,7 +52,7 @@ public class SupportedProtocolCreatorTest
         Config config = Config.defaults();
 
         // when
-        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).createSupportedRaftProtocol();
+        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
         assertThat( supportedRaftProtocol.versions(), empty() );
@@ -62,11 +65,10 @@ public class SupportedProtocolCreatorTest
         Config config = Config.defaults( CausalClusteringSettings.raft_implementations, "1, 2, 3" );
 
         // when
-        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).createSupportedRaftProtocol();
+        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
         assertThat( supportedRaftProtocol.versions(), contains( 1, 2 ) );
-
     }
 
     @Test
@@ -76,7 +78,7 @@ public class SupportedProtocolCreatorTest
         Config config = Config.defaults( CausalClusteringSettings.raft_implementations, "1" );
 
         // when
-        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).createSupportedRaftProtocol();
+        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
         assertThat( supportedRaftProtocol.versions(), contains( 1 ) );
@@ -87,11 +89,54 @@ public class SupportedProtocolCreatorTest
     {
         // given
         Config config = Config.defaults( CausalClusteringSettings.raft_implementations, String.valueOf( Integer.MAX_VALUE ) );
+        SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, log );
 
         // when
-        ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).createSupportedRaftProtocol();
-
+        supportedProtocolCreator.getSupportedRaftProtocolsFromConfiguration();
         // then throw
+    }
+
+    @Test
+    public void shouldReturnAllRaftProtocols()
+    {
+        // when
+        ApplicationSupportedProtocols supportedRaftProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getAllRaftProtocols();
+
+        // then
+        assertEquals( supportedRaftProtocols.identifier(), Protocol.ApplicationProtocolCategory.RAFT );
+        assertTrue( supportedRaftProtocols.versions().isEmpty() );
+    }
+
+    @Test
+    public void shouldReturnAllCatchupProtocols()
+    {
+        // when
+        ApplicationSupportedProtocols supportedCatchupProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getAllCatchupProtocols();
+
+        // then
+        assertEquals( supportedCatchupProtocols.identifier(), Protocol.ApplicationProtocolCategory.CATCHUP );
+        assertTrue( supportedCatchupProtocols.versions().isEmpty() );
+    }
+
+    @Test
+    public void shouldRespectMinimumVersionOfRaftProtocol()
+    {
+        // when
+        int minimumVersion = 2;
+        ApplicationSupportedProtocols supportedRaftProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getMinimumRaftProtocols( minimumVersion );
+
+        // then
+        assertThat( supportedRaftProtocols.versions(), hasItem( 2 ) );
+    }
+
+    @Test
+    public void shouldRespectMinimumVersionOfCatchupProtocol()
+    {
+        // when
+        ApplicationSupportedProtocols supportedCatchupProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getMinimumCatchupProtocols( 2 );
+
+        // then
+        assertThat( supportedCatchupProtocols.versions(), contains( 2 ) );
     }
 
     @Test

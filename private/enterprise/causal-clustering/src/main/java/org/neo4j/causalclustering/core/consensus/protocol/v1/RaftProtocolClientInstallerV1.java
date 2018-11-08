@@ -11,7 +11,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
+import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
 import org.neo4j.causalclustering.messaging.marshalling.v1.RaftMessageEncoder;
 import org.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -52,7 +52,8 @@ public class RaftProtocolClientInstallerV1 implements ProtocolInstaller<Orientat
         clientPipelineBuilderFactory.client( channel, log )
                 .modify( modifiers )
                 .addFraming()
-                .add( "raft_encoder", new RaftMessageEncoder( CoreReplicatedContentMarshal.marshaller() ) )
+                // specifying a database name for V1 is not needed here because we are just encoding
+                .add( "raft_encoder", new RaftMessageEncoder( CoreReplicatedContentMarshalFactory.marshalV1( null ) ) )
                 .install();
     }
 

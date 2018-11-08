@@ -74,9 +74,9 @@ public class VoteState
     {
         private final ChannelMarshal<MemberId> memberMarshal;
 
-        public Marshal( ChannelMarshal<MemberId> memberMarshal )
+        public Marshal()
         {
-            this.memberMarshal = memberMarshal;
+            this.memberMarshal = MemberId.Marshal.INSTANCE;
         }
 
         @Override

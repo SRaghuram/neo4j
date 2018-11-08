@@ -11,6 +11,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 import org.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import org.neo4j.causalclustering.core.replication.ReplicatedContent;
@@ -45,14 +46,15 @@ public class SegmentsTest
     private final FileNames fileNames = new FileNames( baseDirectory );
     @SuppressWarnings( "unchecked" )
     private final ChannelMarshal<ReplicatedContent> contentMarshal = mock( ChannelMarshal.class );
+    private final Function<Integer,ChannelMarshal<ReplicatedContent>> contentMarshals = ignored -> contentMarshal;
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final SegmentHeader header = mock( SegmentHeader.class );
     private final ReaderPool readerPool = new ReaderPool( 0, getInstance(), fileNames, fsa,
             Clocks.fakeClock() );
 
-    private final SegmentFile fileA = spy( new SegmentFile( fsa, fileNames.getForVersion( 0 ), readerPool, 0,
+    private final SegmentFile fileA = spy( new SegmentFile( fsa, fileNames.getForSegment( 0 ), readerPool, 0,
             contentMarshal, logProvider, header ) );
-    private final SegmentFile fileB = spy( new SegmentFile( fsa, fileNames.getForVersion( 1 ), readerPool, 1,
+    private final SegmentFile fileB = spy( new SegmentFile( fsa, fileNames.getForSegment( 1 ), readerPool, 1,
             contentMarshal, logProvider, header ) );
 
     private final List<SegmentFile> segmentFiles = asList( fileA, fileB );
@@ -67,7 +69,7 @@ public class SegmentsTest
     public void shouldCreateNext() throws Exception
     {
         // Given
-        try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshal,
+        try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
                 logProvider, -1 ) )
         {
             // When
@@ -87,7 +89,7 @@ public class SegmentsTest
     {
         verifyZeroInteractions( fsa );
         // Given
-        try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshal,
+        try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
                 logProvider, -1 ) )
         {
             // this is version 0 and will be deleted on prune later
@@ -100,7 +102,7 @@ public class SegmentsTest
             // When
             segments.prune( 11 );
 
-            verify( fsa, times( segmentFiles.size() ) ).deleteFile( fileNames.getForVersion( toPrune.header().version() ) );
+            verify( fsa, times( segmentFiles.size() ) ).deleteFile( fileNames.getForSegment( toPrune.header().segmentNumber() ) );
         }
     }
 
@@ -108,7 +110,7 @@ public class SegmentsTest
     public void shouldNeverDeleteOnTruncate() throws Exception
     {
         // Given
-        try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshal,
+        try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
                 logProvider, -1 ) )
         {
             segments.rotate( -1, -1, -1 );
@@ -128,7 +130,7 @@ public class SegmentsTest
     public void shouldDeleteTruncatedFilesOnPrune() throws Exception
     {
         // Given
-        try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshal,
+        try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
                 logProvider, -1 ) )
         {
             SegmentFile toBePruned = segments.rotate( -1, -1, -1 );
@@ -146,7 +148,7 @@ public class SegmentsTest
             // Then
             // the truncate file is part of the deletes that happen while pruning
             verify( fsa, times( segmentFiles.size() ) ).deleteFile(
-                    fileNames.getForVersion( toBePruned.header().version() ) );
+                    fileNames.getForSegment( toBePruned.header().segmentNumber() ) );
         }
     }
 
@@ -154,7 +156,7 @@ public class SegmentsTest
     public void shouldCloseTheSegments()
     {
         // Given
-        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshal, logProvider, -1 );
+        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals, logProvider, -1 );
 
         // When
         segments.close();
@@ -173,7 +175,7 @@ public class SegmentsTest
         doThrow( new RuntimeException() ).when( fileA ).close();
         doThrow( new RuntimeException() ).when( fileB ).close();
 
-        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshal, logProvider, -1 );
+        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals, logProvider, -1 );
 
         // When
         try
@@ -195,7 +197,7 @@ public class SegmentsTest
     {
         //Given a prune index of n, if the smallest value for a segment file is n+c, the pruning should not remove
         // any files and not result in a failure.
-        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshal, logProvider, -1 );
+        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals, logProvider, -1 );
 
         segments.rotate( -1, -1, -1 );
         segments.last().closeWriter(); // need to close writer otherwise dispose will not be called
@@ -225,7 +227,7 @@ public class SegmentsTest
          */
 
         // Given
-        Segments segments = new Segments( fsa, fileNames, readerPool, Collections.emptyList(), contentMarshal, logProvider, -1 );
+        Segments segments = new Segments( fsa, fileNames, readerPool, Collections.emptyList(), contentMarshals, logProvider, -1 );
 
         /*
         create 0

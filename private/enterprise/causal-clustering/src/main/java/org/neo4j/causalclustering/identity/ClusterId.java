@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import org.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
+import org.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import org.neo4j.storageengine.api.ReadableChannel;
 import org.neo4j.storageengine.api.WritableChannel;
 
@@ -56,7 +57,7 @@ public class ClusterId
                '}';
     }
 
-    public static class Marshal extends SafeChannelMarshal<ClusterId>
+    public static class Marshal extends SafeStateMarshal<ClusterId>
     {
         public static final Marshal INSTANCE = new Marshal();
         private static final UUID NIL = new UUID( 0L, 0L );
@@ -77,6 +78,18 @@ public class ClusterId
             UUID uuid = new UUID( mostSigBits, leastSigBits );
 
             return uuid.equals( NIL ) ? null : new ClusterId( uuid );
+        }
+
+        @Override
+        public ClusterId startState()
+        {
+            return null;
+        }
+
+        @Override
+        public long ordinal( ClusterId clusterId )
+        {
+            return clusterId == null ? 0 : 1;
         }
     }
 }

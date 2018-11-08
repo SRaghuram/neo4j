@@ -29,7 +29,7 @@ public class EntryCursorTest
     private ReaderPool readerPool = new ReaderPool( 0, getInstance(), fileNames, fsa,
             Clocks.fakeClock() );
     private final Segments segments =
-            new Segments( fsa, fileNames, readerPool, emptyList(), mock( ChannelMarshal.class ), NullLogProvider.getInstance(), -1 );
+            new Segments( fsa, fileNames, readerPool, emptyList(), ignored -> mock( ChannelMarshal.class ), NullLogProvider.getInstance(), -1 );
 
     {
         fsa.mkdir( bam );

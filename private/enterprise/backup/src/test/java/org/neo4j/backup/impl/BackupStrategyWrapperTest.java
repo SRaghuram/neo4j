@@ -61,6 +61,7 @@ class BackupStrategyWrapperTest
     private OnlineBackupRequiredArguments requiredArguments;
     private final Config config = mock( Config.class );
     private final OptionalHostnamePort userProvidedAddress = new OptionalHostnamePort( (String) null, null, null );
+    private final String databaseName = "graph.db";
     private final Fallible<BackupStageOutcome> SUCCESS = new Fallible<>( BackupStageOutcome.SUCCESS, null );
     private final Fallible<BackupStageOutcome> FAILURE = new Fallible<>( BackupStageOutcome.FAILURE, null );
     private final PageCache pageCache = mock( PageCache.class );
@@ -511,7 +512,7 @@ class BackupStrategyWrapperTest
     private OnlineBackupRequiredArguments requiredArguments( boolean fallbackToFull )
     {
         File databaseDirectory = desiredBackupLayout.databaseDirectory();
-        return new OnlineBackupRequiredArguments( userProvidedAddress, desiredBackupLayout.getStoreLayout().storeDirectory().toPath(),
+        return new OnlineBackupRequiredArguments( userProvidedAddress, databaseName, desiredBackupLayout.getStoreLayout().storeDirectory().toPath(),
                 databaseDirectory.getName(), SelectedBackupProtocol.ANY, fallbackToFull, true, 1000, reportDir );
     }
 

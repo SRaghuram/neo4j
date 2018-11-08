@@ -19,28 +19,43 @@ import static org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLoc
 
 public class ReplicatedLockTokenState
 {
-    private ReplicatedLockTokenRequest currentToken = INVALID_REPLICATED_LOCK_TOKEN_REQUEST;
-    private long ordinal = -1L;
+    private static long INITIAL_ORDINAL = -1;
+    private long ordinal;
+    private MemberId owner;
+    private int candidateId;
 
     public ReplicatedLockTokenState()
     {
+        this( INITIAL_ORDINAL, INVALID_REPLICATED_LOCK_TOKEN_REQUEST );
     }
 
     public ReplicatedLockTokenState( long ordinal, ReplicatedLockTokenRequest currentToken )
     {
-        this.ordinal = ordinal;
-        this.currentToken = currentToken;
+        this( ordinal, currentToken.id(), currentToken.owner() );
+    }
+
+    private ReplicatedLockTokenState( long ordinal, int candidateId, MemberId owner )
+    {
+       this.ordinal = ordinal;
+       this.candidateId = candidateId;
+       this.owner = owner;
     }
 
     public void set( ReplicatedLockTokenRequest currentToken, long ordinal )
     {
-        this.currentToken = currentToken;
+        candidateId = currentToken.id();
+        owner = currentToken.owner();
         this.ordinal = ordinal;
     }
 
-    public ReplicatedLockTokenRequest get()
+    public int candidateId()
     {
-        return currentToken;
+        return candidateId;
+    }
+
+    public MemberId owner()
+    {
+        return owner;
     }
 
     long ordinal()
@@ -51,7 +66,7 @@ public class ReplicatedLockTokenState
     @Override
     public String toString()
     {
-        return String.format( "ReplicatedLockTokenState{currentToken=%s, ordinal=%d}", currentToken, ordinal );
+        return String.format( "ReplicatedLockTokenState{candidateId=%s, owner=%s, ordinal=%d}", candidateId, owner, ordinal );
     }
 
     @Override
@@ -61,33 +76,32 @@ public class ReplicatedLockTokenState
         {
             return true;
         }
-        if ( o == null || getClass() != o.getClass() )
+        if ( !(o instanceof ReplicatedLockTokenState) )
         {
             return false;
         }
         ReplicatedLockTokenState that = (ReplicatedLockTokenState) o;
-        return ordinal == that.ordinal &&
-                Objects.equals( currentToken, that.currentToken );
+        return ordinal == that.ordinal && candidateId == that.candidateId && Objects.equals( owner, that.owner );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( currentToken, ordinal );
+        return Objects.hash( ordinal, owner, candidateId );
     }
 
     ReplicatedLockTokenState newInstance()
     {
-        return new ReplicatedLockTokenState( ordinal, currentToken );
+        return new ReplicatedLockTokenState( ordinal, candidateId, owner );
     }
 
     public static class Marshal extends SafeStateMarshal<ReplicatedLockTokenState>
     {
         private final ChannelMarshal<MemberId> memberMarshal;
 
-        public Marshal( ChannelMarshal<MemberId> memberMarshal )
+        public Marshal()
         {
-            this.memberMarshal = memberMarshal;
+            this.memberMarshal = MemberId.Marshal.INSTANCE;
         }
 
         @Override
@@ -95,8 +109,8 @@ public class ReplicatedLockTokenState
                              WritableChannel channel ) throws IOException
         {
             channel.putLong( state.ordinal );
-            channel.putInt( state.get().id() );
-            memberMarshal.marshal( state.get().owner(), channel );
+            channel.putInt( state.candidateId() );
+            memberMarshal.marshal( state.owner(), channel );
         }
 
         @Override
@@ -105,8 +119,7 @@ public class ReplicatedLockTokenState
             long logIndex = channel.getLong();
             int candidateId = channel.getInt();
             MemberId member = memberMarshal.unmarshal( channel );
-
-            return new ReplicatedLockTokenState( logIndex, new ReplicatedLockTokenRequest( member, candidateId ) );
+            return new ReplicatedLockTokenState( logIndex, candidateId, member );
         }
 
         @Override

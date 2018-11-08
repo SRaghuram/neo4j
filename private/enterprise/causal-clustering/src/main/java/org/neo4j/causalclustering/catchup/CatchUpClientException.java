@@ -7,6 +7,11 @@ package org.neo4j.causalclustering.catchup;
 
 public class CatchUpClientException extends Exception
 {
+    public CatchUpClientException()
+    {
+        super();
+    }
+
     CatchUpClientException( String message )
     {
         super( message );

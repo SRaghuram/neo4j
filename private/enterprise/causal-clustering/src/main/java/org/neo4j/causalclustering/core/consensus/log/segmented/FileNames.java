@@ -51,7 +51,7 @@ public class FileNames
      *
      * @return A file for the specific version.
      */
-    File getForVersion( long version )
+    File getForSegment( long version )
     {
         return new File( baseDirectory, BASE_FILE_NAME + version );
     }

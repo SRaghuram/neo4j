@@ -5,7 +5,7 @@
  */
 package org.neo4j.causalclustering.core.state.machines.tx;
 
-import org.neo4j.causalclustering.catchup.storecopy.LocalDatabase;
+import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;

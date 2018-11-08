@@ -43,7 +43,7 @@ import static org.neo4j.causalclustering.routing.load_balancing.procedure.Proced
 /**
  * Returns endpoints and their capabilities.
  */
-@Deprecated
+@Deprecated // to be removed in 4.0
 public class LegacyGetServersProcedure implements CallableProcedure
 {
     private final String DESCRIPTION = "Returns cluster endpoints and their capabilities.";
@@ -59,7 +59,6 @@ public class LegacyGetServersProcedure implements CallableProcedure
     private final LeaderLocator leaderLocator;
     private final Config config;
     private final Log log;
-    private final String dbName;
 
     public LegacyGetServersProcedure( TopologyService topologyService, LeaderLocator leaderLocator,
             Config config, LogProvider logProvider )
@@ -68,7 +67,6 @@ public class LegacyGetServersProcedure implements CallableProcedure
         this.leaderLocator = leaderLocator;
         this.config = config;
         this.log = logProvider.getLog( getClass() );
-        this.dbName = config.get( CausalClusteringSettings.database );
     }
 
     @Override

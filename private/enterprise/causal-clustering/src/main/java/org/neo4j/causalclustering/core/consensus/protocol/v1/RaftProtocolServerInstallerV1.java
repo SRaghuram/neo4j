@@ -13,7 +13,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
+import org.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
 import org.neo4j.causalclustering.messaging.marshalling.v1.RaftMessageDecoder;
 import org.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -29,24 +29,31 @@ public class RaftProtocolServerInstallerV1 implements ProtocolInstaller<Orientat
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,RaftProtocolServerInstallerV1>
     {
-        public Factory( ChannelInboundHandler raftMessageHandler, NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider )
+        public Factory( ChannelInboundHandler raftMessageHandler, NettyPipelineBuilderFactory pipelineBuilderFactory,
+                String databaseName, LogProvider logProvider )
         {
             super( APPLICATION_PROTOCOL,
-                    modifiers -> new RaftProtocolServerInstallerV1( raftMessageHandler, pipelineBuilderFactory, modifiers, logProvider ) );
+                    modifiers -> new RaftProtocolServerInstallerV1( raftMessageHandler, pipelineBuilderFactory, modifiers, databaseName, logProvider ) );
         }
     }
 
     private final ChannelInboundHandler raftMessageHandler;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final List<ModifierProtocolInstaller<Orientation.Server>> modifiers;
+    private final String databaseName;
     private final Log log;
 
+    /**
+     * @param databaseName Used when talking raft protocol V1 with a 3.4 instance. It is simply assumed that we have
+     * the same database (which is the only supported way of doing a rolling upgrade).
+     */
     public RaftProtocolServerInstallerV1( ChannelInboundHandler raftMessageHandler, NettyPipelineBuilderFactory pipelineBuilderFactory,
-            List<ModifierProtocolInstaller<Orientation.Server>> modifiers, LogProvider logProvider )
+            List<ModifierProtocolInstaller<Orientation.Server>> modifiers, String databaseName, LogProvider logProvider )
     {
         this.raftMessageHandler = raftMessageHandler;
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.modifiers = modifiers;
+        this.databaseName = databaseName;
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -56,7 +63,7 @@ public class RaftProtocolServerInstallerV1 implements ProtocolInstaller<Orientat
         pipelineBuilderFactory.server( channel, log )
                 .modify( modifiers )
                 .addFraming()
-                .add( "raft_decoder", new RaftMessageDecoder( CoreReplicatedContentMarshal.marshaller(), Clock.systemUTC() ) )
+                .add( "raft_decoder", new RaftMessageDecoder( CoreReplicatedContentMarshalFactory.marshalV1( databaseName ), Clock.systemUTC() ) )
                 .add( "raft_handler", raftMessageHandler )
                 .install();
     }

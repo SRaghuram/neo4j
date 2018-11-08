@@ -14,11 +14,14 @@ import org.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import org.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
 import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
 import org.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
-import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
+import org.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
+import org.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
 
 public interface ReplicatedContentHandler
 {
-    void handle( ReplicatedTransaction replicatedTransaction ) throws IOException;
+    void handle( ByteArrayReplicatedTransaction replicatedTransaction ) throws IOException;
+
+    void handle( TransactionRepresentationReplicatedTransaction replicatedTransaction ) throws IOException;
 
     void handle( MemberIdSet memberIdSet ) throws IOException;
 

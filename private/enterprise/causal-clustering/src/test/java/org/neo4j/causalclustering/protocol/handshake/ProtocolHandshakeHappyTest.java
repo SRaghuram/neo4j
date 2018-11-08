@@ -257,7 +257,8 @@ public class ProtocolHandshakeHappyTest
 
         private CompletableFuture<ProtocolStack> initiate()
         {
-            return handshakeClient.initiate( clientChannel, clientApplicationProtocolRepository, clientModifierProtocolRepository );
+            handshakeClient.initiate( clientChannel, clientApplicationProtocolRepository, clientModifierProtocolRepository );
+            return handshakeClient.protocol();
         }
     }
 

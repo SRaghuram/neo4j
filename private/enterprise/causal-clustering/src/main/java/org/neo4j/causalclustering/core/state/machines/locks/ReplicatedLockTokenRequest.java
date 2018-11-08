@@ -21,14 +21,21 @@ public class ReplicatedLockTokenRequest implements CoreReplicatedContent, LockTo
 {
     private final MemberId owner;
     private final int candidateId;
+    private final String databaseName;
 
     static final ReplicatedLockTokenRequest INVALID_REPLICATED_LOCK_TOKEN_REQUEST =
-            new ReplicatedLockTokenRequest( null, LockToken.INVALID_LOCK_TOKEN_ID );
+            new ReplicatedLockTokenRequest( null, LockToken.INVALID_LOCK_TOKEN_ID, null );
 
-    public ReplicatedLockTokenRequest( MemberId owner, int candidateId )
+    public ReplicatedLockTokenRequest( ReplicatedLockTokenState state, String databaseName )
+    {
+        this( state.owner(), state.candidateId(), databaseName );
+    }
+
+    public ReplicatedLockTokenRequest( MemberId owner, int candidateId, String databaseName )
     {
         this.owner = owner;
         this.candidateId = candidateId;
+        this.databaseName = databaseName;
     }
 
     @Override
@@ -77,8 +84,13 @@ public class ReplicatedLockTokenRequest implements CoreReplicatedContent, LockTo
     }
 
     @Override
-    public void handle( ReplicatedContentHandler contentHandler ) throws IOException
+    public void dispatch( ReplicatedContentHandler contentHandler ) throws IOException
     {
         contentHandler.handle( this );
+    }
+
+    public String databaseName()
+    {
+        return databaseName;
     }
 }

@@ -14,9 +14,9 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
-import org.neo4j.causalclustering.discovery.Cluster;
-import org.neo4j.causalclustering.discovery.CoreClusterMember;
-import org.neo4j.causalclustering.discovery.ReadReplica;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.TransactionFailureException;
@@ -67,7 +67,7 @@ public class ReadReplicaStoreCopyIT
             catch ( Exception e )
             {
                 assertThat( e, instanceOf( TransactionFailureException.class ) );
-                assertThat( e.getMessage(), containsString( "Database is stopped to copy store" ) );
+                assertThat( e.getMessage(), containsString( "stopped to copy a store" ) );
             }
         }
         finally

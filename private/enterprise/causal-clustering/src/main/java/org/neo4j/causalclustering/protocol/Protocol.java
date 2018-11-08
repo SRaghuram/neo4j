@@ -5,9 +5,12 @@
  */
 package org.neo4j.causalclustering.protocol;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public interface Protocol<IMPL extends Comparable<IMPL>>
@@ -23,6 +26,15 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
                 .filter( protocol -> Objects.equals( protocol.category(), category.canonicalName() ) )
                 .filter( protocol -> Objects.equals( normalise.apply( protocol.implementation() ), normalise.apply( implementation ) ) )
                 .findFirst();
+    }
+
+    static <IMPL extends Comparable<IMPL>, T extends Protocol<IMPL>> List<T> filterCategory(
+            T[] values, Category<T> category, Predicate<IMPL> implPredicate )
+    {
+        return Stream.of( values )
+                .filter( protocol -> Objects.equals( protocol.category(), category.canonicalName() ) )
+                .filter( protocol -> implPredicate.test( protocol.implementation() ) )
+                .collect( Collectors.toList() );
     }
 
     interface Category<T extends Protocol>
@@ -50,7 +62,8 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
     {
         RAFT_1( ApplicationProtocolCategory.RAFT, 1 ),
         RAFT_2( ApplicationProtocolCategory.RAFT, 2 ),
-        CATCHUP_1( ApplicationProtocolCategory.CATCHUP, 1 );
+        CATCHUP_1( ApplicationProtocolCategory.CATCHUP, 1 ),
+        CATCHUP_2( ApplicationProtocolCategory.CATCHUP, 2 );
 
         private final Integer version;
         private final ApplicationProtocolCategory identifier;
@@ -77,6 +90,16 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
         {
             return Protocol.find( ApplicationProtocols.values(), category, version, Function.identity() );
         }
+
+        public static List<ApplicationProtocol> filterByVersion( ApplicationProtocolCategory category, Predicate<Integer> versionPredicate )
+        {
+            return Protocol.filterCategory( ApplicationProtocols.values(), category, versionPredicate );
+        }
+    }
+
+    interface CatchupProtocolFeatures
+    {
+        int SUPPORTS_MULTIPLE_DATABASES_FROM_VERSION = 2;
     }
 
     interface ModifierProtocol extends Protocol<String>

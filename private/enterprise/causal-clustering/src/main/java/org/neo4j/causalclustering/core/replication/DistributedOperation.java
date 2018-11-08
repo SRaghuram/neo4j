@@ -22,7 +22,7 @@ import org.neo4j.storageengine.api.WritableChannel;
 /**
  * A uniquely identifiable operation.
  */
-public class  DistributedOperation implements ReplicatedContent
+public class DistributedOperation implements ReplicatedContent
 {
     private final ReplicatedContent content;
     private final GlobalSession globalSession;
@@ -57,10 +57,10 @@ public class  DistributedOperation implements ReplicatedContent
     }
 
     @Override
-    public void handle( ReplicatedContentHandler contentHandler ) throws IOException
+    public void dispatch( ReplicatedContentHandler contentHandler ) throws IOException
     {
         contentHandler.handle( this );
-        content().handle( contentHandler );
+        content().dispatch( contentHandler );
     }
 
     /**

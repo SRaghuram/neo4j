@@ -11,6 +11,7 @@ import java.util.EnumSet;
 
 import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
+import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -20,8 +21,6 @@ import org.neo4j.jmx.impl.Neo4jMBean;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.management.CausalClustering;
-
-import static org.neo4j.causalclustering.core.consensus.log.RaftLog.RAFT_LOG_DIRECTORY_NAME;
 
 @Service.Implementation( ManagementBeanProvider.class )
 public class CausalClusteringBean extends ManagementBeanProvider
@@ -84,7 +83,7 @@ public class CausalClusteringBean extends ManagementBeanProvider
         @Override
         public long getRaftLogSize()
         {
-            File raftLogDirectory = new File( clusterStateDirectory.get(), RAFT_LOG_DIRECTORY_NAME );
+            File raftLogDirectory = CoreStateFiles.RAFT_LOG.at( clusterStateDirectory.get() );
             return FileUtils.size( fs, raftLogDirectory );
         }
 
@@ -103,7 +102,7 @@ public class CausalClusteringBean extends ManagementBeanProvider
             for ( File file : files )
             {
                 // Exclude raft log that resides in same directory
-                if ( fs.isDirectory( file ) && file.getName().equals( RAFT_LOG_DIRECTORY_NAME ) )
+                if ( fs.isDirectory( file ) && file.getName().equals( CoreStateFiles.RAFT_LOG.directoryFullName() ) )
                 {
                     continue;
                 }

@@ -74,7 +74,7 @@ public class RaftTestGroup implements RaftGroup<MemberId>
     }
 
     @Override
-    public void handle( ReplicatedContentHandler contentHandler )
+    public void dispatch( ReplicatedContentHandler contentHandler )
     {
         throw new UnsupportedOperationException( "No handler for this " + this.getClass() );
     }

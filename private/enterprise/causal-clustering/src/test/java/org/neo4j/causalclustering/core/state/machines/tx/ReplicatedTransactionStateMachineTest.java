@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
+import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
@@ -35,6 +36,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ReplicatedTransactionStateMachineTest
 {
@@ -48,7 +50,7 @@ public class ReplicatedTransactionStateMachineTest
         // given
         int lockSessionId = 23;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( lockSessionId ) );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( lockSessionId ), DEFAULT_DATABASE_NAME );
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
         PageCursorTracer cursorTracer = mock( PageCursorTracer.class );
@@ -75,7 +77,7 @@ public class ReplicatedTransactionStateMachineTest
         int txLockSessionId = 23;
         int currentLockSessionId = 24;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ) );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DEFAULT_DATABASE_NAME );
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
 
@@ -118,7 +120,7 @@ public class ReplicatedTransactionStateMachineTest
         int currentLockSessionId = 24;
         long txId = 42L;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ) );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DEFAULT_DATABASE_NAME );
 
         TransactionCommitProcess localCommitProcess = createFakeTransactionCommitProcess( txId );
 
@@ -162,7 +164,7 @@ public class ReplicatedTransactionStateMachineTest
                 new ReplicatedTransactionStateMachine( commandIndexTracker, lockState( txLockSessionId ), batchSize, logProvider, PageCursorTracerSupplier.NULL,
                         EmptyVersionContextSupplier.EMPTY );
 
-        ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( physicalTx( txLockSessionId ) );
+        ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DEFAULT_DATABASE_NAME );
 
         // and
         TransactionCommitProcess localCommitProcess = createFakeTransactionCommitProcess( anyTransactionId );
@@ -207,9 +209,9 @@ public class ReplicatedTransactionStateMachineTest
 
     private  ReplicatedLockTokenStateMachine lockState( int lockSessionId )
     {
-        @SuppressWarnings( "unchecked" )
+        ReplicatedLockTokenRequest lockTokenRequest = new ReplicatedLockTokenRequest( null, lockSessionId, DEFAULT_DATABASE_NAME );
         ReplicatedLockTokenStateMachine lockState = mock( ReplicatedLockTokenStateMachine.class );
-        when( lockState.currentToken() ).thenReturn( new ReplicatedLockTokenRequest( null, lockSessionId ) );
+        when( lockState.snapshot() ).thenReturn( new ReplicatedLockTokenState( -1, lockTokenRequest ) );
         return lockState;
     }
 }

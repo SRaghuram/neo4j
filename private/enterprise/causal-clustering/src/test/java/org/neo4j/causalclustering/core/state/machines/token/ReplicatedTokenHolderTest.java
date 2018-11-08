@@ -35,17 +35,19 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ReplicatedTokenHolderTest
 {
     private Supplier storageEngineSupplier = mock( Supplier.class );
+    private String databaseName = DEFAULT_DATABASE_NAME;
 
     @Test
     public void shouldStoreInitialTokens()
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( registry, null,
+        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseName, registry, null,
                 null, storageEngineSupplier );
 
         // when
@@ -60,7 +62,7 @@ public class ReplicatedTokenHolderTest
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( registry, null,
+        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseName, registry, null,
                 null, storageEngineSupplier );
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
 
@@ -86,7 +88,7 @@ public class ReplicatedTokenHolderTest
 
         TokenRegistry registry = new TokenRegistry( "Label" );
         int generatedTokenId = 1;
-        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( registry, ( content, trackResult ) ->
+        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseName, registry, ( content, trackResult ) ->
         {
             CompletableFuture<Object> completeFuture = new CompletableFuture<>();
             completeFuture.complete( generatedTokenId );

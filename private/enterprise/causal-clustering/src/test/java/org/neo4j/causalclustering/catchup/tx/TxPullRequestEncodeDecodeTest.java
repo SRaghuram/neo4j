@@ -8,10 +8,14 @@ package org.neo4j.causalclustering.catchup.tx;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
+import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
+import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequestDecoderV1;
+import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequestEncoderV1;
 import org.neo4j.causalclustering.identity.StoreId;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class TxPullRequestEncodeDecodeTest
 {
@@ -19,9 +23,9 @@ public class TxPullRequestEncodeDecodeTest
     public void shouldEncodeAndDecodePullRequestMessage()
     {
         // given
-        EmbeddedChannel channel = new EmbeddedChannel( new TxPullRequestEncoder(), new TxPullRequestDecoder() );
+        EmbeddedChannel channel = new EmbeddedChannel( new TxPullRequestEncoderV1(), new TxPullRequestDecoderV1( DEFAULT_DATABASE_NAME ) );
         final long arbitraryId = 23;
-        TxPullRequest sent = new TxPullRequest( arbitraryId, new StoreId( 1, 2, 3, 4 ) );
+        TxPullRequest sent = new TxPullRequest( arbitraryId, new StoreId( 1, 2, 3, 4 ), DEFAULT_DATABASE_NAME );
 
         // when
         channel.writeOutbound( sent );
