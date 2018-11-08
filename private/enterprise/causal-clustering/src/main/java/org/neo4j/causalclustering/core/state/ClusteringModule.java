@@ -45,12 +45,12 @@ public class ClusteringModule
     {
         LifeSupport life = platformModule.life;
         Config config = platformModule.config;
-        LogProvider logProvider = platformModule.logging.getInternalLogProvider();
-        LogProvider userLogProvider = platformModule.logging.getUserLogProvider();
+        LogProvider logProvider = platformModule.logService.getInternalLogProvider();
+        LogProvider userLogProvider = platformModule.logService.getUserLogProvider();
         Dependencies dependencies = platformModule.dependencies;
         Monitors monitors = platformModule.monitors;
         FileSystemAbstraction fileSystem = platformModule.fileSystem;
-        RemoteMembersResolver remoteMembersResolver = chooseResolver( config, platformModule.logging );
+        RemoteMembersResolver remoteMembersResolver = chooseResolver( config, platformModule.logService );
 
         topologyService = discoveryServiceFactory.coreTopologyService( config, myself, platformModule.jobScheduler,
                 logProvider, userLogProvider, remoteMembersResolver, resolveStrategy( config, logProvider ), monitors, platformModule.clock );

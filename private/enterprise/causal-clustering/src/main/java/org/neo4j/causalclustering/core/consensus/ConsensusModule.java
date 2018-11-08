@@ -70,7 +70,7 @@ public class ConsensusModule
             File clusterStateDirectory, CoreTopologyService coreTopologyService, CoreStateStorageService coreStorageService, String activeDatabaseName )
     {
         final Config config = platformModule.config;
-        final LogService logging = platformModule.logging;
+        final LogService logging = platformModule.logService;
         final FileSystemAbstraction fileSystem = platformModule.fileSystem;
         final LifeSupport life = platformModule.life;
 

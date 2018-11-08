@@ -26,7 +26,7 @@ public class IdentityModule
     IdentityModule( PlatformModule platformModule, File clusterStateDirectory )
     {
         FileSystemAbstraction fileSystem = platformModule.fileSystem;
-        LogProvider logProvider = platformModule.logging.getInternalLogProvider();
+        LogProvider logProvider = platformModule.logService.getInternalLogProvider();
 
         Log log = logProvider.getLog( getClass() );
 

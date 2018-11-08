@@ -418,7 +418,7 @@ public class QueryLoggerIT
         {
             database.execute( QUERY ).close();
 
-            // File will not be created until query logging is enabled.
+            // File will not be created until query logService is enabled.
             assertFalse( fileSystem.fileExists( logFilename ) );
 
             database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'true')" ).close();

@@ -34,7 +34,6 @@ import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
 import static java.lang.String.format;
@@ -47,7 +46,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
     {
         super( platformModule );
         globalTransactionStats = new GlobalTransactionStats();
-        initGlobalGuard( platformModule.clock, platformModule.logging );
+        initGlobalGuard( platformModule.clock, platformModule.logService );
     }
 
     protected Function<String,TokenHolders> createTokenHolderProvider( PlatformModule platform )
@@ -132,7 +131,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
         {
             SecurityModule securityModule = setupSecurityModule( platformModule, editionModule,
-                    platformModule.logging.getUserLog( EnterpriseEditionModule.class ),
+                    platformModule.logService.getUserLog( EnterpriseEditionModule.class ),
                     procedures, "commercial-security-module" );
             platformModule.life.add( securityModule );
             securityProvider = securityModule;

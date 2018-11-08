@@ -57,7 +57,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     {
         super( platformModule, discoveryServiceFactory );
         this.globalTransactionStats = new GlobalTransactionStats();
-        initGlobalGuard( platformModule.clock, platformModule.logging );
+        initGlobalGuard( platformModule.clock, platformModule.logService );
     }
 
     @Override

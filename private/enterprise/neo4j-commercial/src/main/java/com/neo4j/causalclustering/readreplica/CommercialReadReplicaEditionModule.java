@@ -54,7 +54,7 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
     {
         super( platformModule, discoveryServiceFactory, myself );
         this.transactionStats = new GlobalTransactionStats();
-        initGlobalGuard( platformModule.clock, platformModule.logging );
+        initGlobalGuard( platformModule.clock, platformModule.logService );
     }
 
     @Override

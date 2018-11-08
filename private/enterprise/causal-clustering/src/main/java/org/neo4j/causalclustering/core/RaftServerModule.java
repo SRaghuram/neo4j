@@ -77,7 +77,7 @@ class RaftServerModule
         this.supportedApplicationProtocol = supportedApplicationProtocol;
         this.databaseService = databaseService;
         this.messageLogger = messageLogger;
-        this.logProvider = platformModule.logging.getInternalLogProvider();
+        this.logProvider = platformModule.logService.getInternalLogProvider();
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.catchupAddressProvider = catchupAddressProvider;
         this.supportedModifierProtocols = supportedModifierProtocols;
@@ -120,7 +120,7 @@ class RaftServerModule
                 protocolInstallerRepository, pipelineBuilderFactory, logProvider );
 
         ListenSocketAddress raftListenAddress = platformModule.config.get( CausalClusteringSettings.raft_listen_address );
-        Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider, platformModule.logging.getUserLogProvider(),
+        Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider, platformModule.logService.getUserLogProvider(),
                 raftListenAddress, "raft-server" );
 
         LoggingInbound<ReceivedInstantClusterIdAwareMessage<?>> loggingRaftInbound =

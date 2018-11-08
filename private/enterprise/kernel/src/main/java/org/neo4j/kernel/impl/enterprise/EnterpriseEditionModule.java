@@ -109,7 +109,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule
         if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
         {
             SecurityModule securityModule = setupSecurityModule( platformModule, editionModule,
-                    platformModule.logging.getUserLog( EnterpriseEditionModule.class ),
+                    platformModule.logService.getUserLog( EnterpriseEditionModule.class ),
                     procedures, platformModule.config.get( EnterpriseEditionSettings.security_module ) );
             platformModule.life.add( securityModule );
             securityProvider = securityModule;
