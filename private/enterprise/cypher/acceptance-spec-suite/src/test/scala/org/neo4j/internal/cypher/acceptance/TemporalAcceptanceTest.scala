@@ -15,9 +15,6 @@ import org.neo4j.values.storable.{DateValue, DurationValue}
 
 class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  private val failConf1 = Configs.InterpretedAndSlotted
-  private val failConf2 = Configs.InterpretedAndSlotted
-
   // Getting current value of a temporal
 
   test("should return something for current time/date/etc") {
@@ -146,7 +143,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
                                  .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Occasion(timeSpan)"))
-      }, expectPlansToFail = Configs.All - Configs.Version4_0 - Configs.Version3_4),
+      }),
                              params = Map("param" ->
         Array(LocalDate.of(2018, 4, 1))))
 
@@ -171,7 +168,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
                                  .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Occasion(timeSpan)"))
-      }, expectPlansToFail = Configs.All - Configs.Version4_0 - Configs.Version3_4),
+      }),
                              params = Map("param" ->
         List(LocalDate.of(2018, 4, 1))))
 
@@ -197,7 +194,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
                                  .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Occasion(timeSpan)"))
-      }, expectPlansToFail = Configs.All - Configs.Version4_0 - Configs.Version3_4),
+      }),
                              params = Map("param" ->
         Array(LocalDate.of(2018, 4, 1), LocalDate.of(2018, 4, 2))))
 
@@ -224,7 +221,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
                                  .onTopOf(aPlan("NodeIndexSeek").containingArgument(":Occasion(timeSpan)"))
-      }, expectPlansToFail = Configs.All - Configs.Version4_0 - Configs.Version3_4),
+      }),
                              params = Map("param" ->
         List(LocalDate.of(2018, 4, 1), LocalDate.of(2018, 4, 2))))
 
@@ -428,8 +425,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val query1 = s"WITH localtime({hour: 12, minute: 34, second: 56}) as x RETURN localdatetime({time:x})"
     val query2 = s"WITH localtime({hour: 12, minute: 34, second: 56}) as x RETURN datetime({time:x})"
 
-    failWithError(failConf2, query1, Seq("year must be specified"), Seq("InvalidArgumentException"))
-    failWithError(failConf2, query2, Seq("year must be specified"), Seq("InvalidArgumentException"))
+    failWithError(Configs.InterpretedAndSlotted, query1, Seq("year must be specified"), Seq("InvalidArgumentException"))
+    failWithError(Configs.InterpretedAndSlotted, query2, Seq("year must be specified"), Seq("InvalidArgumentException"))
   }
 
   test("should not select only date for datetime and localdatetime") {
@@ -746,7 +743,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (arg <- Seq("P1.5Y1M", "P1Y1.5M1D", "P1Y1M1.5DT1H", "P1Y1M1DT1.5H1M", "P1Y1M1DT1H1.5M1S")) {
       val query = s"RETURN duration('$arg')"
       withClue(s"Executing $query") {
-        failWithError(failConf2, query, Seq("Text cannot be parsed to a Duration"))
+        failWithError(Configs.InterpretedAndSlotted, query, Seq("Text cannot be parsed to a Duration"))
       }
     }
   }
@@ -755,7 +752,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (arg <- Seq("2018-04-01T12:45:45+45", "2018-04-01T12:45:65+05", "2018-04-01T12:65:45+05", "2018-04-01T65:45:45+05", "2018-04-65T12:45:45+05", "2018-65-01T12:45:45+05")) {
       val query = s"RETURN datetime('$arg') as value"
       withClue(s"Executing $query") {
-        failWithError(failConf2, query, Seq("Invalid value for", "not in valid range"))
+        failWithError(Configs.InterpretedAndSlotted, query, Seq("Invalid value for", "not in valid range"))
       }
     }
   }
@@ -802,7 +799,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (func <- Seq("inMonths", "inDays"); arg1 <- args; arg2 <- args) {
       val query = s"RETURN duration.$func($arg1, $arg2)"
       withClue(s"Executing $query") {
-        failWithError(failConf2, query, Seq.empty, Seq("CypherTypeException"))
+        failWithError(Configs.InterpretedAndSlotted, query, Seq.empty, Seq("CypherTypeException"))
       }
     }
   }
@@ -857,7 +854,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     )
     for(returnQuery <- returnQueries) {
       withClue("executing " + returnQuery) {
-        failWithError(failConf2, "MATCH (n) RETURN " + returnQuery, Seq("Invalid call signature", "Can't coerce"), Seq("CypherExecutionException", "CypherTypeException"))
+        failWithError(Configs.InterpretedAndSlotted, "MATCH (n) RETURN " + returnQuery, Seq("Invalid call signature", "Can't coerce"), Seq("CypherExecutionException", "CypherTypeException"))
       }
     }
   }
@@ -871,7 +868,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN t
       """.stripMargin
 
-    failWithError(failConf2, query, Seq("Text cannot be parsed to a Time"))
+    failWithError(Configs.InterpretedAndSlotted, query, Seq("Text cannot be parsed to a Time"))
   }
 
   test("create time with named time zone should be supported") {
@@ -918,7 +915,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (receiver <- receivers; arg <- args) {
       val query = s"RETURN $receiver.truncate('$truncationUnit', $arg)"
       withClue(s"Executing $query") {
-        failWithError(failConf2, query, Seq(errorMsg), Seq("CypherTypeException"))
+        failWithError(Configs.InterpretedAndSlotted, query, Seq(errorMsg), Seq("CypherTypeException"))
       }
     }
   }
@@ -937,7 +934,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (func <- returnFuncs; arg <- args) {
       val query = s"WITH $withX as x RETURN $func($arg)"
       withClue(s"Executing $query") {
-        failWithError(failConf2, query, validErrorMessages, Seq(errorType))
+        failWithError(Configs.InterpretedAndSlotted, query, validErrorMessages, Seq(errorType))
       }
     }
   }
@@ -947,7 +944,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       val query = s"RETURN $typ($args).$acc"
       val validErrorMessages = Seq("No such field", "Unsupported field", "Cannot get the offset of", "Cannot get the time zone of", "not supported")
       withClue(s"Executing $query") {
-        failWithError(failConf1, query, validErrorMessages, Seq("CypherTypeException"))
+        failWithError(Configs.InterpretedAndSlotted, query, validErrorMessages, Seq("CypherTypeException"))
       }
     }
   }
@@ -957,7 +954,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       val query = s"RETURN $func($arg)"
       val validErrorMessages = Seq("Cannot assign", "cannot be selected together with", "cannot be specified without", "must be specified", "Invalid value")
       withClue(s"Executing $query") {
-        failWithError(failConf2, query, validErrorMessages, Seq("CypherTypeException", "InvalidArgumentException", "SyntaxException"))
+        failWithError(Configs.InterpretedAndSlotted, query, validErrorMessages, Seq("CypherTypeException", "InvalidArgumentException", "SyntaxException"))
       }
     }
   }

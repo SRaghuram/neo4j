@@ -16,15 +16,12 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
     GraphDatabaseSettings.cypher_lenient_create_relationship -> "true"
   )
 
-  private val createConf = Configs.Version4_0 + Configs.Version3_4 - Configs.Compiled
-  private val mergeConf = Configs.Version4_0 + Configs.Version3_4 - Configs.Compiled
-
   // No CLG decision on this AFAIK, so not TCK material
   test("should silently not CREATE relationship if start-point is missing") {
     graph.execute("CREATE (a), (b)")
 
 
-    val result = executeWith(createConf, """MATCH (a), (b)
+    val result = executeWith(Configs.InterpretedAndSlotted, """MATCH (a), (b)
                                        |WHERE id(a)=0 AND id(b)=1
                                        |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
                                        |CREATE (b)-[:LINK_TO]->(a)
@@ -37,7 +34,7 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
   test("should silently not CREATE relationship if end-point is missing") {
     graph.execute("CREATE (a), (b)")
 
-    val result = executeWith(createConf, """MATCH (a), (b)
+    val result = executeWith(Configs.InterpretedAndSlotted, """MATCH (a), (b)
                                        |WHERE id(a)=0 AND id(b)=1
                                        |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
                                        |CREATE (b)-[:LINK_TO]->(a)
@@ -49,7 +46,7 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
   // No CLG decision on this AFAIK, so not TCK material
   test("should silently not MERGE relationship if start-point is missing") {
 
-    val result = executeWith(mergeConf,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """MERGE (n:Node {Ogrn: "4"})
         |WITH n
         |OPTIONAL MATCH (m:Node { Ogrn: "4"}) WHERE id(n) <> id(m)
@@ -61,7 +58,7 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
   // No CLG decision on this AFAIK, so not TCK material
   test("should silently not MERGE relationship if end-point is missing") {
 
-    val result = executeWith(mergeConf,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """MERGE (n:Node {Ogrn: "4"})
         |WITH n
         |OPTIONAL MATCH (m:Node { Ogrn: "4"}) WHERE id(n) <> id(m)

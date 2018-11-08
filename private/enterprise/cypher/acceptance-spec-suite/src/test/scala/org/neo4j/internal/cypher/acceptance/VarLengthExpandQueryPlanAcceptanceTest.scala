@@ -12,8 +12,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
 
 class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  private val InterpretedNoCost31 = InterpretedAndSlotted
-
   test("Plan should have right relationship direction") {
     setUp("From")
     val query = "MATCH (a:From {name:'Keanu Reeves'})-[*..4]->(e:To {name:'Andres'}) RETURN *"
@@ -194,7 +192,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(InterpretedNoCost31, query)
+    val result = executeWith(InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -211,7 +209,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(InterpretedNoCost31, query)
+    val result = executeWith(InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -229,7 +227,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(InterpretedNoCost31, query)
+    val result = executeWith(InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -248,7 +246,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(InterpretedNoCost31, query)
+    val result = executeWith(InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -265,7 +263,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(InterpretedNoCost31, query)
+    val result = executeWith(InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -302,7 +300,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(InterpretedNoCost31, query)
+    val result = executeWith(InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -320,7 +318,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(InterpretedNoCost31, query)
+    val result = executeWith(InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -338,7 +336,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(InterpretedNoCost31, query)
+    val result = executeWith(InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -356,7 +354,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(InterpretedNoCost31, query)
+    val result = executeWith(InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)

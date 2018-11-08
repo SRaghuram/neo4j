@@ -88,7 +88,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
       db =>
         assertVersionAndRuntime(db, "3.4", "slotted")
         assertVersionAndRuntime(db, "3.4", "compiled")
-        assertVersionAndRuntime(db, "4.0", "compiled")
+        assertVersionAndRuntime(db, "4.0", "slotted")
         assertVersionAndRuntime(db, "4.0", "compiled")
     }
   }

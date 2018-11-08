@@ -11,12 +11,8 @@ import org.neo4j.values.storable.{CoordinateReferenceSystem, Values}
 
 class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  private val pointConfig = Configs.InterpretedAndSlotted
-  private val unrecognizedKeyPointConfig: TestConfiguration = pointConfig
-  private val distanceConfig = Configs.InterpretedAndSlotted
-
   test("distance function should work on co-located points") {
-    val result = executeWith(pointConfig, "WITH point({latitude: 12.78, longitude: 56.7}) as point RETURN distance(point,point) as dist",
+    val result = executeWith(Configs.InterpretedAndSlotted, "WITH point({latitude: 12.78, longitude: 56.7}) as point RETURN distance(point,point) as dist",
     planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r))))
@@ -25,7 +21,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work on co-located points in 3D") {
-    val result = executeWith(unrecognizedKeyPointConfig, "WITH point({latitude: 12.78, longitude: 56.7, height: 198.2}) as point RETURN distance(point,point) as dist",
+    val result = executeWith(Configs.InterpretedAndSlotted, "WITH point({latitude: 12.78, longitude: 56.7, height: 198.2}) as point RETURN distance(point,point) as dist",
       planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r))))
@@ -34,7 +30,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work on nearby cartesian points") {
-    val result = executeWith(pointConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |WITH point({x: 2.3, y: 4.5, crs: 'cartesian'}) as p1, point({x: 1.1, y: 5.4, crs: 'cartesian'}) as p2
         |RETURN distance(p1,p2) as dist
@@ -47,7 +43,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work on nearby points") {
-    val result = executeWith(pointConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |WITH point({longitude: 12.78, latitude: 56.7}) as p1, point({latitude: 56.71, longitude: 12.79}) as p2
         |RETURN distance(p1,p2) as dist
@@ -60,7 +56,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work on nearby points in 3D") {
-    val result = executeWith(unrecognizedKeyPointConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |WITH point({longitude: 12.78, latitude: 56.7, height: 100}) as p1, point({latitude: 56.71, longitude: 12.79, height: 100}) as p2
         |RETURN distance(p1,p2) as dist
@@ -73,7 +69,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work on distant points") {
-    val result = executeWith(pointConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |WITH point({latitude: 56.7, longitude: 12.78}) as p1, point({longitude: -51.9, latitude: -16.7}) as p2
         |RETURN distance(p1,p2) as dist
@@ -86,7 +82,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work on distant points in 3D") {
-    val result = executeWith(unrecognizedKeyPointConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |WITH point({latitude: 56.7, longitude: 12.78, height: 100}) as p1, point({longitude: -51.9, latitude: -16.7, height: 100}) as p2
         |RETURN distance(p1,p2) as dist
@@ -99,7 +95,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work on 3D cartesian points") {
-    val result = executeWith(unrecognizedKeyPointConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |WITH point({x: 1.2, y: 3.4, z: 5.6}) as p1, point({x: 1.2, y: 3.4, z: 6.6}) as p2
         |RETURN distance(p1,p2) as dist
@@ -112,15 +108,15 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should not fail if provided with points from different CRS") {
-    val localConfig = unrecognizedKeyPointConfig
-      val res = executeWith(localConfig,
+    val localConfig = Configs.InterpretedAndSlotted
+    val res = executeWith(localConfig,
         """WITH point({x: 2.3, y: 4.5, crs: 'cartesian'}) as p1, point({longitude: 1.1, latitude: 5.4, crs: 'WGS-84'}) as p2
         |RETURN distance(p1,p2) as dist""".stripMargin)
     res.columnAs[AnyRef]("dist").next() should be (null)
   }
 
   test("distance function should return null if provided with points with different dimensions") {
-    val result = executeWith(unrecognizedKeyPointConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """WITH point({x: 2.3, y: 4.5}) as p1, point({x: 1.2, y: 3.4, z: 5.6}) as p2
         |RETURN distance(p1,p2) as dist""".stripMargin)
     val dist = result.columnAs[Any]("dist").next()
@@ -128,7 +124,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should measure distance from Copenhagen train station to Neo4j in Malmö") {
-    val result = executeWith(pointConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |WITH point({latitude: 55.672874, longitude: 12.564590}) as p1, point({latitude: 55.611784, longitude: 12.994341}) as p2
         |RETURN distance(p1,p2) as dist
@@ -141,12 +137,12 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should work with two null inputs") {
-    val result = executeWith(pointConfig, "RETURN distance(null, null) as dist")
+    val result = executeWith(Configs.InterpretedAndSlotted, "RETURN distance(null, null) as dist")
     result.toList should equal(List(Map("dist" -> null)))
   }
 
   test("distance function should return null with lhs null input") {
-    val result = executeWith(pointConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |WITH point({latitude: 55.672874, longitude: 12.564590}) as p1
         |RETURN distance(null, p1) as dist
@@ -155,7 +151,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should return null with rhs null input") {
-    val result = executeWith(pointConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |WITH point({latitude: 55.672874, longitude: 12.564590}) as p1
         |RETURN distance(p1, null) as dist
@@ -164,19 +160,19 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("distance function should return null if a point is null") {
-    var result = executeWith(pointConfig,
+    var result = executeWith(Configs.InterpretedAndSlotted,
       "RETURN distance(point({latitude:3,longitude:7}),point({latitude:null, longitude:3})) as dist;")
     result.toList should equal(List(Map("dist" -> null)))
 
-    result = executeWith(pointConfig,
+    result = executeWith(Configs.InterpretedAndSlotted,
       "RETURN distance(point({latitude:3,longitude:null}),point({latitude:7, longitude:3})) as dist;")
     result.toList should equal(List(Map("dist" -> null)))
 
-    result = executeWith(pointConfig,
+    result = executeWith(Configs.InterpretedAndSlotted,
       "RETURN distance(point({x:3,y:7}),point({x:null, y:3})) as dist;")
     result.toList should equal(List(Map("dist" -> null)))
 
-    result = executeWith(pointConfig,
+    result = executeWith(Configs.InterpretedAndSlotted,
       "RETURN distance(point({x:3,y:null}),point({x:7, y:3})) as dist;")
     result.toList should equal(List(Map("dist" -> null)))
   }
@@ -212,7 +208,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
           |WHERE distance(p.location, $point) < $distance
           |RETURN p.location as point
         """.stripMargin
-      val result = executeWith(distanceConfig, query)
+      val result = executeWith(Configs.InterpretedAndSlotted, query)
 
       // Then
       result.toList should equal(List(Map("point" -> expected)))
@@ -348,7 +344,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 9.99))
       )
-      val result = executeWith(distanceConfig, query)
+      val result = executeWith(Configs.InterpretedAndSlotted, query)
       result.executionPlanDescription() shouldNot includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgumentRegex(".*distance.*".r)
       result.toList.toSet should equal(expected)
     }
@@ -652,7 +648,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
          |RETURN p.location as point
         """.stripMargin
     // When
-    val result = executeWith(distanceConfig, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     // Then
     val plan = result.executionPlanDescription()
@@ -670,7 +666,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
          |RETURN p.location as point
         """.stripMargin
     // When
-    val result = executeWith(distanceConfig, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     // Then
     val plan = result.executionPlanDescription()
@@ -693,7 +689,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
          |RETURN p.location as point
         """.stripMargin
     // When
-    val result = executeWith(distanceConfig, query, params = Map("poi" -> 5))
+    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("poi" -> 5))
 
     // Then
     result.toList shouldBe empty
@@ -701,7 +697,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     // And given
     graph.execute(s"DROP INDEX ON :Place(location)")
     // when
-    val resultNoIndex = executeWith(distanceConfig, query,  params = Map("poi" -> 5))
+    val resultNoIndex = executeWith(Configs.InterpretedAndSlotted, query,  params = Map("poi" -> 5))
 
     // Then
     resultNoIndex.toList shouldBe empty
@@ -719,7 +715,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN p.location as point
       """.stripMargin
     // When
-    val result = executeWith(distanceConfig, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     // Then
     result.toList shouldBe empty
@@ -727,7 +723,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     // And given
     graph.execute(s"DROP INDEX ON :Place(location)")
     // when
-    val resultNoIndex = executeWith(distanceConfig, query)
+    val resultNoIndex = executeWith(Configs.InterpretedAndSlotted, query)
 
     // Then
     resultNoIndex.toList shouldBe empty
@@ -777,7 +773,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   private def expectResultsAndIndexUsage(query: String, expectedResults: Set[_ <: Any], inclusiveRange: Boolean): Unit = {
-    val result = executeWith(distanceConfig, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     // Then
     val plan = result.executionPlanDescription()

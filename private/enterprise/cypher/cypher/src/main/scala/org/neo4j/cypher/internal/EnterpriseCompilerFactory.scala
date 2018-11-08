@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
-import org.neo4j.cypher.internal.compatibility.v3_4.Cypher34Planner
-import org.neo4j.cypher.internal.compatibility.v4_0.Cypher35Planner
+import org.neo4j.cypher.internal.compatibility.v3_4.Cypher3_4Planner
+import org.neo4j.cypher.internal.compatibility.v4_0.Cypher4_0Planner
 import org.neo4j.cypher.internal.compatibility.{CypherPlanner, _}
 import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
@@ -45,7 +45,7 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
     val log = logProvider.getLog(getClass)
     val planner = cypherVersion match {
       case CypherVersion.v3_4 =>
-        Cypher34Planner(
+        Cypher3_4Planner(
           plannerConfig,
           MasterCompiler.CLOCK,
           kernelMonitors,
@@ -54,8 +54,8 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
           cypherUpdateStrategy,
           LastCommittedTxIdProvider(graph))
 
-      case CypherVersion.`v4_0` =>
-        Cypher35Planner(
+      case CypherVersion.v4_0 =>
+        Cypher4_0Planner(
           plannerConfig,
           MasterCompiler.CLOCK,
           kernelMonitors,
