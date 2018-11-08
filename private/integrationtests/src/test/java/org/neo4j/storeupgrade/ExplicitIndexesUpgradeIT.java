@@ -5,15 +5,14 @@
  */
 package org.neo4j.storeupgrade;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
 import java.io.IOException;
 import java.util.Map;
 import java.util.function.IntFunction;
 
-import org.neo4j.backup.OnlineBackupSettings;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -26,7 +25,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.RelationshipIndex;
 import org.neo4j.index.lucene.ValueContext;
-import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationException;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.Unzip;
@@ -109,7 +107,6 @@ public class ExplicitIndexesUpgradeIT
         GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
         builder.setConfig( GraphDatabaseSettings.allow_upgrade, Boolean.toString( allowUpgrade ) );
         builder.setConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
-        builder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
         return builder.newGraphDatabase();
     }
 

@@ -50,7 +50,6 @@ public class DatabaseRoleInfoServerModule implements ServerModule
     private List<String> getClassNames()
     {
         return asList(
-                MasterInfoService.class.getName(),
                 CoreDatabaseAvailabilityService.class.getName(),
                 ReadReplicaDatabaseAvailabilityService.class.getName(),
                 CausalClusteringService.class.getName()

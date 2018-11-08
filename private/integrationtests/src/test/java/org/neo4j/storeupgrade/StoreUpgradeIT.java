@@ -5,12 +5,6 @@
  */
 package org.neo4j.storeupgrade;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -24,7 +18,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 
-import org.neo4j.backup.OnlineBackupSettings;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -46,9 +45,7 @@ import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.ha.ClusterManager;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -74,8 +71,6 @@ import static org.junit.Assert.fail;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
-import static org.neo4j.kernel.impl.ha.ClusterManager.allSeesAllAsAvailable;
-import static org.neo4j.kernel.impl.ha.ClusterManager.clusterOfSize;
 
 @RunWith( Enclosed.class )
 public class StoreUpgradeIT
@@ -137,7 +132,6 @@ public class StoreUpgradeIT
             builder.setConfig( GraphDatabaseSettings.allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
             builder.setConfig( GraphDatabaseSettings.logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
-            builder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
             GraphDatabaseService db = builder.newGraphDatabase();
             try
             {
@@ -172,7 +166,6 @@ public class StoreUpgradeIT
             props.setProperty( new HttpConnector( "http" ).enabled.name(), "true" );
             props.setProperty( new HttpConnector( "http" ).listen_address.name(), "localhost:0" );
             props.setProperty( new HttpConnector( "https" ).enabled.name(), Settings.FALSE );
-            props.setProperty( OnlineBackupSettings.online_backup_enabled.name(), Settings.FALSE );
             props.setProperty( new BoltConnector( "bolt" ).enabled.name(), Settings.FALSE );
             try ( FileWriter writer = new FileWriter( configFile ) )
             {
@@ -192,59 +185,6 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( DatabaseLayout.of( databaseDirectory ) );
-        }
-
-        @Test
-        public void migratingOlderDataAndThanStartAClusterUsingTheNewerDataShouldWork() throws Throwable
-        {
-            // migrate the store using a single instance
-            File storeDir = testDir.storeDir( "initialData" );
-            File databaseDirectory = store.prepareDirectory( testDir.databaseDir( storeDir ) );
-            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
-            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory );
-            builder.setConfig( GraphDatabaseSettings.allow_upgrade, "true" );
-            builder.setConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
-            builder.setConfig( GraphDatabaseSettings.logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
-            builder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
-            GraphDatabaseService db = builder.newGraphDatabase();
-            try
-            {
-                checkInstance( store, (GraphDatabaseAPI) db );
-            }
-            finally
-            {
-                db.shutdown();
-            }
-
-            assertConsistentStore( DatabaseLayout.of( databaseDirectory ) );
-
-            // start the cluster with the db migrated from the old instance
-            File haDir = testDir.storeDir( "ha-stuff" );
-            ClusterManager clusterManager = new ClusterManager.Builder( haDir )
-                    .withSeedDir( databaseDirectory ).withCluster( clusterOfSize( 2 ) ).build();
-
-            HighlyAvailableGraphDatabase master;
-            HighlyAvailableGraphDatabase slave;
-            try
-            {
-                clusterManager.start();
-                ClusterManager.ManagedCluster cluster = clusterManager.getCluster();
-
-                cluster.await( allSeesAllAsAvailable() );
-
-                master = cluster.getMaster();
-                checkInstance( store, master );
-                slave = cluster.getAnySlave();
-                checkInstance( store, slave );
-                clusterManager.safeShutdown();
-
-                assertConsistentStore( master.databaseLayout() );
-                assertConsistentStore( slave.databaseLayout() );
-            }
-            finally
-            {
-                clusterManager.safeShutdown();
-            }
         }
     }
 
@@ -329,7 +269,6 @@ public class StoreUpgradeIT
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
             builder.setConfig( GraphDatabaseSettings.allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
-            builder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
             GraphDatabaseService db = builder.newGraphDatabase();
             try
             {

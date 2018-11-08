@@ -5,22 +5,20 @@
  */
 package com.neo4j.server.enterprise;
 
+import java.io.File;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.File;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.server.BaseBootstrapperIT;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.ServerBootstrapper;
@@ -72,26 +70,6 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
         assertEquals( ServerBootstrapper.OK, resultCode );
         assertEventually( "Server was not started", bootstrapper::isRunning, is( true ), 1, TimeUnit.MINUTES );
         assertThat( bootstrapper.getServer().getDatabase().getGraph(), instanceOf( CommercialGraphDatabase.class ) );
-    }
-
-    @Test
-    public void shouldBeAbleToStartInHAMode() throws Exception
-    {
-        // When
-        int clusterPort = PortAuthority.allocatePort();
-        int resultCode = ServerBootstrapper.start( bootstrapper, withConnectorsOnRandomPortsConfig(
-                "--home-dir", tempDir.newFolder( "home-dir" ).getAbsolutePath(),
-                "-c", configOption( EnterpriseEditionSettings.mode, "HA" ),
-                "-c", configOption( ClusterSettings.server_id, "1" ),
-                "-c", configOption( ClusterSettings.initial_hosts, "127.0.0.1:" + clusterPort ),
-                "-c", configOption( ClusterSettings.cluster_server, "127.0.0.1:" + clusterPort ),
-                "-c", configOption( data_directory, getRelativePath( folder.getRoot(), data_directory ) ),
-                "-c", configOption( logs_directory, tempDir.getRoot().getAbsolutePath() ),
-                "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ) ) );
-
-        // Then
-        assertEquals( ServerBootstrapper.OK, resultCode );
-        assertEventually( "Server was not started", bootstrapper::isRunning, is( true ), 1, TimeUnit.MINUTES );
     }
 
     @Test

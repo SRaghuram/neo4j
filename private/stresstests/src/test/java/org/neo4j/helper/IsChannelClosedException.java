@@ -8,8 +8,6 @@ package org.neo4j.helper;
 import java.nio.channels.ClosedChannelException;
 import java.util.function.Predicate;
 
-import org.neo4j.com.ComException;
-
 public class IsChannelClosedException implements Predicate<Throwable>
 {
     @Override
@@ -21,12 +19,6 @@ public class IsChannelClosedException implements Predicate<Throwable>
         }
 
         if ( e instanceof ClosedChannelException )
-        {
-            return true;
-        }
-
-        if ( e instanceof ComException && e.getMessage() != null &&
-                e.getMessage().startsWith( "Channel has been closed" ) )
         {
             return true;
         }

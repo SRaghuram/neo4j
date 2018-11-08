@@ -63,10 +63,6 @@ public class MetricsSettings implements LoadableConfig
     public static final Setting<Boolean> neoCountsEnabled = buildSetting(
             "metrics.neo4j.counts.enabled", BOOLEAN ).inherits( neoEnabled ).build();
 
-    @Description( "Enable reporting metrics about the network usage." )
-    public static final Setting<Boolean> neoNetworkEnabled = buildSetting(
-            "metrics.neo4j.network.enabled", BOOLEAN ).inherits( neoEnabled ).build();
-
     @Description( "Enable reporting metrics about Causal Clustering mode." )
     public static final Setting<Boolean> causalClusteringEnabled = buildSetting(
             "metrics.neo4j.causal_clustering.enabled", BOOLEAN ).inherits( neoEnabled ).build();
@@ -80,14 +76,6 @@ public class MetricsSettings implements LoadableConfig
                   + "complete." )
     public static final Setting<Boolean> neoLogRotationEnabled = buildSetting(
             "metrics.neo4j.logrotation.enabled", BOOLEAN ).inherits( neoEnabled ).build();
-
-    /**
-     * @deprecated high availability database/edition is deprecated in favour of causal clustering. It will be removed in next major release.
-     */
-    @Description( "Enable reporting metrics about HA cluster info." )
-    @Deprecated
-    public static final Setting<Boolean> neoClusterEnabled = buildSetting(
-            "metrics.neo4j.cluster.enabled", BOOLEAN ).inherits( neoEnabled ).build();
 
     @Description( "Enable reporting metrics about Server threading info." )
     public static final Setting<Boolean> neoServerEnabled = buildSetting(

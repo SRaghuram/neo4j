@@ -52,7 +52,7 @@ class OnlineBackupCommand implements AdminCommand
             checkDestination( onlineBackupContext.getRequiredArguments().getReportDir() );
 
             BackupStrategyCoordinator backupStrategyCoordinator =
-                    backupStrategyCoordinatorFactory.backupStrategyCoordinator( onlineBackupContext, backupSupportingClasses.getBackupProtocolService(),
+                    backupStrategyCoordinatorFactory.backupStrategyCoordinator( onlineBackupContext,
                             backupSupportingClasses.getBackupDelegator(), backupSupportingClasses.getPageCache() );
 
             backupStrategyCoordinator.performBackup( onlineBackupContext );
@@ -93,9 +93,6 @@ class OnlineBackupCommand implements AdminCommand
             {
             case CATCHUP:
                 compatibleProducts = "causal clustering";
-                break;
-            case COMMON:
-                compatibleProducts = "HA and single";
                 break;
             default:
                 throw new IllegalArgumentException( "Unhandled protocol " + selectedBackupProtocol );

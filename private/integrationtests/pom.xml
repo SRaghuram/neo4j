@@ -87,13 +87,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-com</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.neo4j.app</groupId>
             <artifactId>neo4j-server-enterprise</artifactId>
             <version>${project.version}</version>
@@ -110,13 +103,6 @@
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-ha</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -216,19 +202,6 @@
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-causal-clustering</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-ha</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-cluster</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>

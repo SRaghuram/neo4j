@@ -37,16 +37,16 @@ class BackupStrategyCoordinator
     private final OutsideWorld outsideWorld;
     private final LogProvider logProvider;
     private final ProgressMonitorFactory progressMonitorFactory;
-    private final List<BackupStrategyWrapper> strategies;
+    private final BackupStrategyWrapper strategy;
 
     BackupStrategyCoordinator( ConsistencyCheckService consistencyCheckService, OutsideWorld outsideWorld, LogProvider logProvider,
-            ProgressMonitorFactory progressMonitorFactory, List<BackupStrategyWrapper> strategies )
+            ProgressMonitorFactory progressMonitorFactory, BackupStrategyWrapper strategy )
     {
         this.consistencyCheckService = consistencyCheckService;
         this.outsideWorld = outsideWorld;
         this.logProvider = logProvider;
         this.progressMonitorFactory = progressMonitorFactory;
-        this.strategies = strategies;
+        this.strategy = strategy;
     }
 
     /**
@@ -65,20 +65,13 @@ class BackupStrategyCoordinator
 
         Fallible<BackupStrategyOutcome> throwableWithState = null;
         List<Throwable> causesOfFailure = new ArrayList<>();
-        for ( BackupStrategyWrapper backupStrategy : strategies )
+        throwableWithState = strategy.doBackup( onlineBackupContext );
+        if ( throwableWithState.getState() == BackupStrategyOutcome.CORRECT_STRATEGY_FAILED )
         {
-            throwableWithState = backupStrategy.doBackup( onlineBackupContext );
-            if ( throwableWithState.getState() == BackupStrategyOutcome.SUCCESS )
-            {
-                break;
-            }
-            if ( throwableWithState.getState() == BackupStrategyOutcome.CORRECT_STRATEGY_FAILED )
-            {
-                throw commandFailedWithCause( throwableWithState ).get();
-            }
-            throwableWithState.getCause().ifPresent( causesOfFailure::add );
+            throw commandFailedWithCause( throwableWithState ).get();
         }
-        if ( throwableWithState == null || !BackupStrategyOutcome.SUCCESS.equals( throwableWithState.getState() ) )
+        throwableWithState.getCause().ifPresent( causesOfFailure::add );
+        if ( !BackupStrategyOutcome.SUCCESS.equals( throwableWithState.getState() ) )
         {
             CommandFailed commandFailed = new CommandFailed( "Failed to run a backup using the available strategies." );
             causesOfFailure.forEach( commandFailed::addSuppressed );

@@ -10,7 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import org.neo4j.com.storecopy.ExternallyManagedPageCache;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.InconsistentStoreException;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
@@ -51,6 +50,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLog;
+import org.neo4j.tools.util.ExternallyManagedPageCache;
 
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;

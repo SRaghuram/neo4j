@@ -5,17 +5,17 @@
  */
 package org.neo4j.kernel.api.impl.fulltext;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-
 import java.io.File;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.neo4j.backup.OnlineBackup;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.RuleChain;
+
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -30,6 +30,7 @@ import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.util.TestHelpers;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -44,6 +45,7 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 import static org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_server;
 
+@Ignore( "This test will remain ignored until standalone instances get backup functionality again" )
 public class FulltextIndexBackupIT
 {
     private static final Label LABEL = Label.label( "LABEL" );
@@ -78,12 +80,17 @@ public class FulltextIndexBackupIT
     }
 
     @Test
-    public void fulltextIndexesMustBeTransferredInBackup()
+    public void fulltextIndexesMustBeTransferredInBackup() throws Exception
     {
         initializeTestData();
         verifyData( db );
         File backup = dir.storeDir( "backup" );
-        OnlineBackup.from( "127.0.0.1", backupPort ).backup( backup );
+        runBackupToolFromOtherJvmToGetExitCode( backup,
+                "--from", "127.0.0.1:" + backupPort,
+                "--protocol=catchup",
+                "--name=name",
+                "--cc-report-dir=" + backup,
+                "--backup-dir=" + backup );
         db.shutdown();
 
         GraphDatabaseAPI backupDb = startBackupDatabase( backup );
@@ -91,11 +98,17 @@ public class FulltextIndexBackupIT
     }
 
     @Test
-    public void fulltextIndexesMustBeUpdatedByIncrementalBackup()
+    public void fulltextIndexesMustBeUpdatedByIncrementalBackup() throws Exception
     {
         initializeTestData();
         File backup = dir.databaseDir( "backup" );
-        OnlineBackup.from( "127.0.0.1", backupPort ).backup( backup );
+
+        runBackupToolFromOtherJvmToGetExitCode( backup,
+                "--from", "127.0.0.1:" + backupPort,
+                "--protocol=catchup",
+                "--name=name",
+                "--cc-report-dir=" + backup,
+                "--backup-dir=" + backup );
 
         long nodeId3;
         long nodeId4;
@@ -115,7 +128,13 @@ public class FulltextIndexBackupIT
         }
         verifyData( db );
 
-        OnlineBackup.from( "127.0.0.1", backupPort ).backup( backup );
+        runBackupToolFromOtherJvmToGetExitCode( backup,
+                "--from", "127.0.0.1:" + backupPort,
+                "--protocol=catchup",
+                "--name=name",
+                "--cc-report-dir=" + backup,
+                "--backup-dir=" + backup );
+
         db.shutdown();
 
         GraphDatabaseAPI backupDb = startBackupDatabase( backup );
@@ -200,5 +219,9 @@ public class FulltextIndexBackupIT
             }
             tx.success();
         }
+    }
+    private int runBackupToolFromOtherJvmToGetExitCode( File backupDir, String... args ) throws Exception
+    {
+        return TestHelpers.runBackupToolFromOtherJvmToGetExitCode( backupDir, args );
     }
 }

@@ -19,7 +19,7 @@ public class BackupHelpOutput
 
         lines.add( "usage: neo4j-admin backup --backup-dir=<backup-path> --name=<graph.db-backup>" );
         lines.add( "                          [--from=<address>] [--database=<graph.db>]" );
-        lines.add( "                          [--protocol=<any|catchup|common>]" );
+        lines.add( "                          [--protocol=<any|catchup>]" );
         lines.add( "                          [--fallback-to-full[=<true|false>]]" );
         lines.add( "                          [--timeout=<timeout>] [--pagecache=<8m>]" );
         lines.add( "                          [--check-consistency[=<true|false>]]" );
@@ -54,7 +54,7 @@ public class BackupHelpOutput
         lines.add( "                                           backup will be attempted." );
         lines.add( "  --from=<address>                         Host and port of Neo4j." );
         lines.add( "                                           [default:localhost:6362]" );
-        lines.add( "  --protocol=<any|catchup|common>          Preferred backup protocol" );
+        lines.add( "  --protocol=<any|catchup>                 Preferred backup protocol" );
         lines.add( "                                           [default:any]" );
         lines.add( "  --fallback-to-full=<true|false>          If an incremental backup fails backup" );
         lines.add( "                                           will move the old backup to" );

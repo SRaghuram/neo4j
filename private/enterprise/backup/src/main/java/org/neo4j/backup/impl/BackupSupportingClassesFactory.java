@@ -9,7 +9,6 @@ import java.io.OutputStream;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupClientBuilder;
@@ -36,7 +35,6 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
-import static org.neo4j.backup.impl.BackupProtocolServiceFactory.backupProtocolService;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
@@ -79,15 +77,8 @@ public class BackupSupportingClassesFactory
         PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler );
         return new BackupSupportingClasses(
                 backupDelegatorFromConfig( pageCache, context.getConfig(), context.getRequiredArguments() ),
-                haFromConfig( pageCache ),
                 pageCache,
                 Arrays.asList( pageCache, jobScheduler ) );
-    }
-
-    private BackupProtocolService haFromConfig( PageCache pageCache )
-    {
-        Supplier<FileSystemAbstraction> fileSystemSupplier = () -> fileSystemAbstraction;
-        return backupProtocolService( fileSystemSupplier, logProvider, logDestination, monitors, pageCache );
     }
 
     private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, Config config, OnlineBackupRequiredArguments arguments )

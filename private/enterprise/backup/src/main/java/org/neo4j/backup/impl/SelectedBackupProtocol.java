@@ -10,7 +10,6 @@ import java.util.stream.Stream;
 public enum SelectedBackupProtocol
 {
     ANY( "any" ),
-    COMMON( "common" ),
     CATCHUP( "catchup" );
 
     public String getName()

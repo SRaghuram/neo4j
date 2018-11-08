@@ -9,7 +9,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.com.storecopy.StoreCopyClientMonitor;
+import org.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.admin.ParameterisedOutsideWorld;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;

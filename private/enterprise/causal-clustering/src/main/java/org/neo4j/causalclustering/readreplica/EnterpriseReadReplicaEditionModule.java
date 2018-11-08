@@ -35,7 +35,6 @@ import org.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import org.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
-import org.neo4j.com.storecopy.StoreUtil;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -241,8 +240,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
     static Predicate<String> fileWatcherFileNameFilter()
     {
         return Predicates.any( fileName -> fileName.startsWith( TransactionLogFiles.DEFAULT_NAME ),
-                fileName -> fileName.startsWith( IndexConfigStore.INDEX_DB_FILE_NAME ), filename -> filename.startsWith( StoreUtil.BRANCH_SUBDIRECTORY ),
-                filename -> filename.startsWith( StoreUtil.TEMP_COPY_DIRECTORY_NAME ), filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
+                fileName -> fileName.startsWith( IndexConfigStore.INDEX_DB_FILE_NAME ), filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 
     @Override

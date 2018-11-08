@@ -5,14 +5,13 @@
  */
 package org.neo4j.causalclustering.core;
 
+import java.util.function.Predicate;
+
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.util.function.Predicate;
-
 import org.neo4j.causalclustering.core.state.machines.id.FreeIdFilteredIdGeneratorFactory;
 import org.neo4j.causalclustering.common.Cluster;
-import org.neo4j.com.storecopy.StoreUtil;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.index.IndexConfigStore;
@@ -57,7 +56,6 @@ public class EnterpriseCoreEditionModuleIT
         assertFalse( filter.test( layout.nodeStore().getName() ) );
         assertTrue( filter.test( TransactionLogFiles.DEFAULT_NAME + ".1" ) );
         assertTrue( filter.test( IndexConfigStore.INDEX_DB_FILE_NAME + ".any" ) );
-        assertTrue( filter.test( StoreUtil.TEMP_COPY_DIRECTORY_NAME ) );
         assertTrue( filter.test( metadataStoreName + PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 }

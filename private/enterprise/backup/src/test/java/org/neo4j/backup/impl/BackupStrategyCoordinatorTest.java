@@ -5,14 +5,12 @@
  */
 package org.neo4j.backup.impl;
 
+import java.nio.file.Path;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collections;
 
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.OutsideWorld;
@@ -47,7 +45,6 @@ public class BackupStrategyCoordinatorTest
     private final FileSystemAbstraction fileSystem = mock( FileSystemAbstraction.class );
     private final LogProvider logProvider = mock( LogProvider.class );
     private final BackupStrategyWrapper firstStrategy = mock( BackupStrategyWrapper.class );
-    private final BackupStrategyWrapper secondStrategy = mock( BackupStrategyWrapper.class );
 
     private BackupStrategyCoordinator subject;
 
@@ -69,31 +66,7 @@ public class BackupStrategyCoordinatorTest
         when( onlineBackupContext.getResolvedLocationFromName() ).thenReturn( reportDir );
         when( requiredArguments.getReportDir() ).thenReturn( reportDir );
         subject = new BackupStrategyCoordinator( consistencyCheckService, outsideWorld, logProvider, progressMonitorFactory,
-                Arrays.asList( firstStrategy, secondStrategy ) );
-    }
-
-    @Test
-    public void backupIsValidIfAnySingleStrategyPasses_secondFails() throws CommandFailed
-    {
-        // given
-        when( firstStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.SUCCESS, null ) );
-        when( secondStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, null ) );
-
-        // when
-        subject.performBackup( onlineBackupContext );
-
-        // then no exception
-    }
-
-    @Test
-    public void backupIsValidIfAnySingleStrategyPasses_firstFails() throws CommandFailed
-    {
-        // given
-        when( firstStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, null ) );
-        when( secondStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.SUCCESS, null ) );
-
-        // when
-        subject.performBackup( onlineBackupContext );
+                firstStrategy );
     }
 
     @Test
@@ -101,22 +74,6 @@ public class BackupStrategyCoordinatorTest
     {
         // given
         when( firstStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.CORRECT_STRATEGY_FAILED, null ) );
-        when( secondStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, null ) );
-
-        // then
-        expectedException.expect( CommandFailed.class );
-        expectedException.expectMessage( containsString( "Execution of backup failed" ) );
-
-        // when
-        subject.performBackup( onlineBackupContext );
-    }
-
-    @Test
-    public void backupIsInvalidIfTheCorrectMethodFailed_secondFails() throws CommandFailed
-    {
-        // given
-        when( firstStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, null ) );
-        when( secondStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.CORRECT_STRATEGY_FAILED, null ) );
 
         // then
         expectedException.expect( CommandFailed.class );
@@ -131,7 +88,6 @@ public class BackupStrategyCoordinatorTest
     {
         // given
         when( firstStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, null ) );
-        when( secondStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, null ) );
 
         // then
         expectedException.expect( CommandFailed.class );
@@ -178,17 +134,13 @@ public class BackupStrategyCoordinatorTest
     {
         // given expected causes for failure
         RuntimeException firstCause = new RuntimeException( "First cause" );
-        RuntimeException secondCause = new RuntimeException( "Second cause" );
 
         // and strategies fail with given causes
         when( firstStrategy.doBackup( any() ) )
                 .thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, firstCause ) );
-        when( secondStrategy.doBackup( any() ) )
-                .thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, secondCause ) );
 
         // then the command failed exception contains the specified causes
         expectedException.expect( exceptionContainsSuppressedThrowable( firstCause ) );
-        expectedException.expect( exceptionContainsSuppressedThrowable( secondCause ) );
         expectedException.expect( CommandFailed.class );
         expectedException.expectMessage( "Failed to run a backup using the available strategies." );
 
@@ -214,27 +166,11 @@ public class BackupStrategyCoordinatorTest
         subject.performBackup( onlineBackupContext );
     }
 
-    @Test
-    public void havingNoStrategiesCausesAllSolutionsFailedException() throws CommandFailed
-    {
-        // given there are no strategies in the solution
-        subject = new BackupStrategyCoordinator( consistencyCheckService, outsideWorld, logProvider, progressMonitorFactory,
-                Collections.emptyList() );
-
-        // then we want a predictable exception (instead of NullPointer)
-        expectedException.expect( CommandFailed.class );
-        expectedException.expectMessage( "Failed to run a backup using the available strategies." );
-
-        // when
-        subject.performBackup( onlineBackupContext );
-    }
-
     /**
      * Fixture for other tests
      */
     private void anyStrategyPasses()
     {
         when( firstStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.SUCCESS, null ) );
-        when( secondStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.SUCCESS, null ) );
     }
 }

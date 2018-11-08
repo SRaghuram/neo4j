@@ -5,14 +5,13 @@
  */
 package org.neo4j.metrics.source;
 
-import com.codahale.metrics.MetricRegistry;
-
 import java.util.function.Supplier;
+
+import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.causalclustering.core.consensus.CoreMetaData;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.ha.cluster.member.ClusterMembers;
 import org.neo4j.kernel.impl.api.LogRotationMonitor;
 import org.neo4j.kernel.impl.factory.Edition;
 import org.neo4j.kernel.impl.factory.OperationalMode;
@@ -30,8 +29,6 @@ import org.neo4j.metrics.output.EventReporter;
 import org.neo4j.metrics.source.causalclustering.CatchUpMetrics;
 import org.neo4j.metrics.source.causalclustering.CoreMetrics;
 import org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
-import org.neo4j.metrics.source.cluster.ClusterMetrics;
-import org.neo4j.metrics.source.cluster.NetworkMetrics;
 import org.neo4j.metrics.source.db.BoltMetrics;
 import org.neo4j.metrics.source.db.CheckPointingMetrics;
 import org.neo4j.metrics.source.db.CypherMetrics;
@@ -62,8 +59,6 @@ public class Neo4jMetricsBuilder
         TransactionCounters transactionCounters();
 
         PageCacheCounters pageCacheCounters();
-
-        Supplier<ClusterMembers> clusterMembers();
 
         Supplier<CoreMetaData> raft();
 
@@ -118,21 +113,6 @@ public class Neo4jMetricsBuilder
                     kernelContext.databaseInfo().edition != Edition.unknown )
             {
                 life.add( new EntityCountMetrics( registry, databaseDependencySupplier( StoreEntityCounters.class ) ) );
-                result = true;
-            }
-        }
-
-        if ( config.get( MetricsSettings.neoNetworkEnabled ) )
-        {
-            life.add( new NetworkMetrics( registry, dependencies.monitors() ) );
-            result = true;
-        }
-
-        if ( config.get( MetricsSettings.neoClusterEnabled ) )
-        {
-            if ( kernelContext.databaseInfo().operationalMode == OperationalMode.ha )
-            {
-                life.add( new ClusterMetrics( dependencies.monitors(), registry, dependencies.clusterMembers() ) );
                 result = true;
             }
         }

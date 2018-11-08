@@ -5,13 +5,13 @@
  */
 package org.neo4j.kernel;
 
-import org.junit.Rule;
-import org.junit.Test;
-
 import java.io.File;
 import java.nio.file.Path;
 
-import org.neo4j.backup.OnlineBackup;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+
 import org.neo4j.commandline.admin.AdminTool;
 import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.RealOutsideWorld;
@@ -29,18 +29,20 @@ import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EnterpriseDatabaseRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.util.TestHelpers;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongValue;
 import static org.neo4j.metrics.source.db.PageCacheMetrics.PC_PAGE_FAULTS;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
+@Ignore( "This test will remain ignored until standalone instances get backup functionality again" )
 public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSupport
 {
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
@@ -106,7 +108,12 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         File metricsDirectory = testDirectory.cleanDirectory( "metrics" );
         File backupDir = testDirectory.cleanDirectory( "backup" );
-        assertTrue( OnlineBackup.from( "localhost", backupPort ).backup( backupDir ).isConsistent() );
+        assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( backupDir,
+                "--from", "localhost:" + backupPort,
+                "--protocol=catchup",
+                "--cc-report-dir=" + backupDir,
+                "--name=graph.db-backup",
+                "--backup-dir=" + backupDir ) );
         latch.release();
         DatabaseRule.RestartAction useBackupDir = ( fs, storeDir ) ->
         {
@@ -140,8 +147,13 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         for ( int i = 0; i < 20; i++ )
         {
-            String backupDir = testDirectory.cleanDirectory( "backup" ).getAbsolutePath();
-            assertTrue( OnlineBackup.from( "localhost", backupPort ).full( backupDir ).isConsistent() );
+            File backupDir = testDirectory.cleanDirectory( "backup" );
+            assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( backupDir,
+                    "--from", "localhost:" + backupPort,
+                    "--protocol=catchup",
+                    "--name=graph.db-backup",
+                    "--cc-report-dir=" + backupDir,
+                    "--backup-dir=" + backupDir ) );
         }
     }
 
@@ -216,5 +228,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         logProvider.assertContainsMessageContaining( "Page cache warmup started." );
         logProvider.assertContainsMessageContaining( "Page cache warmup completed. %d pages loaded. Duration: %s." );
+    }
+
+    private int runBackupToolFromOtherJvmToGetExitCode( File backupDir, String... args ) throws Exception
+    {
+        return TestHelpers.runBackupToolFromOtherJvmToGetExitCode( backupDir, args );
     }
 }

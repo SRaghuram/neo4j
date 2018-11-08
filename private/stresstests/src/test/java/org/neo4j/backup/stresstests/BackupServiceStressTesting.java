@@ -5,8 +5,6 @@
  */
 package org.neo4j.backup.stresstests;
 
-import org.junit.Test;
-
 import java.io.File;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -16,6 +14,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.Ignore;
+import org.junit.Test;
 
 import org.neo4j.causalclustering.stresstests.Config;
 import org.neo4j.causalclustering.stresstests.Control;
@@ -40,6 +41,7 @@ import static org.neo4j.helper.StressTestingHelper.fromEnv;
 /**
  * Notice the class name: this is _not_ going to be run as part of the main build.
  */
+@Ignore( "This test will remain ignored until standalone instances get backup functionality again" )
 public class BackupServiceStressTesting
 {
     private static final String DEFAULT_WORKING_DIR = new File( getProperty( "java.io.tmpdir" ) ).getPath();

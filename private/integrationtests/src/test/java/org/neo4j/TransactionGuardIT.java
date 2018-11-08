@@ -5,10 +5,6 @@
  */
 package org.neo4j;
 
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -21,7 +17,10 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import org.neo4j.backup.OnlineBackupSettings;
+import org.junit.After;
+import org.junit.ClassRule;
+import org.junit.Test;
+
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Session;
@@ -513,7 +512,6 @@ public class TransactionGuardIT
         databaseBuilder.setConfig( GraphDatabaseSettings.record_id_batch_size, "1" );
 
         GraphDatabaseAPI database = (GraphDatabaseAPI) databaseBuilder
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
         cleanupRule.add( database );
         return database;

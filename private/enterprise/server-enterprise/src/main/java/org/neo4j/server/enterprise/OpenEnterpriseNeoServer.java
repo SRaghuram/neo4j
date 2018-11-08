@@ -5,21 +5,18 @@
  */
 package org.neo4j.server.enterprise;
 
-import org.eclipse.jetty.util.thread.ThreadPool;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import org.eclipse.jetty.util.thread.ThreadPool;
+
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
-import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.ha.HaSettings;
-import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
 import org.neo4j.metrics.source.server.ServerThreadView;
 import org.neo4j.metrics.source.server.ServerThreadViewSetter;
@@ -33,7 +30,6 @@ import org.neo4j.server.modules.DBMSModule;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.rest.DatabaseRoleInfoServerModule;
 import org.neo4j.server.rest.EnterpriseDiscoverableURIs;
-import org.neo4j.server.rest.MasterInfoService;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 import org.neo4j.server.rest.management.AdvertisableService;
 import org.neo4j.server.web.Jetty9WebServer;
@@ -121,25 +117,13 @@ public class OpenEnterpriseNeoServer extends CommunityNeoServer
     @Override
     public Iterable<AdvertisableService> getServices()
     {
-        if ( getDatabase().getGraph() instanceof HighlyAvailableGraphDatabase )
-        {
-            return Iterables.append( new MasterInfoService( null, null ), super.getServices() );
-        }
-        else
-        {
-            return super.getServices();
-        }
+        return super.getServices();
     }
 
     @Override
     protected Pattern[] getUriWhitelist()
     {
         final List<Pattern> uriWhitelist = new ArrayList<>( Arrays.asList( super.getUriWhitelist() ) );
-
-        if ( !getConfig().get( HaSettings.ha_status_auth_enabled ) )
-        {
-            uriWhitelist.add( Pattern.compile( "/db/manage/server/ha.*" ) );
-        }
 
         if ( !getConfig().get( CausalClusteringSettings.status_auth_enabled ) )
         {

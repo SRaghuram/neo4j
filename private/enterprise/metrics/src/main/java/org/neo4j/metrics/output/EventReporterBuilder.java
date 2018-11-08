@@ -7,7 +7,6 @@ package org.neo4j.metrics.output;
 
 import com.codahale.metrics.MetricRegistry;
 
-import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
@@ -82,17 +81,6 @@ public class EventReporterBuilder
 
     private String createMetricsPrefix( Config config )
     {
-        String prefix = config.get( MetricsSettings.metricsPrefix );
-
-        if ( prefix.equals( MetricsSettings.metricsPrefix.getDefaultValue() ) )
-        {
-            // If default name and in HA, try to figure out a nicer name
-            if ( config.isConfigured( ClusterSettings.server_id ) )
-            {
-                prefix += "." + config.get( ClusterSettings.cluster_name );
-                prefix += "." + config.get( ClusterSettings.server_id );
-            }
-        }
-        return prefix;
+        return config.get( MetricsSettings.metricsPrefix );
     }
 }

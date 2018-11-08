@@ -5,11 +5,6 @@
  */
 package org.neo4j.backup.impl;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -18,6 +13,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.commandline.admin.CommandFailed;
@@ -299,8 +299,8 @@ public class OnlineBackupContextFactoryTest
     public void overrideWithLegacy() throws CommandFailed, IncorrectUsage
     {
         // with
-        List<String> input = Arrays.asList( "common", "catchup" );
-        List<SelectedBackupProtocol> expected = Arrays.asList( SelectedBackupProtocol.COMMON, SelectedBackupProtocol.CATCHUP );
+        List<String> input = Arrays.asList( "catchup" );
+        List<SelectedBackupProtocol> expected = Arrays.asList( SelectedBackupProtocol.CATCHUP );
 
         for ( int useCase = 0; useCase < input.size(); useCase++ )
         {

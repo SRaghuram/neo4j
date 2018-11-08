@@ -138,13 +138,6 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-ha</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-metrics</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
@@ -188,13 +181,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-com</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
   
 </project>

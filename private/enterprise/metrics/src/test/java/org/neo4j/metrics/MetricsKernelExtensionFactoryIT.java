@@ -5,46 +5,46 @@
  */
 package org.neo4j.metrics;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-
 import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
-import org.neo4j.metrics.source.cluster.ClusterMetrics;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.metrics.source.db.CheckPointingMetrics;
 import org.neo4j.metrics.source.db.CypherMetrics;
-import org.neo4j.metrics.source.db.EntityCountMetrics;
 import org.neo4j.metrics.source.db.TransactionMetrics;
 import org.neo4j.metrics.source.jvm.ThreadMetrics;
-import org.neo4j.test.ha.ClusterRule;
+import org.neo4j.test.rule.DatabaseRule;
+import org.neo4j.test.rule.EmbeddedDatabaseRule;
+import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.System.currentTimeMillis;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.cypher_min_replan_interval;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.kernel.impl.ha.ClusterManager.clusterOfSize;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.metrics.MetricsSettings.csvEnabled;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
 import static org.neo4j.metrics.MetricsSettings.graphiteInterval;
@@ -55,27 +55,29 @@ import static org.neo4j.metrics.MetricsTestHelper.readLongValueAndAssert;
 public class MetricsKernelExtensionFactoryIT
 {
     @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withSharedSetting( GraphDatabaseSettings.record_id_batch_size, "1" );
+    public final TestDirectory directory = TestDirectory.testDirectory();
 
-    private HighlyAvailableGraphDatabase db;
+    @Rule
+    public final DatabaseRule dbRule = new EmbeddedDatabaseRule( directory ).startLazily();
+
     private File outputPath;
+    private GraphDatabaseAPI db;
 
     @Before
     public void setup()
     {
-        outputPath = clusterRule.directory( "metrics" );
-        Map<String, String> config = stringMap(
-                MetricsSettings.neoEnabled.name(), Settings.TRUE,
-                metricsEnabled.name(), Settings.TRUE,
-                csvEnabled.name(), Settings.TRUE,
-                cypher_min_replan_interval.name(), "0m",
-                csvPath.name(), outputPath.getAbsolutePath(),
-                check_point_interval_time.name(), "100ms",
-                graphiteInterval.name(), "1s",
-                OnlineBackupSettings.online_backup_enabled.name(), Settings.FALSE
-        );
-        db = clusterRule.withSharedConfig( config ).withCluster( clusterOfSize( 1 ) ).startCluster().getMaster();
+        outputPath = new File( directory.databaseDir(), "metrics" );
+        Map<Setting<?>, String> config = new HashMap<>();
+        config.put( MetricsSettings.neoEnabled, Settings.TRUE );
+        config.put( metricsEnabled, Settings.TRUE );
+        config.put( csvEnabled, Settings.TRUE );
+        config.put( cypher_min_replan_interval, "0m" );
+        config.put( csvPath, outputPath.getAbsolutePath() );
+        config.put( check_point_interval_time, "100ms" );
+        config.put( graphiteInterval, "1s" );
+        config.put( record_id_batch_size, "1" );
+        config.put( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
+        db = dbRule.withSettings( config ).getGraphDatabaseAPI();
         addNodes( 1 ); // to make sure creation of label and property key tokens do not mess up with assertions in tests
     }
 
@@ -106,7 +108,7 @@ public class MetricsKernelExtensionFactoryIT
         // GIVEN
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, EntityCountMetrics.COUNTS_NODE );
+        File metricsFile = metricsCsv( outputPath, TransactionMetrics.TX_COMMITTED );
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
@@ -115,23 +117,6 @@ public class MetricsKernelExtensionFactoryIT
 
         // THEN
         assertThat( committedTransactions, lessThanOrEqualTo( 1001L ) );
-    }
-
-    @Test
-    public void shouldShowClusterMetricsWhenMetricsEnabled() throws Throwable
-    {
-        // GIVEN
-        // Create some activity that will show up in the metrics data.
-        addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, ClusterMetrics.IS_MASTER );
-
-        // WHEN
-        // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
-        long committedTransactions = readLongValueAndAssert( metricsFile,
-                ( newValue, currentValue ) -> newValue >= currentValue );
-
-        // THEN
-        assertThat( committedTransactions, equalTo( 1L ) );
     }
 
     @Test
@@ -218,7 +203,7 @@ public class MetricsKernelExtensionFactoryIT
     public void mustBeAbleToStartWithNullTracer()
     {
         // Start the database
-        File disabledTracerDb = clusterRule.directory( "disabledTracerDb" );
+        File disabledTracerDb = directory.databaseDir( new File( "disabledTracerDb" ) );
         GraphDatabaseBuilder builder = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledTracerDb );
         GraphDatabaseService nullTracerDatabase =
                 builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE ).setConfig( csvEnabled, Settings.TRUE )

@@ -36,14 +36,11 @@
     <module>management</module>
     <module>metrics</module>
     <module>deferred-locks</module>
-    <module>ha</module>
     <module>server-enterprise</module>
     <module>backup</module>
     <module>causal-clustering</module>
-    <module>cluster</module>
     <module>neo4j-enterprise</module>
     <module>security</module>
-    <module>com</module>
     <module>kernel</module>
     <module>neo4j-harness-commercial</module>
   </modules>

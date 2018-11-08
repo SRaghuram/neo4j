@@ -14,17 +14,15 @@ class BackupSupportingClasses implements AutoCloseable
 {
     // Strategies
     private final BackupDelegator backupDelegator;
-    private final BackupProtocolService backupProtocolService;
     private final CloseableResourceManager closeableResourceManager;
 
     // Dependency Helpers
     private final PageCache pageCache;
 
-    BackupSupportingClasses( BackupDelegator backupDelegator, BackupProtocolService backupProtocolService, PageCache pageCache,
+    BackupSupportingClasses( BackupDelegator backupDelegator, PageCache pageCache,
             Collection<AutoCloseable> closeables )
     {
         this.backupDelegator = backupDelegator;
-        this.backupProtocolService = backupProtocolService;
         this.pageCache = pageCache;
         this.closeableResourceManager = new CloseableResourceManager();
         closeables.forEach( closeableResourceManager::registerCloseableResource );
@@ -33,11 +31,6 @@ class BackupSupportingClasses implements AutoCloseable
     public BackupDelegator getBackupDelegator()
     {
         return backupDelegator;
-    }
-
-    public BackupProtocolService getBackupProtocolService()
-    {
-        return backupProtocolService;
     }
 
     public PageCache getPageCache()

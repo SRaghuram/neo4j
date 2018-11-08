@@ -47,8 +47,6 @@ public class EnterpriseEditionSettings implements LoadableConfig
     public enum Mode
     {
         SINGLE,
-        HA,
-        ARBITER,
         CORE,
         READ_REPLICA
     }

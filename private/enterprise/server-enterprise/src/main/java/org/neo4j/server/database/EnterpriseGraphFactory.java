@@ -14,7 +14,6 @@ import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.enterprise.EnterpriseGraphDatabase;
-import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
@@ -31,11 +30,6 @@ public class EnterpriseGraphFactory implements GraphFactory
 
         switch ( mode )
         {
-        case HA:
-            return new HighlyAvailableGraphDatabase( storeDir, config, dependencies );
-        case ARBITER:
-            // Should never reach here because this mode is handled separately by the scripts.
-            throw new IllegalArgumentException( "The server cannot be started in ARBITER mode." );
         case CORE:
             return new CoreGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
         case READ_REPLICA:

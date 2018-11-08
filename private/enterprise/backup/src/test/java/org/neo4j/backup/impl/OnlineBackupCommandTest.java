@@ -5,17 +5,17 @@
  */
 package org.neo4j.backup.impl;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.CommandLocator;
@@ -42,7 +42,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.backup.impl.SelectedBackupProtocol.ANY;
 import static org.neo4j.backup.impl.SelectedBackupProtocol.CATCHUP;
-import static org.neo4j.backup.impl.SelectedBackupProtocol.COMMON;
 
 public class OnlineBackupCommandTest
 {
@@ -86,8 +85,7 @@ public class OnlineBackupCommandTest
         backupDirectory = testDirectory.directory( "backupDirectory" ).toPath();
         reportDirectory = testDirectory.directory( "reportDirectory/" ).toPath();
         BackupSupportingClasses backupSupportingClasses =
-                new BackupSupportingClasses( mock( BackupDelegator.class ), mock( BackupProtocolService.class ), mock( PageCache.class ),
-                        Collections.emptyList() );
+                new BackupSupportingClasses( mock( BackupDelegator.class ), mock( PageCache.class ), Collections.emptyList() );
         when( backupSupportingClassesFactory.createSupportingClasses( any() ) ).thenReturn( backupSupportingClasses );
 
         requiredArguments =
@@ -95,7 +93,7 @@ public class OnlineBackupCommandTest
                         doConsistencyCheck, timeout, reportDirectory );
         OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
 
-        when( backupStrategyCoordinatorFactory.backupStrategyCoordinator( any(), any(), any(), any() ) ).thenReturn( backupStrategyCoordinator );
+        when( backupStrategyCoordinatorFactory.backupStrategyCoordinator( any(), any(), any() ) ).thenReturn( backupStrategyCoordinator );
 
         subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
     }
@@ -138,7 +136,7 @@ public class OnlineBackupCommandTest
 
         assertEquals( format( "usage: neo4j-admin backup --backup-dir=<backup-path> --name=<graph.db-backup>%n" +
                 "                          [--from=<address>] [--database=<graph.db>]%n" +
-                "                          [--protocol=<any|catchup|common>]%n" +
+                "                          [--protocol=<any|catchup>]%n" +
                 "                          [--fallback-to-full[=<true|false>]]%n" +
                 "                          [--timeout=<timeout>] [--pagecache=<8m>]%n" +
                 "                          [--check-consistency[=<true|false>]]%n" +
@@ -177,7 +175,7 @@ public class OnlineBackupCommandTest
                 "                                           backup. Only supported with latest%n" +
                 "                                           version of the catchup protocol.%n" +
                 "                                           [default:null]%n" +
-                "  --protocol=<any|catchup|common>          Preferred backup protocol%n" +
+                "  --protocol=<any|catchup>                 Preferred backup protocol%n" +
                 "                                           [default:any]%n" +
                 "  --fallback-to-full=<true|false>          If an incremental backup fails backup%n" +
                 "                                           will move the old backup to%n" +
@@ -212,27 +210,23 @@ public class OnlineBackupCommandTest
     public void protocolOverrideWarnsUser() throws CommandFailed, IncorrectUsage
     {
         // with
-        List<Object[]> cases = asList(
-                new Object[]{SelectedBackupProtocol.CATCHUP,
-                        String.format( "The selected protocol `catchup` means that it is only compatible with causal clustering instances%n" )},
-                new Object[]{COMMON,
-                        String.format( "The selected protocol `common` means that it is only compatible with HA and single instances%n" )}
-        );
-        for ( Object[] thisCase : cases )
-        {
-            // given
-            requiredArguments = new OnlineBackupRequiredArguments( address, null, backupDirectory, backupName, (SelectedBackupProtocol) thisCase[0],
-                    fallbackToFull, doConsistencyCheck, timeout, reportDirectory );
-            OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
-            subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
+        Object[] thisCase =
+                new Object[]{
+                        SelectedBackupProtocol.CATCHUP,
+                        String.format( "The selected protocol `catchup` means that it is only compatible with causal clustering instances%n" )
+                };
+        // given
+        requiredArguments = new OnlineBackupRequiredArguments( address, null, backupDirectory, backupName, (SelectedBackupProtocol) thisCase[0],
+                fallbackToFull, doConsistencyCheck, timeout, reportDirectory );
+        OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
+        subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
 
-            // when
-            execute();
+        // when
+        execute();
 
-            // then
-            assertThat( baosOut.toString(), containsString( (String) thisCase[1] ) );
-            baosOut.reset();
-        }
+        // then
+        assertThat( baosOut.toString(), containsString( (String) thisCase[1] ) );
+        baosOut.reset();
     }
 
     @Test
@@ -240,26 +234,22 @@ public class OnlineBackupCommandTest
     {
         // with
         String expectedMessage = "Only the catchup protocol supports specifying the remote database name";
-        List<SelectedBackupProtocol> protocols = asList( ANY, COMMON );
 
-        for ( SelectedBackupProtocol protocol : protocols )
+        // given
+        requiredArguments = new OnlineBackupRequiredArguments( address, "graph.db", backupDirectory, backupName, ANY,
+                fallbackToFull, doConsistencyCheck, timeout, reportDirectory );
+        OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
+        subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
+
+        try
         {
-            // given
-            requiredArguments = new OnlineBackupRequiredArguments( address, "graph.db", backupDirectory, backupName, protocol,
-                    fallbackToFull, doConsistencyCheck, timeout, reportDirectory );
-            OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
-            subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
-
-            try
-            {
-                // when
-                execute();
-            }
-            catch ( IncorrectUsage incorrectUsage )
-            {
-                // then
-                assertThat( incorrectUsage.getMessage(), containsString( expectedMessage ) );
-            }
+            // when
+            execute();
+        }
+        catch ( IncorrectUsage incorrectUsage )
+        {
+            // then
+            assertThat( incorrectUsage.getMessage(), containsString( expectedMessage ) );
         }
     }
 
