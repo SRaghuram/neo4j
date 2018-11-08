@@ -11,8 +11,6 @@ import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.logging.LogProvider;
 
-import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
-
 /**
  * Retrieves last raft log index that was appended to the transaction log, so that raft log replay can recover while
  * preserving idempotency (avoid appending the same transaction twice).
@@ -31,8 +29,8 @@ public class RecoverConsensusLogIndex
     public long findLastAppliedIndex()
     {
         DependencyResolver dependencies = localDatabase.dataSource().getDependencyResolver();
-        TransactionIdStore transactionIdStore = dependencies.resolveDependency( TransactionIdStore.class, ONLY );
-        LogicalTransactionStore transactionStore = dependencies.resolveDependency( LogicalTransactionStore.class, ONLY );
+        TransactionIdStore transactionIdStore = dependencies.resolveDependency( TransactionIdStore.class );
+        LogicalTransactionStore transactionStore = dependencies.resolveDependency( LogicalTransactionStore.class );
 
         return new LastCommittedIndexFinder( transactionIdStore, transactionStore, logProvider )
                 .getLastCommittedIndex();

@@ -23,7 +23,6 @@ import org.neo4j.logging.Log;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.function.Predicates.awaitForever;
-import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 
 class CatchupNewReadReplica extends Workload
 {
@@ -108,7 +107,7 @@ class CatchupNewReadReplica extends Workload
         try
         {
             GraphDatabaseAPI database = member.database();
-            TransactionIdStore txIdStore = database.getDependencyResolver().resolveDependency( TransactionIdStore.class, ONLY );
+            TransactionIdStore txIdStore = database.getDependencyResolver().resolveDependency( TransactionIdStore.class );
             return OptionalLong.of( txIdStore.getLastClosedTransactionId() );
         }
         catch ( Throwable ex )
