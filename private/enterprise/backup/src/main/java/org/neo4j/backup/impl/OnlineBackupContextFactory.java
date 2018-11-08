@@ -6,9 +6,7 @@
 package org.neo4j.backup.impl;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -26,7 +24,6 @@ import org.neo4j.commandline.arguments.common.OptionalCanonicalPath;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.TimeUtil;
-import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.util.OptionalHostnamePort;
@@ -216,6 +213,6 @@ class OnlineBackupContextFactory
 
     private Config loadAdditionalConfigFile( Path path )
     {
-        return Config.fromFile( path ).withThrowOnFileLoadFailure().build();
+        return Config.fromFile( path ).build();
     }
 }

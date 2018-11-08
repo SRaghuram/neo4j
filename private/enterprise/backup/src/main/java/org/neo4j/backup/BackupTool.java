@@ -6,14 +6,12 @@
 package org.neo4j.backup;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.neo4j.backup.impl.BackupClient;
@@ -26,7 +24,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Args;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.Service;
-import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.MismatchingStoreIdException;
@@ -220,7 +217,7 @@ public class BackupTool
             File configFile = new File( configFilePath );
             try
             {
-                return Config.fromFile( configFile ).withThrowOnFileLoadFailure().build();
+                return Config.fromFile( configFile ).build();
             }
             catch ( Exception e )
             {
