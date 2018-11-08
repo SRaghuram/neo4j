@@ -49,6 +49,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   private val cursors = mock[ExpressionCursors]
   when(cursors.nodeCursor).thenReturn(nodeCursor)
   when(cursors.propertyCursor).thenReturn(propertyCursor)
+  when(cursors.relationshipScanCursor).thenReturn(relationshipScanCursor)
   when(db.relationshipGetStartNode(any[RelationshipValue])).thenAnswer(new Answer[NodeValue] {
     override def answer(in: InvocationOnMock): NodeValue = in.getArgument[RelationshipValue](0).startNode()
   })
@@ -487,7 +488,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     val labels = Values.stringArray("A", "B", "C")
     val node = nodeValue(1, labels, EMPTY_MAP)
-    when(db.getLabelsForNode(node.id(), any[NodeCursor])).thenReturn(VirtualValues.fromArray(labels))
+    when(db.getLabelsForNode(node.id(), nodeCursor)).thenReturn(VirtualValues.fromArray(labels))
 
     compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
     compiled.evaluate(ctx, db, map(Array("a"), Array(node)), cursors) should equal(labels)
@@ -514,7 +515,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.propertyKey("y")).thenReturn(2)
     when(db.propertyKey("crs")).thenReturn(3)
 
-    when(db.nodeProperty(any[Long], any[Int], nodeCursor, propertyCursor)).thenAnswer(new Answer[AnyValue] {
+    when(db.nodeProperty(any[Long], any[Int], any[NodeCursor], any[PropertyCursor])).thenAnswer(new Answer[AnyValue] {
       override def answer(in: InvocationOnMock): AnyValue = in.getArgument[Int](1) match {
         case 1 => pointMap.get("x")
         case 2 => pointMap.get("y")
@@ -540,7 +541,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     when(db.propertyKey("y")).thenReturn(2)
     when(db.propertyKey("crs")).thenReturn(3)
 
-    when(db.relationshipProperty(any[Long], any[Int], relationshipScanCursor, propertyCursor)).thenAnswer(new Answer[AnyValue] {
+    when(db.relationshipProperty(any[Long], any[Int], any[RelationshipScanCursor], any[PropertyCursor])).thenAnswer(new Answer[AnyValue] {
       override def answer(in: InvocationOnMock): AnyValue = in.getArgument[Int](1) match {
         case 1 => pointMap.get("x")
         case 2 => pointMap.get("y")
