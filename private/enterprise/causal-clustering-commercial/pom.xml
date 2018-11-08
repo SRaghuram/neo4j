@@ -64,7 +64,7 @@
         <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-all</artifactId>
-            <version>3.7.5</version>
+            <version>3.11</version>
         </dependency>
 
         <dependency>
@@ -228,7 +228,7 @@
         <dependency>
             <groupId>co.unruly</groupId>
             <artifactId>java-8-matchers</artifactId>
-            <version>1.5</version>
+            <version>1.6</version>
             <scope>test</scope>
         </dependency>
 

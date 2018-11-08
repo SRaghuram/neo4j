@@ -39,7 +39,7 @@
 
   <properties>
     <license-text.header>commercial-license-header.txt</license-text.header>
-    <akka.version>2.5.14</akka.version>
+    <akka.version>2.5.18</akka.version>
   </properties>
 
   <build>
