@@ -7,11 +7,11 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.io.ByteArrayOutputStream
 import java.util.zip.{DeflaterOutputStream, GZIPOutputStream}
-
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+
 import org.eclipse.jetty.server.handler.{AbstractHandler, ContextHandler, ContextHandlerCollection}
 import org.eclipse.jetty.server.{Handler, Request, Server, ServerConnector}
-import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.{ExecutionEngineFunSuite, LoadExternalResourceException}
 import org.scalatest.BeforeAndAfterAll
 
 class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with BeforeAndAfterAll {
@@ -29,8 +29,24 @@ class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with Befo
     server.start()
   }
 
+  override protected def beforeEach() = {
+    super.beforeEach()
+    server.restartIfNotRunning()
+  }
+
+  private def executeFlakySafe(q: String) = {
+    try {
+      execute(q)
+    } catch {
+      case _: LoadExternalResourceException =>
+        System.out.println("Failed due to LoadExternalResourceException, will restart server and try this query again: '" + q + "'")
+        server.restartIfNotRunning()
+        execute(q)
+    }
+  }
+
   test("should handle uncompressed csv over http") {
-    val result = execute(s"LOAD CSV FROM 'http://localhost:${server.port}/csv' AS lines RETURN lines")
+    val result = executeFlakySafe(s"LOAD CSV FROM 'http://localhost:${server.port}/csv' AS lines RETURN lines")
 
     result.toList should equal(List(
       Map("lines" -> Seq("a1", "b1", "c1", "d1")),
@@ -39,7 +55,7 @@ class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with Befo
   }
 
   test("should handle gzipped csv over http") {
-    val result = execute(s"LOAD CSV FROM 'http://localhost:${server.port}/gzip' AS lines RETURN lines")
+    val result = executeFlakySafe(s"LOAD CSV FROM 'http://localhost:${server.port}/gzip' AS lines RETURN lines")
 
     result.toList should equal(List(
       Map("lines" -> Seq("a1", "b1", "c1", "d1")),
@@ -48,7 +64,7 @@ class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with Befo
   }
 
   test("should handle deflated csv over http") {
-    val result = execute(s"LOAD CSV FROM 'http://localhost:${server.port}/deflate' AS lines RETURN lines")
+    val result = executeFlakySafe(s"LOAD CSV FROM 'http://localhost:${server.port}/deflate' AS lines RETURN lines")
 
     result.toList should equal(List(
       Map("lines" -> Seq("a1", "b1", "c1", "d1")),
@@ -76,11 +92,19 @@ class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with Befo
        //find the port that we're using.
        _port = server.getConnectors()(0).asInstanceOf[ServerConnector].getLocalPort
        assert(_port > 0)
+       if (!server.isRunning) throw new IllegalStateException("Started server is not running. Wtf? State: " + server.getState)
      }
 
      def stop() = server.stop()
 
      def port = _port
+
+     def restartIfNotRunning() = {
+       if (!server.isRunning) {
+         stop()
+         start()
+       }
+     }
 
      private def addHandler(path: String, handler: Handler): Unit = {
       val contextHandler = new ContextHandler()
