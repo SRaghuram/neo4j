@@ -29,7 +29,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
-import static org.neo4j.metrics.MetricsTestHelper.readLongValue;
+import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -86,7 +86,7 @@ class ServerMetricsIT
     {
         try
         {
-            return readLongValue( file );
+            return readLongGaugeValue( file );
         }
         catch ( IOException io )
         {

@@ -36,7 +36,8 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
-import static org.neo4j.metrics.MetricsTestHelper.readLongValue;
+import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
+import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics.PULL_UPDATES;
 import static org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics.PULL_UPDATE_HIGHEST_TX_ID_RECEIVED;
 import static org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics.PULL_UPDATE_HIGHEST_TX_ID_REQUESTED;
@@ -96,15 +97,15 @@ public class CoreEdgeMetricsIT
         File coreMetricsDir = new File( coreMember.homeDir(), csvPath.getDefaultValue() );
 
         assertEventually( "append index eventually accurate",
-                () -> readLongValue( metricsCsv( coreMetricsDir, CoreMetrics.APPEND_INDEX ) ),
+                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, CoreMetrics.APPEND_INDEX ) ),
                 greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
 
         assertEventually( "commit index eventually accurate",
-                () -> readLongValue( metricsCsv( coreMetricsDir, CoreMetrics.COMMIT_INDEX ) ),
+                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, CoreMetrics.COMMIT_INDEX ) ),
                 greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
 
         assertEventually( "term eventually accurate",
-                () -> readLongValue( metricsCsv( coreMetricsDir, CoreMetrics.TERM ) ),
+                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, CoreMetrics.TERM ) ),
                 greaterThanOrEqualTo( 0L ), TIMEOUT, TimeUnit.SECONDS );
 
         assertEventually( "tx pull requests received eventually accurate", () ->
@@ -113,31 +114,31 @@ public class CoreEdgeMetricsIT
             for ( final File homeDir : cluster.coreMembers().stream().map( CoreClusterMember::homeDir ).collect( Collectors.toList()) )
             {
                 File metricsDir = new File( homeDir, "metrics" );
-                total += readLongValue( metricsCsv( metricsDir, CatchUpMetrics.TX_PULL_REQUESTS_RECEIVED ) );
+                total += readLongCounterValue( metricsCsv( metricsDir, CatchUpMetrics.TX_PULL_REQUESTS_RECEIVED ) );
             }
             return total;
         }, greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
 
         assertEventually( "tx retries eventually accurate",
-                () -> readLongValue( metricsCsv( coreMetricsDir, CoreMetrics.TX_RETRIES ) ), equalTo( 0L ),
+                () -> readLongCounterValue( metricsCsv( coreMetricsDir, CoreMetrics.TX_RETRIES ) ), equalTo( 0L ),
                 TIMEOUT, TimeUnit.SECONDS );
 
         assertEventually( "is leader eventually accurate",
-                () -> readLongValue( metricsCsv( coreMetricsDir, CoreMetrics.IS_LEADER ) ),
+                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, CoreMetrics.IS_LEADER ) ),
                 greaterThanOrEqualTo( 0L ), TIMEOUT, TimeUnit.SECONDS );
 
         File readReplicaMetricsDir = new File( cluster.getReadReplicaById( 0 ).homeDir(), "metrics" );
 
         assertEventually( "pull update request registered",
-                () -> readLongValue( metricsCsv( readReplicaMetricsDir, PULL_UPDATES ) ),
+                () -> readLongCounterValue( metricsCsv( readReplicaMetricsDir, PULL_UPDATES ) ),
                 greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
 
         assertEventually( "pull update request registered",
-                () -> readLongValue( metricsCsv( readReplicaMetricsDir, PULL_UPDATE_HIGHEST_TX_ID_REQUESTED ) ),
+                () -> readLongCounterValue( metricsCsv( readReplicaMetricsDir, PULL_UPDATE_HIGHEST_TX_ID_REQUESTED ) ),
                 greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
 
         assertEventually( "pull update response received",
-                () -> readLongValue( metricsCsv( readReplicaMetricsDir, PULL_UPDATE_HIGHEST_TX_ID_RECEIVED ) ),
+                () -> readLongCounterValue( metricsCsv( readReplicaMetricsDir, PULL_UPDATE_HIGHEST_TX_ID_RECEIVED ) ),
                 greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
     }
 

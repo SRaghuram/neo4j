@@ -17,6 +17,7 @@ import org.neo4j.kernel.ha.cluster.member.ClusterMembers;
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.metrics.metric.MetricsCounter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 import static org.neo4j.kernel.ha.cluster.modeswitch.HighAvailabilityModeSwitcher.MASTER;
@@ -56,8 +57,8 @@ public class ClusterMetrics extends LifecycleAdapter
         registry.register( IS_MASTER, new RoleGauge( MASTER::equals ) );
         registry.register( IS_AVAILABLE, new RoleGauge( s -> !UNKNOWN.equals( s ) ) );
 
-        registry.register( SLAVE_PULL_UPDATES, (Gauge<Long>) () -> monitor.events.get() );
-        registry.register( SLAVE_PULL_UPDATE_UP_TO_TX, (Gauge<Long>) () -> monitor.lastAppliedTxId );
+        registry.register( SLAVE_PULL_UPDATES, new MetricsCounter( () -> monitor.events.get() ) );
+        registry.register( SLAVE_PULL_UPDATE_UP_TO_TX, new MetricsCounter( () -> monitor.lastAppliedTxId ) );
     }
 
     @Override

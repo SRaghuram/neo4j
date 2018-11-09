@@ -11,6 +11,7 @@ import com.codahale.metrics.MetricRegistry;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.metrics.metric.MetricsCounter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -50,13 +51,13 @@ public class PageCacheMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
-        registry.register( PC_PAGE_FAULTS, (Gauge<Long>) pageCacheCounters::faults );
-        registry.register( PC_EVICTIONS, (Gauge<Long>) pageCacheCounters::evictions );
-        registry.register( PC_PINS, (Gauge<Long>) pageCacheCounters::pins );
-        registry.register( PC_UNPINS, (Gauge<Long>) pageCacheCounters::unpins );
-        registry.register( PC_HITS, (Gauge<Long>) pageCacheCounters::hits );
-        registry.register( PC_FLUSHES, (Gauge<Long>) pageCacheCounters::flushes );
-        registry.register( PC_EVICTION_EXCEPTIONS, (Gauge<Long>) pageCacheCounters::evictionExceptions );
+        registry.register( PC_PAGE_FAULTS, new MetricsCounter( pageCacheCounters::faults ) );
+        registry.register( PC_EVICTIONS, new MetricsCounter( pageCacheCounters::evictions ) );
+        registry.register( PC_PINS, new MetricsCounter( pageCacheCounters::pins ) );
+        registry.register( PC_UNPINS, new MetricsCounter( pageCacheCounters::unpins ) );
+        registry.register( PC_HITS, new MetricsCounter( pageCacheCounters::hits ) );
+        registry.register( PC_FLUSHES, new MetricsCounter( pageCacheCounters::flushes ) );
+        registry.register( PC_EVICTION_EXCEPTIONS, new MetricsCounter( pageCacheCounters::evictionExceptions ) );
         registry.register( PC_HIT_RATIO, (Gauge<Double>) pageCacheCounters::hitRatio );
         registry.register( PC_USAGE_RATIO, (Gauge<Double>) pageCacheCounters::usageRatio );
     }

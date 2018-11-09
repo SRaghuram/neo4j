@@ -5,11 +5,12 @@
  */
 package org.neo4j.metrics.source.jvm;
 
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
+
+import org.neo4j.metrics.metric.MetricsCounter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -31,10 +32,8 @@ public class GCMetrics extends JvmMetrics
     {
         for ( final GarbageCollectorMXBean gcBean : ManagementFactory.getGarbageCollectorMXBeans() )
         {
-            registry.register( name( GC_TIME, prettifyName( gcBean.getName() ) ),
-                    (Gauge<Long>) gcBean::getCollectionTime );
-            registry.register( name( GC_COUNT, prettifyName( gcBean.getName() ) ),
-                    (Gauge<Long>) gcBean::getCollectionCount );
+            registry.register( name( GC_TIME, prettifyName( gcBean.getName() ) ), new MetricsCounter( gcBean::getCollectionTime ) );
+            registry.register( name( GC_COUNT, prettifyName( gcBean.getName() ) ), new MetricsCounter( gcBean::getCollectionCount ) );
         }
     }
 

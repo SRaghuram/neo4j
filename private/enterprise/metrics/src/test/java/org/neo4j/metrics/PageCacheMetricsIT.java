@@ -30,8 +30,8 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
-import static org.neo4j.metrics.MetricsTestHelper.readDoubleValue;
-import static org.neo4j.metrics.MetricsTestHelper.readLongValue;
+import static org.neo4j.metrics.MetricsTestHelper.readDoubleGaugeValue;
+import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static org.neo4j.metrics.source.db.PageCacheMetrics.PC_EVICTIONS;
 import static org.neo4j.metrics.source.db.PageCacheMetrics.PC_EVICTION_EXCEPTIONS;
 import static org.neo4j.metrics.source.db.PageCacheMetrics.PC_FLUSHES;
@@ -97,19 +97,19 @@ public class PageCacheMetricsIT
 
         assertEventually(
                 "Metrics report should include page cache hit ratio",
-                () -> readDoubleValue( metricsCsv( metricsDirectory, PC_HIT_RATIO ) ),
+                () -> readDoubleGaugeValue( metricsCsv( metricsDirectory, PC_HIT_RATIO ) ),
                 lessThanOrEqualTo( 1.0 ),
                 5, SECONDS );
 
         assertEventually(
                 "Metrics report should include page cache usage ratio",
-                () -> readDoubleValue( metricsCsv( metricsDirectory, PC_USAGE_RATIO ) ),
+                () -> readDoubleGaugeValue( metricsCsv( metricsDirectory, PC_USAGE_RATIO ) ),
                 lessThanOrEqualTo( 1.0 ),
                 5, SECONDS );
     }
 
     private void assertMetrics( String message, String metricName, Matcher<Long> matcher ) throws Exception
     {
-        assertEventually( message, () -> readLongValue( metricsCsv( metricsDirectory, metricName ) ), matcher, 5, SECONDS );
+        assertEventually( message, () -> readLongCounterValue( metricsCsv( metricsDirectory, metricName ) ), matcher, 5, SECONDS );
     }
 }

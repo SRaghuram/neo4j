@@ -15,6 +15,7 @@ import org.neo4j.causalclustering.core.consensus.RaftMessages;
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.metrics.metric.MetricsCounter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -93,20 +94,20 @@ public class CoreMetrics extends LifecycleAdapter
         registry.register( COMMIT_INDEX, (Gauge<Long>) raftLogCommitIndexMetric::commitIndex );
         registry.register( APPEND_INDEX, (Gauge<Long>) raftLogAppendIndexMetric::appendIndex );
         registry.register( TERM, (Gauge<Long>) raftTermMetric::term );
-        registry.register( TX_RETRIES, (Gauge<Long>) txRetryMetric::transactionsRetries );
+        registry.register( TX_RETRIES, new MetricsCounter( txRetryMetric::transactionsRetries ) );
         registry.register( IS_LEADER, new LeaderGauge() );
         registry.register( TOTAL_BYTES, (Gauge<Long>) inFlightCacheMetric::getTotalBytes );
-        registry.register( HITS, (Gauge<Long>) inFlightCacheMetric::getHits );
-        registry.register( MISSES, (Gauge<Long>) inFlightCacheMetric::getMisses );
+        registry.register( HITS, new MetricsCounter( inFlightCacheMetric::getHits ) );
+        registry.register( MISSES, new MetricsCounter( inFlightCacheMetric::getMisses ) );
         registry.register( MAX_BYTES, (Gauge<Long>) inFlightCacheMetric::getMaxBytes );
         registry.register( MAX_ELEMENTS, (Gauge<Long>) inFlightCacheMetric::getMaxElements );
         registry.register( ELEMENT_COUNT, (Gauge<Long>) inFlightCacheMetric::getElementCount );
         registry.register( DELAY, (Gauge<Long>) raftMessageProcessingMetric::delay );
         registry.register( TIMER, raftMessageProcessingMetric.timer() );
-        registry.register( REPLICATION_NEW, (Gauge<Long>) replicationMetric::newReplicationCount );
-        registry.register( REPLICATION_ATTEMPT, (Gauge<Long>) replicationMetric::attemptCount );
-        registry.register( REPLICATION_SUCCESS, (Gauge<Long>) replicationMetric::successCount );
-        registry.register( REPLICATION_FAIL, (Gauge<Long>) replicationMetric::failCount );
+        registry.register( REPLICATION_NEW, new MetricsCounter( replicationMetric::newReplicationCount ) );
+        registry.register( REPLICATION_ATTEMPT, new MetricsCounter( replicationMetric::attemptCount ) );
+        registry.register( REPLICATION_SUCCESS, new MetricsCounter( replicationMetric::successCount ) );
+        registry.register( REPLICATION_FAIL, new MetricsCounter( replicationMetric::failCount ) );
 
         for ( RaftMessages.Type type : RaftMessages.Type.values() )
         {

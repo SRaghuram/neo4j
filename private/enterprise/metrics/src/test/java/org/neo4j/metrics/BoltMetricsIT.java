@@ -30,7 +30,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
-import static org.neo4j.metrics.MetricsTestHelper.readLongValue;
+import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static org.neo4j.metrics.source.db.BoltMetrics.MESSAGES_DONE;
 import static org.neo4j.metrics.source.db.BoltMetrics.MESSAGES_RECEIVED;
 import static org.neo4j.metrics.source.db.BoltMetrics.MESSAGES_STARTED;
@@ -78,19 +78,19 @@ public class BoltMetricsIT
 
         // Then
         assertEventually( "session shows up as started",
-                () -> readLongValue( metricsCsv( metricsFolder, SESSIONS_STARTED ) ), equalTo( 1L ), 5, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsFolder, SESSIONS_STARTED ) ), equalTo( 1L ), 5, SECONDS );
         assertEventually( "init request shows up as received",
-                () -> readLongValue( metricsCsv( metricsFolder, MESSAGES_RECEIVED ) ), equalTo( 1L ), 5, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsFolder, MESSAGES_RECEIVED ) ), equalTo( 1L ), 5, SECONDS );
         assertEventually( "init request shows up as started",
-                () -> readLongValue( metricsCsv( metricsFolder, MESSAGES_STARTED ) ), equalTo( 1L ), 5, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsFolder, MESSAGES_STARTED ) ), equalTo( 1L ), 5, SECONDS );
         assertEventually( "init request shows up as done",
-                () -> readLongValue( metricsCsv( metricsFolder, MESSAGES_DONE ) ), equalTo( 1L ), 5, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsFolder, MESSAGES_DONE ) ), equalTo( 1L ), 5, SECONDS );
 
         assertEventually( "queue time shows up",
-                () -> readLongValue( metricsCsv( metricsFolder, TOTAL_QUEUE_TIME ) ),
+                () -> readLongCounterValue( metricsCsv( metricsFolder, TOTAL_QUEUE_TIME ) ),
                 greaterThanOrEqualTo( 0L ), 5, SECONDS );
         assertEventually( "processing time shows up",
-                () -> readLongValue( metricsCsv( metricsFolder, TOTAL_PROCESSING_TIME ) ),
+                () -> readLongCounterValue( metricsCsv( metricsFolder, TOTAL_PROCESSING_TIME ) ),
                 greaterThanOrEqualTo( 0L ), 5, SECONDS );
     }
 

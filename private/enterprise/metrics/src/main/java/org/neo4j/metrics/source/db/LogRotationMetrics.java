@@ -17,6 +17,7 @@ import org.neo4j.kernel.impl.api.DefaultTransactionTracer;
 import org.neo4j.kernel.impl.api.LogRotationMonitor;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.metrics.metric.MetricsCounter;
 import org.neo4j.metrics.output.EventReporter;
 
 import static com.codahale.metrics.MetricRegistry.name;
@@ -59,9 +60,8 @@ public class LogRotationMetrics extends LifecycleAdapter
         monitors.addMonitorListener( listener );
 
         LogRotationMonitor monitor = this.logRotationMonitorSupplier.get();
-        registry.register( LOG_ROTATION_EVENTS, (Gauge<Long>) monitor::numberOfLogRotationEvents );
-        registry.register( LOG_ROTATION_TOTAL_TIME,
-                (Gauge<Long>) monitor::logRotationAccumulatedTotalTimeMillis );
+        registry.register( LOG_ROTATION_EVENTS, new MetricsCounter( monitor::numberOfLogRotationEvents ) );
+        registry.register( LOG_ROTATION_TOTAL_TIME, new MetricsCounter( monitor::logRotationAccumulatedTotalTimeMillis ) );
     }
 
     @Override
