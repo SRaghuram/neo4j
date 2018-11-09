@@ -8,8 +8,8 @@ package org.neo4j.internal.cypher.acceptance
 import java.io.ByteArrayOutputStream
 import java.net.InetSocketAddress
 import java.util.zip.{DeflaterOutputStream, GZIPOutputStream}
-
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+
 import org.eclipse.jetty.server.handler.{AbstractHandler, ContextHandler, ContextHandlerCollection}
 import org.eclipse.jetty.server.{Handler, Request, Server, ServerConnector}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, LoadExternalResourceException}
