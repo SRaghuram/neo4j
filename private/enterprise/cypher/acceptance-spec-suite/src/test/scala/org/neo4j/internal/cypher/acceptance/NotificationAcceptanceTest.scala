@@ -618,14 +618,6 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                                        deprecatedName("rels", "relationships")))
   }
 
-  test("should warn when using START in newer runtimes") {
-    createNode()
-    val query = "EXPLAIN CYPHER runtime=slotted START n=node(0) RETURN n"
-    val result = executeSingle(query, Map.empty)
-    val notifications = result.notifications
-    notifications should contain(RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty))
-  }
-
   test("should warn when using contains on an index with SLOW_CONTAINS limitation") {
     graph.createIndex("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name CONTAINS 'er' RETURN a"
