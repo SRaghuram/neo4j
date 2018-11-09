@@ -5,12 +5,10 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -18,50 +16,45 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.causalclustering.ClusterRule;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.Inject;
 
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 
-@RunWith( Parameterized.class )
-public class ClusterShutdownIT
+@ClusterExtension
+@TestInstance( TestInstance.Lifecycle.PER_METHOD )
+class ClusterShutdownIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 );
+    @Inject
+    private ClusterFactory clusterFactory;
 
-    @Parameterized.Parameter()
-    public Collection<Integer> shutdownOrder;
     private Cluster<?> cluster;
 
-    @Parameterized.Parameters( name = "shutdown order {0}" )
-    public static Collection<Collection<Integer>> shutdownOrders()
+    static Stream<Collection<Integer>> shutdownOrders()
     {
-        return asList( asList( 0, 1, 2 ), asList( 1, 2, 0 ), asList( 2, 0, 1 ) );
+        return Stream.of( asList( 0, 1, 2 ), asList( 1, 2, 0 ), asList( 2, 0, 1 ) );
     }
 
-    @Before
-    public void startCluster() throws Exception
+    @BeforeEach
+    void startCluster() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 ) );
+        cluster.start();
     }
 
-    @After
-    public void shutdownCluster()
-    {
-        if ( cluster != null )
-        {
-            cluster.shutdown();
-        }
-    }
-
-    @Test
-    public void shouldShutdownEvenThoughWaitingForLock() throws Exception
+    @ParameterizedTest
+    @MethodSource( "shutdownOrders" )
+    void shouldShutdownEvenThoughWaitingForLock( Collection<Integer> shutdownOrder ) throws Exception
     {
         CoreClusterMember leader = cluster.awaitLeader();
         shouldShutdownEvenThoughWaitingForLock0( cluster, leader.serverId(), shutdownOrder );
