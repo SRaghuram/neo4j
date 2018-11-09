@@ -10,6 +10,7 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 
+import static java.lang.String.format;
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.ID_ALLOCATION;
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.LOCK_TOKEN;
 
@@ -21,12 +22,16 @@ import static org.neo4j.causalclustering.core.state.CoreStateFiles.LOCK_TOKEN;
  * Typical setup
  *
  *   root state        $NEO4J_HOME/data/cluster-state
- *   database state    $NEO4J_HOME/data/cluster-state/graph.db
+ *   database state    $NEO4J_HOME/data/cluster-state/db/graph.db
  * </pre>
  */
 public class ClusterStateDirectory
 {
     static final String CLUSTER_STATE_DIRECTORY_NAME = "cluster-state";
+
+    static final String MISSING_FILES_MESSAGE = format( "Invalid state: Both %s and %s should exist", ID_ALLOCATION.directoryFullName(),
+            LOCK_TOKEN.directoryFullName() );
+    static final String OVERLAPPING_DATABASE_STATE_MESSAGE = "Invalid state: Overlapping top-level and database state.";
 
     private final File rootStateDir;
 
@@ -60,7 +65,7 @@ public class ClusterStateDirectory
      * It is a requirement to initialize before using the class, unless
      * the non-migrating version is used.
      */
-    public ClusterStateDirectory initialize( FileSystemAbstraction fs, String defaultDbName )
+    public ClusterStateDirectory initialize( FileSystemAbstraction fs, String databaseName )
     {
         assert !initialized;
         if ( !readOnly )
@@ -68,7 +73,7 @@ public class ClusterStateDirectory
             migrateRootStateIfNeeded( fs );
         }
         ensureDirectoryExists( fs, rootStateDir );
-        migrateDataStateIfNeeded( fs, defaultDbName );
+        migrateDatabaseStateIfNeeded( fs, databaseName );
         initialized = true;
         return this;
     }
@@ -113,69 +118,75 @@ public class ClusterStateDirectory
         }
     }
 
-    private void migrateDataStateIfNeeded( FileSystemAbstraction fs, String defaultDbName )
+    private void migrateDatabaseStateIfNeeded( FileSystemAbstraction fs, String databaseName )
     {
         File idAllocDir = ID_ALLOCATION.at( rootStateDir );
         File lockTokenDir = LOCK_TOKEN.at( rootStateDir );
 
-        File dbStateDir = new File( rootStateDir, defaultDbName );
-
-        if ( fs.fileExists( idAllocDir ) || fs.fileExists( lockTokenDir ) )
+        if ( !fs.fileExists( idAllocDir ) && !fs.fileExists( lockTokenDir ) )
         {
-            if ( !( fs.fileExists( idAllocDir ) && fs.fileExists( lockTokenDir ) ) )
-            {
-                throw new ClusterStateException( String.format( "Invalid cluster state found! Both %s and %s should exist!", ID_ALLOCATION.directoryFullName(),
-                        LOCK_TOKEN.directoryFullName() ) );
-            }
+            // no migration needed
+            return;
+        }
 
-            if ( fs.fileExists( dbStateDir ) )
-            {
-                throw new ClusterStateException( "Invalid cluster state found! Overlapping top-level and database state." );
-            }
-            else
-            {
-                ensureDirectoryExists( fs, dbStateDir );
+        if ( !fs.fileExists( idAllocDir ) || !fs.fileExists( lockTokenDir ) )
+        {
+            throw new ClusterStateException( MISSING_FILES_MESSAGE );
+        }
 
-                try
-                {
-                    fs.moveToDirectory( idAllocDir, dbStateDir );
-                    fs.moveToDirectory( lockTokenDir, dbStateDir );
-                }
-                catch ( IOException e )
-                {
-                    throw new ClusterStateException( e );
-                }
-            }
+        File dbStateDir = databaseStateDirectory( databaseName );
+
+        if ( fs.fileExists( dbStateDir ) )
+        {
+            // directory should not exist prior to migration
+            throw new ClusterStateException( OVERLAPPING_DATABASE_STATE_MESSAGE );
+        }
+
+        ensureDirectoryExists( fs, dbStateDir );
+
+        try
+        {
+            // do the migration
+            fs.moveToDirectory( idAllocDir, dbStateDir );
+            fs.moveToDirectory( lockTokenDir, dbStateDir );
+        }
+        catch ( IOException e )
+        {
+            throw new ClusterStateException( e );
         }
     }
 
     private void ensureDirectoryExists( FileSystemAbstraction fs, File dir )
     {
-        if ( !fs.fileExists( dir ) )
+        if ( fs.fileExists( dir ) )
         {
-            if ( readOnly )
-            {
-                throw new ClusterStateException( String.format( "The directory %s does not exist!", dir.getAbsolutePath() ) );
-            }
-            else
-            {
-                try
-                {
-                    fs.mkdirs( dir );
-                }
-                catch ( IOException e )
-                {
-                    throw new ClusterStateException( e );
-                }
-            }
+            return;
+        }
+        else if ( readOnly )
+        {
+            throw new ClusterStateException( format( "The directory %s does not exist!", dir.getAbsolutePath() ) );
+        }
+
+        try
+        {
+            fs.mkdirs( dir );
+        }
+        catch ( IOException e )
+        {
+            throw new ClusterStateException( e );
         }
     }
 
-    PerDatabaseClusterStateDirectory stateFor( FileSystemAbstraction fs, String databaseName )
+    private File databaseStateDirectory( String databaseName )
     {
-        File subDir = new File( this.get(), databaseName );
-        ensureDirectoryExists( fs,  subDir );
-        return new PerDatabaseClusterStateDirectory( this, databaseName, subDir );
+        return new File( new File( rootStateDir, "db" ), databaseName );
+    }
+
+    File databaseStateDirectory( FileSystemAbstraction fs, String databaseName )
+    {
+        File dbStateDir = databaseStateDirectory( databaseName );
+        ensureDirectoryExists( fs,  dbStateDir );
+        return dbStateDir;
     }
 
     public File get()
@@ -185,39 +196,5 @@ public class ClusterStateDirectory
             throw new IllegalStateException( "Cluster state has not been initialized" );
         }
         return rootStateDir;
-    }
-
-    /**
-     * This represents the sub-directory of cluster state containing state related to a specific database.
-     * Unlike the enclosing {{@link ClusterStateDirectory}} this class contains no migration logic, as this is handled by
-     * the login *in* {{@link ClusterStateDirectory#initialize(FileSystemAbstraction, String)}}.
-     */
-    public static class PerDatabaseClusterStateDirectory
-    {
-        private final ClusterStateDirectory parent;
-        private final String databaseName;
-        private final File subDir;
-
-        private PerDatabaseClusterStateDirectory( ClusterStateDirectory parent, String databaseName, File subDir )
-        {
-            this.parent = parent;
-            this.databaseName = databaseName;
-            this.subDir = subDir;
-        }
-
-        public ClusterStateDirectory parent()
-        {
-            return parent;
-        }
-
-        public String databaseName()
-        {
-            return databaseName;
-        }
-
-        public File get()
-        {
-            return subDir;
-        }
     }
 }

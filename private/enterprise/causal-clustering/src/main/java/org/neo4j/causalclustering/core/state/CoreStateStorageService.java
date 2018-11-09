@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.neo4j.causalclustering.core.state.ClusterStateDirectory.PerDatabaseClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import org.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import org.neo4j.causalclustering.core.state.storage.SimpleStorage;
@@ -98,9 +97,9 @@ public class CoreStateStorageService
         }
         else if ( perDbStorage.contains( type ) )
         {
-            PerDatabaseClusterStateDirectory databaseState = clusterStateDirectory.stateFor( fs, databaseName );
-            File f = type.at( databaseState.get() );
-            durableStore = new DurableStateStorage<>( fs, f, type, type.rotationSize( config ), logProvider );
+            File databaseStateDirectory = clusterStateDirectory.databaseStateDirectory( fs, databaseName );
+            File specificStateDirectory = type.at( databaseStateDirectory );
+            durableStore = new DurableStateStorage<>( fs, specificStateDirectory, type, type.rotationSize( config ), logProvider );
         }
         else
         {

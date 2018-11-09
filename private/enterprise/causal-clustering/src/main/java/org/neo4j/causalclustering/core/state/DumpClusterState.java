@@ -46,24 +46,24 @@ public class DumpClusterState
 
         File dataDirectory;
         Optional<String> databaseToDumpOpt;
-        Optional<String> defaultDatabaseNameOpt;
+        Optional<String> databaseNameOpt;
         if ( args.length == 1 )
         {
             dataDirectory = new File( args[0] );
             databaseToDumpOpt = Optional.empty();
-            defaultDatabaseNameOpt = Optional.empty();
+            databaseNameOpt = Optional.empty();
         }
         else if ( args.length == 2 )
         {
             dataDirectory = new File( args[0] );
             databaseToDumpOpt = Optional.ofNullable( args[1] );
-            defaultDatabaseNameOpt = Optional.empty();
+            databaseNameOpt = Optional.empty();
         }
         else if ( args.length == 3 )
         {
             dataDirectory = new File( args[0] );
             databaseToDumpOpt = Optional.ofNullable( args[1] );
-            defaultDatabaseNameOpt = Optional.ofNullable( args[2] );
+            databaseNameOpt = Optional.ofNullable( args[2] );
         }
         else
         {
@@ -74,9 +74,9 @@ public class DumpClusterState
 
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            String defaultDatabaseName = defaultDatabaseNameOpt.orElse( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-            String databaseToDump = databaseToDumpOpt.orElse( defaultDatabaseName );
-            DumpClusterState dumpTool = new DumpClusterState( fileSystem, dataDirectory, System.out, databaseToDump, defaultDatabaseName );
+            String databaseName = databaseNameOpt.orElse( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+            String databaseToDump = databaseToDumpOpt.orElse( databaseName );
+            DumpClusterState dumpTool = new DumpClusterState( fileSystem, dataDirectory, System.out, databaseToDump, databaseName );
             dumpTool.dump();
         }
         catch ( Exception e )
@@ -86,10 +86,10 @@ public class DumpClusterState
         }
     }
 
-    DumpClusterState( FileSystemAbstraction fs, File dataDirectory, PrintStream out, String databaseToDump, String defaultDbName )
+    DumpClusterState( FileSystemAbstraction fs, File dataDirectory, PrintStream out, String databaseToDump, String databaseName )
     {
         this.lifeSupport = new LifeSupport();
-        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDirectory ).initialize( fs, defaultDbName );
+        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDirectory ).initialize( fs, databaseName );
         this.storageService = new CoreStateStorageService( fs, clusterStateDirectory, lifeSupport, NullLogProvider.getInstance(), Config.defaults() );
         this.out = out;
         this.databaseToDump = databaseToDump;

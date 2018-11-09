@@ -169,9 +169,6 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine =
                 new ReplicatedLockTokenStateMachine( storage.stateStorage( CoreStateFiles.LOCK_TOKEN, databaseName ) );
 
-        // TODO: deps
-//        dbDependencies.satisfyDependency( new IdBasedStoreEntityCounters( idGeneratorFactory ) );
-
         ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( labelTokenRegistry,
                 logProvider, versionContextSupplier );
         ReplicatedTokenStateMachine propertyKeyTokenStateMachine =
