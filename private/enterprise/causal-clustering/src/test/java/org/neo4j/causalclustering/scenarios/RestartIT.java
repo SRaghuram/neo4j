@@ -5,9 +5,10 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,53 +29,49 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
-import org.neo4j.test.causalclustering.ClusterRule;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static org.neo4j.graphdb.Label.label;
 
-public class RestartIT
+@ClusterExtension
+class RestartIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 0 );
+    @Inject
+    private ClusterFactory clusterFactory;
+
+    private Cluster<?> cluster;
+
+    @BeforeAll
+    void startCluster() throws ExecutionException, InterruptedException
+    {
+        cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfReadReplicas( 0 ) );
+        cluster.start();
+    }
 
     @Test
-    public void restartFirstServer() throws Exception
+    void restartFirstServer()
     {
-        // given
-        Cluster<?> cluster = clusterRule.startCluster();
-
         // when
         cluster.removeCoreMemberWithServerId( 0 );
         cluster.addCoreMemberWithId( 0 ).start();
-
-        // then
-        cluster.shutdown();
     }
 
     @Test
-    public void restartSecondServer() throws Exception
+    void restartSecondServer()
     {
-        // given
-        Cluster<?> cluster = clusterRule.startCluster();
-
         // when
         cluster.removeCoreMemberWithServerId( 1 );
         cluster.addCoreMemberWithId( 1 ).start();
-
-        // then
-        cluster.shutdown();
     }
 
     @Test
-    public void restartWhileDoingTransactions() throws Exception
+    void restartWhileDoingTransactions() throws Exception
     {
-        // given
-        Cluster<?> cluster = clusterRule.startCluster();
-
         // when
         final GraphDatabaseService coreDB = cluster.getCoreMemberById( 0 ).database();
 
@@ -109,10 +106,9 @@ public class RestartIT
     }
 
     @Test
-    public void shouldHaveWritableClusterAfterCompleteRestart() throws Exception
+    void shouldHaveWritableClusterAfterCompleteRestart() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
         cluster.shutdown();
 
         // when
@@ -127,14 +123,14 @@ public class RestartIT
 
         // then
         dataMatchesEventually( last, cluster.coreMembers() );
-        cluster.shutdown();
     }
 
     @Test
-    public void readReplicaTest() throws Exception
+    void readReplicaTest() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterRule.withNumberOfCoreMembers( 2 ).withNumberOfReadReplicas( 1 ).startCluster();
+        Cluster<?> cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfCoreMembers( 2 ).withNumberOfReadReplicas( 1 ) );
+        cluster.start();
 
         // when
         CoreClusterMember last = cluster.coreTx( ( db, tx ) ->
@@ -154,20 +150,20 @@ public class RestartIT
         {
             for ( CoreClusterMember core : cluster.coreMembers() )
             {
-                ConsistencyCheckService.Result result = new ConsistencyCheckService()
-                        .runFullConsistencyCheck( DatabaseLayout.of( core.databaseDirectory() ), Config.defaults(), ProgressMonitorFactory.NONE,
-                                NullLogProvider.getInstance(), fileSystem, false,
+                ConsistencyCheckService.Result result =
+                        new ConsistencyCheckService().runFullConsistencyCheck( DatabaseLayout.of( core.databaseDirectory() ), Config.defaults(),
+                                ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), fileSystem, false,
                                 new ConsistencyFlags( true, true, true, false ) );
-                assertTrue( "Inconsistent: " + core, result.isSuccessful() );
+                assertTrue( result.isSuccessful(), "Inconsistent: " + core );
             }
 
             for ( ReadReplica readReplica : cluster.readReplicas() )
             {
-                ConsistencyCheckService.Result result = new ConsistencyCheckService()
-                        .runFullConsistencyCheck( DatabaseLayout.of( readReplica.databaseDirectory() ), Config.defaults(), ProgressMonitorFactory.NONE,
-                                NullLogProvider.getInstance(), fileSystem, false,
+                ConsistencyCheckService.Result result =
+                        new ConsistencyCheckService().runFullConsistencyCheck( DatabaseLayout.of( readReplica.databaseDirectory() ), Config.defaults(),
+                                ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), fileSystem, false,
                                 new ConsistencyFlags( true, true, true, false ) );
-                assertTrue( "Inconsistent: " + readReplica, result.isSuccessful() );
+                assertTrue( result.isSuccessful(), "Inconsistent: " + readReplica );
             }
         }
     }
