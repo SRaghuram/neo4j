@@ -199,6 +199,47 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         Map("label" -> "B", "nodeCount" -> 1)))
   }
 
+  test("should get correct count for labels when added in same transaction") {
+    // Given
+    createLabeledNode(Map("name" -> "Tic"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "A")
+    createLabeledNode(Map("name" -> "Toc"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "B")
+    createLabeledNode(Map("name" -> "Toc"), "C")
+
+    //When
+    val result = executeWith(
+      Configs.InterpretedAndSlotted,
+      "CREATE(c:C) WITH 1 AS single CALL db.labels() YIELD label, nodeCount RETURN label, nodeCount")
+
+    // Then
+    result.toList should equal(
+      List(
+        Map("label" -> "A", "nodeCount" -> 3),
+        Map("label" -> "B", "nodeCount" -> 1),
+        Map("label" -> "C", "nodeCount" -> 2)))
+  }
+
+  test("should get correct count for labels when removed in same transaction") {
+    // Given
+    createLabeledNode(Map("name" -> "Tic"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "A")
+    createLabeledNode(Map("name" -> "Toc"), "A")
+    createLabeledNode(Map("name" -> "Tac"), "B")
+    createLabeledNode(Map("name" -> "Toc"), "C")
+
+    //When
+    val result = executeWith(
+      Configs.InterpretedAndSlotted,
+      "MATCH (c:C) REMOVE c:C WITH count(c) AS single CALL db.labels() YIELD label, nodeCount RETURN label, nodeCount")
+
+    // Then
+    result.toList should equal(
+      List(
+        Map("label" -> "A", "nodeCount" -> 3),
+        Map("label" -> "B", "nodeCount" -> 1)))
+  }
+
   test("db.labels works on an empty database") {
     // Given an empty database
     //When
@@ -257,6 +298,54 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         Map("relationshipType" -> "A", "relationshipCount" -> 1),
         Map("relationshipType" -> "B", "relationshipCount" -> 2),
         Map("relationshipType" -> "C", "relationshipCount" -> 1)))
+  }
+
+  test("should get correct count for relationship types when added in transaction") {
+    // Given
+    relate(createNode(), createNode(), "A")
+    relate(createNode(), createNode(), "B")
+    relate(createNode(), createNode(), "B")
+    relate(createNode(), createNode(), "C")
+
+    // When
+    val result = executeWith(Configs.InterpretedAndSlotted,
+      """
+        |CREATE ()-[:C]->()
+        |WITH 1 as single
+        |CALL db.relationshipTypes() YIELD relationshipType, relationshipCount
+        |RETURN relationshipType, relationshipCount
+      """.stripMargin)
+
+    // Then
+    result.toList should equal(
+      List(
+        Map("relationshipType" -> "A", "relationshipCount" -> 1),
+        Map("relationshipType" -> "B", "relationshipCount" -> 2),
+        Map("relationshipType" -> "C", "relationshipCount" -> 2)))
+  }
+
+  test("should get correct count for relationship types when removed in transaction") {
+    // Given
+    relate(createNode(), createNode(), "A")
+    relate(createNode(), createNode(), "B")
+    relate(createNode(), createNode(), "B")
+    relate(createNode(), createNode(), "C")
+
+    // When
+    val result = executeWith(Configs.InterpretedAndSlotted,
+      """
+        |MATCH ()-[c:C]->()
+        |DELETE c
+        |WITH count(c) as single
+        |CALL db.relationshipTypes() YIELD relationshipType, relationshipCount
+        |RETURN relationshipType, relationshipCount
+      """.stripMargin)
+
+    // Then
+    result.toList should equal(
+      List(
+        Map("relationshipType" -> "A", "relationshipCount" -> 1),
+        Map("relationshipType" -> "B", "relationshipCount" -> 2)))
   }
 
   test("db.relationshipType work on an empty database") {
