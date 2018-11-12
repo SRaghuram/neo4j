@@ -47,8 +47,8 @@ public abstract class CatchupServersModule
         this.databaseService = databaseService;
         this.pipelineBuilders = pipelineBuilders;
 
-        this.logProvider = platformModule.logging.getInternalLogProvider();
-        this.userLogProvider = platformModule.logging.getUserLogProvider();
+        this.logProvider = platformModule.logService.getInternalLogProvider();
+        this.userLogProvider = platformModule.logService.getUserLogProvider();
         this.config = platformModule.config;
         this.lifeSupport = platformModule.life;
 

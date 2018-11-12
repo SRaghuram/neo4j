@@ -51,7 +51,7 @@ public class ReadReplicaDatabaseContext implements EditionDatabaseContext
         this.editionModule = editionModule;
         this.databaseName = databaseName;
         this.locksManager = new ReadReplicaLockManager();
-        this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, platformModule.config, platformModule.logging ).select();
+        this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, platformModule.config, platformModule.logService ).select();
 
         IdContextFactory idContextFactory =
                 IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( platformModule.config ), platformModule.jobScheduler )

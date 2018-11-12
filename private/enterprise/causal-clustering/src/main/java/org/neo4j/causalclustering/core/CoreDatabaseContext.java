@@ -45,7 +45,7 @@ public class CoreDatabaseContext implements EditionDatabaseContext
         CoreStateService coreStateService = editionModule.coreStateComponents();
         databaseState = coreStateService.getDatabaseState( databaseName )
                 .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseName ) ) );
-        statementLocksFactory = new StatementLocksFactorySelector( databaseState.lockManager(), platformModule.config, platformModule.logging ).select();
+        statementLocksFactory = new StatementLocksFactorySelector( databaseState.lockManager(), platformModule.config, platformModule.logService ).select();
         transactionMonitor = editionModule.createTransactionMonitor();
     }
 

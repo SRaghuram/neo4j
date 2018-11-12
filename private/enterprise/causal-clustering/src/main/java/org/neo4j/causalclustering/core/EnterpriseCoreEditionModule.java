@@ -36,8 +36,8 @@ import org.neo4j.causalclustering.core.server.CoreServerModule;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.ClusteringModule;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
-import org.neo4j.causalclustering.core.state.CoreStateStorageService;
 import org.neo4j.causalclustering.core.state.CoreStateService;
+import org.neo4j.causalclustering.core.state.CoreStateStorageService;
 import org.neo4j.causalclustering.core.state.storage.StateStorage;
 import org.neo4j.causalclustering.diagnostics.CoreMonitor;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -193,7 +193,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     public EnterpriseCoreEditionModule( final PlatformModule platformModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
         final Dependencies dependencies = platformModule.dependencies;
-        final LogService logging = platformModule.logging;
+        final LogService logging = platformModule.logService;
         final LifeSupport life = platformModule.life;
 
         this.platformModule = platformModule;
@@ -255,7 +255,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
 
         Duration handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
         HandshakeClientInitializer channelInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                protocolInstallerRepository, pipelineBuilders.client(), handshakeTimeout, logProvider, platformModule.logging.getUserLogProvider() );
+                protocolInstallerRepository, pipelineBuilders.client(), handshakeTimeout, logProvider, platformModule.logService.getUserLogProvider() );
         final SenderService raftSender = new SenderService( channelInitializer, logProvider );
         life.add( raftSender );
         this.clientInstalledProtocols = raftSender::installedProtocols;

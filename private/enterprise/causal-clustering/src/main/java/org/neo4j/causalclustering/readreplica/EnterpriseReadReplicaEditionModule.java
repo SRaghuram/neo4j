@@ -13,8 +13,8 @@ import java.util.function.Supplier;
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.RegularCatchupServerHandler;
-import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.DefaultDatabaseService;
+import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.PipelineBuilders;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.schedule.TimerService;
@@ -90,11 +90,11 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
     public EnterpriseReadReplicaEditionModule( final PlatformModule platformModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
     {
         this.platformModule = platformModule;
-        LogService logging = platformModule.logging;
+        LogService logging = platformModule.logService;
         this.config = platformModule.config;
         this.activeDatabaseName = config.get( GraphDatabaseSettings.active_database );
-        logProvider = platformModule.logging.getInternalLogProvider();
-        LogProvider userLogProvider = platformModule.logging.getUserLogProvider();
+        logProvider = platformModule.logService.getInternalLogProvider();
+        LogProvider userLogProvider = platformModule.logService.getUserLogProvider();
         logProvider.getLog( getClass() ).info( String.format( "Generated new id: %s", myself ) );
 
         ioLimiter = new ConfigurableIOLimiter( platformModule.config );
@@ -130,7 +130,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
 
         connectionTracker = dependencies.satisfyDependency( createConnectionTracker() );
 
-        RemoteMembersResolver hostnameResolver = chooseResolver( config, platformModule.logging );
+        RemoteMembersResolver hostnameResolver = chooseResolver( config, platformModule.logService);
 
         configureDiscoveryService( discoveryServiceFactory, dependencies, config, logProvider );
 
@@ -168,7 +168,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
         CatchupProcessManager catchupProcessManager =
                 new CatchupProcessManager( catchupExecutor, serverModule.catchupComponents(), databaseService, servicesToStopOnStoreCopy,
                         databaseHealthSupplier, topologyService, serverModule.catchupClient(), upstreamDatabaseStrategySelector, timerService,
-                        commandIndexTracker, platformModule.logging.getInternalLogProvider(), platformModule.versionContextSupplier,
+                        commandIndexTracker, platformModule.logService.getInternalLogProvider(), platformModule.versionContextSupplier,
                         platformModule.tracers.pageCursorTracerSupplier, platformModule.config );
 
         life.add( new ReadReplicaStartupProcess( catchupExecutor, databaseService, catchupProcessManager, upstreamDatabaseStrategySelector,

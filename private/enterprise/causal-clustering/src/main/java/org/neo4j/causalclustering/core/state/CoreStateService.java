@@ -112,7 +112,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     public CoreStateService( MemberId myself, PlatformModule platformModule, CoreStateStorageService storage, Config config, RaftMachine raftMachine,
             DatabaseService databaseService, ReplicationModule replicationModule, StateStorage<Long> lastFlushedStorage )
     {
-        this.logging = platformModule.logging;
+        this.logging = platformModule.logService;
         this.logProvider = logging.getInternalLogProvider();
         this.lastFlushedStorage = lastFlushedStorage;
         this.storage = storage;
