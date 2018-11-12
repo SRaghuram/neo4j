@@ -1978,16 +1978,16 @@ object IntermediateCodeGeneration {
   private val CURSORS = load("cursors")
 
   private val NODE_CURSOR = load("nodeCursor")
-  private val vNODE_CURSOR = loadCursorVariable[NodeCursor]("nodeCursor")
+  private val vNODE_CURSOR = cursorVariable[NodeCursor]("nodeCursor")
 
   private val RELATIONSHIP_CURSOR = load("relationshipScanCursor")
-  private val vRELATIONSHIP_CURSOR = loadCursorVariable[RelationshipScanCursor]("relationshipScanCursor")
+  private val vRELATIONSHIP_CURSOR = cursorVariable[RelationshipScanCursor]("relationshipScanCursor")
 
   private val PROPERTY_CURSOR = load("propertyCursor")
-  private val vPROPERTY_CURSOR = loadCursorVariable[PropertyCursor]("propertyCursor")
+  private val vPROPERTY_CURSOR = cursorVariable[PropertyCursor]("propertyCursor")
 
   private val vCURSORS = Seq(vNODE_CURSOR, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR)
 
-  private def loadCursorVariable[T](name: String)(implicit m: Manifest[T]): LocalVariable =
+  private def cursorVariable[T](name: String)(implicit m: Manifest[T]): LocalVariable =
     variable[T](name, invoke(load("cursors"), method[ExpressionCursors, T](name)))
 }
