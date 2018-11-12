@@ -11,27 +11,12 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.DbRepresentation;
 
 public class ClusterHelper
 {
     public static final Label label = Label.label( "any_label" );
     public static final String PROP_NAME = "name";
     public static final String PROP_RANDOM = "random";
-
-    /**
-     * Used by non-cc
-     * @param db
-     * @return
-     */
-    public static DbRepresentation createSomeData( GraphDatabaseService db )
-    {
-        try ( Transaction tx = db.beginTx() )
-        {
-            createSomeData(db, tx);
-        }
-        return DbRepresentation.of( db );
-    }
 
     /**
      * Used by cc

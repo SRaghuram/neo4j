@@ -5,7 +5,6 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.hamcrest.Matchers;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -23,7 +22,6 @@ import org.neo4j.test.causalclustering.ClusterRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
 
@@ -53,10 +51,8 @@ public class ClusterCustomLogLocationIT
         {
             DependencyResolver dependencyResolver = coreClusterMember.database().getDependencyResolver();
             LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
-            assertEquals( logFiles.logFilesDirectory().getName(), "core-tx-logs-" + coreClusterMember.serverId() );
+            assertEquals( logFiles.logFilesDirectory().getName(), coreClusterMember.database().databaseLayout().getDatabaseName() );
             assertTrue( logFiles.hasAnyEntries( 0 ) );
-            File[] coreLogDirectories = coreClusterMember.databaseDirectory().listFiles( file -> file.getName().startsWith( "core" ) );
-            assertThat( coreLogDirectories, Matchers.arrayWithSize( 1 ) );
 
             logFileInStoreDirectoryDoesNotExist( coreClusterMember.databaseDirectory(), dependencyResolver );
         }
@@ -67,10 +63,8 @@ public class ClusterCustomLogLocationIT
             readReplica.txPollingClient().upToDateFuture().get();
             DependencyResolver dependencyResolver = readReplica.database().getDependencyResolver();
             LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
-            assertEquals( logFiles.logFilesDirectory().getName(), "replica-tx-logs-" + readReplica.serverId() );
+            assertEquals( logFiles.logFilesDirectory().getName(), readReplica.database().databaseLayout().getDatabaseName() );
             assertTrue( logFiles.hasAnyEntries( 0 ) );
-            File[] replicaLogDirectories = readReplica.databaseDirectory().listFiles( file -> file.getName().startsWith( "replica" ) );
-            assertThat( replicaLogDirectories, Matchers.arrayWithSize( 1 ) );
 
             logFileInStoreDirectoryDoesNotExist( readReplica.databaseDirectory(), dependencyResolver );
         }

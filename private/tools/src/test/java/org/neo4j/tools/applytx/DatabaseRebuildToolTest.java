@@ -5,8 +5,8 @@
  */
 package org.neo4j.tools.applytx;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -29,28 +29,30 @@ import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.tools.console.input.ConsoleUtil.NULL_PRINT_STREAM;
 
-public class DatabaseRebuildToolTest
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class DatabaseRebuildToolTest
 {
-    @Rule
-    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    @Rule
-    public final TestDirectory directory = TestDirectory.testDirectory();
+
+    @Inject
+    private TestDirectory directory;
 
     @Test
-    public void shouldRebuildDbFromTransactions() throws Exception
+    void shouldRebuildDbFromTransactions() throws Exception
     {
         // This tests the basic functionality of this tool, there are more things, but it's not as important
         // to test as the functionality of applying transactions.
@@ -69,7 +71,7 @@ public class DatabaseRebuildToolTest
     }
 
     @Test
-    public void shouldApplySomeTransactions() throws Exception
+    void shouldApplySomeTransactions() throws Exception
     {
         // This tests the basic functionality of this tool, there are more things, but it's not as important
         // to test as the functionality of applying transactions.
@@ -89,7 +91,7 @@ public class DatabaseRebuildToolTest
     }
 
     @Test
-    public void shouldDumpNodePropertyChain() throws Exception
+    void shouldDumpNodePropertyChain() throws Exception
     {
         shouldPrint( "dump node properties 0",
                 "Property",
@@ -97,7 +99,7 @@ public class DatabaseRebuildToolTest
     }
 
     @Test
-    public void shouldDumpRelationshipPropertyChain() throws Exception
+    void shouldDumpRelationshipPropertyChain() throws Exception
     {
         shouldPrint( "dump relationship properties 0",
                 "Property",
@@ -105,7 +107,7 @@ public class DatabaseRebuildToolTest
     }
 
     @Test
-    public void shouldDumpRelationships() throws Exception
+    void shouldDumpRelationships() throws Exception
     {
         shouldPrint( "dump node relationships 0",
                 "Relationship[0,",
@@ -113,7 +115,7 @@ public class DatabaseRebuildToolTest
     }
 
     @Test
-    public void shouldDumpRelationshipTypeTokens() throws Exception
+    void shouldDumpRelationshipTypeTokens() throws Exception
     {
         shouldPrint( "dump tokens relationship-type",
                 "TYPE_0",
@@ -121,7 +123,7 @@ public class DatabaseRebuildToolTest
     }
 
     @Test
-    public void shouldDumpLabelTokens() throws Exception
+    void shouldDumpLabelTokens() throws Exception
     {
         shouldPrint( "dump tokens label",
                 "Label_0",
@@ -129,7 +131,7 @@ public class DatabaseRebuildToolTest
     }
 
     @Test
-    public void shouldDumpPropertyKeyTokens() throws Exception
+    void shouldDumpPropertyKeyTokens() throws Exception
     {
         shouldPrint( "dump tokens property-key",
                 "name" );

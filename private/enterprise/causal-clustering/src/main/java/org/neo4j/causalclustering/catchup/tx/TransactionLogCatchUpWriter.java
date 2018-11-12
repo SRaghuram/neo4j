@@ -80,12 +80,11 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
     private Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean forceTransactionRotations )
     {
-        Config config = Config.builder()
-                .build();
+        Config config = Config.builder().build();
         if ( !keepTxLogsInStoreDir )
         {
-            original.getRaw( GraphDatabaseSettings.logical_logs_location.name() )
-                    .ifPresent( v -> config.augment( GraphDatabaseSettings.logical_logs_location, v ) );
+            original.getValue( GraphDatabaseSettings.transaction_logs_root_path.name() ).ifPresent(
+                    v -> config.augment( GraphDatabaseSettings.transaction_logs_root_path, v.toString() ) );
         }
         if ( forceTransactionRotations )
         {

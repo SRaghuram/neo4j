@@ -6,8 +6,8 @@
 package com.neo4j.kernel.impl.storemigration;
 
 import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -34,23 +34,26 @@ import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
-public class StoreMigratorTest
+@ExtendWith( TestDirectoryExtension.class )
+class StoreMigratorTest
 {
-    @Rule
-    public final TestDirectory directory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory directory;
 
     @Test
-    public void shouldNotDoActualStoreMigrationBetween3_0_5_and_next() throws Exception
+    void shouldNotDoActualStoreMigrationBetween3_0_5_and_next() throws Exception
     {
         // GIVEN a store in vE.H.0 format
         DatabaseLayout databaseLayout = directory.databaseLayout();
@@ -71,7 +74,7 @@ public class StoreMigratorTest
             String fromStoreVersion = StoreVersion.HIGH_LIMIT_V3_0_0.versionString();
             Result hasVersionResult = new RecordStoreVersionCheck( pageCache ).hasVersion(
                     databaseLayout.metadataStore(), fromStoreVersion );
-            assertTrue( hasVersionResult.actualVersion, hasVersionResult.outcome.isSuccessful() );
+            assertTrue( hasVersionResult.outcome.isSuccessful(), hasVersionResult.actualVersion );
 
             // WHEN
             StoreMigrator migrator = new StoreMigrator( fs, pageCache, config, NullLogService.getInstance(), jobScheduler );
@@ -86,12 +89,8 @@ public class StoreMigratorTest
     }
 
     @Test
-    public void detectObsoleteCountStoresToRebuildDuringMigration()
+    void detectObsoleteCountStoresToRebuildDuringMigration()
     {
-        FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
-        PageCache pageCache = mock( PageCache.class );
-        Config config = Config.defaults();
-        CountsMigrator storeMigrator = new CountsMigrator( fileSystem, pageCache, config );
         Set<String> actualVersions = new HashSet<>();
         Set<String> expectedVersions = Arrays.stream( StoreVersion.values() ).map( StoreVersion::versionString )
                         .collect( Collectors.toSet() );

@@ -39,6 +39,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.lang.String.valueOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -134,8 +135,7 @@ class SystemDatabaseIT
     {
         LogFiles systemLogFiles = systemDb.getDependencyResolver().resolveDependency( LogFiles.class );
         LogFiles defaultLogFiles = defaultDb.getDependencyResolver().resolveDependency( LogFiles.class );
-        assertEquals( systemDb.databaseLayout().databaseDirectory(), systemLogFiles.logFilesDirectory() );
-        assertEquals( defaultDb.databaseLayout().databaseDirectory(), defaultLogFiles.logFilesDirectory() );
+        assertNotEquals( defaultLogFiles.logFilesDirectory(), systemLogFiles.logFilesDirectory() );
     }
 
     @Test

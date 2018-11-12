@@ -18,28 +18,24 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 public class ClassicNeo4jStore
 {
     private final File storeDir;
-    private final File logicalLogsDir;
 
-    private ClassicNeo4jStore( File storeDir, File logicalLogsDir )
+    private ClassicNeo4jStore( File storeDir )
     {
         this.storeDir = storeDir;
-        this.logicalLogsDir = logicalLogsDir;
     }
 
     public File getStoreDir()
     {
         return storeDir;
-    }
-
-    public File getLogicalLogsDir()
-    {
-        return logicalLogsDir;
     }
 
     public static Neo4jStoreBuilder builder( File baseDir, FileSystemAbstraction fsa )
@@ -55,7 +51,7 @@ public class ClassicNeo4jStore
         private String recordsFormat = Standard.LATEST_NAME;
         private final File baseDir;
         private final FileSystemAbstraction fsa;
-        private String logicalLogsLocation = "";
+        private String absoluteLogicalLogsRootLocation = "";
 
         Neo4jStoreBuilder( File baseDir, FileSystemAbstraction fsa )
         {
@@ -88,21 +84,22 @@ public class ClassicNeo4jStore
             return this;
         }
 
-        public Neo4jStoreBuilder logicalLogsLocation( String logicalLogsLocation )
+        public Neo4jStoreBuilder logicalLogsRootLocation( String absoluteLogicalLogsRootLocation )
         {
-            this.logicalLogsLocation = logicalLogsLocation;
+            this.absoluteLogicalLogsRootLocation = absoluteLogicalLogsRootLocation;
             return this;
         }
 
         public ClassicNeo4jStore build() throws IOException
         {
-            createStore( baseDir, fsa, dbName, nrOfNodes, recordsFormat, needRecover, logicalLogsLocation );
             File storeDir = new File( baseDir, dbName );
-            return new ClassicNeo4jStore( storeDir, new File( storeDir, logicalLogsLocation ) );
+            File logsRootDir = isEmpty( absoluteLogicalLogsRootLocation ) ? baseDir : new File( absoluteLogicalLogsRootLocation );
+            createStore( baseDir, fsa, dbName, nrOfNodes, recordsFormat, needRecover, logsRootDir.getAbsolutePath() );
+            return new ClassicNeo4jStore( storeDir  );
         }
 
         private static void createStore( File base, FileSystemAbstraction fileSystem, String dbName, int nodesToCreate, String recordFormat,
-                boolean recoveryNeeded, String logicalLogsLocation ) throws IOException
+                boolean recoveryNeeded, String logicalLogsRoot ) throws IOException
         {
             File storeDir = new File( base, dbName );
             GraphDatabaseService db = new TestGraphDatabaseFactory()
@@ -110,7 +107,7 @@ public class ClassicNeo4jStore
                     .newEmbeddedDatabaseBuilder( storeDir )
                     .setConfig( GraphDatabaseSettings.record_format, recordFormat )
                     .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() )
-                    .setConfig( GraphDatabaseSettings.logical_logs_location, logicalLogsLocation )
+                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, logicalLogsRoot )
                     .newGraphDatabase();
 
             for ( int i = 0; i < (nodesToCreate / 2); i++ )
@@ -126,24 +123,25 @@ public class ClassicNeo4jStore
 
             if ( recoveryNeeded )
             {
+                LogFiles logFiles = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( LogFiles.class );
+                File logFilesDirectory = logFiles.logFilesDirectory();
                 File tmpLogs = new File( base, "unrecovered" );
                 fileSystem.mkdir( tmpLogs );
-                File txLogsDir = new File( storeDir, logicalLogsLocation );
-                for ( File file : fileSystem.listFiles( txLogsDir, TransactionLogFiles.DEFAULT_FILENAME_FILTER ) )
+                for ( File file : logFiles.logFiles() )
                 {
                     fileSystem.copyFile( file, new File( tmpLogs, file.getName() ) );
                 }
 
                 db.shutdown();
 
-                for ( File file : fileSystem.listFiles( txLogsDir, TransactionLogFiles.DEFAULT_FILENAME_FILTER ) )
+                for ( File file : logFiles.logFiles() )
                 {
                     fileSystem.deleteFile( file );
                 }
 
-                for ( File file : fileSystem.listFiles( tmpLogs, TransactionLogFiles.DEFAULT_FILENAME_FILTER ) )
+                for ( File file : logFiles.logFiles() )
                 {
-                    fileSystem.copyFile( file, new File( txLogsDir, file.getName() ) );
+                    fileSystem.copyToDirectory( file, logFilesDirectory );
                 }
             }
             else

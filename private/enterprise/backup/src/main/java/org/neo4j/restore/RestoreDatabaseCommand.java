@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.commandline.admin.CommandFailed;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
@@ -21,14 +20,13 @@ import static java.lang.String.format;
 import static org.neo4j.commandline.Util.checkLock;
 import static org.neo4j.commandline.Util.isSameOrChildFile;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.database_path;
+import static org.neo4j.kernel.configuration.LayoutConfig.of;
 
 public class RestoreDatabaseCommand
 {
     private FileSystemAbstraction fs;
     private final File fromDatabasePath;
-    private final File toDatabaseDir;
-    private final File transactionLogsDirectory;
-    private String toDatabaseName;
+    private final DatabaseLayout targetDatabaseLayout;
     private boolean forceOverwrite;
 
     public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, String toDatabaseName,
@@ -37,9 +35,7 @@ public class RestoreDatabaseCommand
         this.fs = fs;
         this.fromDatabasePath = fromDatabasePath;
         this.forceOverwrite = forceOverwrite;
-        this.toDatabaseName = toDatabaseName;
-        this.toDatabaseDir = config.get( database_path ).getAbsoluteFile();
-        this.transactionLogsDirectory = config.get( GraphDatabaseSettings.logical_logs_location ).getAbsoluteFile();
+        this.targetDatabaseLayout = DatabaseLayout.of( config.get( database_path ).getAbsoluteFile(), of( config ), toDatabaseName );
     }
 
     public void execute() throws IOException, CommandFailed
@@ -59,18 +55,19 @@ public class RestoreDatabaseCommand
                     format( "Source directory is not a database backup [%s]", fromDatabasePath ) );
         }
 
-        if ( fs.fileExists( toDatabaseDir ) && !forceOverwrite )
+        if ( fs.fileExists( targetDatabaseLayout.databaseDirectory() ) && !forceOverwrite )
         {
-            throw new IllegalArgumentException( format( "Database with name [%s] already exists at %s", toDatabaseName, toDatabaseDir ) );
+            throw new IllegalArgumentException(
+                    format( "Database with name [%s] already exists at %s", targetDatabaseLayout.getDatabaseName(), targetDatabaseLayout ) );
         }
 
-        checkLock( DatabaseLayout.of( toDatabaseDir ).getStoreLayout() );
+        checkLock( targetDatabaseLayout.getStoreLayout() );
 
-        fs.deleteRecursively( toDatabaseDir );
+        fs.deleteRecursively( targetDatabaseLayout.databaseDirectory() );
 
-        if ( !isSameOrChildFile( toDatabaseDir, transactionLogsDirectory ) )
+        if ( !isSameOrChildFile( targetDatabaseLayout.databaseDirectory(), targetDatabaseLayout.getTransactionLogsDirectory() ) )
         {
-            fs.deleteRecursively( transactionLogsDirectory );
+            fs.deleteRecursively( targetDatabaseLayout.getTransactionLogsDirectory() );
         }
         LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
         restoreDatabaseFiles( backupLogFiles, fromDatabasePath.listFiles() );
@@ -80,17 +77,19 @@ public class RestoreDatabaseCommand
     {
         if ( files != null )
         {
+            File databaseDirectory = targetDatabaseLayout.databaseDirectory();
+            File transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
             for ( File file : files )
             {
                 if ( file.isDirectory() )
                 {
-                    File destination = new File( toDatabaseDir, file.getName() );
+                    File destination = new File( databaseDirectory, file.getName() );
                     fs.mkdirs( destination );
                     fs.copyRecursively( file, destination );
                 }
                 else
                 {
-                    fs.copyToDirectory( file, backupLogFiles.isLogFile( file ) ? transactionLogsDirectory : toDatabaseDir );
+                    fs.copyToDirectory( file, backupLogFiles.isLogFile( file ) ? transactionLogsDirectory : databaseDirectory );
                 }
             }
         }

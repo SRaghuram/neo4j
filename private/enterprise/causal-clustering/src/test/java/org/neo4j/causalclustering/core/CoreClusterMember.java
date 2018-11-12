@@ -88,6 +88,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         boltAdvertisedSocketAddress = advertisedAddress( advertisedAddress, boltPort );
         raftListenAddress = listenAddress( listenAddress, raftPort );
 
+        config.put( GraphDatabaseSettings.active_database.name(), GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         config.put( EnterpriseEditionSettings.mode.name(), EnterpriseEditionSettings.Mode.CORE.name() );
         config.put( GraphDatabaseSettings.default_advertised_address.name(), advertisedAddress );
         config.put( CausalClusteringSettings.initial_discovery_members.name(), initialMembers );
