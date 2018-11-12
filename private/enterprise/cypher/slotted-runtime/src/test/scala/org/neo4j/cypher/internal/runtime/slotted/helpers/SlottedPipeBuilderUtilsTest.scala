@@ -11,10 +11,10 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualValues
-import org.opencypher.v9_0.util.AssertionUtils._
-import org.opencypher.v9_0.util.ParameterWrongTypeException
-import org.opencypher.v9_0.util.symbols._
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v3_5.util.AssertionUtils._
+import org.neo4j.cypher.internal.v3_5.util.ParameterWrongTypeException
+import org.neo4j.cypher.internal.v3_5.util.symbols._
+import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
 
 // If this test class gets in your way you can just delete it
 class SlottedPipeBuilderUtilsTest extends CypherFunSuite {

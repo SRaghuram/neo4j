@@ -12,9 +12,9 @@ import org.neo4j.cypher.internal.v3_5.logical.plans.CachedNodeProperty
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{Value, Values}
 import org.neo4j.values.virtual._
-import org.opencypher.v9_0.util.AssertionUtils._
-import org.opencypher.v9_0.util.InternalException
-import org.opencypher.v9_0.util.symbols.{CTNode, CTRelationship}
+import org.neo4j.cypher.internal.v3_5.util.AssertionUtils._
+import org.neo4j.cypher.internal.v3_5.util.InternalException
+import org.neo4j.cypher.internal.v3_5.util.symbols.{CTNode, CTRelationship}
 
 import scala.collection.mutable
 

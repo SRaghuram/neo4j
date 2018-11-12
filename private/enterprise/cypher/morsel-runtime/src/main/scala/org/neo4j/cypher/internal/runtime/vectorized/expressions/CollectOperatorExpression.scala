@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{ListValue, VirtualValues}
-import org.opencypher.v9_0.util.symbols.CTAny
+import org.neo4j.cypher.internal.v3_5.util.symbols.CTAny
 
 import scala.collection.mutable.ArrayBuffer
 

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.parallel
 
 import java.util.concurrent.{CountDownLatch, ThreadLocalRandom, TimeUnit}
 
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
 
 import scala.collection.mutable.ArrayBuffer
 

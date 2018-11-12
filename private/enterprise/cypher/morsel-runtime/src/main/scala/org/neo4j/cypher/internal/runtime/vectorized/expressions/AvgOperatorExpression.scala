@@ -13,7 +13,7 @@ import org.neo4j.values.storable.Values.longValue
 import org.neo4j.values.storable.{LongValue, NumberValue, Values}
 import org.neo4j.values.utils.ValueMath.overflowSafeAdd
 import org.neo4j.values.virtual.{ListValue, VirtualValues}
-import org.opencypher.v9_0.util.symbols.CTAny
+import org.neo4j.cypher.internal.v3_5.util.symbols.CTAny
 
 /*
 Vectorized version of the average aggregation function

@@ -24,7 +24,7 @@ import org.neo4j.kernel.impl.proc.Procedures
 import org.neo4j.procedure.Mode
 import org.neo4j.test.TestGraphDatabaseFactory
 import org.neo4j.values.virtual.VirtualValues
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
 
 import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayBuffer
