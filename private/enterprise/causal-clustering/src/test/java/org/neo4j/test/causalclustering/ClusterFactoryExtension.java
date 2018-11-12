@@ -33,28 +33,27 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
     @Override
     public void afterAll( ExtensionContext context )
     {
-        TrackingClusterFactory clusterFactory = getTrackingClusterFactory( context );
-        if ( clusterFactory.isRootClass( context.getRequiredTestClass() ) )
+        TrackingClusterFactory clusterFactory = (TrackingClusterFactory) removeStoredValue( context );
+        if ( clusterFactory != null )
         {
             try ( ErrorHandler errorHandler = new ErrorHandler( "Shutting down cluster contexts" ) )
             {
                 errorHandler.execute( clusterFactory::shutdownAll );
                 errorHandler.execute( () -> clusterFactory.testDirectory().complete( !context.getExecutionException().isPresent() ) );
-                errorHandler.execute( () -> super.afterAll( context ) );
             }
         }
     }
 
     /**
-     * Respects root class. If lifecycle is per method then shutdown all clusters after each.
+     * If the context created the {@link ClusterFactory} and has PER_METHOD lifecycle then we shutdown all clusters.
      */
     @Override
     public void afterEach( ExtensionContext context )
     {
-        TrackingClusterFactory trackingClusterFactory = getTrackingClusterFactory( context );
-        if ( trackingClusterFactory.getLifecycle() == TestInstance.Lifecycle.PER_METHOD )
+        TrackingClusterFactory clusterFactory = (TrackingClusterFactory) getStoredValue( context );
+        if ( clusterFactory.getLifecycle() == TestInstance.Lifecycle.PER_METHOD )
         {
-            trackingClusterFactory.shutdownAll();
+            clusterFactory.shutdownAll();
         }
     }
 
@@ -74,18 +73,13 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
     protected ClusterFactory createField( ExtensionContext extensionContext )
     {
         TestDirectory testDirectory = getTestDirectory( extensionContext );
-        return new TrackingClusterFactory( testDirectory, extensionContext.getRequiredTestClass(), extensionContext.getTestInstanceLifecycle().get() );
+        return new TrackingClusterFactory( testDirectory, extensionContext.getTestInstanceLifecycle().orElse( TestInstance.Lifecycle.PER_CLASS ) );
     }
 
     @Override
     protected ExtensionContext.Namespace getNameSpace()
     {
         return CLUSTER_NAMESPACE;
-    }
-
-    private TrackingClusterFactory getTrackingClusterFactory( ExtensionContext context )
-    {
-        return (TrackingClusterFactory) getStoredValue( context );
     }
 
     private static TestDirectory getTestDirectory( ExtensionContext extensionContext )

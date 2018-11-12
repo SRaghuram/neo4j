@@ -23,16 +23,19 @@ import org.neo4j.test.rule.TestDirectory;
 public class TrackingClusterFactory implements ClusterFactory
 {
     private TestDirectory testDirectory;
-    private final Class<?> injectedClass;
     private final TestInstance.Lifecycle lifecycle;
     private final Collection<Cluster> clusters = new CopyOnWriteArrayList<>();
     private final AtomicInteger idCounter = new AtomicInteger();
 
-    TrackingClusterFactory( TestDirectory testDirectory, Class<?> injectedClass, TestInstance.Lifecycle lifecycle )
+    TrackingClusterFactory( TestDirectory testDirectory, TestInstance.Lifecycle lifecycle )
     {
         this.testDirectory = testDirectory;
-        this.injectedClass = injectedClass;
         this.lifecycle = lifecycle;
+    }
+
+    public TestInstance.Lifecycle getLifecycle()
+    {
+        return lifecycle;
     }
 
     @Override
@@ -42,16 +45,6 @@ public class TrackingClusterFactory implements ClusterFactory
         EnterpriseCluster cluster = ClusterConfig.createCluster( directory, clusterConfig );
         clusters.add( cluster );
         return cluster;
-    }
-
-    boolean isRootClass( Class<?> clazz )
-    {
-        return clazz.equals( injectedClass );
-    }
-
-    TestInstance.Lifecycle getLifecycle()
-    {
-        return lifecycle;
     }
 
     void shutdownAll()
