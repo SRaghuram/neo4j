@@ -26,7 +26,7 @@ public class TrackingClusterFactory implements ClusterFactory
     private final Class<?> injectedClass;
     private final TestInstance.Lifecycle lifecycle;
     private final Collection<Cluster> clusters = new CopyOnWriteArrayList<>();
-    private static final AtomicInteger idCounter = new AtomicInteger();
+    private final AtomicInteger idCounter = new AtomicInteger();
 
     TrackingClusterFactory( TestDirectory testDirectory, Class<?> injectedClass, TestInstance.Lifecycle lifecycle )
     {
@@ -49,7 +49,7 @@ public class TrackingClusterFactory implements ClusterFactory
         return clazz.equals( injectedClass );
     }
 
-    public TestInstance.Lifecycle getLifecycle()
+    TestInstance.Lifecycle getLifecycle()
     {
         return lifecycle;
     }
@@ -83,7 +83,7 @@ public class TrackingClusterFactory implements ClusterFactory
         return "cluster-" + idCounter.getAndIncrement();
     }
 
-    public TestDirectory testDirectory()
+    TestDirectory testDirectory()
     {
         return testDirectory;
     }
