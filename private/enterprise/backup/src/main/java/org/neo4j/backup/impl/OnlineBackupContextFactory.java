@@ -167,6 +167,7 @@ class OnlineBackupContextFactory
             Config config = builder.withHome( homeDir )
                                    .withSetting( logical_logs_location, logPath.toString() )
                                    .withConnectorsDisabled()
+                                   .withNoThrowOnFileLoadFailure() // Online backup does not require the presence of a neo4j.conf file.
                                    .build();
             additionalConfig.map( this::loadAdditionalConfigFile ).ifPresent( config::augment );
 
