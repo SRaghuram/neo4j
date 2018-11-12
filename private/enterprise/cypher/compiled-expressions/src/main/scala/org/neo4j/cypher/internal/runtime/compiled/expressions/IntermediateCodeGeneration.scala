@@ -1204,7 +1204,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         }
 
         val predicate: IntermediateRepresentation = ternary(tokensAndNames.map { token =>
-          invokeStatic(method[CypherFunctions, Boolean, AnyValue, Int, DbAccess]("hasLabel"),
+          invokeStatic(method[CypherFunctions, Boolean, AnyValue, Int, DbAccess, NodeCursor]("hasLabel"),
                        node.ir, loadField(token._1), DB_ACCESS, NODE_CURSOR)
         }.reduceLeft(and), truthValue, falseValue)
 
@@ -1485,7 +1485,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case functions.Labels =>
       internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
-       invokeStatic(method[CypherFunctions, ListValue, AnyValue, DbAccess]("labels"), in.ir, DB_ACCESS, NODE_CURSOR),
+       invokeStatic(method[CypherFunctions, ListValue, AnyValue, DbAccess, NodeCursor]("labels"), in.ir, DB_ACCESS, NODE_CURSOR),
        in.fields, in.variables :+ vNODE_CURSOR, in.nullCheck))
 
     case functions.Type =>

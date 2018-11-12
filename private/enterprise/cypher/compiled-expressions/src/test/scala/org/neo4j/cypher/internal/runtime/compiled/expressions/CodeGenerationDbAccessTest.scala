@@ -192,6 +192,8 @@ class CodeGenerationDbAccessTest extends CypherFunSuite with AstConstructionTest
   private val propertyCursor = mock[PropertyCursor]
   private val cursors = mock[ExpressionCursors]
   when(cursors.nodeCursor).thenReturn(nodeCursor)
+  when(cursors.relationshipScanCursor).thenReturn(relationshipScanCursor)
+  when(cursors.propertyCursor).thenReturn(propertyCursor)
 
   when(ctx.getLongAt(nodeOffset)).thenReturn(node)
   when(ctx.getLongAt(relOffset)).thenReturn(relationship)

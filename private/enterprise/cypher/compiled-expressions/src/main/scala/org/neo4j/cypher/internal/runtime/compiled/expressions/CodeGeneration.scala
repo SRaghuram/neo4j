@@ -20,7 +20,6 @@ import org.neo4j.codegen.bytecode.ByteCode.BYTECODE
 import org.neo4j.codegen.source.SourceCode.{PRINT_SOURCE, SOURCECODE}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
-import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.MapValue
