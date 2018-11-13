@@ -17,6 +17,7 @@ import org.opencypher.v9_0.util.attribution.Id
 case class NodeIndexScanSlottedPipe(ident: String,
                                     label: LabelToken,
                                     property: SlottedIndexedProperty,
+                                    queryIndexId: Int,
                                     indexOrder: IndexOrder,
                                     slots: SlotConfiguration,
                                     argumentSize: SlotConfiguration.Size)

@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast.{NodeFromSlot, RelationshipFromSlot}
 import org.neo4j.cypher.internal.ir.v4_0.VarPatternLength
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
@@ -34,7 +35,8 @@ import org.opencypher.v9_0.{expressions => frontEndAst}
 class SlottedPipeMapper(fallback: PipeMapper,
                         expressionConverters: ExpressionConverters,
                         physicalPlan: PhysicalPlan,
-                        readOnly: Boolean)
+                        readOnly: Boolean,
+                        queryIndexes: QueryIndexes)
                        (implicit semanticTable: SemanticTable, tokenContext: TokenContext)
   extends PipeMapper {
 
@@ -51,7 +53,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         AllNodesScanSlottedPipe(column, slots, argumentSize)(id)
 
       case NodeIndexScan(column, label, property, _, indexOrder) =>
-        NodeIndexScanSlottedPipe(column, label, SlottedIndexedProperty(column, property, slots), indexOrder, slots, argumentSize)(id)
+        NodeIndexScanSlottedPipe(column, label, SlottedIndexedProperty(column, property, slots), queryIndexes.registerQueryIndex(label, property), indexOrder, slots, argumentSize)(id)
 
       case NodeIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)

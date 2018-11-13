@@ -12,18 +12,18 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
 import org.neo4j.cypher.internal.compiler.v4_0.planner.{HardcodedGraphStatistics, LogicalPlanningTestSupport2}
 import org.neo4j.cypher.internal.ir.v4_0.{CreateNode, VarPatternLength}
 import org.neo4j.cypher.internal.planner.v4_0.spi.{PlanContext, TokenContext}
-import org.neo4j.cypher.internal.runtime.interpreted.{InterpretedPipeMapper, commands}
+import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Literal, Property, Variable}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates
 import org.neo4j.cypher.internal.runtime.interpreted.commands.values.KeyToken
 import org.neo4j.cypher.internal.runtime.interpreted.commands.values.TokenType.PropertyKey
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.runtime.interpreted.{InterpretedPipeMapper, commands}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeProperty, RelationshipProperty, SlottedCommandProjection, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.v4_0.logical.plans
-import org.neo4j.cypher.internal.v4_0.logical.plans._
-import org.neo4j.cypher.internal.v4_0.logical.plans.UnwindCollection
+import org.neo4j.cypher.internal.v4_0.logical.plans.{UnwindCollection, _}
 import org.opencypher.v9_0.ast.semantics.SemanticTable
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.util.LabelId
@@ -45,8 +45,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val converters = new ExpressionConverters(SlottedExpressionConverters(physicalPlan),
                                                                           CommunityExpressionConverter(TokenContext.EMPTY))
 
-    val fallback = InterpretedPipeMapper(true, converters, planContext)(table)
-    val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, true)(table, planContext)
+    val fallback = InterpretedPipeMapper(true, converters, planContext, mock[QueryIndexes])(table)
+    val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, true, mock[QueryIndexes])(table, planContext)
     PipeTreeBuilder(pipeBuilder).build(logicalPlan)
   }
 
@@ -697,6 +697,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         "n",
         LabelToken("Awesome", LabelId(0)),
         SlottedIndexedProperty(0, None),
+        0,
         IndexOrderNone,
         SlotConfiguration.empty.newLong("n", false, CTNode), Size.zero)())
   }

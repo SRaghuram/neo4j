@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.parallel._
 import org.neo4j.cypher.internal.runtime.vectorized.Dispatcher
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.{CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy, CypherVersion}
-import org.neo4j.internal.kernel.api.{CursorFactory, Kernel}
+import org.neo4j.internal.kernel.api.{CursorFactory, Kernel, SchemaRead}
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
 import org.neo4j.logging.{Log, LogProvider}
@@ -118,6 +118,7 @@ case class RuntimeEnvironment(config:CypherRuntimeConfiguration, jobScheduler: J
   * query compilation and parallel execution.
   */
 case class EnterpriseRuntimeContext(tokenContext: TokenContext,
+                                    schemaRead: SchemaRead,
                                     readOnly: Boolean,
                                     codeStructure: CodeStructure[GeneratedQuery],
                                     log: Log,
@@ -137,11 +138,13 @@ case class EnterpriseRuntimeContextCreator(codeStructure: CodeStructure[Generate
   extends RuntimeContextCreator[EnterpriseRuntimeContext] {
 
   override def create(tokenContext: TokenContext,
+                      schemaRead: SchemaRead,
                       clock: Clock,
                       debugOptions: Set[String],
                       readOnly: Boolean,
                       compileExpressions: Boolean): EnterpriseRuntimeContext =
     EnterpriseRuntimeContext(tokenContext,
+                             schemaRead,
                              readOnly,
                              codeStructure,
                              log,
