@@ -12,7 +12,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationException;
+import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedException;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.NullLogProvider;
 
@@ -59,7 +59,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         }
         catch ( Exception e )
         {
-            Throwable peeled = Exceptions.peel( e, t -> !(t instanceof UpgradeNotAllowedByConfigurationException) );
+            Throwable peeled = Exceptions.peel( e, t -> !(t instanceof UpgradeNotAllowedException) );
             if ( peeled != null )
             {
                 throw new RuntimeException( failedToStartMessage(), e );

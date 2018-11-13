@@ -5,13 +5,13 @@
  */
 package org.neo4j.storeupgrade;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.function.IntFunction;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.function.IntFunction;
 
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -25,7 +25,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.RelationshipIndex;
 import org.neo4j.index.lucene.ValueContext;
-import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedByConfigurationException;
+import org.neo4j.kernel.impl.storemigration.UpgradeNotAllowedException;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.Unzip;
 import org.neo4j.test.matchers.NestedThrowableMatcher;
@@ -87,7 +87,7 @@ public class ExplicitIndexesUpgradeIT
     public void migrationShouldFailIfUpgradeNotAllowed() throws IOException
     {
         prepareStore( "explicit-index-db.zip" );
-        expectedException.expect( new NestedThrowableMatcher( UpgradeNotAllowedByConfigurationException.class ) );
+        expectedException.expect( new NestedThrowableMatcher( UpgradeNotAllowedException.class ) );
 
         startDatabase( false );
     }
