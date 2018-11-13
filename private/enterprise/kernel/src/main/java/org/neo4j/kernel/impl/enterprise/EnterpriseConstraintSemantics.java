@@ -132,7 +132,7 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
     public TxStateVisitor decorateTxStateVisitor( StorageReader storageReader,
             Read read, CursorFactory cursorFactory, ReadableTransactionState txState, TxStateVisitor visitor )
     {
-        if ( txState.getDataRevision() == 0 )
+        if ( !txState.hasDataChanges() )
         {
             // If there are no data changes, there is no need to enforce constraints. Since there is no need to
             // enforce constraints, there is no need to build up the state required to be able to enforce constraints.
