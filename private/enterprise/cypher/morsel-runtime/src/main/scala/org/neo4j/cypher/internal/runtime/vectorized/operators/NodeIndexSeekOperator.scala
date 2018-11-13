@@ -29,7 +29,7 @@ class NodeIndexSeekOperator(offset: Int,
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
   override def init(context: QueryContext, state: QueryState, currentRow: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
-    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
+    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
     val indexReference = reference(context)
     val nodeCursor = indexSeek(queryState, indexReference, needsValues, indexOrder, currentRow)
     new OTask(nodeCursor)

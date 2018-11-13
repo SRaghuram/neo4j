@@ -6,11 +6,9 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.v4_0.logical.plans.IndexOrder
-import org.neo4j.internal.kernel.api.IndexReference
 import org.opencypher.v9_0.expressions.LabelToken
 import org.opencypher.v9_0.util.attribution.Id
 
@@ -30,17 +28,8 @@ case class NodeIndexScanSlottedPipe(ident: String,
   override val indexPropertyIndices: Array[Int] = indexPropertySlotOffsets.map(_ => 0)
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  private var reference: IndexReference = IndexReference.NO_INDEX
-
-  private def reference(context: QueryContext): IndexReference = {
-    if (reference == IndexReference.NO_INDEX) {
-      reference = context.indexReference(label.nameId.id, property.propertyKeyId)
-    }
-    reference
-  }
-
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
-    val cursor = state.query.indexScan(reference(state.query), needsValues, indexOrder)
+    val cursor = state.query.indexScan(state.queryIndexes(queryIndexId), needsValues, indexOrder)
     new SlottedIndexIterator(state, slots, cursor)
   }
 }

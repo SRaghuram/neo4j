@@ -19,7 +19,7 @@ class FilterOperator(predicate: Predicate) extends StatelessOperator {
     override def operate(readingRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
       val writingRow = readingRow.createClone()
-      val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
+      val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
 
       while (readingRow.hasMoreRows) {
         val matches = predicate(readingRow, queryState) == Values.TRUE

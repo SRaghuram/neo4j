@@ -34,7 +34,7 @@ class MergeSortOperator(orderBy: Seq[ColumnOrder],
 
     val limit = countExpression.map { count =>
       val firstRow = sortedInputs.peek()
-      val queryState = new OldQueryState(queryContext, resources = null, params = state.params, cursors)
+      val queryState = new OldQueryState(queryContext, resources = null, params = state.params, cursors, Array())
       count(firstRow, queryState).asInstanceOf[NumberValue].longValue()
     }
 

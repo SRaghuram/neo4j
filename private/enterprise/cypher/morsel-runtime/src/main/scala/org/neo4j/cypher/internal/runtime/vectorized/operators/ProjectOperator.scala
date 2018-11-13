@@ -25,8 +25,12 @@ class ProjectOperator(val projectionOps: Map[Slot, Expression]) extends Stateles
         ctx.setRefAt(offset, result)
   }.toArray
 
-  override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
-    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
+  override def operate(currentRow: MorselExecutionContext,
+                       context: QueryContext,
+                       state: QueryState,
+                       cursors: ExpressionCursors): Unit = {
+
+    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
 
     while (currentRow.hasMoreRows) {
       project.foreach(p => p(currentRow, queryState))

@@ -20,7 +20,7 @@ class AggregationMapperOperatorNoGrouping(aggregations: Array[AggregationOffsets
   override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
     val aggregationMappers = aggregations.map(_.aggregation.createAggregationMapper)
-    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
+    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
 
     //loop over the entire morsel and apply the aggregation
     while (currentRow.hasMoreRows) {

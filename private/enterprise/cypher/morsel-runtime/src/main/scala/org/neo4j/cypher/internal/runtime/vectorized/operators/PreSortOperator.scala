@@ -37,7 +37,7 @@ class PreSortOperator(orderBy: Seq[ColumnOrder],
 
       // potentially calculate the limit
       val maybeLimit = countExpression.map { count =>
-        val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
+        val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
         count(currentRow, queryState).asInstanceOf[NumberValue].longValue().toInt
       }
 

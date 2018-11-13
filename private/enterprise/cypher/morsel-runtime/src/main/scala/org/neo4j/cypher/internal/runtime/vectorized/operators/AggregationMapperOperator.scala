@@ -30,7 +30,7 @@ class AggregationMapperOperator(aggregations: Array[AggregationOffsets],
 
     val result = mutable.LinkedHashMap[AnyValue, Array[(Int,AggregationMapper)]]()
 
-    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors)
+    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
 
     //loop over the entire morsel and apply the aggregation
     while (currentRow.hasMoreRows) {

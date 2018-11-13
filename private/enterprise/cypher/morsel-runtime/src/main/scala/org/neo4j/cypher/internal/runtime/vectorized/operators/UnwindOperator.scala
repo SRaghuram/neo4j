@@ -17,7 +17,7 @@ class UnwindOperator(collection: Expression,
   extends StreamingOperator with ListSupport {
 
   override def init(context: QueryContext, state: QueryState, inputRow: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
-    val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors)
+    val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors, Array())
     val value = collection(inputRow, queryState)
     val unwoundValues = makeTraversable(value).iterator
     new OTask(inputRow, unwoundValues)
@@ -29,7 +29,7 @@ class UnwindOperator(collection: Expression,
 
     override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
-      val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors)
+      val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors, Array())
 
       do {
         if (unwoundValues == null) {

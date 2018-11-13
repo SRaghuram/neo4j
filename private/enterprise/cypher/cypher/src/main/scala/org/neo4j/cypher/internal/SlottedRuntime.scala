@@ -72,6 +72,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       val columns = state.statement().returnColumns
       val resultBuilderFactory =
         new SlottedExecutionResultBuilderFactory(pipe,
+                                                 queryIndexes,
                                                  context.readOnly,
                                                  columns,
                                                  logicalPlan,
