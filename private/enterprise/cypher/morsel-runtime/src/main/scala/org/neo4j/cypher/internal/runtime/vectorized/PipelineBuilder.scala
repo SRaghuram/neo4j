@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{RefSlot, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeekModeFactory, LazyLabel, LazyTypes}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
@@ -18,7 +19,7 @@ import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.opencypher.v9_0.ast.semantics.SemanticTable
 import org.opencypher.v9_0.util.InternalException
 
-class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverters, readOnly: Boolean)
+class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverters, readOnly: Boolean, queryIndexes: QueryIndexes)
   extends TreeBuilder[Pipeline] {
 
   override def create(plan: LogicalPlan): Pipeline = {
@@ -48,6 +49,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
           slots.getLongOffsetFor(column),
           labelToken.nameId.id,
           SlottedIndexedProperty(column, property, slots),
+          queryIndexes.registerQueryIndex(labelToken, property),
           argumentSize)
 
       case NodeIndexContainsScan(column, labelToken, property, valueExpr, _, indexOrder) =>

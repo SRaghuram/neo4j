@@ -14,13 +14,13 @@ import org.neo4j.internal.kernel.api.{IndexOrder, IndexReadSession, NodeValueInd
 class NodeIndexScanOperator(nodeOffset: Int,
                             label: Int,
                             property: SlottedIndexedProperty,
+                            queryIndexId: Int,
                             argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, property.maybeCachedNodePropertySlot) {
 
   override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
     val valueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
-    val indexReference = context.transactionalContext.schemaRead.index(label, property.propertyKeyId)
-    val indexSession = context.transactionalContext.dataRead.getOrCreateIndexReadSession(indexReference)
+    val indexSession = state.queryIndexes(queryIndexId)
     new OTask(valueIndexCursor, indexSession)
   }
 

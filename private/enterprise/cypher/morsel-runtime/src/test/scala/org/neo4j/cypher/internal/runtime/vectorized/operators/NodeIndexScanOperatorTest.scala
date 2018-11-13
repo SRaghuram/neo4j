@@ -57,7 +57,7 @@ class NodeIndexScanOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference(nDotProp, nullable = false, CTAny)
     val operator = new NodeIndexScanOperator(slots.getLongOffsetFor("n"), label.nameId.id,
-      SlottedIndexedProperty(propertyKey.nameId.id, Some(slots.getReferenceOffsetFor(nDotProp))), slots.size())
+      SlottedIndexedProperty(propertyKey.nameId.id, Some(slots.getReferenceOffsetFor(nDotProp))), 0, slots.size())
 
     // When
     operator.init(queryContext, QueryState.EMPTY, inputRow, cursors).operate(outputRow, queryContext, QueryState.EMPTY, cursors)

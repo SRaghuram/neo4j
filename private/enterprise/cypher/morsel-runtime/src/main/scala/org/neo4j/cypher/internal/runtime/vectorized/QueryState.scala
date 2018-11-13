@@ -6,10 +6,11 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.{MapValue, VirtualValues}
 
 object QueryState {
-  val EMPTY = QueryState(VirtualValues.EMPTY_MAP, null, 10000, singeThreaded = true)
+  val EMPTY = QueryState(VirtualValues.EMPTY_MAP, null, 10000, Array(), singeThreaded = true)
 }
 
 /**
@@ -18,5 +19,6 @@ object QueryState {
 case class QueryState(params: MapValue,
                       visitor: QueryResultVisitor[_],
                       morselSize: Int,
+                      queryIndexes: Array[IndexReadSession],
                       singeThreaded: Boolean, // hack until we solve [Transaction 1 - * Threads] problem
                       reduceCollector: Option[ReduceCollector] = None)

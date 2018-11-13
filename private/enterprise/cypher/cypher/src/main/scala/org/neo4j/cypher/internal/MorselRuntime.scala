@@ -24,6 +24,7 @@ import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
 import org.neo4j.graphdb.ResourceIterator
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.MapValue
 import org.opencypher.v9_0.ast.semantics.SemanticTable
 import org.opencypher.v9_0.util.InternalNotification
@@ -46,7 +47,8 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
         CommunityExpressionConverter(context.tokenContext))
     }
 
-    val operatorBuilder = new PipelineBuilder(physicalPlan, converters, context.readOnly)
+    val queryIndexes = new QueryIndexes(context.schemaRead)
+    val operatorBuilder = new PipelineBuilder(physicalPlan, converters, context.readOnly, queryIndexes)
 
     val operators = operatorBuilder.create(logicalPlan)
     val dispatcher = context.runtimeEnvironment.getDispatcher(context.debugOptions)
@@ -55,6 +57,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     VectorizedExecutionPlan(operators,
                             physicalPlan.slotConfigurations,
+                            queryIndexes,
                             logicalPlan,
                             fieldNames,
                             dispatcher,
@@ -71,6 +74,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
   case class VectorizedExecutionPlan(operators: Pipeline,
                                      slots: SlotConfigurations,
+                                     queryIndexes: QueryIndexes,
                                      logicalPlan: LogicalPlan,
                                      fieldNames: Array[String],
                                      dispatcher: Dispatcher,
@@ -82,6 +86,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                      prePopulateResults: Boolean): RuntimeResult = {
 
       new VectorizedRuntimeResult(operators,
+                                  queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.getOrCreateIndexReadSession(x)),
                                   logicalPlan,
                                   queryContext,
                                   params,
@@ -99,6 +104,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   }
 
   class VectorizedRuntimeResult(operators: Pipeline,
+                                queryIndexes: Array[IndexReadSession],
                                 logicalPlan: LogicalPlan,
                                 queryContext: QueryContext,
                                 params: MapValue,
@@ -109,7 +115,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     private var resultRequested = false
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      dispatcher.execute(operators, queryContext, params, schedulerTracer)(visitor)
+      dispatcher.execute(operators, queryContext, params, schedulerTracer, queryIndexes)(visitor)
       resultRequested = true
     }
 
