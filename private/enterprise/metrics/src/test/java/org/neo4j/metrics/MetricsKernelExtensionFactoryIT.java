@@ -5,15 +5,15 @@
  */
 package org.neo4j.metrics;
 
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -31,10 +31,11 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.metrics.source.db.CheckPointingMetrics;
 import org.neo4j.metrics.source.db.CypherMetrics;
+import org.neo4j.metrics.source.db.EntityCountMetrics;
 import org.neo4j.metrics.source.db.TransactionMetrics;
 import org.neo4j.metrics.source.jvm.ThreadMetrics;
 import org.neo4j.test.rule.DatabaseRule;
-import org.neo4j.test.rule.EmbeddedDatabaseRule;
+import org.neo4j.test.rule.EnterpriseDatabaseRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.System.currentTimeMillis;
@@ -58,7 +59,7 @@ public class MetricsKernelExtensionFactoryIT
     public final TestDirectory directory = TestDirectory.testDirectory();
 
     @Rule
-    public final DatabaseRule dbRule = new EmbeddedDatabaseRule( directory ).startLazily();
+    public final DatabaseRule dbRule = new EnterpriseDatabaseRule( directory ).startLazily();
 
     private File outputPath;
     private GraphDatabaseAPI db;
@@ -108,7 +109,7 @@ public class MetricsKernelExtensionFactoryIT
         // GIVEN
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, TransactionMetrics.TX_COMMITTED );
+        File metricsFile = metricsCsv( outputPath, EntityCountMetrics.COUNTS_NODE );
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
@@ -203,7 +204,7 @@ public class MetricsKernelExtensionFactoryIT
     public void mustBeAbleToStartWithNullTracer()
     {
         // Start the database
-        File disabledTracerDb = directory.databaseDir( new File( "disabledTracerDb" ) );
+        File disabledTracerDb = directory.databaseDir( "disabledTracerDb" );
         GraphDatabaseBuilder builder = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledTracerDb );
         GraphDatabaseService nullTracerDatabase =
                 builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE ).setConfig( csvEnabled, Settings.TRUE )
