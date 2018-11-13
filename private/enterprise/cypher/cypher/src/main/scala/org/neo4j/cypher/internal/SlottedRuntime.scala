@@ -12,10 +12,11 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.{PeriodicCommitInfo, ExecutionPlan => ExecutionPlan_V35}
 import org.neo4j.cypher.internal.compiler.v4_0.phases.LogicalPlanState
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeExecutionBuilderContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionResultBuilderFactory, SlottedPipeBuilder}
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionResultBuilderFactory, SlottedPipeMapper}
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.opencypher.v9_0.ast.semantics.SemanticTable
 import org.opencypher.v9_0.util.CypherException
@@ -48,20 +49,23 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         printRewrittenPlanInfo(logicalPlan)
       }
 
-      val converters = if (context.compileExpressions) {
-        new ExpressionConverters(
-          new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext),
-          SlottedExpressionConverters(physicalPlan),
-          CommunityExpressionConverter(context.tokenContext))
-      } else {
-        new ExpressionConverters(
-          SlottedExpressionConverters(physicalPlan),
-          CommunityExpressionConverter(context.tokenContext))
-      }
-      val pipeBuilderFactory = SlottedPipeBuilder.Factory(physicalPlan)
-      val executionPlanBuilder = new PipeExecutionPlanBuilder(expressionConverters = converters, pipeBuilderFactory = pipeBuilderFactory)
-      val pipeBuildContext = PipeExecutionBuilderContext(state.semanticTable(), context.readOnly)
-      val pipe = executionPlanBuilder.build(logicalPlan)(pipeBuildContext, context.tokenContext)
+      val converters =
+        if (context.compileExpressions) {
+          new ExpressionConverters(
+            new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext),
+            SlottedExpressionConverters(physicalPlan),
+            CommunityExpressionConverter(context.tokenContext))
+        } else {
+          new ExpressionConverters(
+            SlottedExpressionConverters(physicalPlan),
+            CommunityExpressionConverter(context.tokenContext))
+        }
+
+      val fallback = InterpretedPipeMapper(context.readOnly, converters, context.tokenContext)(state.semanticTable)
+      val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, context.readOnly)(state.semanticTable, context.tokenContext)
+      val pipeTreeBuilder = PipeTreeBuilder(pipeBuilder)
+      val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, logicalPlan)
+      val pipe = pipeTreeBuilder.build(logicalPlanWithConvertedNestedPlans)
       val periodicCommitInfo = state.periodicCommit.map(x => PeriodicCommitInfo(x.batchSize))
       val columns = state.statement().returnColumns
       val resultBuilderFactory =

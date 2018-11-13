@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{RefSlot, SlottedInd
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeekModeFactory, LazyLabel, LazyTypes}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder.translateColumnOrder
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.AggregationExpressionOperator
 import org.neo4j.cypher.internal.runtime.vectorized.operators._
 import org.neo4j.cypher.internal.v4_0.logical.plans

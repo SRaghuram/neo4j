@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
 import org.neo4j.cypher.internal.compiler.v4_0.planner.{HardcodedGraphStatistics, LogicalPlanningTestSupport2}
 import org.neo4j.cypher.internal.ir.v4_0.{CreateNode, VarPatternLength}
 import org.neo4j.cypher.internal.planner.v4_0.spi.{PlanContext, TokenContext}
-import org.neo4j.cypher.internal.runtime.interpreted.commands
+import org.neo4j.cypher.internal.runtime.interpreted.{InterpretedPipeMapper, commands}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Literal, Property, Variable}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates
@@ -31,7 +31,7 @@ import org.opencypher.v9_0.util.symbols.{CTAny, CTList, CTNode, CTRelationship}
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 //noinspection NameBooleanParameters
-class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
+class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
 
   implicit private val table = SemanticTable()
 
@@ -44,9 +44,10 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
     val logicalPlan = slottedRewriter(beforeRewrite, physicalPlan.slotConfigurations)
     val converters = new ExpressionConverters(SlottedExpressionConverters(physicalPlan),
                                                                           CommunityExpressionConverter(TokenContext.EMPTY))
-    val executionPlanBuilder = new PipeExecutionPlanBuilder(SlottedPipeBuilder.Factory(physicalPlan), converters)
-    val context = PipeExecutionBuilderContext(table, true)
-    executionPlanBuilder.build(logicalPlan)(context, planContext)
+
+    val fallback = InterpretedPipeMapper(true, converters, planContext)(table)
+    val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, true)(table, planContext)
+    PipeTreeBuilder(pipeBuilder).build(logicalPlan)
   }
 
   private val x = "x"

@@ -12,7 +12,7 @@ import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder.computeUnionMapping
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.computeUnionMapping
 import org.neo4j.cypher.internal.runtime.{NodeOperations, QueryContext, RelationshipOperations}
 import org.neo4j.graphdb.{Node, Relationship}
 import org.neo4j.kernel.impl.util.ValueUtils.{fromNodeProxy, fromRelationshipProxy}
