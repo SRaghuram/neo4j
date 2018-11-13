@@ -5,6 +5,17 @@
  */
 package org.neo4j.ext.udc.impl;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.SystemUtils;
+import org.apache.http.HttpHost;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.localserver.LocalServerTestBase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -17,17 +28,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.SystemUtils;
-import org.apache.http.HttpHost;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.localserver.LocalServerTestBase;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
 
 import org.neo4j.ext.udc.Edition;
 import org.neo4j.ext.udc.UdcConstants;
@@ -52,7 +52,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.neo4j.ext.udc.UdcConstants.CLUSTER_HASH;
 import static org.neo4j.ext.udc.UdcConstants.DATABASE_MODE;
 import static org.neo4j.ext.udc.UdcConstants.EDITION;
 import static org.neo4j.ext.udc.UdcConstants.MAC;
@@ -193,19 +192,6 @@ public class UdcExtensionImplIT extends LocalServerTestBase
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
         assertEquals( "single", handler.getQueryMap().get( DATABASE_MODE ) );
-    }
-
-    @Test
-    public void shouldRecordClusterName() throws Exception
-    {
-        // When
-        graphdb = createDatabase( config );
-
-        // Then
-        assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-
-        String hashOfDefaultClusterName = "1108231321";
-        assertEquals( hashOfDefaultClusterName, handler.getQueryMap().get( CLUSTER_HASH ) );
     }
 
     private void blockUntilServerAvailable( final URL url ) throws Exception
