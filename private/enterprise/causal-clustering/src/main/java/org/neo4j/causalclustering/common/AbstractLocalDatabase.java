@@ -26,8 +26,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
-import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
-
 public abstract class AbstractLocalDatabase extends SafeLifecycle implements LocalDatabase
 {
     private final DatabaseLayout databaseLayout;
@@ -49,7 +47,7 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
         this.txLogs = txLogs;
         this.dataSourceManager = dataSourceManager;
         this.databaseName = databaseName;
-        this.checkPointerService = new CheckPointerService( () -> dependencies().resolveDependency( CheckPointer.class, ONLY ),
+        this.checkPointerService = new CheckPointerService( () -> dependencies().resolveDependency( CheckPointer.class ),
                 jobScheduler, Group.CHECKPOINT );
         this.isAvailable = isAvailable;
         this.log = logProvider.getLog( getClass() );

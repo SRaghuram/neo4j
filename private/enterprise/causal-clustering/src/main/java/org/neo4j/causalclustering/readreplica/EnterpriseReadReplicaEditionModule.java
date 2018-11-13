@@ -72,7 +72,6 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.udc.UsageData;
 
 import static org.neo4j.causalclustering.discovery.ResolutionResolverFactory.chooseResolver;
-import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -145,7 +144,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
         PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, logProvider, config, dependencies );
 
         final Supplier<DatabaseHealth> databaseHealthSupplier =
-                () -> platformModule.dataSourceManager.getDataSource().getDependencyResolver().resolveDependency( DatabaseHealth.class, ONLY );
+                () -> platformModule.dataSourceManager.getDataSource().getDependencyResolver().resolveDependency( DatabaseHealth.class );
         this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, platformModule, logProvider, config );
 
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
@@ -197,7 +196,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
 
         // TODO: Error handling
         CheckPointerService checkPointerService = new CheckPointerService(
-                () -> localDatabase.get().dependencies().resolveDependency( CheckPointer.class, ONLY ),
+                () -> localDatabase.get().dependencies().resolveDependency( CheckPointer.class ),
                 platformModule.jobScheduler, Group.CHECKPOINT );
 
         return new RegularCatchupServerHandler( platformModule.monitors, logProvider, () -> localDatabase.get().storeId(),

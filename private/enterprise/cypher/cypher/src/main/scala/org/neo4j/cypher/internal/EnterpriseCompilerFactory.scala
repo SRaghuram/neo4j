@@ -7,9 +7,9 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
+import org.neo4j.cypher.internal.compatibility._
 import org.neo4j.cypher.internal.compatibility.v3_4.Cypher3_4Planner
 import org.neo4j.cypher.internal.compatibility.v4_0.Cypher4_0Planner
-import org.neo4j.cypher.internal.compatibility.{CypherPlanner, _}
 import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
@@ -19,7 +19,6 @@ import org.neo4j.cypher.internal.runtime.parallel._
 import org.neo4j.cypher.internal.runtime.vectorized.Dispatcher
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.{CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy, CypherVersion}
-import org.neo4j.graphdb.DependencyResolver
 import org.neo4j.internal.kernel.api.{CursorFactory, Kernel}
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
@@ -40,8 +39,8 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
    */
   private val runtimeEnvironment = {
     val resolver = graph.getDependencyResolver
-    val jobScheduler = resolver.resolveDependency(classOf[JobScheduler], DependencyResolver.SelectionStrategy.ONLY)
-    val kernel = resolver.resolveDependency(classOf[Kernel], DependencyResolver.SelectionStrategy.ONLY)
+    val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
+    val kernel = resolver.resolveDependency(classOf[Kernel])
     RuntimeEnvironment(runtimeConfig, jobScheduler, kernel.cursors())
   }
 

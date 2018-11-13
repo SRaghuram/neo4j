@@ -22,7 +22,6 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 
 import static org.neo4j.causalclustering.catchup.storecopy.DataSourceChecks.hasSameStoreId;
-import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 
 public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<PrepareStoreCopyRequest>
 {
@@ -54,7 +53,7 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
             }
             else
             {
-                CheckPointer checkPointer = neoStoreDataSource.getDependencyResolver().resolveDependency( CheckPointer.class, ONLY );
+                CheckPointer checkPointer = neoStoreDataSource.getDependencyResolver().resolveDependency( CheckPointer.class );
                 closeablesListener.add( tryCheckpointAndAcquireMutex( checkPointer ) );
                 PrepareStoreCopyFiles prepareStoreCopyFiles =
                         closeablesListener.add( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( neoStoreDataSource ) );

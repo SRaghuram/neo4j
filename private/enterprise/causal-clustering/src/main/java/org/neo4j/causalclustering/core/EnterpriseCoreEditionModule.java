@@ -125,7 +125,6 @@ import org.neo4j.udc.UsageData;
 import static java.util.Arrays.asList;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_messages_log_path;
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.LAST_FLUSHED;
-import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -223,7 +222,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
 
         //Build local databases object
         final Supplier<DatabaseHealth> databaseHealthSupplier =
-                () -> platformModule.dataSourceManager.getDataSource().getDependencyResolver().resolveDependency( DatabaseHealth.class, ONLY );
+                () -> platformModule.dataSourceManager.getDataSource().getDependencyResolver().resolveDependency( DatabaseHealth.class );
 
         this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, platformModule, logProvider, config );
 
@@ -326,7 +325,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         Supplier<LocalDatabase> localDatabase = () -> databaseService.get( activeDatabaseName ).orElseThrow( IllegalStateException::new );
 
         CheckPointerService checkPointerService =
-                new CheckPointerService( () -> localDatabase.get().dependencies().resolveDependency( CheckPointer.class, ONLY ),
+                new CheckPointerService( () -> localDatabase.get().dependencies().resolveDependency( CheckPointer.class ),
                         platformModule.jobScheduler, Group.CHECKPOINT );
 
         return new RegularCatchupServerHandler( platformModule.monitors, logProvider, () -> localDatabase.get().storeId(),

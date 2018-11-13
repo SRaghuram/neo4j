@@ -39,7 +39,6 @@ import static org.neo4j.causalclustering.catchup.CatchupResult.E_STORE_ID_MISMAT
 import static org.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
 import static org.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static org.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
-import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
 import static org.neo4j.kernel.impl.transaction.command.Commands.createNode;
@@ -62,8 +61,8 @@ public class TxPullRequestHandlerTest
     {
         Dependencies dependencies = mock( Dependencies.class );
         when( datasource.getDependencyResolver() ).thenReturn( dependencies );
-        when( dependencies.resolveDependency( LogicalTransactionStore.class, ONLY ) ).thenReturn( logicalTransactionStore );
-        when( dependencies.resolveDependency( TransactionIdStore.class, ONLY ) ).thenReturn( transactionIdStore );
+        when( dependencies.resolveDependency( LogicalTransactionStore.class ) ).thenReturn( logicalTransactionStore );
+        when( dependencies.resolveDependency( TransactionIdStore.class ) ).thenReturn( transactionIdStore );
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
         txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), () -> storeId, () -> true,
                 () -> datasource, new Monitors(), logProvider );
