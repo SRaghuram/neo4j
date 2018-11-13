@@ -28,7 +28,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseLockManagerIT
@@ -54,7 +54,7 @@ class MultiDatabaseLockManagerIT
     @Test
     void differentDatabasesCanLockSameEntitiesSimultaneously()
     {
-        assertTimeout( Duration.ofMinutes( 1 ), this::acquireLockIn2DifferentDatabases );
+        assertTimeoutPreemptively( Duration.ofMinutes( 1 ), this::acquireLockIn2DifferentDatabases );
     }
 
     @Test
