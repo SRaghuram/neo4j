@@ -210,9 +210,10 @@ public class CoreServerModule
         ApplicationSupportedProtocols supportedCatchupProtocols = supportedProtocolCreator.createSupportedCatchupProtocol();
         Collection<ModifierSupportedProtocols> supportedModifierProtocols = supportedProtocolCreator.createSupportedModifierProtocols();
         Duration handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
+        long inactivityTimeoutMillis = config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ).toMillis();
 
         CatchUpClient catchUpClient = new CatchupClientBuilder( supportedCatchupProtocols, supportedModifierProtocols, clientPipelineBuilderFactory,
-                handshakeTimeout, logProvider, userLogProvider, systemClock() ).build();
+                handshakeTimeout, logProvider, userLogProvider, systemClock() ).inactivityTimeoutMillis( inactivityTimeoutMillis ).build();
         platformModule.life.add( catchUpClient );
         return catchUpClient;
     }
