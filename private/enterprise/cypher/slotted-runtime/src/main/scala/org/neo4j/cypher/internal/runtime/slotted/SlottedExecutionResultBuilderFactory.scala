@@ -23,12 +23,11 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                                            lenientCreateRelationship: Boolean)
   extends BaseExecutionResultBuilderFactory(pipe, readOnly, columns, logicalPlan) {
 
-  override def create(queryContext: QueryContext): ExecutionResultBuilder = SlottedExecutionWorkflowBuilder(queryContext)
+  override def create(queryContext: QueryContext): ExecutionResultBuilder = SlottedExecutionResultBuilder(queryContext)
 
-  case class SlottedExecutionWorkflowBuilder(queryContext: QueryContext) extends BaseExecutionWorkflowBuilder {
+  case class SlottedExecutionResultBuilder(queryContext: QueryContext) extends BaseExecutionResultBuilder {
 
     val cursors = new ExpressionCursors(queryContext.transactionalContext.cursors)
-
     override protected def createQueryState(params: MapValue, prePopulateResults: Boolean): SlottedQueryState = {
       new SlottedQueryState(queryContext,
                             externalResource,
