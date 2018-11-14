@@ -101,7 +101,6 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
     private GetStoreFileRequestHandler buildStoreFileRequestHandler( LocalDatabase localDatabase,
             CatchupServerProtocol protocol )
     {
-        //TODO: This isn't right. We don't actually satisfy the CheckPointerService anywhere so this will fail.
         return new GetStoreFileRequestHandler( protocol, localDatabase::dataSource, localDatabase.checkPointerService(),
                 new StoreFileStreamingProtocol(), fs, logProvider );
     }
