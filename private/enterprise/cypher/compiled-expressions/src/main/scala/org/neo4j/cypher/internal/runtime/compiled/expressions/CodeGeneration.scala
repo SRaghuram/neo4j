@@ -18,8 +18,8 @@ import org.neo4j.codegen.TypeReference.{OBJECT, typeReference}
 import org.neo4j.codegen._
 import org.neo4j.codegen.bytecode.ByteCode.BYTECODE
 import org.neo4j.codegen.source.SourceCode.{PRINT_SOURCE, SOURCECODE}
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.MapValue
@@ -70,7 +70,7 @@ object CodeGeneration {
       clazz.handle()
     }
 
-    handle.loadClass().newInstance().asInstanceOf[CompiledExpression]
+    handle.loadAnonymousClass().newInstance().asInstanceOf[CompiledExpression]
   }
 
   def compileProjection(expression: IntermediateExpression): CompiledProjection = {
@@ -86,7 +86,7 @@ object CodeGeneration {
       clazz.handle()
     }
 
-    handle.loadClass().newInstance().asInstanceOf[CompiledProjection]
+    handle.loadAnonymousClass().newInstance().asInstanceOf[CompiledProjection]
   }
 
   private def generateConstructor(clazz: ClassGenerator, expression: IntermediateExpression): Unit = {
