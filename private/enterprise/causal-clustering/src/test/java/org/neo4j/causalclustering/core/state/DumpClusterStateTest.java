@@ -72,7 +72,7 @@ public class DumpClusterStateTest
         ClusterId nonDefaultClusterId = new ClusterId( UUID.randomUUID() );
         createStates( nonDefaultMember, nonDefaultClusterId, nonDefaultClusterName, nonDefaultTermState );
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        DumpClusterState dumpTool = new DumpClusterState( fsa.get(), dataDir, new PrintStream( out ), defaultDbName, defaultDbName );
+        DumpClusterState dumpTool = new DumpClusterState( fsa.get(), dataDir, new PrintStream( out ), defaultDbName );
 
         // when
         dumpTool.dump();

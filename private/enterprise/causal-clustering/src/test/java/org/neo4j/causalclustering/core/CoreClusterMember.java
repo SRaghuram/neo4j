@@ -37,6 +37,7 @@ import org.neo4j.logging.Level;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
+import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -198,24 +199,24 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         return defaultDatabaseDirectory;
     }
 
-    public File databasesDirectory()
+    protected File databasesDirectory()
     {
         return databasesDirectory;
     }
 
     public RaftLogPruner raftLogPruner()
     {
-        return database.getDependencyResolver().resolveDependency( RaftLogPruner.class );
+        return database.getDependencyResolver().resolveDependency( RaftLogPruner.class, ONLY );
     }
 
     public RaftMachine raft()
     {
-        return database.getDependencyResolver().resolveDependency( RaftMachine.class );
+        return database.getDependencyResolver().resolveDependency( RaftMachine.class, ONLY );
     }
 
     public MemberId id()
     {
-        return database.getDependencyResolver().resolveDependency( RaftMachine.class ).identity();
+        return database.getDependencyResolver().resolveDependency( RaftMachine.class, ONLY ).identity();
     }
 
     public SortedMap<Long, File> getLogFileNames() throws IOException

@@ -38,6 +38,7 @@ import static org.junit.Assert.fail;
 import static org.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static org.neo4j.causalclustering.helpers.DataCreator.countNodes;
 import static org.neo4j.function.Predicates.await;
+import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -102,7 +103,7 @@ public class CoreReplicationIT
     {
         // Given initial pin counts on all members
         Function<CoreClusterMember,PageCacheCounters> getPageCacheCounters =
-                ccm -> ccm.database().getDependencyResolver().resolveDependency( PageCacheCounters.class );
+                ccm -> ccm.database().getDependencyResolver().resolveDependency( PageCacheCounters.class, ONLY );
         List<PageCacheCounters> countersList =
                 cluster.coreMembers().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
         long[] initialPins = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();

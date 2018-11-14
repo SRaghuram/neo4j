@@ -173,6 +173,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     {
         procedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         procedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
+        //noinspection deprecation
         procedures.register( new LegacyGetServersProcedure( topologyService, consensusModule.raftMachine(), config, logProvider ) );
 
         if ( config.get( CausalClusteringSettings.multi_dc_license ) )
@@ -474,7 +475,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         createDatabase( databaseManager, activeDatabaseName );
     }
 
-    public ConsensusModule consensusModule()
+    ConsensusModule consensusModule()
     {
         return consensusModule;
     }

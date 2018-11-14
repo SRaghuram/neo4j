@@ -87,6 +87,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.causalclustering.scenarios.SampleData.createData;
 import static org.neo4j.function.Predicates.awaitEx;
+import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -213,7 +214,7 @@ public class ReadReplicaReplicationIT
     private static void gatherLabelScanStoreFiles( GraphDatabaseAPI db, Set<Path> labelScanStoreFiles )
     {
         Path databaseDirectory = db.databaseLayout().databaseDirectory().toPath();
-        LabelScanStore labelScanStore = db.getDependencyResolver().resolveDependency( LabelScanStore.class );
+        LabelScanStore labelScanStore = db.getDependencyResolver().resolveDependency( LabelScanStore.class, ONLY );
         try ( ResourceIterator<File> files = labelScanStore.snapshotStoreFiles() )
         {
             Path relativePath = databaseDirectory.relativize( files.next().toPath().toAbsolutePath() );
@@ -410,7 +411,7 @@ public class ReadReplicaReplicationIT
 
         ReadReplicaGraphDatabase readReplicaGraphDatabase = cluster.findAnyReadReplica().database();
         CatchupPollingProcess pollingClient = readReplicaGraphDatabase.getDependencyResolver()
-                .resolveDependency( CatchupPollingProcess.class );
+                .resolveDependency( CatchupPollingProcess.class, ONLY );
         pollingClient.stop();
 
         cluster.coreTx( ( coreGraphDatabase, transaction ) ->
@@ -443,13 +444,13 @@ public class ReadReplicaReplicationIT
         Supplier<TransactionIdStore> transactionIdStore =
                 database.getDependencyResolver().provideDependency( TransactionIdStore.class );
         AvailabilityGuard databaseAvailabilityGuard =
-                database.getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class );
+                database.getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class, ONLY );
         return new TransactionIdTracker( transactionIdStore, databaseAvailabilityGuard );
     }
 
     private static LogFiles physicalLogFiles( ClusterMember clusterMember )
     {
-        return clusterMember.database().getDependencyResolver().resolveDependency( LogFiles.class );
+        return clusterMember.database().getDependencyResolver().resolveDependency( LogFiles.class, ONLY );
     }
 
     private static boolean readReplicasUpToDateAsTheLeader( CoreClusterMember leader, Collection<ReadReplica> readReplicas )
@@ -463,7 +464,7 @@ public class ReadReplicaReplicationIT
     private static void changeStoreId( ReadReplica replica ) throws IOException
     {
         File neoStoreFile = DatabaseLayout.of( replica.databaseDirectory() ).metadataStore();
-        PageCache pageCache = replica.database().getDependencyResolver().resolveDependency( PageCache.class );
+        PageCache pageCache = replica.database().getDependencyResolver().resolveDependency( PageCache.class, ONLY );
         MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis() );
     }
 
@@ -471,7 +472,7 @@ public class ReadReplicaReplicationIT
     {
         try
         {
-            return db.getDependencyResolver().resolveDependency( TransactionIdStore.class )
+            return db.getDependencyResolver().resolveDependency( TransactionIdStore.class, ONLY )
                     .getLastClosedTransactionId();
         }
         catch ( IllegalStateException  | UnsatisfiedDependencyException /* db is shutdown or not available */ ex )
@@ -577,7 +578,7 @@ public class ReadReplicaReplicationIT
         // Given initial pin counts on all members
         Cluster<?> cluster = clusterRule.startCluster();
         Function<ReadReplica,PageCacheCounters> getPageCacheCounters =
-                ccm -> ccm.database().getDependencyResolver().resolveDependency( PageCacheCounters.class );
+                ccm -> ccm.database().getDependencyResolver().resolveDependency( PageCacheCounters.class, ONLY );
         List<PageCacheCounters> countersList =
                 cluster.readReplicas().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
         long[] initialPins = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();

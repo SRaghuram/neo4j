@@ -39,9 +39,8 @@ public class DumpClusterState
 
     /**
      * @param args [0] = data directory
-     * @throws IOException When IO exception occurs.
      */
-    public static void main( String[] args ) throws IOException
+    public static void main( String[] args )
     {
 
         File dataDirectory;

@@ -58,7 +58,6 @@ import static org.neo4j.time.Clocks.systemClock;
 
 public class ConsensusModule
 {
-
     private final MonitoredRaftLog raftLog;
     private final RaftMachine raftMachine;
     private final RaftMembershipManager raftMembershipManager;

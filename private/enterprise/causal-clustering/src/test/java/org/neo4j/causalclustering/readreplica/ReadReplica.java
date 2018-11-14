@@ -30,6 +30,7 @@ import org.neo4j.logging.Level;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
+import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -147,7 +148,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
 
     public CatchupPollingProcess txPollingClient()
     {
-        return database.getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
+        return database.getDependencyResolver().resolveDependency( CatchupPollingProcess.class, ONLY );
     }
 
     @Override
