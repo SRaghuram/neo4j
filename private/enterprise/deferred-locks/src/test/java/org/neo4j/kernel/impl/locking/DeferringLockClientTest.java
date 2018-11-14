@@ -5,8 +5,8 @@
  */
 package org.neo4j.kernel.impl.locking;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,65 +19,47 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
 import org.neo4j.storageengine.api.lock.LockTracer;
 import org.neo4j.storageengine.api.lock.ResourceType;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
 import static java.lang.Math.abs;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-public class DeferringLockClientTest
+@ExtendWith( RandomExtension.class )
+class DeferringLockClientTest
 {
-    @Rule
-    public final RandomRule random = new RandomRule();
+    @Inject
+    private RandomRule random;
 
     @Test
-    public void releaseOfNotHeldSharedLockThrows()
+    void releaseOfNotHeldSharedLockThrows()
     {
         // GIVEN
         TestLocks actualLocks = new TestLocks();
         TestLocksClient actualClient = actualLocks.newClient();
         DeferringLockClient client = new DeferringLockClient( actualClient );
 
-        try
-        {
-            // WHEN
-            client.releaseShared( ResourceTypes.NODE, 42 );
-            fail( "Exception expected" );
-        }
-        catch ( Exception e )
-        {
-            // THEN
-            assertThat( e, instanceOf( IllegalStateException.class ) );
-        }
+        assertThrows( IllegalStateException.class, () -> client.releaseShared( ResourceTypes.NODE, 42 ) );
+
     }
 
     @Test
-    public void releaseOfNotHeldExclusiveLockThrows()
+    void releaseOfNotHeldExclusiveLockThrows()
     {
         // GIVEN
         TestLocks actualLocks = new TestLocks();
         TestLocksClient actualClient = actualLocks.newClient();
         DeferringLockClient client = new DeferringLockClient( actualClient );
 
-        try
-        {
-            // WHEN
-            client.releaseExclusive( ResourceTypes.NODE, 42 );
-            fail( "Exception expected" );
-        }
-        catch ( Exception e )
-        {
-            // THEN
-            assertThat( e, instanceOf( IllegalStateException.class ) );
-        }
+        assertThrows( IllegalStateException.class, () -> client.releaseExclusive( ResourceTypes.NODE, 42 ) );
     }
 
     @Test
-    public void shouldDeferAllLocks()
+    void shouldDeferAllLocks()
     {
         // GIVEN
         TestLocks actualLocks = new TestLocks();
@@ -110,7 +92,7 @@ public class DeferringLockClientTest
     }
 
     @Test
-    public void shouldStopUnderlyingClient()
+    void shouldStopUnderlyingClient()
     {
         // GIVEN
         Locks.Client actualClient = mock( Locks.Client.class );
@@ -124,7 +106,7 @@ public class DeferringLockClientTest
     }
 
     @Test
-    public void shouldPrepareUnderlyingClient()
+    void shouldPrepareUnderlyingClient()
     {
         // GIVEN
         Locks.Client actualClient = mock( Locks.Client.class );
@@ -138,7 +120,7 @@ public class DeferringLockClientTest
     }
 
     @Test
-    public void shouldCloseUnderlyingClient()
+    void shouldCloseUnderlyingClient()
     {
         // GIVEN
         Locks.Client actualClient = mock( Locks.Client.class );
@@ -152,7 +134,7 @@ public class DeferringLockClientTest
     }
 
     @Test
-    public void shouldThrowOnAcquireWhenStopped()
+    void shouldThrowOnAcquireWhenStopped()
     {
         // GIVEN
         Locks.Client actualClient = mock( Locks.Client.class );
@@ -160,20 +142,11 @@ public class DeferringLockClientTest
 
         client.stop();
 
-        try
-        {
-            // WHEN
-            client.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 1 );
-            fail( "Expected exception" );
-        }
-        catch ( LockClientStoppedException e )
-        {
-            // THEN
-        }
+        assertThrows( LockClientStoppedException.class, () -> client.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 1 ) );
     }
 
     @Test
-    public void shouldThrowOnAcquireWhenClosed()
+    void shouldThrowOnAcquireWhenClosed()
     {
         // GIVEN
         Locks.Client actualClient = mock( Locks.Client.class );
@@ -181,58 +154,31 @@ public class DeferringLockClientTest
 
         client.close();
 
-        try
-        {
-            // WHEN
-            client.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 1 );
-            fail( "Expected exception" );
-        }
-        catch ( LockClientStoppedException e )
-        {
-            // THEN
-        }
+        assertThrows( LockClientStoppedException.class, () -> client.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 1 ) );
     }
 
     @Test
-    public void shouldThrowWhenReleaseNotYetAcquiredExclusive()
+    void shouldThrowWhenReleaseNotYetAcquiredExclusive()
     {
         // GIVEN
         Locks.Client actualClient = mock( Locks.Client.class );
         DeferringLockClient client = new DeferringLockClient( actualClient );
 
-        try
-        {
-            // WHEN
-            client.releaseExclusive( ResourceTypes.NODE, 1 );
-            fail( "Expected exception" );
-        }
-        catch ( IllegalStateException e )
-        {
-            // THEN
-        }
+        assertThrows( IllegalStateException.class, () -> client.releaseExclusive( ResourceTypes.NODE, 1 ) );
     }
 
     @Test
-    public void shouldThrowWhenReleaseNotYetAcquiredShared()
+    void shouldThrowWhenReleaseNotYetAcquiredShared()
     {
         // GIVEN
         Locks.Client actualClient = mock( Locks.Client.class );
         DeferringLockClient client = new DeferringLockClient( actualClient );
 
-        try
-        {
-            // WHEN
-            client.releaseShared( ResourceTypes.NODE, 1 );
-            fail( "Expected exception" );
-        }
-        catch ( IllegalStateException e )
-        {
-            // THEN
-        }
+        assertThrows( IllegalStateException.class, () -> client.releaseShared( ResourceTypes.NODE, 1 ) );
     }
 
     @Test
-    public void shouldThrowWhenReleaseNotMatchingAcquired()
+    void shouldThrowWhenReleaseNotMatchingAcquired()
     {
         // GIVEN
         Locks.Client actualClient = mock( Locks.Client.class );
@@ -240,20 +186,11 @@ public class DeferringLockClientTest
 
         client.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 1 );
 
-        try
-        {
-            // WHEN
-            client.releaseShared( ResourceTypes.NODE, 1 );
-            fail( "Expected exception" );
-        }
-        catch ( IllegalStateException e )
-        {
-            // THEN
-        }
+        assertThrows( IllegalStateException.class, () -> client.releaseShared( ResourceTypes.NODE, 1 ) );
     }
 
     @Test
-    public void shouldThrowWhenReleasingLockMultipleTimes()
+    void shouldThrowWhenReleasingLockMultipleTimes()
     {
         // GIVEN
         Locks.Client actualClient = mock( Locks.Client.class );
@@ -262,20 +199,11 @@ public class DeferringLockClientTest
         client.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 1 );
         client.releaseExclusive( ResourceTypes.NODE, 1 );
 
-        try
-        {
-            // WHEN
-            client.releaseShared( ResourceTypes.NODE, 1 );
-            fail( "Expected exception" );
-        }
-        catch ( IllegalStateException e )
-        {
-            // THEN
-        }
+        assertThrows( IllegalStateException.class, () -> client.releaseShared( ResourceTypes.NODE, 1 ) );
     }
 
     @Test
-    public void exclusiveLockAcquiredMultipleTimesCanNotBeReleasedAtOnce()
+    void exclusiveLockAcquiredMultipleTimesCanNotBeReleasedAtOnce()
     {
         // GIVEN
         TestLocks actualLocks = new TestLocks();
@@ -294,7 +222,7 @@ public class DeferringLockClientTest
     }
 
     @Test
-    public void sharedLockAcquiredMultipleTimesCanNotBeReleasedAtOnce()
+    void sharedLockAcquiredMultipleTimesCanNotBeReleasedAtOnce()
     {
         // GIVEN
         TestLocks actualLocks = new TestLocks();
@@ -313,7 +241,7 @@ public class DeferringLockClientTest
     }
 
     @Test
-    public void acquireBothSharedAndExclusiveLockThenReleaseShared()
+    void acquireBothSharedAndExclusiveLockThenReleaseShared()
     {
         // GIVEN
         TestLocks actualLocks = new TestLocks();
@@ -332,7 +260,7 @@ public class DeferringLockClientTest
     }
 
     @Test
-    public void exclusiveLocksAcquiredFirst()
+    void exclusiveLocksAcquiredFirst()
     {
         // GIVEN
         TestLocks actualLocks = new TestLocks();
@@ -365,7 +293,7 @@ public class DeferringLockClientTest
     }
 
     @Test
-    public void acquireBothSharedAndExclusiveLockThenReleaseExclusive()
+    void acquireBothSharedAndExclusiveLockThenReleaseExclusive()
     {
         // GIVEN
         TestLocks actualLocks = new TestLocks();

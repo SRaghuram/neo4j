@@ -5,14 +5,14 @@
  */
 package org.neo4j.kernel.impl.locking;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.storageengine.api.lock.LockTracer;
 import org.neo4j.storageengine.api.lock.ResourceType;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -21,10 +21,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-public class DeferringStatementLocksTest
+class DeferringStatementLocksTest
 {
     @Test
-    public void shouldUseCorrectClientForImplicitAndExplicit()
+    void shouldUseCorrectClientForImplicitAndExplicit()
     {
         // GIVEN
         final Locks.Client client = mock( Locks.Client.class );
@@ -36,7 +36,7 @@ public class DeferringStatementLocksTest
     }
 
     @Test
-    public void shouldDoNothingWithClientWhenPreparingForCommitWithNoLocksAcquired()
+    void shouldDoNothingWithClientWhenPreparingForCommitWithNoLocksAcquired()
     {
         // GIVEN
         final Locks.Client client = mock( Locks.Client.class );
@@ -51,7 +51,7 @@ public class DeferringStatementLocksTest
     }
 
     @Test
-    public void shouldPrepareExplicitForCommitWhenLocksAcquire()
+    void shouldPrepareExplicitForCommitWhenLocksAcquire()
     {
         // GIVEN
         final Locks.Client client = mock( Locks.Client.class );
@@ -71,7 +71,7 @@ public class DeferringStatementLocksTest
     }
 
     @Test
-    public void shouldStopUnderlyingClient()
+    void shouldStopUnderlyingClient()
     {
         // GIVEN
         final Locks.Client client = mock( Locks.Client.class );
@@ -85,7 +85,7 @@ public class DeferringStatementLocksTest
     }
 
     @Test
-    public void shouldCloseUnderlyingClient()
+    void shouldCloseUnderlyingClient()
     {
         // GIVEN
         final Locks.Client client = mock( Locks.Client.class );

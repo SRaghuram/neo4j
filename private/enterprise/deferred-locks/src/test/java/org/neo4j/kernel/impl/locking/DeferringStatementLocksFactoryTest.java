@@ -5,68 +5,44 @@
  */
 package org.neo4j.kernel.impl.locking;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.locking.DeferringStatementLocksFactory.deferred_locks_enabled;
 
-public class DeferringStatementLocksFactoryTest
+class DeferringStatementLocksFactoryTest
 {
     @Test
-    public void initializeThrowsForNullLocks()
+    void initializeThrowsForNullLocks()
     {
         DeferringStatementLocksFactory factory = new DeferringStatementLocksFactory();
-        try
-        {
-            factory.initialize( null, Config.defaults() );
-            fail( "Exception expected" );
-        }
-        catch ( Exception e )
-        {
-            assertThat( e, instanceOf( NullPointerException.class ) );
-        }
+        assertThrows( NullPointerException.class, () -> factory.initialize( null, Config.defaults() ) );
     }
 
     @Test
-    public void initializeThrowsForNullConfig()
+    void initializeThrowsForNullConfig()
     {
         DeferringStatementLocksFactory factory = new DeferringStatementLocksFactory();
-        try
-        {
-            factory.initialize( mock( Locks.class ), null );
-            fail( "Exception expected" );
-        }
-        catch ( Exception e )
-        {
-            assertThat( e, instanceOf( NullPointerException.class ) );
-        }
+        assertThrows( NullPointerException.class, () -> factory.initialize( mock( Locks.class ), null ) );
     }
 
     @Test
-    public void newInstanceThrowsWhenNotInitialized()
+    void newInstanceThrowsWhenNotInitialized()
     {
         DeferringStatementLocksFactory factory = new DeferringStatementLocksFactory();
-        try
-        {
-            factory.newInstance();
-            fail( "Exception expected" );
-        }
-        catch ( Exception e )
-        {
-            assertThat( e, instanceOf( IllegalStateException.class ) );
-        }
+        assertThrows( IllegalStateException.class, factory::newInstance );
     }
 
     @Test
-    public void newInstanceCreatesSimpleLocksWhenConfigNotSet()
+    void newInstanceCreatesSimpleLocksWhenConfigNotSet()
     {
         Locks locks = mock( Locks.class );
         Locks.Client client = mock( Locks.Client.class );
@@ -85,7 +61,7 @@ public class DeferringStatementLocksFactoryTest
     }
 
     @Test
-    public void newInstanceCreatesDeferredLocksWhenConfigSet()
+    void newInstanceCreatesDeferredLocksWhenConfigSet()
     {
         Locks locks = mock( Locks.class );
         Locks.Client client = mock( Locks.Client.class );
