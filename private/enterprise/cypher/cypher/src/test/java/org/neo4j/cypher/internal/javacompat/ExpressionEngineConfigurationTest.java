@@ -22,16 +22,15 @@ class ExpressionEngineConfigurationTest
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
 
     @Test
-    void shouldBeUsingInterpretedByDefault()
+    void shouldBeJitCompileOnSecondAccessByDefault()
     {
         // Given
         String query = "RETURN sin(cos(sin(cos(rand()))))";
-        GraphDatabaseService db = withEngineAndLimit( "DEFAULT", 0 );
-        int manyTimes = 10;
-        for ( int i = 0; i < manyTimes; i++ )
-        {
-            assertNotUsingCompiled( db, query );
-        }
+        GraphDatabaseService db = withEngineAndLimit( "DEFAULT", 1 );
+
+        assertNotUsingCompiled( db, query );
+
+        assertUsingCompiled( db, query );
     }
 
     @Test
