@@ -225,12 +225,10 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
                 () -> platformModule.dataSourceManager.getDataSource().getDependencyResolver().resolveDependency( DatabaseHealth.class );
 
         this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, platformModule, logProvider, config );
+        dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
 
         ClusteringModule clusteringModule = getClusteringModule( platformModule, discoveryServiceFactory, storage,
                 identityModule, dependencies, databaseService );
-
-        // We need to satisfy the dependency here to keep users of it, such as BoltKernelExtension, happy.
-        dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
 
         PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, logProvider, config, dependencies );
 

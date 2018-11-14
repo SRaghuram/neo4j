@@ -131,15 +131,14 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
 
         RemoteMembersResolver hostnameResolver = chooseResolver( config, platformModule.logService);
 
+        dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
+
         configureDiscoveryService( discoveryServiceFactory, dependencies, config, logProvider );
 
         topologyService = discoveryServiceFactory.readReplicaTopologyService( config, logProvider, platformModule.jobScheduler, myself, hostnameResolver,
                 resolveStrategy( config, logProvider ) );
 
         life.add( dependencies.satisfyDependency( topologyService ) );
-
-        // We need to satisfy the dependency here to keep users of it, such as BoltKernelExtension, happy.
-        dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
 
         PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, logProvider, config, dependencies );
 

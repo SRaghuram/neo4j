@@ -61,7 +61,7 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
     protected void configureDiscoveryService( DiscoveryServiceFactory discoveryServiceFactory, Dependencies dependencies,
                                               Config config, LogProvider logProvider )
     {
-        SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
+        SslPolicyLoader sslPolicyFactory = dependencies.resolveDependency( SslPolicyLoader.class );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
 
         if ( discoveryServiceFactory instanceof SslDiscoveryServiceFactory )
