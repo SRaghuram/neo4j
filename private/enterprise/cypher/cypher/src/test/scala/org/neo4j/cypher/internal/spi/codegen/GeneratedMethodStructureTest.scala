@@ -229,7 +229,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
         schemaRead = body.field(typeRef[SchemaRead], "schemaRead")
       )
       // the "COLUMNS" static field
-      body.staticField(typeRef[util.List[String]], "COLUMNS", Templates.asList[String](Seq.empty))
+      body.privateStaticFinalField(typeRef[util.List[String]], "COLUMNS", Templates.asList[String](Seq.empty))
       using(body.generate(MethodDeclaration.method(typeRef[Unit], "foo"))) { methodBody =>
         block(new GeneratedMethodStructure(fields, methodBody, new AuxGenerator(packageName, codeGen)))
       }

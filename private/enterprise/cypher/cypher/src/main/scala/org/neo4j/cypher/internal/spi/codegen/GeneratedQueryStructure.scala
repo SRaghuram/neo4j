@@ -172,13 +172,13 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
 
   private def setOperatorIds(clazz: ClassGenerator, operatorIds: Map[String, Id]) = {
     operatorIds.keys.foreach { opId =>
-      clazz.staticField(typeRef[Id], opId)
+      clazz.publicStaticField(typeRef[Id], opId)
     }
   }
 
   private def createFields(columns: Seq[String], clazz: ClassGenerator) = {
-    clazz.staticField(TypeReference.typeReference(classOf[Array[String]]),
-                      "COLUMNS", newArray(typeRef[String], columns.map(key => constant(key)):_*))
+    clazz.privateStaticFinalField(TypeReference.typeReference(classOf[Array[String]]),
+                                  "COLUMNS", newArray(typeRef[String], columns.map(key => constant(key)):_*))
 
     Fields(
       entityAccessor = clazz.field(typeRef[EmbeddedProxySPI], "proxySpi"),
