@@ -5,23 +5,26 @@
  */
 package org.neo4j.kernel;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-public class PageCacheFlushTracingTest
+@ExtendWith( TestDirectoryExtension.class )
+class PageCacheFlushTracingTest
 {
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void tracePageCacheFlushProgress()
+    void tracePageCacheFlushProgress()
     {
         AssertableLogProvider logProvider = new AssertableLogProvider( true );
         GraphDatabaseService database = new TestGraphDatabaseFactory().setInternalLogProvider( logProvider )
@@ -35,6 +38,5 @@ public class PageCacheFlushTracingTest
         }
         database.shutdown();
         logProvider.assertContainsMessageContaining( "Flushing file" );
-        logProvider.assertContainsMessageContaining( "Page cache flush completed. Flushed " );
     }
 }

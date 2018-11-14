@@ -12,9 +12,9 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DependencyResolver;
@@ -115,18 +115,16 @@ public class VersionContextTrackingIT
         NeoStores neoStores = dependencyResolver.resolveDependency( RecordStorageEngine.class ).testAccessNeoStores();
         File storeFile = neoStores.getNodeStore().getStorageFile();
         long maxTransactionId = Long.MIN_VALUE;
-        try ( PagedFile pageFile = pageCache.getExistingMapping( storeFile ).get() )
+        PagedFile pageFile = pageCache.getExistingMapping( storeFile ).get();
+        long lastPageId = pageFile.getLastPageId();
+        for ( int i = 0; i <= lastPageId; i++ )
         {
-            long lastPageId = pageFile.getLastPageId();
-            for ( int i = 0; i <= lastPageId; i++ )
+            try ( CursorPageAccessor pageCursor = new CursorPageAccessor(
+                    (MuninnPageCursor) pageFile.io( i, PagedFile.PF_SHARED_READ_LOCK ) ) )
             {
-                try ( CursorPageAccessor pageCursor = new CursorPageAccessor(
-                        (MuninnPageCursor) pageFile.io( i, PagedFile.PF_SHARED_READ_LOCK ) ) )
+                if ( pageCursor.next() )
                 {
-                    if ( pageCursor.next() )
-                    {
-                        maxTransactionId = Math.max( maxTransactionId, pageCursor.lastTxModifierId() );
-                    }
+                    maxTransactionId = Math.max( maxTransactionId, pageCursor.lastTxModifierId() );
                 }
             }
         }
