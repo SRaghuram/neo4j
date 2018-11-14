@@ -75,7 +75,7 @@ public class DumpClusterState
         {
             String databaseName = databaseNameOpt.orElse( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
             String databaseToDump = databaseToDumpOpt.orElse( databaseName );
-            DumpClusterState dumpTool = new DumpClusterState( fileSystem, dataDirectory, System.out, databaseToDump, databaseName );
+            DumpClusterState dumpTool = new DumpClusterState( fileSystem, dataDirectory, System.out, databaseToDump );
             dumpTool.dump();
         }
         catch ( Exception e )
@@ -85,10 +85,10 @@ public class DumpClusterState
         }
     }
 
-    DumpClusterState( FileSystemAbstraction fs, File dataDirectory, PrintStream out, String databaseToDump, String databaseName )
+    DumpClusterState( FileSystemAbstraction fs, File dataDirectory, PrintStream out, String databaseToDump )
     {
         this.lifeSupport = new LifeSupport();
-        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDirectory ).initialize( fs, databaseName );
+        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( fs, dataDirectory ).initialize();
         this.storageService = new CoreStateStorageService( fs, clusterStateDirectory, lifeSupport, NullLogProvider.getInstance(), Config.defaults() );
         this.out = out;
         this.databaseToDump = databaseToDump;

@@ -26,7 +26,7 @@ public class SegmentedRaftLogVerificationIT extends RaftLogVerificationIT
     {
         FileSystemAbstraction fsa = fsRule.get();
 
-        File directory = new File( CoreStateFiles.RAFT_LOG.directoryFullName() );
+        File directory = new File( CoreStateFiles.RAFT_LOG.directoryName() );
         fsa.mkdir( directory );
 
         long rotateAtSizeBytes = 128;

@@ -76,8 +76,8 @@ public class UnbindFromClusterCommandTest
     private File createClusterStateDir( FileSystemAbstraction fs )
     {
         File dataDir = new File( homeDir.toFile(), "data" );
-        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, false );
-        clusterStateDirectory.initialize( fs, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( fs, dataDir, false );
+        clusterStateDirectory.initialize();
         return clusterStateDirectory.get();
     }
 

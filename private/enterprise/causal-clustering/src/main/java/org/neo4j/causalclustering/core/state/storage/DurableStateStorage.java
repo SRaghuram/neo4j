@@ -45,8 +45,8 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         this.log = logProvider.getLog( getClass() );
         this.recoveryManager = new StateRecoveryManager<>( fsa, this.marshal );
         File parent = fileType.at( baseDir );
-        this.fileA = new File( parent, fileType.directoryBaseName() + ".a" );
-        this.fileB = new File( parent, fileType.directoryBaseName() + ".b" );
+        this.fileA = new File( parent, fileType.baseName() + ".a" );
+        this.fileB = new File( parent, fileType.baseName() + ".b" );
     }
 
     public boolean exists()

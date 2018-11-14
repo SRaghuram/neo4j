@@ -90,7 +90,7 @@ public class CoreSnapshot
             for ( Map.Entry<Pair<String,CoreStateFiles>,Object> entry : coreSnapshot.snapshotCollection.entrySet() )
             {
                 CoreStateFiles type = entry.getKey().other();
-                channel.putInt( type.ordinal() );
+                channel.putInt( type.typeId() );
                 //noinspection unchecked
                 type.marshal().marshal( entry.getValue(), channel );
                 StringMarshal.marshal( channel, entry.getKey().first() );
@@ -108,7 +108,7 @@ public class CoreSnapshot
             for ( int i = 0; i < snapshotCount; i++ )
             {
                 int typeOrdinal = channel.getInt();
-                CoreStateFiles type = CoreStateFiles.values().get(typeOrdinal);
+                CoreStateFiles type = CoreStateFiles.values().get( typeOrdinal );
                 Object state = type.marshal().unmarshal( channel );
                 String databaseName = StringMarshal.unmarshal( channel );
                 //noinspection unchecked

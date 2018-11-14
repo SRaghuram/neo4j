@@ -213,10 +213,11 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
 
         final File dataDir = config.get( GraphDatabaseSettings.data_directory );
         /* Database directory is passed here to support migration from earlier versions of cluster state, which were stored *inside* the database directory */
-        final ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, activeDatabaseLayout.databaseDirectory(), false );
-        clusterStateDirectory.initialize( fileSystem, activeDatabaseName );
+        final ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( fileSystem, dataDir, activeDatabaseLayout.databaseDirectory(), false );
+        clusterStateDirectory.initialize();
         dependencies.satisfyDependency( clusterStateDirectory );
         CoreStateStorageService storage = new CoreStateStorageService( fileSystem, clusterStateDirectory, platformModule.life, logProvider, config );
+        storage.migrateIfNecessary( activeDatabaseName );
 
         AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( platformModule.clock, logging, platformModule.config );
         threadToTransactionBridge = dependencies.satisfyDependency( new ThreadToStatementContextBridge( globalGuard ) );

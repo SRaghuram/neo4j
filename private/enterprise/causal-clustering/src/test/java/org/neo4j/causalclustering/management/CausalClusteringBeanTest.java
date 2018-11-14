@@ -17,7 +17,6 @@ import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.CoreStateFiles;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -37,14 +36,14 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class CausalClusteringBeanTest
 {
     private final FileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
     private final File dataDir = new File( "dataDir" );
-    private final ClusterStateDirectory clusterStateDirectory = ClusterStateDirectory.withoutInitializing( dataDir );
+    private final ClusterStateDirectory clusterStateDirectory = ClusterStateDirectory.withoutInitializing( fs, dataDir );
     private final RaftMachine raftMachine = mock( RaftMachine.class );
-    private final String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
     private CausalClustering ccBean;
 
     @Rule
@@ -56,7 +55,7 @@ public class CausalClusteringBeanTest
         DataSourceManager dataSourceManager = new DataSourceManager( NullLogProvider.getInstance(), Config.defaults() );
         NeoStoreDataSource dataSource = mock( NeoStoreDataSource.class );
         when( dataSource.getDatabaseLayout() ).thenReturn( testDirectory.databaseLayout() );
-        dataSourceManager.register( databaseName, dataSource );
+        dataSourceManager.register( DEFAULT_DATABASE_NAME, dataSource );
         KernelData kernelData = new KernelData( fs, mock( PageCache.class ), new File( "storeDir" ), Config.defaults(), dataSourceManager );
 
         Dependencies dependencies = new Dependencies();

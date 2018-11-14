@@ -34,7 +34,7 @@ public class SegmentedRaftLogContractTest extends RaftLogContractTest
     @Override
     public RaftLog createRaftLog()
     {
-        File directory = new File( CoreStateFiles.RAFT_LOG.directoryFullName() );
+        File directory = new File( CoreStateFiles.RAFT_LOG.directoryName() );
         FileSystemAbstraction fileSystem = fsRule.get();
         fileSystem.mkdir( directory );
 

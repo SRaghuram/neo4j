@@ -38,7 +38,7 @@ public class SegmentedRaftLogDurabilityTest
 
     private final RaftLogFactory logFactory = fileSystem ->
     {
-        File directory = new File( CoreStateFiles.RAFT_LOG.directoryFullName() );
+        File directory = new File( CoreStateFiles.RAFT_LOG.directoryName() );
         fileSystem.mkdir( directory );
 
         long rotateAtSizeBytes = 128;

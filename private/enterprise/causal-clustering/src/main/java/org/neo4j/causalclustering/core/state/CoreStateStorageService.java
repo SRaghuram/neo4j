@@ -6,6 +6,7 @@
 package org.neo4j.causalclustering.core.state;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -53,6 +54,7 @@ public class CoreStateStorageService
         throw new UnsupportedOperationException( String.format( "You cannot instantiate SimpleStorage for core state of type %s", type ) );
     }
 
+    @SuppressWarnings( "SameParameterValue" )
     <E> DurableStateStorage<E> durableStorage( CoreStateFiles<E> type )
     {
         return durableStorage( type, null );
@@ -73,7 +75,7 @@ public class CoreStateStorageService
         return stateStorage( type, null );
     }
 
-    public <E> StateStorage<E> stateStorage( CoreStateFiles<E> type, String databaseName )
+    <E> StateStorage<E> stateStorage( CoreStateFiles<E> type, String databaseName )
     {
         Map<String,StateStorage> perDbStorage = cachedStorage.computeIfAbsent( type, ignored -> new HashMap<>() );
 
@@ -87,19 +89,23 @@ public class CoreStateStorageService
         return store;
     }
 
+    public void migrateIfNecessary( String databaseName )
+    {
+        migrateDatabaseStateIfNeeded( databaseName );
+    }
+
     private <E> StateStorage<E> createNewStorage( CoreStateFiles<E> type, String databaseName )
     {
         DurableStateStorage<E> durableStore;
         if ( simpleStorage.contains( type ) )
         {
-            File f = type.at( clusterStateDirectory.get() );
-            return new SimpleFileStorage<>( fs, f, type.marshal(), logProvider );
+            File simpleStateFile = type.at( clusterStateDirectory.get() );
+            return new SimpleFileStorage<>( fs, simpleStateFile, type.marshal(), logProvider );
         }
         else if ( perDbStorage.contains( type ) )
         {
-            File databaseStateDirectory = clusterStateDirectory.databaseStateDirectory( fs, databaseName );
-            File specificStateDirectory = type.at( databaseStateDirectory );
-            durableStore = new DurableStateStorage<>( fs, specificStateDirectory, type, type.rotationSize( config ), logProvider );
+            File databaseStateDirectory = clusterStateDirectory.databaseStateDirectory( databaseName );
+            durableStore = new DurableStateStorage<>( fs, databaseStateDirectory, type, type.rotationSize( config ), logProvider );
         }
         else
         {
@@ -108,5 +114,37 @@ public class CoreStateStorageService
         }
         life.add( durableStore );
         return durableStore;
+    }
+
+    /**
+     * <pre>
+     * Databases-specific state previously lived directly at
+     *      cluster-state/
+     *
+     * but has now moved down to
+     *      cluster-state/db/<database-name>     (typically /graph.db)
+     */
+    private void migrateDatabaseStateIfNeeded( String databaseName )
+    {
+        for ( CoreStateFiles state : perDbStorage )
+        {
+            File oldDir = new File( clusterStateDirectory.get(), state.directoryName() );
+
+            if ( !fs.fileExists( oldDir ) )
+            {
+                continue;
+            }
+
+            File dbStateRootDir = clusterStateDirectory.databaseStateDirectory( databaseName );
+
+            try
+            {
+                fs.moveToDirectory( oldDir, dbStateRootDir );
+            }
+            catch ( IOException e )
+            {
+                throw new ClusterStateException( e );
+            }
+        }
     }
 }

@@ -101,8 +101,7 @@ public class CausalClusteringBean extends ManagementBeanProvider
             long size = 0L;
             for ( File file : files )
             {
-                // Exclude raft log that resides in same directory
-                if ( fs.isDirectory( file ) && file.getName().equals( CoreStateFiles.RAFT_LOG.directoryFullName() ) )
+                if ( fs.isDirectory( file ) && file.getName().equals( CoreStateFiles.RAFT_LOG.directoryName() ) )
                 {
                     continue;
                 }

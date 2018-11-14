@@ -48,7 +48,7 @@ public class DumpClusterStateTest
     @Rule
     public EphemeralFileSystemRule fsa = new EphemeralFileSystemRule();
     private File dataDir = new File( "data" );
-    private ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, false );
+    private ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( fsa.get(), dataDir, false );
     private String defaultDbName = DEFAULT_DATABASE_NAME;
     private CoreStateStorageService storageService;
     private LifeSupport lifeSupport = new LifeSupport();
@@ -56,7 +56,7 @@ public class DumpClusterStateTest
     @Before
     public void setup()
     {
-        clusterStateDirectory.initialize( fsa.get(), defaultDbName );
+        clusterStateDirectory.initialize();
         storageService = new CoreStateStorageService( fsa, clusterStateDirectory, lifeSupport, NullLogProvider.getInstance(), Config.defaults() );
     }
 

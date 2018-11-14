@@ -27,7 +27,7 @@ public class SimpleStorageTest
     public void shouldWriteAndReadState() throws Exception
     {
         // given
-        File dummyState = new File( CoreStateFiles.DUMMY( MemberId.Marshal.INSTANCE ).directoryFullName() );
+        File dummyState = new File( CoreStateFiles.DUMMY( MemberId.Marshal.INSTANCE ).directoryName() );
         SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fsa.get(), dummyState, new MemberId.Marshal(), NullLogProvider.getInstance() );
 
         // when
