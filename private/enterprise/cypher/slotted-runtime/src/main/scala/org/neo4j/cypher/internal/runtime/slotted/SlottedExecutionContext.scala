@@ -223,7 +223,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
           )
           thisSlotSetter.apply(this, other.getLongAt(offset))
 
-        case (key, otherSlot @ RefSlot(offset, _, _)) if slottedOther.isRefInitialized(offset) =>
+        case (key, otherSlot @ RefSlot(offset, _, _)) if slottedOther.isRefInitialized(offset)  =>
           val thisSlotSetter = slots.maybeSetter(key).getOrElse(
             throw new InternalException(s"Tried to merge slot $otherSlot from $other but it is missing from $this." +
               "Looks like something needs to be fixed in slot allocation.")
@@ -238,6 +238,10 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
           val otherValue = slottedOther.getRefAtWithoutCheckingInitialized(offset)
           thisSlotSetter.apply(this, otherValue)
+
+        case _ =>
+        // a slot which is not initialized(=null). This means it is allocated, but will only be used later in the pipeline.
+        // Therefore, this is a no-op.
       }, {
         case (cachedNodeProperty, refSlot) =>
           setCachedProperty(cachedNodeProperty, other.getCachedPropertyAt(refSlot.offset))
