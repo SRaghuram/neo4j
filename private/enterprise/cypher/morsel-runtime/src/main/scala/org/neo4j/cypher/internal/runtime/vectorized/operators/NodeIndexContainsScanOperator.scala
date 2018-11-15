@@ -24,7 +24,7 @@ class NodeIndexContainsScanOperator(nodeOffset: Int,
   override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
     val valueIndexCursor: NodeValueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
     val index = context.transactionalContext.schemaRead.index(label, property.propertyKeyId)
-    val indexSession = context.transactionalContext.dataRead.getOrCreateIndexReadSession(index)
+    val indexSession = context.transactionalContext.dataRead.indexReadSession(index)
     new OTask(valueIndexCursor, indexSession)
   }
 

@@ -34,7 +34,7 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                             externalResource,
                             params,
                             cursors,
-                            queryIndexes.indexes.map(index => queryContext.transactionalContext.dataRead.getOrCreateIndexReadSession(index)),
+                            queryIndexes.indexes.map(index => queryContext.transactionalContext.dataRead.indexReadSession(index)),
                             pipeDecorator,
                             lenientCreateRelationship = lenientCreateRelationship,
                             prePopulateResults = prePopulateResults)

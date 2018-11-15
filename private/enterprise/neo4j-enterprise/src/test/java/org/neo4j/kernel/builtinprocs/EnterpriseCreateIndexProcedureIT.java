@@ -280,7 +280,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
             {
                 query[i] = IndexQuery.exact( propertyKeyIds[i], value );
             }
-            IndexReadSession indexSession = transaction.dataRead().getOrCreateIndexReadSession( index );
+            IndexReadSession indexSession = transaction.dataRead().indexReadSession( index );
             transaction.dataRead().nodeIndexSeek( indexSession, indexCursor, IndexOrder.NONE, false, query );
             assertTrue( indexCursor.next() );
             assertEquals( node, indexCursor.nodeReference() );
