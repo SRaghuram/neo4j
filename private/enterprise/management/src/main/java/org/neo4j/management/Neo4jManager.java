@@ -30,7 +30,6 @@ import javax.rmi.ssl.SslRMIClientSocketFactory;
 
 import org.neo4j.jmx.Kernel;
 import org.neo4j.jmx.Primitives;
-import org.neo4j.jmx.StoreFile;
 import org.neo4j.jmx.impl.ConfigurationBean;
 import org.neo4j.management.impl.KernelProxy;
 
@@ -220,19 +219,9 @@ public final class Neo4jManager extends KernelProxy implements Kernel
         return getBean( IndexSamplingManager.class );
     }
 
-    public MemoryMapping getMemoryMappingBean()
-    {
-        return getBean( MemoryMapping.class );
-    }
-
     public Primitives getPrimitivesBean()
     {
         return getBean( Primitives.class );
-    }
-
-    public StoreFile getStoreFileBean()
-    {
-        return getBean( StoreFile.class );
     }
 
     public TransactionManager getTransactionManagerBean()
@@ -243,24 +232,6 @@ public final class Neo4jManager extends KernelProxy implements Kernel
     public PageCache getPageCacheBean()
     {
         return getBean( PageCache.class );
-    }
-
-    /**
-     *  @deprecated high availability database/edition is deprecated in favour of causal clustering. It will be removed in next major release.
-     */
-    @Deprecated
-    public HighAvailability getHighAvailabilityBean()
-    {
-        return getBean( HighAvailability.class );
-    }
-
-    /**
-     *  @deprecated high availability database/edition is deprecated in favour of causal clustering. It will be removed in next major release.
-     */
-    @Deprecated
-    public BranchedStore getBranchedStoreBean()
-    {
-        return getBean( BranchedStore.class );
     }
 
     public Object getConfigurationParameter( String key )

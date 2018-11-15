@@ -34,8 +34,7 @@ import static org.neo4j.kernel.configuration.Settings.setting;
 public class MetricsSettings implements LoadableConfig
 {
     // Common settings
-    @Description( "A common prefix for the reported metrics field names. By default, this is either be 'neo4j', " +
-                  "or a computed value based on the cluster and instance names, when running in an HA configuration." )
+    @Description( "A common prefix for the reported metrics field names." )
     public static final Setting<String> metricsPrefix = setting( "metrics.prefix", STRING, "neo4j" );
 
     // The below settings define what metrics to gather

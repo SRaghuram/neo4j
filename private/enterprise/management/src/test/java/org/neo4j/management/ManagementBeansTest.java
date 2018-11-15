@@ -84,21 +84,9 @@ public class ManagementBeansTest
     }
 
     @Test
-    public void canGetMemoryMappingBean()
-    {
-        assertNotNull( getManager().getMemoryMappingBean() );
-    }
-
-    @Test
     public void canGetPrimitivesBean()
     {
         assertNotNull( getManager().getPrimitivesBean() );
-    }
-
-    @Test
-    public void canGetStoreFileBean()
-    {
-        assertNotNull( getManager().getStoreFileBean() );
     }
 
     @Test
@@ -111,11 +99,5 @@ public class ManagementBeansTest
     public void canGetPageCacheBean()
     {
         assertNotNull( getManager().getPageCacheBean() );
-    }
-
-    @Test
-    public void canAccessMemoryMappingCompositData()
-    {
-        assertNotNull( "MemoryPools is null", getManager().getMemoryMappingBean().getMemoryPools() );
     }
 }
