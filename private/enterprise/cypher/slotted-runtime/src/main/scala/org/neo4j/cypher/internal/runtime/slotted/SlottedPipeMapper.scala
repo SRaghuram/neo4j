@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, Colu
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeBuilder.generateSlotAccessorFunctions
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.opencypher.v9_0.ast.semantics.SemanticTable
