@@ -23,6 +23,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.explicitindex.AutoIndexing;
+import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.configuration.Config;
@@ -249,7 +250,7 @@ class TransactionStatusResultTest
                         mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
                         AutoIndexing.UNSUPPORTED, mock( ExplicitIndexStore.class ),
                         EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
-                        mock( IndexingService.class ), mockedTokenHolders(), new Dependencies() )
+                        mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ), new Dependencies() )
             {
                 @Override
                 public Statistics getStatistics()

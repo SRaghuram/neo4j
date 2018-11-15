@@ -29,6 +29,7 @@ import org.neo4j.kernel.api.SilentTokenNameLookup
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI
 import org.neo4j.kernel.impl.util.ValueUtils
+import org.neo4j.storageengine.api.TokenNameLookup
 import org.neo4j.values.storable.{Value, ValueComparator, Values}
 import org.neo4j.values.virtual._
 import org.neo4j.values.{AnyValue, AnyValues}
