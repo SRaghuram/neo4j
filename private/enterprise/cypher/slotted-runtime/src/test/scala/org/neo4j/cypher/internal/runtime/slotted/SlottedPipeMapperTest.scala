@@ -525,7 +525,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     // then
     pipe should equal(ApplySlottedPipe(
       NodesByLabelScanSlottedPipe("x", LazyLabel("label"), X_NODE_SLOTS, Size.zero)(),
-      NodeIndexSeekSlottedPipe("z", label, Vector(SlottedIndexedProperty(0,None)), SingleQueryExpression(commands.expressions.Literal(42)), org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek,
+      NodeIndexSeekSlottedPipe("z", label, Vector(SlottedIndexedProperty(0,None)), 0, SingleQueryExpression(commands.expressions.Literal(42)), org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek,
         IndexOrderNone,
         SlotConfiguration.empty
           .newLong("x", false, CTNode)
@@ -713,7 +713,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
 
     // then
     pipe should equal(
-      NodeIndexSeekSlottedPipe("z", label, IndexedSeq.empty, SingleQueryExpression(commands.expressions.Literal(42)), UniqueIndexSeek, IndexOrderNone,
+      NodeIndexSeekSlottedPipe("z", label, IndexedSeq.empty, 0, SingleQueryExpression(commands.expressions.Literal(42)), UniqueIndexSeek, IndexOrderNone,
         SlotConfiguration.empty.newLong("z", false, CTNode), Size.zero)()
     )
   }

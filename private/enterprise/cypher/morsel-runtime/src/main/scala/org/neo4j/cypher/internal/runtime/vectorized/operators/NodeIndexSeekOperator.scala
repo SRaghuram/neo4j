@@ -18,6 +18,7 @@ import org.opencypher.v9_0.expressions.LabelToken
 class NodeIndexSeekOperator(offset: Int,
                             label: LabelToken,
                             properties: Array[SlottedIndexedProperty],
+                            queryIndexId: Int,
                             indexOrder: IndexOrder,
                             argumentSize: SlotConfiguration.Size,
                             override val valueExpr: QueryExpression[Expression],
@@ -30,21 +31,11 @@ class NodeIndexSeekOperator(offset: Int,
 
   override def init(context: QueryContext, state: QueryState, currentRow: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
     val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
-    val indexReference = reference(context)
-    val nodeCursor = indexSeek(queryState, indexReference, needsValues, indexOrder, currentRow)
+    val nodeCursor = indexSeek(queryState, state.queryIndexes(queryIndexId), needsValues, indexOrder, currentRow)
     new OTask(nodeCursor)
   }
 
   override val propertyIds: Array[Int] = properties.map(_.propertyKeyId)
-
-  private var reference: IndexReference = IndexReference.NO_INDEX
-
-  private def reference(context: QueryContext): IndexReference = {
-    if (reference == IndexReference.NO_INDEX) {
-      reference = context.indexReference(label.nameId.id, propertyIds:_*)
-    }
-    reference
-  }
 
   class OTask(nodeCursors: Iterator[NodeValueIndexCursor]) extends ContinuableOperatorTask {
 

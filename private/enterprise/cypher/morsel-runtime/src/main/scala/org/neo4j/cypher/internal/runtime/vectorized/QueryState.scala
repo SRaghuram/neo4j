@@ -7,11 +7,7 @@ package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.values.virtual.{MapValue, VirtualValues}
-
-object QueryState {
-  val EMPTY = QueryState(VirtualValues.EMPTY_MAP, null, 10000, Array(null), singeThreaded = true)
-}
+import org.neo4j.values.virtual.MapValue
 
 /**
   * The query state of the morsel runtime

@@ -9,7 +9,7 @@ import org.mockito.Mockito.{RETURNS_DEEP_STUBS, when}
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.interpreted.ImplicitDummyPos
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexMockingHelp
-import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
+import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, NodeValueHit, QueryContext}
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
@@ -60,7 +60,7 @@ class NodeIndexScanOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       SlottedIndexedProperty(propertyKey.nameId.id, Some(slots.getReferenceOffsetFor(nDotProp))), 0, slots.size())
 
     // When
-    operator.init(queryContext, QueryState.EMPTY, inputRow, cursors).operate(outputRow, queryContext, QueryState.EMPTY, cursors)
+    operator.init(queryContext, EmptyQueryState(), inputRow, cursors).operate(outputRow, queryContext, EmptyQueryState(), cursors)
 
     // then
     outputMorsel.longs should equal(Array(

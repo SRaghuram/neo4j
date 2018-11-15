@@ -52,7 +52,7 @@ class NodeIndexSeekSlottedPipeTest extends CypherFunSuite with ImplicitDummyPos 
     val argumentSize = Size(0,1)
 
     val properties = IndexedSeq(SlottedIndexedProperty(0, None))
-    val pipe = NodeIndexSeekSlottedPipe("n", label,  properties, ManyQueryExpression(ListLiteral(
+    val pipe = NodeIndexSeekSlottedPipe("n", label,  properties, 0, ManyQueryExpression(ListLiteral(
       Literal("hello"),
       Literal("bye")
     )),
@@ -82,7 +82,7 @@ class NodeIndexSeekSlottedPipeTest extends CypherFunSuite with ImplicitDummyPos 
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val pipe = NodeIndexSeekSlottedPipe("n", label, properties, ManyQueryExpression(ListLiteral(
+    val pipe = NodeIndexSeekSlottedPipe("n", label, properties, 0, ManyQueryExpression(ListLiteral(
       Literal("hello"),
       Literal("bye")
     )),
@@ -113,7 +113,7 @@ class NodeIndexSeekSlottedPipeTest extends CypherFunSuite with ImplicitDummyPos 
       .newReference("n." + propertyKeys(0).name, nullable = false, CTAny)
       .newReference("n." + propertyKeys(1).name, nullable = false, CTAny)
     val properties = propertyKeys.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val pipe = NodeIndexSeekSlottedPipe("n", label, properties,
+    val pipe = NodeIndexSeekSlottedPipe("n", label, properties, 0,
       CompositeQueryExpression(Seq(
         ManyQueryExpression(ListLiteral(
           Literal("hello"), Literal("bye")
@@ -147,7 +147,7 @@ class NodeIndexSeekSlottedPipeTest extends CypherFunSuite with ImplicitDummyPos 
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val pipe = NodeIndexSeekSlottedPipe("n", label, properties, ManyQueryExpression(ListLiteral(Literal("hello"), Literal("world"))), LockingUniqueIndexSeek,
+    val pipe = NodeIndexSeekSlottedPipe("n", label, properties, 0, ManyQueryExpression(ListLiteral(Literal("hello"), Literal("world"))), LockingUniqueIndexSeek,
       IndexOrderNone, slots, slots.size())()
     val result = pipe.createResults(queryState)
 

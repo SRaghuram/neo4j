@@ -43,7 +43,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     val operator = new ArgumentOperator(SlotConfiguration.Size(1, 1))
 
     // When
-    operator.init(null, null, inputRow, cursors).operate(outputRow, null, QueryState.EMPTY, cursors)
+    operator.init(null, null, inputRow, cursors).operate(outputRow, null, EmptyQueryState(), cursors)
 
     // Then
     outputMorsel.longs should equal(Array(1, 0))
@@ -53,7 +53,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     // And when
     inputRow.moveToNextRow()
     outputRow.resetToFirstRow()
-    operator.init(null, null, inputRow, cursors).operate(outputRow, null, QueryState.EMPTY, cursors)
+    operator.init(null, null, inputRow, cursors).operate(outputRow, null, EmptyQueryState(), cursors)
 
     // Then
     outputMorsel.longs should equal(Array(4, 0))
@@ -63,7 +63,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     // And when
     inputRow.moveToNextRow()
     outputRow.resetToFirstRow()
-    operator.init(null, null, inputRow, cursors).operate(outputRow, null, QueryState.EMPTY, cursors)
+    operator.init(null, null, inputRow, cursors).operate(outputRow, null, EmptyQueryState(), cursors)
 
     // Then
     outputMorsel.longs should equal(Array(7, 0))

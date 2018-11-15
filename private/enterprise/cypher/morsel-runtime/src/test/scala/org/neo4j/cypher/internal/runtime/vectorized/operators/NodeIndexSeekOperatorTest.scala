@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.interpreted.ImplicitDummyPos
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{ListLiteral, Literal}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexMockingHelp, LockingUniqueIndexSeek}
-import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
+import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext}
 import org.neo4j.cypher.internal.v4_0.logical.plans.{CompositeQueryExpression, IndexOrderNone, ManyQueryExpression}
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
@@ -63,7 +63,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, IndexOrderNone, slots.size(),
+    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, slots.size(),
       ManyQueryExpression(ListLiteral(
         Literal("hello"),
         Literal("bye")
@@ -71,7 +71,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     )
 
     // When
-    operator.init(queryContext, QueryState.EMPTY, inputRow, cursors).operate(outputRow, queryContext, QueryState.EMPTY, cursors)
+    operator.init(queryContext, EmptyQueryState(), inputRow, cursors).operate(outputRow, queryContext, EmptyQueryState(), cursors)
 
     // then
     outputMorsel.longs should equal(Array(
@@ -107,7 +107,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       .newReference("n." + propertyKeys(0).name, nullable = false, CTAny)
       .newReference("n." + propertyKeys(1).name, nullable = false, CTAny)
     val properties = propertyKeys.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, IndexOrderNone, slots.size(),
+    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, slots.size(),
       CompositeQueryExpression(Seq(
         ManyQueryExpression(ListLiteral(
           Literal("hello"), Literal("bye")
@@ -117,7 +117,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
         ))))
     )
     // When
-    operator.init(queryContext, QueryState.EMPTY, inputRow, cursors).operate(outputRow, queryContext, QueryState.EMPTY, cursors)
+    operator.init(queryContext, EmptyQueryState(), inputRow, cursors).operate(outputRow, queryContext, EmptyQueryState(), cursors)
 
     // then
     outputMorsel.longs should equal(Array(
@@ -154,11 +154,11 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
 
-    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, IndexOrderNone, slots.size(),
+    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, slots.size(),
       ManyQueryExpression(ListLiteral(Literal("hello"), Literal("world"))), LockingUniqueIndexSeek)
 
     // When
-    operator.init(queryContext, QueryState.EMPTY, inputRow, cursors).operate(outputRow, queryContext, QueryState.EMPTY, cursors)
+    operator.init(queryContext, EmptyQueryState(), inputRow, cursors).operate(outputRow, queryContext, EmptyQueryState(), cursors)
 
 
     // then

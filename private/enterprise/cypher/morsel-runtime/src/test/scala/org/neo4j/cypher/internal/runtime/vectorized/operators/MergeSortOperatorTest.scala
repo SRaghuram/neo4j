@@ -47,8 +47,8 @@ class MergeSortOperatorTest extends CypherFunSuite {
     val out = new Morsel(new Array[Long](longs.length), Array[AnyValue](), longs.length)
 
     val operator = new MergeSortOperator(columnOrdering, Some(Literal(3)))
-    val task = operator.init(null, QueryState.EMPTY, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences)), cursors)
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
+    val task = operator.init(null, EmptyQueryState(), Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences)), cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
     task.canContinue should be(false)
     out.longs.take(3) should equal(Array[Long](1, 2, 3))
     out.validRows shouldBe 3
@@ -193,13 +193,13 @@ class MergeSortOperatorTest extends CypherFunSuite {
 
     val operator = new MergeSortOperator(columnOrdering, Some(Literal(9)))
 
-    val task = operator.init(null, QueryState.EMPTY, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)), cursors)
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
+    val task = operator.init(null, EmptyQueryState(), Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences), MorselExecutionContext(in2, numberOfLongs, numberOfReferences)), cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
     task.canContinue should be(true)
     out.longs should equal(Array(1, 2, 3, 4, 5))
     out.validRows shouldBe 5
 
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
+    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
     task.canContinue should be(false)
     out.longs.take(4) should equal(Array(6, 7, 7, 8))
     out.validRows shouldBe 4

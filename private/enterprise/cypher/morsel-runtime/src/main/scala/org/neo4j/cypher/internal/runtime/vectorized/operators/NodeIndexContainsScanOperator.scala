@@ -43,7 +43,8 @@ class NodeIndexContainsScanOperator(nodeOffset: Int,
 
         value match {
           case value: TextValue =>
-            read.nodeIndexSeek(index, valueIndexCursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined, IndexQuery.stringContains(index.reference().properties()(0), value.stringValue()))
+            val indexQuery = IndexQuery.stringContains(property.propertyKeyId, value.stringValue())
+            read.nodeIndexSeek(index, valueIndexCursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
 
           case Values.NO_VALUE =>
             // CONTAINS null does not produce any rows

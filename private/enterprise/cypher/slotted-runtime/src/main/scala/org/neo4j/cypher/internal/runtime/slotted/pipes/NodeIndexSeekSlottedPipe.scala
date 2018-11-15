@@ -6,19 +6,18 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.v4_0.logical.plans.{IndexOrder, QueryExpression}
-import org.neo4j.internal.kernel.api.IndexReference
 import org.opencypher.v9_0.expressions.LabelToken
 import org.opencypher.v9_0.util.attribution.Id
 
 case class NodeIndexSeekSlottedPipe(ident: String,
                                     label: LabelToken,
                                     properties: IndexedSeq[SlottedIndexedProperty],
+                                    queryIndexId: Int,
                                     valueExpr: QueryExpression[Expression],
                                     indexMode: IndexSeekMode = IndexSeek,
                                     indexOrder: IndexOrder,
@@ -34,21 +33,12 @@ case class NodeIndexSeekSlottedPipe(ident: String,
   override val indexPropertySlotOffsets: Array[Int] = properties.map(_.maybeCachedNodePropertySlot).collect{ case Some(o) => o }.toArray
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  private var reference: IndexReference = IndexReference.NO_INDEX
-
-  private def reference(context: QueryContext): IndexReference = {
-    if (reference == IndexReference.NO_INDEX) {
-      reference = context.indexReference(label.nameId.id, propertyIds: _*)
-    }
-    reference
-  }
-
   valueExpr.expressions.foreach(_.registerOwningPipe(this))
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
-    val indexReference = reference(state.query)
+    val index = state.queryIndexes(queryIndexId)
     val contextForIndexExpression = state.initialContext.getOrElse(SlottedExecutionContext.empty)
-    indexSeek(state, indexReference, needsValues, indexOrder, contextForIndexExpression).flatMap(
+    indexSeek(state, index, needsValues, indexOrder, contextForIndexExpression).flatMap(
       cursor => new SlottedIndexIterator(state, slots, cursor)
     )
   }

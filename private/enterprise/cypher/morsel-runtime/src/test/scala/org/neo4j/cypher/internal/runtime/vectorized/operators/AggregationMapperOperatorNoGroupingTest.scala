@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, MorselExecutionContext, QueryState}
+import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext}
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -26,7 +26,7 @@ class AggregationMapperOperatorNoGroupingTest extends CypherFunSuite {
     val data = new Morsel(longs, refs, longs.length)
 
     // When
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
+    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
 
     // Then
     data.refs(0) should equal(Values.longArray(Array(0,2,4,6,8)))
@@ -46,7 +46,7 @@ class AggregationMapperOperatorNoGroupingTest extends CypherFunSuite {
     val refs = new Array[AnyValue](5)
     val data = new Morsel(longs, refs, 5)
 
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, QueryState.EMPTY, cursors)
+    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
 
     data.refs(0) should equal(Values.longArray(Array(0,2,4,6,8)))
     data.refs(1) should equal(Values.longArray(Array.empty))
