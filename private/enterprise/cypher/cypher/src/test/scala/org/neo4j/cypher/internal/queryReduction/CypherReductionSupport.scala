@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.{CommunityRuntimeFactory, EnterpriseRuntimeCont
 import org.neo4j.cypher.{CypherRuntimeOption, GraphIcing}
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
-import org.neo4j.kernel.impl.coreapi.{InternalTransaction, PropertyContainerLocker}
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContextFactory}
 import org.neo4j.kernel.monitoring.Monitors
 import org.neo4j.logging.NullLog
@@ -80,7 +80,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
   override protected def initTest() {
     super.initTest()
     graph = new GraphDatabaseCypherService(new TestGraphDatabaseFactory().newImpermanentDatabase())
-    contextFactory = Neo4jTransactionalContextFactory.create(graph, new PropertyContainerLocker())
+    contextFactory = Neo4jTransactionalContextFactory.create(graph)
   }
 
   override protected def stopTest() {
