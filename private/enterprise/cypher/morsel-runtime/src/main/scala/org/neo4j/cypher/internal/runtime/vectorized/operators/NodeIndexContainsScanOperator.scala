@@ -24,10 +24,11 @@ class NodeIndexContainsScanOperator(nodeOffset: Int,
   override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
     val valueIndexCursor: NodeValueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
     val index = context.transactionalContext.schemaRead.index(label, property.propertyKeyId)
-    new OTask(valueIndexCursor, index)
+    val indexSession = context.transactionalContext.dataRead.getOrCreateIndexReadSession(index)
+    new OTask(valueIndexCursor, indexSession)
   }
 
-  class OTask(valueIndexCursor: NodeValueIndexCursor, index: IndexReference) extends ContinuableOperatorTask {
+  class OTask(valueIndexCursor: NodeValueIndexCursor, index: IndexReadSession) extends ContinuableOperatorTask {
 
     var hasMore = false
     override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
@@ -42,11 +43,7 @@ class NodeIndexContainsScanOperator(nodeOffset: Int,
 
         value match {
           case value: TextValue =>
-            read.nodeIndexSeek(index,
-                               valueIndexCursor,
-                               IndexOrder.NONE,
-                               property.maybeCachedNodePropertySlot.isDefined,
-                               IndexQuery.stringContains(index.properties()(0), value.stringValue()))
+            read.nodeIndexSeek(index, valueIndexCursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined, IndexQuery.stringContains(index.reference().properties()(0), value.stringValue()))
 
           case Values.NO_VALUE =>
             // CONTAINS null does not produce any rows

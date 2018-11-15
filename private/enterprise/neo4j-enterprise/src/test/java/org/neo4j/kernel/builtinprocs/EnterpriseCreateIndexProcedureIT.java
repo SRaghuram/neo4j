@@ -21,6 +21,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.SchemaRead;
@@ -279,7 +280,8 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
             {
                 query[i] = IndexQuery.exact( propertyKeyIds[i], value );
             }
-            transaction.dataRead().nodeIndexSeek( index, indexCursor, IndexOrder.NONE, false, query );
+            IndexReadSession indexSession = transaction.dataRead().getOrCreateIndexReadSession( index );
+            transaction.dataRead().nodeIndexSeek( indexSession, indexCursor, IndexOrder.NONE, false, query );
             assertTrue( indexCursor.next() );
             assertEquals( node, indexCursor.nodeReference() );
             assertFalse( indexCursor.next() );
