@@ -212,6 +212,134 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     }
   }
 
+  // Min and Max
+
+  for ((TestOrder(cypherToken, expectedOrder, providedOrder), functionName) <- List((ASCENDING, "min"), (DESCENDING, "max"))) {
+    test(s"$cypherToken-$functionName: should not plan aggregation") {
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("Limit")
+          .onTopOf(aPlan("Projection")
+            .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+          )
+
+      //expectedOrder.head corresponds to limit 1
+      val expected = expectedOrder(List(
+        Map(s"$functionName(n.prop1)" -> 40), // min
+        Map(s"$functionName(n.prop1)" -> 44) // max
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+    test(s"$cypherToken-$functionName: should not plan aggregation for multiple types") {
+      graph.execute("CREATE (:Awesome {prop1: 'hallo'})")
+
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("Limit")
+          .onTopOf(aPlan("Projection")
+            .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1"))))
+
+      //expectedOrder.head corresponds to limit 1
+      val expected = expectedOrder(List(
+        Map(s"$functionName(n.prop1)" -> 40), // min
+        Map(s"$functionName(n.prop1)" -> 44) // max
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+    test(s"$cypherToken-$functionName: should not plan aggregation with rename") {
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n.prop1 AS prop RETURN $functionName(prop) AS extreme", executeBefore = createSomeNodes)
+
+      val plan = result.executionPlanDescription()
+      plan should includeSomewhere.aPlan("Limit")
+      plan should includeSomewhere.aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1"))
+      plan shouldNot includeSomewhere.aPlan("Sort")
+      plan shouldNot includeSomewhere.aPlan("Aggregation")
+
+      //expectedOrder.head corresponds to limit 1
+      val expected = expectedOrder(List(
+        Map("extreme" -> 40), // min
+        Map("extreme" -> 44) // max
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+    test(s"$cypherToken-$functionName: should not plan aggregation for nested functions with $functionName as inner") {
+      graph.execute("CREATE (:Awesome {prop3: 'ha'})")
+
+      //should give the length of the alphabetically smallest/largest prop3 string
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN size($functionName(n.prop3)) AS agg", executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("Projection")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop3]", "n").withOrder(providedOrder("n.prop3")))
+            )
+          )
+
+      //expectedOrder.head corresponds to limit 1
+      val expected = expectedOrder(List(
+        Map("agg" -> 3), // min: aaa
+        Map("agg" -> 2) // max: ha
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+    // There is no index for size so have to use aggregation, will still add it as an interesting order
+    test(s"$cypherToken-$functionName: should give correct result for nested functions with $functionName as outer") {
+      graph.execute("CREATE (:Awesome {prop3: 'ha'})")
+
+      //should give the length of the shortest/longest prop3 string
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN $functionName(size(n.prop3)) AS agg", executeBefore = createSomeNodes)
+
+      //expectedOrder.head corresponds to limit 1
+      val expected = expectedOrder(List(
+        Map("agg" -> 2), // min: ha
+        Map("agg" -> 9) // max: footurama
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+    // There is no index for the inner functions so have to use aggregation, will still add it as an interesting order
+    test(s"$cypherToken-$functionName: should give correct result for nested functions in several depths") {
+      graph.execute("CREATE (:Awesome {prop3: 'ha'})")
+
+      //should give the length of the shortest/longest prop3 string
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN $functionName(size(trim(replace(n.prop3, 'a', 'aa')))) AS agg", executeBefore = createSomeNodes)
+
+      //expectedOrder.head corresponds to limit 1
+      val expected = expectedOrder(List(
+        Map("agg" -> 3), // min: haa
+        Map("agg" -> 11) // max: footuraamaa
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+    // The planer doesn't yet support composite range scans, so we can't avoid the aggregation
+    test(s"$cypherToken-$functionName: should give correct result for multiple aggregations") {
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:Awesome) WHERE n.prop1 > 0 AND n.prop2 > 0 RETURN $functionName(n.prop1), $functionName(n.prop2)", executeBefore = createSomeNodes)
+
+      //expectedOrder.head corresponds to limit 1
+      val expected = expectedOrder(List(
+        Map(s"$functionName(n.prop1)" -> 40, s"$functionName(n.prop2)" -> 1), // min
+        Map(s"$functionName(n.prop1)" -> 44, s"$functionName(n.prop2)" -> 5) // max
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+  }
+
   // Only tested in ASC mode because it's hard to make compatibility check out otherwise
   test("ASC: Order by index backed property in a plan with an outer join") {
     // Be careful with what is created in createSomeNodes. It underwent careful cardinality tuning to get exactly the plan we want here.
