@@ -1,5 +1,9 @@
 #!/bin/bash
 
-mvn dependency:copy-dependencies
+mvn_log="$(mvn dependency:copy-dependencies)"
+if [[ $? != 0 ]]; then
+  echo "${mvn_log}" >&2
+  exit 1
+fi
 
 java -cp "target/dependency/*:target/classes"  org.neo4j.tools.dump.DumpLogicalLog $*
