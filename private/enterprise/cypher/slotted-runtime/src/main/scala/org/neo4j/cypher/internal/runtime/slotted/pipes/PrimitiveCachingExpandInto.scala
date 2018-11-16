@@ -6,9 +6,8 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.eclipse.collections.api.iterator.LongIterator
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.kernel.impl.api.store.RelationshipIterator
+import org.neo4j.cypher.internal.runtime.{QueryContext, RelationshipIterator}
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.opencypher.v9_0.expressions.SemanticDirection
 import org.opencypher.v9_0.util.InternalException
