@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.{AggregationHelper, AggregationMapper}
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
@@ -30,7 +31,7 @@ class AggregationMapperOperator(aggregations: Array[AggregationOffsets],
 
     val result = mutable.LinkedHashMap[AnyValue, Array[(Int,AggregationMapper)]]()
 
-    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
+    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
 
     //loop over the entire morsel and apply the aggregation
     while (currentRow.hasMoreRows) {

@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.ListSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => InterpretedQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 
 class UnwindOperator(collection: Expression,
@@ -17,7 +18,7 @@ class UnwindOperator(collection: Expression,
   extends StreamingOperator with ListSupport {
 
   override def init(context: QueryContext, state: QueryState, inputRow: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
-    val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors, Array())
+    val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
     val value = collection(inputRow, queryState)
     val unwoundValues = makeTraversable(value).iterator
     new OTask(inputRow, unwoundValues)
@@ -29,7 +30,7 @@ class UnwindOperator(collection: Expression,
 
     override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
-      val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors, Array())
+      val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
 
       do {
         if (unwoundValues == null) {

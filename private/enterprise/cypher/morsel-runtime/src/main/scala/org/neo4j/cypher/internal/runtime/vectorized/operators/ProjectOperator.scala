@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.internal.kernel.api.IndexReadSession
 
 class ProjectOperator(val projectionOps: Map[Slot, Expression]) extends StatelessOperator {
 
@@ -30,7 +31,7 @@ class ProjectOperator(val projectionOps: Map[Slot, Expression]) extends Stateles
                        state: QueryState,
                        cursors: ExpressionCursors): Unit = {
 
-    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
+    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
 
     while (currentRow.hasMoreRows) {
       project.foreach(p => p(currentRow, queryState))

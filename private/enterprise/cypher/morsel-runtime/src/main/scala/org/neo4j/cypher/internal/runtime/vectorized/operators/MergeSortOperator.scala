@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.NumberValue
 
 /**
@@ -34,7 +35,7 @@ class MergeSortOperator(orderBy: Seq[ColumnOrder],
 
     val limit = countExpression.map { count =>
       val firstRow = sortedInputs.peek()
-      val queryState = new OldQueryState(queryContext, resources = null, params = state.params, cursors, Array())
+      val queryState = new OldQueryState(queryContext, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
       count(firstRow, queryState).asInstanceOf[NumberValue].longValue()
     }
 

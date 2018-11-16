@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.NumberValue
 
 import scala.collection.JavaConverters._
@@ -37,7 +38,7 @@ class PreSortOperator(orderBy: Seq[ColumnOrder],
 
       // potentially calculate the limit
       val maybeLimit = countExpression.map { count =>
-        val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
+        val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
         count(currentRow, queryState).asInstanceOf[NumberValue].longValue().toInt
       }
 

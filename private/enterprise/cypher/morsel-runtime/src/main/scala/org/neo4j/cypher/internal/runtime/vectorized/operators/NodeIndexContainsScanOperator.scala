@@ -37,7 +37,7 @@ class NodeIndexContainsScanOperator(nodeOffset: Int,
       var nullExpression: Boolean = false
 
       if (!hasMore) {
-        val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
+        val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
         val value = valueExpr(currentRow, queryState)
 
         value match {

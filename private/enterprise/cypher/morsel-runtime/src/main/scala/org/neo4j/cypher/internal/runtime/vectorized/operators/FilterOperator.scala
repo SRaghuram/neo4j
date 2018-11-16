@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.Values
 
 /**
@@ -19,7 +20,7 @@ class FilterOperator(predicate: Predicate) extends StatelessOperator {
     override def operate(readingRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
       val writingRow = readingRow.createClone()
-      val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array())
+      val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
 
       while (readingRow.hasMoreRows) {
         val matches = predicate(readingRow, queryState) == Values.TRUE
