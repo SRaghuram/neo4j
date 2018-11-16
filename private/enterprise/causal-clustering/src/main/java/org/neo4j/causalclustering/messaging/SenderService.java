@@ -19,12 +19,12 @@ import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.NamedThreadFactory;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.JobHandle;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
@@ -34,16 +34,17 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
 
     private final ChannelInitializer channelInitializer;
     private final ReadWriteLock serviceLock = new ReentrantReadWriteLock();
+    private final JobScheduler scheduler;
     private final Log log;
 
-    private JobHandle jobHandle;
     private boolean senderServiceRunning;
     private Bootstrap bootstrap;
     private NioEventLoopGroup eventLoopGroup;
 
-    public SenderService( ChannelInitializer channelInitializer, LogProvider logProvider )
+    public SenderService( ChannelInitializer channelInitializer, JobScheduler scheduler, LogProvider logProvider )
     {
         this.channelInitializer = channelInitializer;
+        this.scheduler = scheduler;
         this.log = logProvider.getLog( getClass() );
         this.channels = new ReconnectingChannels();
     }
@@ -114,7 +115,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
         serviceLock.writeLock().lock();
         try
         {
-            eventLoopGroup = new NioEventLoopGroup( 0, new NamedThreadFactory( "sender-service" ) );
+            eventLoopGroup = new NioEventLoopGroup( 0, scheduler.executor( Group.CATCHUP ) );
             bootstrap = new Bootstrap()
                     .group( eventLoopGroup )
                     .channel( NioSocketChannel.class )
@@ -135,12 +136,6 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
         try
         {
             senderServiceRunning = false;
-
-            if ( jobHandle != null )
-            {
-                jobHandle.cancel( true );
-                jobHandle = null;
-            }
 
             Iterator<ReconnectingChannel> itr = channels.values().iterator();
             while ( itr.hasNext() )

@@ -8,6 +8,7 @@ package org.neo4j.causalclustering.messaging;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -44,9 +45,11 @@ import org.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import org.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
+import org.neo4j.test.rule.CleanupRule;
 
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -68,6 +71,9 @@ public class SenderServiceIT
             new ApplicationProtocolRepository( ApplicationProtocols.values(), supportedApplicationProtocol );
     private final ModifierProtocolRepository modifierProtocolRepository =
             new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
+
+    @Rule
+    public CleanupRule cleanupRule = new CleanupRule();
 
     @Parameterized.Parameter
     public boolean blocking;
@@ -161,7 +167,7 @@ public class SenderServiceIT
                 logProvider,
                 logProvider );
 
-        return new SenderService( channelInitializer, logProvider );
+        return new SenderService( channelInitializer, cleanupRule.add( JobSchedulerFactory.createInitialisedScheduler() ), logProvider );
     }
 
     private ApplicationProtocolRepository clientRepository()
