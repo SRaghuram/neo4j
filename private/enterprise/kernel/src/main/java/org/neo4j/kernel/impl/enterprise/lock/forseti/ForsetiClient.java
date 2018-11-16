@@ -64,7 +64,7 @@ public class ForsetiClient implements Locks.Client
     private final ConcurrentMap<Long,ForsetiLockManager.Lock>[] lockMaps;
 
     /** resourceType -> wait strategy */
-    private final WaitStrategy<AcquireLockTimeoutException>[] waitStrategies;
+    private final WaitStrategy[] waitStrategies;
 
     /** How to resolve deadlocks. */
     private final DeadlockResolutionStrategy deadlockResolutionStrategy;
@@ -127,7 +127,7 @@ public class ForsetiClient implements Locks.Client
     private volatile ForsetiLockManager.Lock waitingForLock;
 
     public ForsetiClient( int id, ConcurrentMap<Long,ForsetiLockManager.Lock>[] lockMaps,
-                          WaitStrategy<AcquireLockTimeoutException>[] waitStrategies, Pool<ForsetiClient> clientPool,
+                          WaitStrategy[] waitStrategies, Pool<ForsetiClient> clientPool,
                           DeadlockResolutionStrategy deadlockResolutionStrategy, IntFunction<ForsetiClient> clientById,
                           long lockAcquisitionTimeoutMillis, Clock clock )
     {

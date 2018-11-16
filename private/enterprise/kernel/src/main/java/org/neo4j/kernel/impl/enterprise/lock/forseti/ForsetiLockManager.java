@@ -190,7 +190,7 @@ public class ForsetiLockManager implements Locks
         this.resourceTypes = new ResourceType[maxResourceId];
 
         /* Wait strategies per resource type */
-        WaitStrategy<AcquireLockTimeoutException>[] waitStrategies = new WaitStrategy[maxResourceId];
+        WaitStrategy[] waitStrategies = new WaitStrategy[maxResourceId];
 
         for ( ResourceType type : resourceTypes )
         {
@@ -269,11 +269,11 @@ public class ForsetiLockManager implements Locks
         private final Config config;
         private final Clock clock;
         private final ConcurrentMap<Long,ForsetiLockManager.Lock>[] lockMaps;
-        private final WaitStrategy<AcquireLockTimeoutException>[] waitStrategies;
+        private final WaitStrategy[] waitStrategies;
         private final DeadlockResolutionStrategy deadlockResolutionStrategy = DeadlockStrategies.DEFAULT;
 
         ForsetiClientFlyweightPool( Config config, Clock clock, ConcurrentMap<Long,Lock>[] lockMaps,
-                WaitStrategy<AcquireLockTimeoutException>[] waitStrategies )
+                WaitStrategy[] waitStrategies )
         {
             super( 128, null );
             this.config = config;
