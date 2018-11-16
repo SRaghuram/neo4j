@@ -5,7 +5,7 @@
  */
 package org.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.neo4j.internal.kernel.api.exceptions.KernelException;
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.Status;
 
 // TODO: Should this really be a KernelException?
