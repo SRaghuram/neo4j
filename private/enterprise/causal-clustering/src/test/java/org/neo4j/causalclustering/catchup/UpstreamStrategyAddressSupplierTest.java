@@ -16,7 +16,6 @@ import java.util.UUID;
 
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -41,11 +40,11 @@ public class UpstreamStrategyAddressSupplierTest
     public ExpectedException expectedException = ExpectedException.none();
 
     @Before
-    public void setup()
+    public void setup() throws CatchupAddressResolutionException
     {
-        when( topologyService.findCatchupAddress( eq( defaultMember ) ) ).thenReturn( Optional.of( defaultAddress ) );
-        when( topologyService.findCatchupAddress( eq( firstMember ) ) ).thenReturn( Optional.of( firstAddress ) );
-        when( topologyService.findCatchupAddress( eq( secondMember ) ) ).thenReturn( Optional.of( secondAddress ) );
+        when( topologyService.findCatchupAddress( eq( defaultMember ) ) ).thenReturn( defaultAddress );
+        when( topologyService.findCatchupAddress( eq( firstMember ) ) ).thenReturn( firstAddress );
+        when( topologyService.findCatchupAddress( eq( secondMember ) ) ).thenReturn( secondAddress );
     }
 
     @Test
@@ -103,7 +102,7 @@ public class UpstreamStrategyAddressSupplierTest
         }
 
         @Override
-        public Optional<MemberId> upstreamDatabase() throws UpstreamDatabaseSelectionException
+        public Optional<MemberId> upstreamDatabase()
         {
             MemberId consumed = upstreamDatabase;
             numberOfIterations--;

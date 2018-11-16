@@ -8,7 +8,7 @@ package org.neo4j.causalclustering.discovery;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.helper.RobustJobSchedulerWrapper;
@@ -130,14 +130,14 @@ public class HazelcastClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public Optional<AdvertisedSocketAddress> findCatchupAddress( MemberId memberId )
+    public AdvertisedSocketAddress findCatchupAddress( MemberId memberId )
     {
-        return topologyServiceRetryStrategy.apply( memberId, this::retrieveSocketAddress, Optional::isPresent );
+        return topologyServiceRetryStrategy.apply( memberId, this::retrieveSocketAddress, Objects::nonNull );
     }
 
-    private Optional<AdvertisedSocketAddress> retrieveSocketAddress( MemberId memberId )
+    private AdvertisedSocketAddress retrieveSocketAddress( MemberId memberId )
     {
-        return Optional.ofNullable( catchupAddressMap.get( memberId ) );
+        return catchupAddressMap.get( memberId );
     }
 
     /**

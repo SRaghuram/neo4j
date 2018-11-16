@@ -29,7 +29,7 @@ public class UpstreamStrategyAddressSupplier implements ThrowingSupplier<Adverti
         try
         {
             MemberId upstreamMember = strategySelector.bestUpstreamDatabase();
-            return topologyService.findCatchupAddress( upstreamMember ).orElseThrow( () -> new CatchupAddressResolutionException( upstreamMember ) );
+            return topologyService.findCatchupAddress( upstreamMember );
         }
         catch ( UpstreamDatabaseSelectionException e )
         {

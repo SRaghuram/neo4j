@@ -89,7 +89,7 @@ public class CatchupPollingProcessTest
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID );
         when( strategyPipeline.bestUpstreamDatabase() ).thenReturn( coreMemberId );
         when( localDatabase.storeId() ).thenReturn( storeId );
-        when( topologyService.findCatchupAddress( coreMemberId ) ).thenReturn( Optional.of( coreMemberAddress ) );
+        when( topologyService.findCatchupAddress( coreMemberId ) ).thenReturn( coreMemberAddress );
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_1, v1Client, v2Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ) ) ).thenReturn( catchupClient );

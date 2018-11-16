@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
+import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import org.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabaseCatchupComponents;
 import org.neo4j.causalclustering.catchup.storecopy.RemoteStore;
@@ -72,13 +73,13 @@ public class ReadReplicaStartupProcessTest
     private StoreId otherStoreId = new StoreId( 5, 6, 7, 8 );
 
     @Before
-    public void commonMocking()
+    public void commonMocking() throws CatchupAddressResolutionException
     {
         Map<MemberId,CoreServerInfo> members = new HashMap<>();
         members.put( memberId, mock( CoreServerInfo.class ) );
         when( topologyService.allCoreServers() ).thenReturn( clusterTopology );
         when( clusterTopology.members() ).thenReturn( members );
-        when( topologyService.findCatchupAddress( memberId ) ).thenReturn( Optional.of( fromAddress ) );
+        when( topologyService.findCatchupAddress( memberId ) ).thenReturn( fromAddress );
         //I know ... I'm sorry
         when( catchupComponents.componentsFor( anyString() ) )
                 .then( arg -> Optional.ofNullable( dbCatchupComponents.get( arg.<String>getArgument( 0 ) ) ) );
@@ -139,7 +140,7 @@ public class ReadReplicaStartupProcessTest
             mockDatabaseResponses( name, true, Optional.of( otherStoreId ) );
         }
 
-        when( topologyService.findCatchupAddress( any() )).thenReturn( Optional.of( fromAddress ) );
+        when( topologyService.findCatchupAddress( any() )).thenReturn( fromAddress );
         ReadReplicaStartupProcess readReplicaStartupProcess =
                 new ReadReplicaStartupProcess( new FakeExecutor(), databaseService, txPulling, chooseFirstMember(), NullLogProvider.getInstance(),
                         NullLogProvider.getInstance(), topologyService, catchupComponents, retryStrategy );
@@ -187,7 +188,7 @@ public class ReadReplicaStartupProcessTest
             mockCatchupComponents( name, mockDb, mockRemoteStore, storeCopyProcess );
         }
 
-        when( topologyService.findCatchupAddress( any() )).thenReturn( Optional.of( fromAddress ) );
+        when( topologyService.findCatchupAddress( any() )).thenReturn( fromAddress );
         ReadReplicaStartupProcess readReplicaStartupProcess =
                 new ReadReplicaStartupProcess( new FakeExecutor(), databaseService, txPulling, chooseFirstMember(), NullLogProvider.getInstance(),
                         NullLogProvider.getInstance(), topologyService, catchupComponents, retryStrategy );

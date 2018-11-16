@@ -19,6 +19,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import org.neo4j.causalclustering.discovery.CoreTopology;
@@ -215,9 +216,14 @@ public class UserDefinedConfigurationStrategyTest
             }
 
             @Override
-            public Optional<AdvertisedSocketAddress> findCatchupAddress( MemberId upstream )
+            public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
             {
-                return Optional.ofNullable( catchupAddresses.get( upstream ) );
+                AdvertisedSocketAddress advertisedSocketAddress = catchupAddresses.get( upstream );
+                if ( advertisedSocketAddress == null )
+                {
+                    throw new CatchupAddressResolutionException( upstream );
+                }
+                return advertisedSocketAddress;
             }
 
             @Override

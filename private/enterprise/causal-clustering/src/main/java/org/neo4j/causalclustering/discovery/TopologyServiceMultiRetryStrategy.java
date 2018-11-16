@@ -5,13 +5,11 @@
  */
 package org.neo4j.causalclustering.discovery;
 
-import java.util.Optional;
-
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.LogProvider;
 
-public class TopologyServiceMultiRetryStrategy extends MultiRetryStrategy<MemberId,Optional<AdvertisedSocketAddress>> implements TopologyServiceRetryStrategy
+public class TopologyServiceMultiRetryStrategy extends MultiRetryStrategy<MemberId,AdvertisedSocketAddress> implements TopologyServiceRetryStrategy
 {
     public TopologyServiceMultiRetryStrategy( long delayInMillis, long retries, LogProvider logProvider )
     {

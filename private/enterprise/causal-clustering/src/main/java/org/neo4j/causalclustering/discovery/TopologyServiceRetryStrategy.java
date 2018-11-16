@@ -5,11 +5,9 @@
  */
 package org.neo4j.causalclustering.discovery;
 
-import java.util.Optional;
-
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 
-public interface TopologyServiceRetryStrategy extends RetryStrategy<MemberId, Optional<AdvertisedSocketAddress>>
+public interface TopologyServiceRetryStrategy extends RetryStrategy<MemberId,AdvertisedSocketAddress>
 {
 }

@@ -8,6 +8,7 @@ package org.neo4j.causalclustering.discovery;
 import java.util.Map;
 import java.util.Optional;
 
+import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -88,14 +89,16 @@ class SharedDiscoveryReadReplicaClient extends SafeLifecycle implements Topology
     }
 
     @Override
-    public Optional<AdvertisedSocketAddress> findCatchupAddress( MemberId upstream )
+    public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        return sharedDiscoveryService.getCoreTopology( dbName, false )
-                .find( upstream )
-                .map( info -> Optional.of( info.getCatchupServer() ) )
-                .orElseGet( () -> sharedDiscoveryService.getReadReplicaTopology()
-                        .find( upstream )
-                        .map( ReadReplicaInfo::getCatchupServer ) );
+        Optional<AdvertisedSocketAddress> coreAdvertisedAddress =
+                sharedDiscoveryService.getCoreTopology( dbName, false ).find( upstream ).map( CoreServerInfo::getCatchupServer );
+        if ( coreAdvertisedAddress.isPresent() )
+        {
+            return coreAdvertisedAddress.get();
+        }
+        return sharedDiscoveryService.getReadReplicaTopology()
+                        .find( upstream ).map( ReadReplicaInfo::getCatchupServer ).orElseThrow( () -> new CatchupAddressResolutionException( upstream ) );
     }
 
     @Override

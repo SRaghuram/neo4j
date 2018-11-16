@@ -10,10 +10,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import org.neo4j.causalclustering.discovery.CoreServerInfo;
 import org.neo4j.causalclustering.discovery.CoreTopology;
@@ -116,9 +116,9 @@ class FakeTopologyService implements TopologyService
     }
 
     @Override
-    public Optional<AdvertisedSocketAddress> findCatchupAddress( MemberId upstream )
+    public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        return Optional.empty();
+        throw new CatchupAddressResolutionException( upstream );
     }
 
     @Override

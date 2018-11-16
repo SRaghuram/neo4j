@@ -20,8 +20,10 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 
 import java.time.Clock;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
+import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
 import org.neo4j.causalclustering.discovery.CoreTopology;
@@ -195,9 +197,9 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public Optional<AdvertisedSocketAddress> findCatchupAddress( MemberId upstream )
+    public AdvertisedSocketAddress findCatchupAddress( MemberId upstream )
     {
-        return retryStrategy.apply( upstream, topologyState::retrieveSocketAddress, Optional::isPresent );
+        return retryStrategy.apply( upstream, topologyState::retrieveSocketAddress, Objects::nonNull );
     }
 
     @Override

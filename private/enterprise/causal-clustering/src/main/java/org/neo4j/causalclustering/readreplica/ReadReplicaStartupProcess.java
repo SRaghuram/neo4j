@@ -201,7 +201,7 @@ class ReadReplicaStartupProcess implements Lifecycle
             debugLog.info( "Local database is empty, attempting to replace with copy from upstream server %s", source );
 
             debugLog.info( "Finding store id of upstream server %s", source );
-            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source ).orElseThrow( () -> new TopologyLookupException( source ) );
+            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source );
             StoreId storeId = catchup.remoteStore().getStoreId( fromAddress );
 
             debugLog.info( "Copying store from upstream server %s", source );
@@ -220,8 +220,7 @@ class ReadReplicaStartupProcess implements Lifecycle
             throws StoreIdDownloadFailedException, TopologyLookupException
     {
         StoreId localStoreId = localDatabase.storeId();
-        AdvertisedSocketAddress advertisedSocketAddress =
-                topologyService.findCatchupAddress( upstream ).orElseThrow( () -> new TopologyLookupException( upstream ) );
+        AdvertisedSocketAddress advertisedSocketAddress = topologyService.findCatchupAddress( upstream );
         StoreId remoteStoreId = remoteStore.getStoreId( advertisedSocketAddress );
         if ( !localStoreId.equals( remoteStoreId ) )
         {

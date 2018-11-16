@@ -248,7 +248,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         TxPullResult result;
         try
         {
-            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( upstream ).orElseThrow( () -> new TopologyLookupException( upstream ) );
+            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( upstream );
             result = catchUpClient.getClient( fromAddress )
                     .v1( c -> c.pullTransactions( localStoreId, lastQueuedTxId ) )
                     .v2( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseName ) )
@@ -319,7 +319,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         try
         {
             MemberId source = selectionStrategy.bestUpstreamDatabase();
-            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source ).orElseThrow( () -> new TopologyLookupException( source ) );
+            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source );
             storeCopyProcess.replaceWithStoreFrom( new SingleAddressProvider( fromAddress ), localDatabase.storeId() );
             transitionToTxPulling();
         }
