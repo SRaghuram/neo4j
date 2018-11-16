@@ -235,6 +235,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
 
     test(s"$cypherToken-$functionName: should not plan aggregation for multiple types") {
       graph.execute("CREATE (:Awesome {prop1: 'hallo'})")
+      graph.execute("CREATE (:Awesome {prop1: 35.5})")
 
       val result = executeWith(Configs.InterpretedAndSlotted,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
@@ -246,7 +247,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
 
       //expectedOrder.head corresponds to limit 1
       val expected = expectedOrder(List(
-        Map(s"$functionName(n.prop1)" -> 40), // min
+        Map(s"$functionName(n.prop1)" -> 35.5), // min
         Map(s"$functionName(n.prop1)" -> 44) // max
       )).head
       result.toList should equal(List(expected))
@@ -337,7 +338,6 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
       )).head
       result.toList should equal(List(expected))
     }
-
   }
 
   // Only tested in ASC mode because it's hard to make compatibility check out otherwise
