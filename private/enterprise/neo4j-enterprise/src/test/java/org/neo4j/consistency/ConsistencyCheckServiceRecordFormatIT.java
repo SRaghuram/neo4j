@@ -32,8 +32,8 @@ import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
-import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EmbeddedDatabaseRule;
+import org.neo4j.test.rule.GraphDatabaseRule;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static org.junit.Assert.assertTrue;
@@ -41,7 +41,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith( Parameterized.class )
 public class ConsistencyCheckServiceRecordFormatIT
 {
-    private final DatabaseRule db = new EmbeddedDatabaseRule()
+    private final GraphDatabaseRule db = new EmbeddedDatabaseRule()
             .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
             .startLazily();
 

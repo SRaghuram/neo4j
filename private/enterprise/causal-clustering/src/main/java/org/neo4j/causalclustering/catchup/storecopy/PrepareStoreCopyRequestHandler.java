@@ -17,7 +17,7 @@ import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
 import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import org.neo4j.graphdb.Resource;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 
@@ -27,10 +27,10 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
 {
     private final CatchupServerProtocol protocol;
     private final PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider;
-    private final Supplier<NeoStoreDataSource> dataSourceSupplier;
+    private final Supplier<Database> dataSourceSupplier;
     private final StoreFileStreamingProtocol streamingProtocol = new StoreFileStreamingProtocol();
 
-    public PrepareStoreCopyRequestHandler( CatchupServerProtocol catchupServerProtocol, Supplier<NeoStoreDataSource> dataSourceSupplier,
+    public PrepareStoreCopyRequestHandler( CatchupServerProtocol catchupServerProtocol, Supplier<Database> dataSourceSupplier,
             PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider )
     {
         this.protocol = catchupServerProtocol;
@@ -45,18 +45,18 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
         PrepareStoreCopyResponse response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_LISTING_STORE );
         try
         {
-            NeoStoreDataSource neoStoreDataSource = dataSourceSupplier.get();
-            if ( !hasSameStoreId( prepareStoreCopyRequest.getStoreId(), neoStoreDataSource ) )
+            Database database = dataSourceSupplier.get();
+            if ( !hasSameStoreId( prepareStoreCopyRequest.getStoreId(), database ) )
             {
                 channelHandlerContext.write( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE );
                 response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_STORE_ID_MISMATCH );
             }
             else
             {
-                CheckPointer checkPointer = neoStoreDataSource.getDependencyResolver().resolveDependency( CheckPointer.class );
+                CheckPointer checkPointer = database.getDependencyResolver().resolveDependency( CheckPointer.class );
                 closeablesListener.add( tryCheckpointAndAcquireMutex( checkPointer ) );
                 PrepareStoreCopyFiles prepareStoreCopyFiles =
-                        closeablesListener.add( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( neoStoreDataSource ) );
+                        closeablesListener.add( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( database ) );
 
                 StoreResource[] nonReplayable = prepareStoreCopyFiles.getAtomicFilesSnapshot();
                 for ( StoreResource storeResource : nonReplayable )

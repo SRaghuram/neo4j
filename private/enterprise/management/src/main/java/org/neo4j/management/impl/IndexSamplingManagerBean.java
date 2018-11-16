@@ -13,8 +13,8 @@ import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelExcept
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
-import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
 import org.neo4j.kernel.impl.core.TokenHolders;
@@ -92,7 +92,7 @@ public final class IndexSamplingManagerBean extends ManagementBeanProvider
         private volatile State state;
 
         @Override
-        public void registered( NeoStoreDataSource dataSource )
+        public void registered( Database dataSource )
         {
             DependencyResolver dependencyResolver = dataSource.getDependencyResolver();
             state = new State(
@@ -102,7 +102,7 @@ public final class IndexSamplingManagerBean extends ManagementBeanProvider
         }
 
         @Override
-        public void unregistered( NeoStoreDataSource dataSource )
+        public void unregistered( Database dataSource )
         {
             state = null;
         }

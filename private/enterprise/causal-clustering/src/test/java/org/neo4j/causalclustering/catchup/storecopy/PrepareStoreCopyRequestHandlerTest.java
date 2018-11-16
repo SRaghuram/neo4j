@@ -22,7 +22,7 @@ import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
 import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import org.neo4j.causalclustering.identity.StoreId;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
 import org.neo4j.kernel.impl.util.Dependencies;
@@ -43,7 +43,7 @@ public class PrepareStoreCopyRequestHandlerTest
     private EmbeddedChannel embeddedChannel;
 
     private static final CheckPointer checkPointer = mock( CheckPointer.class );
-    private static final NeoStoreDataSource neoStoreDataSource = mock( NeoStoreDataSource.class );
+    private static final Database DATABASE = mock( Database.class );
     private CatchupServerProtocol catchupServerProtocol;
     private final PrepareStoreCopyFiles prepareStoreCopyFiles = mock( PrepareStoreCopyFiles.class );
 
@@ -53,8 +53,8 @@ public class PrepareStoreCopyRequestHandlerTest
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( checkPointer );
         StoreCopyCheckPointMutex storeCopyCheckPointMutex = new StoreCopyCheckPointMutex();
-        when( neoStoreDataSource.getStoreCopyCheckPointMutex() ).thenReturn( storeCopyCheckPointMutex );
-        when( neoStoreDataSource.getDependencyResolver() ).thenReturn( dependencies );
+        when( DATABASE.getStoreCopyCheckPointMutex() ).thenReturn( storeCopyCheckPointMutex );
+        when( DATABASE.getDependencyResolver() ).thenReturn( dependencies );
         PrepareStoreCopyRequestHandler subject = createHandler();
         embeddedChannel = new EmbeddedChannel( subject );
     }
@@ -107,7 +107,7 @@ public class PrepareStoreCopyRequestHandlerTest
         when( channelHandlerContext.writeAndFlush( any( PrepareStoreCopyResponse.class ) ) ).thenReturn( channelPromise );
 
         ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-        when( neoStoreDataSource.getStoreCopyCheckPointMutex() ).thenReturn( new StoreCopyCheckPointMutex( lock ) );
+        when( DATABASE.getStoreCopyCheckPointMutex() ).thenReturn( new StoreCopyCheckPointMutex( lock ) );
         PrepareStoreCopyRequestHandler subjectHandler = createHandler();
 
         // and
@@ -133,8 +133,8 @@ public class PrepareStoreCopyRequestHandlerTest
     {
         catchupServerProtocol = new CatchupServerProtocol();
         catchupServerProtocol.expect( CatchupServerProtocol.State.PREPARE_STORE_COPY );
-        Supplier<NeoStoreDataSource> dataSourceSupplier = () -> neoStoreDataSource;
-        when( neoStoreDataSource.getStoreId() ).thenReturn( new org.neo4j.storageengine.api.StoreId( 1, 2, 5, 3, 4 ) );
+        Supplier<Database> dataSourceSupplier = () -> DATABASE;
+        when( DATABASE.getStoreId() ).thenReturn( new org.neo4j.storageengine.api.StoreId( 1, 2, 5, 3, 4 ) );
 
         PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider = mock( PrepareStoreCopyFilesProvider.class );
         when( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( any() ) ).thenReturn( prepareStoreCopyFiles );

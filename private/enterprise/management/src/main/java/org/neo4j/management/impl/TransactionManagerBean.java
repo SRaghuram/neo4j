@@ -11,7 +11,7 @@ import org.neo4j.helpers.Service;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
@@ -76,12 +76,12 @@ public final class TransactionManagerBean extends ManagementBeanProvider
         @Override
         public long getLastCommittedTxId()
         {
-            NeoStoreDataSource neoStoreDataSource = dataSourceManager.getDataSource();
-            if ( neoStoreDataSource == null )
+            Database database = dataSourceManager.getDataSource();
+            if ( database == null )
             {
                 return -1;
             }
-            return neoStoreDataSource.getDependencyResolver().resolveDependency( TransactionIdStore.class )
+            return database.getDependencyResolver().resolveDependency( TransactionIdStore.class )
                     .getLastCommittedTransactionId();
         }
     }

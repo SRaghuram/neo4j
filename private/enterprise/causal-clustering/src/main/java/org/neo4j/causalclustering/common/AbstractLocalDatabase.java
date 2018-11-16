@@ -14,7 +14,7 @@ import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
@@ -137,7 +137,7 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     }
 
     @Override
-    public NeoStoreDataSource dataSource()
+    public Database dataSource()
     {
         return dataSourceManager.getDataSource( databaseName ).orElseThrow( IllegalStateException::new );
     }

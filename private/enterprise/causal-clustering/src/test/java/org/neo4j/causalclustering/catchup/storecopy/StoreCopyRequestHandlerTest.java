@@ -25,7 +25,7 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.TriggerInfo;
 import org.neo4j.kernel.impl.util.Dependencies;
@@ -49,7 +49,7 @@ public class StoreCopyRequestHandlerTest
     private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4 );
     private final DefaultFileSystemAbstraction fileSystemAbstraction = new DefaultFileSystemAbstraction();
 
-    private final NeoStoreDataSource neoStoreDataSource = mock( NeoStoreDataSource.class );
+    private final Database database = mock( Database.class );
     private final FakeCheckPointer checkPointer = new FakeCheckPointer();
     private EmbeddedChannel embeddedChannel;
     private CatchupServerProtocol catchupServerProtocol;
@@ -63,12 +63,12 @@ public class StoreCopyRequestHandlerTest
         catchupServerProtocol = new CatchupServerProtocol();
         catchupServerProtocol.expect( CatchupServerProtocol.State.GET_STORE_FILE );
         StoreCopyRequestHandler storeCopyRequestHandler =
-                new NiceStoreCopyRequestHandler( catchupServerProtocol, () -> neoStoreDataSource, new StoreFileStreamingProtocol(),
+                new NiceStoreCopyRequestHandler( catchupServerProtocol, () -> database, new StoreFileStreamingProtocol(),
                         fileSystemAbstraction, NullLogProvider.getInstance() );
         Dependencies dependencies = new Dependencies();
-        when( neoStoreDataSource.getStoreId() ).thenReturn( new org.neo4j.storageengine.api.StoreId( 1, 2, 5, 3, 4 ) );
-        when( neoStoreDataSource.getDependencyResolver() ).thenReturn( dependencies );
-        when( neoStoreDataSource.getDatabaseLayout() ).thenReturn( DatabaseLayout.of( new File( "." ) ) );
+        when( database.getStoreId() ).thenReturn( new org.neo4j.storageengine.api.StoreId( 1, 2, 5, 3, 4 ) );
+        when( database.getDependencyResolver() ).thenReturn( dependencies );
+        when( database.getDatabaseLayout() ).thenReturn( DatabaseLayout.of( new File( "." ) ) );
         embeddedChannel = new EmbeddedChannel( storeCopyRequestHandler );
     }
 
@@ -101,7 +101,7 @@ public class StoreCopyRequestHandlerTest
     @Test
     public void shouldResetProtocolAndGiveErrorOnUncheckedException()
     {
-        when( neoStoreDataSource.getStoreId() ).thenThrow( new IllegalStateException() );
+        when( database.getStoreId() ).thenThrow( new IllegalStateException() );
 
         try
         {
@@ -124,7 +124,7 @@ public class StoreCopyRequestHandlerTest
     public void shoulResetProtocolAndGiveErrorIfFilesThrowException()
     {
         EmbeddedChannel alternativeChannel = new EmbeddedChannel(
-                new EvilStoreCopyRequestHandler( catchupServerProtocol, () -> neoStoreDataSource, new StoreFileStreamingProtocol(),
+                new EvilStoreCopyRequestHandler( catchupServerProtocol, () -> database, new StoreFileStreamingProtocol(),
                         fileSystemAbstraction, NullLogProvider.getInstance() ) );
         try
         {
@@ -171,7 +171,7 @@ public class StoreCopyRequestHandlerTest
 
     private class NiceStoreCopyRequestHandler extends StoreCopyRequestHandler<GetStoreFileRequest>
     {
-        private NiceStoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<NeoStoreDataSource> dataSource,
+        private NiceStoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource,
                 StoreFileStreamingProtocol storeFileStreamingProtocol,
                 FileSystemAbstraction fs, LogProvider logProvider )
         {
@@ -179,7 +179,7 @@ public class StoreCopyRequestHandlerTest
         }
 
         @Override
-        ResourceIterator<StoreFileMetadata> files( GetStoreFileRequest request, NeoStoreDataSource neoStoreDataSource )
+        ResourceIterator<StoreFileMetadata> files( GetStoreFileRequest request, Database database )
         {
             return Iterators.emptyResourceIterator();
         }
@@ -187,14 +187,14 @@ public class StoreCopyRequestHandlerTest
 
     private class EvilStoreCopyRequestHandler extends StoreCopyRequestHandler<GetStoreFileRequest>
     {
-        private EvilStoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<NeoStoreDataSource> dataSource,
+        private EvilStoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
             super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
-        ResourceIterator<StoreFileMetadata> files( GetStoreFileRequest request, NeoStoreDataSource neoStoreDataSource )
+        ResourceIterator<StoreFileMetadata> files( GetStoreFileRequest request, Database database )
         {
             throw new IllegalStateException( "I am evil" );
         }

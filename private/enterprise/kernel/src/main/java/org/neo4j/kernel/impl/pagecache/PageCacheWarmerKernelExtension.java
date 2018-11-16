@@ -8,9 +8,9 @@ package org.neo4j.kernel.impl.pagecache;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerMonitor;
 import org.neo4j.kernel.impl.transaction.state.NeoStoreFileListing;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -20,7 +20,7 @@ import org.neo4j.scheduler.JobScheduler;
 class PageCacheWarmerKernelExtension extends LifecycleAdapter
 {
     private final DatabaseAvailabilityGuard databaseAvailabilityGuard;
-    private final NeoStoreDataSource dataSource;
+    private final Database dataSource;
     private final Config config;
     private final PageCacheWarmer pageCacheWarmer;
     private final WarmupAvailabilityListener availabilityListener;
@@ -28,7 +28,7 @@ class PageCacheWarmerKernelExtension extends LifecycleAdapter
 
     PageCacheWarmerKernelExtension(
             JobScheduler scheduler, DatabaseAvailabilityGuard databaseAvailabilityGuard, PageCache pageCache, FileSystemAbstraction fs,
-            NeoStoreDataSource dataSource, Log log, PageCacheWarmerMonitor monitor, Config config )
+            Database dataSource, Log log, PageCacheWarmerMonitor monitor, Config config )
     {
         this.databaseAvailabilityGuard = databaseAvailabilityGuard;
         this.dataSource = dataSource;

@@ -17,20 +17,20 @@ import java.util.stream.Stream;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
 import static org.neo4j.io.fs.FileUtils.relativePath;
 
 public class PrepareStoreCopyFiles implements AutoCloseable
 {
-    private final NeoStoreDataSource neoStoreDataSource;
+    private final Database database;
     private final FileSystemAbstraction fileSystemAbstraction;
     private final CloseablesListener closeablesListener = new CloseablesListener();
 
-    PrepareStoreCopyFiles( NeoStoreDataSource neoStoreDataSource, FileSystemAbstraction fileSystemAbstraction )
+    PrepareStoreCopyFiles( Database database, FileSystemAbstraction fileSystemAbstraction )
     {
-        this.neoStoreDataSource = neoStoreDataSource;
+        this.database = database;
         this.fileSystemAbstraction = fileSystemAbstraction;
     }
 
@@ -42,8 +42,8 @@ public class PrepareStoreCopyFiles implements AutoCloseable
     StoreResource[] getAtomicFilesSnapshot() throws IOException
     {
         ResourceIterator<StoreFileMetadata> neoStoreFilesIterator =
-                closeablesListener.add( neoStoreDataSource.getNeoStoreFileListing().builder().excludeAll().includeNeoStoreFiles().build() );
-        ResourceIterator<StoreFileMetadata> indexIterator = closeablesListener.add( neoStoreDataSource
+                closeablesListener.add( database.getNeoStoreFileListing().builder().excludeAll().includeNeoStoreFiles().build() );
+        ResourceIterator<StoreFileMetadata> indexIterator = closeablesListener.add( database
                 .getNeoStoreFileListing()
                 .builder()
                 .excludeAll()
@@ -53,7 +53,7 @@ public class PrepareStoreCopyFiles implements AutoCloseable
                 .includeSchemaIndexStoreFiles()
                 .build() );
 
-        return Stream.concat( neoStoreFilesIterator.stream().filter( isCountFile( neoStoreDataSource.getDatabaseLayout() ) ), indexIterator.stream() ).map(
+        return Stream.concat( neoStoreFilesIterator.stream().filter( isCountFile( database.getDatabaseLayout() ) ), indexIterator.stream() ).map(
                 mapToStoreResource() ).toArray( StoreResource[]::new );
     }
 
@@ -74,10 +74,10 @@ public class PrepareStoreCopyFiles implements AutoCloseable
 
     File[] listReplayableFiles() throws IOException
     {
-        try ( Stream<StoreFileMetadata> stream = neoStoreDataSource.getNeoStoreFileListing().builder().excludeLogFiles()
+        try ( Stream<StoreFileMetadata> stream = database.getNeoStoreFileListing().builder().excludeLogFiles()
                 .excludeExplicitIndexStoreFiles().excludeSchemaIndexStoreFiles().excludeAdditionalProviders().build().stream() )
         {
-            return stream.filter( isCountFile( neoStoreDataSource.getDatabaseLayout() ).negate() ).map( StoreFileMetadata::file ).toArray( File[]::new );
+            return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( StoreFileMetadata::file ).toArray( File[]::new );
         }
     }
 
@@ -89,7 +89,7 @@ public class PrepareStoreCopyFiles implements AutoCloseable
 
     private StoreResource toStoreResource( StoreFileMetadata storeFileMetadata ) throws IOException
     {
-        File databaseDirectory = neoStoreDataSource.getDatabaseLayout().databaseDirectory();
+        File databaseDirectory = database.getDatabaseLayout().databaseDirectory();
         File file = storeFileMetadata.file();
         String relativePath = relativePath( databaseDirectory, file );
         return new StoreResource( file, relativePath, storeFileMetadata.recordSize(), fileSystemAbstraction );

@@ -9,8 +9,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
-import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
 import org.neo4j.kernel.impl.core.TokenHolder;
@@ -34,13 +34,13 @@ public class IndexSamplingManagerBeanTest
     private static final String NON_EXISTING_PROPERTY = "bogusProp";
     private static final int PROPERTY_ID = 43;
 
-    private NeoStoreDataSource dataSource;
+    private Database dataSource;
     private IndexingService indexingService;
 
     @Before
     public void setup()
     {
-        dataSource = mock( NeoStoreDataSource.class );
+        dataSource = mock( Database.class );
         StorageEngine storageEngine = mock( StorageEngine.class );
         StorageReader storageReader = mock( StorageReader.class );
         when( storageEngine.newReader() ).thenReturn( storageReader );

@@ -5,12 +5,12 @@
  */
 package org.neo4j.kernel;
 
-import java.io.File;
-import java.nio.file.Path;
-
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+
+import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.commandline.admin.AdminTool;
 import org.neo4j.commandline.admin.CommandLocator;
@@ -25,8 +25,8 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EnterpriseDatabaseRule;
+import org.neo4j.test.rule.GraphDatabaseRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.util.TestHelpers;
@@ -115,7 +115,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                 "--name=graph.db-backup",
                 "--backup-dir=" + backupDir ) );
         latch.release();
-        DatabaseRule.RestartAction useBackupDir = ( fs, storeDir ) ->
+        GraphDatabaseRule.RestartAction useBackupDir = ( fs, storeDir ) ->
         {
             fs.deleteRecursively( storeDir.databaseDirectory() );
             fs.copyRecursively( backupDir, storeDir.databaseDirectory() );

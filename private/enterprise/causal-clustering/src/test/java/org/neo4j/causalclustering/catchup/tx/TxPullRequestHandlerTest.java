@@ -15,7 +15,7 @@ import org.neo4j.causalclustering.catchup.ResponseMessageType;
 import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.cursor.Cursor;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.command.Commands;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
@@ -50,7 +50,7 @@ public class TxPullRequestHandlerTest
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
 
     private StoreId storeId = new StoreId( 1, 2, 3, 4 );
-    private NeoStoreDataSource datasource = mock( NeoStoreDataSource.class );
+    private Database datasource = mock( Database.class );
     private LogicalTransactionStore logicalTransactionStore = mock( LogicalTransactionStore.class );
     private TransactionIdStore transactionIdStore = mock( TransactionIdStore.class );
 

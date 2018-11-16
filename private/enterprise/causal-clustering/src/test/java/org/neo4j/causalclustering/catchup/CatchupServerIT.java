@@ -32,7 +32,7 @@ import org.neo4j.graphdb.index.Index;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.state.NeoStoreFileListing;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -50,8 +50,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.io.fs.FileUtils.relativePath;
 
 // TODO - actually update tests for potential database name related issues.
@@ -117,7 +117,7 @@ public class CatchupServerIT
     public void shouldListExpectedFilesCorrectly() throws Exception
     {
         // given (setup) required runtime subject dependencies
-        NeoStoreDataSource neoStoreDataSource = getNeoStoreDataSource( graphDb );
+        Database database = getDatabase( graphDb );
         SimpleCatchupClient simpleCatchupClient = new SimpleCatchupClient( graphDb, DEFAULT_DATABASE_NAME, fsa, catchupClient,
                 catchupServer, temporaryDirectory, LOG_PROVIDER );
 
@@ -126,10 +126,10 @@ public class CatchupServerIT
         simpleCatchupClient.close();
 
         // then
-        listOfDownloadedFilesMatchesServer( neoStoreDataSource, prepareStoreCopyResponse.getFiles() );
+        listOfDownloadedFilesMatchesServer( database, prepareStoreCopyResponse.getFiles() );
 
         // and downloaded files are identical to source
-        List<File> expectedCountStoreFiles = listServerExpectedNonReplayableFiles( neoStoreDataSource );
+        List<File> expectedCountStoreFiles = listServerExpectedNonReplayableFiles( database );
         for ( File storeFileSnapshot : expectedCountStoreFiles )
         {
             fileContentEquals( databaseFileToClientFile( storeFileSnapshot ), storeFileSnapshot );
@@ -191,14 +191,14 @@ public class CatchupServerIT
     {
 
         // given
-        NeoStoreDataSource neoStoreDataSource = getNeoStoreDataSource( graphDb );
-        List<File> expectingFiles = neoStoreDataSource.getNeoStoreFileListing().builder().excludeAll().includeSchemaIndexStoreFiles().build().stream().map(
+        Database database = getDatabase( graphDb );
+        List<File> expectingFiles = database.getNeoStoreFileListing().builder().excludeAll().includeSchemaIndexStoreFiles().build().stream().map(
                 StoreFileMetadata::file ).collect( toList() );
         SimpleCatchupClient simpleCatchupClient = new SimpleCatchupClient( graphDb, DEFAULT_DATABASE_NAME, fsa, catchupClient,
                 catchupServer, temporaryDirectory, LOG_PROVIDER );
 
         // and
-        LongIterator indexIds = getExpectedIndexIds( neoStoreDataSource ).longIterator();
+        LongIterator indexIds = getExpectedIndexIds( database ).longIterator();
 
         // when
         while ( indexIds.hasNext() )
@@ -267,38 +267,38 @@ public class CatchupServerIT
                 CausalClusteringTestHelpers.fileContent( fileB, fsa ) );
     }
 
-    private void listOfDownloadedFilesMatchesServer( NeoStoreDataSource neoStoreDataSource, File[] files )
+    private void listOfDownloadedFilesMatchesServer( Database database, File[] files )
             throws IOException
     {
-        List<String> expectedStoreFiles = getExpectedStoreFiles( neoStoreDataSource );
+        List<String> expectedStoreFiles = getExpectedStoreFiles( database );
         List<String> givenFile = Arrays.stream( files ).map( File::getName ).collect( toList() );
         assertThat( givenFile, containsInAnyOrder( expectedStoreFiles.toArray( new String[givenFile.size()] ) ) );
     }
 
-    private static LongSet getExpectedIndexIds( NeoStoreDataSource neoStoreDataSource )
+    private static LongSet getExpectedIndexIds( Database database )
     {
-        return neoStoreDataSource.getNeoStoreFileListing().getNeoStoreFileIndexListing().getIndexIds();
+        return database.getNeoStoreFileListing().getNeoStoreFileIndexListing().getIndexIds();
     }
 
-    private static List<File> listServerExpectedNonReplayableFiles( NeoStoreDataSource neoStoreDataSource ) throws IOException
+    private static List<File> listServerExpectedNonReplayableFiles( Database database ) throws IOException
     {
-        try ( Stream<StoreFileMetadata> countStoreStream = neoStoreDataSource.getNeoStoreFileListing().builder().excludeAll()
+        try ( Stream<StoreFileMetadata> countStoreStream = database.getNeoStoreFileListing().builder().excludeAll()
                 .includeNeoStoreFiles().build().stream();
-                Stream<StoreFileMetadata> explicitIndexStream = neoStoreDataSource.getNeoStoreFileListing().builder().excludeAll()
+                Stream<StoreFileMetadata> explicitIndexStream = database.getNeoStoreFileListing().builder().excludeAll()
                          .includeExplicitIndexStoreStoreFiles().build().stream() )
         {
-            return Stream.concat( countStoreStream.filter( isCountFile( neoStoreDataSource.getDatabaseLayout() ) ), explicitIndexStream ).map(
+            return Stream.concat( countStoreStream.filter( isCountFile( database.getDatabaseLayout() ) ), explicitIndexStream ).map(
                     StoreFileMetadata::file ).collect( toList() );
         }
     }
 
-    private List<String> getExpectedStoreFiles( NeoStoreDataSource neoStoreDataSource ) throws IOException
+    private List<String> getExpectedStoreFiles( Database database ) throws IOException
     {
-        NeoStoreFileListing.StoreFileListingBuilder builder = neoStoreDataSource.getNeoStoreFileListing().builder();
+        NeoStoreFileListing.StoreFileListingBuilder builder = database.getNeoStoreFileListing().builder();
         builder.excludeLogFiles().excludeExplicitIndexStoreFiles().excludeSchemaIndexStoreFiles().excludeAdditionalProviders();
         try ( Stream<StoreFileMetadata> stream = builder.build().stream() )
         {
-            return stream.filter( isCountFile( neoStoreDataSource.getDatabaseLayout() ).negate() ).map( sfm -> sfm.file().getName() ).collect( toList() );
+            return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( sfm -> sfm.file().getName() ).collect( toList() );
         }
     }
 
@@ -345,8 +345,8 @@ public class CatchupServerIT
         return graphDb.getDependencyResolver().resolveDependency( CheckPointer.class );
     }
 
-    private static NeoStoreDataSource getNeoStoreDataSource( GraphDatabaseAPI graphDb )
+    private static Database getDatabase( GraphDatabaseAPI graphDb )
     {
-        return graphDb.getDependencyResolver().resolveDependency( NeoStoreDataSource.class );
+        return graphDb.getDependencyResolver().resolveDependency( Database.class );
     }
 }

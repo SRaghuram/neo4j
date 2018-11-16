@@ -69,7 +69,7 @@ public class CoreBootstrapperIT
                 .getStoreDir();
         DatabaseLayout databaseLayout = DatabaseLayout.of( classicNeo4jStore );
 
-        //TODO: Consider providing a data source manager as well - when we have NeoStoreDataSourceRule playing nice with cluster
+        //TODO: Consider providing a data source manager as well - when we have DatabaseRule playing nice with cluster
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseLayout( databaseLayout )
                 .withMonitors( new Monitors() )

@@ -21,8 +21,8 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.command.Commands;
@@ -45,7 +45,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.kernel.recovery.LogTailScanner.LogTailInformation;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.rule.NeoStoreDataSourceRule;
+import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -71,7 +71,7 @@ public class TransactionLogCatchUpWriterTest
     @Rule
     public final PageCacheRule pageCacheRule = new PageCacheRule();
     @Rule
-    public NeoStoreDataSourceRule dsRule = new NeoStoreDataSourceRule();
+    public DatabaseRule dsRule = new DatabaseRule();
 
     @Parameterized.Parameter
     public boolean partOfStoreCopy;
@@ -246,7 +246,7 @@ public class TransactionLogCatchUpWriterTest
     {
         // create an empty store
         org.neo4j.storageengine.api.StoreId storeId;
-        NeoStoreDataSource ds = dsRule.getDataSource( databaseLayout, fs, pageCache );
+        Database ds = dsRule.getDatabase( databaseLayout, fs, pageCache );
         try ( Lifespan ignored = new Lifespan( ds ) )
         {
             storeId = ds.getStoreId();

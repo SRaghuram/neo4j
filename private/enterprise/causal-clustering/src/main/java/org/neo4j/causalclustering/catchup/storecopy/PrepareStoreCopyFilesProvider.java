@@ -6,7 +6,7 @@
 package org.neo4j.causalclustering.catchup.storecopy;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 
 public class PrepareStoreCopyFilesProvider
 {
@@ -17,8 +17,8 @@ public class PrepareStoreCopyFilesProvider
         this.fileSystemAbstraction = fileSystemAbstraction;
     }
 
-    PrepareStoreCopyFiles prepareStoreCopyFiles( NeoStoreDataSource neoStoreDataSource )
+    PrepareStoreCopyFiles prepareStoreCopyFiles( Database database )
     {
-        return new PrepareStoreCopyFiles( neoStoreDataSource, fileSystemAbstraction );
+        return new PrepareStoreCopyFiles( database, fileSystemAbstraction );
     }
 }

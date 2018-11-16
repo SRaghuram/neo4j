@@ -11,7 +11,7 @@ import java.util.Optional;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.facade.spi.ClassicCoreSPI;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.DataSourceModule;
+import org.neo4j.graphdb.factory.module.DatabaseModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.helpers.Exceptions;
@@ -50,10 +50,10 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
 
         GraphDatabaseFacade facade =
                 platform.config.get( GraphDatabaseSettings.active_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
-        DataSourceModule dataSource = new DataSourceModule( databaseName, platform, edition, procedures, facade );
+        DatabaseModule dataSource = new DatabaseModule( databaseName, platform, edition, procedures, facade );
         ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
-        facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, dataSource.neoStoreDataSource.getTokenHolders() );
-        platform.dataSourceManager.register( databaseName, dataSource.neoStoreDataSource );
+        facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, dataSource.database.getTokenHolders() );
+        platform.dataSourceManager.register( databaseName, dataSource.database );
         databaseMap.put( databaseName, facade );
         return facade;
     }

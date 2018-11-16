@@ -22,8 +22,8 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
 import org.neo4j.kernel.impl.store.id.IdType;
-import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.EnterpriseDatabaseRule;
+import org.neo4j.test.rule.GraphDatabaseRule;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
@@ -33,7 +33,7 @@ import static org.junit.Assert.assertThat;
 public class IdReuseTest
 {
     @Rule
-    public DatabaseRule dbRule = new EnterpriseDatabaseRule()
+    public GraphDatabaseRule dbRule = new EnterpriseDatabaseRule()
             .withSetting( EnterpriseEditionSettings.idTypesToReuse, IdType.NODE + "," + IdType.RELATIONSHIP )
             .withSetting( GraphDatabaseSettings.record_id_batch_size, "1" );
 

@@ -20,7 +20,7 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.state.NeoStoreFileIndexListing;
 import org.neo4j.kernel.impl.transaction.state.NeoStoreFileListing;
 import org.neo4j.storageengine.api.StoreFileMetadata;
@@ -49,7 +49,7 @@ public class PrepareStoreCopyFilesTest
     @Before
     public void setUp()
     {
-        NeoStoreDataSource dataSource = mock( NeoStoreDataSource.class );
+        Database dataSource = mock( Database.class );
         fileListingBuilder = mock( NeoStoreFileListing.StoreFileListingBuilder.class, CALLS_REAL_METHODS );
         databaseLayout = testDirectory.databaseLayout();
         when( dataSource.getDatabaseLayout() ).thenReturn( databaseLayout );

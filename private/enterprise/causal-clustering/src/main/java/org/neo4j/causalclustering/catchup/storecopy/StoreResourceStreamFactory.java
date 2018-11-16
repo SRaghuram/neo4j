@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 import org.neo4j.cursor.RawCursor;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
 import static org.neo4j.io.fs.FileUtils.relativePath;
@@ -20,9 +20,9 @@ import static org.neo4j.io.fs.FileUtils.relativePath;
 public class StoreResourceStreamFactory
 {
     private final FileSystemAbstraction fs;
-    private final Supplier<NeoStoreDataSource> dataSourceSupplier;
+    private final Supplier<Database> dataSourceSupplier;
 
-    public StoreResourceStreamFactory( FileSystemAbstraction fs, Supplier<NeoStoreDataSource> dataSourceSupplier )
+    public StoreResourceStreamFactory( FileSystemAbstraction fs, Supplier<Database> dataSourceSupplier )
     {
         this.fs = fs;
         this.dataSourceSupplier = dataSourceSupplier;
@@ -30,7 +30,7 @@ public class StoreResourceStreamFactory
 
     RawCursor<StoreResource,IOException> create() throws IOException
     {
-        NeoStoreDataSource dataSource = dataSourceSupplier.get();
+        Database dataSource = dataSourceSupplier.get();
 
         File databaseDirectory = dataSource.getDatabaseLayout().databaseDirectory();
         ResourceIterator<StoreFileMetadata> files = dataSource.listStoreFiles( false );

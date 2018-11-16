@@ -5,8 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.io.File
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
 
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher._
@@ -17,15 +16,13 @@ import org.neo4j.cypher.internal.tracing.TimingCompilationTracer.QueryEvent
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V4_0
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.io.fs.FileUtils
-import org.neo4j.kernel.NeoStoreDataSource
 import org.neo4j.kernel.api.security.AnonymousContext
+import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.coreapi.TopLevelTransaction
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory
-import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.test.{TestEnterpriseGraphDatabaseFactory, TestGraphDatabaseFactory}
 import org.opencypher.v9_0.frontend.phases.CompilationPhaseTracer.CompilationPhase
 
 import scala.collection.JavaConverters._
@@ -922,7 +919,7 @@ order by a.COL1""".format(a, b))
     val result1 = executeOfficial("match (n) return n").asScala.toList
     result1 shouldBe empty
 
-    val ds = graph.getDependencyResolver.resolveDependency(classOf[NeoStoreDataSource])
+    val ds = graph.getDependencyResolver.resolveDependency(classOf[Database])
     ds.stop()
     ds.start()
 

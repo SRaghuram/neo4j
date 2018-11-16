@@ -24,8 +24,8 @@ import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.ManagementSupport;
-import org.neo4j.kernel.NeoStoreDataSource;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.impl.util.Dependencies;
@@ -54,7 +54,7 @@ public class CausalClusteringBeanTest
     public void setUp()
     {
         DataSourceManager dataSourceManager = new DataSourceManager( NullLogProvider.getInstance(), Config.defaults() );
-        NeoStoreDataSource dataSource = mock( NeoStoreDataSource.class );
+        Database dataSource = mock( Database.class );
         when( dataSource.getDatabaseLayout() ).thenReturn( testDirectory.databaseLayout() );
         dataSourceManager.register( databaseName, dataSource );
         KernelData kernelData = new KernelData( fs, mock( PageCache.class ), new File( "storeDir" ), Config.defaults(), dataSourceManager );

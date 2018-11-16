@@ -7,7 +7,7 @@ package org.neo4j.causalclustering.catchup.storecopy;
 
 import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.identity.StoreId;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 
 class DataSourceChecks
 {
@@ -15,7 +15,7 @@ class DataSourceChecks
     {
     }
 
-    static boolean hasSameStoreId( StoreId storeId, NeoStoreDataSource dataSource )
+    static boolean hasSameStoreId( StoreId storeId, Database dataSource )
     {
         return storeId.equalToKernelStoreId( dataSource.getStoreId() );
     }

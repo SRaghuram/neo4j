@@ -20,7 +20,7 @@ import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.graphdb.DependencyResolver;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
@@ -47,7 +47,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
     private final Log log;
 
     public TxPullRequestHandler( CatchupServerProtocol protocol, Supplier<StoreId> storeIdSupplier,
-            BooleanSupplier databaseAvailable, Supplier<NeoStoreDataSource> dataSourceSupplier, Monitors monitors, LogProvider logProvider )
+            BooleanSupplier databaseAvailable, Supplier<Database> dataSourceSupplier, Monitors monitors, LogProvider logProvider )
     {
         this.protocol = protocol;
         this.storeIdSupplier = storeIdSupplier;

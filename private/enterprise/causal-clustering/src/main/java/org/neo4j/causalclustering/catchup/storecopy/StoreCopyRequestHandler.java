@@ -24,7 +24,7 @@ import org.neo4j.causalclustering.messaging.StoreCopyRequest;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreFileMetadata;
@@ -37,14 +37,14 @@ import static org.neo4j.io.fs.FileUtils.relativePath;
 public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extends SimpleChannelInboundHandler<T>
 {
     private final CatchupServerProtocol protocol;
-    private final Supplier<NeoStoreDataSource> dataSource;
+    private final Supplier<Database> dataSource;
     private final CheckPointerService checkPointerService;
     private final StoreFileStreamingProtocol storeFileStreamingProtocol;
 
     private final FileSystemAbstraction fs;
     private final Log log;
 
-    StoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<NeoStoreDataSource> dataSource, CheckPointerService checkPointerService,
+    StoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource, CheckPointerService checkPointerService,
             StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider, Class<T> clazz )
     {
         super( clazz );
@@ -63,8 +63,8 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         StoreCopyFinishedResponse.Status responseStatus = StoreCopyFinishedResponse.Status.E_UNKNOWN;
         try
         {
-            NeoStoreDataSource neoStoreDataSource = dataSource.get();
-            if ( !hasSameStoreId( request.expectedStoreId(), neoStoreDataSource ) )
+            Database database = dataSource.get();
+            if ( !hasSameStoreId( request.expectedStoreId(), database ) )
             {
                 responseStatus = StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH;
             }
@@ -76,8 +76,8 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
             }
             else
             {
-                File databaseDirectory = neoStoreDataSource.getDatabaseLayout().databaseDirectory();
-                try ( ResourceIterator<StoreFileMetadata> resourceIterator = files( request, neoStoreDataSource ) )
+                File databaseDirectory = database.getDatabaseLayout().databaseDirectory();
+                try ( ResourceIterator<StoreFileMetadata> resourceIterator = files( request, database ) )
                 {
                     while ( resourceIterator.hasNext() )
                     {
@@ -97,7 +97,7 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         }
     }
 
-    abstract ResourceIterator<StoreFileMetadata> files( T request, NeoStoreDataSource neoStoreDataSource ) throws IOException;
+    abstract ResourceIterator<StoreFileMetadata> files( T request, Database database ) throws IOException;
 
     private static Iterator<StoreFileMetadata> onlyOne( List<StoreFileMetadata> files, String description )
     {
@@ -115,16 +115,16 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
 
     public static class GetStoreFileRequestHandler extends StoreCopyRequestHandler<GetStoreFileRequest>
     {
-        public GetStoreFileRequestHandler( CatchupServerProtocol protocol, Supplier<NeoStoreDataSource> dataSource, CheckPointerService checkPointerService,
+        public GetStoreFileRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource, CheckPointerService checkPointerService,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
             super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
-        ResourceIterator<StoreFileMetadata> files( GetStoreFileRequest request, NeoStoreDataSource neoStoreDataSource ) throws IOException
+        ResourceIterator<StoreFileMetadata> files( GetStoreFileRequest request, Database database ) throws IOException
         {
-            try ( ResourceIterator<StoreFileMetadata> resourceIterator = neoStoreDataSource.listStoreFiles( false ) )
+            try ( ResourceIterator<StoreFileMetadata> resourceIterator = database.listStoreFiles( false ) )
             {
                 String fileName = request.file().getName();
                 return Iterators.asResourceIterator(
@@ -135,7 +135,7 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
 
     public static class GetIndexSnapshotRequestHandler extends StoreCopyRequestHandler<GetIndexFilesRequest>
     {
-        public GetIndexSnapshotRequestHandler( CatchupServerProtocol protocol, Supplier<NeoStoreDataSource> dataSource,
+        public GetIndexSnapshotRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource,
                 CheckPointerService checkPointerService, StoreFileStreamingProtocol storeFileStreamingProtocol,
                 FileSystemAbstraction fs, LogProvider logProvider )
         {
@@ -143,9 +143,9 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         }
 
         @Override
-        ResourceIterator<StoreFileMetadata> files( GetIndexFilesRequest request, NeoStoreDataSource neoStoreDataSource ) throws IOException
+        ResourceIterator<StoreFileMetadata> files( GetIndexFilesRequest request, Database database ) throws IOException
         {
-            return neoStoreDataSource.getNeoStoreFileListing().getNeoStoreFileIndexListing().getSnapshot( request.indexId() );
+            return database.getNeoStoreFileListing().getNeoStoreFileIndexListing().getSnapshot( request.indexId() );
         }
     }
 }

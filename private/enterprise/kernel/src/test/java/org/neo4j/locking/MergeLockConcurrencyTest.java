@@ -21,7 +21,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.ConfigBuilder;
-import org.neo4j.test.rule.DatabaseRule;
+import org.neo4j.test.rule.GraphDatabaseRule;
 import org.neo4j.test.rule.ImpermanentDatabaseRule;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 
@@ -35,7 +35,7 @@ import static org.neo4j.test.rule.concurrent.ThreadingRule.await;
 public class MergeLockConcurrencyTest
 {
     @Rule
-    public final DatabaseRule db = new ImpermanentDatabaseRule();
+    public final GraphDatabaseRule db = new ImpermanentDatabaseRule();
     @Rule
     public final ThreadingRule threads = new ThreadingRule();
 

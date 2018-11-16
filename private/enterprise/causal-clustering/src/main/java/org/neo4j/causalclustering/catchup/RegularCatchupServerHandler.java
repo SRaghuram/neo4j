@@ -21,7 +21,7 @@ import org.neo4j.causalclustering.core.state.CoreSnapshotService;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestHandler;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 
@@ -30,14 +30,14 @@ public class RegularCatchupServerHandler implements CatchupServerHandler
     private final Monitors monitors;
     private final LogProvider logProvider;
     private final Supplier<StoreId> storeIdSupplier;
-    private final Supplier<NeoStoreDataSource> dataSourceSupplier;
+    private final Supplier<Database> dataSourceSupplier;
     private final BooleanSupplier dataSourceAvailabilitySupplier;
     private final FileSystemAbstraction fs;
     private final CoreSnapshotService snapshotService;
     private final CheckPointerService checkPointerService;
 
     public RegularCatchupServerHandler( Monitors monitors, LogProvider logProvider, Supplier<StoreId> storeIdSupplier,
-            Supplier<NeoStoreDataSource> dataSourceSupplier, BooleanSupplier dataSourceAvailabilitySupplier, FileSystemAbstraction fs,
+            Supplier<Database> dataSourceSupplier, BooleanSupplier dataSourceAvailabilitySupplier, FileSystemAbstraction fs,
             CoreSnapshotService snapshotService, CheckPointerService checkPointerService )
     {
         this.monitors = monitors;

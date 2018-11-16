@@ -11,7 +11,7 @@ import java.io.IOException;
 import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.NeoStoreDataSource;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -81,10 +81,10 @@ public interface LocalDatabase extends Lifecycle
     void replaceWith( File sourceDir ) throws IOException;
 
     /**
-     * Returns the {@link NeoStoreDataSource} which actually underpins this datasource. Exposes all sorts of kernel level machinery.
+     * Returns the {@link Database} which actually underpins this datasource. Exposes all sorts of kernel level machinery.
      * @return the underlying datasource for this database
      */
-    NeoStoreDataSource dataSource();
+    Database dataSource();
 
     /**
      * @return the name of this database
