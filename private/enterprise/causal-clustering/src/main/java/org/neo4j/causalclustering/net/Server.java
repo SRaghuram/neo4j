@@ -14,11 +14,11 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 import java.net.BindException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.causalclustering.helper.SuspendableLifeCycle;
 import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.helpers.NamedThreadFactory;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -31,7 +31,7 @@ public class Server extends SuspendableLifeCycle
     private final Log userLog;
     private final String serverName;
 
-    private final NamedThreadFactory threadFactory;
+    private final Executor executor;
     private final ChildInitializer childInitializer;
     private final ChannelInboundHandler parentHandler;
     private final ListenSocketAddress listenAddress;
@@ -40,13 +40,18 @@ public class Server extends SuspendableLifeCycle
     private Channel channel;
 
     public Server( ChildInitializer childInitializer, LogProvider debugLogProvider, LogProvider userLogProvider, ListenSocketAddress listenAddress,
-                   String serverName )
+                   String serverName, Executor executor )
     {
-        this( childInitializer, null, debugLogProvider, userLogProvider, listenAddress, serverName );
+        this( childInitializer, null, debugLogProvider, userLogProvider, listenAddress, serverName, executor );
+    }
+
+    public Server( ChildInitializer childInitializer, ListenSocketAddress listenAddress, String serverName, Executor executor )
+    {
+        this( childInitializer, null, NullLogProvider.getInstance(), NullLogProvider.getInstance(), listenAddress, serverName, executor );
     }
 
     public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, LogProvider debugLogProvider, LogProvider userLogProvider,
-                   ListenSocketAddress listenAddress, String serverName )
+                   ListenSocketAddress listenAddress, String serverName, Executor executor )
     {
         super( debugLogProvider.getLog( Server.class ) );
         this.childInitializer = childInitializer;
@@ -55,12 +60,7 @@ public class Server extends SuspendableLifeCycle
         this.debugLog = debugLogProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
         this.serverName = serverName;
-        this.threadFactory = new NamedThreadFactory( serverName );
-    }
-
-    public Server( ChildInitializer childInitializer, ListenSocketAddress listenAddress, String serverName )
-    {
-        this( childInitializer, null, NullLogProvider.getInstance(), NullLogProvider.getInstance(), listenAddress, serverName );
+        this.executor = executor;
     }
 
     @Override
@@ -77,7 +77,7 @@ public class Server extends SuspendableLifeCycle
             return;
         }
 
-        workerGroup = new NioEventLoopGroup( 0, threadFactory );
+        workerGroup = new NioEventLoopGroup( 0, executor );
 
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .group( workerGroup )

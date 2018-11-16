@@ -8,6 +8,7 @@ package org.neo4j.causalclustering.core;
 import io.netty.channel.ChannelInboundHandler;
 
 import java.util.Collection;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
@@ -120,8 +121,9 @@ class RaftServerModule
                 protocolInstallerRepository, pipelineBuilderFactory, logProvider );
 
         ListenSocketAddress raftListenAddress = platformModule.config.get( CausalClusteringSettings.raft_listen_address );
+        Executor raftServerExecutor = platformModule.jobScheduler.executor( Group.RAFT );
         Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider, platformModule.logService.getUserLogProvider(),
-                raftListenAddress, "raft-server" );
+                raftListenAddress, "raft-server", raftServerExecutor );
 
         LoggingInbound<ReceivedInstantClusterIdAwareMessage<?>> loggingRaftInbound =
                 new LoggingInbound<>( nettyHandler, messageLogger, identityModule.myself() );

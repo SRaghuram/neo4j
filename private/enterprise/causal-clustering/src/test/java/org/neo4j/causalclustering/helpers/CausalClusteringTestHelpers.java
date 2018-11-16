@@ -36,6 +36,7 @@ import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.scheduler.JobScheduler;
 
 import static java.util.Collections.emptyList;
 import static org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
@@ -47,19 +48,20 @@ public final class CausalClusteringTestHelpers
     {
     }
 
-    public static CatchupClientFactory getCatchupClient( LogProvider logProvider )
+    public static CatchupClientFactory getCatchupClient( LogProvider logProvider, JobScheduler scheduler )
     {
         return CatchupClientBuilder.builder()
                 .defaultDatabaseName( GraphDatabaseSettings.DEFAULT_DATABASE_NAME )
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( VOID_WRAPPER ) )
+                .scheduler( scheduler )
                 .debugLogProvider( logProvider )
                 .userLogProvider( logProvider )
                 .build();
     }
 
-    public static Server getCatchupServer( CatchupServerHandler catchupServerHandler, ListenSocketAddress listenAddress )
+    public static Server getCatchupServer( CatchupServerHandler catchupServerHandler, ListenSocketAddress listenAddress, JobScheduler scheduler )
     {
         return CatchupServerBuilder.builder()
                 .catchupServerHandler( catchupServerHandler )
@@ -70,6 +72,7 @@ public final class CausalClusteringTestHelpers
                 //TODO: Best I can tell the test catchupServer builder was essentially using null here before anyway, but should double check with Hugh
                 .installedProtocolsHandler( null )
                 .listenAddress( listenAddress )
+                .scheduler( scheduler )
                 .debugLogProvider( NullLogProvider.getInstance() )
                 .userLogProvider( NullLogProvider.getInstance() )
                 .serverName( "test-catchup-server" )

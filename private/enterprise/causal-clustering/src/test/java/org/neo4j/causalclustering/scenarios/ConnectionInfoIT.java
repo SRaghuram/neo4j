@@ -12,6 +12,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.neo4j.causalclustering.net.Server;
 import org.neo4j.helpers.ListenSocketAddress;
@@ -47,7 +49,8 @@ public class ConnectionInfoIT
         AssertableLogProvider userLogProvider = new AssertableLogProvider();
         ListenSocketAddress listenSocketAddress = new ListenSocketAddress( "localhost", testSocket.getLocalPort() );
 
-        Server catchupServer = new Server( channel -> { }, logProvider, userLogProvider, listenSocketAddress, "server-name" );
+        ExecutorService executor = Executors.newCachedThreadPool();
+        Server catchupServer = new Server( channel -> { }, logProvider, userLogProvider, listenSocketAddress, "server-name", executor );
 
         //then
         try
@@ -57,6 +60,10 @@ public class ConnectionInfoIT
         catch ( Throwable throwable )
         {
             //expected.
+        }
+        finally
+        {
+            executor.shutdown();
         }
         logProvider.assertContainsMessageContaining( "server-name: address is already bound: " );
         userLogProvider.assertContainsMessageContaining( "server-name: address is already bound: " );

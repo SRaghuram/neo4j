@@ -17,6 +17,8 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -146,7 +148,8 @@ public class SenderServiceIT
                 installer, pipelineFactory, logProvider );
 
         ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", port );
-        return new Server( channelInitializer, null, logProvider, logProvider, listenAddress, "raft-server" );
+        ExecutorService serverExecutor = cleanupRule.add( Executors.newCachedThreadPool() );
+        return new Server( channelInitializer, null, logProvider, logProvider, listenAddress, "raft-server", serverExecutor );
     }
 
     private SenderService raftSender()

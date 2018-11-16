@@ -7,6 +7,7 @@ package org.neo4j.causalclustering.catchup;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -47,10 +48,10 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 class TestCatchupServer extends Server
 {
-    TestCatchupServer( FileSystemAbstraction fileSystem, GraphDatabaseAPI graphDb, LogProvider logProvider )
+    TestCatchupServer( FileSystemAbstraction fileSystem, GraphDatabaseAPI graphDb, LogProvider logProvider, ExecutorService executor )
     {
         super( childInitializer( fileSystem, graphDb, logProvider ), logProvider, logProvider,
-                new ListenSocketAddress( "localhost", PortAuthority.allocatePort() ), "fake-catchup-server" );
+                new ListenSocketAddress( "localhost", PortAuthority.allocatePort() ), "fake-catchup-server", executor );
     }
 
     private static ChildInitializer childInitializer( FileSystemAbstraction fileSystem, GraphDatabaseAPI graphDb, LogProvider logProvider )

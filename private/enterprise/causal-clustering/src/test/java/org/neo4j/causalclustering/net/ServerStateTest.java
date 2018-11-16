@@ -18,6 +18,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.neo4j.causalclustering.helper.SuspendableLifeCycleLifeStateChangeTest;
 import org.neo4j.causalclustering.helper.SuspendableLifeCycleSuspendedStateChangeTest;
 import org.neo4j.helpers.ListenSocketAddress;
@@ -38,6 +41,7 @@ public class ServerStateTest
 
     private static Bootstrap bootstrap;
     private static EventLoopGroup clientGroup;
+    private ExecutorService executor;
     private Server server;
     private Channel channel;
 
@@ -61,6 +65,7 @@ public class ServerStateTest
     @Before
     public void setUp() throws Throwable
     {
+        executor = Executors.newCachedThreadPool();
         server = createServer();
         server.init();
         assertFalse( canConnect() );
@@ -78,6 +83,7 @@ public class ServerStateTest
         {
             channel.close();
         }
+        executor.shutdown();
     }
 
     @AfterClass
@@ -128,10 +134,10 @@ public class ServerStateTest
         assertTrue( canConnect() );
     }
 
-    private static Server createServer()
+    private Server createServer()
     {
         return new Server( channel -> {}, logProvider, logProvider,
-                           new ListenSocketAddress( "localhost", PortAuthority.allocatePort() ), "serverName" );
+                           new ListenSocketAddress( "localhost", PortAuthority.allocatePort() ), "serverName", executor );
     }
 
     private boolean canConnect() throws InterruptedException

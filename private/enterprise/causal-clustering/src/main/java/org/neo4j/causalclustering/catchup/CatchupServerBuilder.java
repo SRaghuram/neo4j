@@ -10,6 +10,7 @@ import io.netty.channel.ChannelInboundHandler;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import org.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
 import org.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
@@ -28,6 +29,8 @@ import org.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 
 public final class CatchupServerBuilder
 {
@@ -41,7 +44,7 @@ public final class CatchupServerBuilder
     }
 
     private static class StepBuilder implements NeedsCatchupServerHandler, NeedsDefaultDatabaseName, NeedsCatchupProtocols, NeedsModifierProtocols,
-            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, AcceptsOptionalParams
+            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler, AcceptsOptionalParams
     {
         private CatchupServerHandler catchupServerHandler;
         private String defaultDatabaseName;
@@ -50,6 +53,7 @@ public final class CatchupServerBuilder
         private Collection<ModifierSupportedProtocols> modifierProtocols;
         private ChannelInboundHandler parentHandler;
         private ListenSocketAddress listenAddress;
+        private JobScheduler scheduler;
         private LogProvider debugLogProvider = NullLogProvider.getInstance();
         private LogProvider userLogProvider = NullLogProvider.getInstance();
         private String serverName = "catchup-server";
@@ -101,9 +105,16 @@ public final class CatchupServerBuilder
         }
 
         @Override
-        public AcceptsOptionalParams listenAddress( ListenSocketAddress listenAddress )
+        public NeedsScheduler listenAddress( ListenSocketAddress listenAddress )
         {
             this.listenAddress = listenAddress;
+            return this;
+        }
+
+        @Override
+        public AcceptsOptionalParams scheduler( JobScheduler scheduler )
+        {
+            this.scheduler = scheduler;
             return this;
         }
 
@@ -143,8 +154,9 @@ public final class CatchupServerBuilder
 
             HandshakeServerInitializer handshakeServerInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
                     protocolInstallerRepository, pipelineBuilder, debugLogProvider );
+            Executor executor = scheduler.executor( Group.CATCHUP );
 
-            return new Server( handshakeServerInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName );
+            return new Server( handshakeServerInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor );
         }
     }
 
@@ -180,7 +192,12 @@ public final class CatchupServerBuilder
 
     public interface NeedsListenAddress
     {
-        AcceptsOptionalParams listenAddress( ListenSocketAddress listenAddress );
+        NeedsScheduler listenAddress( ListenSocketAddress listenAddress );
+    }
+
+    public interface NeedsScheduler
+    {
+        AcceptsOptionalParams scheduler( JobScheduler scheduler );
     }
 
     public interface AcceptsOptionalParams

@@ -20,6 +20,7 @@ import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.JobScheduler;
 
 public class TransactionBackupServiceProvider
 {
@@ -30,11 +31,12 @@ public class TransactionBackupServiceProvider
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final NettyPipelineBuilderFactory serverPipelineBuilderFactory;
     private final CatchupServerHandler catchupServerHandler;
+    private final JobScheduler scheduler;
     private String activeDatabaseName;
 
     public TransactionBackupServiceProvider( LogProvider logProvider, LogProvider userLogProvider, ApplicationSupportedProtocols catchupProtocols,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, NettyPipelineBuilderFactory serverPipelineBuilderFactory,
-            CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, String activeDatabaseName )
+            CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, String activeDatabaseName, JobScheduler scheduler )
     {
         this.logProvider = logProvider;
         this.userLogProvider = userLogProvider;
@@ -44,6 +46,7 @@ public class TransactionBackupServiceProvider
         this.serverPipelineBuilderFactory = serverPipelineBuilderFactory;
         this.catchupServerHandler = catchupServerHandler;
         this.activeDatabaseName = activeDatabaseName;
+        this.scheduler = scheduler;
     }
 
     public Optional<Server> resolveIfBackupEnabled( Config config )
@@ -60,6 +63,7 @@ public class TransactionBackupServiceProvider
                     .pipelineBuilder( serverPipelineBuilderFactory )
                     .installedProtocolsHandler( parentHandler )
                     .listenAddress( backupAddress )
+                    .scheduler( scheduler )
                     .userLogProvider( userLogProvider )
                     .debugLogProvider( logProvider )
                     .serverName( "backup-server" )

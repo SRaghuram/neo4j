@@ -28,6 +28,7 @@ import org.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import org.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.scheduler.JobScheduler;
 
 import static org.neo4j.time.Clocks.systemClock;
 
@@ -44,12 +45,13 @@ public final class CatchupClientBuilder
     }
 
     private static class StepBuilder implements NeedsDefaultDatabaseName, NeedsCatchupProtocols,
-            NeedsModifierProtocols, NeedsPipelineBuilder, AcceptsOptionalParams
+            NeedsModifierProtocols, NeedsPipelineBuilder, NeedsScheduler, AcceptsOptionalParams
     {
         private String defaultDatabaseName;
         private NettyPipelineBuilderFactory pipelineBuilder;
         private ApplicationSupportedProtocols catchupProtocols;
         private Collection<ModifierSupportedProtocols> modifierProtocols;
+        private JobScheduler scheduler;
         private LogProvider debugLogProvider = NullLogProvider.getInstance();
         private LogProvider userLogProvider = NullLogProvider.getInstance();
         private Duration handshakeTimeout = Duration.ofSeconds( 5 );
@@ -81,9 +83,16 @@ public final class CatchupClientBuilder
         }
 
         @Override
-        public AcceptsOptionalParams pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder )
+        public NeedsScheduler pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder )
         {
             this.pipelineBuilder = pipelineBuilder;
+            return this;
+        }
+
+        @Override
+        public AcceptsOptionalParams scheduler( JobScheduler scheduler )
+        {
+            this.scheduler = scheduler;
             return this;
         }
 
@@ -134,7 +143,7 @@ public final class CatchupClientBuilder
                         handshakeTimeout, debugLogProvider, userLogProvider );
             };
 
-            return new CatchupClientFactory( debugLogProvider, clock, channelInitializerFactory, defaultDatabaseName );
+            return new CatchupClientFactory( debugLogProvider, clock, channelInitializerFactory, defaultDatabaseName, scheduler );
         }
     }
 
@@ -155,7 +164,12 @@ public final class CatchupClientBuilder
 
     public interface NeedsPipelineBuilder
     {
-        AcceptsOptionalParams pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder );
+        NeedsScheduler pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder );
+    }
+
+    public interface NeedsScheduler
+    {
+        AcceptsOptionalParams scheduler( JobScheduler scheduler );
     }
 
     public interface AcceptsOptionalParams

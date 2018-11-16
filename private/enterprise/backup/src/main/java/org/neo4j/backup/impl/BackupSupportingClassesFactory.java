@@ -10,8 +10,8 @@ import java.time.Clock;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupClientBuilder;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
 import org.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
@@ -112,6 +112,7 @@ public class BackupSupportingClassesFactory
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( createPipelineWrapper( config ) ) )
+                .scheduler( jobScheduler )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .clock( clock )
                 .debugLogProvider( logProvider )

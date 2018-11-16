@@ -21,6 +21,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,7 +44,8 @@ public class ReconnectingChannelIT
     private static final long DEFAULT_TIMEOUT_MS = 20_000;
     private final Log log = NullLogProvider.getInstance().getLog( getClass() );
     private final ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", PORT );
-    private final Server server = new Server( channel -> {}, listenAddress, "test-server" );
+    private ExecutorService executor;
+    private Server server;
     private EventLoopGroup elg;
     private ReconnectingChannel channel;
     private AtomicInteger childCount = new AtomicInteger();
@@ -71,6 +74,8 @@ public class ReconnectingChannelIT
     @Before
     public void before()
     {
+        executor = Executors.newCachedThreadPool();
+        server = new Server( channel -> {}, listenAddress, "test-server", executor );
         elg = new NioEventLoopGroup( 0 );
         Bootstrap bootstrap = new Bootstrap().channel( NioSocketChannel.class ).group( elg ).handler( childCounter );
         channel = new ReconnectingChannel( bootstrap, elg.next(), listenAddress, log );
@@ -81,6 +86,7 @@ public class ReconnectingChannelIT
     {
         elg.shutdownGracefully( 0, DEFAULT_TIMEOUT_MS, MILLISECONDS ).awaitUninterruptibly();
         server.stop();
+        executor.shutdown();
     }
 
     @Test

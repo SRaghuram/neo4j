@@ -23,10 +23,11 @@ import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import org.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import org.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.NamedThreadFactory;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.causalclustering.protocol.handshake.ChannelAttribute.PROTOCOL_STACK;
@@ -39,16 +40,18 @@ public class CatchupClientFactory extends LifecycleAdapter
     private final CatchupChannelPool<CatchupChannel> pool = new CatchupChannelPool<>( CatchupChannel::new );
     private final Function<CatchupResponseHandler,HandshakeClientInitializer> channelInitializerFactory;
     private final String defaultDatabaseName;
+    private final JobScheduler scheduler;
 
     private NioEventLoopGroup eventLoopGroup;
 
     public CatchupClientFactory( LogProvider logProvider, Clock clock, Function<CatchupResponseHandler,HandshakeClientInitializer> channelInitializerFactory,
-            String defaultDatabaseName )
+            String defaultDatabaseName, JobScheduler scheduler )
     {
         this.log = logProvider.getLog( getClass() );
         this.clock = clock;
         this.channelInitializerFactory = channelInitializerFactory;
         this.defaultDatabaseName = defaultDatabaseName;
+        this.scheduler = scheduler;
     }
 
     public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream ) throws Exception
@@ -135,7 +138,7 @@ public class CatchupClientFactory extends LifecycleAdapter
     @Override
     public void start()
     {
-        eventLoopGroup = new NioEventLoopGroup( 0, new NamedThreadFactory( "catch-up-client" ) );
+        eventLoopGroup = new NioEventLoopGroup( 0, scheduler.executor( Group.CATCHUP ) );
     }
 
     @Override

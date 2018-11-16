@@ -25,11 +25,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import org.neo4j.causalclustering.catchup.CatchupServerBuilder;
-import org.neo4j.causalclustering.catchup.CatchupServerHandler;
+import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
@@ -40,9 +38,6 @@ import org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.net.Server;
-import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.helpers.collection.Iterators;
@@ -55,20 +50,18 @@ import org.neo4j.logging.DuplicatingLogProvider;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Collections.emptyList;
 import static org.hamcrest.CoreMatchers.both;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
 import static org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.getCatchupServer;
-import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
 
 public class StoreCopyClientIT
 {
@@ -84,6 +77,7 @@ public class StoreCopyClientIT
     private final FakeFile fileB = new FakeFile( "another-file-b", "Totally different content 123" );
     private final FakeFile indexFileA = new FakeFile( "lucene", "Lucene 123" );
     private final File targetLocation = new File( "copyTargetLocation" );
+    private JobScheduler scheduler;
     private LogProvider logProvider;
     private StoreCopyClient subject;
     private Server catchupServer;
@@ -105,6 +99,7 @@ public class StoreCopyClientIT
     @Before
     public void setup() throws Throwable
     {
+        scheduler = new ThreadPoolJobScheduler();
         logProvider = new DuplicatingLogProvider( assertableLogProvider, FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out ) );
         serverHandler = new TestCatchupServerHandler( logProvider, testDirectory, fsa );
         serverHandler.addFile( fileA );
@@ -115,10 +110,10 @@ public class StoreCopyClientIT
         writeContents( fsa, relative( indexFileA.getFilename() ), indexFileA.getContent() );
 
         ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", PortAuthority.allocatePort() );
-        catchupServer = getCatchupServer( serverHandler, listenAddress );
+        catchupServer = getCatchupServer( serverHandler, listenAddress, scheduler );
         catchupServer.start();
 
-        CatchupClientFactory catchUpClient = CausalClusteringTestHelpers.getCatchupClient( logProvider );
+        CatchupClientFactory catchUpClient = CausalClusteringTestHelpers.getCatchupClient( logProvider, scheduler );
         catchUpClient.start();
 
         ConstantTimeTimeoutStrategy storeCopyBackoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
@@ -130,6 +125,7 @@ public class StoreCopyClientIT
     public void shutdown() throws Throwable
     {
         catchupServer.stop();
+        scheduler.shutdown();
     }
 
     @Test
@@ -259,7 +255,7 @@ public class StoreCopyClientIT
         {
             // when
             ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", PortAuthority.allocatePort() );
-            halfWayFailingServer = getCatchupServer( halfWayFailingServerhandler, listenAddress );
+            halfWayFailingServer = getCatchupServer( halfWayFailingServerhandler, listenAddress, scheduler );
             halfWayFailingServer.start();
 
             CatchupAddressProvider addressProvider =

@@ -115,7 +115,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
         serviceLock.writeLock().lock();
         try
         {
-            eventLoopGroup = new NioEventLoopGroup( 0, scheduler.executor( Group.CATCHUP ) );
+            eventLoopGroup = new NioEventLoopGroup( 0, scheduler.executor( Group.RAFT ) );
             bootstrap = new Bootstrap()
                     .group( eventLoopGroup )
                     .channel( NioSocketChannel.class )

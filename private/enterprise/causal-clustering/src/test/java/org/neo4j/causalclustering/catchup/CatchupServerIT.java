@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -38,6 +40,7 @@ import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.rule.TestDirectory;
@@ -69,6 +72,7 @@ public class CatchupServerIT
     private GraphDatabaseAPI graphDb;
     private TestCatchupServer catchupServer;
     private File temporaryDirectory;
+    private ExecutorService executor;
 
     private PageCache pageCache;
 
@@ -88,9 +92,10 @@ public class CatchupServerIT
         createPropertyIndex();
         addData( graphDb );
 
-        catchupServer = new TestCatchupServer( fsa, graphDb, LOG_PROVIDER );
+        executor = Executors.newCachedThreadPool();
+        catchupServer = new TestCatchupServer( fsa, graphDb, LOG_PROVIDER, executor );
         catchupServer.start();
-        catchupClient = CausalClusteringTestHelpers.getCatchupClient( LOG_PROVIDER );
+        catchupClient = CausalClusteringTestHelpers.getCatchupClient( LOG_PROVIDER, new ThreadPoolJobScheduler( executor ) );
         catchupClient.start();
         pageCache = graphDb.getDependencyResolver().resolveDependency( PageCache.class );
     }
@@ -111,6 +116,7 @@ public class CatchupServerIT
         {
             catchupServer.stop();
         }
+        executor.shutdown();
     }
 
     @Test

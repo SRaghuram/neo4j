@@ -23,6 +23,7 @@ import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.JobScheduler;
 
 public abstract class CatchupServersModule
 {
@@ -35,6 +36,7 @@ public abstract class CatchupServersModule
     protected final LogProvider logProvider;
     protected final Config config;
     protected final LifeSupport lifeSupport;
+    protected final JobScheduler scheduler;
 
     private final ApplicationSupportedProtocols supportedCatchupProtocols;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
@@ -51,6 +53,7 @@ public abstract class CatchupServersModule
         this.userLogProvider = platformModule.logService.getUserLogProvider();
         this.config = platformModule.config;
         this.lifeSupport = platformModule.life;
+        this.scheduler = platformModule.jobScheduler;
 
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
         this.supportedCatchupProtocols = supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration();
@@ -71,6 +74,7 @@ public abstract class CatchupServersModule
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedModifierProtocols )
                 .pipelineBuilder( pipelineBuilders.client() )
+                .scheduler( scheduler )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .debugLogProvider( logProvider )
                 .userLogProvider( userLogProvider )
@@ -90,6 +94,7 @@ public abstract class CatchupServersModule
                 .pipelineBuilder( pipelineBuilders.server() )
                 .installedProtocolsHandler( installedProtocolsHandler )
                 .listenAddress( config.get( CausalClusteringSettings.transaction_listen_address ) )
+                .scheduler( scheduler )
                 .userLogProvider( userLogProvider )
                 .debugLogProvider( logProvider )
                 .serverName( "catchup-server" )
@@ -107,7 +112,8 @@ public abstract class CatchupServersModule
                         pipelineBuilders.backupServer(),
                         catchupServerHandler,
                         installedProtocolsHandler,
-                        activeDatabaseName );
+                        activeDatabaseName,
+                        scheduler );
 
         return transactionBackupServiceProvider.resolveIfBackupEnabled( config );
     }
