@@ -10,7 +10,7 @@ import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.{MapValue, VirtualValues}
 
 object QueryState {
-  val EMPTY = QueryState(VirtualValues.EMPTY_MAP, null, 10000, Array(), singeThreaded = true)
+  val EMPTY = QueryState(VirtualValues.EMPTY_MAP, null, 10000, Array(null), singeThreaded = true)
 }
 
 /**
