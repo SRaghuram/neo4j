@@ -7,14 +7,11 @@ package org.neo4j.management.impl;
 
 import java.io.StringWriter;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
 import javax.management.NotCompliantMBeanException;
 
+import org.neo4j.diagnostics.DbmsDiagnosticsManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
-import org.neo4j.internal.diagnostics.DiagnosticsManager;
-import org.neo4j.internal.diagnostics.DiagnosticsProvider;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
@@ -38,37 +35,26 @@ public class DiagnosticsBean extends ManagementBeanProvider
 
     private static class DiagnosticsImpl extends Neo4jMBean implements Diagnostics
     {
-        private final DiagnosticsManager diagnostics;
+        private final DbmsDiagnosticsManager diagnosticsManager;
         private Config config;
 
         DiagnosticsImpl( ManagementData management ) throws NotCompliantMBeanException
         {
             super( management );
             config = management.resolveDependency( Config.class );
-            this.diagnostics = management.resolveDependency( DiagnosticsManager.class);
+            this.diagnosticsManager = management.resolveDependency( DbmsDiagnosticsManager.class);
         }
 
         @Override
         public void dumpToLog()
         {
-            diagnostics.dumpAll();
+            diagnosticsManager.dumpAll();
         }
 
         @Override
-        public List<String> getDiagnosticsProviders()
+        public void dumpDatabaseDiagnosticsToLog( String databaseName )
         {
-            List<String> result = new ArrayList<>();
-            for ( DiagnosticsProvider provider : diagnostics )
-            {
-                result.add( provider.getDiagnosticsIdentifier() );
-            }
-            return result;
-        }
-
-        @Override
-        public void dumpToLog( String providerId )
-        {
-            diagnostics.dump( providerId );
+            diagnosticsManager.dump( databaseName );
         }
 
         @Override
@@ -77,17 +63,17 @@ public class DiagnosticsBean extends ManagementBeanProvider
             StringWriter stringWriter = new StringWriter();
             ZoneId zoneId = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
             FormattedLog.Builder logBuilder = FormattedLog.withZoneId( zoneId );
-            diagnostics.dumpAll( logBuilder.toWriter( stringWriter ) );
+            diagnosticsManager.dumpAll( logBuilder.toWriter( stringWriter ) );
             return stringWriter.toString();
         }
 
         @Override
-        public String extract( String providerId )
+        public String dumpDatabaseDiagnostics( String databaseName )
         {
             StringWriter stringWriter = new StringWriter();
             ZoneId zoneId = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
             FormattedLog.Builder logBuilder = FormattedLog.withZoneId( zoneId );
-            diagnostics.extract( providerId, logBuilder.toWriter( stringWriter ) );
+            diagnosticsManager.dump( databaseName, logBuilder.toWriter( stringWriter ) );
             return stringWriter.toString();
         }
     }

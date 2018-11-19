@@ -5,6 +5,8 @@
  */
 package com.neo4j.dbms.database;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -21,6 +23,7 @@ import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Logger;
 
+import static java.util.Comparator.naturalOrder;
 import static java.util.Objects.requireNonNull;
 
 public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseManager
@@ -94,6 +97,14 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         {
             throw stopException;
         }
+    }
+
+    @Override
+    public List<String> listDatabases()
+    {
+        ArrayList<String> databaseNames = new ArrayList<>( databaseMap.keySet() );
+        databaseNames.sort( naturalOrder() );
+        return databaseNames;
     }
 
     private void shutdownDatabase( String databaseName, GraphDatabaseFacade databaseFacade )

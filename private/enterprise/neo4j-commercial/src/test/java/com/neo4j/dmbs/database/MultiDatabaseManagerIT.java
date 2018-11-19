@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.dbms.database.DatabaseManager;
@@ -22,6 +23,9 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -102,6 +106,33 @@ class MultiDatabaseManagerIT
         databaseManager.shutdownDatabase( logTestDb );
         logProvider.assertLogStringContains( "Creating 'logTestDb' database." );
         logProvider.assertLogStringContains( "Shutting down 'logTestDb' database." );
+    }
+
+    @Test
+    void listAvailableDatabases()
+    {
+        DatabaseManager databaseManager = getDatabaseManager();
+        List<String> initialDatabases = databaseManager.listDatabases();
+        assertThat( initialDatabases, hasSize( 1 ) );
+        assertEquals( CUSTOM_DATABASE_NAME, initialDatabases.get( 0 ) );
+        String myAnotherDatabase = "myAnotherDatabase";
+        String aMyAnotherDatabase = "aMyAnotherDatabase";
+        databaseManager.createDatabase( myAnotherDatabase );
+        databaseManager.createDatabase( aMyAnotherDatabase );
+        List<String> postCreationDatabasesNames = databaseManager.listDatabases();
+        assertThat( postCreationDatabasesNames, hasSize( 3 ) );
+        assertEquals( aMyAnotherDatabase, postCreationDatabasesNames.get( 0 ) );
+        assertEquals( CUSTOM_DATABASE_NAME, postCreationDatabasesNames.get( 1 ) );
+        assertEquals( myAnotherDatabase, postCreationDatabasesNames.get( 2 ) );
+    }
+
+    @Test
+    void listAvailableDatabaseOnShutdownManager() throws Throwable
+    {
+        DatabaseManager databaseManager = getDatabaseManager();
+        databaseManager.stop();
+        List<String> databases = databaseManager.listDatabases();
+        assertThat( databases, empty() );
     }
 
     private DatabaseManager getDatabaseManager()

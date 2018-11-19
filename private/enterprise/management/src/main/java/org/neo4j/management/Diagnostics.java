@@ -5,8 +5,6 @@
  */
 package org.neo4j.management;
 
-import java.util.List;
-
 import org.neo4j.jmx.Description;
 import org.neo4j.jmx.ManagementInterface;
 
@@ -19,15 +17,12 @@ public interface Diagnostics
     @Description( "Dump diagnostics information to the log." )
     void dumpToLog();
 
-    @Description( "Dump diagnostics information for the diagnostics provider with the specified id." )
-    void dumpToLog( String providerId );
-
     @Description( "Dump diagnostics information to JMX" )
     String dumpAll(  );
 
-    @Description( "Extract diagnostics information for the diagnostics provider with the specified id." )
-    String extract( String providerId );
+    @Description( "Dump diagnostics information for the database with provided name to the log." )
+    void dumpDatabaseDiagnosticsToLog( String databaseName );
 
-    @Description( "A list of the ids for the registered diagnostics providers." )
-    List<String> getDiagnosticsProviders();
+    @Description( "Dump diagnostics information for the database with provided name to JMX." )
+    String dumpDatabaseDiagnostics( String databaseName );
 }
