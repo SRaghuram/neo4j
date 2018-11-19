@@ -6,13 +6,14 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.io.ByteArrayOutputStream
-import java.net.InetSocketAddress
+import java.net.{InetAddress, InetSocketAddress}
 import java.util.zip.{DeflaterOutputStream, GZIPOutputStream}
 
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.eclipse.jetty.server.handler.{AbstractHandler, ContextHandler, ContextHandlerCollection}
 import org.eclipse.jetty.server.{Handler, Request, Server, ServerConnector}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, LoadExternalResourceException}
+import org.neo4j.ports.allocation.PortAuthority
 import org.scalatest.BeforeAndAfterAll
 
 class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with BeforeAndAfterAll {
@@ -22,15 +23,15 @@ class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with Befo
 
   private val server = new TestServer
 
-  override protected def afterAll() = {
+  override protected def afterAll(): Unit = {
     server.stop()
   }
 
-  override protected def beforeAll() = {
+  override protected def beforeAll(): Unit = {
     server.start()
   }
 
-  override protected def beforeEach() = {
+  override protected def beforeEach(): Unit = {
     super.beforeEach()
     server.restartIfNotRunning()
   }
@@ -79,31 +80,28 @@ class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with Befo
   private class TestServer {
 
      //assign the correct port when server has started.
-     private var _port = -1
-     private val _host = "127.0.0.1"
+     private val _port = PortAuthority.allocatePort()
+     private val _host = InetAddress.getLoopbackAddress.getHostAddress
      //let jetty pick a random available port for us
-     private val server: Server = new Server(new InetSocketAddress(_host, 0))
+     private val server: Server = new Server(new InetSocketAddress(_host, _port))
      private val handlers = new ContextHandlerCollection()
      addHandler("/csv", new CsvHandler)
      addHandler("/gzip", new GzipCsvHandler)
      addHandler("/deflate", new DeflateCsvHandler)
      server.setHandler(handlers)
 
-     def start() = {
+     def start(): Unit = {
        server.start()
-       //find the port that we're using.
-       _port = server.getConnectors()(0).asInstanceOf[ServerConnector].getLocalPort
-       assert(_port > 0)
-       if (!server.isRunning) throw new IllegalStateException("Started server is not running. Wtf? State: " + server.getState)
+       if (!server.isRunning) throw new IllegalStateException("Started server is not running: " + server.getState)
      }
 
-     def stop() = server.stop()
+     def stop(): Unit = server.stop()
 
-     def port = _port
+     def port: Int = _port
 
-     def host = _host
+     def host: String = _host
 
-     def restartIfNotRunning() = {
+     def restartIfNotRunning(): Unit = {
        if (!server.isRunning) {
          stop()
          start()
