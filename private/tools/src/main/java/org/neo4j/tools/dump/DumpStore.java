@@ -21,6 +21,7 @@ import org.neo4j.kernel.impl.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.RecordStore;
+import org.neo4j.kernel.impl.store.SchemaRuleAccess;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.SchemaStore;
 import org.neo4j.kernel.impl.store.StoreFactory;
@@ -245,14 +246,14 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
     {
         try ( SchemaStore store = neoStores.getSchemaStore() )
         {
-            final SchemaStorage storage = new SchemaStorage( store );
+            final SchemaRuleAccess schemaRuleAccess = new SchemaStorage( store );
             new DumpStore<DynamicRecord,SchemaStore>( System.out )
             {
                 @Override
                 protected Object transform( DynamicRecord record ) throws Exception
                 {
                     return record.inUse() && record.isStartRecord()
-                           ? storage.loadSingleSchemaRule( record.getId() )
+                           ? schemaRuleAccess.loadSingleSchemaRule( record.getId() )
                            : null;
                 }
             }.dump( store, ids );

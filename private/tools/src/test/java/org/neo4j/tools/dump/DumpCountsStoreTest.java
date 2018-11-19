@@ -22,7 +22,7 @@ import org.neo4j.kernel.impl.store.LabelTokenStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.PropertyKeyTokenStore;
 import org.neo4j.kernel.impl.store.RelationshipTypeTokenStore;
-import org.neo4j.kernel.impl.store.SchemaStorage;
+import org.neo4j.kernel.impl.store.SchemaRuleAccess;
 import org.neo4j.kernel.impl.store.kvstore.BigEndianByteArrayBuffer;
 import org.neo4j.kernel.impl.store.kvstore.HeaderField;
 import org.neo4j.kernel.impl.store.kvstore.Headers;
@@ -130,18 +130,18 @@ public class DumpCountsStoreTest
 
     private DumpCountsStore getCountStore()
     {
-        return new DumpCountsStore( System.out, createNeoStores(), createSchemaStorage() );
+        return new DumpCountsStore( System.out, createNeoStores(), createRuleAccess() );
     }
 
-    private SchemaStorage createSchemaStorage()
+    private SchemaRuleAccess createRuleAccess()
     {
-        SchemaStorage schemaStorage = mock(SchemaStorage.class);
+        SchemaRuleAccess schemaRuleAccess = mock( SchemaRuleAccess.class );
         StoreIndexDescriptor rule = descriptor.withId( indexId );
         ArrayList<StoreIndexDescriptor> rules = new ArrayList<>();
         rules.add( rule );
 
-        when( schemaStorage.indexesGetAll() ).thenReturn( rules.iterator() );
-        return schemaStorage;
+        when( schemaRuleAccess.indexesGetAll() ).thenReturn( rules.iterator() );
+        return schemaRuleAccess;
     }
 
     private NeoStores createNeoStores()

@@ -26,6 +26,7 @@ import org.neo4j.kernel.impl.api.CountsVisitor;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.IndexDescriptor;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.StoreIndexDescriptor;
 import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.SchemaRuleAccess;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.TokenStore;
@@ -78,7 +79,7 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
                         pages, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
 
                 NeoStores neoStores = factory.openAllNeoStores();
-                SchemaStorage schemaStorage = new SchemaStorage( neoStores.getSchemaStore() );
+                SchemaRuleAccess schemaStorage = new SchemaStorage( neoStores.getSchemaStore() );
                 neoStores.getCounts().accept( new DumpCountsStore( out, neoStores, schemaStorage ) );
             }
             else
@@ -102,9 +103,9 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
         this( out, Collections.emptyMap(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList() );
     }
 
-    DumpCountsStore( PrintStream out, NeoStores neoStores, SchemaStorage schemaStorage )
+    DumpCountsStore( PrintStream out, NeoStores neoStores, SchemaRuleAccess schemaRuleAccess )
     {
-        this( out, getAllIndexesFrom( schemaStorage ),
+        this( out, getAllIndexesFrom( schemaRuleAccess ),
               allTokensFrom( neoStores.getLabelTokenStore() ),
               allTokensFrom( neoStores.getRelationshipTypeTokenStore() ),
               allTokensFrom( neoStores.getPropertyKeyTokenStore() ) );
@@ -300,10 +301,10 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
         }
     }
 
-    private static Map<Long,IndexDescriptor> getAllIndexesFrom( SchemaStorage storage )
+    private static Map<Long,IndexDescriptor> getAllIndexesFrom( SchemaRuleAccess schemaRuleAccess )
     {
         HashMap<Long,IndexDescriptor> indexes = new HashMap<>();
-        Iterator<StoreIndexDescriptor> indexRules = storage.indexesGetAll();
+        Iterator<StoreIndexDescriptor> indexRules = schemaRuleAccess.indexesGetAll();
         while ( indexRules.hasNext() )
         {
             StoreIndexDescriptor rule = indexRules.next();
