@@ -75,13 +75,25 @@ public class ClusterViewMessage
         return members;
     }
 
+    /**
+     * If members or unreachable contains the same member with a different status it will be replaced.
+     *
+     * Note that {@link Member#equals(Object)} only compares its {@link UniqueAddress}, so this method
+     * replaces by removing and then adding.
+     */
     public ClusterViewMessage withMember( Member member )
     {
         TreeSet<Member> tempMembers = new TreeSet<>( Member.ordering() );
         tempMembers.addAll( members );
-        tempMembers.remove( member ); // To update
+        tempMembers.remove( member );
         tempMembers.add( member );
-        return new ClusterViewMessage( converged, tempMembers, unreachable );
+
+        Set<Member> tempUnreachable = new HashSet<>( unreachable );
+        if ( tempUnreachable.remove( member ) )
+        {
+            tempUnreachable.add( member );
+        }
+        return new ClusterViewMessage( converged, tempMembers, tempUnreachable );
     }
 
     public ClusterViewMessage withoutMember( Member member )
@@ -89,7 +101,9 @@ public class ClusterViewMessage
         TreeSet<Member> tempMembers = new TreeSet<>( Member.ordering() );
         tempMembers.addAll( members );
         tempMembers.remove( member );
-        return new ClusterViewMessage( converged, tempMembers, unreachable );
+        Set<Member> tempUnreachable = new HashSet<>( unreachable );
+        tempUnreachable.remove( member );
+        return new ClusterViewMessage( converged, tempMembers, tempUnreachable );
     }
 
     public ClusterViewMessage withUnreachable( Member member )
