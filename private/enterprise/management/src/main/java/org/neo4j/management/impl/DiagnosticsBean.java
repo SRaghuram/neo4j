@@ -9,7 +9,7 @@ import java.io.StringWriter;
 import java.time.ZoneId;
 import javax.management.NotCompliantMBeanException;
 
-import org.neo4j.diagnostics.DbmsDiagnosticsManager;
+import org.neo4j.diagnostics.providers.DbmsDiagnosticsManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
