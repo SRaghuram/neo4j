@@ -9,11 +9,11 @@ import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.interpreted.CSVResources
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 import org.opencypher.v9_0.util.helpers.StringHelper.RichString
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatest.BeforeAndAfterAll
 import sun.net.www.protocol.http.HttpURLConnection
 
 class LoadCsvAcceptanceUserAgentTest
-  extends ExecutionEngineFunSuite with BeforeAndAfterAll with BeforeAndAfterEach with CypherComparisonSupport {
+  extends ExecutionEngineFunSuite with BeforeAndAfterAll with CypherComparisonSupport {
 
   test("should be able to download data from the web") {
     val url = s"http://127.0.0.1:$port/test.csv".cypherEscape
@@ -51,11 +51,7 @@ class LoadCsvAcceptanceUserAgentTest
     builder.onPathReplyOnlyWhen(CSV_REDIRECT_PATH, HttpServerTestSupport.hasUserAgent(NEO_USER_AGENT))
 
     httpServer = builder.build()
-  }
-
-  override def beforeEach(): Unit = {
-    super.beforeEach()
-    httpServer.restart()
+    httpServer.start()
     port = httpServer.boundInfo.getPort
     assert(port > 0)
   }
