@@ -35,7 +35,6 @@ import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngin
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.StoreIndexDescriptor;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.SchemaRuleAccess;
-import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.record.ConstraintRule;
 import org.neo4j.storageengine.api.schema.ConstraintDescriptor;
 import org.neo4j.storageengine.api.schema.LabelSchemaDescriptor;
@@ -235,7 +234,7 @@ public class UniquenessConstraintCreationIT
         commit();
 
         // then
-        SchemaRuleAccess schemaRuleAccess = new SchemaStorage( neoStores().getSchemaStore() );
+        SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore() );
         StoreIndexDescriptor indexRule = schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
                 .uniqueForLabel( typeId, propertyKeyId ) );
         ConstraintRule constraintRule = schemaRuleAccess.constraintsGetSingle(

@@ -27,7 +27,6 @@ import org.neo4j.kernel.impl.storageengine.impl.recordstorage.IndexDescriptor;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.StoreIndexDescriptor;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.SchemaRuleAccess;
-import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.TokenStore;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
@@ -79,7 +78,7 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
                         pages, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
 
                 NeoStores neoStores = factory.openAllNeoStores();
-                SchemaRuleAccess schemaStorage = new SchemaStorage( neoStores.getSchemaStore() );
+                SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore() );
                 neoStores.getCounts().accept( new DumpCountsStore( out, neoStores, schemaStorage ) );
             }
             else
