@@ -5,6 +5,9 @@
  */
 package org.neo4j.backup.stresstests;
 
+import org.junit.Ignore;
+import org.junit.Test;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -15,16 +18,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Ignore;
-import org.junit.Test;
-
 import org.neo4j.causalclustering.stresstests.Config;
 import org.neo4j.causalclustering.stresstests.Control;
-import org.neo4j.diagnostics.utils.DumpUtils;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.kernel.diagnostics.utils.DumpUtils;
 
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
