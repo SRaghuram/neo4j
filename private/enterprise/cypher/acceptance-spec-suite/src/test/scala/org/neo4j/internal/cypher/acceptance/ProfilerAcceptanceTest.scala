@@ -432,7 +432,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     //THEN
     result.executionPlanDescription() should (
       includeSomewhere.aPlan("Expand(All)").withDBHits(7) and
-        includeSomewhere.aPlan("NodeUniqueIndexSeek").withDBHits(3)
+        includeSomewhere.aPlan("NodeUniqueIndexSeek").withDBHits(2)
       )
   }
 
