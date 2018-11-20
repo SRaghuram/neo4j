@@ -22,6 +22,7 @@ import org.neo4j.kernel.impl.core.AbstractTokenHolderBase;
 import org.neo4j.kernel.impl.core.TokenRegistry;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdType;
+import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageReader;
@@ -90,9 +91,10 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         TransactionState txState = new TxState();
         int tokenId = Math.toIntExact( idGeneratorFactory.get( tokenIdType ).nextId() );
         tokenCreator.createToken( txState, tokenName, tokenId );
-        try ( StorageReader statement = storageEngine.newReader() )
+        try ( StorageReader reader = storageEngine.newReader();
+              CommandCreationContext creationContext = storageEngine.newCommandCreationContext() )
         {
-            storageEngine.createCommands( commands, txState, statement, ResourceLocker.NONE, Long.MAX_VALUE, NO_DECORATION );
+            storageEngine.createCommands( commands, txState, reader, creationContext, ResourceLocker.NONE, Long.MAX_VALUE, NO_DECORATION );
         }
         catch ( CreateConstraintFailureException | TransactionFailureException | ConstraintValidationException e )
         {

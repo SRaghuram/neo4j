@@ -18,6 +18,7 @@ import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.command.Command;
+import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageReader;
@@ -122,7 +123,8 @@ public class ReplicatedTokenHolderTest
                 }
             } );
             return null;
-        } ).when( storageEngine ).createCommands( anyCollection(), any( ReadableTransactionState.class ), any( StorageReader.class ),
+        } ).when( storageEngine ).createCommands( anyCollection(), any( ReadableTransactionState.class ),
+                any( StorageReader.class ), any( CommandCreationContext.class ),
                 any( ResourceLocker.class ), anyLong(), any( TxStateVisitor.Decorator.class ) );
 
         StorageReader readLayer = mock( StorageReader.class );
