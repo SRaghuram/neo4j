@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.impl.storemigration.participant;
+package com.neo4j.kernel.impl.storemigration;
 
 import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
 import org.junit.Rule;
@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.neo4j.common.ProgressReporter;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -24,11 +25,10 @@ import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
+import org.neo4j.kernel.impl.storemigration.CountsMigrator;
+import org.neo4j.kernel.impl.storemigration.StoreMigrator;
 import org.neo4j.kernel.impl.storemigration.StoreVersionCheck;
 import org.neo4j.kernel.impl.storemigration.StoreVersionCheck.Result;
-import org.neo4j.kernel.impl.storemigration.participant.CountsMigrator;
-import org.neo4j.kernel.impl.storemigration.participant.StoreMigrator;
-import org.neo4j.common.ProgressReporter;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
