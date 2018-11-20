@@ -5,12 +5,14 @@
  */
 package org.neo4j.causalclustering.readreplica;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,6 +24,7 @@ import org.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import org.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabaseCatchupComponents;
 import org.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
+import org.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.StubLocalDatabaseService;
@@ -44,10 +47,9 @@ import org.neo4j.logging.NullLogProvider;
 
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -72,8 +74,8 @@ public class ReadReplicaStartupProcessTest
     private AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "127.0.0.1", 123 );
     private StoreId otherStoreId = new StoreId( 5, 6, 7, 8 );
 
-    @Before
-    public void commonMocking() throws CatchupAddressResolutionException
+    @BeforeEach
+    void commonMocking() throws CatchupAddressResolutionException
     {
         Map<MemberId,CoreServerInfo> members = new HashMap<>();
         members.put( memberId, mock( CoreServerInfo.class ) );
@@ -95,6 +97,14 @@ public class ReadReplicaStartupProcessTest
     private void mockDatabaseResponses( String databaseName, boolean isEmpty ) throws Throwable
     {
         mockDatabaseResponses( databaseName, isEmpty, Optional.empty() );
+    }
+
+    private <E extends Exception> void failToGetFirstStoreId( String databaseName, Class<E> eClass ) throws StoreIdDownloadFailedException
+    {
+        RemoteStore remoteStore = mock( RemoteStore.class );
+        LocalDatabase localDatabase = mockDatabase( databaseName );
+        when( remoteStore.getStoreId( any() ) ).thenThrow( eClass ).thenReturn( localDatabase.storeId() );
+        mockCatchupComponents( databaseName, localDatabase, remoteStore, mock( StoreCopyProcess.class ) );
     }
 
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
@@ -132,7 +142,53 @@ public class ReadReplicaStartupProcessTest
     }
 
     @Test
-    public void shouldReplaceEmptyStoreWithRemote() throws Throwable
+    void shouldRetryIfDbThatThrewExpectedException() throws Throwable
+    {
+        // given
+        Iterator<String> iterator = databaseNames.iterator();
+        String db1 = iterator.next();
+        failToGetFirstStoreId( db1, StoreIdDownloadFailedException.class );
+
+        while ( iterator.hasNext() )
+        {
+            mockDatabaseResponses( iterator.next(), false );
+        }
+
+        ReadReplicaStartupProcess readReplicaStartupProcess =
+                new ReadReplicaStartupProcess( new FakeExecutor(), databaseService, txPulling, chooseFirstMember(), NullLogProvider.getInstance(),
+                        NullLogProvider.getInstance(), topologyService, catchupComponents, retryStrategy );
+
+        // when
+        readReplicaStartupProcess.start();
+
+        // then
+        verify( databaseService ).start();
+        verify( txPulling ).start();
+    }
+
+    @Test
+    void shouldThrowIfNotExpectedExceptionIsThrown() throws Throwable
+    {
+        // given
+        Iterator<String> iterator = databaseNames.iterator();
+        String db1 = iterator.next();
+        failToGetFirstStoreId( db1, RuntimeException.class );
+
+        while ( iterator.hasNext() )
+        {
+            mockDatabaseResponses( iterator.next(), false );
+        }
+
+        ReadReplicaStartupProcess readReplicaStartupProcess =
+                new ReadReplicaStartupProcess( new FakeExecutor(), databaseService, txPulling, chooseFirstMember(), NullLogProvider.getInstance(),
+                        NullLogProvider.getInstance(), topologyService, catchupComponents, retryStrategy );
+
+        // when
+        Assertions.assertThrows( RuntimeException.class, readReplicaStartupProcess::start );
+    }
+
+    @Test
+    void shouldReplaceEmptyStoreWithRemote() throws Throwable
     {
         // given
         for ( String name : databaseNames )
@@ -159,7 +215,7 @@ public class ReadReplicaStartupProcessTest
     }
 
     @Test
-    public void shouldReplaceOnlyEmptyStoresWithRemote() throws Throwable
+    void shouldReplaceOnlyEmptyStoresWithRemote() throws Throwable
     {
         // given
         List<StoreCopyProcess> emptyStoreCopies = new ArrayList<>();
@@ -211,7 +267,7 @@ public class ReadReplicaStartupProcessTest
     }
 
     @Test
-    public void shouldNotStartWithMismatchedNonEmptyStore() throws Throwable
+    void shouldNotStartWithMismatchedNonEmptyStore() throws Throwable
     {
         // given
         String name = databaseNames.get( 0 );
@@ -222,25 +278,17 @@ public class ReadReplicaStartupProcessTest
                         NullLogProvider.getInstance(), topologyService, catchupComponents, retryStrategy );
 
         // when
-        try
-        {
-            readReplicaStartupProcess.start();
-            fail( "should have thrown" );
-        }
-        catch ( Exception ex )
-        {
-            //expected.
-            assertThat( ex.getMessage(), allOf(
-                    containsString( "This read replica cannot join the cluster." ),
-                    containsString("is not empty and has a mismatching storeId" ) ) );
-        }
+        RuntimeException ex = Assertions.assertThrows( RuntimeException.class, readReplicaStartupProcess::start );
+        //expected.
+        assertThat( ex.getMessage(),
+                allOf( containsString( "This read replica cannot join the cluster." ), containsString( "is not empty and has a mismatching storeId" ) ) );
 
         // then
         verify( txPulling, never() ).start();
     }
 
     @Test
-    public void shouldStartWithMatchingDatabase() throws Throwable
+    void shouldStartWithMatchingDatabase() throws Throwable
     {
         // given
         for ( String name : databaseNames )
@@ -261,7 +309,7 @@ public class ReadReplicaStartupProcessTest
     }
 
     @Test
-    public void stopShouldStopTheDatabaseAndStopPolling() throws Throwable
+    void stopShouldStopTheDatabaseAndStopPolling() throws Throwable
     {
         // given
         for ( String name : databaseNames )

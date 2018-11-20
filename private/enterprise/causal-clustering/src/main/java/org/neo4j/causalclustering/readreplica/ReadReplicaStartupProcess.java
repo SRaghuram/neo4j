@@ -6,10 +6,17 @@
 package org.neo4j.causalclustering.readreplica;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupComponentsRepository;
@@ -34,6 +41,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
 class ReadReplicaStartupProcess implements Lifecycle
 {
@@ -88,37 +96,36 @@ class ReadReplicaStartupProcess implements Lifecycle
     @Override
     public void start()
     {
-        boolean syncedWithUpstream = false;
         TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
+        Map<String,? extends LocalDatabase> dbsToSync = databaseService.registeredDatabases();
         int attempt = 0;
-        while ( !syncedWithUpstream )
+        while ( dbsToSync.size() > 0 )
         {
-            attempt++;
-            MemberId source;
             try
             {
-                source = selectionStrategy.bestUpstreamDatabase();
-                MemberId thisSource = source;
-                int thisAttempt = attempt;
-                CompletableFuture<Boolean> sync = syncStoresWithUpstream( source ).handle( ( ignored, errors ) -> {
-                    if ( errors != null )
-                    {
-                        //TODO: Consider what happens when there are several exceptions thrown
-                        logOrRethrowSyncException( errors, thisSource, thisAttempt );
-                        return false;
-                    }
-                    return true;
-                } );
-                syncedWithUpstream = sync.join();
-            }
-            catch ( UpstreamDatabaseSelectionException e )
-            {
-                lastIssue = issueOf( "finding upstream member", attempt );
-                debugLog.warn( lastIssue );
-            }
 
-            try
-            {
+                attempt++;
+                MemberId source;
+                try
+                {
+                    debugLog.info( "Syncing dbs: %s", Arrays.toString( dbsToSync.keySet().toArray() ) );
+                    source = selectionStrategy.bestUpstreamDatabase();
+                    Map<String,AsyncResult> results = syncStoresWithUpstream( source, dbsToSync ).get();
+                    List<String> successful = results.entrySet().stream().filter( isSuccessful() ).map( getDbName() ).collect( toList() );
+                    debugLog.info( "Successfully synced dbs: %s", Arrays.toString( successful.toArray() ) );
+                    removeDbs( dbsToSync, successful );
+                }
+                catch ( UpstreamDatabaseSelectionException e )
+                {
+                    lastIssue = issueOf( "finding upstream member", attempt );
+                    debugLog.warn( lastIssue );
+                }
+                catch ( ExecutionException e )
+                {
+                    debugLog.error( "Unexpected error when syncing stores", e );
+                    throw new RuntimeException( e );
+                }
+
                 Thread.sleep( syncRetryWaitPeriod.getMillis() );
                 syncRetryWaitPeriod.increment();
             }
@@ -128,7 +135,7 @@ class ReadReplicaStartupProcess implements Lifecycle
                 lastIssue = "Interrupted while trying to start read replica";
                 debugLog.warn( lastIssue );
                 userLog.error( lastIssue );
-                throw new RuntimeException( lastIssue );
+                throw new RuntimeException( e );
             }
         }
 
@@ -143,51 +150,65 @@ class ReadReplicaStartupProcess implements Lifecycle
         }
     }
 
-    private void logOrRethrowSyncException( Throwable e, MemberId source, int attempt )
+    private void removeDbs( Map<String,? extends LocalDatabase> dbs, List<String> toRemove )
     {
-        if ( e instanceof StoreCopyFailedException )
-        {
-            lastIssue = issueOf( format( "copying store files from %s", source ), attempt );
-            debugLog.warn( lastIssue );
-        }
-        else if ( e instanceof StoreIdDownloadFailedException )
-        {
-            lastIssue = issueOf( format( "getting store id from %s", source ), attempt );
-            debugLog.warn( lastIssue );
-        }
-        else if ( e instanceof TopologyLookupException )
-        {
-            lastIssue = issueOf( format( "getting address of %s", source ), attempt );
-            debugLog.warn( lastIssue );
-        }
-        else if ( e instanceof CompletionException )
-        {
-            throw (CompletionException) e;
-        }
-        else
-        {
-            //Should be impossible
-            throw new RuntimeException( e );
-        }
+        toRemove.forEach( dbs::remove );
     }
 
-    private CompletableFuture<Void> syncStoresWithUpstream( MemberId source )
+    private Function<Map.Entry<String,AsyncResult>,String> getDbName()
     {
-        CompletableFuture[] syncRequests = databaseService.registeredDatabases().entrySet().stream().map( entry -> CompletableFuture.runAsync( () ->
-        {
-            try
-            {
-                //TODO: a few levels down this actually wraps a future which we immediately block on. Is it worth building Async methods on CatchupClients
-                // to pass the future all the way up to this level and then only block at the top?
-                syncStoreWithUpstream( entry.getKey(), entry.getValue(), source );
-            }
-            catch ( Exception e )
-            {
-                throw new CompletionException( e );
-            }
-        }, executor ) ).toArray( CompletableFuture[]::new );
+        return Map.Entry::getKey;
+    }
 
-        return CompletableFuture.allOf( syncRequests );
+    private Predicate<Map.Entry<String,AsyncResult>> isSuccessful()
+    {
+        return entry -> entry.getValue().successful();
+    }
+
+    private CompletableFuture<Map<String,AsyncResult>> syncStoresWithUpstream( MemberId source, Map<String,? extends LocalDatabase> dbsToSync )
+    {
+        CompletableFuture<Map<String,AsyncResult>> combinedFuture = CompletableFuture.completedFuture( new HashMap<>() );
+        for ( Map.Entry<String,? extends LocalDatabase> nameDbEntry : dbsToSync.entrySet() )
+        {
+            String dbName = nameDbEntry.getKey();
+            CompletableFuture<AsyncResult> stage =
+                    CompletableFuture.supplyAsync( () -> doSyncStoreCopyWithUpstream( dbName, nameDbEntry.getValue(), source ), executor );
+            combinedFuture = combinedFuture.thenCombineAsync( stage, ( stringAsyncResultMap, asyncResult ) ->
+            {
+                stringAsyncResultMap.put( dbName, asyncResult );
+                return stringAsyncResultMap;
+            }, executor );
+        }
+        return combinedFuture;
+    }
+
+    private AsyncResult doSyncStoreCopyWithUpstream( String databaseName, LocalDatabase localDatabase, MemberId source )
+    {
+        try
+        {
+            syncStoreWithUpstream( databaseName, localDatabase, source );
+            return AsyncResult.success();
+        }
+        catch ( TopologyLookupException e )
+        {
+            debugLog.warn( "getting address of %s", source );
+            return AsyncResult.failed( e );
+        }
+        catch ( StoreIdDownloadFailedException e )
+        {
+            debugLog.warn( "getting store id from %s", source );
+            return AsyncResult.failed( e );
+        }
+        catch ( StoreCopyFailedException e )
+        {
+            debugLog.warn( "copying store files from %s", source );
+            return AsyncResult.failed( e );
+        }
+        catch ( DatabaseShutdownException | IOException e )
+        {
+            debugLog.warn( format( "syncing of stores failed unexpectedly from %s", source ), e );
+            return AsyncResult.failed( e );
+        }
     }
 
     private void syncStoreWithUpstream( String databaseName, LocalDatabase localDatabase, MemberId source ) throws IOException,
@@ -242,5 +263,31 @@ class ReadReplicaStartupProcess implements Lifecycle
     {
         catchupProcessManager.shutdown();
         databaseService.shutdown();
+    }
+
+    private static class AsyncResult
+    {
+        private final Exception e;
+
+        AsyncResult( Exception e )
+        {
+            this.e = e;
+        }
+
+        boolean successful()
+        {
+            return e == null;
+        }
+
+        public static AsyncResult success()
+        {
+            return new AsyncResult( null );
+        }
+
+        public static AsyncResult failed( Exception e )
+        {
+            Objects.requireNonNull( e );
+            return new AsyncResult( e );
+        }
     }
 }
