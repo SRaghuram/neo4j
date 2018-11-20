@@ -42,9 +42,9 @@ public class PrepareStoreCopyFiles implements AutoCloseable
     StoreResource[] getAtomicFilesSnapshot() throws IOException
     {
         ResourceIterator<StoreFileMetadata> neoStoreFilesIterator =
-                closeablesListener.add( database.getNeoStoreFileListing().builder().excludeAll().includeNeoStoreFiles().build() );
+                closeablesListener.add( database.getDatabaseFileListing().builder().excludeAll().includeNeoStoreFiles().build() );
         ResourceIterator<StoreFileMetadata> indexIterator = closeablesListener.add( database
-                .getNeoStoreFileListing()
+                .getDatabaseFileListing()
                 .builder()
                 .excludeAll()
                 .includeExplicitIndexStoreStoreFiles()
@@ -74,7 +74,7 @@ public class PrepareStoreCopyFiles implements AutoCloseable
 
     File[] listReplayableFiles() throws IOException
     {
-        try ( Stream<StoreFileMetadata> stream = database.getNeoStoreFileListing().builder().excludeLogFiles()
+        try ( Stream<StoreFileMetadata> stream = database.getDatabaseFileListing().builder().excludeLogFiles()
                 .excludeExplicitIndexStoreFiles().excludeSchemaIndexStoreFiles().excludeAdditionalProviders().build().stream() )
         {
             return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( StoreFileMetadata::file ).toArray( File[]::new );

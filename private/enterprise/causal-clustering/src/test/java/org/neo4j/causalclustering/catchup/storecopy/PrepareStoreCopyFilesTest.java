@@ -21,8 +21,8 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.kernel.impl.transaction.state.NeoStoreFileIndexListing;
-import org.neo4j.kernel.impl.transaction.state.NeoStoreFileListing;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -44,21 +44,21 @@ public class PrepareStoreCopyFilesTest
     private PrepareStoreCopyFiles prepareStoreCopyFiles;
     private NeoStoreFileIndexListing indexListingMock;
     private DatabaseLayout databaseLayout;
-    private NeoStoreFileListing.StoreFileListingBuilder fileListingBuilder;
+    private DatabaseFileListing.StoreFileListingBuilder fileListingBuilder;
 
     @Before
     public void setUp()
     {
         Database dataSource = mock( Database.class );
-        fileListingBuilder = mock( NeoStoreFileListing.StoreFileListingBuilder.class, CALLS_REAL_METHODS );
+        fileListingBuilder = mock( DatabaseFileListing.StoreFileListingBuilder.class, CALLS_REAL_METHODS );
         databaseLayout = testDirectory.databaseLayout();
         when( dataSource.getDatabaseLayout() ).thenReturn( databaseLayout );
         indexListingMock = mock( NeoStoreFileIndexListing.class );
         when( indexListingMock.getIndexIds() ).thenReturn( new LongHashSet() );
-        NeoStoreFileListing storeFileListing = mock( NeoStoreFileListing.class );
+        DatabaseFileListing storeFileListing = mock( DatabaseFileListing.class );
         when( storeFileListing.getNeoStoreFileIndexListing() ).thenReturn( indexListingMock );
         when( storeFileListing.builder() ).thenReturn( fileListingBuilder );
-        when( dataSource.getNeoStoreFileListing() ).thenReturn( storeFileListing );
+        when( dataSource.getDatabaseFileListing() ).thenReturn( storeFileListing );
         prepareStoreCopyFiles = new PrepareStoreCopyFiles( dataSource, fileSystemAbstraction );
     }
 

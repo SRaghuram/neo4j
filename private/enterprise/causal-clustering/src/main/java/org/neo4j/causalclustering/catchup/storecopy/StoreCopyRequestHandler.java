@@ -145,7 +145,7 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         @Override
         ResourceIterator<StoreFileMetadata> files( GetIndexFilesRequest request, Database database ) throws IOException
         {
-            return database.getNeoStoreFileListing().getNeoStoreFileIndexListing().getSnapshot( request.indexId() );
+            return database.getDatabaseFileListing().getNeoStoreFileIndexListing().getSnapshot( request.indexId() );
         }
     }
 }

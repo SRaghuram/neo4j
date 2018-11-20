@@ -12,7 +12,7 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerMonitor;
-import org.neo4j.kernel.impl.transaction.state.NeoStoreFileListing;
+import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
@@ -61,8 +61,8 @@ class PageCacheWarmerKernelExtension extends LifecycleAdapter
         }
     }
 
-    private NeoStoreFileListing getNeoStoreFileListing()
+    private DatabaseFileListing getNeoStoreFileListing()
     {
-        return dataSource.getDependencyResolver().resolveDependency( NeoStoreFileListing.class );
+        return dataSource.getDependencyResolver().resolveDependency( DatabaseFileListing.class );
     }
 }

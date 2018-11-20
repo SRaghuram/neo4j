@@ -34,7 +34,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
-import org.neo4j.kernel.impl.transaction.state.NeoStoreFileListing;
+import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -192,7 +192,7 @@ public class CatchupServerIT
 
         // given
         Database database = getDatabase( graphDb );
-        List<File> expectingFiles = database.getNeoStoreFileListing().builder().excludeAll().includeSchemaIndexStoreFiles().build().stream().map(
+        List<File> expectingFiles = database.getDatabaseFileListing().builder().excludeAll().includeSchemaIndexStoreFiles().build().stream().map(
                 StoreFileMetadata::file ).collect( toList() );
         SimpleCatchupClient simpleCatchupClient = new SimpleCatchupClient( graphDb, DEFAULT_DATABASE_NAME, fsa, catchupClient,
                 catchupServer, temporaryDirectory, LOG_PROVIDER );
@@ -277,14 +277,14 @@ public class CatchupServerIT
 
     private static LongSet getExpectedIndexIds( Database database )
     {
-        return database.getNeoStoreFileListing().getNeoStoreFileIndexListing().getIndexIds();
+        return database.getDatabaseFileListing().getNeoStoreFileIndexListing().getIndexIds();
     }
 
     private static List<File> listServerExpectedNonReplayableFiles( Database database ) throws IOException
     {
-        try ( Stream<StoreFileMetadata> countStoreStream = database.getNeoStoreFileListing().builder().excludeAll()
+        try ( Stream<StoreFileMetadata> countStoreStream = database.getDatabaseFileListing().builder().excludeAll()
                 .includeNeoStoreFiles().build().stream();
-                Stream<StoreFileMetadata> explicitIndexStream = database.getNeoStoreFileListing().builder().excludeAll()
+                Stream<StoreFileMetadata> explicitIndexStream = database.getDatabaseFileListing().builder().excludeAll()
                          .includeExplicitIndexStoreStoreFiles().build().stream() )
         {
             return Stream.concat( countStoreStream.filter( isCountFile( database.getDatabaseLayout() ) ), explicitIndexStream ).map(
@@ -294,7 +294,7 @@ public class CatchupServerIT
 
     private List<String> getExpectedStoreFiles( Database database ) throws IOException
     {
-        NeoStoreFileListing.StoreFileListingBuilder builder = database.getNeoStoreFileListing().builder();
+        DatabaseFileListing.StoreFileListingBuilder builder = database.getDatabaseFileListing().builder();
         builder.excludeLogFiles().excludeExplicitIndexStoreFiles().excludeSchemaIndexStoreFiles().excludeAdditionalProviders();
         try ( Stream<StoreFileMetadata> stream = builder.build().stream() )
         {
