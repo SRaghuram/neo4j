@@ -192,8 +192,16 @@ object CodeGeneration {
       if (ops.isEmpty) Expression.EMPTY else ops.map(compileExpression(_, block)).last
 
     //if (test) {onTrue}
-    case Condition(test, onTrue) =>
+    case Condition(test, onTrue, None) =>
       using(block.ifStatement(compileExpression(test, block)))(compileExpression(onTrue, _))
+
+    case Condition(test, onTrue, Some(onFalse)) =>
+      block.ifElseStatement(compileExpression(test, block), new Consumer[CodeBlock] {
+        override def accept(t: CodeBlock): Unit = compileExpression(onTrue, t)
+      }, new Consumer[CodeBlock] {
+        override def accept(f: CodeBlock): Unit = compileExpression(onFalse, f)
+      })
+      Expression.EMPTY
 
     //typ name;
     case DeclareLocalVariable(typ, name) =>

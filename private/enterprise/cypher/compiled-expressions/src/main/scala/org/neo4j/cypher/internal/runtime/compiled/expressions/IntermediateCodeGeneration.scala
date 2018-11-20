@@ -10,20 +10,21 @@ import java.util.regex
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.compiler.v4_0.helpers.PredicateHelper.isPredicate
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{invoke, load, method, variable}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.logical.plans.{CoerceToPredicate, NestedPlanExpression}
 import org.neo4j.cypher.operations.{CypherBoolean, CypherCoercions, CypherFunctions, CypherMath}
-import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
+import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual._
 import org.opencypher.v9_0.expressions
 import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.functions.AggregatingFunction
 import org.opencypher.v9_0.util.symbols.{CTAny, CTBoolean, CTDate, CTDateTime, CTDuration, CTFloat, CTGeometry, CTInteger, CTLocalDateTime, CTLocalTime, CTMap, CTNode, CTNumber, CTPath, CTPoint, CTRelationship, CTString, CTTime, CypherType, ListType}
 import org.opencypher.v9_0.util.{CypherTypeException, InternalException}
 
@@ -70,6 +71,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
   private def internalCompileExpression(expression: Expression, currentContext: Option[IntermediateRepresentation]): Option[IntermediateExpression] = expression match {
 
     //functions
+    case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
     case c: FunctionInvocation => compileFunction(c, currentContext)
 
     //math
@@ -1062,6 +1064,62 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                                             constant(name)))
       Some(IntermediateExpression(load(parameterVariable), Seq.empty, Seq(local),
                                   Set(equal(load(parameterVariable), noValue))))
+
+    case CaseExpression(Some(innerExpression), alternativeExpressions, defaultExpression) =>
+
+      val maybeDefault = defaultExpression match {
+        case Some(e) => internalCompileExpression(e, currentContext)
+        case None => Some(IntermediateExpression(noValue, Seq.empty, Seq.empty, Set(constant(true))))
+      }
+      val (checkExpressions, loadExpressions) = alternativeExpressions.unzip
+
+      val checks = checkExpressions.flatMap(internalCompileExpression(_, currentContext))
+      val loads = loadExpressions.flatMap(internalCompileExpression(_, currentContext))
+      if (checks.size != loads.size || maybeDefault.isEmpty) None
+      else {
+        for {inner: IntermediateExpression <- internalCompileExpression(innerExpression, currentContext)
+        } yield {
+          //AnyValue compare = inner;
+          //AnyValue returnValue = null;
+          //if (alternatives[0]._1.equals(compare)) {
+          //  returnValue = alternatives[0]._2;
+          //} else {
+          //  if (alternatives[1]._1.equals(compare)) {
+          //    returnValue = alternatives[1]._2;
+          //  } else {
+          //   ...
+          //}
+          //return returnValue == null ? default : returnValue
+
+          val default = maybeDefault.get
+          val returnVariable = namer.nextVariableName()
+          val local = variable[AnyValue](returnVariable, constant(null))
+          def loop(expressions: List[(IntermediateExpression, IntermediateExpression)]): IntermediateRepresentation = expressions match {
+            case (toCheck, toLoad) :: Nil =>
+              val representation = invoke(inner.ir, method[AnyValue, Boolean, AnyRef]("equals"), toCheck.ir)
+              condition(representation){
+                assign(returnVariable, toLoad.ir)
+              }
+            case (toCheck, toLoad) :: tl =>
+              ifElse(invoke(inner.ir, method[AnyValue, Boolean, AnyRef]("equals"), toCheck.ir)) {
+                assign(returnVariable, toLoad.ir)
+              } {
+                loop(tl)
+              }
+          }
+          val lazySet = oneTime( block(
+            loop(checks.zip(loads).toList),
+            condition(equal(load(returnVariable), constant(null)))(assign(returnVariable, default.ir))
+          ))
+
+          val ops = block(lazySet, load(returnVariable))
+          val nullChecks = block(equal(load(returnVariable), noValue))
+          IntermediateExpression(ops,
+                                 inner.fields ++ checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
+                                 inner.variables ++ checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default.variables :+ local,
+                                 Set(nullChecks))
+        }
+      }
 
     case Property(targetExpression, PropertyKeyName(key)) =>
       for (map <- internalCompileExpression(targetExpression, currentContext)) yield {

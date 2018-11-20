@@ -186,11 +186,17 @@ case class Block(ops: Seq[IntermediateRepresentation]) extends IntermediateRepre
   *  {
   *    onTrue;
   *  }
+  *  else
+  *  {
+  *    onFalse
+  *  }
   *  }}}
   * @param test the condition to check
-  * @param onTrue the opertation to perform if the `test` evaluates to true
+  * @param onTrue the operation to perform if the `test` evaluates to true
+  * @param onFalse optional, the operation to perform on false
   */
-case class Condition(test: IntermediateRepresentation, onTrue: IntermediateRepresentation)
+case class Condition(test: IntermediateRepresentation, onTrue: IntermediateRepresentation,
+                     onFalse: Option[IntermediateRepresentation] = None)
   extends IntermediateRepresentation
 
 /**
@@ -455,6 +461,10 @@ object IntermediateRepresentation {
 
   def condition(test: IntermediateRepresentation)
                (onTrue: IntermediateRepresentation): IntermediateRepresentation = Condition(test, onTrue)
+
+  def ifElse(test: IntermediateRepresentation)
+               (onTrue: IntermediateRepresentation)
+               (onFalse: IntermediateRepresentation): IntermediateRepresentation = Condition(test, onTrue, Some(onFalse))
 
   def loop(test: IntermediateRepresentation)
                (body: IntermediateRepresentation): IntermediateRepresentation = Loop(test, body)

@@ -2305,6 +2305,21 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(Values.intValue(42))
   }
 
+  test("simple case expressions") {
+    val alts = List(literalInt(42) -> literalString("42"), literalInt(1337) -> literalString("1337"))
+
+    compile(caseExpression(parameter("a"), alts))
+      .evaluate(ctx, db, parameters("a" -> intValue(42)), cursors) should equal(stringValue("42"))
+    compile(caseExpression(parameter("a"), alts))
+      .evaluate(ctx, db, parameters("a" -> intValue(1337)), cursors) should equal(stringValue("1337"))
+    compile(caseExpression(parameter("a"), alts))
+      .evaluate(ctx, db, parameters("a" -> intValue(-1)), cursors) should equal(NO_VALUE)
+    compile(caseExpression(parameter("a"), alts, Some(literalString("THIS IS THE DEFAULT"))))
+      .evaluate(ctx, db, parameters("a" -> intValue(-1)), cursors) should equal(stringValue("THIS IS THE DEFAULT"))
+  }
+
+  private def caseExpression(inner: Expression, alternatives: List[(Expression, Expression)], default: Option[Expression] = None) =
+    CaseExpression(Some(inner), alternatives, default)(pos)
   private def path(size: Int) =
     VirtualValues.path((0 to size).map(i => node(i)).toArray, (0 until size).map(i => relationship(i)).toArray)
 
@@ -2532,6 +2547,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       )
     }
   }
+
+  private def parameters(kvs: (String, AnyValue)*) = map(kvs.map(_._1).toArray, kvs.map(_._2).toArray)
 
   private val types = Map(longValue(42) -> symbols.CTNumber, stringValue("hello") -> symbols.CTString,
                    Values.TRUE -> symbols.CTBoolean, node(42) -> symbols.CTNode,
