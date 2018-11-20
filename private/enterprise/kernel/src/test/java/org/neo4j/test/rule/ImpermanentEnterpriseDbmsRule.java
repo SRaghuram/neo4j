@@ -8,7 +8,7 @@ package org.neo4j.test.rule;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 
-public class ImpermanentEnterpriseDatabaseRule extends ImpermanentDatabaseRule
+public class ImpermanentEnterpriseDbmsRule extends ImpermanentDbmsRule
 {
     @Override
     protected GraphDatabaseFactory newFactory()

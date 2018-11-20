@@ -36,8 +36,8 @@ import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdType;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
-import org.neo4j.test.rule.GraphDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 
 import static java.lang.System.currentTimeMillis;
 import static org.junit.Assert.assertNotNull;
@@ -46,7 +46,7 @@ import static org.junit.Assert.assertThat;
 public class RelationshipIdReuseStressIT
 {
     @Rule
-    public GraphDatabaseRule embeddedDatabase = new EnterpriseDatabaseRule()
+    public DbmsRule embeddedDatabase = new EnterpriseDbmsRule()
             .withSetting( EnterpriseEditionSettings.idTypesToReuse, IdType.RELATIONSHIP.name() );
 
     private final ExecutorService executorService = Executors.newCachedThreadPool();
@@ -164,13 +164,13 @@ public class RelationshipIdReuseStressIT
         return TestRelationshipTypes.values()[ThreadLocalRandom.current().nextInt( TestRelationshipTypes.values().length )];
     }
 
-    private Node getRandomCityNode( GraphDatabaseRule embeddedDatabase, Label cityLabel )
+    private Node getRandomCityNode( DbmsRule embeddedDatabase, Label cityLabel )
     {
         return embeddedDatabase.
                 findNode( cityLabel, NAME_PROPERTY, "city" + (ThreadLocalRandom.current().nextInt( 1, NUMBER_OF_CITIES + 1 )) );
     }
 
-    private Node getRandomBandNode( GraphDatabaseRule embeddedDatabase, Label bandLabel )
+    private Node getRandomBandNode( DbmsRule embeddedDatabase, Label bandLabel )
     {
         return embeddedDatabase.
                 findNode( bandLabel, NAME_PROPERTY, "band" + (ThreadLocalRandom.current().nextInt( 1, NUMBER_OF_BANDS + 1 )) );

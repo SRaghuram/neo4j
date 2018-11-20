@@ -25,8 +25,8 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
-import org.neo4j.test.rule.GraphDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.util.TestHelpers;
@@ -52,7 +52,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     @Rule
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
     @Rule
-    public final EnterpriseDatabaseRule db = new EnterpriseDatabaseRule( testDirectory )
+    public final EnterpriseDbmsRule db = new EnterpriseDbmsRule( testDirectory )
     {
         @Override
         protected void configure( GraphDatabaseFactory databaseFactory )
@@ -115,7 +115,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                 "--name=graph.db-backup",
                 "--backup-dir=" + backupDir ) );
         latch.release();
-        GraphDatabaseRule.RestartAction useBackupDir = ( fs, storeDir ) ->
+        DbmsRule.RestartAction useBackupDir = ( fs, storeDir ) ->
         {
             fs.deleteRecursively( storeDir.databaseDirectory() );
             fs.copyRecursively( backupDir, storeDir.databaseDirectory() );

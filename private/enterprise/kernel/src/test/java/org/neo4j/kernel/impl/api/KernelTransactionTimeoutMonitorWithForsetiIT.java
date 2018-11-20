@@ -6,14 +6,14 @@
 package org.neo4j.kernel.impl.api;
 
 import org.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLocksFactory;
-import org.neo4j.test.rule.GraphDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.lock_manager;
 
 public class KernelTransactionTimeoutMonitorWithForsetiIT extends KernelTransactionTimeoutMonitorIT
 {
     @Override
-    protected GraphDatabaseRule createDatabaseRule()
+    protected DbmsRule createDatabaseRule()
     {
         return super.createDatabaseRule().withSetting( lock_manager, ForsetiLocksFactory.KEY );
     }

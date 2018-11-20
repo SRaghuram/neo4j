@@ -27,8 +27,8 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
-import org.neo4j.test.rule.GraphDatabaseRule;
-import org.neo4j.test.rule.ImpermanentEnterpriseDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.ImpermanentEnterpriseDbmsRule;
 import org.neo4j.test.rule.VerboseTimeout;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 
@@ -62,7 +62,7 @@ import static org.neo4j.test.rule.concurrent.ThreadingRule.waitingWhileIn;
 
 public class ListQueriesProcedureTest
 {
-    private final GraphDatabaseRule db = new ImpermanentEnterpriseDatabaseRule()
+    private final DbmsRule db = new ImpermanentEnterpriseDbmsRule()
             .withSetting( cypher_hints_error, Settings.TRUE )
             .withSetting( GraphDatabaseSettings.track_query_allocation, Settings.TRUE )
             .withSetting( track_query_cpu_time, Settings.TRUE )

@@ -18,7 +18,7 @@ import org.neo4j.kernel.impl.coreapi.schema.NodeKeyConstraintDefinition;
 import org.neo4j.kernel.impl.coreapi.schema.NodePropertyExistenceConstraintDefinition;
 import org.neo4j.kernel.impl.coreapi.schema.RelationshipPropertyExistenceConstraintDefinition;
 import org.neo4j.kernel.impl.coreapi.schema.UniquenessConstraintDefinition;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
@@ -28,7 +28,7 @@ import static org.neo4j.test.mockito.matcher.Neo4jMatchers.getConstraints;
 public class SchemaWithPECAcceptanceTest
 {
     @Rule
-    public EnterpriseDatabaseRule dbRule = new EnterpriseDatabaseRule();
+    public EnterpriseDbmsRule dbRule = new EnterpriseDbmsRule();
 
     private GraphDatabaseService db;
     private Label label = Labels.MY_LABEL;

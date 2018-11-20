@@ -15,7 +15,7 @@ import org.neo4j.jmx.Kernel;
 import org.neo4j.jmx.Primitives;
 import org.neo4j.jmx.impl.JmxKernelExtension;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.rule.EmbeddedDatabaseRule;
+import org.neo4j.test.rule.EmbeddedDbmsRule;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 public class ManagementBeansTest
 {
     @ClassRule
-    public static EmbeddedDatabaseRule dbRule = new EmbeddedDatabaseRule();
+    public static EmbeddedDbmsRule dbRule = new EmbeddedDbmsRule();
     private static GraphDatabaseAPI graphDb;
 
     @BeforeClass

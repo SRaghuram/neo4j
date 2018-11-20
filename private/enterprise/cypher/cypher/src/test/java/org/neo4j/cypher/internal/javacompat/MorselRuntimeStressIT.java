@@ -22,7 +22,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -59,7 +59,7 @@ public class MorselRuntimeStressIT
     private AtomicInteger counter = new AtomicInteger( 0 );
 
     @Rule
-    public final EnterpriseDatabaseRule db = new EnterpriseDatabaseRule();
+    public final EnterpriseDbmsRule db = new EnterpriseDbmsRule();
 
     private ExecutorService service = Executors.newFixedThreadPool( N_THREADS );
     private Runnable task = () -> {

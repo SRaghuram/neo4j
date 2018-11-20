@@ -23,8 +23,8 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.OtherThreadExecutor.WorkerCommand;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
-import org.neo4j.test.rule.GraphDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 import org.neo4j.test.rule.concurrent.OtherThreadRule;
 
 import static org.hamcrest.Matchers.instanceOf;
@@ -43,7 +43,7 @@ public class DeferringLocksIT
     private static final String VALUE_2 = "value2";
 
     @Rule
-    public final GraphDatabaseRule dbRule = new EnterpriseDatabaseRule().startLazily();
+    public final DbmsRule dbRule = new EnterpriseDbmsRule().startLazily();
     @Rule
     public final OtherThreadRule<Void> t2 = new OtherThreadRule<>();
     @Rule

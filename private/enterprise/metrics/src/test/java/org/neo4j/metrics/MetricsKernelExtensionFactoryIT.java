@@ -34,8 +34,8 @@ import org.neo4j.metrics.source.db.CypherMetrics;
 import org.neo4j.metrics.source.db.EntityCountMetrics;
 import org.neo4j.metrics.source.db.TransactionMetrics;
 import org.neo4j.metrics.source.jvm.ThreadMetrics;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
-import org.neo4j.test.rule.GraphDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.System.currentTimeMillis;
@@ -59,7 +59,7 @@ public class MetricsKernelExtensionFactoryIT
     public final TestDirectory directory = TestDirectory.testDirectory();
 
     @Rule
-    public final GraphDatabaseRule dbRule = new EnterpriseDatabaseRule( directory ).startLazily();
+    public final DbmsRule dbRule = new EnterpriseDbmsRule( directory ).startLazily();
 
     private File outputPath;
     private GraphDatabaseAPI db;

@@ -24,8 +24,8 @@ import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.Race;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
-import org.neo4j.test.rule.GraphDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -39,7 +39,7 @@ public class NodeIdReuseStressIT
     private static final int OPERATIONS_COUNT = 10_000;
 
     @Rule
-    public final GraphDatabaseRule db = new EnterpriseDatabaseRule()
+    public final DbmsRule db = new EnterpriseDbmsRule()
             .withSetting( EnterpriseEditionSettings.idTypesToReuse, IdType.NODE.name() );
 
     @Before

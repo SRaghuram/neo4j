@@ -23,8 +23,8 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.kernel.impl.newapi.Operations;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
-import org.neo4j.test.rule.GraphDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -52,7 +52,7 @@ public class PropertyExistenceConstraintVerificationIT
             extends AbstractPropertyExistenceConstraintVerificationIT
     {
         @Override
-        void createConstraint( GraphDatabaseRule db, String label, String property )
+        void createConstraint( DbmsRule db, String label, String property )
         {
             SchemaHelper.createNodePropertyExistenceConstraint( db, label, property );
         }
@@ -64,7 +64,7 @@ public class PropertyExistenceConstraintVerificationIT
         }
 
         @Override
-        long createOffender( GraphDatabaseRule db, String key )
+        long createOffender( DbmsRule db, String key )
         {
             Node node = db.createNode();
             node.addLabel( label( key ) );
@@ -89,7 +89,7 @@ public class PropertyExistenceConstraintVerificationIT
             extends AbstractPropertyExistenceConstraintVerificationIT
     {
         @Override
-        public void createConstraint( GraphDatabaseRule db, String relType, String property )
+        public void createConstraint( DbmsRule db, String relType, String property )
         {
             SchemaHelper.createRelPropertyExistenceConstraint( db, relType, property );
         }
@@ -101,7 +101,7 @@ public class PropertyExistenceConstraintVerificationIT
         }
 
         @Override
-        public long createOffender( GraphDatabaseRule db, String key )
+        public long createOffender( DbmsRule db, String key )
         {
             Node start = db.createNode();
             Node end = db.createNode();
@@ -129,15 +129,15 @@ public class PropertyExistenceConstraintVerificationIT
         private static final String PROPERTY = "bar";
 
         @Rule
-        public final GraphDatabaseRule db = new EnterpriseDatabaseRule();
+        public final DbmsRule db = new EnterpriseDbmsRule();
         @Rule
         public final ThreadingRule thread = new ThreadingRule();
 
-        abstract void createConstraint( GraphDatabaseRule db, String key, String property );
+        abstract void createConstraint( DbmsRule db, String key, String property );
 
         abstract String constraintCreationMethodName();
 
-        abstract long createOffender( GraphDatabaseRule db, String key );
+        abstract long createOffender( DbmsRule db, String key );
 
         abstract String offenderCreationMethodName();
         abstract Class<?> getOwner();

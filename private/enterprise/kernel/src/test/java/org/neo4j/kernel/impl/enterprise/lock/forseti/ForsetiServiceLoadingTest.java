@@ -12,7 +12,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.community.CommunityLockManger;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.rule.EmbeddedDatabaseRule;
+import org.neo4j.test.rule.EmbeddedDbmsRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
@@ -20,7 +20,7 @@ import static org.hamcrest.core.IsInstanceOf.instanceOf;
 public class ForsetiServiceLoadingTest
 {
     @Rule
-    public EmbeddedDatabaseRule dbRule = new EmbeddedDatabaseRule().startLazily();
+    public EmbeddedDbmsRule dbRule = new EmbeddedDbmsRule().startLazily();
 
     @Test
     public void shouldUseForsetiAsDefaultLockManager()

@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.codegen;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -19,7 +19,7 @@ import static org.neo4j.helpers.collection.MapUtil.map;
 public class CompiledRuntimeEchoIT
 {
     @Rule
-    public final EnterpriseDatabaseRule db = new EnterpriseDatabaseRule();
+    public final EnterpriseDbmsRule db = new EnterpriseDbmsRule();
 
     @Test
     public void shouldBeAbleToEchoMaps()

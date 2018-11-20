@@ -12,8 +12,8 @@ import org.junit.rules.ExpectedException;
 import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.test.matchers.NestedThrowableMatcher;
-import org.neo4j.test.rule.GraphDatabaseRule;
-import org.neo4j.test.rule.ImpermanentEnterpriseDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.ImpermanentEnterpriseDbmsRule;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -23,7 +23,7 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.plugin_dir;
 public class SetConfigValueProcedureTest
 {
     @Rule
-    public final GraphDatabaseRule db = new ImpermanentEnterpriseDatabaseRule();
+    public final DbmsRule db = new ImpermanentEnterpriseDbmsRule();
 
     @Rule
     public final ExpectedException expect = ExpectedException.none();

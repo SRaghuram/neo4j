@@ -41,8 +41,8 @@ import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
 import org.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
-import org.neo4j.test.rule.GraphDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -60,7 +60,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
 
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
 
-    protected GraphDatabaseRule dbRule = getDatabaseTestRule( testDirectory );
+    protected DbmsRule dbRule = getDatabaseTestRule( testDirectory );
 
     @Rule
     public RuleChain chain = RuleChain.outerRule( testDirectory ).around( dbRule );
@@ -80,9 +80,9 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
 
     protected abstract Map<Setting<?>,String> getSettings();
 
-    protected GraphDatabaseRule getDatabaseTestRule( TestDirectory testDirectory )
+    protected DbmsRule getDatabaseTestRule( TestDirectory testDirectory )
     {
-        return new EnterpriseDatabaseRule( testDirectory ).startLazily();
+        return new EnterpriseDbmsRule( testDirectory ).startLazily();
     }
 
     void restartServerWithOverriddenSettings( String... configChanges ) throws IOException

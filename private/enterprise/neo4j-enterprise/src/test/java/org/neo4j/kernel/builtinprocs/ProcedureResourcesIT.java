@@ -28,8 +28,8 @@ import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.proc.Procedures;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
-import org.neo4j.test.rule.GraphDatabaseRule;
+import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -37,7 +37,7 @@ import static org.junit.Assert.assertTrue;
 public class ProcedureResourcesIT
 {
     @Rule
-    public GraphDatabaseRule db = new EnterpriseDatabaseRule()
+    public DbmsRule db = new EnterpriseDbmsRule()
             .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
 
     private final String indexDefinition = ":Label(prop)";

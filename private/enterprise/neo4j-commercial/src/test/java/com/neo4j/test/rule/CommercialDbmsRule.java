@@ -8,12 +8,12 @@ package com.neo4j.test.rule;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.test.rule.EmbeddedDatabaseRule;
+import org.neo4j.test.rule.EmbeddedDbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
-public class CommercialDatabaseRule extends EmbeddedDatabaseRule
+public class CommercialDbmsRule extends EmbeddedDbmsRule
 {
-    public CommercialDatabaseRule( TestDirectory testDirectory )
+    public CommercialDbmsRule( TestDirectory testDirectory )
     {
         super( testDirectory );
     }
@@ -25,8 +25,8 @@ public class CommercialDatabaseRule extends EmbeddedDatabaseRule
     }
 
     @Override
-    public CommercialDatabaseRule startLazily()
+    public CommercialDbmsRule startLazily()
     {
-        return (CommercialDatabaseRule) super.startLazily();
+        return (CommercialDbmsRule) super.startLazily();
     }
 }

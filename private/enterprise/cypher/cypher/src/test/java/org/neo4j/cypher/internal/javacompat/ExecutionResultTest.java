@@ -17,7 +17,7 @@ import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterators;
-import org.neo4j.test.rule.EnterpriseDatabaseRule;
+import org.neo4j.test.rule.EnterpriseDbmsRule;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -30,7 +30,7 @@ public class ExecutionResultTest
 {
     private static final String CURRENT_VERSION = "CYPHER 4.0";
     @Rule
-    public final EnterpriseDatabaseRule db = new EnterpriseDatabaseRule();
+    public final EnterpriseDbmsRule db = new EnterpriseDbmsRule();
 
     @Test
     public void shouldBePossibleToConsumeCompiledExecutionResultsWithIterator()
