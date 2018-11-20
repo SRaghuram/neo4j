@@ -7,7 +7,7 @@ package org.neo4j.helper;
 
 import java.util.function.Predicate;
 
-import org.neo4j.kernel.impl.util.UnsatisfiedDependencyException;
+import org.neo4j.exceptions.UnsatisfiedDependencyException;
 
 public class IsStoreClosed implements Predicate<Throwable>
 {
