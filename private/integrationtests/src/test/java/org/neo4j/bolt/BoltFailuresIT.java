@@ -35,7 +35,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.Connector.ConnectorType.BOLT;
+import static org.neo4j.kernel.configuration.Connector.ConnectorType.BOLT;
 import static org.neo4j.kernel.configuration.Settings.FALSE;
 import static org.neo4j.kernel.configuration.Settings.TRUE;
 import static org.neo4j.test.PortUtils.getBoltPort;
