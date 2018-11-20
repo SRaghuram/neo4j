@@ -2308,18 +2308,33 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   test("simple case expressions") {
     val alts = List(literalInt(42) -> literalString("42"), literalInt(1337) -> literalString("1337"))
 
-    compile(caseExpression(parameter("a"), alts))
+    compile(simpleCase(parameter("a"), alts))
       .evaluate(ctx, db, parameters("a" -> intValue(42)), cursors) should equal(stringValue("42"))
-    compile(caseExpression(parameter("a"), alts))
+    compile(simpleCase(parameter("a"), alts))
       .evaluate(ctx, db, parameters("a" -> intValue(1337)), cursors) should equal(stringValue("1337"))
-    compile(caseExpression(parameter("a"), alts))
+    compile(simpleCase(parameter("a"), alts))
       .evaluate(ctx, db, parameters("a" -> intValue(-1)), cursors) should equal(NO_VALUE)
-    compile(caseExpression(parameter("a"), alts, Some(literalString("THIS IS THE DEFAULT"))))
+    compile(simpleCase(parameter("a"), alts, Some(literalString("THIS IS THE DEFAULT"))))
       .evaluate(ctx, db, parameters("a" -> intValue(-1)), cursors) should equal(stringValue("THIS IS THE DEFAULT"))
   }
 
-  private def caseExpression(inner: Expression, alternatives: List[(Expression, Expression)], default: Option[Expression] = None) =
+  test("generic case expressions") {
+    compile(genericCase(List(f -> literalString("no"), t -> literalString("yes"))))
+      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("yes"))
+    compile(genericCase(List(t -> literalString("no"), f -> literalString("yes"))))
+      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("no"))
+    compile(genericCase(List(f -> literalString("no"), f -> literalString("yes"))))
+      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(genericCase(List(f -> literalString("no"), f -> literalString("yes")), Some(literalString("default"))))
+      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("default"))
+  }
+
+  private def simpleCase(inner: Expression, alternatives: List[(Expression, Expression)], default: Option[Expression] = None) =
     CaseExpression(Some(inner), alternatives, default)(pos)
+
+  private def genericCase(alternatives: List[(Expression, Expression)], default: Option[Expression] = None) =
+    CaseExpression(None, alternatives, default)(pos)
+
   private def path(size: Int) =
     VirtualValues.path((0 to size).map(i => node(i)).toArray, (0 until size).map(i => relationship(i)).toArray)
 
