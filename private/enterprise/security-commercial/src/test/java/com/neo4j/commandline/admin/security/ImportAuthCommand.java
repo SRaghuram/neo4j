@@ -211,7 +211,7 @@ public class ImportAuthCommand implements AdminCommand
 
         DatabaseManager databaseManager = getDatabaseManager( db );
         RealmLifecycle systemGraphRealm = CommercialSecurityModule.createSystemGraphRealmForOfflineImport(
-                config, NullLogProvider.getInstance(),
+                config,
                 securityLog,
                 databaseManager,
                 importUserRepository, importRoleRepository,

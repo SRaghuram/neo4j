@@ -21,9 +21,12 @@ import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
+import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -34,6 +37,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class SecureClusterIT
@@ -65,6 +69,8 @@ class SecureClusterIT
                 CausalClusteringSettings.disable_middleware_logging.name(), "false",
                 CausalClusteringSettings.middleware_logging_level.name(), "0",
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName,
+                GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
+                SecuritySettings.auth_provider.name(), SYSTEM_GRAPH_REALM_NAME,
                 policyConfig.base_directory.name(), "certificates/cluster"
         );
         Map<String,String> readReplicaParams = stringMap(

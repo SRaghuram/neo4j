@@ -11,11 +11,11 @@ import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
+import com.neo4j.security.CommercialSecurityModule;
 
 import java.time.Clock;
 
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
-import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
 import org.neo4j.causalclustering.core.IdentityModule;
@@ -26,14 +26,16 @@ import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
-import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
+import org.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
@@ -52,6 +54,7 @@ import static com.neo4j.security.configuration.CommercialSecuritySettings.isSyst
 public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 {
     private final GlobalTransactionStats globalTransactionStats;
+    private DatabaseInitializer securityDatabaseInitializer;
 
     CommercialCoreEditionModule( final PlatformModule platformModule, final SslDiscoveryServiceFactory discoveryServiceFactory )
     {
@@ -69,7 +72,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 
     @Override
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
-            CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies, DatabaseService databaseService )
+            CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies )
     {
         SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
@@ -79,7 +82,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
             ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
 
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService, databaseInitializers );
     }
 
     @Override
@@ -100,6 +103,12 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
         if ( isSystemDatabaseEnabled( config ) )
         {
             createDatabase( databaseManager, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+            assert databaseInitializers.get( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) == null;
+
+            if ( securityDatabaseInitializer != null )
+            {
+                databaseInitializers.put( GraphDatabaseSettings.SYSTEM_DATABASE_NAME, securityDatabaseInitializer );
+            }
         }
         createConfiguredDatabases( databaseManager, config );
     }
@@ -143,8 +152,20 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     @Override
     public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
     {
-        //TODO: change to commercial security module here when ready
-        EnterpriseEditionModule.createEnterpriseSecurityModule( this, platformModule, procedures );
+        SecurityProvider securityProvider;
+        if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
+        {
+            CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( platformModule, this,
+                    platformModule.logging.getUserLog( CommercialCoreEditionModule.class ), procedures, "commercial-security-module" );
+            securityDatabaseInitializer = securityModule.markForExternalBootstrappingAndGetBootstrapper();
+            platformModule.life.add( securityModule );
+            securityProvider = securityModule;
+        }
+        else
+        {
+            securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
+        }
+        setSecurityProvider( securityProvider );
     }
 
     private void initGlobalGuard( Clock clock, LogService logService )

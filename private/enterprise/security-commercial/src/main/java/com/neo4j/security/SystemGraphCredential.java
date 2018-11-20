@@ -71,12 +71,19 @@ class SystemGraphCredential implements Credential
         } );
     }
 
+    static SystemGraphCredential createCredentialForPassword( byte[] password, SecureHasher secureHasher )
+    {
+        SimpleHash hash = secureHasher.hash( password );
+        return new SystemGraphCredential( secureHasher, hash );
+    }
+
     @Override
     public String serialize()
     {
         return serialize( this );
     }
 
+    // TODO: Unused. Remove?
     SimpleHash hashedCredentials()
     {
         return hashedCredentials;

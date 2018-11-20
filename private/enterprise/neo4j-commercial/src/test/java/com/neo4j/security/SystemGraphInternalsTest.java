@@ -23,7 +23,6 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
@@ -42,7 +41,7 @@ import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 class SystemGraphInternalsTest
 {
     private GraphDatabaseService database;
-    private SystemGraphExecutor systemGraphExecutor;
+    private ContextSwitchingSystemGraphQueryExecutor systemGraphExecutor;
     private SystemGraphRealm realm;
 
     @Inject
@@ -58,7 +57,7 @@ class SystemGraphInternalsTest
         database = builder.newGraphDatabase();
         String activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
         DatabaseManager databaseManager = getDatabaseManager();
-        systemGraphExecutor = new SystemGraphExecutor( databaseManager, activeDbName );
+        systemGraphExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, activeDbName );
         setupSystemGraphRealm();
 
         // Neo4j default user should have a DbRole node connected it to admin role already
@@ -70,26 +69,20 @@ class SystemGraphInternalsTest
         AssertableLogProvider log = new AssertableLogProvider();
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
 
+        SystemGraphImportOptions importOptions =
+                new SystemGraphImportOptions( false, false, false, false, InMemoryUserRepository::new, InMemoryRoleRepository::new, InMemoryUserRepository::new,
+                        InMemoryRoleRepository::new, InMemoryUserRepository::new, InMemoryUserRepository::new );
+
+        SecureHasher secureHasher = new SecureHasher();
+        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( systemGraphExecutor, secureHasher );
         realm = new SystemGraphRealm(
-                systemGraphExecutor,
+                systemGraphOperations,
+                new SystemGraphInitializer( systemGraphExecutor, systemGraphOperations, importOptions, secureHasher, securityLog ),
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 Mockito.mock( AuthenticationStrategy.class ),
                 true,
-                true,
-                securityLog,
-                new SystemGraphImportOptions(
-                        false,
-                        false,
-                        false,
-                        false,
-                        InMemoryUserRepository::new,
-                        InMemoryRoleRepository::new,
-                        InMemoryUserRepository::new,
-                        InMemoryRoleRepository::new,
-                        InMemoryUserRepository::new,
-                        InMemoryUserRepository::new
-                )
+                true
         );
         realm.initialize();
         realm.start(); // creates default user and roles

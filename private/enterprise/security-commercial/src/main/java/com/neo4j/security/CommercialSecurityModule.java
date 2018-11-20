@@ -6,10 +6,16 @@
 package com.neo4j.security;
 
 import java.io.File;
+import java.util.Map;
 import java.util.function.Supplier;
 
+import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
+import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.helpers.Service;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
@@ -17,6 +23,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.AccessCapability;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
@@ -40,9 +47,14 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     public static final String USER_IMPORT_FILENAME = ".users.import";
     public static final String ROLE_IMPORT_FILENAME = ".roles.import";
 
-    // This will be need as an input to the SystemGraphRealm later to be able to handle transactions
-    private static DatabaseManager databaseManager;
+    private DatabaseManager databaseManager; // TODO: Check with security team.
+    private boolean useExternalBootstrapping;
+    private Config config;
+    private LogProvider logProvider;
+    private FileSystemAbstraction fileSystem;
+    private AccessCapability accessCapability;
 
+    @SuppressWarnings( "WeakerAccess" )
     public CommercialSecurityModule()
     {
         super( "commercial-security-module" );
@@ -51,7 +63,15 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     @Override
     public void setup( Dependencies dependencies ) throws KernelException
     {
-        databaseManager = ( (org.neo4j.kernel.impl.util.Dependencies) dependencies.dependencySatisfier() ).resolveDependency( DatabaseManager.class );
+        // This will be need as an input to the SystemGraphRealm later to be able to handle transactions
+        org.neo4j.kernel.impl.util.Dependencies platformDependencies = (org.neo4j.kernel.impl.util.Dependencies) dependencies.dependencySatisfier();
+        this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
+
+        this.config = dependencies.config();
+        this.logProvider = dependencies.logService().getUserLogProvider();
+        this.fileSystem = dependencies.fileSystem();
+        this.accessCapability = dependencies.accessCapability();
+
         super.setup( dependencies );
     }
 
@@ -71,18 +91,68 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         return internalRealm;
     }
 
+    /**
+     * To be used in clusters.
+     */
+    // TODO: Maybe move this somewhere else...
+    public DatabaseInitializer markForExternalBootstrappingAndGetBootstrapper()
+    {
+        useExternalBootstrapping = true;
+
+        return database ->
+        {
+            QueryExecutor queryExecutor = new QueryExecutor()
+            {
+                @Override
+                public void executeQuery( String query, Map<String,Object> params, QueryResult.QueryResultVisitor resultVisitor )
+                {
+                    try ( Transaction tx = database.beginTx() )
+                    {
+                        Result result = database.execute( query, params );
+                        QueryResult queryResult = ((QueryResultProvider) result).queryResult();
+                        queryResult.accept( resultVisitor );
+                        tx.success();
+                    }
+                }
+            };
+
+            SecureHasher secureHasher = new SecureHasher();
+            SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
+            SystemGraphImportOptions importOptions = configureImportOptions( config, logProvider, fileSystem, accessCapability );
+            Log log = logProvider.getLog( getClass() );
+            SystemGraphInitializer initializer = new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, log );
+
+            try
+            {
+                initializer.initializeSystemGraph();
+            }
+            catch ( Throwable e )
+            {
+                throw new RuntimeException( e );
+            }
+        };
+    }
+
     private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog,
             AccessCapability accessCapability )
     {
+        ContextSwitchingSystemGraphQueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager,
+                config.get( GraphDatabaseSettings.active_database ) );
+
+        SecureHasher secureHasher = new SecureHasher();
+        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
+
+        SystemGraphInitializer systemGraphInitializer = useExternalBootstrapping ? null : new SystemGraphInitializer( queryExecutor, systemGraphOperations,
+                configureImportOptions( config, logProvider, fileSystem, accessCapability ), secureHasher, securityLog );
+
         return new SystemGraphRealm(
-                new SystemGraphExecutor( databaseManager, config.get( GraphDatabaseSettings.active_database ) ),
-                new SecureHasher(),
+                systemGraphOperations,
+                systemGraphInitializer,
+                secureHasher,
                 new BasicPasswordPolicy(),
                 createAuthenticationStrategy( config ),
                 config.get( SecuritySettings.native_authentication_enabled ),
-                config.get( SecuritySettings.native_authorization_enabled ),
-                securityLog,
-                configureImportOptions( config, logProvider, fileSystem, accessCapability )
+                config.get( SecuritySettings.native_authorization_enabled )
         );
     }
 
@@ -95,7 +165,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
 
         boolean shouldPerformImport = fileSystem.fileExists( userImportFile ) || fileSystem.fileExists( roleImportFile );
         boolean mayPerformMigration = !shouldPerformImport && mayPerformMigration( config, accessCapability );
-        boolean shouldPurgeImportRepositoriesAfterSuccesfulImport = shouldPerformImport;
+        boolean shouldPurgeImportRepositoriesAfterSuccessfulImport = shouldPerformImport;
         boolean shouldResetSystemGraphAuthBeforeImport = false;
 
         Supplier<UserRepository> importUserRepositorySupplier = () -> new FileUserRepository( fileSystem, userImportFile, logProvider );
@@ -108,7 +178,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         return new SystemGraphImportOptions(
                 shouldPerformImport,
                 mayPerformMigration,
-                shouldPurgeImportRepositoriesAfterSuccesfulImport,
+                shouldPurgeImportRepositoriesAfterSuccessfulImport,
                 shouldResetSystemGraphAuthBeforeImport,
                 importUserRepositorySupplier,
                 importRoleRepositorySupplier,
@@ -119,8 +189,8 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         );
     }
 
-    private static SystemGraphImportOptions configureImportOptionsForOfflineImport( Config config, LogProvider logProvider,
-            UserRepository importUserRepository, RoleRepository importRoleRepository, boolean shouldResetSystemGraphAuthBeforeImport )
+    private static SystemGraphImportOptions configureImportOptionsForOfflineImport( UserRepository importUserRepository, RoleRepository importRoleRepository,
+            boolean shouldResetSystemGraphAuthBeforeImport )
     {
         boolean shouldPerformImport = true;
         boolean mayPerformMigration = false;
@@ -203,23 +273,29 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     }
 
     // This is used by ImportAuthCommand for offline import of auth information
-    public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config, LogProvider logProvider,
+    public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config,
             SecurityLog securityLog,
             DatabaseManager databaseManager,
             UserRepository importUserRepository, RoleRepository importRoleRepository,
             boolean shouldResetSystemGraphAuthBeforeImport )
     {
+        ContextSwitchingSystemGraphQueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, SYSTEM_DATABASE_NAME );
+        SecureHasher secureHasher = new SecureHasher();
+        SystemGraphImportOptions importOptions =
+                configureImportOptionsForOfflineImport( importUserRepository, importRoleRepository, shouldResetSystemGraphAuthBeforeImport );
+
+        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
+        SystemGraphInitializer systemGraphInitializer =
+                new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, securityLog );
+
         return new SystemGraphRealm(
-                new SystemGraphExecutor( databaseManager, SYSTEM_DATABASE_NAME ),
+                systemGraphOperations,
+                systemGraphInitializer,
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 createAuthenticationStrategy( config ),
                 false,
-                true, // At least one of these needs to be true for the realm to consider imports
-                securityLog,
-                configureImportOptionsForOfflineImport( config, logProvider,
-                        importUserRepository, importRoleRepository,
-                        shouldResetSystemGraphAuthBeforeImport )
+                true // At least one of these needs to be true for the realm to consider imports
         );
     }
 }

@@ -63,7 +63,7 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 public class SystemGraphRealmTest
 {
     TestDatabaseManager dbManager;
-    SystemGraphExecutor executor;
+    ContextSwitchingSystemGraphQueryExecutor executor;
     private AssertableLogProvider log;
     private SecurityLog securityLog;
     private int maxFailedAttemps;
@@ -72,7 +72,7 @@ public class SystemGraphRealmTest
     void setUp()
     {
         dbManager = new TestDatabaseManager();
-        executor = new TestSystemGraphExecutor( dbManager );
+        executor = new TestContextSwitchingSystemGraphQueryExecutor( dbManager );
         log = new AssertableLogProvider();
         securityLog = new SecurityLog( log.getLog( getClass() ) );
         maxFailedAttemps = Config.defaults().get( GraphDatabaseSettings.auth_max_failed_attempts );
@@ -417,15 +417,16 @@ public class SystemGraphRealmTest
 
     private SystemGraphRealm testRealmWithImportOptions( SystemGraphImportOptions importOptions ) throws Throwable
     {
+        SecureHasher secureHasher = new SecureHasher();
+        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( executor, secureHasher );
         SystemGraphRealm realm = new SystemGraphRealm(
-                executor,
+                systemGraphOperations,
+                new SystemGraphInitializer( executor, systemGraphOperations, importOptions, secureHasher, securityLog ),
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 newRateLimitedAuthStrategy(),
                 true,
-                true,
-                securityLog,
-                importOptions
+                true
         );
 
         realm.initialize();
@@ -439,11 +440,11 @@ public class SystemGraphRealmTest
         return new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() );
     }
 
-    private class TestSystemGraphExecutor extends SystemGraphExecutor
+    private class TestContextSwitchingSystemGraphQueryExecutor extends ContextSwitchingSystemGraphQueryExecutor
     {
         private TestThreadToStatementContextBridge bridge;
 
-        TestSystemGraphExecutor( DatabaseManager databaseManager )
+        TestContextSwitchingSystemGraphQueryExecutor( DatabaseManager databaseManager )
         {
             super( databaseManager, DEFAULT_DATABASE_NAME );
             bridge = new TestThreadToStatementContextBridge();

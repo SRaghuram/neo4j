@@ -69,26 +69,23 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
     @Override
     protected EnterpriseUserManager getUserManager() throws Throwable
     {
+        SystemGraphImportOptions importOptions =
+                new SystemGraphImportOptions( false, false, false, false, () -> new InMemoryUserRepository(), () -> new InMemoryRoleRepository(),
+                        () -> new InMemoryUserRepository(), () -> new InMemoryRoleRepository(), () -> new InMemoryUserRepository(),
+                        () -> new InMemoryUserRepository() );
+
+        QueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, activeDbName );
+        SecureHasher secureHasher = new SecureHasher();
+        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
+
         SystemGraphRealm realm = new SystemGraphRealm(
-                new SystemGraphExecutor( databaseManager, activeDbName ),
+                systemGraphOperations,
+                new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, authProcedures.securityLog ),
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 Mockito.mock( AuthenticationStrategy.class ),
                 true,
-                true,
-                authProcedures.securityLog,
-                new SystemGraphImportOptions(
-                    false,
-                    false,
-                    false,
-                    false,
-                    () -> new InMemoryUserRepository(),
-                    () -> new InMemoryRoleRepository(),
-                    () -> new InMemoryUserRepository(),
-                    () -> new InMemoryRoleRepository(),
-                    () -> new InMemoryUserRepository(),
-                    () -> new InMemoryUserRepository()
-                )
+                true
         );
         realm.initialize();
         realm.start(); // creates default user and roles
