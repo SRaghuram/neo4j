@@ -28,7 +28,7 @@ import org.neo4j.kernel.impl.storemigration.StoreVersionCheck;
 import org.neo4j.kernel.impl.storemigration.StoreVersionCheck.Result;
 import org.neo4j.kernel.impl.storemigration.participant.CountsMigrator;
 import org.neo4j.kernel.impl.storemigration.participant.StoreMigrator;
-import org.neo4j.kernel.impl.util.monitoring.ProgressReporter;
+import org.neo4j.common.ProgressReporter;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
