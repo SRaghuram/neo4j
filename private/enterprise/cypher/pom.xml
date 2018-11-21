@@ -62,13 +62,6 @@
     <pluginManagement>
       <plugins>
         <plugin>
-          <groupId>org.scalastyle</groupId>
-          <artifactId>scalastyle-maven-plugin</artifactId>
-          <configuration>
-            <configLocation>${project.basedir}/../../../../public/community/cypher/scalastyle_config.xml</configLocation>
-          </configuration>
-        </plugin>
-        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
           <configuration combine.self="override">
