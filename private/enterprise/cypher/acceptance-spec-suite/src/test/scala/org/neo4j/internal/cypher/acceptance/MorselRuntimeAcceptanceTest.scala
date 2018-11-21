@@ -6,8 +6,11 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.graphdb.Result
+import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 
@@ -385,10 +388,45 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
                      |CREATE (zadie)-[:WROTE]->(:BOOK {book: "Swing Time"})""".stripMargin)
 
     // When
-    val result = graph.execute("CYPHER runtime=morsel  MATCH (a)-[r]->(b) RETURN b.book as book, count(r), count(distinct a)")
+    val result = graph.execute("CYPHER runtime=morsel MATCH (a)-[r]->(b) RETURN b.book as book, count(r), count(distinct a)")
 
     // Then
     asScalaResult(result).toList should not be empty
+  }
+
+  // TODO add 50/10/10 (which currently fails)
+  test("should produce results non-concurrently") {
+    // Given a big network
+    for (i <- 1 to 10) {
+      val n = createLabeledNode("N")
+      for (j <- 1 to 10) {
+        val m = createLabeledNode("M")
+        relate(n, m, "R")
+        for (k <- 1 to 10) {
+          val o = createLabeledNode(Map("i" -> i, "j" -> j, "k" -> k), "O")
+          relate(m, o, "P")
+        }
+      }
+    }
+
+    val switch = new AtomicBoolean(false)
+
+    // When executing a query that has multiple ProduceResult taks
+    val result = graph.execute("CYPHER runtime=morsel MATCH (n:N)-[:R]->(m:M)-[:P]->(o:O) RETURN o.i, o.j, o.k")
+
+    // Then these tasks should be executed non-concurrently
+    result.accept(new ResultVisitor[Exception]() {
+      override def visit(row: Result.ResultRow): Boolean = {
+        if(!switch.compareAndSet(false, true)) {
+          fail("Expected switch to be false: Concurrently doing ProduceResults.")
+        }
+        Thread.sleep(0)
+        if(!switch.compareAndSet(true, false)) {
+          fail("Expected switch to be true: Concurrently doing ProduceResults.")
+        }
+        true
+      }
+    })
   }
 
   test("should not duplicate results in queries with multiple eager pipelines") {
