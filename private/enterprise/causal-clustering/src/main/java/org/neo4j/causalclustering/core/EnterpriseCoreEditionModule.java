@@ -112,7 +112,6 @@ import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.internal.KernelData;
@@ -390,9 +389,9 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
 
     private void editionInvariants( PlatformModule platformModule, Dependencies dependencies, Config config, LifeSupport life )
     {
-        dependencies.satisfyDependency(
-                createKernelData( platformModule.fileSystem, platformModule.pageCache, platformModule.storeLayout.storeDirectory(),
-                        config, platformModule.dataSourceManager, life ) );
+        KernelData kernelData = createKernelData( platformModule.fileSystem, platformModule.pageCache, platformModule.storeLayout.storeDirectory(), config );
+        dependencies.satisfyDependency( kernelData );
+        life.add( kernelData );
 
         ioLimiter = new ConfigurableIOLimiter( platformModule.config );
 
@@ -433,11 +432,9 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         return SchemaWriteGuard.ALLOW_ALL_WRITES;
     }
 
-    private static KernelData createKernelData( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir, Config config,
-            DataSourceManager dataSourceManager, LifeSupport life )
+    private static KernelData createKernelData( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir, Config config )
     {
-        KernelData kernelData = new KernelData( fileSystem, pageCache, storeDir, config, dataSourceManager );
-        return life.add( kernelData );
+        return new KernelData( fileSystem, pageCache, storeDir, config );
     }
 
     private static TransactionHeaderInformationFactory createHeaderInformationFactory()

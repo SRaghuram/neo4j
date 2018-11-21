@@ -56,7 +56,7 @@ public class CausalClusteringBeanTest
         Database dataSource = mock( Database.class );
         when( dataSource.getDatabaseLayout() ).thenReturn( testDirectory.databaseLayout() );
         dataSourceManager.register( DEFAULT_DATABASE_NAME, dataSource );
-        KernelData kernelData = new KernelData( fs, mock( PageCache.class ), new File( "storeDir" ), Config.defaults(), dataSourceManager );
+        KernelData kernelData = new KernelData( fs, mock( PageCache.class ), new File( "storeDir" ), Config.defaults() );
 
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( clusterStateDirectory );
@@ -64,7 +64,7 @@ public class CausalClusteringBeanTest
         dependencies.satisfyDependency( DatabaseInfo.CORE );
 
         when( dataSource.getDependencyResolver() ).thenReturn( dependencies );
-        ManagementData data = new ManagementData( new CausalClusteringBean(), kernelData, ManagementSupport.load() );
+        ManagementData data = new ManagementData( new CausalClusteringBean(), kernelData, dataSourceManager, ManagementSupport.load() );
 
         ccBean = (CausalClustering) new CausalClusteringBean().createMBean( data );
     }

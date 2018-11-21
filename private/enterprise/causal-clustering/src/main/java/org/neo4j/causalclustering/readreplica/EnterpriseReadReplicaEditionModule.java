@@ -111,7 +111,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
                 layout -> createDatabaseFileSystemWatcher( platformModule.fileSystemWatcher.getFileWatcher(), layout, logging, fileWatcherFileNameFilter() );
 
         File contextDirectory = platformModule.storeLayout.storeDirectory();
-        life.add( dependencies.satisfyDependency( new KernelData( fileSystem, pageCache, contextDirectory, config, platformModule.dataSourceManager ) ) );
+        life.add( dependencies.satisfyDependency( new KernelData( fileSystem, pageCache, contextDirectory, config ) ) );
 
         headerInformationFactory = TransactionHeaderInformationFactory.DEFAULT;
         schemaWriteGuard = () ->
