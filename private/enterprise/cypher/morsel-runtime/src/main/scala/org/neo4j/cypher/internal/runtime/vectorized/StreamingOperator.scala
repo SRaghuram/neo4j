@@ -23,7 +23,7 @@ trait StreamingOperator {
   * Physical immutable operator. [[ReduceOperator#init]] is thread-safe, and creates a [[ContinuableOperatorTask]]
   * which can be executed.
   *
-  * ReduceOperators are operate in a blocking fashion, where all input morsels have to be collected
+  * ReduceOperators operate in a blocking fashion, where all input morsels have to be collected
   * upfront and then provided to the operator in one collection.
   */
 trait ReduceOperator {
@@ -64,7 +64,7 @@ trait ContinuableOperatorTask extends OperatorTask {
   */
 trait ReduceCollector {
 
-  def acceptMorsel(inputMorsel: MorselExecutionContext): Unit
+  def acceptMorsel(inputMorsel: MorselExecutionContext): Option[Task[ExpressionCursors]]
 
   def produceTaskScheduled(task: String): Unit
 
