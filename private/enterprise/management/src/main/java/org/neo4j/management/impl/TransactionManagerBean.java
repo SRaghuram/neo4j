@@ -7,13 +7,14 @@ package org.neo4j.management.impl;
 
 import javax.management.NotCompliantMBeanException;
 
+import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
-import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.management.TransactionManager;
 
@@ -34,13 +35,13 @@ public final class TransactionManagerBean extends ManagementBeanProvider
     private static class TransactionManagerImpl extends Neo4jMBean implements TransactionManager
     {
         private final DatabaseTransactionStats txMonitor;
-        private final DataSourceManager dataSourceManager;
+        private final DatabaseManager databaseManager;
 
         TransactionManagerImpl( ManagementData management ) throws NotCompliantMBeanException
         {
             super( management );
             this.txMonitor = management.resolveDependency( DatabaseTransactionStats.class );
-            this.dataSourceManager = management.resolveDependency( DataSourceManager.class );
+            this.databaseManager = management.resolveDependency( DatabaseManager.class );
         }
 
         @Override
@@ -76,13 +77,11 @@ public final class TransactionManagerBean extends ManagementBeanProvider
         @Override
         public long getLastCommittedTxId()
         {
-            Database database = dataSourceManager.getDataSource();
-            if ( database == null )
-            {
-                return -1;
-            }
-            return database.getDependencyResolver().resolveDependency( TransactionIdStore.class )
-                    .getLastCommittedTransactionId();
+            return databaseManager.getDatabaseFacade( GraphDatabaseSettings.DEFAULT_DATABASE_NAME )
+                                 .map( GraphDatabaseFacade::getDependencyResolver )
+                                 .map( resolver -> resolver.resolveDependency( TransactionIdStore.class ) )
+                                 .map( TransactionIdStore::getLastCommittedTransactionId )
+                                 .orElse( -1L );
         }
     }
 }
