@@ -37,8 +37,9 @@ class LazyReducePipeline(start: LazyReduceOperator,
   override def acceptMorsel(inputMorsel: MorselExecutionContext,
                             context: QueryContext,
                             state: QueryState,
-                            cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
-    state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, cursors)
+                            cursors: ExpressionCursors,
+                            from: AbstractPipelineTask): Option[Task[ExpressionCursors]] = {
+    state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, cursors, from)
   }
 
   override def initCollector(): Collector = new Collector
@@ -54,7 +55,8 @@ class LazyReducePipeline(start: LazyReduceOperator,
       */
     private val reduceTaskState = new AtomicReference[ReduceTaskState](NoTaskScheduled)
 
-    override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
+    override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
+                              from: AbstractPipelineTask): Option[Task[ExpressionCursors]] = {
       // First we put the next morsel in the queue
       queue.add(inputMorsel)
 
@@ -84,6 +86,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
           this.toString,
           context,
           nextState,
+          from.ownerPipeline,
           downstream)
       }
     }

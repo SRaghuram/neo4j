@@ -24,7 +24,8 @@ class StreamingPipeline(start: StreamingOperator,
     pipelineTask(streamTask, context, nextState)
   }
 
-  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] =
+  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
+                            from: AbstractPipelineTask): Option[Task[ExpressionCursors]] =
     Some(pipelineTask(start.init(context, state, inputMorsel, cursors), context, state))
 
   override def toString: String = {

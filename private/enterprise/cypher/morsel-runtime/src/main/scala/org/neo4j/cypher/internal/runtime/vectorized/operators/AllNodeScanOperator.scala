@@ -12,37 +12,29 @@ import org.neo4j.internal.kernel.api.NodeCursor
 
 class AllNodeScanOperator(offset: Int, argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override def init(queryContext: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
-    val nodeCursor = queryContext.transactionalContext.cursors.allocateNodeCursor()
-    queryContext.transactionalContext.dataRead.allNodesScan(nodeCursor)
-    new OTask(nodeCursor, inputMorsel)
+  override def init(queryContext: QueryContext,
+                    state: QueryState,
+                    inputMorsel: MorselExecutionContext,
+                    cursors: ExpressionCursors): ContinuableOperatorTask = {
+    new OTask(inputMorsel)
   }
 
-  class OTask(var nodeCursor: NodeCursor, argument: MorselExecutionContext) extends ContinuableOperatorTask {
+  class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
 
-    var cursorHasMore = true
+    var nodeCursor: NodeCursor = _
 
-    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
-
-      while (currentRow.hasMoreRows && cursorHasMore) {
-        cursorHasMore = nodeCursor.next()
-        if (cursorHasMore) {
-          currentRow.copyFrom(argument, argumentSize.nLongs, argumentSize.nReferences)
-          currentRow.setLongAt(offset, nodeCursor.nodeReference())
-          currentRow.moveToNextRow()
-        }
-      }
-
-      currentRow.finishedWriting()
-
-      if (!cursorHasMore) {
-        if (nodeCursor != null) {
-          nodeCursor.close()
-          nodeCursor = null
-        }
-      }
+    protected override def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+      nodeCursor = context.transactionalContext.cursors.allocateNodeCursor()
+      context.transactionalContext.dataRead.allNodesScan(nodeCursor)
+      nodeCursor
     }
 
-    override def canContinue: Boolean = cursorHasMore
+    override def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      while (outputRow.hasMoreRows && nodeCursor.next()) {
+        outputRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
+        outputRow.setLongAt(offset, nodeCursor.nodeReference())
+        outputRow.moveToNextRow()
+      }
+    }
   }
 }

@@ -7,13 +7,17 @@ package org.neo4j.cypher.internal.runtime.parallel
 
 import scala.collection.mutable
 
+import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
+
 /**
   * Single threaded implementation of the Scheduler trait
   */
 class SingleThreadScheduler[T <: AutoCloseable](threadLocalResourceFactory: () => T) extends Scheduler[T] {
 
-  override def execute(task: Task[T], tracer: SchedulerTracer): QueryExecution =
+  override def execute(task: Task[T], tracer: SchedulerTracer): QueryExecution = {
+    dprintln(s"SingleThreadScheduler execute $task")
     new SingleThreadQueryExecution(task, tracer.traceQuery())
+  }
 
   def isMultiThreaded: Boolean = false
 
@@ -55,6 +59,7 @@ class SingleThreadScheduler[T <: AutoCloseable](threadLocalResourceFactory: () =
     }
 
     private def schedule(task: Task[T], upstreamWorkUnitEvent: Option[WorkUnitEvent]) = {
+      //dprintln(s"SingleThreadedScheduler schedule $task")
       val scheduledWorkUnitEvent = tracer.scheduleWorkUnit(task, upstreamWorkUnitEvent)
       jobStack.push((task,scheduledWorkUnitEvent))
     }

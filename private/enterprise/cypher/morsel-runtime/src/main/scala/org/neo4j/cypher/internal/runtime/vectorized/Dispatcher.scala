@@ -19,7 +19,7 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[ExpressionCursors]) {
                               schedulerTracer: SchedulerTracer,
                               queryIndexes: Array[IndexReadSession])
                              (visitor: QueryResultVisitor[E]): Unit = {
-    val leaf = getLeaf(operators)
+    val leaf = operators.getLeaf
 
     val state = QueryState(params, visitor, morselSize, queryIndexes, singeThreaded = scheduler.isInstanceOf[SingleThreadScheduler[_]])
 
@@ -27,9 +27,11 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[ExpressionCursors]) {
     //    a) delegate the task of finding the initial task to the scheduler, and use the schedulers cursors
     //    b) attempt some lazy cursor creation here, because they will usually not be needed
     val initExpressionCursors = new ExpressionCursors(queryContext.transactionalContext.cursors)
+
+    // NOTE: We will iterate over this initial input MorselExecutionContext, so we must clone MorselExecutionContext.EMPTY
     val initialTask =
       try {
-        leaf.init(MorselExecutionContext.EMPTY, queryContext, state, initExpressionCursors)
+        leaf.init(MorselExecutionContext.createSingleRow(), queryContext, state, initExpressionCursors)
       } finally {
         initExpressionCursors.close()
       }
@@ -38,14 +40,5 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[ExpressionCursors]) {
     val maybeError = queryExecution.await()
     if (maybeError.isDefined)
       throw maybeError.get
-  }
-
-  private def getLeaf(pipeline: Pipeline): StreamingPipeline = {
-    var leafOp = pipeline
-    while (leafOp.upstream.nonEmpty) {
-      leafOp = leafOp.upstream.get
-    }
-
-    leafOp.asInstanceOf[StreamingPipeline]
   }
 }

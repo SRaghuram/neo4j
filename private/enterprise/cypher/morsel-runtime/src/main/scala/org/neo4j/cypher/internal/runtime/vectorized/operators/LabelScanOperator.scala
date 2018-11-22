@@ -15,20 +15,23 @@ class LabelScanOperator(offset: Int, label: LazyLabel, argumentSize: SlotConfigu
   extends NodeIndexOperator[NodeLabelIndexCursor](offset) {
 
   override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
-    val cursor = context.transactionalContext.cursors.allocateNodeLabelIndexCursor()
-    val read = context.transactionalContext.dataRead
-    val labelId = label.getOptId(context)
-    read.nodeLabelScan(labelId.get.id, cursor)
-    new OTask(cursor)
+    new OTask(inputMorsel)
   }
 
-  class OTask(nodeCursor: NodeLabelIndexCursor) extends ContinuableOperatorTask {
+  class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
 
-    var hasMore = false
-    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
-      hasMore = iterate(currentRow, nodeCursor, argumentSize)
+    private var cursor: NodeLabelIndexCursor = _
+
+    override protected def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+      cursor = context.transactionalContext.cursors.allocateNodeLabelIndexCursor()
+      val read = context.transactionalContext.dataRead
+      val labelId = label.getOptId(context)
+      read.nodeLabelScan(labelId.get.id, cursor)
+      cursor
     }
 
-    override def canContinue: Boolean = hasMore
+    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      iterate(inputRow, outputRow, cursor, argumentSize)
+    }
   }
 }

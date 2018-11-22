@@ -11,6 +11,8 @@ import java.util.function.Supplier
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
 
+import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
+
 /**
   * A simple implementation of the Scheduler trait
   */
@@ -25,6 +27,7 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executor: Executor
   })
 
   override def execute(task: Task[THREAD_LOCAL_RESOURCE], tracer: SchedulerTracer): QueryExecution = {
+    //dprintln(s"SimpleScheduler execute $task")
     val queryTracer: QueryExecutionTracer = tracer.traceQuery()
     new SimpleQueryExecution(schedule(task, None, queryTracer), this, queryTracer, waitTimeout.toMillis)
   }
@@ -32,13 +35,16 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executor: Executor
   def isMultiThreaded: Boolean = true
 
   def schedule(task: Task[THREAD_LOCAL_RESOURCE], upstreamWorkUnit: Option[WorkUnitEvent], queryTracer: QueryExecutionTracer): Future[TaskResult[THREAD_LOCAL_RESOURCE]] = {
+    //dprintln(s"SimpleScheduler schedule $task")
     val scheduledWorkUnitEvent = queryTracer.scheduleWorkUnit(task, upstreamWorkUnit)
     val callableTask =
       new Callable[TaskResult[THREAD_LOCAL_RESOURCE]] {
         override def call(): TaskResult[THREAD_LOCAL_RESOURCE] = {
+          //dprintln(s"SimpleScheduler running $task")
           val workUnitEvent = scheduledWorkUnitEvent.start()
           try {
-            TaskResult(task, workUnitEvent, task.executeWorkUnit(threadLocalResource.get()))
+            val newDownstreamTasks = task.executeWorkUnit(threadLocalResource.get())
+            TaskResult(task, workUnitEvent, newDownstreamTasks)
           } finally {
             workUnitEvent.stop()
           }

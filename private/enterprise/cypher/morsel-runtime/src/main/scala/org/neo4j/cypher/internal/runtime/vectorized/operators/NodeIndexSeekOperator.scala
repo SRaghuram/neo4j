@@ -29,18 +29,21 @@ class NodeIndexSeekOperator(offset: Int,
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  override def init(context: QueryContext, state: QueryState, currentRow: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
-    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
-    val nodeCursor = indexSeek(queryState, state.queryIndexes(queryIndexId), needsValues, indexOrder, currentRow)
-    new OTask(nodeCursor)
+  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
+    new OTask(inputMorsel)
   }
 
   override val propertyIds: Array[Int] = properties.map(_.propertyKeyId)
 
-  class OTask(nodeCursors: Iterator[NodeValueIndexCursor]) extends ContinuableOperatorTask {
+  class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
 
+    private var nodeCursors: Iterator[NodeValueIndexCursor] = _
     private var nodeCursor: NodeValueIndexCursor = _
-    private var _canContinue: Boolean = true
+
+    private val closeCursorsWhenFinished = new AutoCloseable {
+      override def close(): Unit =
+        nodeCursors.foreach(_.close())
+    }
 
     private def next(): Boolean = {
       while (true) {
@@ -49,31 +52,30 @@ class NodeIndexSeekOperator(offset: Int,
         else if (nodeCursors.hasNext)
           nodeCursor = nodeCursors.next()
         else {
-          _canContinue = false
           return false
         }
       }
       false // because scala compiler doesn't realize that this line is unreachable
-    }
-
-    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
-
-      while (currentRow.hasMoreRows && next()) {
-        currentRow.setLongAt(offset, nodeCursor.nodeReference())
-        var i = 0
-        while (i < indexPropertyIndices.length) {
-          currentRow.setCachedPropertyAt(indexPropertySlotOffsets(i), nodeCursor.propertyValue(indexPropertyIndices(i)))
-          i += 1
-        }
-        currentRow.moveToNextRow()
       }
 
-      currentRow.finishedWriting()
+    override protected def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+      val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+      nodeCursors = indexSeek(queryState, state.queryIndexes(queryIndexId), needsValues, indexOrder, inputRow)
+      closeCursorsWhenFinished
     }
 
-    override def canContinue: Boolean = _canContinue
+    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      while (outputRow.hasMoreRows && next()) {
+        outputRow.setLongAt(offset, nodeCursor.nodeReference())
+        var i = 0
+        while (i < indexPropertyIndices.length) {
+          outputRow.setCachedPropertyAt(indexPropertySlotOffsets(i), nodeCursor.propertyValue(indexPropertyIndices(i)))
+          i += 1
+        }
+        outputRow.moveToNextRow()
+      }
+    }
   }
-
 }
 
 class NodeWithValues(val nodeId: Long, val values: Array[Value])

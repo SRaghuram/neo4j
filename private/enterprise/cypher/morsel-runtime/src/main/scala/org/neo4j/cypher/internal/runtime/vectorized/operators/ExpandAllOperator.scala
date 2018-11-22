@@ -21,49 +21,39 @@ class ExpandAllOperator(fromOffset: Int,
   override def init(queryContext: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask =
     new OTask(inputMorsel)
 
-  class OTask(val inputRow: MorselExecutionContext) extends ContinuableOperatorTask {
+  class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
 
     /*
     This might look wrong, but it's like this by design. This allows the loop to terminate early and still be
     picked up at any point again - all without impacting the tight loop.
     The mutable state is an unfortunate cost for this feature.
      */
-    var readPos = 0
-    var relationships: RelationshipSelectionCursor = _
+    private var relationships: RelationshipSelectionCursor = _
 
-    override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
-
-      while (inputRow.hasMoreRows && outputRow.hasMoreRows) {
-
-        val fromNode = inputRow.getLongAt(fromOffset)
-        if (entityIsNull(fromNode)) inputRow.moveToNextRow()
-        else {
-          if (relationships == null) {
-            relationships = context.getRelationshipsCursor(fromNode, dir, types.types(context))
-          }
-
-          while (outputRow.hasMoreRows && relationships.next()) {
-            val relId = relationships.relationshipReference()
-            val otherSide = relationships.otherNodeReference()
-
-            // Now we have everything needed to create a row.
-            outputRow.copyFrom(inputRow)
-            outputRow.setLongAt(relOffset, relId)
-            outputRow.setLongAt(toOffset, otherSide)
-            outputRow.moveToNextRow()
-          }
-
-          //we haven't filled up the rows
-          if (outputRow.hasMoreRows) {
-            relationships.close()
-            relationships = null
-            inputRow.moveToNextRow()
-          }
-        }
+    protected override def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+      val fromNode = inputRow.getLongAt(fromOffset)
+      if (entityIsNull(fromNode))
+        null
+      else {
+        relationships = context.getRelationshipsCursor(fromNode, dir, types.types(context))
+        relationships
       }
-      outputRow.finishedWriting()
     }
 
-    override def canContinue: Boolean = inputRow.hasMoreRows || relationships != null
+    override def innerLoop(outputRow: MorselExecutionContext,
+                           context: QueryContext,
+                           state: QueryState): Unit = {
+
+      while (outputRow.hasMoreRows && relationships.next()) {
+        val relId = relationships.relationshipReference()
+        val otherSide = relationships.otherNodeReference()
+
+        // Now we have everything needed to create a row.
+        outputRow.copyFrom(inputRow)
+        outputRow.setLongAt(relOffset, relId)
+        outputRow.setLongAt(toOffset, otherSide)
+        outputRow.moveToNextRow()
+      }
+    }
   }
 }

@@ -17,6 +17,46 @@ import scala.collection.JavaConverters._
 /**
   * A pipeline that eagerly aggregates input morsels into a queue,
   * and after that processes these morsels in a [[ContinuableOperatorTask]].
+  *
+  * We need to be careful to avoid race conditions when we update task count:
+  *
+  *  1. Increment of `taskCount` always occurs immediately before creation of a pipeline task (nothing to do with when it is actually executed)
+  *  2. Decrement occurs on completion, only after all downstream pipeline tasks have been created (so `taskCount` has been incremented for them too)
+  *
+  * An example with a plan that contains these pipelines:
+  *
+  *                  ...
+  *                 /
+  *                C(reduce pipeline)
+  *               /
+  *              /
+  *             B (regular pipeline)
+  *            /
+  *           /
+  *          A (regular pipeline)
+  *
+  * Take ‘+P’ to mean increment `taskCount` for the creation of pipeline ‘P’
+  * And ‘-P’ to mean decrement `taskCount` for completion of ‘P’
+  *
+  * The reference counting would work something like this:
+  *
+  *                      +A                                      +B1                                 -B1           +B2              -A                    -B2
+  *                 count=1                                  count=2                            count=1       count=2          count=1               count=0
+  *
+  *                create(A)  run(A)                       create(B1)   run(B1)
+  *                  +-+       +-+                            +--+       +--+
+  * Pipeline.init()->|A|-exec->|A|-downstream.acceptMorsel()->|B1|-exec->|B1|-coll.complete(B1)->kill(B1)
+  * coll.schedule(A) +-+       +-+  coll.schedule(B1)         +--+       +--+
+  *                                      |
+  *                                      |
+  *                                      |                                            run(A)                 create(B2)   run(B2)
+  *                                      |                             +-+             +-+                      +--+       +--+                    +-+       +-+
+  *                                      +---------------canContinue-->|A|-------exec->|A|-down.acceptMorsel()->|B2|-exec->|B2|-coll.complete(B2)->|C|-exec->|C|
+  *                                                     query.await()  +-+             +-+  coll.scheduled()    +--+       +--+                    +-+       +-+
+  *                                                                                     |
+  *                                                                                     |
+  *                                                                                     |
+  *                                                                                     +-------------------coll.complete(A)->kill(A)
   */
 class EagerReducePipeline(start: EagerReduceOperator,
                           override val slots: SlotConfiguration,
@@ -27,8 +67,9 @@ class EagerReducePipeline(start: EagerReduceOperator,
     s"EagerReducePipeline(${classNames.mkString(",")})"
   }
 
-  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
-    state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, cursors)
+  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
+                            from: AbstractPipelineTask): Option[Task[ExpressionCursors]] = {
+    state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, cursors, from)
   }
 
   override def initCollector(): ReduceCollector = new Collector
@@ -38,7 +79,8 @@ class EagerReducePipeline(start: EagerReduceOperator,
     private val eagerData = new java.util.concurrent.ConcurrentLinkedQueue[MorselExecutionContext]()
     private val taskCount = new AtomicInteger(0)
 
-    override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
+    override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
+                             from: AbstractPipelineTask): Option[Task[ExpressionCursors]] = {
       eagerData.add(inputMorsel)
       None
     }

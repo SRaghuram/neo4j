@@ -46,7 +46,10 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
   override def transactionalContext(query: (String, Map[String, Any])): TransactionalContext = graph.transactionalContext(query = query)
 
   override def databaseConfig(): collection.Map[Setting[_], String] = {
-    Map(GraphDatabaseSettings.cypher_hints_error -> "true")
+    Map(GraphDatabaseSettings.cypher_hints_error -> "true",
+        GraphDatabaseSettings.cypher_morsel_size -> "4",
+        GraphDatabaseSettings.cypher_worker_count -> "0"
+    )
   }
 
   override protected def createDatabaseFactory(): TestGraphDatabaseFactory = new TestEnterpriseGraphDatabaseFactory()
@@ -191,7 +194,13 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                             resultAssertionInTx: Option[RewindableExecutionResult => Unit] = None,
                             executeBefore: () => Unit = () => {},
                             executeExpectedFailures: Boolean = true,
-                            params: Map[String, Any] = Map.empty): RewindableExecutionResult = {
+                            params: Map[String, Any] = Map.empty,
+                            printExecutionPlan: Boolean = false): RewindableExecutionResult = {
+    if (printExecutionPlan) {
+      val planResult = innerExecute(s"EXPLAIN $query", params)
+      println(planResult.executionPlanDescription())
+    }
+
     if (expectSucceed.scenarios.nonEmpty) {
       val compareResults = expectSucceed - expectedDifferentResults
       val baseScenario = extractBaseScenario(expectSucceed, compareResults)

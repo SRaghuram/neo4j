@@ -19,25 +19,22 @@ class NodeIndexScanOperator(nodeOffset: Int,
   extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, property.maybeCachedNodePropertySlot) {
 
   override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
-    val valueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
     val indexSession = state.queryIndexes(queryIndexId)
-    new OTask(valueIndexCursor, indexSession)
+    new OTask(inputMorsel, indexSession)
   }
 
-  class OTask(valueIndexCursor: NodeValueIndexCursor, index: IndexReadSession) extends ContinuableOperatorTask {
+  class OTask(val inputRow: MorselExecutionContext, index: IndexReadSession) extends StreamingContinuableOperatorTask {
+    var valueIndexCursor: NodeValueIndexCursor = _
 
-    var hasMore = false
-    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
-
+    protected override def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+      valueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
       val read = context.transactionalContext.dataRead
-
-      if (!hasMore) {
-        read.nodeIndexScan(index, valueIndexCursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined)
-      }
-
-      hasMore = iterate(currentRow, valueIndexCursor, argumentSize)
+      read.nodeIndexScan(index, valueIndexCursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined)
+      valueIndexCursor
     }
 
-    override def canContinue: Boolean = hasMore
+    override def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      iterate(inputRow, outputRow, valueIndexCursor, argumentSize)
+    }
   }
 }

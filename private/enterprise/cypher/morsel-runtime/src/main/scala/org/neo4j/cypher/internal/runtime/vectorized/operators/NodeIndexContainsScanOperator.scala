@@ -21,45 +21,49 @@ class NodeIndexContainsScanOperator(nodeOffset: Int,
                                     argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, property.maybeCachedNodePropertySlot) {
 
-  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
-    val valueIndexCursor: NodeValueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
+  override def init(context: QueryContext,
+                    state: QueryState,
+                    inputMorsel: MorselExecutionContext,
+                    cursors: ExpressionCursors): ContinuableOperatorTask = {
     val index = context.transactionalContext.schemaRead.index(label, property.propertyKeyId)
     val indexSession = context.transactionalContext.dataRead.indexReadSession(index)
-    new OTask(valueIndexCursor, indexSession)
+    new OTask(inputMorsel, indexSession)
   }
 
-  class OTask(valueIndexCursor: NodeValueIndexCursor, index: IndexReadSession) extends ContinuableOperatorTask {
+  class OTask(val inputRow: MorselExecutionContext, index: IndexReadSession) extends StreamingContinuableOperatorTask {
 
-    var hasMore = false
-    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
+    private var valueIndexCursor: NodeValueIndexCursor = _
+
+    override def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+      valueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
 
       val read = context.transactionalContext.dataRead
 
       var nullExpression: Boolean = false
 
-      if (!hasMore) {
-        val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
-        val value = valueExpr(currentRow, queryState)
+      val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+      val value = valueExpr(inputRow, queryState)
 
-        value match {
-          case value: TextValue =>
-            val indexQuery = IndexQuery.stringContains(property.propertyKeyId, value)
-            read.nodeIndexSeek(index, valueIndexCursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
+      value match {
+        case value: TextValue =>
+          val indexQuery = IndexQuery.stringContains(property.propertyKeyId, value)
+          read.nodeIndexSeek(index, valueIndexCursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
 
-          case Values.NO_VALUE =>
-            // CONTAINS null does not produce any rows
-            nullExpression = true
+        case Values.NO_VALUE =>
+          // CONTAINS null does not produce any rows
+          nullExpression = true
 
-          case x => throw new CypherTypeException(s"Expected a string value, but got $x")
-        }
+        case x => throw new CypherTypeException(s"Expected a string value, but got $x")
       }
 
-      if (!nullExpression)
-        hasMore = iterate(currentRow, valueIndexCursor, argumentSize)
+      if (nullExpression)
+        null
       else
-        hasMore = false
+        valueIndexCursor
     }
 
-    override def canContinue: Boolean = hasMore
+    override def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      iterate(inputRow, outputRow, valueIndexCursor, argumentSize)
+    }
   }
 }

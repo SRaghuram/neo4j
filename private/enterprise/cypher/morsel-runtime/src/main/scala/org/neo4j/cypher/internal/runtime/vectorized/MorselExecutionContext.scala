@@ -7,9 +7,10 @@ package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, ResourceLinenumber}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.{Value, Values}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 
 object MorselExecutionContext {
@@ -18,9 +19,14 @@ object MorselExecutionContext {
   def apply(morsel: Morsel, numberOfLongs: Int, numberOfRows: Int) = new MorselExecutionContext(morsel,
     numberOfLongs, numberOfRows, 0)
   val EMPTY = new MorselExecutionContext(Morsel.create(SlotConfiguration.empty, 1), 0, 0, 0)
+
+  def createSingleRow(): MorselExecutionContext =
+    EMPTY.createClone()
 }
 
 class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow: Int, private val refsPerRow: Int, private var currentRow: Int) extends ExecutionContext {
+
+  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, currentRow)
 
   def moveToNextRow(): Unit = {
     currentRow += 1
@@ -61,7 +67,16 @@ class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow
     case _ => fail()
   }
 
-  override def copyTo(target: ExecutionContext, fromLongOffset: Int = 0, fromRefOffset: Int = 0, toLongOffset: Int = 0, toRefOffset: Int = 0): Unit = ???
+  override def copyTo(target: ExecutionContext, fromLongOffset: Int = 0, fromRefOffset: Int = 0, toLongOffset: Int = 0, toRefOffset: Int = 0): Unit =
+    target match {
+      case other: MorselExecutionContext =>
+        System.arraycopy(morsel.longs, longsAtCurrentRow + fromLongOffset, other.morsel.longs, other.longsAtCurrentRow + toLongOffset, longsPerRow - fromLongOffset)
+        System.arraycopy(morsel.refs, refsAtCurrentRow + fromRefOffset, other.morsel.refs, other.refsAtCurrentRow + toRefOffset, refsPerRow - fromRefOffset)
+
+      case other: SlottedExecutionContext =>
+        System.arraycopy(morsel.longs, longsAtCurrentRow + fromLongOffset, other.longs, toLongOffset, longsPerRow - fromLongOffset)
+        System.arraycopy(morsel.refs, refsAtCurrentRow + fromRefOffset, other.refs, toRefOffset, refsPerRow - fromRefOffset)
+    }
 
   override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit = input match {
     case other:MorselExecutionContext =>
@@ -71,13 +86,21 @@ class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow
         System.arraycopy(other.morsel.longs, other.longsAtCurrentRow, morsel.longs, longsAtCurrentRow, nLongs)
         System.arraycopy(other.morsel.refs, other.refsAtCurrentRow, morsel.refs, refsAtCurrentRow, nRefs)
       }
+
+    case other:SlottedExecutionContext =>
+      if (nLongs > longsPerRow || nRefs > refsPerRow)
+        throw new InternalException("Tried to copy too much data.")
+      else {
+        System.arraycopy(other.longs, 0, morsel.longs, longsAtCurrentRow, nLongs)
+        System.arraycopy(other.refs, 0, morsel.refs, refsAtCurrentRow, nRefs)
+      }
     case _ => fail()
   }
 
   override def copyCachedFrom(input: ExecutionContext): Unit = ???
 
   override def toString(): String = {
-    s"MorselExecutionContext(morsel=$morsel, longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, currentRow=$currentRow)"
+    s"MorselExecutionContext[0x${System.identityHashCode(this).toHexString}](morsel[0x${System.identityHashCode(morsel).toHexString}]=$morsel, longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, currentRow=$currentRow)"
   }
 
   /**
@@ -94,37 +117,43 @@ class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow
 
   override def getRefAt(offset: Int): AnyValue = morsel.refs(currentRow * refsPerRow + offset)
 
-  override def set(newEntries: Seq[(String, AnyValue)]): Unit = ???
+  override def set(newEntries: Seq[(String, AnyValue)]): Unit = fail()
 
-  override def set(key1: String, value1: AnyValue): Unit = ???
+  override def set(key1: String, value1: AnyValue): Unit = fail()
 
-  override def set(key1: String, value1: AnyValue, key2: String, value2: AnyValue): Unit = ???
+  override def set(key1: String, value1: AnyValue, key2: String, value2: AnyValue): Unit = fail()
 
-  override def set(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): Unit = ???
+  override def set(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): Unit = fail()
 
-  override def mergeWith(other: ExecutionContext): Unit = ???
+  override def mergeWith(other: ExecutionContext): Unit = fail()
 
   override def createClone(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, currentRow)
 
-  override def +=(kv: (String, AnyValue)): MorselExecutionContext.this.type = ???
+  override def +=(kv: (String, AnyValue)): MorselExecutionContext.this.type = fail()
 
-  override def -=(key: String): MorselExecutionContext.this.type = ???
+  override def -=(key: String): MorselExecutionContext.this.type = fail()
 
-  override def get(key: String): Option[AnyValue] = ???
+  override def get(key: String): Option[AnyValue] = fail()
 
-  override def iterator: Iterator[(String, AnyValue)] = ???
+  override def iterator: Iterator[(String, AnyValue)] = {
+    // This method implementation is for debug usage only (the debugger will invoke it when stepping).
+    // Please do not use in production code.
+    val longRow =  morsel.longs.slice(currentRow * longsPerRow, (currentRow + 1) * longsPerRow)
+    val refRow =  morsel.refs.slice(currentRow * refsPerRow, (currentRow + 1) * refsPerRow)
+    Iterator.single(s"${this.toString()}" -> Values.stringValue(s"""${longRow.mkString("[", ",", "]")}${refRow.mkString("[", ",", "]")}"""))
+  }
 
-  override def copyWith(key1: String, value1: AnyValue) = ???
+  override def copyWith(key1: String, value1: AnyValue) = fail()
 
-  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue) = ???
+  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue) = fail()
 
-  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): ExecutionContext = ???
+  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): ExecutionContext = fail()
 
-  override def copyWith(newEntries: Seq[(String, AnyValue)]): ExecutionContext = ???
+  override def copyWith(newEntries: Seq[(String, AnyValue)]): ExecutionContext = fail()
 
-  override def boundEntities(materializeNode: Long => AnyValue, materializeRelationship: Long => AnyValue): Map[String, AnyValue] = ???
+  override def boundEntities(materializeNode: Long => AnyValue, materializeRelationship: Long => AnyValue): Map[String, AnyValue] = fail()
 
-  override def isNull(key: String): Boolean = ???
+  override def isNull(key: String): Boolean = fail()
 
   override def setCachedProperty(key: CachedNodeProperty, value: Value): Unit = fail()
 
@@ -138,7 +167,11 @@ class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow
 
   private def refsAtCurrentRow: Int = currentRow * refsPerRow
 
-  private def fail(): Nothing = throw new InternalException("Tried using a wrong context.")
+  private def fail(): Nothing = {
+    val e = new InternalException("Tried using a wrong context.")
+    e.printStackTrace()
+    throw e
+  }
 
   override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = ???
 

@@ -69,6 +69,63 @@ trait ContinuableOperatorTask extends OperatorTask {
   def canContinue: Boolean
 }
 
+object NOTHING_TO_CLOSE extends AutoCloseable {
+  override def close(): Unit = {}
+}
+
+/**
+  * Streaming operator task which takes an input morsel and produces one or many output rows
+  * for each input row, and might require several operate calls to be fully executed.
+  */
+trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
+  val inputRow: MorselExecutionContext
+
+  protected def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable
+  protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit
+
+  private var innerLoop: AutoCloseable = _
+
+  override def operate(outputRow: MorselExecutionContext,
+                       context: QueryContext,
+                       state: QueryState,
+                       cursors: ExpressionCursors): Unit = {
+
+    while ((inputRow.hasMoreRows || innerLoop != null) && outputRow.hasMoreRows) {
+      if (innerLoop == null) {
+        innerLoop = initializeInnerLoop(inputRow, context, state, cursors)
+      }
+      // Do we have any output rows for this input row?
+      if (innerLoop != null) {
+        // Implementor is responsible for advancing both `outputRow` and `innerLoop`.
+        // Typically the loop will look like this:
+        //        while (outputRow.hasMoreRows && cursor.next()) {
+        //          ... // Copy argumentSize #columns from inputRow to outputRow
+        //          ... // Write additional columns to outputRow
+        //          outputRow.moveToNextRow()
+        //        }
+        // The reason the loop itself is not already coded here is to avoid too many fine-grained virtual calls
+        innerLoop(outputRow, context, state)
+
+        // If we have not filled the output rows, move to the next input row
+        if (outputRow.hasMoreRows) {
+          innerLoop.close()
+          innerLoop = null
+          inputRow.moveToNextRow()
+        }
+      }
+      else {
+        // Nothing to do for this input row, move to the next
+        inputRow.moveToNextRow()
+      }
+    }
+
+    outputRow.finishedWriting()
+  }
+
+  override def canContinue: Boolean =
+    inputRow.hasMoreRows || innerLoop != null
+}
+
 /**
   * A [[ReduceCollector]] holds morsels in front of a [[EagerReduceOperator]]. It relies on reference counting
   * of upstreams tasks in order to know when all expected data has arrived, at which point it will schedule
@@ -83,7 +140,8 @@ trait ContinuableOperatorTask extends OperatorTask {
   */
 trait ReduceCollector {
 
-  def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]]
+  def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
+                   from: AbstractPipelineTask): Option[Task[ExpressionCursors]]
 
   def produceTaskScheduled(task: String): Unit
 

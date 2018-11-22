@@ -90,14 +90,15 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
       case plans.Argument(_) =>
         new ArgumentOperator(argumentSize)
 
-      case p => throw new CantCompileQueryException(s"$p not supported in morsel runtime")
+      case p =>
+        throw new CantCompileQueryException(s"$p not supported in morsel runtime")
     }
 
     new StreamingPipeline(thisOp, slots, None)
   }
 
   override protected def build(plan: LogicalPlan, from: Pipeline): Pipeline = {
-    var source = from
+    val source = from
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
 
@@ -203,7 +204,15 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
   override protected def build(plan: LogicalPlan, lhs: Pipeline, rhs: Pipeline): Pipeline = {
     val slots = physicalPlan.slotConfigurations(plan.id)
 
-    throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
+    plan match {
+      case _: plans.Apply =>
+        //        // lhs => rhs => ...
+        lhs.connectPipeline(Some(rhs), None)
+        rhs
+
+      case p =>
+        throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
+    }
   }
 }
 

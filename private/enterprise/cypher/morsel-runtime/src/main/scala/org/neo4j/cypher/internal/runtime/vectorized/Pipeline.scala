@@ -14,6 +14,15 @@ import scala.collection.mutable.ArrayBuffer
 
 object Pipeline {
   private[vectorized] val DEBUG = false
+
+  /**
+    * Debug print method toggled by the DEBUG flag and with output prefixed with the current thread name
+    */
+  val dprintln: String => Unit =
+    if (DEBUG)
+      (s: String) => println(s"[${Thread.currentThread().getName}] $s")
+    else
+      (_: String) => {}
 }
 
 /**
@@ -26,13 +35,16 @@ abstract class Pipeline() {
 
   // abstract
   def upstream: Option[Pipeline]
-  def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]]
+  def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
+                   from: AbstractPipelineTask): Option[Task[ExpressionCursors]]
   def slots: SlotConfiguration
 
   // operators
   protected val operators: ArrayBuffer[StatelessOperator] = new ArrayBuffer[StatelessOperator]
   def addOperator(operator: StatelessOperator): Unit =
     operators += operator
+
+  def hasAdditionalOperators: Boolean = operators.nonEmpty
 
   // downstream
   var downstream: Option[Pipeline] = None
@@ -47,13 +59,22 @@ abstract class Pipeline() {
     this
   }
 
-  protected def connectPipeline(downstream: Option[Pipeline], downstreamReduce: Option[ReducePipeline]): Unit = {
+  def connectPipeline(downstream: Option[Pipeline], downstreamReduce: Option[ReducePipeline]): Unit = {
     this.downstream = downstream
     this.downstreamReduce = downstreamReduce
     this.upstream.foreach(_.connectPipeline(Some(this), getThisOrDownstreamReduce(downstreamReduce)))
   }
 
-  private def getThisOrDownstreamReduce(downstreamReduce: Option[ReducePipeline]): Option[ReducePipeline] =
+  def getLeaf: StreamingPipeline = {
+    var leafOp = this
+    while (leafOp.upstream.nonEmpty) {
+      leafOp = leafOp.upstream.get
+    }
+
+    leafOp.asInstanceOf[StreamingPipeline]
+  }
+
+  protected def getThisOrDownstreamReduce(downstreamReduce: Option[ReducePipeline]): Option[ReducePipeline] =
     this match {
       case reducePipeline: ReducePipeline => Some(reducePipeline)
       case _ => downstreamReduce
@@ -74,6 +95,7 @@ abstract class Pipeline() {
                  this.toString,
                  context,
                  state,
+                 this,
                  downstream)
   }
 }

@@ -29,9 +29,9 @@ object SlottedExecutionContext {
   */
 case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionContext {
 
-  private val longs = new Array[Long](slots.numberOfLongs)
+  val longs = new Array[Long](slots.numberOfLongs)
   //java.util.Arrays.fill(longs, -2L) // When debugging long slot issues you can uncomment this to check for uninitialized long slots (also in getLongAt below)
-  private val refs = new Array[AnyValue](slots.numberOfReferences)
+  val refs = new Array[AnyValue](slots.numberOfReferences)
 
   override def toString(): String = {
     val iter = this.iterator
