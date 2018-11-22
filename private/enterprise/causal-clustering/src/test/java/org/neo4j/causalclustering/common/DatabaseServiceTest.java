@@ -11,13 +11,13 @@ import org.mockito.InOrder;
 import java.time.Clock;
 
 import org.neo4j.causalclustering.helpers.FakeJobScheduler;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
@@ -31,9 +31,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.reset;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class DatabaseServiceTest
@@ -44,7 +44,7 @@ public class DatabaseServiceTest
     {
         AvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
-        DatabaseService databaseService = newLocalDatabaseService( guard, mock( DataSourceManager.class )  );
+        DatabaseService databaseService = newLocalDatabaseService( guard, mock( DatabaseManager.class )  );
 
         assertNotNull( databaseService );
         assertFalse( guard.isAvailable() );
@@ -56,7 +56,7 @@ public class DatabaseServiceTest
         AvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
 
-        DatabaseService databaseService = newLocalDatabaseService( guard, mock( DataSourceManager.class ) );
+        DatabaseService databaseService = newLocalDatabaseService( guard, mock( DatabaseManager.class ) );
         assertFalse( guard.isAvailable() );
 
         databaseService.start();
@@ -69,7 +69,7 @@ public class DatabaseServiceTest
         AvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
 
-        DatabaseService databaseService = newLocalDatabaseService( guard, mock( DataSourceManager.class ) );
+        DatabaseService databaseService = newLocalDatabaseService( guard, mock( DatabaseManager.class ) );
         assertFalse( guard.isAvailable() );
 
         databaseService.start();
@@ -86,7 +86,7 @@ public class DatabaseServiceTest
         DatabaseAvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
 
-        DatabaseService databaseService = newLocalDatabaseService( guard, mock( DataSourceManager.class ) );
+        DatabaseService databaseService = newLocalDatabaseService( guard, mock( DatabaseManager.class ) );
         assertFalse( guard.isAvailable() );
 
         databaseService.start();
@@ -101,47 +101,47 @@ public class DatabaseServiceTest
     public void availabilityGuardRaisedBeforeDataSourceManagerIsStopped() throws Throwable
     {
         AvailabilityGuard guard = mock( DatabaseAvailabilityGuard.class );
-        DataSourceManager dataSourceManager = mock( DataSourceManager.class );
+        DatabaseManager databaseManager = mock( DatabaseManager.class );
 
-        DatabaseService databaseService = newLocalDatabaseService( guard, dataSourceManager );
+        DatabaseService databaseService = newLocalDatabaseService( guard, databaseManager );
         databaseService.stop();
 
-        InOrder inOrder = inOrder( guard, dataSourceManager );
+        InOrder inOrder = inOrder( guard, databaseManager );
         // guard should be raised twice - once during construction and once during stop
         inOrder.verify( guard, times( 2 ) ).require( any() );
-        inOrder.verify( dataSourceManager ).stop();
+        inOrder.verify( databaseManager ).stop();
     }
 
     @Test
     public void availabilityGuardRaisedBeforeDataSourceManagerIsStoppedForStoreCopy() throws Throwable
     {
         AvailabilityGuard guard = mock( DatabaseAvailabilityGuard.class );
-        DataSourceManager dataSourceManager = mock( DataSourceManager.class );
+        DatabaseManager databaseManager = mock( DatabaseManager.class );
 
-        DatabaseService databaseService = newLocalDatabaseService( guard, dataSourceManager );
+        DatabaseService databaseService = newLocalDatabaseService( guard, databaseManager );
         databaseService.stopForStoreCopy();
 
-        InOrder inOrder = inOrder( guard, dataSourceManager );
+        InOrder inOrder = inOrder( guard, databaseManager );
         // guard should be raised twice - once during construction and once during stop
         inOrder.verify( guard, times( 2 ) ).require( any() );
-        inOrder.verify( dataSourceManager ).stop();
+        inOrder.verify( databaseManager ).stop();
     }
 
     @Test
     public void doNotRestartServicesIfAlreadyStarted() throws Throwable
     {
-        DataSourceManager dataSourceManager = mock( DataSourceManager.class );
-        DatabaseService databaseService = newLocalDatabaseService( newAvailabilityGuard(), dataSourceManager );
+        DatabaseManager databaseManager = mock( DatabaseManager.class );
+        DatabaseService databaseService = newLocalDatabaseService( newAvailabilityGuard(), databaseManager );
 
         databaseService.start();
 
-        verify( dataSourceManager ).start();
-        reset( dataSourceManager );
+        verify( databaseManager ).start();
+        reset( databaseManager );
 
         databaseService.start();
         databaseService.start();
 
-        verify( dataSourceManager, never() ).start();
+        verify( databaseManager, never() ).start();
     }
 
     protected DatabaseAvailabilityGuard newAvailabilityGuard()
@@ -149,9 +149,9 @@ public class DatabaseServiceTest
         return new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, Clock.systemUTC(), NullLog.getInstance() );
     }
 
-    protected DatabaseService newLocalDatabaseService( AvailabilityGuard availabilityGuard, DataSourceManager dataSourceManager )
+    protected DatabaseService newLocalDatabaseService( AvailabilityGuard availabilityGuard, DatabaseManager databaseManager )
     {
-        return new DefaultDatabaseService<>( StubLocalDatabase::new, dataSourceManager, mock( StoreLayout.class ), availabilityGuard,
+        return new DefaultDatabaseService<>( StubLocalDatabase::new, () -> databaseManager, mock( StoreLayout.class ), availabilityGuard,
                 () -> mock( DatabaseHealth.class ), mock( FileSystemAbstraction.class ), mock( PageCache.class ),
                 new FakeJobScheduler(), NullLogProvider.getInstance(), Config.defaults() );
     }

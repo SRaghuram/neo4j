@@ -11,10 +11,9 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 import org.neo4j.causalclustering.helpers.FakeJobScheduler;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
@@ -30,7 +29,7 @@ public class StubLocalDatabaseService implements DatabaseService
     private Map<String,LocalDatabase> databases = new HashMap<>();
     private boolean isStoppedForSomeReason;
     private DatabaseHealth dbHealth = new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), NullLog.getInstance() );
-    private DataSourceManager dataSourceManager = new DataSourceManager( NullLogProvider.getInstance(), Config.defaults() );
+    private DatabaseManager databaseManager = mock( DatabaseManager.class );
 
     public StubLocalDatabaseService()
     {
@@ -122,14 +121,14 @@ public class StubLocalDatabaseService implements DatabaseService
 
     private LocalDatabase stubDatabaseFromConfig( LocalDatabaseConfig config )
     {
-        return new StubLocalDatabase( config.databaseName, config.dataSourceManager, config.databaseLayout,
+        return new StubLocalDatabase( config.databaseName, () -> config.databaseManager, config.databaseLayout,
                 config.logProvider, config.isAvailable, config.monitors, config.jobScheduler );
     }
 
     public class LocalDatabaseConfig implements NeedsDatabaseDirectory
     {
         private String databaseName = DEFAULT_DATABASE_NAME;
-        private DataSourceManager dataSourceManager = StubLocalDatabaseService.this.dataSourceManager;
+        private DatabaseManager databaseManager = StubLocalDatabaseService.this.databaseManager;
         private DatabaseLayout databaseLayout;
         private LogProvider logProvider = NullLogProvider.getInstance();
         private BooleanSupplier isAvailable = StubLocalDatabaseService.this::areAvailable;
@@ -165,9 +164,9 @@ public class StubLocalDatabaseService implements DatabaseService
             return this;
         }
 
-        public LocalDatabaseConfig withDataSourceManager( DataSourceManager dataSourceManager )
+        public LocalDatabaseConfig withDatabaseManager( DatabaseManager databaseManager )
         {
-            this.dataSourceManager = dataSourceManager;
+            this.databaseManager = databaseManager;
             return this;
         }
 

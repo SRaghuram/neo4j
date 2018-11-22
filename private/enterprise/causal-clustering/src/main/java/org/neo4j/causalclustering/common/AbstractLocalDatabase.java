@@ -9,15 +9,16 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.causalclustering.identity.StoreId;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -31,7 +32,7 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     private final DatabaseLayout databaseLayout;
     private final StoreFiles storeFiles;
     private final Log log;
-    private final DataSourceManager dataSourceManager;
+    private final Supplier<DatabaseManager> databaseManagerSupplier;
     private final String databaseName;
     private final BooleanSupplier isAvailable;
     private final LogFiles txLogs;
@@ -39,13 +40,13 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
 
     private volatile StoreId storeId;
 
-    public AbstractLocalDatabase( String databaseName, DataSourceManager dataSourceManager, DatabaseLayout databaseLayout, LogFiles txLogs,
+    public AbstractLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogFiles txLogs,
             StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable, JobScheduler jobScheduler )
     {
         this.databaseLayout = databaseLayout;
         this.storeFiles = storeFiles;
         this.txLogs = txLogs;
-        this.dataSourceManager = dataSourceManager;
+        this.databaseManagerSupplier = databaseManagerSupplier;
         this.databaseName = databaseName;
         this.checkPointerService = new CheckPointerService( () -> dependencies().resolveDependency( CheckPointer.class ),
                 jobScheduler, Group.CHECKPOINT );
@@ -139,7 +140,8 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     @Override
     public Database dataSource()
     {
-        return dataSourceManager.getDataSource( databaseName ).orElseThrow( IllegalStateException::new );
+        return databaseManagerSupplier.get().getDatabaseFacade( databaseName ).orElseThrow( IllegalStateException::new )
+                .getDependencyResolver().resolveDependency( Database.class );
     }
 
     //TODO: Find places where both LocalDatabase and String databaseName are passed as params, as this is no longer necessary

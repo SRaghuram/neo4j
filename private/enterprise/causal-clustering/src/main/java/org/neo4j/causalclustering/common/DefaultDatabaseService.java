@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.StoreLayout;
@@ -23,7 +24,6 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -43,7 +43,7 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
     private final Map<String,DB> databases;
     private final LocalDatabaseFactory<DB> databaseFactory;
     private final LifeSupport databasesLife = new LifeSupport();
-    private final DataSourceManager dataSourceManager;
+    private final Supplier<DatabaseManager> databaseManagerSupplier;
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
     private final StoreLayout storeLayout;
@@ -55,12 +55,12 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
     private volatile DatabaseHealth databaseHealth;
     private volatile AvailabilityRequirement currentRequirement;
 
-    public DefaultDatabaseService( LocalDatabaseFactory<DB> databaseFactory, DataSourceManager dataSourceManager, StoreLayout storeLayout,
+    public DefaultDatabaseService( LocalDatabaseFactory<DB> databaseFactory, Supplier<DatabaseManager> databaseManagerSupplier, StoreLayout storeLayout,
             AvailabilityGuard availabilityGuard, Supplier<DatabaseHealth> databaseHealthSupplier, FileSystemAbstraction fs,
             PageCache pageCache, JobScheduler jobScheduler, LogProvider logProvider, Config config )
     {
 
-        this.dataSourceManager = dataSourceManager;
+        this.databaseManagerSupplier = databaseManagerSupplier;
         this.availabilityGuard = availabilityGuard;
         this.databaseHealthSupplier = databaseHealthSupplier;
         this.fs = fs;
@@ -87,51 +87,51 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
         currentRequirement = requirement;
     }
 
-    private synchronized void stopWithRequirement( AvailabilityRequirement requirement )
+    private synchronized void stopWithRequirement( AvailabilityRequirement requirement ) throws Throwable
     {
         log.info( "Stopping, reason: " + requirement.description() );
         raiseAvailabilityGuard( requirement );
         databaseHealth = null;
         databasesLife.stop();
-        dataSourceManager.stop();
+        databaseManagerSupplier.get().stop();
     }
 
     @Override
-    public void init()
+    public void init() throws Throwable
     {
-        dataSourceManager.init();
+        databaseManagerSupplier.get().init();
     }
 
     @Override
-    public synchronized void start()
+    public synchronized void start() throws Throwable
     {
         if ( areAvailable() )
         {
             return;
         }
-        dataSourceManager.start();
+        databaseManagerSupplier.get().start();
         databasesLife.start();
         availabilityGuard.fulfill( currentRequirement );
         currentRequirement = null;
     }
 
     @Override
-    public void stop()
+    public void stop() throws Throwable
     {
         stopWithRequirement( notStoppedReq );
     }
 
     @Override
-    public void shutdown()
+    public void shutdown() throws Throwable
     {
-        dataSourceManager.stop();
+        databaseManagerSupplier.get().shutdown();
     }
 
     /**
      * Stop database to perform a store copy. This will raise {@link DatabaseAvailabilityGuard} with
      * a more friendly blocking requirement.
      */
-    public void stopForStoreCopy()
+    public void stopForStoreCopy() throws Throwable
     {
         stopWithRequirement( notCopyingReq );
     }
@@ -159,7 +159,8 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
         StoreFiles storeFiles = new StoreFiles( fs, pageCache );
         DatabaseLayout dbLayout = storeLayout.databaseLayout( databaseName );
         LogFiles logFiles = buildLocalDatabaseLogFiles( dbLayout );
-        return databaseFactory.create( databaseName, dataSourceManager, dbLayout, logFiles, storeFiles, logProvider, this::areAvailable, jobScheduler );
+        return databaseFactory.create( databaseName, databaseManagerSupplier, dbLayout, logFiles, storeFiles, logProvider, this::areAvailable,
+                jobScheduler );
     }
 
     public Map<String,DB> registeredDatabases()

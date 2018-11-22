@@ -21,7 +21,7 @@ public interface DatabaseService extends Lifecycle
     /**
      * Stop all databases in order to perform a store copy. This will raise a {@link DatabaseAvailabilityGuard} with a more human-readable blocking requirement.
      */
-    void stopForStoreCopy();
+    void stopForStoreCopy() throws Throwable;
 
     /**
      * Reflects whether the databases aggregated in this service are available, or whether they have been stopped for some reason.

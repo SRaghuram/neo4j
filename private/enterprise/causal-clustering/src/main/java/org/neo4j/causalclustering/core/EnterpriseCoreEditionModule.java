@@ -225,8 +225,10 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         //Build local databases object
         final Supplier<DatabaseHealth> databaseHealthSupplier =
                 () -> platformModule.dataSourceManager.getDataSource().getDependencyResolver().resolveDependency( DatabaseHealth.class );
+        final Supplier<DatabaseManager> databaseManagerSupplier = () -> platformModule.dependencies.resolveDependency( DatabaseManager.class );
 
-        this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, platformModule, logProvider, config );
+        this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, platformModule,
+                databaseManagerSupplier, logProvider, config );
         dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
 
         ClusteringModule clusteringModule = getClusteringModule( platformModule, discoveryServiceFactory, storage, identityModule, dependencies );
@@ -311,9 +313,10 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     }
 
     private DefaultDatabaseService<CoreLocalDatabase> createDatabasesService( Supplier<DatabaseHealth> databaseHealthSupplier,
-            FileSystemAbstraction fileSystem, AvailabilityGuard availabilityGuard, PlatformModule platformModule, LogProvider logProvider, Config config )
+            FileSystemAbstraction fileSystem, AvailabilityGuard availabilityGuard, PlatformModule platformModule,
+            Supplier<DatabaseManager> databaseManagerSupplier, LogProvider logProvider, Config config )
     {
-        return new DefaultDatabaseService<>( CoreLocalDatabase::new, platformModule.dataSourceManager, platformModule.storeLayout,
+        return new DefaultDatabaseService<>( CoreLocalDatabase::new, databaseManagerSupplier, platformModule.storeLayout,
                 availabilityGuard, databaseHealthSupplier, fileSystem, platformModule.pageCache, platformModule.jobScheduler, logProvider, config );
     }
 

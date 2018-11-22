@@ -8,12 +8,13 @@ package org.neo4j.causalclustering.common;
 import java.io.File;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.causalclustering.identity.StoreId;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -28,16 +29,16 @@ public class StubLocalDatabase extends AbstractLocalDatabase
     private final Monitors monitors;
 
     /* This constructor is provided so that StubLocalDatabase can still conform to the LocalDatabaseFactory interface */
-    StubLocalDatabase( String databaseName, DataSourceManager dataSourceManager, DatabaseLayout databaseLayout, LogFiles ignoredTxLogs,
+    StubLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogFiles ignoredTxLogs,
             StoreFiles ignoredStoreFiles, LogProvider logProvider, BooleanSupplier isAvailable, JobScheduler jobScheduler )
     {
-        this( databaseName, dataSourceManager, databaseLayout, logProvider, isAvailable, null, jobScheduler );
+        this( databaseName, databaseManagerSupplier, databaseLayout, logProvider, isAvailable, null, jobScheduler );
     }
 
-    StubLocalDatabase( String databaseName, DataSourceManager dataSourceManager, DatabaseLayout databaseLayout, LogProvider logProvider,
+    StubLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogProvider logProvider,
             BooleanSupplier isAvailable, Monitors monitors, JobScheduler jobScheduler )
     {
-        super( databaseName, dataSourceManager, databaseLayout, null, null, logProvider, isAvailable, jobScheduler );
+        super( databaseName, databaseManagerSupplier, databaseLayout, null, null, logProvider, isAvailable, jobScheduler );
 
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         storeId = new StoreId( rng.nextInt(), rng.nextInt(), rng.nextInt(), rng.nextInt() );
