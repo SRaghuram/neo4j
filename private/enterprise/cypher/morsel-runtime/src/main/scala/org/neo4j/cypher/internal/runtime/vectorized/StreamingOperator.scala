@@ -46,7 +46,7 @@ trait LazyReduceOperator {
            state: QueryState,
            messageQueue: util.Queue[MorselExecutionContext],
            collector: LazyReduceCollector,
-           cursors: ExpressionCursors): ContinuableOperatorTask
+           cursors: ExpressionCursors): LazyReduceOperatorTask
 }
 
 /**

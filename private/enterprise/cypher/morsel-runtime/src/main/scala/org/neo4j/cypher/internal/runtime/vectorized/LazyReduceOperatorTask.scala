@@ -10,35 +10,37 @@ import java.util
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
 
+abstract class LazyReduceOperatorTask(messageQueue: util.Queue[MorselExecutionContext], collector: LazyReduceCollector) {
 
-abstract class LazyReduceOperatorTask(messageQueue: util.Queue[MorselExecutionContext], collector: LazyReduceCollector) extends ContinuableOperatorTask {
+  private var processedMorsels = IndexedSeq.newBuilder[MorselExecutionContext]
+  private var processedMorselsNum = 0
 
-  private var processedMorsels = 0
-
-  // TODO we don't really need outputRow. It's an unnecessary empty morsel.
-  override def operate(outputRow: MorselExecutionContext,
-                       context: QueryContext,
-                       state: QueryState,
-                       cursors: ExpressionCursors): Unit = {
+  /**
+    * Operates on all available morsels from the queue.
+    * @return all processed morsels
+    */
+  def operate(context: QueryContext,
+              state: QueryState,
+              cursors: ExpressionCursors): IndexedSeq[MorselExecutionContext] = {
     // Outer loop until trySetTaskDone succeeds
     do {
       // Inner loop until there is currently no more data
       var currentRow = messageQueue.poll()
       while (currentRow != null) {
-        processedMorsels += 1
         operateSingleMorsel(context, state, currentRow)
+        processedMorsels += currentRow
+        processedMorselsNum += 1
         currentRow = messageQueue.poll()
       }
-    } while(!collector.trySetTaskDone(this, processedMorsels))
+    } while(!collector.trySetTaskDone(this, processedMorselsNum))
+    processedMorsels.result()
   }
 
   /**
-    * Process a single morsel. This function is supposed to have side effects.
+    * Process a single morsel. This function is supposed to have side effects, or change the morsel in place.
     * @param currentRow the morsel
     */
   def operateSingleMorsel(context: QueryContext,
                           state: QueryState,
                           currentRow: MorselExecutionContext): Unit
-
-  override val canContinue: Boolean = false
 }

@@ -394,7 +394,6 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     asScalaResult(result).toList should not be empty
   }
 
-  // TODO add 50/10/10 (which currently fails)
   test("should produce results non-concurrently") {
     // Given a big network
     for (i <- 1 to 10) {

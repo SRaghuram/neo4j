@@ -63,8 +63,11 @@ abstract class Pipeline() {
     state.copy(reduceCollector = downstreamReduce.map(_.initCollector()))
   }
 
-  protected def pipelineTask(startOperatorTask: ContinuableOperatorTask, context: QueryContext, state: QueryState): PipelineTask = {
+  protected def produceTaskScheduleForReduceCollector(state: QueryState): Unit =
     state.reduceCollector.foreach(_.produceTaskScheduled(this.toString))
+
+  protected def pipelineTask(startOperatorTask: ContinuableOperatorTask, context: QueryContext, state: QueryState): PipelineTask = {
+    produceTaskScheduleForReduceCollector(state)
     PipelineTask(startOperatorTask,
                  operators,
                  slots,

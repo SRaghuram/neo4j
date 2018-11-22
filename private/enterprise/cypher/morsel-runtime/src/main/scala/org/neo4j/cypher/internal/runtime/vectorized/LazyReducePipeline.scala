@@ -21,8 +21,9 @@ import org.neo4j.cypher.internal.runtime.parallel.Task
   * The difference to a [[EagerReducePipeline]] is that this Pipeline starts its work
   * as soon as the first input morsel arrives.
   *
-  * The difference to a [[StreamingPipeline]] is that this Pipeline executes all work
-  * in one [[ContinuableOperatorTask]], not multiple.
+  * The difference to a [[StreamingPipeline]] is that this Pipeline is stateless,
+  * i.e. the start operator does not need to write to new morsels. Another difference
+  * is that the [[LazyReduceOperatorTask]]s can never be run in parallel, while [[ContinuableOperatorTask]]s can.
   */
 class LazyReducePipeline(start: LazyReduceOperator,
                          override val slots: SlotConfiguration,
@@ -56,7 +57,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
 
       // Try updating the state in a loop, until it succeeds.
       var updatedState = false
-      var maybeNextTask: Option[ContinuableOperatorTask] = None
+      var maybeNextTask: Option[LazyReduceOperatorTask] = None
       while(!updatedState) {
         reduceTaskState.get() match {
           case NotScheduled =>
@@ -78,11 +79,18 @@ class LazyReducePipeline(start: LazyReduceOperator,
 
       maybeNextTask.map { reduceTask =>
         val nextState = initDownstreamReduce(state)
-        pipelineTask(reduceTask, context, nextState)
+        produceTaskScheduleForReduceCollector(nextState)
+        LazyReducePipelineTask(reduceTask,
+          operators,
+          slots,
+          this.toString,
+          context,
+          nextState,
+          downstream)
       }
     }
 
-    override def trySetTaskDone(task: ContinuableOperatorTask, morselsProcessed: Int): Boolean = {
+    override def trySetTaskDone(task: LazyReduceOperatorTask, morselsProcessed: Int): Boolean = {
       reduceTaskState.get() match {
         case s@ScheduledAndGoing(`task`, `morselsProcessed`) =>
           // Mark the task as done
@@ -118,16 +126,16 @@ class LazyReducePipeline(start: LazyReduceOperator,
 
 trait LazyReduceCollector extends ReduceCollector {
   /**
-    * Executed from the [[ContinuableOperatorTask]]s Thread. Tries to mark itself as done. If that fails,
+    * Executed from the [[LazyReduceOperatorTask]]s Thread. Tries to mark itself as done. If that fails,
     * due to concurrently arriving new data, the Task has to continue instead.
     *
     * This method has to be called from a retry loop, that, if false is returned, processed any new items
     * in the queue, and then retries setting itself done.
     *
-    * @param task the [[ContinuableOperatorTask]]
+    * @param task the [[LazyReduceOperatorTask]]
     * @return if successfully set to done
     */
-  def trySetTaskDone(task: ContinuableOperatorTask, morselsProcessed: Int): Boolean
+  def trySetTaskDone(task: LazyReduceOperatorTask, morselsProcessed: Int): Boolean
 }
 
 /**
@@ -146,11 +154,11 @@ case object NotScheduled extends ReduceTaskState
   * @param reduceTask the task.
   * @param morselsArrived how many morsels arrived.
   */
-case class ScheduledAndGoing(reduceTask: ContinuableOperatorTask, morselsArrived: Int) extends ReduceTaskState
+case class ScheduledAndGoing(reduceTask: LazyReduceOperatorTask, morselsArrived: Int) extends ReduceTaskState
 
 /**
   * A reduce task has been scheduled. It has processed all currently available data.
   *
   * @param reduceTask the task.
   */
-case class ScheduledAndDone(reduceTask: ContinuableOperatorTask) extends ReduceTaskState
+case class ScheduledAndDone(reduceTask: LazyReduceOperatorTask) extends ReduceTaskState

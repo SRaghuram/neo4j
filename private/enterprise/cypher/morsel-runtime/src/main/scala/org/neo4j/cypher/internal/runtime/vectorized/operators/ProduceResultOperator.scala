@@ -23,7 +23,7 @@ class ProduceResultOperator(slots: SlotConfiguration, fieldNames: Array[String])
                     state: QueryState,
                     messageQueue: util.Queue[MorselExecutionContext],
                     collector: LazyReduceCollector,
-                    cursors: ExpressionCursors): ContinuableOperatorTask = new OTask(messageQueue, collector)
+                    cursors: ExpressionCursors): LazyReduceOperatorTask = new OTask(messageQueue, collector)
 
   class OTask(messageQueue: util.Queue[MorselExecutionContext], collector: LazyReduceCollector) extends LazyReduceOperatorTask(messageQueue, collector) {
 
