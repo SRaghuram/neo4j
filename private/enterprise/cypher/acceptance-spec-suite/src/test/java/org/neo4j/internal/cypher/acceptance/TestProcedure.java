@@ -203,8 +203,8 @@ public class TestProcedure
     public static class LabelEvaluator implements Evaluator
     {
         private Set<String> endNodeLabels;
-        private long limit = -1;
-        private long minLevel = -1;
+        private long limit;
+        private long minLevel;
         private long resultCount;
 
         LabelEvaluator( String endNodeLabel, long limit, int minLevel )

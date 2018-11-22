@@ -245,40 +245,13 @@ public class DurableStateStorageIT
     private static class LongState implements AutoCloseable
     {
         private final DurableStateStorage<Long> stateStorage;
-        private long theState = -1;
+        private long theState;
         private LifeSupport lifeSupport = new LifeSupport();
 
         LongState( FileSystemAbstraction fileSystemAbstraction, File stateDir,
                    int numberOfEntriesBeforeRotation )
         {
             lifeSupport.start();
-
-            StateMarshal<Long> byteBufferMarshal = new SafeStateMarshal<Long>()
-            {
-                @Override
-                public Long startState()
-                {
-                    return 0L;
-                }
-
-                @Override
-                public long ordinal( Long aLong )
-                {
-                    return aLong;
-                }
-
-                @Override
-                public void marshal( Long aLong, WritableChannel channel ) throws IOException
-                {
-                    channel.putLong( aLong );
-                }
-
-                @Override
-                public Long unmarshal0( ReadableChannel channel ) throws IOException
-                {
-                    return channel.getLong();
-                }
-            };
 
             this.stateStorage = lifeSupport.add( new DurableStateStorage<>( fileSystemAbstraction, stateDir, CoreStateFiles.DUMMY( new LongIndexMarshal() ),
                     numberOfEntriesBeforeRotation, NullLogProvider.getInstance()

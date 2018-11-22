@@ -63,9 +63,8 @@ class BackupStrategyCoordinator
         Path destination = onlineBackupContext.getResolvedLocationFromName();
         ConsistencyFlags consistencyFlags = onlineBackupContext.getConsistencyFlags();
 
-        Fallible<BackupStrategyOutcome> throwableWithState = null;
         List<Throwable> causesOfFailure = new ArrayList<>();
-        throwableWithState = strategy.doBackup( onlineBackupContext );
+        Fallible<BackupStrategyOutcome> throwableWithState = strategy.doBackup( onlineBackupContext );
         if ( throwableWithState.getState() == BackupStrategyOutcome.CORRECT_STRATEGY_FAILED )
         {
             throw commandFailedWithCause( throwableWithState ).get();

@@ -76,7 +76,7 @@ public class CheckTxLogs
         CheckType<?,?>[] checkTypes = parseChecks( arguments );
         File dir = parseDir( out, arguments );
 
-        boolean success = false;
+        boolean success;
         try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction() )
         {
             LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( dir, fs ).build();
