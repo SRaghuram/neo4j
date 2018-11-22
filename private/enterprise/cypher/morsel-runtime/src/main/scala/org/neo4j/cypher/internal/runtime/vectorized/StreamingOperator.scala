@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized
 
+import java.util
+
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.parallel.Task
 
@@ -28,6 +30,23 @@ trait StreamingOperator {
   */
 trait ReduceOperator {
   def init(context: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask
+}
+
+/**
+  * Physical immutable operator. [[LazyReduceOperator#init]] is thread-safe, and creates a [[ContinuableOperatorTask]]
+  * which can be executed.
+  */
+trait LazyReduceOperator {
+  /**
+    * Create a task that
+    * - pulls from the queue and processed the morsels
+    * - has a retry loop that calls [[LazyReduceCollector.trySetTaskDone()]]
+    */
+  def init(context: QueryContext,
+           state: QueryState,
+           messageQueue: util.Queue[MorselExecutionContext],
+           collector: LazyReduceCollector,
+           cursors: ExpressionCursors): ContinuableOperatorTask
 }
 
 /**
@@ -64,7 +83,7 @@ trait ContinuableOperatorTask extends OperatorTask {
   */
 trait ReduceCollector {
 
-  def acceptMorsel(inputMorsel: MorselExecutionContext): Option[Task[ExpressionCursors]]
+  def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]]
 
   def produceTaskScheduled(task: String): Unit
 

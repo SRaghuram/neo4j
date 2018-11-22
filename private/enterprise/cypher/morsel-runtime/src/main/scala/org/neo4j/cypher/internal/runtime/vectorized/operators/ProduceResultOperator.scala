@@ -5,23 +5,59 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import java.util
+
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.LongSlot
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.RefSlot
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.values.AnyValue
 import org.opencypher.v9_0.util.symbols
 
+class ProduceResultOperator(slots: SlotConfiguration, fieldNames: Array[String]) extends LazyReduceOperator {
 
-class ProduceResultOperator(slots: SlotConfiguration, fieldNames: Array[String]) extends StatelessOperator {
+  override def init(context: QueryContext,
+                    state: QueryState,
+                    messageQueue: util.Queue[MorselExecutionContext],
+                    collector: LazyReduceCollector,
+                    cursors: ExpressionCursors): ContinuableOperatorTask = new OTask(messageQueue, collector)
 
-  override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
-    val resultRow = new MorselResultRow(currentRow, slots, fieldNames, context)
+  class OTask(messageQueue: util.Queue[MorselExecutionContext], collector: LazyReduceCollector) extends ContinuableOperatorTask {
 
-    while (currentRow.hasMoreRows) {
-      state.visitor.visit(resultRow)
-      currentRow.moveToNextRow()
+    private var processedMorsels = 0
+
+    // TODO we don't really need outputRow. It's an unnecessary empty morsel.
+    override def operate(outputRow: MorselExecutionContext,
+                         context: QueryContext,
+                         state: QueryState,
+                         cursors: ExpressionCursors): Unit = {
+      // Outer loop until trySetTaskDone succeeds
+      do {
+        // Inner loop until there is currently no more data
+        var currentRow = messageQueue.poll()
+        while (currentRow != null) {
+          processedMorsels += 1
+          innerOperate(context, state, currentRow)
+          currentRow = messageQueue.poll()
+        }
+      } while(!collector.trySetTaskDone(this, processedMorsels))
     }
+
+    private def innerOperate(context: QueryContext,
+                             state: QueryState,
+                             currentRow: MorselExecutionContext): Unit = {
+      val resultRow = new MorselResultRow(currentRow, slots, fieldNames, context)
+      // Loop over the rows of the morsel and call teh vissitor for each one
+      while (currentRow.hasMoreRows) {
+        state.visitor.visit(resultRow)
+        currentRow.moveToNextRow()
+      }
+    }
+
+    override val canContinue: Boolean = false
   }
 }
 
