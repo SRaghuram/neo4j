@@ -9,7 +9,6 @@ import com.neo4j.server.database.CommercialGraphFactory;
 
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.server.database.GraphFactory;
 import org.neo4j.server.enterprise.OpenEnterpriseNeoServer;
 

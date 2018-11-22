@@ -6,13 +6,11 @@
 package org.neo4j.causalclustering.core.consensus.log.segmented;
 
 import java.io.IOException;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
 
 import org.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import org.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import org.neo4j.storageengine.api.ReadableChannel;
 import org.neo4j.storageengine.api.WritableChannel;
 

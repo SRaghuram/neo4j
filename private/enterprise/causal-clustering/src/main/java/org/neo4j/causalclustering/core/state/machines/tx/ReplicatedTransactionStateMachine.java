@@ -10,7 +10,6 @@ import java.util.function.Consumer;
 import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.causalclustering.core.state.machines.StateMachine;
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;

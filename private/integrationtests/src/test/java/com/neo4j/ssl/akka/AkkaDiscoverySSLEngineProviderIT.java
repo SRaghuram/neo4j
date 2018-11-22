@@ -5,7 +5,6 @@
  */
 package com.neo4j.ssl.akka;
 
-import akka.Done;
 import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;

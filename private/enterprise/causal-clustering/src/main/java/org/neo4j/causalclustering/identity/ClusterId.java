@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import org.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import org.neo4j.storageengine.api.ReadableChannel;
 import org.neo4j.storageengine.api.WritableChannel;

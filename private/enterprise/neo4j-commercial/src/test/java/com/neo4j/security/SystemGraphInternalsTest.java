@@ -9,8 +9,6 @@ import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 
@@ -34,6 +32,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 

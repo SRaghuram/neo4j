@@ -9,7 +9,6 @@ import java.io.IOException;
 
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.messaging.EndOfStreamException;
-import org.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import org.neo4j.storageengine.api.ReadableChannel;
 import org.neo4j.storageengine.api.WritableChannel;
 
