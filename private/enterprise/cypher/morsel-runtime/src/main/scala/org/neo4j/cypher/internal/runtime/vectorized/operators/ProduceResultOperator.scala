@@ -25,39 +25,18 @@ class ProduceResultOperator(slots: SlotConfiguration, fieldNames: Array[String])
                     collector: LazyReduceCollector,
                     cursors: ExpressionCursors): ContinuableOperatorTask = new OTask(messageQueue, collector)
 
-  class OTask(messageQueue: util.Queue[MorselExecutionContext], collector: LazyReduceCollector) extends ContinuableOperatorTask {
+  class OTask(messageQueue: util.Queue[MorselExecutionContext], collector: LazyReduceCollector) extends LazyReduceOperatorTask(messageQueue, collector) {
 
-    private var processedMorsels = 0
-
-    // TODO we don't really need outputRow. It's an unnecessary empty morsel.
-    override def operate(outputRow: MorselExecutionContext,
-                         context: QueryContext,
-                         state: QueryState,
-                         cursors: ExpressionCursors): Unit = {
-      // Outer loop until trySetTaskDone succeeds
-      do {
-        // Inner loop until there is currently no more data
-        var currentRow = messageQueue.poll()
-        while (currentRow != null) {
-          processedMorsels += 1
-          innerOperate(context, state, currentRow)
-          currentRow = messageQueue.poll()
-        }
-      } while(!collector.trySetTaskDone(this, processedMorsels))
-    }
-
-    private def innerOperate(context: QueryContext,
-                             state: QueryState,
-                             currentRow: MorselExecutionContext): Unit = {
+    override def operateSingleMorsel(context: QueryContext,
+                                     state: QueryState,
+                                     currentRow: MorselExecutionContext): Unit = {
       val resultRow = new MorselResultRow(currentRow, slots, fieldNames, context)
-      // Loop over the rows of the morsel and call teh vissitor for each one
+      // Loop over the rows of the morsel and call the visitor for each one
       while (currentRow.hasMoreRows) {
         state.visitor.visit(resultRow)
         currentRow.moveToNextRow()
       }
     }
-
-    override val canContinue: Boolean = false
   }
 }
 
