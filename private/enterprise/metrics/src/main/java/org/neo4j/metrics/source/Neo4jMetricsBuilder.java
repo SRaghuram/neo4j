@@ -5,11 +5,12 @@
  */
 package org.neo4j.metrics.source;
 
-import java.util.function.Supplier;
-
 import com.codahale.metrics.MetricRegistry;
 
+import java.util.function.Supplier;
+
 import org.neo4j.causalclustering.core.consensus.CoreMetaData;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.LogRotationMonitor;
@@ -19,7 +20,6 @@ import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -42,6 +42,8 @@ import org.neo4j.metrics.source.jvm.MemoryPoolMetrics;
 import org.neo4j.metrics.source.jvm.ThreadMetrics;
 import org.neo4j.metrics.source.server.ServerMetrics;
 
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+
 public class Neo4jMetricsBuilder
 {
     private final MetricRegistry registry;
@@ -62,7 +64,7 @@ public class Neo4jMetricsBuilder
 
         Supplier<CoreMetaData> raft();
 
-        DataSourceManager dataSourceManager();
+        DatabaseManager databaseManager();
     }
 
     public Neo4jMetricsBuilder( MetricRegistry registry, EventReporter reporter, Config config, LogService logService,
@@ -182,6 +184,8 @@ public class Neo4jMetricsBuilder
 
     private <T> Supplier<T> databaseDependencySupplier( Class<T> clazz )
     {
-        return () -> dependencies.dataSourceManager().getDataSource().getDependencyResolver().resolveDependency( clazz );
+        return () -> dependencies.databaseManager().getDatabaseFacade( DEFAULT_DATABASE_NAME )
+                                                   .orElseThrow( () -> new IllegalStateException( "Default database not found." ) )
+                                                   .getDependencyResolver().resolveDependency( clazz );
     }
 }

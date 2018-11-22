@@ -56,7 +56,6 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         DatabaseModule dataSource = new DatabaseModule( databaseName, platform, edition, procedures, facade );
         ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
         facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, dataSource.database.getTokenHolders() );
-        platform.dataSourceManager.register( databaseName, dataSource.database );
         databaseMap.put( databaseName, facade );
         return facade;
     }

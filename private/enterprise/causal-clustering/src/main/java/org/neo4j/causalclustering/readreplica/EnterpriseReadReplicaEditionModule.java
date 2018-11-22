@@ -53,6 +53,7 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import org.neo4j.kernel.impl.pagecache.PageCacheWarmer;
@@ -70,6 +71,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.udc.UsageData;
 
 import static org.neo4j.causalclustering.discovery.ResolutionResolverFactory.chooseResolver;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -139,9 +141,12 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
 
         PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, logProvider, config, dependencies );
 
-        final Supplier<DatabaseHealth> databaseHealthSupplier =
-                () -> platformModule.dataSourceManager.getDataSource().getDependencyResolver().resolveDependency( DatabaseHealth.class );
         Supplier<DatabaseManager> databaseManagerSupplier = () -> platformModule.dependencies.resolveDependency( DatabaseManager.class );
+        Supplier<DatabaseHealth> databaseHealthSupplier =
+                () -> databaseManagerSupplier.get().getDatabaseFacade( DEFAULT_DATABASE_NAME )
+                                    .map( GraphDatabaseFacade::getDependencyResolver )
+                                    .map( resolver -> resolver.resolveDependency( DatabaseHealth.class ) )
+                                    .orElseThrow( () -> new IllegalStateException( "Default database not found." ) );
         this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, platformModule,
                 databaseManagerSupplier, logProvider, config );
 
