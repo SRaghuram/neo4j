@@ -8,6 +8,7 @@ package org.neo4j;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -273,7 +274,7 @@ public class HalfAppliedConstraintRecoveryIT
                 .newImpermanentDatabase();
     }
 
-    private static void flushStores( GraphDatabaseAPI db )
+    private static void flushStores( GraphDatabaseAPI db ) throws IOException
     {
         db.getDependencyResolver().resolveDependency( RecordStorageEngine.class )
                 .testAccessNeoStores().flush( IOLimiter.UNLIMITED );

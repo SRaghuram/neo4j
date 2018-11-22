@@ -446,7 +446,7 @@ public class StoreUpgradeIT
                     .getKernelTransactionBoundToThisThread( true ).acquireStatement() )
             {
                 long countsTxId = db.getDependencyResolver().resolveDependency( RecordStorageEngine.class )
-                        .testAccessNeoStores().getCounts().txId();
+                        .testAccessCountsStore().txId();
                 assertEquals( lastCommittedTxId, countsTxId );
                 assertThat( lastCommittedTxId, is( store.lastTxId ) );
             }

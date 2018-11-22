@@ -242,9 +242,9 @@ class RebuildFromLogs
 
         private void checkConsistency() throws ConsistencyCheckIncompleteException, InconsistentStoreException
         {
-            StoreAccess nativeStores = new StoreAccess( graphdb.getDependencyResolver()
-                    .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores() ).initialize();
-            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes );
+            RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
+            StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
+            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, storageEngine.testAccessCountsStore() );
             FullCheck fullCheck = new FullCheck( tuningConfiguration, ProgressMonitorFactory.textual( System.err ),
                     Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber() );
 
