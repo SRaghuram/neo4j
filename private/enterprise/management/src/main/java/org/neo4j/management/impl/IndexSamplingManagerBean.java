@@ -7,6 +7,7 @@ package org.neo4j.management.impl;
 
 import javax.management.NotCompliantMBeanException;
 
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.helpers.Service;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
@@ -14,15 +15,15 @@ import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
-import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
 import org.neo4j.kernel.impl.core.TokenHolders;
-import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
 import org.neo4j.management.IndexSamplingManager;
-import org.neo4j.storageengine.api.StorageEngine;
 
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.TokenRead.NO_TOKEN;
+import static org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode.TRIGGER_REBUILD_ALL;
+import static org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode.TRIGGER_REBUILD_UPDATED;
 
 @Service.Implementation( ManagementBeanProvider.class )
 public final class IndexSamplingManagerBean extends ManagementBeanProvider
@@ -69,64 +70,37 @@ public final class IndexSamplingManagerBean extends ManagementBeanProvider
 
     private static StoreAccess access( ManagementData management )
     {
-        StoreAccess access = new StoreAccess();
-        management.getDataSourceManager().addListener( access );
-        return access;
+        return new StoreAccess( management.getDatabaseManager() );
     }
 
-    static class StoreAccess implements DataSourceManager.Listener
+    static class StoreAccess
     {
-        private static class State
-        {
-            final StorageEngine storageEngine;
-            final IndexingService indexingService;
-            final TokenHolders tokenHolders;
+        private final DatabaseManager databaseManager;
 
-            State( StorageEngine storageEngine, IndexingService indexingService, TokenHolders tokenHolders )
+        StoreAccess( DatabaseManager databaseManager )
+        {
+            this.databaseManager = databaseManager;
+        }
+
+        void triggerIndexSampling( String labelKey, String propertyKey, boolean forceSample )
+        {
+            DependencyResolver dependencyResolver = databaseManager.getDatabaseFacade( DEFAULT_DATABASE_NAME )
+                    .orElseThrow( () -> new IllegalStateException( "Default database not found." ) ).getDependencyResolver();
+            IndexingService indexingService = dependencyResolver.resolveDependency( IndexingService.class );
+            TokenHolders tokenHolders = dependencyResolver.resolveDependency( TokenHolders.class );
+            int labelKeyId = tokenHolders.labelTokens().getIdByName( labelKey );
+            int propertyKeyId = tokenHolders.propertyKeyTokens().getIdByName( propertyKey );
+            if ( labelKeyId == NO_TOKEN )
             {
-                this.storageEngine = storageEngine;
-                this.indexingService = indexingService;
-                this.tokenHolders = tokenHolders;
+                throw new IllegalArgumentException( "No label key was found associated with " + labelKey );
             }
-        }
-        private volatile State state;
-
-        @Override
-        public void registered( Database dataSource )
-        {
-            DependencyResolver dependencyResolver = dataSource.getDependencyResolver();
-            state = new State(
-                    dependencyResolver.resolveDependency( StorageEngine.class ),
-                    dependencyResolver.resolveDependency( IndexingService.class ),
-                    dependencyResolver.resolveDependency( TokenHolders.class ) );
-        }
-
-        @Override
-        public void unregistered( Database dataSource )
-        {
-            state = null;
-        }
-
-        public void triggerIndexSampling( String labelKey, String propertyKey, boolean forceSample )
-        {
-            int labelKeyId = NO_TOKEN;
-            int propertyKeyId = NO_TOKEN;
-            State state = this.state;
-            if ( state != null )
+            if ( propertyKeyId == NO_TOKEN )
             {
-                labelKeyId = state.tokenHolders.labelTokens().getIdByName( labelKey );
-                propertyKeyId = state.tokenHolders.propertyKeyTokens().getIdByName( propertyKey );
-            }
-            if ( state == null || labelKeyId == NO_TOKEN || propertyKeyId == NO_TOKEN )
-            {
-                throw new IllegalArgumentException( "No property or label key was found associated with " +
-                        propertyKey + " and " + labelKey );
+                throw new IllegalArgumentException( "No property was found associated with " + propertyKey );
             }
             try
             {
-                state.indexingService.triggerIndexSampling(
-                        SchemaDescriptorFactory.forLabel( labelKeyId, propertyKeyId ),
-                        getIndexSamplingMode( forceSample ) );
+                indexingService.triggerIndexSampling( SchemaDescriptorFactory.forLabel( labelKeyId, propertyKeyId ), getIndexSamplingMode( forceSample ) );
             }
             catch ( IndexNotFoundKernelException e )
             {
@@ -136,14 +110,7 @@ public final class IndexSamplingManagerBean extends ManagementBeanProvider
 
         private IndexSamplingMode getIndexSamplingMode( boolean forceSample )
         {
-            if ( forceSample )
-            {
-                return IndexSamplingMode.TRIGGER_REBUILD_ALL;
-            }
-            else
-            {
-                return IndexSamplingMode.TRIGGER_REBUILD_UPDATED;
-            }
+            return forceSample ? TRIGGER_REBUILD_ALL : TRIGGER_REBUILD_UPDATED;
         }
     }
 }

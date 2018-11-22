@@ -8,6 +8,9 @@ package org.neo4j.management.impl;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Optional;
+
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.database.Database;
@@ -15,7 +18,9 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.util.Dependencies;
+import org.neo4j.management.impl.IndexSamplingManagerBean.StoreAccess;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageReader;
 
@@ -23,6 +28,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.TokenRead.NO_TOKEN;
 
 public class IndexSamplingManagerBeanTest
@@ -34,13 +40,20 @@ public class IndexSamplingManagerBeanTest
     private static final String NON_EXISTING_PROPERTY = "bogusProp";
     private static final int PROPERTY_ID = 43;
 
-    private Database dataSource;
+    private Database database;
     private IndexingService indexingService;
+    private DatabaseManager databaseManager;
 
     @Before
     public void setup()
     {
-        dataSource = mock( Database.class );
+        Dependencies dependencies = mock( Dependencies.class );
+        GraphDatabaseFacade databaseFacade = mock( GraphDatabaseFacade.class );
+        databaseManager = mock( DatabaseManager.class );
+        database = mock( Database.class );
+        when( databaseManager.getDatabaseFacade( DEFAULT_DATABASE_NAME ) ).thenReturn( Optional.of( databaseFacade ) );
+        when( databaseFacade.getDependencyResolver() ).thenReturn( dependencies );
+        when( dependencies.resolveDependency( Database.class ) ).thenReturn( database );
         StorageEngine storageEngine = mock( StorageEngine.class );
         StorageReader storageReader = mock( StorageReader.class );
         when( storageEngine.newReader() ).thenReturn( storageReader );
@@ -50,19 +63,17 @@ public class IndexSamplingManagerBeanTest
         when( tokenHolders.propertyKeyTokens().getIdByName( EXISTING_PROPERTY ) ).thenReturn( PROPERTY_ID );
         when( tokenHolders.propertyKeyTokens().getIdByName( NON_EXISTING_PROPERTY ) ).thenReturn( -1 );
         when( tokenHolders.labelTokens().getIdByName( NON_EXISTING_LABEL ) ).thenReturn( NO_TOKEN );
-        Dependencies dependencies = mock( Dependencies.class );
         when( dependencies.resolveDependency( IndexingService.class ) ).thenReturn( indexingService );
         when( dependencies.resolveDependency( StorageEngine.class ) ).thenReturn( storageEngine );
         when( dependencies.resolveDependency( TokenHolders.class ) ).thenReturn( tokenHolders );
-        when( dataSource.getDependencyResolver() ).thenReturn( dependencies );
+        when( database.getDependencyResolver() ).thenReturn( dependencies );
     }
 
     @Test
     public void samplingTriggeredWhenIdsArePresent() throws IndexNotFoundKernelException
     {
         // Given
-        IndexSamplingManagerBean.StoreAccess storeAccess = new IndexSamplingManagerBean.StoreAccess();
-        storeAccess.registered( dataSource );
+        StoreAccess storeAccess = new StoreAccess( databaseManager );
 
         // When
         storeAccess.triggerIndexSampling( EXISTING_LABEL, EXISTING_PROPERTY, false );
@@ -77,8 +88,7 @@ public class IndexSamplingManagerBeanTest
     public void forceSamplingTriggeredWhenIdsArePresent() throws IndexNotFoundKernelException
     {
         // Given
-        IndexSamplingManagerBean.StoreAccess storeAccess = new IndexSamplingManagerBean.StoreAccess();
-        storeAccess.registered( dataSource );
+        StoreAccess storeAccess = new StoreAccess( databaseManager );
 
         // When
         storeAccess.triggerIndexSampling( EXISTING_LABEL, EXISTING_PROPERTY, true );
@@ -93,8 +103,7 @@ public class IndexSamplingManagerBeanTest
     public void exceptionThrownWhenMissingLabel()
     {
         // Given
-        IndexSamplingManagerBean.StoreAccess storeAccess = new IndexSamplingManagerBean.StoreAccess();
-        storeAccess.registered( dataSource );
+        StoreAccess storeAccess = new StoreAccess( databaseManager );
 
         // When
         storeAccess.triggerIndexSampling( NON_EXISTING_LABEL, EXISTING_PROPERTY, false );
@@ -104,21 +113,10 @@ public class IndexSamplingManagerBeanTest
     public void exceptionThrownWhenMissingProperty()
     {
         // Given
-        IndexSamplingManagerBean.StoreAccess storeAccess = new IndexSamplingManagerBean.StoreAccess();
-        storeAccess.registered( dataSource );
+        StoreAccess storeAccess = new StoreAccess( databaseManager );
 
         // When
         storeAccess.triggerIndexSampling( EXISTING_LABEL, NON_EXISTING_PROPERTY, false );
-    }
-
-    @Test( expected = IllegalArgumentException.class )
-    public void exceptionThrownWhenNotRegistered()
-    {
-        // Given
-        IndexSamplingManagerBean.StoreAccess storeAccess = new IndexSamplingManagerBean.StoreAccess();
-
-        // When
-        storeAccess.triggerIndexSampling( EXISTING_LABEL, EXISTING_PROPERTY, false );
     }
 
     private static TokenHolders mockedTokenHolders()
