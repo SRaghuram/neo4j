@@ -61,7 +61,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("round function") {
     compile(function("round", literalFloat(PI))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(3.0))
-    compile(function("round", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("round", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("rand function") {
@@ -79,70 +79,70 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   test("sin function") {
     val arg = random.nextDouble()
     compile(function("sin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.sin(arg)))
-    compile(function("sin", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("sin", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("asin function") {
     val arg = random.nextDouble()
     compile(function("asin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.asin(arg)))
-    compile(function("asin", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("asin", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("haversin function") {
     val arg = random.nextDouble()
     compile(function("haversin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue((1.0 - Math.cos(arg)) / 2))
-    compile(function("haversin", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("haversin", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("acos function") {
     val arg = random.nextDouble()
     compile(function("acos", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.acos(arg)))
-    compile(function("acos", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("acos", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("cos function") {
     val arg = random.nextDouble()
     compile(function("cos", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.cos(arg)))
-    compile(function("cos", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("cos", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("cot function") {
     val arg = random.nextDouble()
     compile(function("cot", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(1 / Math.tan(arg)))
-    compile(function("cot", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("cot", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("atan function") {
     val arg = random.nextDouble()
     compile(function("atan", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.atan(arg)))
-    compile(function("atan", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("atan", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("atan2 function") {
     val arg1 = random.nextDouble()
     val arg2 = random.nextDouble()
     compile(function("atan2", literalFloat(arg1), literalFloat(arg2))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.atan2(arg1, arg2)))
-    compile(function("atan2", noValue,literalFloat(arg1))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
-    compile(function("atan2", literalFloat(arg1), noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
-    compile(function("atan2", noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("atan2", nullLiteral, literalFloat(arg1))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("atan2", literalFloat(arg1), nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("atan2", nullLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("tan function") {
     val arg = random.nextDouble()
     compile(function("tan", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.tan(arg)))
-    compile(function("tan", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("tan", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("ceil function") {
     val arg = random.nextDouble()
     compile(function("ceil", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.ceil(arg)))
-    compile(function("ceil", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("ceil", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("floor function") {
     val arg = random.nextDouble()
     compile(function("floor", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.floor(arg)))
-    compile(function("floor", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("floor", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("abs function") {
@@ -150,49 +150,49 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compile(function("abs", literalFloat(-3.2))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(3.2))
     compile(function("abs", literalInt(3))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(longValue(3))
     compile(function("abs", literalInt(-3))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(longValue(3))
-    compile(function("abs", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(function("abs", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
   }
 
   test("radians function") {
     val arg = random.nextDouble()
     compile(function("radians", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.toRadians(arg)))
-    compile(function("radians", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("radians", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("degrees function") {
     val arg = random.nextDouble()
     compile(function("degrees", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.toDegrees(arg)))
-    compile(function("degrees", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("degrees", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("exp function") {
     val arg = random.nextDouble()
     compile(function("exp", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.exp(arg)))
-    compile(function("exp", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("exp", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("log function") {
     val arg = random.nextDouble()
     compile(function("log", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.log(arg)))
-    compile(function("log", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("log", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("log10 function") {
     val arg = random.nextDouble()
     compile(function("log10", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.log10(arg)))
-    compile(function("log10", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("log10", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("sign function") {
     val arg = random.nextInt()
     compile(function("sign", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.signum(arg)))
-    compile(function("sign", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("sign", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("sqrt function") {
     val arg = random.nextDouble()
     compile(function("sqrt", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.sqrt(arg)))
-    compile(function("sqrt", noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("sqrt", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("pi function") {
@@ -215,8 +215,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("coalesce function") {
-    compile(function("coalesce", noValue, noValue, literalInt(2), noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(longValue(2))
-    compile(function("coalesce", noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    compile(function("coalesce", nullLiteral, nullLiteral, literalInt(2), nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(longValue(2))
+    compile(function("coalesce", nullLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
   test("coalesce function with parameters") {
@@ -936,7 +936,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("NULL") {
     // Given
-    val expression = noValue
+    val expression = nullLiteral
 
     // When
     val compiled = compile(expression)
@@ -947,7 +947,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("TRUE") {
     // Given
-    val expression = t
+    val expression = trueLiteral
 
     // When
     val compiled = compile(expression)
@@ -958,7 +958,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("FALSE") {
     // Given
-    val expression = f
+    val expression = falseLiteral
 
     // When
     val compiled = compile(expression)
@@ -968,36 +968,36 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("OR") {
-    compile(or(t, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(f, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(t, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(f, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(or(trueLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(or(falseLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(or(trueLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(or(falseLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
 
-    compile(or(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(or(noValue, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(t, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(noValue, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(or(f, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(or(nullLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(or(nullLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(or(trueLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(or(nullLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(or(falseLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
   }
 
   test("XOR") {
-    compile(xor(t, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(xor(f, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(xor(t, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(xor(f, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(xor(trueLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(xor(falseLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(xor(trueLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(xor(falseLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
 
-    compile(xor(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(xor(noValue, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(xor(t, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(xor(noValue, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(xor(f, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(xor(nullLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(xor(nullLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(xor(trueLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(xor(nullLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(xor(falseLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
   }
 
   test("OR should throw on non-boolean input") {
-    a [CypherTypeException] should be thrownBy compile(or(literalInt(42), f)).evaluate(ctx, db, EMPTY_MAP, cursors)
-    a [CypherTypeException] should be thrownBy compile(or(f, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, cursors)
-    compile(or(t, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(literalInt(42), t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    a [CypherTypeException] should be thrownBy compile(or(literalInt(42), falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors)
+    a [CypherTypeException] should be thrownBy compile(or(falseLiteral, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, cursors)
+    compile(or(trueLiteral, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(or(literalInt(42), trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
   }
 
   test("OR should handle coercion") {
@@ -1007,10 +1007,10 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("ORS") {
-    compile(ors(f, f, f, f, f, f, t, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(ors(f, f, f, f, f, f, f, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(ors(f, f, f, f, noValue, f, f, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(ors(f, f, f, t, noValue, t, f, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(ors(falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, trueLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(ors(falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(ors(falseLiteral, falseLiteral, falseLiteral, falseLiteral, nullLiteral, falseLiteral, falseLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(ors(falseLiteral, falseLiteral, falseLiteral, trueLiteral, nullLiteral, trueLiteral, falseLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
   }
 
   test("ORS should throw on non-boolean input") {
@@ -1032,23 +1032,23 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("AND") {
-    compile(and(t, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(and(f, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(and(t, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(and(f, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(and(trueLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(and(falseLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(and(trueLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(and(falseLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
 
-    compile(and(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(and(noValue, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(and(t, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(and(noValue, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(and(f, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(and(nullLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(and(nullLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(and(trueLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(and(nullLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(and(falseLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
   }
 
   test("AND should throw on non-boolean input") {
-    a [CypherTypeException] should be thrownBy compile(and(literalInt(42), t)).evaluate(ctx, db, EMPTY_MAP, cursors)
-    a [CypherTypeException] should be thrownBy compile(and(t, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, cursors)
-    compile(and(f, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(and(literalInt(42), f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    a [CypherTypeException] should be thrownBy compile(and(literalInt(42), trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors)
+    a [CypherTypeException] should be thrownBy compile(and(trueLiteral, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, cursors)
+    compile(and(falseLiteral, literalInt(42))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(and(literalInt(42), falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
   }
 
   test("AND should handle coercion") {
@@ -1058,10 +1058,10 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("ANDS") {
-    compile(ands(t, t, t, t, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(ands(t, t, t, t, t, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(ands(t, t, t, t, noValue, t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(ands(t, t, t, f, noValue, f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(ands(trueLiteral, trueLiteral, trueLiteral, trueLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(ands(trueLiteral, trueLiteral, trueLiteral, trueLiteral, trueLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(ands(trueLiteral, trueLiteral, trueLiteral, trueLiteral, nullLiteral, trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(ands(trueLiteral, trueLiteral, trueLiteral, falseLiteral, nullLiteral, falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
   }
 
   test("ANDS should throw on non-boolean input") {
@@ -1083,9 +1083,9 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("NOT") {
-    compile(not(f)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(not(t)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(not(noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(not(falseLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(not(trueLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(not(nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
   }
 
   test("NOT should handle coercion") {
@@ -1097,19 +1097,19 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   test("EQUALS") {
     compile(equals(literalInt(42), literalInt(42))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
     compile(equals(literalInt(42), literalInt(43))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(equals(noValue, literalInt(43))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(equals(literalInt(42), noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(equals(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(equals(TRUE, equals(TRUE, equals(TRUE, noValue)))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(equals(nullLiteral, literalInt(43))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(equals(literalInt(42), nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(equals(nullLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(equals(TRUE, equals(TRUE, equals(TRUE, nullLiteral)))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
   }
 
   test("NOT EQUALS") {
     compile(notEquals(literalInt(42), literalInt(42))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
     compile(notEquals(literalInt(42), literalInt(43))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(notEquals(noValue, literalInt(43))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(notEquals(literalInt(42), noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(notEquals(noValue, noValue)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(notEquals(TRUE, notEquals(TRUE, notEquals(TRUE, noValue)))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(notEquals(nullLiteral, literalInt(43))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(notEquals(literalInt(42), nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(notEquals(nullLiteral, nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(notEquals(TRUE, notEquals(TRUE, notEquals(TRUE, nullLiteral)))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
   }
 
   test("regex match on literal pattern") {
@@ -1321,7 +1321,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("handle list literals") {
-    val literal = literalList(t, literalInt(5), noValue, f)
+    val literal = literalList(trueLiteral, literalInt(5), nullLiteral, falseLiteral)
 
     val compiled = compile(literal)
 
@@ -1338,7 +1338,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("handle map literals with null") {
-    val literal = literalMap("foo" -> literalInt(1), "bar" -> noValue, "baz" -> literalString("three"))
+    val literal = literalMap("foo" -> literalInt(1), "bar" -> nullLiteral, "baz" -> literalString("three"))
 
     val compiled = compile(literal)
 
@@ -1617,8 +1617,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, single(bar IN null WHERE bar = foo)
-    val compiled = compile(singleInList("bar", noValue,
-      equals(varFor("bar"), varFor("foo"))))
+    val compiled = compile(singleInList("bar", nullLiteral,
+                                        equals(varFor("bar"), varFor("foo"))))
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
@@ -1630,7 +1630,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     //When, single(bar IN ['a','aa','aaa'] WHERE bar = null)
     val compiled = compile(singleInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
-      equals(varFor("bar"), noValue)))
+      equals(varFor("bar"), nullLiteral)))
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
@@ -1712,8 +1712,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, none(bar IN null WHERE bar = foo)
-    val compiled = compile(noneInList("bar", noValue,
-      equals(varFor("bar"), varFor("foo"))))
+    val compiled = compile(noneInList("bar", nullLiteral,
+                                      equals(varFor("bar"), varFor("foo"))))
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
@@ -1725,7 +1725,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     //When, none(bar IN null WHERE bar = null)
     val compiled = compile(noneInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
-      equals(varFor("bar"), noValue )))
+      equals(varFor("bar"), nullLiteral )))
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
@@ -1807,8 +1807,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, any(bar IN null WHERE bar = foo)
-    val compiled = compile(anyInList("bar", noValue,
-      equals(varFor("bar"), varFor("foo"))))
+    val compiled = compile(anyInList("bar", nullLiteral,
+                                     equals(varFor("bar"), varFor("foo"))))
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
@@ -1820,7 +1820,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     //When, any(bar IN ['a','aa','aaa'] WHERE bar = null)
     val compiled = compile(anyInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
-      equals(varFor("bar"), noValue)))
+      equals(varFor("bar"), nullLiteral)))
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
@@ -1902,8 +1902,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, all(bar IN null WHERE bar STARTS WITH foo)
-    val compiled = compile(allInList("bar", noValue,
-      startsWith(varFor("bar"), varFor("foo"))))
+    val compiled = compile(allInList("bar", nullLiteral,
+                                     startsWith(varFor("bar"), varFor("foo"))))
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
@@ -1915,7 +1915,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     //When, all(bar IN null WHERE bar STARTS WITH null)
     val compiled = compile(allInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
-      startsWith(varFor("bar"), noValue)))
+      startsWith(varFor("bar"), nullLiteral)))
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
@@ -1987,8 +1987,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, filter(bar IN null WHERE bar STARTS WITH 'aa')
-    val compiled = compile(filter("bar", noValue,
-      startsWith(varFor("bar"), varFor("aa"))))
+    val compiled = compile(filter("bar", nullLiteral,
+                                  startsWith(varFor("bar"), varFor("aa"))))
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
@@ -2000,7 +2000,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     //When, filter(bar IN null WHERE bar STARTS WITH null)
     val compiled = compile(filter("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
-      startsWith(varFor("bar"), noValue)))
+      startsWith(varFor("bar"), nullLiteral)))
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(list())
@@ -2188,7 +2188,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
     //When, extract(bar IN null | size(bar)
-    val compiled = compile(extract("bar", noValue,
+    val compiled = compile(extract("bar", nullLiteral,
                                    function("size", varFor("bar"))))
 
     //Then
@@ -2261,7 +2261,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
     //When, reduce(count = 0, bar IN null | count + size(bar))
-    val compiled = compile(reduce("count", literalInt(0), "bar", noValue,
+    val compiled = compile(reduce("count", literalInt(0), "bar", nullLiteral,
                                   add(function("size", varFor("bar")), varFor("count"))))
 
     //Then
@@ -2319,13 +2319,13 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("generic case expressions") {
-    compile(genericCase(List(f -> literalString("no"), t -> literalString("yes"))))
+    compile(genericCase(List(falseLiteral -> literalString("no"), trueLiteral -> literalString("yes"))))
       .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("yes"))
-    compile(genericCase(List(t -> literalString("no"), f -> literalString("yes"))))
+    compile(genericCase(List(trueLiteral -> literalString("no"), falseLiteral -> literalString("yes"))))
       .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("no"))
-    compile(genericCase(List(f -> literalString("no"), f -> literalString("yes"))))
+    compile(genericCase(List(falseLiteral -> literalString("no"), falseLiteral -> literalString("yes"))))
       .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
-    compile(genericCase(List(f -> literalString("no"), f -> literalString("yes")), Some(literalString("default"))))
+    compile(genericCase(List(falseLiteral -> literalString("no"), falseLiteral -> literalString("yes")), Some(literalString("default"))))
       .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("default"))
   }
 
@@ -2379,11 +2379,11 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   private def parameter(key: String) = Parameter(key, symbols.CTAny)(pos)
 
-  private def noValue = Null()(pos)
+  private def nullLiteral = Null()(pos)
 
-  private def t = True()(pos)
+  private def trueLiteral = True()(pos)
 
-  private def f = False()(pos)
+  private def falseLiteral = False()(pos)
 
   private def or(l: Expression, r: Expression) = Or(l, r)(pos)
 
@@ -2408,7 +2408,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   private def literalString(s: String) = expressions.StringLiteral(s)(pos)
 
   private def literal(a: Any) = a match {
-    case null => noValue
+    case null => nullLiteral
     case s: String => literalString(s)
     case d: Double => literalFloat(d)
     case d: java.lang.Float => literalFloat(d.doubleValue())
