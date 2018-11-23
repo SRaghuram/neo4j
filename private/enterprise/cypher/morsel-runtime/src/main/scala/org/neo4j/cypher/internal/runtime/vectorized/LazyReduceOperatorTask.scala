@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 
 abstract class LazyReduceOperatorTask(messageQueue: util.Queue[MorselExecutionContext], collector: LazyReduceCollector) {
 
-  private var processedMorsels = IndexedSeq.newBuilder[MorselExecutionContext]
+  private var processedMorsels = List[MorselExecutionContext]()
   private var processedMorselsNum = 0
 
   /**
@@ -21,19 +21,19 @@ abstract class LazyReduceOperatorTask(messageQueue: util.Queue[MorselExecutionCo
     */
   def operate(context: QueryContext,
               state: QueryState,
-              cursors: ExpressionCursors): IndexedSeq[MorselExecutionContext] = {
+              cursors: ExpressionCursors): Seq[MorselExecutionContext] = {
     // Outer loop until trySetTaskDone succeeds
     do {
       // Inner loop until there is currently no more data
       var currentRow = messageQueue.poll()
       while (currentRow != null) {
         operateSingleMorsel(context, state, currentRow)
-        processedMorsels += currentRow
+        processedMorsels ::= currentRow
         processedMorselsNum += 1
         currentRow = messageQueue.poll()
       }
     } while(!collector.trySetTaskDone(this, processedMorselsNum))
-    processedMorsels.result()
+    processedMorsels
   }
 
   /**
