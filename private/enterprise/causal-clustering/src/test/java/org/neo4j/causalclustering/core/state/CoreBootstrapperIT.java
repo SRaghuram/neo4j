@@ -5,12 +5,14 @@
  */
 package org.neo4j.causalclustering.core.state;
 
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -23,6 +25,7 @@ import org.neo4j.causalclustering.helper.TemporaryDatabase;
 import org.neo4j.causalclustering.helpers.ClassicNeo4jStore;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -59,7 +62,15 @@ public class CoreBootstrapperIT
 
     @Rule
     public RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( pageCacheRule ).around( testDirectory );
-    private File bootstrapDirectory = mock( File.class );
+    private File bootstrapDirectory;
+    private TemporaryDatabase.Factory temporaryDatabaseFactory = mock( TemporaryDatabase.Factory.class );
+    private Map<String,DatabaseInitializer> databaseInitializers = new HashMap<>();
+
+    @Before
+    public void setup()
+    {
+        bootstrapDirectory = new File( testDirectory.directory(), "bootstrap" );
+    }
 
     @Test
     public void shouldSetAllCoreState() throws Exception
@@ -81,7 +92,7 @@ public class CoreBootstrapperIT
 
         PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
         CoreBootstrapper bootstrapper =
-                new CoreBootstrapper( databaseService, mock( TemporaryDatabase.Factory.class ), bootstrapDirectory, mock( Map.class ), fileSystem,
+                new CoreBootstrapper( databaseService, temporaryDatabaseFactory, bootstrapDirectory, databaseInitializers, fileSystem,
                         Config.defaults(), NullLogProvider.getInstance(), pageCache, new Monitors() );
         bootstrapAndVerify( nodeCount, fileSystem, databaseLayout, pageCache, Config.defaults(), bootstrapper, DEFAULT_DATABASE_NAME );
     }
@@ -109,7 +120,7 @@ public class CoreBootstrapperIT
         Config config = Config.defaults( GraphDatabaseSettings.logical_logs_location,
                 customTransactionLogsLocation );
         CoreBootstrapper bootstrapper =
-                new CoreBootstrapper( databaseService, mock( TemporaryDatabase.Factory.class ), bootstrapDirectory, mock( Map.class ), fileSystem, config,
+                new CoreBootstrapper( databaseService, temporaryDatabaseFactory, bootstrapDirectory, databaseInitializers, fileSystem, config,
                         NullLogProvider.getInstance(), pageCache, new Monitors() );
 
         bootstrapAndVerify( nodeCount, fileSystem, databaseLayout, pageCache, config, bootstrapper, DEFAULT_DATABASE_NAME );
@@ -138,7 +149,7 @@ public class CoreBootstrapperIT
         PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
         Config config = Config.defaults();
         CoreBootstrapper bootstrapper =
-                new CoreBootstrapper( databaseService, mock( TemporaryDatabase.Factory.class ), bootstrapDirectory, mock( Map.class ), fileSystem, config,
+                new CoreBootstrapper( databaseService, temporaryDatabaseFactory, bootstrapDirectory, databaseInitializers, fileSystem, config,
                         assertableLogProvider, pageCache, new Monitors() );
 
         // when
@@ -183,7 +194,7 @@ public class CoreBootstrapperIT
 
         Config config = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
         CoreBootstrapper bootstrapper =
-                new CoreBootstrapper( databaseService, mock( TemporaryDatabase.Factory.class ), bootstrapDirectory, mock( Map.class ), fileSystem, config,
+                new CoreBootstrapper( databaseService, temporaryDatabaseFactory, bootstrapDirectory, databaseInitializers, fileSystem, config,
                         assertableLogProvider, pageCache, new Monitors() );
 
         // when
