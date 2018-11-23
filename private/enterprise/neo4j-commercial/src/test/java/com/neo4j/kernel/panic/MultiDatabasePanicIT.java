@@ -52,8 +52,8 @@ class MultiDatabasePanicIT
         GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second" );
         PanicDatabaseEventListener firstPanicListener = new PanicDatabaseEventListener();
         PanicDatabaseEventListener secondPanicListener = new PanicDatabaseEventListener();
-        firstDatabase.registerKernelEventHandler( firstPanicListener );
-        secondDatabase.registerKernelEventHandler( secondPanicListener );
+        firstDatabase.registerDatabaseEventHandler( firstPanicListener );
+        secondDatabase.registerDatabaseEventHandler( secondPanicListener );
 
         assertFalse( firstPanicListener.isPanic() );
         assertFalse( secondPanicListener.isPanic() );
