@@ -10,13 +10,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupComponentsRepository;
@@ -111,9 +108,9 @@ class ReadReplicaStartupProcess implements Lifecycle
                     debugLog.info( "Syncing dbs: %s", Arrays.toString( dbsToSync.keySet().toArray() ) );
                     source = selectionStrategy.bestUpstreamDatabase();
                     Map<String,AsyncResult> results = syncStoresWithUpstream( source, dbsToSync ).get();
-                    List<String> successful = results.entrySet().stream().filter( isSuccessful() ).map( getDbName() ).collect( toList() );
+                    List<String> successful = results.entrySet().stream().filter( this::isSuccessful ).map( this::getDbName ).collect( toList() );
                     debugLog.info( "Successfully synced dbs: %s", Arrays.toString( successful.toArray() ) );
-                    removeDbs( dbsToSync, successful );
+                    successful.forEach( dbsToSync::remove );
                 }
                 catch ( UpstreamDatabaseSelectionException e )
                 {
@@ -155,19 +152,14 @@ class ReadReplicaStartupProcess implements Lifecycle
         return new HashMap<>( databaseService.registeredDatabases() );
     }
 
-    private void removeDbs( Map<String,? extends LocalDatabase> dbs, List<String> toRemove )
+    private String getDbName( Map.Entry<String,AsyncResult> resultEntry )
     {
-        toRemove.forEach( dbs::remove );
+        return resultEntry.getKey();
     }
 
-    private Function<Map.Entry<String,AsyncResult>,String> getDbName()
+    private boolean isSuccessful( Map.Entry<String,AsyncResult> resultEntry )
     {
-        return Map.Entry::getKey;
-    }
-
-    private Predicate<Map.Entry<String,AsyncResult>> isSuccessful()
-    {
-        return entry -> entry.getValue().successful();
+        return resultEntry.getValue() == AsyncResult.SUCCESS;
     }
 
     private CompletableFuture<Map<String,AsyncResult>> syncStoresWithUpstream( MemberId source, Map<String,? extends LocalDatabase> dbsToSync )
@@ -192,27 +184,27 @@ class ReadReplicaStartupProcess implements Lifecycle
         try
         {
             syncStoreWithUpstream( databaseName, localDatabase, source );
-            return AsyncResult.success();
+            return AsyncResult.SUCCESS;
         }
         catch ( TopologyLookupException e )
         {
             debugLog.warn( "getting address of %s", source );
-            return AsyncResult.failed( e );
+            return AsyncResult.FAIL;
         }
         catch ( StoreIdDownloadFailedException e )
         {
             debugLog.warn( "getting store id from %s", source );
-            return AsyncResult.failed( e );
+            return AsyncResult.FAIL;
         }
         catch ( StoreCopyFailedException e )
         {
             debugLog.warn( "copying store files from %s", source );
-            return AsyncResult.failed( e );
+            return AsyncResult.FAIL;
         }
         catch ( DatabaseShutdownException | IOException e )
         {
             debugLog.warn( format( "syncing of stores failed unexpectedly from %s", source ), e );
-            return AsyncResult.failed( e );
+            return AsyncResult.FAIL;
         }
     }
 
@@ -270,29 +262,9 @@ class ReadReplicaStartupProcess implements Lifecycle
         databaseService.shutdown();
     }
 
-    private static class AsyncResult
+    private enum AsyncResult
     {
-        private final Exception e;
-
-        AsyncResult( Exception e )
-        {
-            this.e = e;
-        }
-
-        boolean successful()
-        {
-            return e == null;
-        }
-
-        public static AsyncResult success()
-        {
-            return new AsyncResult( null );
-        }
-
-        public static AsyncResult failed( Exception e )
-        {
-            Objects.requireNonNull( e );
-            return new AsyncResult( e );
-        }
+        SUCCESS,
+        FAIL
     }
 }
