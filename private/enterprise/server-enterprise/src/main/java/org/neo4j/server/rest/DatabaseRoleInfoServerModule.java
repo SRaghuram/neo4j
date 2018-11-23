@@ -35,7 +35,7 @@ public class DatabaseRoleInfoServerModule implements ServerModule
     public void start()
     {
         URI baseUri = managementApiUri();
-        server.addJAXRSClasses( getClassNames(), baseUri.toString(), null );
+        server.addJAXRSClasses( getClasses(), baseUri.toString(), null );
 
         log.info( "Mounted REST API at: %s", baseUri.toString() );
     }
@@ -44,15 +44,15 @@ public class DatabaseRoleInfoServerModule implements ServerModule
     public void stop()
     {
         URI baseUri = managementApiUri();
-        server.removeJAXRSClasses( getClassNames(), baseUri.toString() );
+        server.removeJAXRSClasses( getClasses(), baseUri.toString() );
     }
 
-    private List<String> getClassNames()
+    private List<Class<?>> getClasses()
     {
         return asList(
-                CoreDatabaseAvailabilityService.class.getName(),
-                ReadReplicaDatabaseAvailabilityService.class.getName(),
-                CausalClusteringService.class.getName()
+                CoreDatabaseAvailabilityService.class,
+                ReadReplicaDatabaseAvailabilityService.class,
+                CausalClusteringService.class
         );
     }
 

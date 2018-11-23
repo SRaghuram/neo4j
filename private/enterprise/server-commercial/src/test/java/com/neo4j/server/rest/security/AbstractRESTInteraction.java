@@ -130,7 +130,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     {
         HTTP.RawPayload payload = constructQuery( call );
         HTTP.Response response = HTTP.withHeaders( HttpHeaders.AUTHORIZATION, subject.principalCredentials )
-                .request( POST, commitURL(), payload );
+                .POST( commitURL(), payload );
 
         try
         {

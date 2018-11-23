@@ -50,7 +50,7 @@ class CypherRESTInteraction extends com.neo4j.server.rest.security.AbstractRESTI
     protected HTTP.Response authenticate( String principalCredentials )
     {
         return HTTP.withHeaders( HttpHeaders.AUTHORIZATION, principalCredentials )
-                .request( POST, commitURL(), constructQuery( "RETURN 1" ) );
+                .POST( commitURL(), constructQuery( "RETURN 1" ) );
     }
 
     private class CypherRESTResult extends AbstractRESTResult

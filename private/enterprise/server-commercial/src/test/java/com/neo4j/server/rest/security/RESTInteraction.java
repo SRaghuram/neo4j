@@ -51,7 +51,7 @@ class RESTInteraction extends com.neo4j.server.rest.security.AbstractRESTInterac
     @Override
     protected HTTP.Response authenticate( String principalCredentials )
     {
-        return HTTP.withHeaders( HttpHeaders.AUTHORIZATION, principalCredentials ).request( POST, commitURL() );
+        return HTTP.withHeaders( HttpHeaders.AUTHORIZATION, principalCredentials ).POST( commitURL() );
     }
 
     private class RESTResult extends AbstractRESTResult
