@@ -42,8 +42,7 @@ class NodeIndexContainsScanOperatorTest extends CypherFunSuite with ImplicitDumm
     val queryContext = kernelScanFor(Seq(nodeValueHit(node, "hello")))
 
     // input data
-    val inputMorsel = new Morsel(new Array[Long](0), new Array[AnyValue](0), 0)
-    val inputRow = MorselExecutionContext(inputMorsel, 0, 0)
+    val inputRow = MorselExecutionContext.createSingleRow()
 
     // output data
     val numberOfLongs = 1
@@ -59,7 +58,7 @@ class NodeIndexContainsScanOperatorTest extends CypherFunSuite with ImplicitDumm
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference(nDotProp, nullable = false, CTAny)
     val operator = new NodeIndexContainsScanOperator(slots.getLongOffsetFor("n"), label.nameId.id,
-      SlottedIndexedProperty(propertyKey.nameId.id, Some(slots.getReferenceOffsetFor(nDotProp))), Literal("hell"), slots.size())
+      SlottedIndexedProperty(propertyKey.nameId.id, Some(slots.getReferenceOffsetFor(nDotProp))), Literal("hell"), SlotConfiguration.Size.zero)
 
     // When
     operator.init(queryContext, EmptyQueryState(), inputRow, cursors).operate(outputRow, queryContext, EmptyQueryState(), cursors)

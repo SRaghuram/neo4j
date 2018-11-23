@@ -46,8 +46,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     )
 
     // input data
-    val inputMorsel = new Morsel(new Array[Long](0), new Array[AnyValue](0), 0)
-    val inputRow = MorselExecutionContext(inputMorsel, 0, 0)
+    val inputRow = MorselExecutionContext.createSingleRow()
 
     // output data
     val numberOfLongs = 1
@@ -63,7 +62,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, slots.size(),
+    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
       ManyQueryExpression(ListLiteral(
         Literal("hello"),
         Literal("bye")
@@ -90,8 +89,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     )
 
     // input data
-    val inputMorsel = new Morsel(new Array[Long](0), new Array[AnyValue](0), 0)
-    val inputRow = MorselExecutionContext(inputMorsel, 0, 0)
+    val inputRow = MorselExecutionContext.createSingleRow()
 
     // output data
     val numberOfLongs = 1
@@ -107,7 +105,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       .newReference("n." + propertyKeys(0).name, nullable = false, CTAny)
       .newReference("n." + propertyKeys(1).name, nullable = false, CTAny)
     val properties = propertyKeys.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, slots.size(),
+    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
       CompositeQueryExpression(Seq(
         ManyQueryExpression(ListLiteral(
           Literal("hello"), Literal("bye")
@@ -137,8 +135,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     )
 
     // input data
-    val inputMorsel = new Morsel(new Array[Long](0), new Array[AnyValue](0), 0)
-    val inputRow = MorselExecutionContext(inputMorsel, 0, 0)
+    val inputRow = MorselExecutionContext.createSingleRow()
 
     // output data
     val numberOfLongs = 1
@@ -154,7 +151,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
 
-    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, slots.size(),
+    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
       ManyQueryExpression(ListLiteral(Literal("hello"), Literal("world"))), LockingUniqueIndexSeek)
 
     // When
