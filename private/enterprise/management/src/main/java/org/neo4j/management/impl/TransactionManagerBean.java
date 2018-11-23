@@ -7,13 +7,13 @@ package org.neo4j.management.impl;
 
 import javax.management.NotCompliantMBeanException;
 
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Service;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.management.TransactionManager;
@@ -77,8 +77,8 @@ public final class TransactionManagerBean extends ManagementBeanProvider
         @Override
         public long getLastCommittedTxId()
         {
-            return databaseManager.getDatabaseFacade( GraphDatabaseSettings.DEFAULT_DATABASE_NAME )
-                                 .map( GraphDatabaseFacade::getDependencyResolver )
+            return databaseManager.getDatabaseContext( GraphDatabaseSettings.DEFAULT_DATABASE_NAME )
+                                 .map( DatabaseContext::getDependencies )
                                  .map( resolver -> resolver.resolveDependency( TransactionIdStore.class ) )
                                  .map( TransactionIdStore::getLastCommittedTransactionId )
                                  .orElse( -1L );

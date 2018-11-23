@@ -17,10 +17,10 @@ import java.util.stream.Collectors;
 import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import org.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabaseCatchupComponents;
-import org.neo4j.causalclustering.common.DatabaseService;
-import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.catchup.tx.BatchingTxApplier;
 import org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess;
+import org.neo4j.causalclustering.common.DatabaseService;
+import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.schedule.Timer;
 import org.neo4j.causalclustering.core.consensus.schedule.TimerService;
@@ -45,8 +45,8 @@ import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.util.VisibleForTesting;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
 import static org.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.fixedTimeout;
+import static org.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
 
 /**
  * This class is responsible for aggregating a number of {@link CatchupPollingProcess} instances and pulling transactions for
@@ -178,12 +178,12 @@ public class CatchupProcessManager extends SafeLifecycle
                 .orElseThrow( () -> new IllegalArgumentException( String.format( "No StoreCopyProcess instance exists for database %s.", databaseName ) ) );
 
         Supplier<TransactionCommitProcess> writableCommitProcess = () -> new TransactionRepresentationCommitProcess(
-                localDatabase.dataSource().getDependencyResolver().resolveDependency( TransactionAppender.class ),
-                localDatabase.dataSource().getDependencyResolver().resolveDependency( StorageEngine.class ) );
+                localDatabase.database().getDependencyResolver().resolveDependency( TransactionAppender.class ),
+                localDatabase.database().getDependencyResolver().resolveDependency( StorageEngine.class ) );
 
         int maxBatchSize = config.get( CausalClusteringSettings.read_replica_transaction_applier_batch_size );
         BatchingTxApplier batchingTxApplier = new BatchingTxApplier(
-                maxBatchSize, () -> localDatabase.dataSource().getDependencyResolver().resolveDependency( TransactionIdStore.class ),
+                maxBatchSize, () -> localDatabase.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ),
                 writableCommitProcess, localDatabase.monitors(), pageCursorTracerSupplier, versionContextSupplier, commandIndexTracker, logProvider );
 
         CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseName, databaseService, servicesToStopOnStoreCopy,

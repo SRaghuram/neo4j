@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.facade.spi.ClassicCoreSPI;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -17,6 +18,7 @@ import org.neo4j.graphdb.factory.module.DatabaseModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
@@ -28,7 +30,7 @@ import static java.util.Objects.requireNonNull;
 
 public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseManager
 {
-    private final Map<String, GraphDatabaseFacade> databaseMap = new CopyOnWriteHashMap<>();
+    private final Map<String, DatabaseContext> databaseMap = new CopyOnWriteHashMap<>();
     private final PlatformModule platform;
     private final AbstractEditionModule edition;
     private final Procedures procedures;
@@ -46,7 +48,7 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     }
 
     @Override
-    public GraphDatabaseFacade createDatabase( String databaseName )
+    public DatabaseContext createDatabase( String databaseName )
     {
         requireNonNull( databaseName, "Database name should be not null" );
         log.log( "Creating '%s' database.", databaseName );
@@ -55,13 +57,15 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
                 platform.config.get( GraphDatabaseSettings.active_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
         DatabaseModule dataSource = new DatabaseModule( databaseName, platform, edition, procedures, facade );
         ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
-        facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, dataSource.database.getTokenHolders() );
-        databaseMap.put( databaseName, facade );
-        return facade;
+        Database database = dataSource.database;
+        facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, database.getTokenHolders() );
+        DatabaseContext databaseContext = new DatabaseContext( database, database.getDependencyResolver(), graphDatabaseFacade );
+        databaseMap.put( databaseName, databaseContext );
+        return databaseContext;
     }
 
     @Override
-    public Optional<GraphDatabaseFacade> getDatabaseFacade( String name )
+    public Optional<DatabaseContext> getDatabaseContext( String name )
     {
         return Optional.ofNullable( databaseMap.get( name ) );
     }
@@ -69,10 +73,10 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     @Override
     public void shutdownDatabase( String databaseName )
     {
-        GraphDatabaseFacade databaseFacade = databaseMap.remove( databaseName );
-        if ( databaseFacade != null )
+        DatabaseContext databaseContext = databaseMap.remove( databaseName );
+        if ( databaseContext != null )
         {
-            shutdownDatabase( databaseName, databaseFacade );
+            shutdownDatabase( databaseName, databaseContext );
         }
     }
 
@@ -80,11 +84,11 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     public void stop() throws Throwable
     {
         Throwable stopException = null;
-        for ( Map.Entry<String, GraphDatabaseFacade> databaseFacade : databaseMap.entrySet() )
+        for ( Map.Entry<String, DatabaseContext> databaseContextEntry : databaseMap.entrySet() )
         {
             try
             {
-                shutdownDatabase( databaseFacade.getKey(), databaseFacade.getValue() );
+                shutdownDatabase( databaseContextEntry.getKey(), databaseContextEntry.getValue() );
             }
             catch ( Throwable t )
             {
@@ -106,9 +110,11 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         return databaseNames;
     }
 
-    private void shutdownDatabase( String databaseName, GraphDatabaseFacade databaseFacade )
+    private void shutdownDatabase( String databaseName, DatabaseContext context )
     {
         log.log( "Shutting down '%s' database.", databaseName );
-        databaseFacade.shutdown();
+        Database database = context.getDatabase();
+        database.stop();
+        database.shutdown();
     }
 }

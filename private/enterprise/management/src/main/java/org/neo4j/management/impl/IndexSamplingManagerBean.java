@@ -84,8 +84,8 @@ public final class IndexSamplingManagerBean extends ManagementBeanProvider
 
         void triggerIndexSampling( String labelKey, String propertyKey, boolean forceSample )
         {
-            DependencyResolver dependencyResolver = databaseManager.getDatabaseFacade( DEFAULT_DATABASE_NAME )
-                    .orElseThrow( () -> new IllegalStateException( "Default database not found." ) ).getDependencyResolver();
+            DependencyResolver dependencyResolver = databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME )
+                    .orElseThrow( () -> new IllegalStateException( "Default database not found." ) ).getDependencies();
             IndexingService indexingService = dependencyResolver.resolveDependency( IndexingService.class );
             TokenHolders tokenHolders = dependencyResolver.resolveDependency( TokenHolders.class );
             int labelKeyId = tokenHolders.labelTokens().getIdByName( labelKey );

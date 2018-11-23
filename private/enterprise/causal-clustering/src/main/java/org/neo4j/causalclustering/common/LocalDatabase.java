@@ -84,7 +84,7 @@ public interface LocalDatabase extends Lifecycle
      * Returns the {@link Database} which actually underpins this datasource. Exposes all sorts of kernel level machinery.
      * @return the underlying datasource for this database
      */
-    Database dataSource();
+    Database database();
 
     /**
      * @return the name of this database

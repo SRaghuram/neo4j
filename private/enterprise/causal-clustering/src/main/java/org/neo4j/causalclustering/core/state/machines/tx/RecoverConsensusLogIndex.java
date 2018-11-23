@@ -28,7 +28,7 @@ public class RecoverConsensusLogIndex
 
     public long findLastAppliedIndex()
     {
-        DependencyResolver dependencies = localDatabase.dataSource().getDependencyResolver();
+        DependencyResolver dependencies = localDatabase.database().getDependencyResolver();
         TransactionIdStore transactionIdStore = dependencies.resolveDependency( TransactionIdStore.class );
         LogicalTransactionStore transactionStore = dependencies.resolveDependency( LogicalTransactionStore.class );
 

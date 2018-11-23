@@ -96,7 +96,7 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     @Override
     public Monitors monitors()
     {
-        return dataSource().getMonitors();
+        return database().getMonitors();
     }
 
     @Override
@@ -108,7 +108,7 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     @Override
     public Dependencies dependencies()
     {
-        return dataSource().getDependencyResolver();
+        return database().getDependencyResolver();
     }
 
     @Override
@@ -138,10 +138,10 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     }
 
     @Override
-    public Database dataSource()
+    public Database database()
     {
-        return databaseManagerSupplier.get().getDatabaseFacade( databaseName ).orElseThrow( IllegalStateException::new )
-                .getDependencyResolver().resolveDependency( Database.class );
+        return databaseManagerSupplier.get().getDatabaseContext( databaseName ).orElseThrow( IllegalStateException::new )
+                .getDatabase();
     }
 
     //TODO: Find places where both LocalDatabase and String databaseName are passed as params, as this is no longer necessary

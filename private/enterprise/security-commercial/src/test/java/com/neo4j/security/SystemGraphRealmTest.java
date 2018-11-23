@@ -20,7 +20,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -28,9 +30,11 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.security.User;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
@@ -471,17 +475,19 @@ public class SystemGraphRealmTest
         }
 
         @Override
-        public Optional<GraphDatabaseFacade> getDatabaseFacade( String name )
+        public Optional<DatabaseContext> getDatabaseContext( String name )
         {
             if ( SYSTEM_DATABASE_NAME.equals( name ) )
             {
-                return Optional.of( testSystemDb );
+                DependencyResolver dependencyResolver = testSystemDb.getDependencyResolver();
+                Database database = dependencyResolver.resolveDependency( Database.class );
+                return Optional.of( new DatabaseContext( database, (Dependencies) dependencyResolver, testSystemDb ) );
             }
             return Optional.empty();
         }
 
         @Override
-        public GraphDatabaseFacade createDatabase( String name )
+        public DatabaseContext createDatabase( String name )
         {
             throw new UnsupportedOperationException( "Call to createDatabase not expected" );
         }

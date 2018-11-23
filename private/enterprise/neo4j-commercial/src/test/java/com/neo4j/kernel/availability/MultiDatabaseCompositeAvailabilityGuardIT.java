@@ -47,7 +47,7 @@ class MultiDatabaseCompositeAvailabilityGuardIT
     {
         ThreadToStatementContextBridge bridge = getTransactionBridge();
         DatabaseManager databaseManager = getDatabaseManager();
-        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second.db" );
+        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second.db" ).getDatabaseFacade();
         secondDatabase.shutdown();
 
         assertThrows( DatabaseShutdownException.class, bridge::assertInUnterminatedTransaction );

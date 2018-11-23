@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
 import org.neo4j.cypher.result.QueryResult;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.PropertyContainer;
@@ -163,8 +164,8 @@ class ContextSwitchingSystemGraphQueryExecutor implements QueryExecutor
         // Resolve statementContext of the active database on the first call
         if ( threadToStatementContextBridge == null )
         {
-            GraphDatabaseFacade activeDb = getDb( activeDbName );
-            threadToStatementContextBridge = activeDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+            DatabaseContext activeDb = getDb( activeDbName );
+            threadToStatementContextBridge = activeDb.getDependencies().resolveDependency( ThreadToStatementContextBridge.class );
         }
         return threadToStatementContextBridge;
     }
@@ -174,14 +175,14 @@ class ContextSwitchingSystemGraphQueryExecutor implements QueryExecutor
         // Resolve systemDb on the first call
         if ( systemDb == null )
         {
-            systemDb = getDb( SYSTEM_DATABASE_NAME );
+            systemDb = getDb( SYSTEM_DATABASE_NAME ).getDatabaseFacade();
         }
         return systemDb;
     }
 
-    private GraphDatabaseFacade getDb( String dbName )
+    private DatabaseContext getDb( String dbName )
     {
-        return databaseManager.getDatabaseFacade( dbName )
+        return databaseManager.getDatabaseContext( dbName )
                 .orElseThrow( () -> new AuthProviderFailedException( "No database called `" + dbName + "` was found." ) );
     }
 }

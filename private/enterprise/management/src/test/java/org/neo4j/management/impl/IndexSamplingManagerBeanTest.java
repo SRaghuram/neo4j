@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import java.util.Optional;
 
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
@@ -18,7 +19,6 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.management.impl.IndexSamplingManagerBean.StoreAccess;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -48,11 +48,11 @@ public class IndexSamplingManagerBeanTest
     public void setup()
     {
         Dependencies dependencies = mock( Dependencies.class );
-        GraphDatabaseFacade databaseFacade = mock( GraphDatabaseFacade.class );
+        DatabaseContext databaseContext = mock( DatabaseContext.class );
         databaseManager = mock( DatabaseManager.class );
         database = mock( Database.class );
-        when( databaseManager.getDatabaseFacade( DEFAULT_DATABASE_NAME ) ).thenReturn( Optional.of( databaseFacade ) );
-        when( databaseFacade.getDependencyResolver() ).thenReturn( dependencies );
+        when( databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ) ).thenReturn( Optional.of( databaseContext ) );
+        when( databaseContext.getDependencies() ).thenReturn( dependencies );
         when( dependencies.resolveDependency( Database.class ) ).thenReturn( database );
         StorageEngine storageEngine = mock( StorageEngine.class );
         StorageReader storageReader = mock( StorageReader.class );

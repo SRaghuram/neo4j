@@ -80,6 +80,7 @@ import org.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import org.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.function.Predicates;
@@ -106,7 +107,6 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import org.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -227,8 +227,8 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         //Build local databases object
         final Supplier<DatabaseManager> databaseManagerSupplier = () -> platformModule.dependencies.resolveDependency( DatabaseManager.class );
         final Supplier<DatabaseHealth> databaseHealthSupplier =
-                () -> databaseManagerSupplier.get().getDatabaseFacade( DEFAULT_DATABASE_NAME )
-                        .map( GraphDatabaseFacade::getDependencyResolver )
+                () -> databaseManagerSupplier.get().getDatabaseContext( DEFAULT_DATABASE_NAME )
+                        .map( DatabaseContext::getDependencies )
                         .map( resolver -> resolver.resolveDependency( DatabaseHealth.class ) )
                         .orElseThrow( () -> new IllegalStateException( "Default database not found." ) );
 
@@ -336,7 +336,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
                         platformModule.jobScheduler, Group.CHECKPOINT );
 
         return new RegularCatchupServerHandler( platformModule.monitors, logProvider, () -> localDatabase.get().storeId(),
-                () -> localDatabase.get().dataSource(), databaseService::areAvailable, fileSystem, snapshotService, checkPointerService );
+                () -> localDatabase.get().database(), databaseService::areAvailable, fileSystem, snapshotService, checkPointerService );
     }
 
     CoreStateService coreStateComponents()

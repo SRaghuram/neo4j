@@ -93,7 +93,7 @@ class MultiDatabaseLockManagerIT
     {
         String secondDb = "second.db";
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.createDatabase( secondDb );
+        return databaseManager.createDatabase( secondDb ).getDatabaseFacade();
     }
 
     private static void lockNodeWithSameIdInAnotherDatabase( ExecutorService transactionExecutor, GraphDatabaseFacade facade, CountDownLatch latch )

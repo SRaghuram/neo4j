@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.List;
 import java.util.Optional;
 
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -60,7 +61,7 @@ class MultiDatabaseManagerIT
     {
         DatabaseManager databaseManager = getDatabaseManager();
         String databaseName = "testDatabase";
-        GraphDatabaseFacade database1 = databaseManager.createDatabase( databaseName );
+        GraphDatabaseFacade database1 = databaseManager.createDatabase( databaseName ).getDatabaseFacade();
 
         assertNotNull( database1 );
         assertEquals( databaseName, database1.databaseLayout().getDatabaseName() );
@@ -70,7 +71,7 @@ class MultiDatabaseManagerIT
     void lookupNotExistingDatabase()
     {
         DatabaseManager databaseManager = getDatabaseManager();
-        Optional<GraphDatabaseFacade> database = databaseManager.getDatabaseFacade( "testDatabase" );
+        Optional<DatabaseContext> database = databaseManager.getDatabaseContext( "testDatabase" );
         assertFalse( database.isPresent() );
     }
 
@@ -78,7 +79,7 @@ class MultiDatabaseManagerIT
     void lookupExistingDatabase()
     {
         DatabaseManager databaseManager = getDatabaseManager();
-        Optional<GraphDatabaseFacade> database = databaseManager.getDatabaseFacade( CUSTOM_DATABASE_NAME );
+        Optional<DatabaseContext> database = databaseManager.getDatabaseContext( CUSTOM_DATABASE_NAME );
         assertTrue( database.isPresent() );
     }
 
@@ -87,14 +88,14 @@ class MultiDatabaseManagerIT
     {
         DatabaseManager databaseManager = getDatabaseManager();
         String databaseName = "databaseToShutdown";
-        GraphDatabaseFacade database = databaseManager.createDatabase( databaseName );
+        DatabaseContext context = databaseManager.createDatabase( databaseName );
 
-        Optional<GraphDatabaseFacade> databaseLookup = databaseManager.getDatabaseFacade( databaseName );
+        Optional<DatabaseContext> databaseLookup = databaseManager.getDatabaseContext( databaseName );
         assertTrue( databaseLookup.isPresent() );
-        assertEquals( database, databaseLookup.get() );
+        assertEquals( context, databaseLookup.get() );
 
         databaseManager.shutdownDatabase( databaseName );
-        assertFalse( databaseManager.getDatabaseFacade( databaseName ).isPresent() );
+        assertFalse( databaseManager.getDatabaseContext( databaseName ).isPresent() );
     }
 
     @Test

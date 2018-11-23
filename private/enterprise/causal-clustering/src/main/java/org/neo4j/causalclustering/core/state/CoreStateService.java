@@ -148,7 +148,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         ReplicatedIdAllocationStateMachine idAllocationStateMachine = new ReplicatedIdAllocationStateMachine(
                 storage.stateStorage( CoreStateFiles.ID_ALLOCATION, databaseName ) );
 
-        Supplier<StorageEngine> storageEngineSupplier = () -> localDatabase.dataSource().getDependencyResolver().resolveDependency( StorageEngine.class );
+        Supplier<StorageEngine> storageEngineSupplier = () -> localDatabase.database().getDependencyResolver().resolveDependency( StorageEngine.class );
 
         ReplicatedIdRangeAcquirer idRangeAcquirer = new ReplicatedIdRangeAcquirer( databaseName, replicator, idAllocationStateMachine, allocationSizes,
                 myself, logProvider );

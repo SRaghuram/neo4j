@@ -13,6 +13,7 @@ import java.time.Clock;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
@@ -56,9 +57,9 @@ public class CommercialEditionModule extends EnterpriseEditionModule
             DatabaseManager databaseManager = platform.dependencies.resolveDependency( DatabaseManager.class );
             Supplier<Kernel> kernelSupplier = () ->
             {
-                GraphDatabaseFacade facade = databaseManager.getDatabaseFacade( databaseName )
+                DatabaseContext databaseContext = databaseManager.getDatabaseContext( databaseName )
                         .orElseThrow( () -> new IllegalStateException( format( "Database %s not found.", databaseName ) ) );
-                return facade.getDependencyResolver().resolveDependency( Kernel.class );
+                return databaseContext.getDependencies().resolveDependency( Kernel.class );
             };
             return new TokenHolders(
                     new DelegatingTokenHolder( createPropertyKeyCreator( config, kernelSupplier ), TokenHolder.TYPE_PROPERTY_KEY ),

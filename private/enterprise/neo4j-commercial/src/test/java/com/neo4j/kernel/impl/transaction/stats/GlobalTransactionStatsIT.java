@@ -53,7 +53,7 @@ class GlobalTransactionStatsIT
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
         String secondDb = "second.db";
         DatabaseManager databaseManager = getDatabaseManager();
-        GraphDatabaseFacade secondFacade = databaseManager.createDatabase( secondDb );
+        GraphDatabaseFacade secondFacade = databaseManager.createDatabase( secondDb ).getDatabaseFacade();
 
         GlobalTransactionStats globalTransactionStats = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( GlobalTransactionStats.class );
         assertEquals( 0, globalTransactionStats.getNumberOfActiveTransactions() );

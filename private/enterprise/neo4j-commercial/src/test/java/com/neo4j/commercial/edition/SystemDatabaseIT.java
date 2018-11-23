@@ -183,7 +183,7 @@ class SystemDatabaseIT
             File disabledSystemDbDirectory = testDirectory.databaseDir( "disabledSystemDb" );
             databaseWithoutSystemDb = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledSystemDbDirectory ).newGraphDatabase();
             DatabaseManager databaseManager = getDatabaseManager( databaseWithoutSystemDb );
-            assertFalse( databaseManager.getDatabaseFacade( SYSTEM_DATABASE_NAME ).isPresent() );
+            assertFalse( databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME ).isPresent() );
         }
         finally
         {
@@ -217,7 +217,7 @@ class SystemDatabaseIT
 
     private static GraphDatabaseFacade getDatabaseByName( DatabaseManager databaseManager, String dbName )
     {
-        return databaseManager.getDatabaseFacade( dbName ).orElseThrow( IllegalStateException::new );
+        return databaseManager.getDatabaseContext( dbName ).orElseThrow( IllegalStateException::new ).getDatabaseFacade();
     }
 
     private DatabaseManager getDatabaseManager( GraphDatabaseService database )

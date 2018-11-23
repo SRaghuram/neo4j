@@ -113,13 +113,14 @@ class MultiDatabaseIdGeneratorIT
 
     private static GraphDatabaseFacade startSecondDatabase( DatabaseManager databaseManager )
     {
-        return databaseManager.createDatabase( "second.db" );
+        return databaseManager.createDatabase( "second.db" ).getDatabaseFacade();
     }
 
     private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager databaseManager )
     {
-        return databaseManager.getDatabaseFacade( Config.defaults().get( GraphDatabaseSettings.active_database ) )
-                .orElseThrow( () -> new IllegalStateException( "Default database not found." ) );
+        return databaseManager.getDatabaseContext( Config.defaults().get( GraphDatabaseSettings.active_database ) )
+                .orElseThrow( () -> new IllegalStateException( "Default database not found." ) )
+                .getDatabaseFacade();
     }
 
     private static IdGeneratorFactory getIdGeneratorFactory( GraphDatabaseFacade database )

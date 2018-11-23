@@ -184,8 +184,8 @@ public class Neo4jMetricsBuilder
 
     private <T> Supplier<T> databaseDependencySupplier( Class<T> clazz )
     {
-        return () -> dependencies.databaseManager().getDatabaseFacade( DEFAULT_DATABASE_NAME )
+        return () -> dependencies.databaseManager().getDatabaseContext( DEFAULT_DATABASE_NAME )
                                                    .orElseThrow( () -> new IllegalStateException( "Default database not found." ) )
-                                                   .getDependencyResolver().resolveDependency( clazz );
+                                                   .getDependencies().resolveDependency( clazz );
     }
 }

@@ -48,8 +48,8 @@ class MultiDatabasePanicIT
     void databasesPanicSeparately()
     {
         DatabaseManager databaseManager = getDatabaseManager();
-        GraphDatabaseFacade firstDatabase = databaseManager.createDatabase( "first" );
-        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second" );
+        GraphDatabaseFacade firstDatabase = databaseManager.createDatabase( "first" ).getDatabaseFacade();
+        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second" ).getDatabaseFacade();
         PanicDatabaseEventListener firstPanicListener = new PanicDatabaseEventListener();
         PanicDatabaseEventListener secondPanicListener = new PanicDatabaseEventListener();
         firstDatabase.registerDatabaseEventHandler( firstPanicListener );

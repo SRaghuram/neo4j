@@ -17,6 +17,7 @@ import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.CoreStateFiles;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -27,7 +28,6 @@ import org.neo4j.jmx.impl.ManagementSupport;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.management.CausalClustering;
@@ -56,9 +56,9 @@ public class CausalClusteringBeanTest
         Dependencies dependencies = new Dependencies();
         DatabaseManager databaseManager = mock( DatabaseManager.class );
         Database dataSource = mock( Database.class );
-        GraphDatabaseFacade databaseFacade = mock( GraphDatabaseFacade.class );
-        when( databaseFacade.getDependencyResolver() ).thenReturn( dependencies );
-        when( databaseManager.getDatabaseFacade( DEFAULT_DATABASE_NAME ) ).thenReturn( of( databaseFacade ) );
+        DatabaseContext databaseContext = mock( DatabaseContext.class );
+        when( databaseContext.getDependencies() ).thenReturn( dependencies );
+        when( databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ) ).thenReturn( of( databaseContext ) );
         when( dataSource.getDatabaseLayout() ).thenReturn( testDirectory.databaseLayout() );
         KernelData kernelData = new KernelData( fs, mock( PageCache.class ), new File( "storeDir" ), Config.defaults() );
 
