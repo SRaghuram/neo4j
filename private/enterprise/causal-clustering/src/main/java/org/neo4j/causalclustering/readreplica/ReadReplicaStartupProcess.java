@@ -97,7 +97,7 @@ class ReadReplicaStartupProcess implements Lifecycle
     public void start()
     {
         TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
-        Map<String,? extends LocalDatabase> dbsToSync = databaseService.registeredDatabases();
+        Map<String,? extends LocalDatabase> dbsToSync = copyRegisteredDatabases();
         int attempt = 0;
         while ( dbsToSync.size() > 0 )
         {
@@ -148,6 +148,11 @@ class ReadReplicaStartupProcess implements Lifecycle
         {
             throw new RuntimeException( e );
         }
+    }
+
+    private HashMap<String,? extends LocalDatabase> copyRegisteredDatabases()
+    {
+        return new HashMap<>( databaseService.registeredDatabases() );
     }
 
     private void removeDbs( Map<String,? extends LocalDatabase> dbs, List<String> toRemove )
