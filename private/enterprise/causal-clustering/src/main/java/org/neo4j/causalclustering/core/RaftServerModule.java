@@ -121,7 +121,7 @@ class RaftServerModule
                 protocolInstallerRepository, pipelineBuilderFactory, logProvider );
 
         ListenSocketAddress raftListenAddress = platformModule.config.get( CausalClusteringSettings.raft_listen_address );
-        Executor raftServerExecutor = platformModule.jobScheduler.executor( Group.RAFT );
+        Executor raftServerExecutor = platformModule.jobScheduler.executor( Group.RAFT_SERVER );
         Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider, platformModule.logService.getUserLogProvider(),
                 raftListenAddress, "raft-server", raftServerExecutor );
 

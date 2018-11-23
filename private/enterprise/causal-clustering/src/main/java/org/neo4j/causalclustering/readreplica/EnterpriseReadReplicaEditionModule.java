@@ -159,7 +159,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
         CommandIndexTracker commandIndexTracker = platformModule.dependencies.satisfyDependency( new CommandIndexTracker() );
 
         CompositeSuspendable servicesToStopOnStoreCopy = new CompositeSuspendable();
-        Executor catchupExecutor = platformModule.jobScheduler.executor( Group.CATCHUP );
+        Executor catchupExecutor = platformModule.jobScheduler.executor( Group.CATCHUP_CLIENT );
 
         TimerService timerService = new TimerService( platformModule.jobScheduler, logProvider );
 

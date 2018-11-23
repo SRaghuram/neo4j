@@ -138,7 +138,7 @@ public class CatchupClientFactory extends LifecycleAdapter
     @Override
     public void start()
     {
-        eventLoopGroup = new NioEventLoopGroup( 0, scheduler.executor( Group.CATCHUP ) );
+        eventLoopGroup = new NioEventLoopGroup( 0, scheduler.executor( Group.CATCHUP_CLIENT ) );
     }
 
     @Override

@@ -154,7 +154,7 @@ public final class CatchupServerBuilder
 
             HandshakeServerInitializer handshakeServerInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
                     protocolInstallerRepository, pipelineBuilder, debugLogProvider );
-            Executor executor = scheduler.executor( Group.CATCHUP );
+            Executor executor = scheduler.executor( Group.CATCHUP_SERVER );
 
             return new Server( handshakeServerInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor );
         }
