@@ -47,6 +47,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN;
@@ -163,7 +164,7 @@ public class CoreBootstrapper
         DatabaseLayout bootstrapDatabaseLayout = StoreLayout.of( bootstrapDirectory ).databaseLayout( "bootstrap.db" );
 
         try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapDatabaseLayout.databaseDirectory(),
-                logsDirectoryName ) )
+                logsDirectoryName, config.get( record_format ) ) )
         {
             if ( databaseInitializer != null )
             {

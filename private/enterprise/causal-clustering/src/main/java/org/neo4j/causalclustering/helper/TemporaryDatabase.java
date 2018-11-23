@@ -39,7 +39,7 @@ public class TemporaryDatabase implements AutoCloseable
             this.pageCache = pageCache;
         }
 
-        public TemporaryDatabase startTemporaryDatabase( File tempStore, String txLogsDirectoryName )
+        public TemporaryDatabase startTemporaryDatabase( File tempStore, String txLogsDirectoryName, String recordFormat )
         {
             ExternallyManagedPageCache.GraphDatabaseFactoryWithPageCacheFactory factory =
                     ExternallyManagedPageCache.graphDatabaseFactoryWithPageCache( pageCache );
@@ -47,6 +47,7 @@ public class TemporaryDatabase implements AutoCloseable
             GraphDatabaseService db = factory
                     .setUserLogProvider( NullLogProvider.getInstance() )
                     .newEmbeddedDatabaseBuilder( tempStore.getAbsoluteFile() )
+                    .setConfig( GraphDatabaseSettings.record_format, recordFormat )
                     .setConfig( GraphDatabaseSettings.logical_logs_location, txLogsDirectoryName )
                     .setConfig( GraphDatabaseSettings.active_database, tempStore.getName() )
                     .setConfig( GraphDatabaseSettings.pagecache_warmup_enabled, FALSE )
