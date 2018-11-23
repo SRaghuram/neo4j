@@ -1094,10 +1094,11 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
       val checks = checkExpressions.flatMap(internalCompileExpression(_, currentContext))
       val loads = loadExpressions.flatMap(internalCompileExpression(_, currentContext))
-      if (checks.size != loads.size || maybeDefault.isEmpty) None
+      if (checks.size != loads.size || checks.isEmpty || maybeDefault.isEmpty) None
       else {
         for {inner: IntermediateExpression <- internalCompileExpression(innerExpression, currentContext)
         } yield {
+
           //AnyValue compare = inner;
           //AnyValue returnValue = null;
           //if (alternatives[0]._1.equals(compare)) {
@@ -1112,35 +1113,15 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           val default = maybeDefault.get
           val returnVariable = namer.nextVariableName()
           val local = variable[AnyValue](returnVariable, constant(null))
-
-          def loop(expressions: List[(IntermediateExpression, IntermediateExpression)]): IntermediateRepresentation = expressions match {
-            case Nil => throw new IllegalStateException()
-            case (toCheck, toLoad) :: Nil =>
-              condition(invoke(inner.ir, method[AnyValue, Boolean, AnyRef]("equals"), toCheck.ir)) {
-                assign(returnVariable, toLoad.ir)
-              }
-            case (toCheck, toLoad) :: tl =>
-              ifElse(invoke(inner.ir, method[AnyValue, Boolean, AnyRef]("equals"), toCheck.ir)) {
-                assign(returnVariable, toLoad.ir)
-              } {
-                loop(tl)
-              }
-          }
-
-          val lazySet = oneTime(block(
-            loop(checks.zip(loads).toList),
-            condition(equal(load(returnVariable), constant(null)))(assign(returnVariable, default.ir))
-          ))
-
-          val ops = block(lazySet, load(returnVariable))
-          val nullChecks = block(equal(load(returnVariable), noValue))
+          val ops = caseExpression(returnVariable, checks.map(_.ir), loads.map(_.ir), default.ir,
+                          toCheck => invoke(inner.ir, method[AnyValue, Boolean, AnyRef]("equals"), toCheck))
           IntermediateExpression(ops,
                                  inner.fields ++ checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
-                                 inner.variables ++ checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default
-                                   .variables :+ local,
-                                 Set(nullChecks))
+                                 inner.variables ++ checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default.variables :+ local,
+                                 Set(block(equal(load(returnVariable), noValue))))
         }
       }
+
 
     case CaseExpression(None, alternativeExpressions, defaultExpression) =>
       val maybeDefault = defaultExpression match {
@@ -1171,32 +1152,13 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val default = maybeDefault.get
         val returnVariable = namer.nextVariableName()
         val local = variable[AnyValue](returnVariable, constant(null))
-
-        def loop(expressions: List[(IntermediateExpression, IntermediateExpression)]): IntermediateRepresentation = expressions match {
-          case Nil => throw new IllegalStateException()
-          case (toCheck, toLoad) :: Nil =>
-            condition(equal(toCheck.ir, truthValue)) {
-              assign(returnVariable, toLoad.ir)
-            }
-          case (toCheck, toLoad) :: tl =>
-            ifElse(equal(toCheck.ir, truthValue)) {
-              assign(returnVariable, toLoad.ir)
-            } {
-              loop(tl)
-            }
-        }
-
-        val lazySet = oneTime(block(
-          loop(checks.zip(loads).toList),
-          condition(equal(load(returnVariable), constant(null)))(assign(returnVariable, default.ir))
-        ))
-
-        val ops = block(lazySet, load(returnVariable))
-        val nullChecks = block(equal(load(returnVariable), noValue))
+        val ops = caseExpression(returnVariable, checks.map(_.ir), loads.map(_.ir), default.ir,
+                        toCheck => equal(toCheck, truthValue))
         Some(IntermediateExpression(ops,
-                               checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
-                               checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default.variables :+ local,
-                               Set(nullChecks)))
+                                    checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
+                                    checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default
+                                      .variables :+ local,
+                                    Set(block(equal(load(returnVariable), noValue)))))
       }
 
     case Property(targetExpression, PropertyKeyName(key)) =>
@@ -2097,7 +2059,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case CTDate => getStatic[Neo4jTypes, Neo4jTypes.DateType]("NTDate")
     case CTTime => getStatic[Neo4jTypes, Neo4jTypes.TimeType]("NTTime")
     case CTLocalTime => getStatic[Neo4jTypes, Neo4jTypes.LocalTimeType]("NTLocalTime")
-    case CTDuration =>getStatic[Neo4jTypes, Neo4jTypes.DurationType]("NTDuration")
+    case CTDuration => getStatic[Neo4jTypes, Neo4jTypes.DurationType]("NTDuration")
     case CTPoint => getStatic[Neo4jTypes, Neo4jTypes.PointType]("NTPoint")
     case CTNode => getStatic[Neo4jTypes, Neo4jTypes.NodeType]("NTNode")
     case CTRelationship => getStatic[Neo4jTypes, Neo4jTypes.RelationshipType]("NTRelationship")
@@ -2105,6 +2067,31 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case CTGeometry => getStatic[Neo4jTypes, Neo4jTypes.GeometryType]("NTGeometry")
     case CTMap => getStatic[Neo4jTypes, Neo4jTypes.MapType]("NTMap")
     case CTAny => getStatic[Neo4jTypes, Neo4jTypes.AnyType]("NTAny")
+  }
+
+  private def caseExpression(returnVariable: String,
+                             checks: Seq[IntermediateRepresentation],
+                             loads: Seq[IntermediateRepresentation],
+                             default: IntermediateRepresentation,
+                             conditionToCheck: IntermediateRepresentation => IntermediateRepresentation) = {
+    def loop(expressions: List[(IntermediateRepresentation, IntermediateRepresentation)]): IntermediateRepresentation = expressions match {
+      case Nil => throw new IllegalStateException()
+      case (toCheck, toLoad) :: Nil =>
+        condition(conditionToCheck(toCheck)) {
+          assign(returnVariable, toLoad)
+        }
+      case (toCheck, toLoad) :: tl =>
+        ifElse(conditionToCheck(toCheck)) {
+          assign(returnVariable, toLoad)
+        } {
+          loop(tl)
+        }
+    }
+
+    block(oneTime(block(
+      loop(checks.zip(loads).toList),
+      condition(equal(load(returnVariable), constant(null)))(assign(returnVariable, default))
+    )), load(returnVariable))
   }
 }
 
