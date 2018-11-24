@@ -35,6 +35,7 @@ import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionExecutionStatistic;
 import org.neo4j.kernel.impl.api.TransactionHooks;
 import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsStore;
 import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.api.transaction.trace.TransactionInitializationTrace;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
@@ -247,7 +248,8 @@ class TransactionStatusResultTest
                         LockTracer.NONE, PageCursorTracerSupplier.NULL,
                         mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
                         EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
-                        mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ), new Dependencies() )
+                        mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ),
+                        mock( IndexStatisticsStore.class ), new Dependencies() )
             {
                 @Override
                 public Statistics getStatistics()

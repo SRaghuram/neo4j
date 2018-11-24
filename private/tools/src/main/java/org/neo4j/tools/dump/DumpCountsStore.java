@@ -8,13 +8,7 @@ package org.neo4j.tools.dump;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
-import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -23,12 +17,9 @@ import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier
 import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.CountsVisitor;
-import org.neo4j.kernel.impl.index.schema.IndexDescriptor;
-import org.neo4j.kernel.impl.index.schema.StoreIndexDescriptor;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.SchemaRuleAccess;
 import org.neo4j.kernel.impl.store.StoreFactory;
-import org.neo4j.kernel.impl.store.TokenStore;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.kernel.impl.store.counts.ReadOnlyCountsTracker;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
@@ -41,10 +32,10 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.storageengine.api.schema.SchemaDescriptor;
 
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
+import static org.neo4j.tools.dump.SimpleSchemaRuleCache.token;
 
 /**
  * Tool that will dump content of count store content into a simple string representation for further analysis.
@@ -82,7 +73,7 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
 
                 NeoStores neoStores = factory.openAllNeoStores();
                 SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore() );
-                counts.accept( new DumpCountsStore( out, neoStores, schemaStorage ) );
+                counts.accept( new DumpCountsStore( out, new SimpleSchemaRuleCache( neoStores, schemaStorage ) ) );
             }
             else
             {
@@ -100,33 +91,18 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
         }
     }
 
+    private final PrintStream out;
+    private final SimpleSchemaRuleCache schema;
+
     DumpCountsStore( PrintStream out )
     {
-        this( out, Collections.emptyMap(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList() );
+        this( out, null );
     }
 
-    DumpCountsStore( PrintStream out, NeoStores neoStores, SchemaRuleAccess schemaRuleAccess )
-    {
-        this( out, getAllIndexesFrom( schemaRuleAccess ),
-              allTokensFrom( neoStores.getLabelTokenStore() ),
-              allTokensFrom( neoStores.getRelationshipTypeTokenStore() ),
-              allTokensFrom( neoStores.getPropertyKeyTokenStore() ) );
-    }
-
-    private final PrintStream out;
-    private final Map<Long,IndexDescriptor> indexes;
-    private final List<NamedToken> labels;
-    private final List<NamedToken> relationshipTypes;
-    private final List<NamedToken> propertyKeys;
-
-    private DumpCountsStore( PrintStream out, Map<Long,IndexDescriptor> indexes, List<NamedToken> labels,
-                             List<NamedToken> relationshipTypes, List<NamedToken> propertyKeys )
+    DumpCountsStore( PrintStream out, SimpleSchemaRuleCache schema )
     {
         this.out = out;
-        this.indexes = indexes;
-        this.labels = labels;
-        this.relationshipTypes = relationshipTypes;
-        this.propertyKeys = propertyKeys;
+        this.schema = schema;
     }
 
     @Override
@@ -156,44 +132,6 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
     }
 
     @Override
-    public void visitIndexStatistics( long indexId, long updates, long size )
-    {
-        SchemaDescriptor schema = indexes.get( indexId ).schema();
-        String tokenIds;
-        switch ( schema.entityType() )
-        {
-        case NODE:
-            tokenIds = labels( schema.getEntityTokenIds() );
-            break;
-        case RELATIONSHIP:
-            tokenIds = relationshipTypes( schema.getEntityTokenIds() );
-            break;
-        default:
-            throw new IllegalStateException( "Indexing is not supported for EntityType: " + schema.entityType() );
-        }
-        out.printf( "\tIndexStatistics[(%s {%s})]:\tupdates=%d, size=%d%n", tokenIds, propertyKeys( schema.getPropertyIds() ), updates, size );
-    }
-
-    @Override
-    public void visitIndexSample( long indexId, long unique, long size )
-    {
-        SchemaDescriptor schema = indexes.get( indexId ).schema();
-        String tokenIds;
-        switch ( schema.entityType() )
-        {
-        case NODE:
-            tokenIds = labels( schema.getEntityTokenIds() );
-            break;
-        case RELATIONSHIP:
-            tokenIds = relationshipTypes( schema.getEntityTokenIds() );
-            break;
-        default:
-            throw new IllegalStateException( "Indexing is not supported for EntityType: " + schema.entityType() );
-        }
-        out.printf( "\tIndexSample[(%s {%s})]:\tunique=%d, size=%d%n", tokenIds, propertyKeys( schema.getPropertyIds() ), unique, size );
-    }
-
-    @Override
     public boolean visitUnknownKey( ReadableBuffer key, ReadableBuffer value )
     {
         out.printf( "\t%s:\t%s%n", key, value );
@@ -202,60 +140,7 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
 
     private String labels( int[] ids )
     {
-        if ( ids.length == 1 )
-        {
-            if ( ids[0] == StatementConstants.ANY_LABEL )
-            {
-                return "";
-            }
-        }
-        StringBuilder builder = new StringBuilder();
-        for ( int i = 0; i < ids.length; i++ )
-        {
-            if ( i > 0 )
-            {
-                builder.append( "," );
-            }
-            token( builder, labels, ":", "label", ids[i] ).toString();
-        }
-        return builder.toString();
-    }
-
-    private String propertyKeys( int[] ids )
-    {
-        StringBuilder builder = new StringBuilder();
-        for ( int i = 0; i < ids.length; i++ )
-        {
-            if ( i > 0 )
-            {
-                builder.append( "," );
-            }
-            token( builder, propertyKeys, "", "key", ids[i] );
-        }
-        return builder.toString();
-    }
-
-    private String relationshipTypes( int[] ids )
-    {
-        if ( ids.length == 1 )
-        {
-            if ( ids[0] == StatementConstants.ANY_LABEL )
-            {
-                return "";
-            }
-        }
-        StringBuilder builder = new StringBuilder();
-        for ( int i = 0; i < ids.length; i++ )
-        {
-            if ( i > 0 )
-            {
-                builder.append( "," );
-            }
-            builder.append( '[' );
-            token( builder, relationshipTypes, ":", "type", i );
-            builder.append( ']' );
-        }
-        return builder.toString();
+        return schema.tokens( schema.labelTokens, "label", ids );
     }
 
     private String relationshipType( int id )
@@ -264,62 +149,12 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
         {
             return "";
         }
-        return token( new StringBuilder().append( '[' ), relationshipTypes, ":", "type", id ).append( ']' ).toString();
-    }
-
-    private static StringBuilder token( StringBuilder result, List<NamedToken> tokens, String pre, String handle, int id )
-    {
-        NamedToken token = null;
-        // search backwards for the token
-        for ( int i = (id < tokens.size()) ? id : tokens.size() - 1; i >= 0; i-- )
-        {
-            token = tokens.get(i);
-            if ( token.id() == id )
-            {
-                break; // found
-            }
-            if ( token.id() < id )
-            {
-                token = null; // not found
-                break;
-            }
-        }
-        if ( token != null )
-        {
-            String name = token.name();
-            result.append( pre ).append( name )
-                  .append( " [" ).append( handle ).append( "Id=" ).append( token.id() ).append( ']' );
-        }
-        else
-        {
-            result.append( handle ).append( "Id=" ).append( id );
-        }
-        return result;
-    }
-
-    private static List<NamedToken> allTokensFrom( TokenStore<?> store )
-    {
-        try ( TokenStore<?> tokens = store )
-        {
-            return tokens.getTokens();
-        }
-    }
-
-    private static Map<Long,IndexDescriptor> getAllIndexesFrom( SchemaRuleAccess schemaRuleAccess )
-    {
-        HashMap<Long,IndexDescriptor> indexes = new HashMap<>();
-        Iterator<StoreIndexDescriptor> indexRules = schemaRuleAccess.indexesGetAll();
-        while ( indexRules.hasNext() )
-        {
-            StoreIndexDescriptor rule = indexRules.next();
-            indexes.put( rule.getId(), rule );
-        }
-        return indexes;
+        return token( new StringBuilder().append( '[' ),
+                schema != null ? schema.relationshipTypeTokens.get( id ) : null, ":", "type", id ).append( ']' ).toString();
     }
 
     private static class VisitableCountsTracker extends CountsTracker
     {
-
         VisitableCountsTracker( LogProvider logProvider, FileSystemAbstraction fs,
                 PageCache pages, Config config, DatabaseLayout databaseLayout )
         {

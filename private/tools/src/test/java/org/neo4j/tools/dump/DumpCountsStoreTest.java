@@ -109,28 +109,9 @@ public class DumpCountsStoreTest
                                   "'w', 'n', 'V', 'a', 'l', 'u', 'e']" ) );
     }
 
-    @Test
-    public void dumpIndexStatistic()
-    {
-        DumpCountsStore countsStore = getCountStore();
-        countsStore.visitIndexStatistics( indexId, 3, 4 );
-        assertThat( suppressOutput.getOutputVoice().toString(),
-                containsString( "IndexStatistics[(:indexLabel [labelId=3] {indexProperty [keyId=1]})" +
-                                    "]:\tupdates=3, size=4" ) );
-    }
-
-    @Test
-    public void dumpIndexSample()
-    {
-        DumpCountsStore countsStore = getCountStore();
-        countsStore.visitIndexSample( indexId, 1, 2 );
-        assertThat( suppressOutput.getOutputVoice().toString(),
-                containsString( "IndexSample[(:indexLabel [labelId=3] {indexProperty [keyId=1]})]:\tunique=1, size=2" ));
-    }
-
     private DumpCountsStore getCountStore()
     {
-        return new DumpCountsStore( System.out, createNeoStores(), createRuleAccess() );
+        return new DumpCountsStore( System.out, new SimpleSchemaRuleCache( createNeoStores(), createRuleAccess() ) );
     }
 
     private SchemaRuleAccess createRuleAccess()
