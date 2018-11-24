@@ -22,7 +22,7 @@ class SystemGraphCredential implements Credential
     private final SimpleHash hashedCredentials;
     private static final String credentialSeparator = ",";
 
-    SystemGraphCredential( SecureHasher secureHasher, SimpleHash hash )
+    private SystemGraphCredential( SecureHasher secureHasher, SimpleHash hash )
     {
         this.secureHasher = secureHasher;
         this.hashedCredentials = hash;
@@ -81,12 +81,6 @@ class SystemGraphCredential implements Credential
     public String serialize()
     {
         return serialize( this );
-    }
-
-    // TODO: Unused. Remove?
-    SimpleHash hashedCredentials()
-    {
-        return hashedCredentials;
     }
 
     static String serialize( SystemGraphCredential credential )

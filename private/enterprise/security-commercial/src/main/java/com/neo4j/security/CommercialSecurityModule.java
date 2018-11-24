@@ -47,7 +47,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     public static final String USER_IMPORT_FILENAME = ".users.import";
     public static final String ROLE_IMPORT_FILENAME = ".roles.import";
 
-    private DatabaseManager databaseManager; // TODO: Check with security team.
+    private DatabaseManager databaseManager;
     private boolean useExternalBootstrapping;
     private Config config;
     private LogProvider logProvider;

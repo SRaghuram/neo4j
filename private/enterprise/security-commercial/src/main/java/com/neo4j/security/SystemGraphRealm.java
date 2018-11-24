@@ -93,12 +93,13 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     @Override
     public void start() throws Throwable
     {
-        if ( authenticationEnabled || authorizationEnabled )
+        if ( !authenticationEnabled && !authorizationEnabled )
         {
-            if ( systemGraphInitializer != null )
-            {
-                systemGraphInitializer.initializeSystemGraph();
-            }
+            return;
+        }
+        if ( systemGraphInitializer != null )
+        {
+            systemGraphInitializer.initializeSystemGraph();
         }
     }
 
