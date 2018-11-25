@@ -17,12 +17,13 @@ object Pipeline {
 
   /**
     * Debug print method toggled by the DEBUG flag and with output prefixed with the current thread name
+    * The argument string is evaluated lazily (unfortunately call-by-name doesn't work with function values)
     */
-  val dprintln: String => Unit =
+  val dprintln: (() => String) => Unit = // Contrary to what your IDE may claim the extra parenthesis are necessary here
     if (DEBUG)
-      (s: String) => println(s"[${Thread.currentThread().getName}] $s")
+      (s: () => String) => println(s"[${Thread.currentThread().getName}] ${s()}")
     else
-      (_: String) => {}
+      (_: () => String) => {}
 }
 
 /**
@@ -65,13 +66,13 @@ abstract class Pipeline() {
     this.upstream.foreach(_.connectPipeline(Some(this), getThisOrDownstreamReduce(downstreamReduce)))
   }
 
-  def getLeaf: StreamingPipeline = {
-    var leafOp = this
-    while (leafOp.upstream.nonEmpty) {
-      leafOp = leafOp.upstream.get
+  def getUpstreamLeafPipeline: StreamingPipeline = {
+    var leafPipeline = this
+    while (leafPipeline.upstream.nonEmpty) {
+      leafPipeline = leafPipeline.upstream.get
     }
 
-    leafOp.asInstanceOf[StreamingPipeline]
+    leafPipeline.asInstanceOf[StreamingPipeline]
   }
 
   protected def getThisOrDownstreamReduce(downstreamReduce: Option[ReducePipeline]): Option[ReducePipeline] =

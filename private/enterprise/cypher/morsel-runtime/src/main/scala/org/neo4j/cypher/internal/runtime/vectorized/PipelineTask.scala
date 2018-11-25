@@ -42,7 +42,7 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
     val downstreamTasks = downstream.flatMap(_.acceptMorsel(currentRow, queryContext, state, cursors, this)).toSeq
 
     if (org.neo4j.cypher.internal.runtime.vectorized.Pipeline.DEBUG && downstreamTasks.nonEmpty) {
-      dprintln(s">>> downstream tasks=$downstreamTasks")
+      dprintln(() => s">>> downstream tasks=$downstreamTasks")
     }
 
     state.reduceCollector match {
@@ -87,20 +87,20 @@ case class PipelineTask(start: ContinuableOperatorTask,
     doStatelessOperators(cursors, outputRow, queryContext)
 
     if (org.neo4j.cypher.internal.runtime.vectorized.Pipeline.DEBUG) {
-      dprintln(s"Pipeline: $name")
+      dprintln(() => s"Pipeline: $name")
 
       val longCount = slots.numberOfLongs
       val refCount = slots.numberOfReferences
 
-      dprintln("Resulting rows")
+      dprintln(() => "Resulting rows")
       for (i <- 0 until outputMorsel.validRows) {
         val ls = util.Arrays.toString(outputMorsel.longs.slice(i * longCount, (i + 1) * longCount))
         val rs = util.Arrays.toString(outputMorsel.refs.slice(i * refCount, (i + 1) * refCount).asInstanceOf[Array[AnyRef]])
         println(s"$ls $rs")
       }
-      dprintln(s"can continue: ${start.canContinue}")
+      dprintln(() => s"can continue: ${start.canContinue}")
       println()
-      dprintln("-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/")
+      dprintln(() => "-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/")
     }
 
     getDownstreamTasks(cursors, outputRow, queryContext)

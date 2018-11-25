@@ -108,6 +108,10 @@ trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
 
         // If we have not filled the output rows, move to the next input row
         if (outputRow.hasMoreRows) {
+          // NOTE: There is a small chance that we run out of output rows and innerLoop iterations simultaneously where we would generate
+          // an additional empty work unit that will just close the innerLoop. This could be avoided if we changed the innerLoop interface to something
+          // slightly more complicated, but since innerLoop iterations and output morsel size will have to match exactly for this to happen it is
+          // probably not a big problem in practice, and the additional checks required may not be worthwhile.
           innerLoop.close()
           innerLoop = null
           inputRow.moveToNextRow()

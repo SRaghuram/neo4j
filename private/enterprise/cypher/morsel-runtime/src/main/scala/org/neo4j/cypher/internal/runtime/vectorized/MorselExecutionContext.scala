@@ -26,8 +26,6 @@ object MorselExecutionContext {
 
 class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow: Int, private val refsPerRow: Int, private var currentRow: Int) extends ExecutionContext {
 
-  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, currentRow)
-
   def moveToNextRow(): Unit = {
     currentRow += 1
   }
@@ -167,11 +165,8 @@ class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow
 
   private def refsAtCurrentRow: Int = currentRow * refsPerRow
 
-  private def fail(): Nothing = {
-    val e = new InternalException("Tried using a wrong context.")
-    e.printStackTrace()
-    throw e
-  }
+  private def fail(): Nothing =
+    throw new InternalException("Tried using a wrong context.")
 
   override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = ???
 

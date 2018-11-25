@@ -13,13 +13,13 @@ import org.neo4j.values.virtual.MapValue
 
 class Dispatcher(morselSize: Int, scheduler: Scheduler[ExpressionCursors]) {
 
-  def execute[E <: Exception](operators: Pipeline,
+  def execute[E <: Exception](pipeline: Pipeline,
                               queryContext: QueryContext,
                               params: MapValue,
                               schedulerTracer: SchedulerTracer,
                               queryIndexes: Array[IndexReadSession])
                              (visitor: QueryResultVisitor[E]): Unit = {
-    val leaf = operators.getLeaf
+    val leafPipeline = pipeline.getUpstreamLeafPipeline
 
     val state = QueryState(params, visitor, morselSize, queryIndexes, singeThreaded = scheduler.isInstanceOf[SingleThreadScheduler[_]])
 
@@ -31,7 +31,7 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[ExpressionCursors]) {
     // NOTE: We will iterate over this initial input MorselExecutionContext, so we must clone MorselExecutionContext.EMPTY
     val initialTask =
       try {
-        leaf.init(MorselExecutionContext.createSingleRow(), queryContext, state, initExpressionCursors)
+        leafPipeline.init(MorselExecutionContext.createSingleRow(), queryContext, state, initExpressionCursors)
       } finally {
         initExpressionCursors.close()
       }

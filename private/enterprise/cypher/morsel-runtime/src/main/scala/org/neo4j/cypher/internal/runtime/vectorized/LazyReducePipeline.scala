@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.Task
+import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
 
 /**
   * A pipeline that is fed with input morsels asynchronously into a queue,
@@ -107,14 +108,14 @@ class LazyReducePipeline(start: LazyReduceOperator,
     override def produceTaskScheduled(task: String): Unit = {
       val tasks = taskCount.incrementAndGet()
       if (Pipeline.DEBUG) {
-        println("taskCount [%3d]: scheduled %s".format(tasks, task))
+        dprintln(() => "taskCount [%3d]: scheduled %s".format(tasks, task))
       }
     }
 
     override def produceTaskCompleted(task: String, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
       val tasksLeft = taskCount.decrementAndGet()
       if (Pipeline.DEBUG) {
-        println("taskCount [%3d]: completed %s".format(tasksLeft, task))
+        dprintln(() => "taskCount [%3d]: completed %s".format(tasksLeft, task))
       }
 
       if (tasksLeft >= 0) {

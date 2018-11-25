@@ -27,7 +27,7 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executor: Executor
   })
 
   override def execute(task: Task[THREAD_LOCAL_RESOURCE], tracer: SchedulerTracer): QueryExecution = {
-    //dprintln(s"SimpleScheduler execute $task")
+    dprintln(() => s"SimpleScheduler execute $task")
     val queryTracer: QueryExecutionTracer = tracer.traceQuery()
     new SimpleQueryExecution(schedule(task, None, queryTracer), this, queryTracer, waitTimeout.toMillis)
   }
@@ -35,12 +35,12 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executor: Executor
   def isMultiThreaded: Boolean = true
 
   def schedule(task: Task[THREAD_LOCAL_RESOURCE], upstreamWorkUnit: Option[WorkUnitEvent], queryTracer: QueryExecutionTracer): Future[TaskResult[THREAD_LOCAL_RESOURCE]] = {
-    //dprintln(s"SimpleScheduler schedule $task")
+    dprintln(() => s"SimpleScheduler schedule $task ${throw new IllegalStateException()}")
     val scheduledWorkUnitEvent = queryTracer.scheduleWorkUnit(task, upstreamWorkUnit)
     val callableTask =
       new Callable[TaskResult[THREAD_LOCAL_RESOURCE]] {
         override def call(): TaskResult[THREAD_LOCAL_RESOURCE] = {
-          //dprintln(s"SimpleScheduler running $task")
+          dprintln(() => s"SimpleScheduler running $task")
           val workUnitEvent = scheduledWorkUnitEvent.start()
           try {
             val newDownstreamTasks = task.executeWorkUnit(threadLocalResource.get())
