@@ -75,7 +75,7 @@ class SimpleCatchupClient implements AutoCloseable
                 .v1( c -> c.prepareStoreCopy( expectedStoreId ) )
                 .v2( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) )
                 .withResponseHandler( responseHandler )
-                .request().get();
+                .request( log );
     }
 
     public StoreCopyFinishedResponse requestIndividualFile( File file ) throws Exception
@@ -91,7 +91,7 @@ class SimpleCatchupClient implements AutoCloseable
                 .v1( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId ) )
                 .v2( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedDatabaseName ) )
                 .withResponseHandler( responseHandler )
-                .request().get();
+                .request( log );
     }
 
     public StoreCopyFinishedResponse requestIndexSnapshot( long indexId ) throws Exception
@@ -104,7 +104,7 @@ class SimpleCatchupClient implements AutoCloseable
                 .v1( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId ) )
                 .v2( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId, correctDatabaseName ) )
                 .withResponseHandler( responseHandler )
-                .request().get();
+                .request( log );
     }
 
     @Override

@@ -71,6 +71,7 @@ public abstract class CatchupServersModule
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedModifierProtocols )
                 .pipelineBuilder( pipelineBuilders.client() )
+                .inactivityTimeout( config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .debugLogProvider( logProvider )
                 .userLogProvider( userLogProvider )

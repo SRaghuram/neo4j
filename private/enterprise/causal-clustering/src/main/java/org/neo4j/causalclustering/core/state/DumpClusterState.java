@@ -114,7 +114,6 @@ public class DumpClusterState
         lifeSupport.shutdown();
     }
 
-    // TODO: look into the marshal here and perhaps enable V1/V2. HF: I'm not sure why we need V1/V2 here?
     private <E> void dumpState( CoreStateFiles<E> fileType ) throws ClusterStateException
     {
         DurableStateStorage<E> storage = storageService.durableStorage( fileType, databaseToDump );

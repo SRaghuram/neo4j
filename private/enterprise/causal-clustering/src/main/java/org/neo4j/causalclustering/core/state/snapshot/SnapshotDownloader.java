@@ -46,8 +46,7 @@ public class SnapshotDownloader
             coreSnapshot = client
                     .any( VersionedCatchupClients.CatchupClientCommon::getCoreSnapshot )
                     .withResponseHandler( responseHandler )
-                    .request()
-                    .get();
+                    .request( log );
         }
         catch ( Exception e )
         {

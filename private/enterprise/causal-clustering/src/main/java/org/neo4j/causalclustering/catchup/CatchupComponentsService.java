@@ -58,15 +58,16 @@ public class CatchupComponentsService implements CatchupComponentsRepository, Ca
     public Optional<PerDatabaseCatchupComponents> componentsFor( String databaseName )
     {
         return databaseService.get( databaseName )
-                .map( db -> components.computeIfAbsent( databaseName, dbName -> createPerDatabaseComponents( dbName, db ) ) );
+                .map( db -> components.computeIfAbsent( databaseName, ignored -> createPerDatabaseComponents( db ) ) );
     }
 
     @Override
-    public PerDatabaseCatchupComponents createPerDatabaseComponents( String databaseName, LocalDatabase localDatabase )
+    public PerDatabaseCatchupComponents createPerDatabaseComponents( LocalDatabase localDatabase )
     {
-        StoreCopyClient storeCopyClient = new StoreCopyClient( catchupClient, databaseName, localDatabase::monitors, logProvider, storeCopyBackoffStrategy );
+        StoreCopyClient storeCopyClient = new StoreCopyClient( catchupClient, localDatabase.databaseName(), localDatabase::monitors,
+                logProvider, storeCopyBackoffStrategy );
         TransactionLogCatchUpFactory transactionLogFactory = new TransactionLogCatchUpFactory();
-        TxPullClient txPullClient = new TxPullClient( catchupClient, databaseName, localDatabase::monitors );
+        TxPullClient txPullClient = new TxPullClient( catchupClient, localDatabase.databaseName(), localDatabase::monitors, logProvider );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystem, pageCache,
                 storeCopyClient, txPullClient, transactionLogFactory, config, localDatabase::monitors );

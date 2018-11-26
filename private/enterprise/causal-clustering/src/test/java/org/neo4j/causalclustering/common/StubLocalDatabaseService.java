@@ -15,6 +15,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
 import org.neo4j.kernel.impl.transaction.state.DataSourceManager;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
@@ -69,9 +70,9 @@ public class StubLocalDatabaseService implements DatabaseService
         databases.put( databaseName, db );
     }
 
-    public NeedsDatabaseLayout newDatabase( String databaseName )
+    public LocalDatabaseConfig givenDatabaseWithConfig()
     {
-        return new LocalDatabaseConfig( databaseName );
+        return new LocalDatabaseConfig();
     }
 
     public void registerAllDatabases( Map<String,LocalDatabase> registeredDbs )
@@ -125,23 +126,27 @@ public class StubLocalDatabaseService implements DatabaseService
                 config.logProvider, config.isAvailable, config.monitors, config.jobScheduler );
     }
 
-    public class LocalDatabaseConfig implements NeedsDatabaseLayout
+    public class LocalDatabaseConfig
     {
-        private final String databaseName;
-
+        private String databaseName;
         private DataSourceManager dataSourceManager = StubLocalDatabaseService.this.dataSourceManager;
         private DatabaseLayout databaseLayout;
         private LogProvider logProvider = NullLogProvider.getInstance();
         private BooleanSupplier isAvailable = StubLocalDatabaseService.this::areAvailable;
         private Monitors monitors;
+        private Dependencies dependencies;
         private JobScheduler jobScheduler = new FakeJobScheduler();
 
-        private LocalDatabaseConfig( String databaseName )
+        private LocalDatabaseConfig()
         {
-            this.databaseName = databaseName;
         }
 
-        @Override
+        public LocalDatabaseConfig withDatabaseName( String databaseName )
+        {
+            this.databaseName = databaseName;
+            return this;
+        }
+
         public LocalDatabaseConfig withDatabaseLayout( DatabaseLayout databaseLayout )
         {
             this.databaseLayout = databaseLayout;
@@ -175,6 +180,12 @@ public class StubLocalDatabaseService implements DatabaseService
         public LocalDatabaseConfig withAvailabilitySupplier( BooleanSupplier availabilitySupplier )
         {
             this.isAvailable = availabilitySupplier;
+            return this;
+        }
+
+        public LocalDatabaseConfig withDependencies( Dependencies dependencies )
+        {
+            this.dependencies = dependencies;
             return this;
         }
 

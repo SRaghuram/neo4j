@@ -11,10 +11,14 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.CharBuffer;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -54,6 +58,7 @@ public final class CausalClusteringTestHelpers
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( VOID_WRAPPER ) )
+                .inactivityTimeout( Duration.of( 10, ChronoUnit.SECONDS ) )
                 .debugLogProvider( logProvider )
                 .userLogProvider( logProvider )
                 .build();
@@ -67,7 +72,6 @@ public final class CausalClusteringTestHelpers
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( VOID_WRAPPER ) )
-                //TODO: Best I can tell the test catchupServer builder was essentially using null here before anyway, but should double check with Hugh
                 .installedProtocolsHandler( null )
                 .listenAddress( listenAddress )
                 .debugLogProvider( NullLogProvider.getInstance() )

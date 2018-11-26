@@ -137,7 +137,7 @@ public class StoreCopyClient
                         .v1( v1Request )
                         .v2( v2Request )
                         .withResponseHandler( filesCopyAdaptor( storeFileStream, log ) )
-                        .request().get();
+                        .request( log );
 
                 if ( successfulRequest( response ) )
                 {
@@ -148,18 +148,15 @@ public class StoreCopyClient
             {
                 log.warn( "Unable to resolve address for StoreCopyRequest. %s", e.getMessage() );
             }
+            catch ( ConnectException e )
+            {
+                log.warn( "Unable to connect. %s", e.getMessage() );
+            }
             catch ( Exception e )
             {
                 //TODO: I understood the argument that we should just throw and catch Exception because anything can go wrong with a future/network request, but
                 // it seems like we're at risk of swallowing runtime exceptions in some cases where we otherwise wouldn't
-                if ( e instanceof ConnectException )
-                {
-                    log.warn( e.getMessage() );
-                }
-                else
-                {
-                    log.warn( "StoreCopyRequest failed exceptionally.", e );
-                }
+                log.warn( "StoreCopyRequest failed exceptionally.", e );
             }
             terminationCondition.assertContinue();
             awaitAndIncrementTimeout( timeout );
@@ -190,7 +187,7 @@ public class StoreCopyClient
                     .v1( c -> c.prepareStoreCopy( expectedStoreId ) )
                     .v2( c -> c.prepareStoreCopy( expectedStoreId, databaseName ) )
                     .withResponseHandler( prepareStoreCopyAdaptor( storeFileStream, log ) )
-                    .request().get();
+                    .request( log );
         }
         catch ( Exception e )
         {
@@ -220,7 +217,7 @@ public class StoreCopyClient
                     .v1( CatchupClientV1::getStoreId )
                     .v2( c -> c.getStoreId( databaseName ) )
                     .withResponseHandler( responseHandler )
-                    .request().get();
+                    .request( log );
         }
         catch ( Exception e )
         {

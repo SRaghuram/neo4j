@@ -12,10 +12,10 @@ import java.util.function.Supplier;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.catchup.CatchupResult;
-import org.neo4j.causalclustering.catchup.tx.TxPullResult;
 import org.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import org.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import org.neo4j.causalclustering.catchup.tx.TxPullClient;
+import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.com.storecopy.StoreCopyClientMonitor;
@@ -34,10 +34,6 @@ import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_I
 
 /**
  * Entry point for remote store related RPC.
- *
- * TODO: Refactor storeCopyProcess to either combine it with this class... or split the public catchup methods off from this class for consistency
- *
- * i.e. either have REmote
  */
 public class RemoteStore
 {
@@ -152,7 +148,7 @@ public class RemoteStore
             log.info( "Pulling transactions from %s starting with txId: %d", from, fromTxId );
             CatchupResult lastStatus;
 
-            TxPullResult result = txPullClient.pullTransactions( from, expectedStoreId, previousTxId, writer );
+            TxStreamFinishedResponse result = txPullClient.pullTransactions( from, expectedStoreId, previousTxId, writer );
             lastStatus = result.status();
             previousTxId = result.lastTxId();
 

@@ -11,6 +11,7 @@ import java.io.File;
 
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
+import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.Config;
@@ -26,11 +27,11 @@ public class CommercialCoreGraphDatabase extends CoreGraphDatabase
                                         GraphDatabaseFacadeFactory.Dependencies dependencies,
                                         SslDiscoveryServiceFactory discoveryServiceFactory )
     {
-        new GraphDatabaseFacadeFactory( DatabaseInfo.CORE, platformModule -> cachingFactory( platformModule, discoveryServiceFactory ) )
-                .initFacade( storeDir, config, dependencies, this );
+        super( storeDir, config, dependencies, discoveryServiceFactory );
     }
 
-    private EnterpriseCoreEditionModule cachingFactory( PlatformModule platformModule, SslDiscoveryServiceFactory discoveryServiceFactory )
+    @Override
+    protected EnterpriseCoreEditionModule cachingFactory( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory )
     {
         if ( editionModule == null )
         {

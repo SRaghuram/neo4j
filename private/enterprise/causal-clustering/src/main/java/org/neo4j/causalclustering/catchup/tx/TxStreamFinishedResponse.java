@@ -9,12 +9,15 @@ import java.util.Objects;
 
 import org.neo4j.causalclustering.catchup.CatchupResult;
 
+/**
+ * Response type when executing a pulling transactions from a catchup server.
+ */
 public class TxStreamFinishedResponse
 {
     private final CatchupResult status;
     private final long latestTxId;
 
-    TxStreamFinishedResponse( CatchupResult status, long latestTxId )
+    public TxStreamFinishedResponse( CatchupResult status, long latestTxId )
     {
         this.status = status;
         this.latestTxId = latestTxId;

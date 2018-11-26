@@ -55,7 +55,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 {
     private final GlobalTransactionStats globalTransactionStats;
 
-    CommercialCoreEditionModule( final PlatformModule platformModule, final SslDiscoveryServiceFactory discoveryServiceFactory )
+    CommercialCoreEditionModule( final PlatformModule platformModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
         super( platformModule, discoveryServiceFactory );
         this.globalTransactionStats = new GlobalTransactionStats();

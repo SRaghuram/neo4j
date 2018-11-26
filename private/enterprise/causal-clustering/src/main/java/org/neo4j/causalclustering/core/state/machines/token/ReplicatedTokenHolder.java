@@ -5,7 +5,12 @@
  */
 package org.neo4j.causalclustering.core.state.machines.token;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -13,6 +18,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.core.replication.ReplicationFailureException;
 import org.neo4j.causalclustering.core.replication.Replicator;
+import org.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException;
@@ -22,6 +28,7 @@ import org.neo4j.kernel.impl.core.AbstractTokenHolderBase;
 import org.neo4j.kernel.impl.core.TokenRegistry;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdType;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageReader;
@@ -57,7 +64,6 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     @Override
     public void getOrCreateIds( String[] names, int[] ids )
     {
-        // TODO: This could be optimised, but doing so requires a protocol change.
         for ( int i = 0; i < names.length; i++ )
         {
             ids[i] = getOrCreateId( names[i] );
@@ -101,4 +107,5 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
 
         return StorageCommandMarshal.commandsToBytes( commands );
     }
+
 }

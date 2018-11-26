@@ -113,7 +113,6 @@ public class CatchupProtocolServerInstallerV2 implements ProtocolInstaller<Orien
 
     private ChannelInboundHandler requestDecoders( CatchupServerProtocol protocol )
     {
-        // TODO: Make sure to use V2 variants where applicable.
         RequestDecoderDispatcher<CatchupServerProtocol.State> decoderDispatcher = new RequestDecoderDispatcher<>( protocol, logProvider );
         decoderDispatcher.register( CatchupServerProtocol.State.TX_PULL, new TxPullRequestDecoderV2() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_ID, new GetStoreIdRequestDecoderV2() );

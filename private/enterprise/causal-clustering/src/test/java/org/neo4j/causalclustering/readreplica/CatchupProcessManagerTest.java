@@ -21,8 +21,8 @@ import org.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import org.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabaseCatchupComponents;
 import org.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
-import org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess;
 import org.neo4j.causalclustering.common.LocalDatabase;
+import org.neo4j.causalclustering.common.StubLocalDatabase;
 import org.neo4j.causalclustering.common.StubLocalDatabaseService;
 import org.neo4j.causalclustering.core.consensus.schedule.CountingTimerService;
 import org.neo4j.causalclustering.core.consensus.schedule.Timer;
@@ -87,12 +87,12 @@ public class CatchupProcessManagerTest
 
     private LocalDatabase getMockDatabase( String databaseName )
     {
-        //TODO: Use StubLocalDatabase and LocalData
-        LocalDatabase db = mock( LocalDatabase.class );
-        when( db.databaseName() ).thenReturn( databaseName );
-        when( db.monitors() ).thenReturn( new Monitors() );
-        when( db.dependencies() ).thenReturn( mock( Dependencies.class  ) );
-        return db;
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseName( databaseName )
+                .withMonitors( new Monitors() )
+                .withDependencies( mock( Dependencies.class ) )
+                .register();
+        return databaseService.get( databaseName ).get();
     }
 
     @Test
@@ -116,9 +116,9 @@ public class CatchupProcessManagerTest
     {
         // given
         List<String> startedCatchupProcs = new ArrayList<>();
-        CatchupProcessManager.CatchupProcessFactory factory = ( dbName, ignored ) ->
+        CatchupProcessManager.CatchupProcessFactory factory = db ->
         {
-            startedCatchupProcs.add( dbName );
+            startedCatchupProcs.add( db.databaseName() );
             CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
             when( catchupProcess.upToDateFuture() ).thenReturn( CompletableFuture.completedFuture( true ) );
             return catchupProcess;

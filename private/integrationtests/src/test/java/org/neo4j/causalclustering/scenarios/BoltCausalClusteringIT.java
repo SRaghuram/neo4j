@@ -18,7 +18,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Level;
 
-import org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess;
+import org.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.common.Cluster;

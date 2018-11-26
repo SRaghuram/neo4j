@@ -95,7 +95,7 @@ public class BackupSupportingClassesFactory
         CatchupClientFactory catchUpClient = catchUpClient( config, arguments );
         String databaseName = arguments.getDatabaseName().orElse( DEFAULT_DATABASE_NAME );
 
-        TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseName, () -> monitors );
+        TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseName, () -> monitors, logProvider );
         ExponentialBackoffStrategy backOffStrategy =
                 new ExponentialBackoffStrategy( 1, config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
         StoreCopyClient storeCopyClient = new StoreCopyClient( catchUpClient, databaseName, () -> monitors, logProvider, backOffStrategy );
@@ -121,6 +121,7 @@ public class BackupSupportingClassesFactory
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( createPipelineWrapper( config ) ) )
+                .inactivityTimeout( config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .clock( clock )
                 .debugLogProvider( logProvider )

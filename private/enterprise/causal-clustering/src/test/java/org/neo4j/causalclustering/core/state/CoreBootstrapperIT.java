@@ -86,7 +86,8 @@ public class CoreBootstrapperIT
         // given
         File notExistingDirectory = new File( testDirectory.directory(), DEFAULT_DATABASE_NAME );
 
-        databaseService.newDatabase( DEFAULT_DATABASE_NAME )
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( DatabaseLayout.of( notExistingDirectory ) )
                 .register();
 
@@ -106,9 +107,10 @@ public class CoreBootstrapperIT
         File databaseDirectory = new File( testDirectory.directory(), DEFAULT_DATABASE_NAME );
         fileSystem.mkdir( databaseDirectory );
 
-        databaseService.newDatabase( DEFAULT_DATABASE_NAME )
-                       .withDatabaseLayout( DatabaseLayout.of( databaseDirectory ) )
-                       .register();
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withDatabaseLayout( DatabaseLayout.of( databaseDirectory ) )
+                .register();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, activeDatabaseConfig, logProvider, pageCache );
@@ -131,7 +133,8 @@ public class CoreBootstrapperIT
                 .build()
                 .getStoreDir();
 
-        databaseService.newDatabase( DEFAULT_DATABASE_NAME )
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( DatabaseLayout.of( classicNeo4jStore ) )
                 .register();
 
@@ -158,7 +161,8 @@ public class CoreBootstrapperIT
                 .build()
                 .getStoreDir();
 
-        databaseService.newDatabase( DEFAULT_DATABASE_NAME )
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( DatabaseLayout.of( classicNeo4jStore ) )
                 .register();
 
@@ -186,7 +190,8 @@ public class CoreBootstrapperIT
                         .build()
                         .getStoreDir();
 
-        databaseService.newDatabase( DEFAULT_DATABASE_NAME )
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( DatabaseLayout.of( storeInNeedOfRecovery ) )
                 .register();
 
@@ -222,7 +227,8 @@ public class CoreBootstrapperIT
                 .build()
                 .getStoreDir();
 
-        databaseService.newDatabase( DEFAULT_DATABASE_NAME )
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( DatabaseLayout.of( storeInNeedOfRecovery ) )
                 .register();
 

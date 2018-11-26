@@ -7,26 +7,43 @@ package org.neo4j.causalclustering.catchup.storecopy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
+import org.neo4j.causalclustering.catchup.v2.storecopy.GetStoreFileRequestMarshalV2;
 import org.neo4j.causalclustering.identity.StoreId;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-//TODO: Add tests for v2 marhsals
+@RunWith( Parameterized.class  )
 public class GetStoreFileMarshalTest
 {
     EmbeddedChannel embeddedChannel;
 
-    @Before
-    public void setup()
+    @Parameterized.Parameters( name = "{0}" )
+    public static Collection<Object[]> data()
     {
-        embeddedChannel = new EmbeddedChannel( new GetStoreFileRequest.Encoder(), new GetStoreFileRequest.Decoder( DEFAULT_DATABASE_NAME ) );
+        return Arrays.asList( new Object[][]
+                {
+                        { "[Marshal V1]", new GetStoreFileRequest.Encoder(), new GetStoreFileRequest.Decoder( DEFAULT_DATABASE_NAME ) },
+                        { "[Marshal V2]", new GetStoreFileRequestMarshalV2.Encoder(), new GetStoreFileRequestMarshalV2.Decoder() }
+                }
+        );
+    }
+
+    public GetStoreFileMarshalTest( String ignored, MessageToByteEncoder<GetStoreFileRequest> encoder, ByteToMessageDecoder decoder )
+    {
+        embeddedChannel = new EmbeddedChannel( encoder, decoder );
     }
 
     private static final StoreId expectedStore = new StoreId( 1, 2, 3, 4 );

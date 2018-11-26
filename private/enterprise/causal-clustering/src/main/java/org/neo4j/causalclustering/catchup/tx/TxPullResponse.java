@@ -5,6 +5,8 @@
  */
 package org.neo4j.causalclustering.catchup.tx;
 
+import java.util.Objects;
+
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 
@@ -43,8 +45,7 @@ public class TxPullResponse
 
         TxPullResponse that = (TxPullResponse) o;
 
-        return (storeId != null ? storeId.equals( that.storeId ) : that.storeId == null) &&
-                (tx != null ? tx.equals( that.tx ) : that.tx == null);
+        return Objects.equals( storeId, that.storeId ) && Objects.equals( tx, that.tx );
     }
 
     @Override

@@ -3,10 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.causalclustering.catchup.tx;
+package org.neo4j.causalclustering.readreplica;
 
 import java.util.function.Supplier;
 
+import org.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import org.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;

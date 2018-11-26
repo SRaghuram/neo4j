@@ -144,7 +144,6 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
         return dataSourceManager.getDataSource( databaseName ).orElseThrow( IllegalStateException::new );
     }
 
-    //TODO: Find places where both LocalDatabase and String databaseName are passed as params, as this is no longer necessary
     @Override
     public String databaseName()
     {

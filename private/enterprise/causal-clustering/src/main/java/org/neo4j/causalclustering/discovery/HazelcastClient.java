@@ -48,8 +48,6 @@ public class HazelcastClient extends SafeLifecycle implements TopologyService
     private final MemberId myself;
     private final List<String> groups;
     private final RetryStrategy topologyServiceRetryStrategy;
-
-    //TODO: Work out error handling in case cluster hosts change their dbName unexpectedly
     private final String dbName;
 
     private JobHandle keepAliveJob;
