@@ -204,12 +204,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             }
         } else Seq.empty
 
-        val (accessName, nullCheck, localVariable) = accessVariable(name.name, currentContext)
+        val (accessName, maybeNullCheck, maybeVariable) = accessVariable(name.name, currentContext)
 
         if (!includeAllProps) {
           Some(IntermediateExpression(
             block(buildMapValue :+ invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")):_*),
-            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ localVariable, nullCheck.toSet))
+            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ maybeVariable, maybeNullCheck.toSet))
 
         }else if (buildMapValue.isEmpty) {
           Some(IntermediateExpression(
@@ -217,7 +217,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                 invokeStatic(
                   method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("asMapValue"),
                   accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)): _*),
-            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ localVariable, nullCheck.toSet))
+            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ maybeVariable, maybeNullCheck.toSet))
         } else {
           Some(IntermediateExpression(
             block(buildMapValue ++ Seq(
@@ -226,7 +226,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("asMapValue"),
               accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
             method[MapValue, MapValue, MapValue]("updatedWith"), invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")))): _*),
-               expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ localVariable, nullCheck.toSet))
+            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ maybeVariable, maybeNullCheck.toSet))
         }
       }
 
@@ -263,11 +263,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case Variable(name) =>
-      val loadVar = invokeStatic(
-        method[CompiledHelpers, AnyValue, ExecutionContext, String]("loadVariable"),
-        loadContext(currentContext), constant(name))
+      val (variableAccess, nullCheck, maybeVariable) = accessVariable(name, currentContext)
 
-      Some(IntermediateExpression(loadVar, Seq.empty, Seq.empty, Set(equal(loadVar, noValue))))
+      Some(IntermediateExpression(variableAccess, Seq.empty, maybeVariable.toSeq, nullCheck.toSet))
 
     case SingleIterablePredicate(scope, collectionExpression) =>
       /*
@@ -740,6 +738,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
+        val (accessInnerContext, variableIsNull, maybeVariable) = accessVariable(scope.accumulator.name, Some(load(innerContext)))
         val ops = Seq(
           //ListValue list = [evaluate collection expression];
           //ExecutionContext innerContext = context.copyWith(acc, init);
@@ -767,11 +766,10 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             ): _*)
           },
           //return innerContext(acc);
-          cast[AnyValue](invoke(load(innerContext), method[ExecutionContext, Object, Object]("apply"),
-                                constant(scope.accumulator.name)))
+          accessInnerContext
         )
         IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields ++ init.fields, collection.variables ++
-          inner.variables ++ init.variables, collection.nullCheck ++ init.nullCheck)
+          inner.variables ++ init.variables ++ maybeVariable, collection.nullCheck ++ init.nullCheck ++ variableIsNull)
       }
 
     //boolean operators
