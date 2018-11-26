@@ -13,7 +13,7 @@ import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import org.neo4j.causalclustering.discovery.NoOpHostnameResolver;
-import org.neo4j.causalclustering.discovery.TopologyServiceNoRetriesStrategy;
+import org.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -54,7 +54,7 @@ public abstract class BaseCoreTopologyServiceIT
                 NullLogProvider.getInstance(),
                 NullLogProvider.getInstance(),
                 initialDiscoveryMemberResolver,
-                new TopologyServiceNoRetriesStrategy(),
+                new NoRetriesStrategy(),
                 new Monitors(),
                 Clocks.systemClock() );
         service.init();

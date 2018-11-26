@@ -24,9 +24,9 @@ import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import org.neo4j.causalclustering.discovery.NoOpHostnameResolver;
+import org.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import org.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
 import org.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
-import org.neo4j.causalclustering.discovery.TopologyServiceNoRetriesStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
@@ -93,7 +93,7 @@ public class SharedDiscoveryServiceIT
                 remoteMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
 
         CoreTopologyService topologyService = discoveryServiceFactory.coreTopologyService( config, member,
-                jobScheduler, logProvider, userLogProvider, remoteMemberResolver, new TopologyServiceNoRetriesStrategy(),
+                jobScheduler, logProvider, userLogProvider, remoteMemberResolver, new NoRetriesStrategy(),
                 new Monitors(), Clocks.systemClock() );
         return sharedClientStarter( topologyService, expectedTargetSet );
     }

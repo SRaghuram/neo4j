@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
@@ -73,7 +74,7 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
     private final RobustJobSchedulerWrapper scheduler;
     private final long refreshPeriod;
     private final RemoteMembersResolver remoteMembersResolver;
-    private final TopologyServiceRetryStrategy topologyServiceRetryStrategy;
+    private final RetryStrategy topologyServiceRetryStrategy;
     private final Monitor monitor;
     private final String localDBName;
 
@@ -97,7 +98,7 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
 
     public HazelcastCoreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
             LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-            TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors )
+            RetryStrategy topologyServiceRetryStrategy, Monitors monitors )
     {
         super( config, myself, logProvider, userLogProvider );
         this.localDBName = config.get( CausalClusteringSettings.database );
@@ -343,14 +344,16 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public AdvertisedSocketAddress findCatchupAddress( MemberId memberId )
+    public AdvertisedSocketAddress findCatchupAddress( MemberId memberId ) throws CatchupAddressResolutionException
     {
-        return topologyServiceRetryStrategy.apply( memberId, this::retrieveSocketAddress, Objects::nonNull );
-    }
-
-    private AdvertisedSocketAddress retrieveSocketAddress( MemberId memberId )
-    {
-        return catchupAddressMap.get( memberId );
+        try
+        {
+            return topologyServiceRetryStrategy.apply( () -> catchupAddressMap.get( memberId ), Objects::nonNull );
+        }
+        catch ( TimeoutException e )
+        {
+            throw new CatchupAddressResolutionException( memberId );
+        }
     }
 
     private void refreshRoles() throws InterruptedException

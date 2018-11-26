@@ -6,47 +6,43 @@
 package org.neo4j.causalclustering.discovery;
 
 import java.util.Collection;
+import java.util.concurrent.TimeoutException;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.logging.LogProvider;
 
 public abstract class RetryingHostnameResolver implements HostnameResolver
 {
     private final int minResolvedAddresses;
-    private final MultiRetryStrategy<AdvertisedSocketAddress,Collection<AdvertisedSocketAddress>> retryStrategy;
+    private final RetryStrategy retryStrategy;
 
-    RetryingHostnameResolver( Config config, MultiRetryStrategy<AdvertisedSocketAddress,Collection<AdvertisedSocketAddress>> retryStrategy )
+    RetryingHostnameResolver( Config config, RetryStrategy retryStrategy )
     {
         minResolvedAddresses = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         this.retryStrategy = retryStrategy;
     }
 
-    static MultiRetryStrategy<AdvertisedSocketAddress,Collection<AdvertisedSocketAddress>> defaultRetryStrategy( Config config, LogProvider logProvider )
+    static RetryStrategy defaultRetryStrategy( Config config )
     {
         long retryIntervalMillis = config.get( CausalClusteringSettings.discovery_resolution_retry_interval ).toMillis();
         long clusterBindingTimeout = config.get( CausalClusteringSettings.discovery_resolution_timeout ).toMillis();
         long numRetries = ( clusterBindingTimeout / retryIntervalMillis ) + 1;
-        return new MultiRetryStrategy<>( retryIntervalMillis, numRetries, logProvider, RetryingHostnameResolver::sleep );
+        return new RetryStrategy( retryIntervalMillis, numRetries );
     }
 
     public final Collection<AdvertisedSocketAddress> resolve( AdvertisedSocketAddress advertisedSocketAddress )
     {
-        return retryStrategy.apply( advertisedSocketAddress, this::resolveOnce, addrs -> addrs.size() >= minResolvedAddresses );
+        try
+        {
+            return retryStrategy.apply( () -> resolveOnce( advertisedSocketAddress ), addrs -> addrs.size() >= minResolvedAddresses );
+        }
+        catch ( TimeoutException e )
+        {
+            // another instance may still have resolved enough members to bootstrap. Let ClusterBinder decide
+            return resolveOnce( advertisedSocketAddress );
+        }
     }
 
     protected abstract Collection<AdvertisedSocketAddress> resolveOnce( AdvertisedSocketAddress advertisedSocketAddress );
-
-    private static void sleep( long durationInMillis )
-    {
-        try
-        {
-            Thread.sleep( durationInMillis );
-        }
-        catch ( InterruptedException e )
-        {
-            throw new RuntimeException( e );
-        }
-    }
 }

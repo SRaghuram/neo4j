@@ -24,12 +24,11 @@ public class DnsHostnameResolver extends RetryingHostnameResolver
     public static RemoteMembersResolver resolver( LogService logService, DomainNameResolver domainNameResolver, Config config )
     {
         DnsHostnameResolver hostnameResolver =
-                new DnsHostnameResolver( logService, domainNameResolver, config, defaultRetryStrategy( config, logService.getInternalLogProvider() ) );
+                new DnsHostnameResolver( logService, domainNameResolver, config, defaultRetryStrategy( config ) );
         return new InitialDiscoveryMembersResolver( hostnameResolver, config );
     }
 
-    DnsHostnameResolver( LogService logService, DomainNameResolver domainNameResolver, Config config,
-            MultiRetryStrategy<AdvertisedSocketAddress,Collection<AdvertisedSocketAddress>> retryStrategy )
+    DnsHostnameResolver( LogService logService, DomainNameResolver domainNameResolver, Config config, RetryStrategy retryStrategy )
     {
         super( config, retryStrategy );
         log = logService.getInternalLog( getClass() );

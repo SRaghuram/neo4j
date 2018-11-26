@@ -13,8 +13,8 @@ import java.time.Clock;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.discovery.TopologyService;
-import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -28,7 +28,7 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
 
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
-            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, TopologyServiceRetryStrategy topologyServiceRetryStrategy,
+            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy,
             Monitors monitors, Clock clock )
     {
         return new AkkaCoreTopologyService(
@@ -43,7 +43,7 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
 
     @Override
     public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, MemberId myself,
-            RemoteMembersResolver remoteMembersResolver, TopologyServiceRetryStrategy topologyServiceRetryStrategy )
+            RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy )
     {
         return new AkkaTopologyClient(
                 config,

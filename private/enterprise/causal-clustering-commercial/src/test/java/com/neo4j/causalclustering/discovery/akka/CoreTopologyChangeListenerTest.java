@@ -13,8 +13,8 @@ import java.util.UUID;
 
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
-import org.neo4j.causalclustering.discovery.TopologyServiceNoRetriesStrategy;
-import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
+import org.neo4j.causalclustering.discovery.NoRetriesStrategy;
+import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.verify;
 public class CoreTopologyChangeListenerTest
 {
     MemberId myself = new MemberId( UUID.randomUUID() );
-    TopologyServiceRetryStrategy  topologyServiceRetryStrategy = new TopologyServiceNoRetriesStrategy();
+    RetryStrategy topologyServiceRetryStrategy = new NoRetriesStrategy();
 
     ActorSystemLifecycle actorSystemLifecycle = Mockito.mock( ActorSystemLifecycle.class );
 

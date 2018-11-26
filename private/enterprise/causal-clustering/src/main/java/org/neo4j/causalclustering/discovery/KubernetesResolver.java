@@ -65,7 +65,7 @@ public class KubernetesResolver implements RemoteMembersResolver
         String namespace = read( config.get( CausalClusteringSettings.kubernetes_namespace ) );
 
         this.kubernetesClient = new KubernetesClient( logService, httpClient, token, namespace, config,
-                RetryingHostnameResolver.defaultRetryStrategy( config, logService.getInternalLogProvider() ) );
+                RetryingHostnameResolver.defaultRetryStrategy( config ) );
     }
 
     public static RemoteMembersResolver resolver( LogService logService, Config config )
@@ -177,7 +177,7 @@ public class KubernetesResolver implements RemoteMembersResolver
         private final AdvertisedSocketAddress kubernetesAddress;
 
         KubernetesClient( LogService logService, HttpClient httpClient, String token, String namespace,
-                Config config, MultiRetryStrategy<AdvertisedSocketAddress,Collection<AdvertisedSocketAddress>> retryStrategy )
+                Config config, RetryStrategy retryStrategy )
         {
             super( config, retryStrategy );
             this.log = logService.getInternalLog( getClass() );

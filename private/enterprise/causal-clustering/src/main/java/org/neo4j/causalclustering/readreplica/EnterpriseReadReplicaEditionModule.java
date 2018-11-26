@@ -13,8 +13,8 @@ import java.util.function.Supplier;
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.RegularCatchupServerHandler;
-import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.DefaultDatabaseService;
+import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.PipelineBuilders;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.schedule.TimerService;
@@ -22,9 +22,8 @@ import org.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.discovery.TopologyService;
-import org.neo4j.causalclustering.discovery.TopologyServiceMultiRetryStrategy;
-import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import org.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
@@ -278,12 +277,13 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
         databaseManager.createDatabase( databaseName );
     }
 
-    private static TopologyServiceRetryStrategy resolveStrategy( Config config, LogProvider logProvider )
+    private static RetryStrategy resolveStrategy( Config config, LogProvider logProvider )
     {
         long refreshPeriodMillis = config.get( CausalClusteringSettings.cluster_topology_refresh ).toMillis();
         int pollingFrequencyWithinRefreshWindow = 2;
         int numberOfRetries =
                 pollingFrequencyWithinRefreshWindow + 1; // we want to have more retries at the given frequency than there is time in a refresh period
-        return new TopologyServiceMultiRetryStrategy( refreshPeriodMillis / pollingFrequencyWithinRefreshWindow, numberOfRetries, logProvider );
+        long delayInMillis = refreshPeriodMillis / pollingFrequencyWithinRefreshWindow;
+        return new RetryStrategy( delayInMillis, (long) numberOfRetries );
     }
 }
