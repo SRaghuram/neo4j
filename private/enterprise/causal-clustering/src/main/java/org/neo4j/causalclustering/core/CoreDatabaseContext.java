@@ -5,7 +5,6 @@
  */
 package org.neo4j.causalclustering.core;
 
-import java.io.File;
 import java.util.function.Function;
 
 import org.neo4j.causalclustering.core.state.CoreStateService;
@@ -13,6 +12,8 @@ import org.neo4j.causalclustering.core.state.PerDatabaseCoreStateComponents;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
+import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
@@ -26,7 +27,6 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
-import org.neo4j.kernel.impl.util.watcher.FileSystemWatcherService;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.time.SystemNanoClock;
 
@@ -62,7 +62,7 @@ public class CoreDatabaseContext implements EditionDatabaseContext
     }
 
     @Override
-    public Function<File,FileSystemWatcherService> getWatcherServiceFactory()
+    public Function<DatabaseLayout,DatabaseLayoutWatcher> getWatcherServiceFactory()
     {
         return editionModule.getWatcherServiceFactory();
     }

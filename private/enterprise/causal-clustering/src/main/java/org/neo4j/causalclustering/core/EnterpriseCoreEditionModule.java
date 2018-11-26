@@ -219,9 +219,8 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
 
         AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( platformModule.clock, logging, platformModule.config );
         threadToTransactionBridge = dependencies.satisfyDependency( new ThreadToStatementContextBridge( globalGuard ) );
-        watcherServiceFactory = directory ->
-                createFileSystemWatcherService( fileSystem, directory, logging, platformModule.jobScheduler, config, fileWatcherFileNameFilter() );
-        dependencies.satisfyDependencies( watcherServiceFactory );
+        watcherServiceFactory = layout ->
+                createDatabaseFileSystemWatcher( platformModule.fileSystemWatcher.getFileWatcher(), layout, logging, fileWatcherFileNameFilter() );
 
         IdentityModule identityModule = new IdentityModule( platformModule, clusterStateDirectory.get() );
 

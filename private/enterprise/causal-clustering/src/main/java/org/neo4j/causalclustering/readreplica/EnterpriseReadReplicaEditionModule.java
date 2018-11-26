@@ -109,8 +109,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
         this.accessCapability = new ReadOnly();
 
         watcherServiceFactory =
-                dir -> createFileSystemWatcherService( fileSystem, dir, logging, platformModule.jobScheduler, config, fileWatcherFileNameFilter() );
-        dependencies.satisfyDependencies( watcherServiceFactory );
+                layout -> createDatabaseFileSystemWatcher( platformModule.fileSystemWatcher.getFileWatcher(), layout, logging, fileWatcherFileNameFilter() );
 
         File contextDirectory = platformModule.storeLayout.storeDirectory();
         life.add( dependencies.satisfyDependency( new KernelData( fileSystem, pageCache, contextDirectory, config, platformModule.dataSourceManager ) ) );
