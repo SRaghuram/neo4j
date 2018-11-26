@@ -15,16 +15,16 @@ import static org.neo4j.server.rest.discovery.CommunityDiscoverableURIs.communit
 
 public class EnterpriseDiscoverableURIs
 {
-    public static DiscoverableURIs enterpriseDiscoverableURIs( Config config, ConnectorPortRegister ports )
+    public static DiscoverableURIs enterpriseDiscoverableURIs( Config config, ConnectorPortRegister portRegister )
     {
-        DiscoverableURIs uris = communityDiscoverableURIs( config, ports );
         if ( config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.CORE )
         {
-            DiscoverableURIs
-                    .discoverableBoltUri( "bolt+routing", config,
-                            EnterpriseServerSettings.bolt_routing_discoverable_address, ports )
-                    .ifPresent( uri -> uris.addAbsolute( "bolt_routing", uri ) );
+            return new DiscoverableURIs.Builder( communityDiscoverableURIs( config, portRegister ) )
+                    .addBoltConnectorFromConfig( "bolt_routing", "bolt+routing", config,
+                            EnterpriseServerSettings.bolt_routing_discoverable_address, portRegister )
+                    .build();
         }
-        return uris;
+
+        return communityDiscoverableURIs( config, portRegister );
     }
 }
