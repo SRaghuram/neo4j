@@ -66,13 +66,13 @@ public final class CompiledHelpers
         }
     }
 
-    public static AnyValue nodeOrNoValue(ExecutionContext context, DbAccess dbAccess, int offset)
+    public static AnyValue nodeOrNoValue( ExecutionContext context, DbAccess dbAccess, int offset )
     {
         long nodeId = context.getLongAt( offset );
         return nodeId == -1 ? NO_VALUE : dbAccess.nodeById( nodeId );
     }
 
-    public static AnyValue relationshipOrNoValue(ExecutionContext context, DbAccess dbAccess, int offset)
+    public static AnyValue relationshipOrNoValue( ExecutionContext context, DbAccess dbAccess, int offset )
     {
         long relationshipId = context.getLongAt( offset );
         return relationshipId == -1 ? NO_VALUE : dbAccess.relationshipById( relationshipId );
