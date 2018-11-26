@@ -30,11 +30,14 @@ class LazyReducePipeline(start: LazyReduceOperator,
                          override val upstream: Option[Pipeline]) extends ReducePipeline {
 
   override def toString: String = {
-    val x = (start +: operators).map(x => x.getClass.getSimpleName)
-    s"LazyReducePipeline(${x.mkString(",")})"
+    val classNames = (start +: operators).map(op => op.getClass.getSimpleName)
+    s"LazyReducePipeline(${classNames.mkString(",")})"
   }
 
-  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
+  override def acceptMorsel(inputMorsel: MorselExecutionContext,
+                            context: QueryContext,
+                            state: QueryState,
+                            cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
     state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, cursors)
   }
 
@@ -58,14 +61,14 @@ class LazyReducePipeline(start: LazyReduceOperator,
       // Try updating the state in a loop, until it succeeds.
       var updatedState = false
       var maybeNextTask: Option[LazyReduceOperatorTask] = None
-      while(!updatedState) {
+      while (!updatedState) {
         reduceTaskState.get() match {
           case NotScheduled =>
             // We have to try and schedule the first task
             val firstTask = start.init(context, state, queue, this, cursors)
             maybeNextTask = Some(firstTask)
             updatedState = reduceTaskState.compareAndSet(NotScheduled, ScheduledAndGoing(firstTask, 1))
-          case s:ScheduledAndDone =>
+          case s: ScheduledAndDone =>
             // We have to try and schedule a new Task
             val nextTask = start.init(context, state, queue, this, cursors)
             maybeNextTask = Some(nextTask)
@@ -79,7 +82,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
 
       maybeNextTask.map { reduceTask =>
         val nextState = initDownstreamReduce(state)
-        produceTaskScheduleForReduceCollector(nextState)
+        produceTaskScheduledForReduceCollector(nextState)
         LazyReducePipelineTask(reduceTask,
           operators,
           slots,
@@ -105,14 +108,16 @@ class LazyReducePipeline(start: LazyReduceOperator,
 
     override def produceTaskScheduled(task: String): Unit = {
       val tasks = taskCount.incrementAndGet()
-      if (Pipeline.DEBUG)
+      if (Pipeline.DEBUG) {
         println("taskCount [%3d]: scheduled %s".format(tasks, task))
+      }
     }
 
     override def produceTaskCompleted(task: String, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
       val tasksLeft = taskCount.decrementAndGet()
-      if (Pipeline.DEBUG)
+      if (Pipeline.DEBUG) {
         println("taskCount [%3d]: completed %s".format(tasksLeft, task))
+      }
 
       if (tasksLeft >= 0) {
         None
@@ -129,7 +134,7 @@ trait LazyReduceCollector extends ReduceCollector {
     * Executed from the [[LazyReduceOperatorTask]]s Thread. Tries to mark itself as done. If that fails,
     * due to concurrently arriving new data, the Task has to continue instead.
     *
-    * This method has to be called from a retry loop, that, if false is returned, processed any new items
+    * This method has to be called from a retry loop, that, if false is returned, processes any new items
     * in the queue, and then retries setting itself done.
     *
     * @param task the [[LazyReduceOperatorTask]]
@@ -151,7 +156,7 @@ case object NotScheduled extends ReduceTaskState
 /**
   * A reduce task has been scheduled. It still has unprocessed data.
   *
-  * @param reduceTask the task.
+  * @param reduceTask     the task.
   * @param morselsArrived how many morsels arrived.
   */
 case class ScheduledAndGoing(reduceTask: LazyReduceOperatorTask, morselsArrived: Int) extends ReduceTaskState

@@ -16,7 +16,7 @@ import scala.collection.mutable
 Responsible for reducing the output of AggregationMapperOperatorNoGrouping
  */
 class AggregationReduceOperator(aggregations: Array[AggregationOffsets],
-                                groupings: Array[GroupingOffsets]) extends ReduceOperator {
+                                groupings: Array[GroupingOffsets]) extends EagerReduceOperator {
 
   //These are assigned at compile time to save some time at runtime
   private val addGroupingValuesToResult = AggregationHelper.computeGroupingSetter(groupings)(_.reducerOutputSlot)

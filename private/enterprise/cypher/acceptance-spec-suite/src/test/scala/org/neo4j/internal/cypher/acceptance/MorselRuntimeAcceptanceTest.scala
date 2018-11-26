@@ -410,17 +410,17 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
 
     val switch = new AtomicBoolean(false)
 
-    // When executing a query that has multiple ProduceResult taks
+    // When executing a query that has multiple ProduceResult tasks
     val result = graph.execute("CYPHER runtime=morsel MATCH (n:N)-[:R]->(m:M)-[:P]->(o:O) RETURN o.i, o.j, o.k")
 
     // Then these tasks should be executed non-concurrently
     result.accept(new ResultVisitor[Exception]() {
       override def visit(row: Result.ResultRow): Boolean = {
-        if(!switch.compareAndSet(false, true)) {
+        if (!switch.compareAndSet(false, true)) {
           fail("Expected switch to be false: Concurrently doing ProduceResults.")
         }
         Thread.sleep(0)
-        if(!switch.compareAndSet(true, false)) {
+        if (!switch.compareAndSet(true, false)) {
           fail("Expected switch to be true: Concurrently doing ProduceResults.")
         }
         true

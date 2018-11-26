@@ -18,13 +18,13 @@ import scala.collection.JavaConverters._
   * A pipeline that eagerly aggregates input morsels into a queue,
   * and after that processes these morsels in a [[ContinuableOperatorTask]].
   */
-class EagerReducePipeline(start: ReduceOperator,
+class EagerReducePipeline(start: EagerReduceOperator,
                           override val slots: SlotConfiguration,
                           override val upstream: Option[Pipeline]) extends ReducePipeline {
 
   override def toString: String = {
-    val x = (start +: operators).map(x => x.getClass.getSimpleName)
-    s"EagerReducePipeline(${x.mkString(",")})"
+    val classNames = (start +: operators).map(op => op.getClass.getSimpleName)
+    s"EagerReducePipeline(${classNames.mkString(",")})"
   }
 
   override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {

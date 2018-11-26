@@ -38,6 +38,7 @@ class ProduceResultOperator(slots: SlotConfiguration, fieldNames: Array[String])
       }
     }
   }
+
 }
 
 class MorselResultRow(currentRow: MorselExecutionContext,
@@ -61,7 +62,7 @@ class MorselResultRow(currentRow: MorselExecutionContext,
 
   override def fields(): Array[AnyValue] = {
     var i = 0
-    while ( i < array.length) {
+    while (i < array.length) {
       array(i) = updateArray(i)()
       i += 1
     }

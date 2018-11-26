@@ -17,7 +17,7 @@ object Pipeline {
 }
 
 /**
-  * A pipeline of physical operators. Consists of one [[StreamingOperator]] or [[ReduceOperator]], called
+  * A pipeline of physical operators. Consists of one [[StreamingOperator]] or [[EagerReduceOperator]], called
   * the start operator, and 0-n [[StatelessOperator]]s.
   */
 abstract class Pipeline() {
@@ -63,11 +63,11 @@ abstract class Pipeline() {
     state.copy(reduceCollector = downstreamReduce.map(_.initCollector()))
   }
 
-  protected def produceTaskScheduleForReduceCollector(state: QueryState): Unit =
+  protected def produceTaskScheduledForReduceCollector(state: QueryState): Unit =
     state.reduceCollector.foreach(_.produceTaskScheduled(this.toString))
 
   protected def pipelineTask(startOperatorTask: ContinuableOperatorTask, context: QueryContext, state: QueryState): PipelineTask = {
-    produceTaskScheduleForReduceCollector(state)
+    produceTaskScheduledForReduceCollector(state)
     PipelineTask(startOperatorTask,
                  operators,
                  slots,

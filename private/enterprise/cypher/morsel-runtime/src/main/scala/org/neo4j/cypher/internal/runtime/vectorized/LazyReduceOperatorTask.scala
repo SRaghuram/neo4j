@@ -17,6 +17,7 @@ abstract class LazyReduceOperatorTask(messageQueue: util.Queue[MorselExecutionCo
 
   /**
     * Operates on all available morsels from the queue.
+    *
     * @return all processed morsels
     */
   def operate(context: QueryContext,
@@ -32,12 +33,13 @@ abstract class LazyReduceOperatorTask(messageQueue: util.Queue[MorselExecutionCo
         processedMorselsNum += 1
         currentRow = messageQueue.poll()
       }
-    } while(!collector.trySetTaskDone(this, processedMorselsNum))
+    } while (!collector.trySetTaskDone(this, processedMorselsNum))
     processedMorsels
   }
 
   /**
     * Process a single morsel. This function is supposed to have side effects, or change the morsel in place.
+    *
     * @param currentRow the morsel
     */
   def operateSingleMorsel(context: QueryContext,

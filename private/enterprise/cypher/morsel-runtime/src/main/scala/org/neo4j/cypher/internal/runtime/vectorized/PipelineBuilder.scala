@@ -190,7 +190,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
       case mo: StatelessOperator =>
         source.addOperator(mo)
         source
-      case ro: ReduceOperator =>
+      case ro: EagerReduceOperator =>
         new EagerReducePipeline(ro, slots, Some(source))
       case ro: LazyReduceOperator =>
         new LazyReducePipeline(ro, slots, Some(source))

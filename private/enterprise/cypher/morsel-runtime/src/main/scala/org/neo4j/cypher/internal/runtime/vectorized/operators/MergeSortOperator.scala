@@ -20,7 +20,7 @@ import org.neo4j.values.storable.NumberValue
   * If countExpression != None, this expression evaluates to a limit for TopN
   */
 class MergeSortOperator(orderBy: Seq[ColumnOrder],
-                        countExpression: Option[Expression] = None) extends ReduceOperator {
+                        countExpression: Option[Expression] = None) extends EagerReduceOperator {
 
   private val comparator: Comparator[MorselExecutionContext] = orderBy
     .map(MorselSorting.createMorselComparator)

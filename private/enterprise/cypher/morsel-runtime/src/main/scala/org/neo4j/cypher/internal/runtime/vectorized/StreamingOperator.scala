@@ -22,13 +22,13 @@ trait StreamingOperator {
 }
 
 /**
-  * Physical immutable operator. [[ReduceOperator#init]] is thread-safe, and creates a [[ContinuableOperatorTask]]
+  * Physical immutable operator. [[EagerReduceOperator#init]] is thread-safe, and creates a [[ContinuableOperatorTask]]
   * which can be executed.
   *
-  * ReduceOperators operate in a blocking fashion, where all input morsels have to be collected
-  * upfront and then provided to the operator in one collection.
+  * [[EagerReduceOperator]]s act as a barrier between pipelines, where all input morsels of the upstream pipeline
+  * have to be collected before the reduce can start.
   */
-trait ReduceOperator {
+trait EagerReduceOperator {
   def init(context: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask
 }
 
@@ -39,7 +39,7 @@ trait ReduceOperator {
 trait LazyReduceOperator {
   /**
     * Create a task that
-    * - pulls from the queue and processed the morsels
+    * - pulls from the queue and processes the morsels
     * - has a retry loop that calls [[LazyReduceCollector.trySetTaskDone()]]
     */
   def init(context: QueryContext,
@@ -50,7 +50,7 @@ trait LazyReduceOperator {
 }
 
 /**
-  * Physical immutable operator. Thread-safe. In contrast to [[StreamingOperator]] and [[ReduceOperator]], [[StatelessOperator]]
+  * Physical immutable operator. Thread-safe. In contrast to [[StreamingOperator]] and [[EagerReduceOperator]], [[StatelessOperator]]
   * has no init-method to generate a task, but performs it's logic directly in the [[StatelessOperator#operate]] call.
   */
 trait StatelessOperator extends OperatorTask
@@ -70,7 +70,7 @@ trait ContinuableOperatorTask extends OperatorTask {
 }
 
 /**
-  * A [[ReduceCollector]] holds morsels in front of a [[ReduceOperator]]. It relies on reference counting
+  * A [[ReduceCollector]] holds morsels in front of a [[EagerReduceOperator]]. It relies on reference counting
   * of upstreams tasks in order to know when all expected data has arrived, at which point it will schedule
   * the downstream reduce computation.
   *

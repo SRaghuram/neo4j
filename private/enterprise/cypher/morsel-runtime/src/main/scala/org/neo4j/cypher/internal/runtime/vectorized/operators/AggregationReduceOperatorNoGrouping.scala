@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.vectorized._
 /*
 Responsible for reducing the output of AggregationMapperOperatorNoGrouping
  */
-class AggregationReduceOperatorNoGrouping(aggregations: Array[AggregationOffsets]) extends ReduceOperator {
+class AggregationReduceOperatorNoGrouping(aggregations: Array[AggregationOffsets]) extends EagerReduceOperator {
 
   override def init(queryContext: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask =
     new OTask(inputMorsels.toArray)

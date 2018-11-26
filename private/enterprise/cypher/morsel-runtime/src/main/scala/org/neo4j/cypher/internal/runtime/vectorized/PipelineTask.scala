@@ -35,14 +35,14 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
 
   protected def getDownstreamTasks(cursors: ExpressionCursors, currentRow: MorselExecutionContext, queryContext: QueryContext): Seq[Task[ExpressionCursors]] = {
     currentRow.resetToFirstRow()
-    val maybeDownsteamTask = downstream.flatMap(_.acceptMorsel(currentRow, queryContext, state, cursors))
+    val maybeDownstreamTask = downstream.flatMap(_.acceptMorsel(currentRow, queryContext, state, cursors))
 
     state.reduceCollector match {
       case Some(x) if !canContinue =>
-        maybeDownsteamTask.toSeq ++ x.produceTaskCompleted(name, queryContext, state, cursors)
+        maybeDownstreamTask.toSeq ++ x.produceTaskCompleted(name, queryContext, state, cursors)
 
       case _ =>
-        maybeDownsteamTask.toSeq
+        maybeDownstreamTask.toSeq
     }
   }
 }
