@@ -52,9 +52,9 @@ public class ClusterConfig
     {
     }
 
-    static EnterpriseCluster createCluster( File direcctory, ClusterConfig clusterConfig )
+    static EnterpriseCluster createCluster( File directory, ClusterConfig clusterConfig )
     {
-        return new EnterpriseCluster( direcctory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.createFactory(),
+        return new EnterpriseCluster( directory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.createFactory(),
                 clusterConfig.coreParams, clusterConfig.instanceCoreParams, clusterConfig.readReplicaParams, clusterConfig.instanceReadReplicaParams,
                 clusterConfig.recordFormat, clusterConfig.ipFamily, clusterConfig.useWildcard, clusterConfig.dbNames );
     }
