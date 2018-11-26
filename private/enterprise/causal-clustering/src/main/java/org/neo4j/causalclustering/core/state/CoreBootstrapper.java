@@ -79,7 +79,6 @@ public class CoreBootstrapper
     private final Config config;
     private final RecoveryRequiredChecker recoveryRequiredChecker;
     private final Log log;
-    private final String txLogsDirectoryName;
 
     CoreBootstrapper( DatabaseService databaseService, TemporaryDatabase.Factory tempDatabaseFactory, File bootstrapDirectory,
             Map<String,DatabaseInitializer> databaseInitializers, FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache,
@@ -91,7 +90,6 @@ public class CoreBootstrapper
         this.databaseInitializers = databaseInitializers;
         this.fs = fs;
         this.config = config;
-        this.txLogsDirectoryName = config.get( GraphDatabaseSettings.logical_logs_location ).getName(); // TODO: Change to some relative path version...
         this.pageCache = pageCache;
         this.log = logProvider.getLog( getClass() );
         this.recoveryRequiredChecker = new RecoveryRequiredChecker( fs, pageCache, config, monitors );
@@ -152,27 +150,55 @@ public class CoreBootstrapper
             File databaseDirectory = databaseLayout.databaseDirectory();
             fs.deleteRecursively( databaseDirectory );
 
-            File bootstrapDatabaseDirectory = initializeDatabase( databaseInitializers.get( databaseName ), txLogsDirectoryName );
+            String txLogsDirectoryName = "tx-logs";
+            File txLogsAfterBootstrap = new File( databaseDirectory, txLogsDirectoryName );
+
+            DatabaseLayout bootstrapDatabaseLayout = StoreLayout.of( bootstrapDirectory ).databaseLayout( "bootstrap.db" );
+            File bootstrapDatabaseDirectory = bootstrapDatabaseLayout.databaseDirectory();
+            initializeDatabase( bootstrapDatabaseDirectory, databaseInitializers.get( databaseName ), txLogsDirectoryName );
+
             fs.renameFile( bootstrapDatabaseDirectory, databaseDirectory );
+            moveTransactionLogs( txLogsAfterBootstrap, config.get( GraphDatabaseSettings.logical_logs_location ) );
+            if ( !fs.deleteFile( txLogsAfterBootstrap ) )
+            {
+                log.warn( "Could not delete: " + txLogsAfterBootstrap );
+            }
         }
 
         appendNullTransactionLogEntryToSetRaftIndexToMinusOne( databaseLayout );
     }
 
-    private File initializeDatabase( DatabaseInitializer databaseInitializer, String logsDirectoryName )
+    private void moveTransactionLogs( File fromDirectory, File toDirectory ) throws IOException
     {
-        DatabaseLayout bootstrapDatabaseLayout = StoreLayout.of( bootstrapDirectory ).databaseLayout( "bootstrap.db" );
+        if ( fromDirectory.equals( toDirectory ) )
+        {
+            return;
+        }
 
-        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapDatabaseLayout.databaseDirectory(),
-                logsDirectoryName, config.get( record_format ) ) )
+        fs.mkdirs( toDirectory );
+        File[] txLogFiles = fs.listFiles( fromDirectory );
+
+        if ( txLogFiles == null )
+        {
+            throw new IllegalStateException( "Could not list files in: " + fromDirectory );
+        }
+
+        for ( File txLogFile : txLogFiles )
+        {
+            fs.moveToDirectory( txLogFile, toDirectory );
+        }
+    }
+
+    private void initializeDatabase( File bootstrapDatabaseDirectory, DatabaseInitializer databaseInitializer, String logsDirectoryName )
+    {
+        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapDatabaseDirectory, logsDirectoryName,
+                config.get( record_format ) ) )
         {
             if ( databaseInitializer != null )
             {
                 databaseInitializer.initialize( temporaryDatabase.graphDatabaseService() );
             }
         }
-
-        return bootstrapDatabaseLayout.databaseDirectory();
     }
 
     private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( DatabaseLayout databaseLayout ) throws IOException
