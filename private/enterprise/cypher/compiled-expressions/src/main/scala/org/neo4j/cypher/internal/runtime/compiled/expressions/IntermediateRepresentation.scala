@@ -360,7 +360,7 @@ object IntermediateRepresentation {
   def field[TYPE](name: String, initializer: IntermediateRepresentation)(implicit typ: Manifest[TYPE]) =
     Field(typeRef(typ), name, Some(initializer))
 
-  def variable[TYPE](name: String, value: IntermediateRepresentation)(implicit typ: Manifest[TYPE]) =
+  def variable[TYPE](name: String, value: IntermediateRepresentation)(implicit typ: Manifest[TYPE]): LocalVariable =
     LocalVariable(typeRef(typ), name, value)
 
   def method[OWNER, OUT](name: String)(implicit owner: Manifest[OWNER], out: Manifest[OUT]) =

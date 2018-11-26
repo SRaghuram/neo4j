@@ -183,6 +183,53 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                                     compiled.values.flatMap(_.variables).toSeq, Set.empty))
       }
 
+    case _: MapProjection => throw new InternalException("should have been rewritten away")
+
+    case DesugaredMapProjection(name, items, includeAllProps) =>
+      val expressions = items.flatMap(i => internalCompileExpression(i.exp, currentContext))
+
+      if (expressions.size < items.size) None
+      else {
+        val expressionMap = items.map(_.key.name).zip(expressions)
+
+        val builderVar = namer.nextVariableName()
+        val buildMapValue = if (expressionMap.nonEmpty) {
+          Seq(
+            declare[MapValueBuilder](builderVar),
+            assign(builderVar, newInstance(constructor[MapValueBuilder, Int], constant(expressionMap.size)))) ++
+            expressionMap.map {
+              case (key, exp) => invokeSideEffect(load(builderVar),
+                                                  method[MapValueBuilder, AnyValue, String, AnyValue]("add"),
+                                                  constant(key), exp.ir)
+            }
+        } else Seq.empty
+
+        val (accessName, nullCheck, localVariable) = accessVariable(name.name, currentContext)
+
+        if (!includeAllProps) {
+          Some(IntermediateExpression(
+            block(buildMapValue :+ invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")):_*),
+            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ localVariable, nullCheck.toSet))
+
+        }else if (buildMapValue.isEmpty) {
+          Some(IntermediateExpression(
+            block(buildMapValue ++ Seq(
+                invokeStatic(
+                  method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("asMapValue"),
+                  accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)): _*),
+            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ localVariable, nullCheck.toSet))
+        } else {
+          Some(IntermediateExpression(
+            block(buildMapValue ++ Seq(
+            invoke(
+            invokeStatic(
+              method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("asMapValue"),
+              accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
+            method[MapValue, MapValue, MapValue]("updatedWith"), invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")))): _*),
+               expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ localVariable, nullCheck.toSet))
+        }
+      }
+
     case ListSlice(collection, None, None) => internalCompileExpression(collection, currentContext)
 
     case ListSlice(collection, Some(from), None) =>
@@ -2092,6 +2139,35 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       loop(checks.zip(loads).toList),
       condition(equal(load(returnVariable), constant(null)))(assign(returnVariable, default))
     )), load(returnVariable))
+  }
+
+  private def accessVariable(name: String, currentContext: Option[IntermediateRepresentation]): (IntermediateRepresentation, Option[IntermediateRepresentation], Option[LocalVariable]) =
+    slots.get(name) match {
+    case Some(LongSlot(offset, true, CTNode)) =>
+      (invokeStatic(method[CompiledHelpers, AnyValue, ExecutionContext, DbAccess, Int]("nodeOrNoValue"),
+                    loadContext(currentContext), DB_ACCESS, constant(offset)), Option(equal(getLongAt(offset, currentContext), constant(-1L))), None)
+    case Some(LongSlot(offset, false, CTNode)) =>
+      (invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset, currentContext)), None, None)
+
+    case Some(LongSlot(offset, true, CTRelationship)) =>
+      (invokeStatic(method[CompiledHelpers, AnyValue, ExecutionContext, DbAccess, Int]("relationshipOrNoValue"),
+                    loadContext(currentContext), DB_ACCESS, constant(offset)),
+        Option(equal(getLongAt(offset, currentContext), constant(-1L))), None)
+    case Some(LongSlot(offset, false, CTRelationship)) =>
+      (invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), getLongAt(offset, currentContext)), None, None)
+    case Some(RefSlot(offset, nullable, _)) =>
+      (getRefAt(offset, currentContext),
+        if (nullable) Option(equal(getRefAt(offset, currentContext), noValue)) else None, None)
+    case _ =>
+      val local = namer.nextVariableName()
+      (oneTime(
+        block(
+          assign(local,
+                 invokeStatic(
+                   method[CompiledHelpers, AnyValue, ExecutionContext, String]("loadVariable"),
+                   loadContext(currentContext), constant(name))),
+          load(local))),
+        Some(equal(load(local), noValue)), Some(variable[AnyValue](local, constant(null))))
   }
 }
 

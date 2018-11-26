@@ -79,7 +79,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
         log.debug(s"Failed to compile projection: $projections", t)
-         None
+        None
     }
   }
 }

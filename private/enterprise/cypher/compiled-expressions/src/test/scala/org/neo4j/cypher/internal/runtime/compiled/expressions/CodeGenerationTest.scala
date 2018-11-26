@@ -2329,6 +2329,71 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("default"))
   }
 
+  test("map projection node with map context") {
+    val propertyMap = map(Array("prop"), Array(stringValue("hello")))
+    val node = nodeValue(1, EMPTY_TEXT_ARRAY, propertyMap)
+    when(ctx.contains("n")).thenReturn(true)
+    when(ctx.apply("n")).thenReturn(node)
+    when(db.nodeAsMap(any[Long], any[NodeCursor], any[PropertyCursor])).thenReturn(propertyMap)
+
+    compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")))
+      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+    compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")))
+      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(map(Array("foo"), Array(stringValue("projected"))))
+  }
+
+  test("map projection node with slotted context") {
+    val propertyMap = map(Array("prop"), Array(stringValue("hello")))
+    val offset = 32
+    val nodeId = 11
+    val slots = SlotConfiguration(Map("n" -> LongSlot(offset, nullable = false, symbols.CTNode)), 1, 0)
+
+    val node = nodeValue(nodeId, EMPTY_TEXT_ARRAY, propertyMap)
+    when(ctx.getLongAt(offset)).thenReturn(nodeId)
+    when(db.nodeById(nodeId)).thenReturn(node)
+    when(db.nodeAsMap(any[Long], any[NodeCursor], any[PropertyCursor])).thenReturn(propertyMap)
+
+    compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
+      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+    compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
+      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(map(Array("foo"), Array(stringValue("projected"))))
+  }
+
+  test("map projection relationship with map context") {
+    val propertyMap = map(Array("prop"), Array(stringValue("hello")))
+    val relationship = relationshipValue(1, nodeValue(11, EMPTY_TEXT_ARRAY, EMPTY_MAP),
+                                         nodeValue(12, EMPTY_TEXT_ARRAY,EMPTY_MAP), stringValue("R"), propertyMap)
+    when(ctx.contains("r")).thenReturn(true)
+    when(ctx.apply("r")).thenReturn(relationship)
+    when(db.relationshipAsMap(any[Long], any[RelationshipScanCursor], any[PropertyCursor])).thenReturn(propertyMap)
+
+    compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")))
+      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+    compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")))
+      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(map(Array("foo"), Array(stringValue("projected"))))
+  }
+
+  test("map projection relationship with slotted context") {
+    val propertyMap = map(Array("prop"), Array(stringValue("hello")))
+    val offset = 32
+    val relationshipId = 1337
+    val slots = SlotConfiguration(Map("r" -> LongSlot(offset, nullable = true, symbols.CTRelationship)), 1, 0)
+
+    val relationship = relationshipValue(1, nodeValue(11, EMPTY_TEXT_ARRAY, EMPTY_MAP),
+                                         nodeValue(12, EMPTY_TEXT_ARRAY,EMPTY_MAP), stringValue("R"), propertyMap)
+    when(ctx.getLongAt(offset)).thenReturn(relationshipId)
+    when(db.relationshipById(relationshipId)).thenReturn(relationship)
+    when(db.relationshipAsMap(any[Long], any[RelationshipScanCursor], any[PropertyCursor])).thenReturn(propertyMap)
+
+    compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots)
+      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+    compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots)
+      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(map(Array("foo"), Array(stringValue("projected"))))
+  }
+
+  private def mapProjection(name: String, includeAllProps: Boolean, items: (String,Expression)*) =
+    DesugaredMapProjection(varFor(name), items.map(kv => LiteralEntry(PropertyKeyName(kv._1)(pos), kv._2)(pos)), includeAllProps)(pos)
+
   private def simpleCase(inner: Expression, alternatives: List[(Expression, Expression)], default: Option[Expression] = None) =
     CaseExpression(Some(inner), alternatives, default)(pos)
 
