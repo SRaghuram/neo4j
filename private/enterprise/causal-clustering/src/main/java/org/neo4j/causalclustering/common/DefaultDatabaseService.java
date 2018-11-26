@@ -6,6 +6,7 @@
 package org.neo4j.causalclustering.common;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -163,7 +164,7 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
 
     public Map<String,DB> registeredDatabases()
     {
-        return databases;
+        return Collections.unmodifiableMap( databases );
     }
 
     private LogFiles buildLocalDatabaseLogFiles( DatabaseLayout dbLayout )

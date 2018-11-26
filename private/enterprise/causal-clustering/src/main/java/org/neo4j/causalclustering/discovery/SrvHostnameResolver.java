@@ -24,13 +24,12 @@ public class SrvHostnameResolver extends RetryingHostnameResolver
 
     public static RemoteMembersResolver resolver( LogService logService, SrvRecordResolver srvHostnameResolver, Config config )
     {
-        SrvHostnameResolver hostnameResolver =
-                new SrvHostnameResolver( logService, srvHostnameResolver, config, defaultRetryStrategy( config, logService.getInternalLogProvider() ) );
+        SrvHostnameResolver hostnameResolver = new SrvHostnameResolver( logService, srvHostnameResolver, config, defaultRetryStrategy( config ) );
         return new InitialDiscoveryMembersResolver( hostnameResolver, config );
     }
 
     SrvHostnameResolver( LogService logService, SrvRecordResolver srvRecordResolver, Config config,
-            MultiRetryStrategy<AdvertisedSocketAddress,Collection<AdvertisedSocketAddress>> retryStrategy )
+            RetryStrategy retryStrategy )
     {
         super( config, retryStrategy );
         log = logService.getInternalLog( getClass() );

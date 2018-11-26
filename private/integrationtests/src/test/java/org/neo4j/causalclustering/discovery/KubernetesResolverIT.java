@@ -46,7 +46,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.causalclustering.discovery.MultiRetryStrategyTest.testRetryStrategy;
+import static org.neo4j.causalclustering.discovery.RetryStrategyTest.testRetryStrategy;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
 public class KubernetesResolverIT

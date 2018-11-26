@@ -81,7 +81,7 @@ public interface CatchupAddressProvider
             try
             {
                 MemberId leadMember = leaderLocator.getLeader();
-                return topologyService.findCatchupAddress( leadMember ).orElseThrow( () -> new CatchupAddressResolutionException( leadMember ) );
+                return topologyService.findCatchupAddress( leadMember );
             }
             catch ( NoLeaderFoundException e )
             {

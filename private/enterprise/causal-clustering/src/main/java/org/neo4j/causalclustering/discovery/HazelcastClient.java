@@ -8,8 +8,10 @@ package org.neo4j.causalclustering.discovery;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
+import java.util.concurrent.TimeoutException;
 
+import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.helper.RobustJobSchedulerWrapper;
 import org.neo4j.causalclustering.identity.MemberId;
@@ -45,7 +47,7 @@ public class HazelcastClient extends SafeLifecycle implements TopologyService
     private final AdvertisedSocketAddress transactionSource;
     private final MemberId myself;
     private final List<String> groups;
-    private final TopologyServiceRetryStrategy topologyServiceRetryStrategy;
+    private final RetryStrategy topologyServiceRetryStrategy;
 
     //TODO: Work out error handling in case cluster hosts change their dbName unexpectedly
     private final String dbName;
@@ -74,17 +76,18 @@ public class HazelcastClient extends SafeLifecycle implements TopologyService
         this.refreshPeriod = config.get( CausalClusteringSettings.cluster_topology_refresh ).toMillis();
         this.myself = myself;
         this.groups = config.get( CausalClusteringSettings.server_groups );
-        this.topologyServiceRetryStrategy = resolveStrategy( refreshPeriod, logProvider );
+        this.topologyServiceRetryStrategy = resolveStrategy( refreshPeriod );
         this.dbName = config.get( CausalClusteringSettings.database );
         this.coreRoles = emptyMap();
     }
 
-    private static TopologyServiceRetryStrategy resolveStrategy( long refreshPeriodMillis, LogProvider logProvider )
+    private static RetryStrategy resolveStrategy( long refreshPeriodMillis )
     {
         int pollingFrequencyWithinRefreshWindow = 2;
         int numberOfRetries =
                 pollingFrequencyWithinRefreshWindow + 1; // we want to have more retries at the given frequency than there is time in a refresh period
-        return new TopologyServiceMultiRetryStrategy( refreshPeriodMillis / pollingFrequencyWithinRefreshWindow, numberOfRetries, logProvider );
+        long delayInMillis = refreshPeriodMillis / pollingFrequencyWithinRefreshWindow;
+        return new RetryStrategy( delayInMillis, (long) numberOfRetries );
     }
 
     @Override
@@ -130,14 +133,16 @@ public class HazelcastClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public Optional<AdvertisedSocketAddress> findCatchupAddress( MemberId memberId )
+    public AdvertisedSocketAddress findCatchupAddress( MemberId memberId ) throws CatchupAddressResolutionException
     {
-        return topologyServiceRetryStrategy.apply( memberId, this::retrieveSocketAddress, Optional::isPresent );
-    }
-
-    private Optional<AdvertisedSocketAddress> retrieveSocketAddress( MemberId memberId )
-    {
-        return Optional.ofNullable( catchupAddressMap.get( memberId ) );
+        try
+        {
+            return topologyServiceRetryStrategy.apply( () -> catchupAddressMap.get( memberId ), Objects::nonNull );
+        }
+        catch ( TimeoutException e )
+        {
+            throw new CatchupAddressResolutionException( memberId );
+        }
     }
 
     /**

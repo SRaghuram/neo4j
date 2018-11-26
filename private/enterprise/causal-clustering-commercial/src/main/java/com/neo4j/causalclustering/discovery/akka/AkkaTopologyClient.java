@@ -14,8 +14,8 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClientTopol
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 
 import java.util.Map;
-import java.util.Optional;
 
+import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
@@ -121,9 +121,14 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public Optional<AdvertisedSocketAddress> findCatchupAddress( MemberId upstream )
+    public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        return topologyState.retrieveSocketAddress( upstream );
+        AdvertisedSocketAddress advertisedSocketAddress = topologyState.retrieveSocketAddress( upstream );
+        if ( advertisedSocketAddress == null )
+        {
+            throw new CatchupAddressResolutionException( upstream );
+        }
+        return advertisedSocketAddress;
     }
 
     @Override

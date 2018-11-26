@@ -20,14 +20,17 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 
 import java.time.Clock;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeoutException;
 
+import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.AbstractCoreTopologyService;
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
+import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.discovery.RoleInfo;
-import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -41,18 +44,18 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private Optional<ActorRef> directoryActorRef = Optional.empty();
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final LogProvider logProvider;
-    private final TopologyServiceRetryStrategy retryStrategy;
+    private final RetryStrategy retryStrategy;
     private final TopologyState topologyState;
     private final Clock clock;
     private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
 
     public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-            LogProvider userLogProvider, TopologyServiceRetryStrategy retryStrategy, Clock clock )
+            LogProvider userLogProvider, RetryStrategy topologyServiceRetryStrategy, Clock clock )
     {
         super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
-        this.retryStrategy = retryStrategy;
+        this.retryStrategy = topologyServiceRetryStrategy;
         this.clock = clock;
         this.topologyState = new TopologyState( config, logProvider, listenerService::notifyListeners );
     }
@@ -195,9 +198,16 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public Optional<AdvertisedSocketAddress> findCatchupAddress( MemberId upstream )
+    public AdvertisedSocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
-        return retryStrategy.apply( upstream, topologyState::retrieveSocketAddress, Optional::isPresent );
+        try
+        {
+            return retryStrategy.apply( () -> topologyState.retrieveSocketAddress( upstream ), Objects::nonNull );
+        }
+        catch ( TimeoutException e )
+        {
+            throw new CatchupAddressResolutionException( upstream );
+        }
     }
 
     @Override

@@ -21,14 +21,14 @@ public class SharedDiscoveryServiceFactory implements DiscoveryServiceFactory
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
             LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-            TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors, Clock clock )
+            RetryStrategy topologyServiceRetryStrategy, Monitors monitors, Clock clock )
     {
         return new SharedDiscoveryCoreClient( discoveryService, myself, logProvider, config );
     }
 
     @Override
     public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, MemberId myself,
-            RemoteMembersResolver remoteMembersResolver, TopologyServiceRetryStrategy topologyServiceRetryStrategy )
+            RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy )
     {
         return new SharedDiscoveryReadReplicaClient( discoveryService, config, myself, logProvider );
     }

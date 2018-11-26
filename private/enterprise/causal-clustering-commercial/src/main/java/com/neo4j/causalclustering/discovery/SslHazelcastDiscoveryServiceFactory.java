@@ -11,8 +11,8 @@ import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.HazelcastClient;
 import org.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.discovery.TopologyService;
-import org.neo4j.causalclustering.discovery.TopologyServiceRetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -27,7 +27,7 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
             LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-            TopologyServiceRetryStrategy topologyServiceRetryStrategy, Monitors monitors, Clock clock )
+            RetryStrategy topologyServiceRetryStrategy, Monitors monitors, Clock clock )
     {
         configureHazelcast( config, logProvider );
         return new SslHazelcastCoreTopologyService( config, sslPolicy, myself, jobScheduler, logProvider,
@@ -37,7 +37,7 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
     @Override
     public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
             MemberId myself, RemoteMembersResolver remoteMembersResolver,
-            TopologyServiceRetryStrategy topologyServiceRetryStrategy )
+            RetryStrategy topologyServiceRetryStrategy )
     {
         configureHazelcast( config, logProvider );
         return new HazelcastClient( new SslHazelcastClientConnector( config, logProvider, sslPolicy, remoteMembersResolver ),

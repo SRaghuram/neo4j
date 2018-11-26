@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.discovery.akka;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -127,10 +126,10 @@ public class TopologyState implements TopologyUpdateSink, DirectoryUpdateSink
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> e.getValue().getCatchupServer() ) );
     }
 
-    public Optional<AdvertisedSocketAddress> retrieveSocketAddress( MemberId memberId )
+    public AdvertisedSocketAddress retrieveSocketAddress( MemberId memberId )
     {
-        Optional<AdvertisedSocketAddress> coreAddress = Optional.ofNullable( coreCatchupAddressMap.get( memberId ) );
+        AdvertisedSocketAddress coreAddress = coreCatchupAddressMap.get( memberId );
         log.debug( "Catchup address for core %s was %s", memberId, coreAddress );
-        return coreAddress.isPresent() ? coreAddress : Optional.ofNullable( rrCatchupAddressMap.get( memberId ) );
+        return coreAddress != null ? coreAddress : rrCatchupAddressMap.get( memberId );
     }
 }

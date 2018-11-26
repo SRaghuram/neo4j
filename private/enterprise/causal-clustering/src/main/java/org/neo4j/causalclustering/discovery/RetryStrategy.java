@@ -5,30 +5,60 @@
  */
 package org.neo4j.causalclustering.discovery;
 
-import java.util.function.Function;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
- * A strategy pattern for deciding how retries will be handled.
- * <p>
- * Depending on the implementation, it is assumed the retriable function will be executed until conditions satisfying desired output are met and then the latest
- * (or most valid)
- * result will be returned
- * </p>
- *
- * @param <I> Type of input used for the input function (assumes 1-parameter input functions)
- * @param <E> Type of output returned from retriable function
- */
-public interface RetryStrategy<I, E>
+ * Repeats the retriable supplier until the correct result has been retrieved or the limit of retries has been
+ * encountered at which point a {@link TimeoutException} is thrown.
+ **/
+public class RetryStrategy
 {
+    private final long delayInMillis;
+    private final long retries;
+
     /**
-     * Run a given function until a satisfying result is achieved
-     *
-     * @param input the input parameter that is given to the retriable function
-     * @param retriable a function that will be executed multiple times until it returns a valid output
-     * @param shouldRetry a predicate deciding if the output of the retriable function is valid. Assume that the function will retry if this returns false and
-     * exit if it returns true
-     * @return the latest (or most valid) output of the retriable function, depending on implementation
+     * @param delayInMillis number of milliseconds between each attempt at getting the desired result
+     * @param retries the number of attempts to perform before giving up
      */
-    E apply( I input, Function<I,E> retriable, Predicate<E> shouldRetry );
+    public RetryStrategy( long delayInMillis, long retries )
+    {
+        this.delayInMillis = delayInMillis;
+        this.retries = retries;
+    }
+
+    /**
+     * Run a given supplier until a satisfying result is achieved
+     *
+     * @param action a supplier that will be executed multiple times until it returns a valid output
+     * @param validator a predicate deciding if the output of the retriable supplier is valid. Assume that the function will retry if this returns false and
+     * exit if it returns true
+     * @param <T> the type of output of the retriable supplier
+     * @return the accepted value from the supplier
+     * @throws TimeoutException if maximum amount of retires is reached without an accepted value.
+     */
+    public <T> T apply( Supplier<T> action, Predicate<T> validator ) throws TimeoutException
+    {
+        T result = action.get();
+        int currentIteration = 0;
+        while ( !validator.test( result ) )
+        {
+            if ( currentIteration++ == retries )
+            {
+                throw new TimeoutException( "Unable to fulfill predicate within " + retries + " retries" );
+            }
+            try
+            {
+                Thread.sleep( delayInMillis );
+            }
+            catch ( InterruptedException e )
+            {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException( e );
+            }
+            result = action.get();
+        }
+        return result;
+    }
 }
