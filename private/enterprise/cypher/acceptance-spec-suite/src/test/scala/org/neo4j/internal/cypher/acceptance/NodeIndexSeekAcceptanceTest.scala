@@ -50,7 +50,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     graph.createIndex("User", "prop1")
     graph.createIndex("User", "prop2")
     val nodes = Range(0, 100).map(i => createLabeledNode(Map("prop1" -> i, "prop2" -> i), "User"))
-
+    createLabeledNode(Map("prop1" -> 1, "prop2" -> 11), "User")
+    createLabeledNode(Map("prop1" -> 11, "prop2" -> 1), "User")
     resampleIndexes()
 
     val query =

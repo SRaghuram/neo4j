@@ -278,6 +278,46 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.toList should equal(List(Map("m.prop1" -> 42), Map("m.prop1" -> 42)))
   }
 
+  test("should plan index seek with GetValue for or leaf planner") {
+    for (_ <- 1 to 10) createLabeledNode("Awesome")
+
+    val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 < 42 OR n.prop1 > 43 RETURN n.prop1"
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Projection")
+        .containingArgument("{n.prop1 : cached[n.prop1]}")
+        .withDBHits(0).withLHS(includeSomewhere
+          .aPlan("NodeIndexScan")
+            .withExactVariables("n", "cached[n.prop1]"))
+
+    result.size should be(6L)
+    result.toList.toSet should equal(Set(
+      Map("n.prop1" -> 40), Map("n.prop1" -> 41), Map("n.prop1" -> 44)
+    ))
+  }
+
+  test("should not use cached property after or when different properties used on each side") {
+    for (_ <- 1 to 10) createLabeledNode("Awesome")
+
+    val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 < 41 OR n.prop2 < 2 RETURN n.prop1, n.prop2"
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Projection")
+      .containingArgument("{n.prop1 : n.prop1, n.prop2 : n.prop2}")
+      .withDBHits()
+        .onTopOf(includeSomewhere.aPlan("Union")
+          .withLHS(includeSomewhere.aPlan("NodeIndexScan"))
+          .withRHS(includeSomewhere.aPlan("NodeIndexScan"))
+        )
+
+    result.size should be(4L)
+    result.toList.toSet should equal(Set(
+      Map("n.prop1" -> 40, "n.prop2" -> 5), Map("n.prop1" -> 43, "n.prop2" -> 1)
+    ))
+  }
+
   test("should not get confused by variable named as index-backed property I") {
 
     val query =

@@ -306,7 +306,7 @@ object SlotAllocation {
     lp match {
 
       case Distinct(_, groupingExpressions) =>
-        val result = SlotConfiguration.empty
+        val result = source.emptyWithCachedProperties()
         addGroupingMap(groupingExpressions, source, result)
         result
 
@@ -632,7 +632,11 @@ object SlotAllocation {
                 val newType = if (lhsSlot.typ == rhsSlot.typ) lhsSlot.typ else CTAny
                 result.newReference(key, lhsSlot.nullable || rhsSlot.nullable, newType)
             }
-        }, ignoreCachedNodeProperties => null)
+        }, {
+          case (key, _) if rhs.hasCachedPropertySlot(key) =>
+            result.newCachedProperty(key)
+          case _ => null
+        })
         result
 
       case _: AssertSameNode =>

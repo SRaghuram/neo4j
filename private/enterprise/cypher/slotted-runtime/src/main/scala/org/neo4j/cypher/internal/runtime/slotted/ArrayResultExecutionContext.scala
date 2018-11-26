@@ -114,6 +114,8 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
 
   override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit = fail()
 
+  override def copyCachedFrom(input: ExecutionContext): Unit = fail()
+
   override def setLongAt(offset: Int, value: Long): Unit = fail()
 
   override def getLongAt(offset: Int): Long = fail()

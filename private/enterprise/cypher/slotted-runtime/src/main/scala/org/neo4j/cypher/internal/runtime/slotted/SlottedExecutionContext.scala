@@ -74,6 +74,14 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
     case _ => fail()
   }
 
+  def copyCachedFrom(input: ExecutionContext): Unit = input match {
+    case other@SlottedExecutionContext(otherPipeline) =>
+      slots.foreachCachedSlot({
+        case (key, slot) => setCachedPropertyAt(slot.offset, other.getCachedPropertyAt(otherPipeline.getCachedNodePropertyOffsetFor(key)))
+      })
+    case _ => fail()
+  }
+
   override def setLongAt(offset: Int, value: Long): Unit =
     longs(offset) = value
 
