@@ -111,7 +111,6 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
             )
             .withRHS(
               aPlan("NodeIndexSeekByRange")
-                .withOrder(providedOrder("b.d"))
             )
         )
 
