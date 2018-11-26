@@ -81,15 +81,9 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
         availabilityGuard.require( requirement );
         if ( currentRequirement != null )
         {
-            dropAvailabilityGuard();
+            availabilityGuard.fulfill( currentRequirement );
         }
         currentRequirement = requirement;
-    }
-
-    private void dropAvailabilityGuard()
-    {
-        availabilityGuard.fulfill( currentRequirement );
-        currentRequirement = null;
     }
 
     private synchronized void stopWithRequirement( AvailabilityRequirement requirement )
@@ -108,7 +102,7 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
     }
 
     @Override
-    public void start()
+    public synchronized void start()
     {
         if ( areAvailable() )
         {
@@ -116,7 +110,8 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
         }
         dataSourceManager.start();
         databasesLife.start();
-        dropAvailabilityGuard();
+        availabilityGuard.fulfill( currentRequirement );
+        currentRequirement = null;
     }
 
     @Override
