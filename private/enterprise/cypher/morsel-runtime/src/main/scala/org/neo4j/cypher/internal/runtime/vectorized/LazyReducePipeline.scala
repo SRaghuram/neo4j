@@ -52,7 +52,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
       * - in [[acceptMorsel]], from any of the upstream pipeline's tasks
       * - in [[trySetTaskDone]], from this pipeline's task
       */
-    private val reduceTaskState = new AtomicReference[ReduceTaskState](NotScheduled)
+    private val reduceTaskState = new AtomicReference[ReduceTaskState](NoTaskScheduled)
 
     override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
       // First we put the next morsel in the queue
@@ -63,16 +63,11 @@ class LazyReducePipeline(start: LazyReduceOperator,
       var maybeNextTask: Option[LazyReduceOperatorTask] = None
       while (!updatedState) {
         reduceTaskState.get() match {
-          case NotScheduled =>
+          case NoTaskScheduled =>
             // We have to try and schedule the first task
             val firstTask = start.init(context, state, queue, this, cursors)
             maybeNextTask = Some(firstTask)
-            updatedState = reduceTaskState.compareAndSet(NotScheduled, ScheduledAndGoing(firstTask, 1))
-          case s: ScheduledAndDone =>
-            // We have to try and schedule a new Task
-            val nextTask = start.init(context, state, queue, this, cursors)
-            maybeNextTask = Some(nextTask)
-            updatedState = reduceTaskState.compareAndSet(s, ScheduledAndGoing(nextTask, 1))
+            updatedState = reduceTaskState.compareAndSet(NoTaskScheduled, ScheduledAndGoing(firstTask, 1))
           case s@ScheduledAndGoing(reduceTask, morselsArrived) =>
             // We don't have to schedule a new task, the running task will pick up the new morsel in the queue
             maybeNextTask = None
@@ -97,12 +92,12 @@ class LazyReducePipeline(start: LazyReduceOperator,
       reduceTaskState.get() match {
         case s@ScheduledAndGoing(`task`, `morselsProcessed`) =>
           // Mark the task as done
-          reduceTaskState.compareAndSet(s, ScheduledAndDone(task))
+          reduceTaskState.compareAndSet(s, NoTaskScheduled)
         case ScheduledAndGoing(`task`, _) =>
           // Some other morsel arrived in the meantime. Now we have to process that as well
           false
         case s =>
-          throw new IllegalStateException(s"Trying to set a task ($task) done, but it is not even Scheduled or already done: $s")
+          throw new IllegalStateException(s"Trying to set a task ($task) done, but had unexpected state: $s")
       }
     }
 
@@ -149,9 +144,9 @@ trait LazyReduceCollector extends ReduceCollector {
 sealed trait ReduceTaskState
 
 /**
-  * No reduce task has been scheduled yet.
+  * No reduce task is currently scheduled.
   */
-case object NotScheduled extends ReduceTaskState
+case object NoTaskScheduled extends ReduceTaskState
 
 /**
   * A reduce task has been scheduled. It still has unprocessed data.
@@ -160,10 +155,3 @@ case object NotScheduled extends ReduceTaskState
   * @param morselsArrived how many morsels arrived.
   */
 case class ScheduledAndGoing(reduceTask: LazyReduceOperatorTask, morselsArrived: Int) extends ReduceTaskState
-
-/**
-  * A reduce task has been scheduled. It has processed all currently available data.
-  *
-  * @param reduceTask the task.
-  */
-case class ScheduledAndDone(reduceTask: LazyReduceOperatorTask) extends ReduceTaskState
