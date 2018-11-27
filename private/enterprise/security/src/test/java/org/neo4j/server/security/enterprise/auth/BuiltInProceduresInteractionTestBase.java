@@ -6,6 +6,7 @@
 package org.neo4j.server.security.enterprise.auth;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -124,7 +125,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         blockedModifierLatch.finishAndWaitForAllToFinish();
     }
 
-    private void waitTransactionToStartWaitingForTheLock() throws InterruptedException
+    private static void waitTransactionToStartWaitingForTheLock() throws InterruptedException
     {
         while ( Thread.getAllStackTraces().keySet().stream().noneMatch(
                 ThreadingRule.waitingWhileIn( Operations.class, "acquireExclusiveNodeLock" ) ) )
@@ -254,6 +255,155 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
             latch.finishAndWaitForAllToFinish();
         }
         read.closeAndAssertSuccess();
+    }
+
+    @Test
+    public void killAlreadyTerminatedTransactionEndsSuccesfully()
+    {
+        DoubleLatch latch = new DoubleLatch( 2, true );
+        try
+        {
+            ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+
+            String q1 = read1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+            latch.startAndWaitForAllToStart();
+
+            String listTransactionQuery = "CALL dbms.listTransactions()";
+            String unwindTransactionId = getTransactionIdExecutingQuery( q1, listTransactionQuery, readSubject );
+            String killTransactionQueryTemplate = "CALL dbms.killTransaction('%s')";
+            assertSuccess( readSubject, format( killTransactionQueryTemplate, unwindTransactionId ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "readSubject" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction terminated." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", unwindTransactionId ) ) );
+            } );
+
+            assertSuccess( readSubject, format( killTransactionQueryTemplate, unwindTransactionId ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "readSubject" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction terminated." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", unwindTransactionId ) ) );
+            } );
+        }
+        finally
+        {
+            latch.finishAndWaitForAllToFinish();
+        }
+
+    }
+
+    @Test
+    public void failToKillTransactionForOtherUserByNonAdmin()
+    {
+        DoubleLatch latch = new DoubleLatch( 2, true );
+        try
+        {
+            ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+
+            String q1 = read1.execute( threading, writeSubject, "UNWIND [1,2,3] AS x RETURN x" );
+            latch.startAndWaitForAllToStart();
+
+            String listTransactionQuery = "CALL dbms.listTransactions()";
+            String unwindTransactionId = getTransactionIdExecutingQuery( q1, listTransactionQuery, writeSubject );
+            String killTransactionQueryTemplate = "CALL dbms.killTransaction('%s')";
+            assertSuccess( readSubject, format( killTransactionQueryTemplate, unwindTransactionId ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "readSubject" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction not found." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", unwindTransactionId ) ) );
+            } );
+        }
+        finally
+        {
+            latch.finishAndWaitForAllToFinish();
+        }
+    }
+
+    @Test
+    public void killAnyTransactionWithAuthDisabled() throws Throwable
+    {
+        neo.tearDown();
+        neo = setUpNeoServer( stringMap( GraphDatabaseSettings.auth_enabled.name(), "false" ) );
+        DoubleLatch latch = new DoubleLatch( 2, true );
+        try
+        {
+            ThreadedTransaction<S> read = new ThreadedTransaction<>( neo, latch );
+
+            String q1 = read.execute( threading, neo.login( "user1", "" ), "UNWIND [1,2,3] AS x RETURN x" );
+            latch.startAndWaitForAllToStart();
+
+            S admin = neo.login( "admin", "" );
+            String listTransactionQuery = "CALL dbms.listTransactions()";
+            String unwindTransactionId = getTransactionIdExecutingQuery( q1, listTransactionQuery, admin );
+            String killTransactionQueryTemplate = "CALL dbms.killTransaction('%s')";
+            assertSuccess( admin, format( killTransactionQueryTemplate, unwindTransactionId ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction terminated." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", unwindTransactionId ) ) );
+            } );
+        }
+        finally
+        {
+            latch.finishAndWaitForAllToFinish();
+        }
+    }
+
+    @Test
+    public void killTransactionMarksTransactionForTermination()
+    {
+        DoubleLatch latch = new DoubleLatch( 2, true );
+        try
+        {
+            ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+
+            String q1 = read1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+            latch.startAndWaitForAllToStart();
+
+            String listTransactionQuery = "CALL dbms.listTransactions()";
+            String unwindTransactionId = getTransactionIdExecutingQuery( q1, listTransactionQuery, readSubject );
+            String killTransactionQueryTemplate = "CALL dbms.killTransaction('%s')";
+            assertSuccess( readSubject, format( killTransactionQueryTemplate, unwindTransactionId ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "readSubject" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction terminated." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", unwindTransactionId ) ) );
+            } );
+        }
+        finally
+        {
+            latch.finishAndWaitForAllToFinish();
+        }
+    }
+
+    private String getTransactionIdExecutingQuery( String q1, String listTransactionQuery, S subject )
+    {
+        MutableObject<String> transactionIdContainer = new MutableObject<>();
+        assertSuccess( subject, listTransactionQuery, r ->
+        {
+            List<Map<String,Object>> listTransactionsResult = collectResults( r );
+            String transactionId = listTransactionsResult.stream().filter( map -> map.containsValue( q1 ) ).map(
+                    map -> map.get( "transactionId" ).toString() ).findFirst().orElseThrow( () -> new RuntimeException( "Expected unwind query not found." ) );
+            transactionIdContainer.setValue( transactionId );
+        } );
+        return transactionIdContainer.getValue();
+    }
+
+    @Test
+    public void killNotExistingTransaction()
+    {
+        String query = "CALL dbms.killTransaction('17')";
+        assertSuccess( readSubject, query, r ->
+        {
+            List<Map<String,Object>> result = collectResults( r );
+            assertThat( result, matchesOneToOneInAnyOrder( hasUsername( "readSubject" ) ) );
+            assertThat( result, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction not found." ) ) );
+            assertThat( result, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", "17" ) ) );
+        } );
     }
 
     //---------- list running queries -----------
@@ -1329,6 +1479,11 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     private Matcher<Map<String,Object>> hasStatus( String statusPrefix )
     {
         return (Matcher) hasEntry( equalTo( "status" ), startsWith( statusPrefix ) );
+    }
+
+    private Matcher<Map<String,Object>> hasResultEntry( String entryKey, String entryPrefix )
+    {
+        return (Matcher) hasEntry( equalTo( entryKey ), startsWith( entryPrefix ) );
     }
 
     @SuppressWarnings( "unchecked" )

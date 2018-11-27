@@ -39,6 +39,7 @@ import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.Log;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
@@ -47,6 +48,7 @@ import org.neo4j.procedure.Procedure;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -62,6 +64,9 @@ import static org.neo4j.procedure.Mode.DBMS;
 public class EnterpriseBuiltInDbmsProcedures
 {
     private static final int HARD_CHAR_LIMIT = 2048;
+
+    @Context
+    public Log log;
 
     @Context
     public DependencyResolver resolver;
@@ -324,6 +329,41 @@ public class EnterpriseBuiltInDbmsProcedures
             throwIfPresent( uncaught.getCauseIfOfType( InvalidArgumentsException.class ) );
             throw uncaught;
         }
+    }
+
+    @Description( "Kill transaction with provided id." )
+    @Procedure( name = "dbms.killTransaction", mode = DBMS )
+    public Stream<TransactionMarkForTerminationResult> killTransaction( @Name( "id" ) String transactionId )
+    {
+        requireNonNull( transactionId );
+        return killTransactions( singletonList( transactionId ) );
+    }
+
+    @Description( "Kill transactions with provided ids." )
+    @Procedure( name = "dbms.killTransactions", mode = DBMS )
+    public Stream<TransactionMarkForTerminationResult> killTransactions( @Name( "ids" ) List<String> transactionIds )
+    {
+        requireNonNull( transactionIds );
+        securityContext.assertCredentialsNotExpired();
+        log.warn( "User %s trying to kill transactions: %s.", securityContext.subject().username(), transactionIds.toString() );
+        Map<String,KernelTransactionHandle> handles = getKernelTransactions().activeTransactions().stream()
+                        .filter( transaction -> isAdminOrSelf( transaction.subject().username() ) )
+                        .filter( transaction -> transactionIds.contains( transaction.getUserTransactionName() ) )
+                        .collect( toMap( KernelTransactionHandle::getUserTransactionName, identity() ) );
+        return transactionIds.stream().map( id -> terminateTransaction( handles, id ) );
+    }
+
+    private TransactionMarkForTerminationResult terminateTransaction( Map<String,KernelTransactionHandle> handles, String transactionId )
+    {
+        KernelTransactionHandle handle = handles.get( transactionId );
+        String currentUser = securityContext.subject().username();
+        if ( handle == null )
+        {
+            return new TransactionMarkForTerminationFailedResult( transactionId, currentUser );
+        }
+        log.debug( "User %s terminated transaction %d.", currentUser, transactionId );
+        handle.markForTermination( Status.Transaction.Terminated );
+        return new TransactionMarkForTerminationResult( transactionId, handle.subject().username() );
     }
 
     private static Function<KernelTransactionHandle,List<QuerySnapshot>> getTransactionQueries()

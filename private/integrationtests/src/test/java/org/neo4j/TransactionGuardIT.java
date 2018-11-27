@@ -46,7 +46,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.api.KernelTransactionTimeoutMonitor;
+import org.neo4j.kernel.impl.api.transaciton.monitor.KernelTransactionMonitor;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -110,8 +110,8 @@ public class TransactionGuardIT
     public void terminateLongRunningTransaction()
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
-        KernelTransactionTimeoutMonitor timeoutMonitor =
-                database.getDependencyResolver().resolveDependency( KernelTransactionTimeoutMonitor.class );
+        KernelTransactionMonitor timeoutMonitor =
+                database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         try ( Transaction transaction = database.beginTx() )
         {
             fakeClock.forward( 3, TimeUnit.SECONDS );
@@ -133,9 +133,9 @@ public class TransactionGuardIT
     public void terminateLongRunningTransactionWithPeriodicCommit() throws Exception
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
-        KernelTransactionTimeoutMonitor timeoutMonitor =
-                database.getDependencyResolver().resolveDependency( KernelTransactionTimeoutMonitor.class );
-        monitorSupplier.setTransactionTimeoutMonitor( timeoutMonitor );
+        KernelTransactionMonitor timeoutMonitor =
+                database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
+        monitorSupplier.setTransactionMonitor( timeoutMonitor );
         try
         {
             URL url = prepareTestImportFile( 8 );
@@ -152,8 +152,8 @@ public class TransactionGuardIT
     public void terminateTransactionWithCustomTimeoutWithoutConfiguredDefault()
     {
         GraphDatabaseAPI database = startDatabaseWithoutTimeout();
-        KernelTransactionTimeoutMonitor timeoutMonitor =
-                database.getDependencyResolver().resolveDependency( KernelTransactionTimeoutMonitor.class );
+        KernelTransactionMonitor timeoutMonitor =
+                database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         try ( Transaction transaction = database.beginTx( 27, TimeUnit.SECONDS ) )
         {
             fakeClock.forward( 26, TimeUnit.SECONDS );
@@ -181,9 +181,9 @@ public class TransactionGuardIT
     public void terminateLongRunningQueryTransaction()
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
-        KernelTransactionTimeoutMonitor timeoutMonitor =
-                database.getDependencyResolver().resolveDependency( KernelTransactionTimeoutMonitor.class );
-        monitorSupplier.setTransactionTimeoutMonitor( timeoutMonitor );
+        KernelTransactionMonitor timeoutMonitor =
+                database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
+        monitorSupplier.setTransactionMonitor( timeoutMonitor );
 
         try ( Transaction transaction = database.beginTx() )
         {
@@ -205,8 +205,8 @@ public class TransactionGuardIT
     public void terminateLongRunningQueryWithCustomTimeoutWithoutConfiguredDefault()
     {
         GraphDatabaseAPI database = startDatabaseWithoutTimeout();
-        KernelTransactionTimeoutMonitor timeoutMonitor =
-                database.getDependencyResolver().resolveDependency( KernelTransactionTimeoutMonitor.class );
+        KernelTransactionMonitor timeoutMonitor =
+                database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         try ( Transaction transaction = database.beginTx( 5, TimeUnit.SECONDS ) )
         {
             fakeClock.forward( 4, TimeUnit.SECONDS );
@@ -235,8 +235,8 @@ public class TransactionGuardIT
     public void terminateLongRunningRestTransactionalEndpointQuery() throws Exception
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
-        KernelTransactionTimeoutMonitor timeoutMonitor =
-                database.getDependencyResolver().resolveDependency( KernelTransactionTimeoutMonitor.class );
+        KernelTransactionMonitor timeoutMonitor =
+                database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         OpenEnterpriseNeoServer neoServer = startNeoServer( (GraphDatabaseFacade) database );
         String transactionEndPoint = HTTP.POST( transactionUri( neoServer ) ).location();
 
@@ -259,8 +259,8 @@ public class TransactionGuardIT
     public void terminateLongRunningRestTransactionalEndpointWithCustomTimeoutQuery() throws Exception
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
-        KernelTransactionTimeoutMonitor timeoutMonitor =
-                database.getDependencyResolver().resolveDependency( KernelTransactionTimeoutMonitor.class );
+        KernelTransactionMonitor timeoutMonitor =
+                database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         OpenEnterpriseNeoServer neoServer = startNeoServer( (GraphDatabaseFacade) database );
         long customTimeout = TimeUnit.SECONDS.toMillis( 10 );
         HTTP.Response beginResponse = HTTP
@@ -295,8 +295,8 @@ public class TransactionGuardIT
     public void terminateLongRunningDriverQuery() throws Exception
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
-        KernelTransactionTimeoutMonitor timeoutMonitor =
-                database.getDependencyResolver().resolveDependency( KernelTransactionTimeoutMonitor.class );
+        KernelTransactionMonitor timeoutMonitor =
+                database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         OpenEnterpriseNeoServer neoServer = startNeoServer( (GraphDatabaseFacade) database );
 
         org.neo4j.driver.v1.Config driverConfig = getDriverConfig();
@@ -326,9 +326,9 @@ public class TransactionGuardIT
     public void terminateLongRunningDriverPeriodicCommitQuery() throws Exception
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
-        KernelTransactionTimeoutMonitor timeoutMonitor =
-                database.getDependencyResolver().resolveDependency( KernelTransactionTimeoutMonitor.class );
-        monitorSupplier.setTransactionTimeoutMonitor( timeoutMonitor );
+        KernelTransactionMonitor timeoutMonitor =
+                database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
+        monitorSupplier.setTransactionMonitor( timeoutMonitor );
         OpenEnterpriseNeoServer neoServer = startNeoServer( (GraphDatabaseFacade) database );
 
         org.neo4j.driver.v1.Config driverConfig = getDriverConfig();
@@ -351,8 +351,8 @@ public class TransactionGuardIT
     public void changeTimeoutAtRuntime()
     {
         GraphDatabaseAPI database = startDatabaseWithTimeout();
-        KernelTransactionTimeoutMonitor timeoutMonitor =
-                database.getDependencyResolver().resolveDependency( KernelTransactionTimeoutMonitor.class );
+        KernelTransactionMonitor timeoutMonitor =
+                database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         try ( Transaction transaction = database.beginTx() )
         {
             fakeClock.forward( 3, TimeUnit.SECONDS );
@@ -519,39 +519,39 @@ public class TransactionGuardIT
         return database;
     }
 
-    private static class KernelTransactionTimeoutMonitorSupplier implements Supplier<KernelTransactionTimeoutMonitor>
+    private static class KernelTransactionTimeoutMonitorSupplier implements Supplier<KernelTransactionMonitor>
     {
-        private volatile KernelTransactionTimeoutMonitor transactionTimeoutMonitor;
+        private volatile KernelTransactionMonitor transactionMonitor;
 
-        void setTransactionTimeoutMonitor( KernelTransactionTimeoutMonitor transactionTimeoutMonitor )
+        void setTransactionMonitor( KernelTransactionMonitor transactionMonitor )
         {
-            this.transactionTimeoutMonitor = transactionTimeoutMonitor;
+            this.transactionMonitor = transactionMonitor;
         }
 
         @Override
-        public KernelTransactionTimeoutMonitor get()
+        public KernelTransactionMonitor get()
         {
-            return transactionTimeoutMonitor;
+            return transactionMonitor;
         }
 
         public void clear()
         {
-            setTransactionTimeoutMonitor( null );
+            setTransactionMonitor( null );
         }
     }
 
     private static class IdInjectionFunctionAction
     {
-        private final Supplier<KernelTransactionTimeoutMonitor> monitorSupplier;
+        private final Supplier<KernelTransactionMonitor> monitorSupplier;
 
-        IdInjectionFunctionAction( Supplier<KernelTransactionTimeoutMonitor> monitorSupplier )
+        IdInjectionFunctionAction( Supplier<KernelTransactionMonitor> monitorSupplier )
         {
             this.monitorSupplier = monitorSupplier;
         }
 
         void tickAndCheck()
         {
-            KernelTransactionTimeoutMonitor timeoutMonitor = monitorSupplier.get();
+            KernelTransactionMonitor timeoutMonitor = monitorSupplier.get();
             if ( timeoutMonitor != null )
             {
                 fakeClock.forward( 1, TimeUnit.SECONDS );
