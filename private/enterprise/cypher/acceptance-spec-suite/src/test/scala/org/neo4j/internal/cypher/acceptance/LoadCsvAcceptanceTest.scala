@@ -122,6 +122,57 @@ class LoadCsvAcceptanceTest
     }
   }
 
+  private val interpretedAndSlotted4_0 = Configs.InterpretedAndSlotted - Configs.Version3_4
+
+  test("should return correct linenumber") {
+    val url = createCSVTempFileURL("neo")({
+      writer =>
+        writer.println("Foo")
+        writer.println("Bar")
+        writer.println("Baz")
+    })
+
+    val result = executeWith(interpretedAndSlotted4_0, s"LOAD CSV FROM '$url' AS line CREATE (a {name: line[0]}) RETURN a.name, linenumber()")
+    resourceMonitor.assertClosedAndClear(1)
+    assertStats(result, nodesCreated = 3, propertiesWritten = 3)
+    result.toList should equal(List(
+      Map("linenumber()" -> 1, "a.name" -> "Foo"),
+      Map("linenumber()" -> 2, "a.name" -> "Bar"),
+      Map("linenumber()" -> 3, "a.name" -> "Baz")))
+  }
+
+  test("should return no linenumber or filename after aggregation") {
+    val url = createCSVTempFileURL("neo")({
+      writer =>
+        writer.println("Foo")
+        writer.println("Bar")
+        writer.println("Baz")
+    })
+
+    val result = executeWith(interpretedAndSlotted4_0, s"LOAD CSV FROM '$url' AS line WITH count(line) as linecount RETURN linecount, linenumber(), filename()")
+    resourceMonitor.assertClosedAndClear(1)
+    result.toList should equal(List(Map("linecount" -> 3, "linenumber()" -> null, "filename()" -> null)))
+  }
+
+  test("should return no linenumber or filename without load csv") {
+    val result = executeWith(interpretedAndSlotted4_0, "RETURN linenumber(), filename()")
+    result.toList should equal(List(Map("linenumber()" -> null, "filename()" -> null)))
+  }
+
+  test("should return correct filename") {
+    val path = Files.createTempFile("file",".csv")
+
+    Files.write(path,"foo".getBytes)
+    assert(Files.exists(path))
+
+    val normalized = path.normalize()
+    val filePathForQuery = normalized.toUri
+    val result = executeWith(interpretedAndSlotted4_0, s"LOAD CSV FROM '$filePathForQuery' AS line CREATE (a {name: line[0]}) RETURN a.name, filename()")
+    assertStats(result, nodesCreated = 1, propertiesWritten = 1)
+    resourceMonitor.assertClosedAndClear(1)
+    result.toList should equal(List(Map("a.name" -> "foo", "filename()" -> normalized.toString)))
+  }
+
   test("make sure to release all possible locks/references on input files") {
     val path = Files.createTempFile("file",".csv")
 
