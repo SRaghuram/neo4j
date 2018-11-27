@@ -16,7 +16,7 @@ public class CommercialGraphDatabase extends GraphDatabaseFacade
 {
     public CommercialGraphDatabase( File storeDir, Config config, GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
-        new GraphDatabaseFacadeFactory( DatabaseInfo.ENTERPRISE, CommercialEditionModule::new )
+        new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
                 .initFacade( storeDir, config, dependencies, this );
     }
 }

@@ -111,8 +111,8 @@ public class Neo4jMetricsBuilder
 
         if ( config.get( MetricsSettings.neoCountsEnabled ) )
         {
-            if ( kernelContext.databaseInfo().edition != Edition.community &&
-                    kernelContext.databaseInfo().edition != Edition.unknown )
+            if ( kernelContext.databaseInfo().edition != Edition.COMMUNITY &&
+                    kernelContext.databaseInfo().edition != Edition.UNKNOWN )
             {
                 life.add( new EntityCountMetrics( registry, databaseDependencySupplier( StoreEntityCounters.class ) ) );
                 result = true;
@@ -158,13 +158,13 @@ public class Neo4jMetricsBuilder
         if ( config.get( MetricsSettings.causalClusteringEnabled ) )
         {
             OperationalMode mode = kernelContext.databaseInfo().operationalMode;
-            if ( mode == OperationalMode.core )
+            if ( mode == OperationalMode.CORE )
             {
                 life.add( new CoreMetrics( dependencies.monitors(), registry, dependencies.raft() ) );
                 life.add( new CatchUpMetrics( dependencies.monitors(), registry ) );
                 result = true;
             }
-            else if ( mode == OperationalMode.read_replica )
+            else if ( mode == OperationalMode.READ_REPLICA )
             {
                 life.add( new ReadReplicaMetrics( dependencies.monitors(), registry ) );
                 life.add( new CatchUpMetrics( dependencies.monitors(), registry ) );

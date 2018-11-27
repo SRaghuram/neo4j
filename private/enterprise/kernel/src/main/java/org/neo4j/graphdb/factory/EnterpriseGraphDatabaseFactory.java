@@ -42,6 +42,6 @@ public class EnterpriseGraphDatabaseFactory extends GraphDatabaseFactory
     @Override
     public String getEdition()
     {
-        return Edition.enterprise.toString();
+        return Edition.COMMERCIAL.toString();
     }
 }

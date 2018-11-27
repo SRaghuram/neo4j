@@ -25,7 +25,7 @@ import org.neo4j.management.CausalClustering;
 @Service.Implementation( ManagementBeanProvider.class )
 public class CausalClusteringBean extends ManagementBeanProvider
 {
-    private static final EnumSet<OperationalMode> CLUSTERING_MODES = EnumSet.of( OperationalMode.core, OperationalMode.read_replica );
+    private static final EnumSet<OperationalMode> CLUSTERING_MODES = EnumSet.of( OperationalMode.CORE, OperationalMode.READ_REPLICA );
 
     @SuppressWarnings( "WeakerAccess" ) // Bean needs public constructor
     public CausalClusteringBean()

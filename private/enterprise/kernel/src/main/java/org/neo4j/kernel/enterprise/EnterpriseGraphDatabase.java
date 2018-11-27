@@ -18,7 +18,7 @@ public class EnterpriseGraphDatabase extends GraphDatabaseFacade
     public EnterpriseGraphDatabase( File storeDir, Config config,
             GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
-        new GraphDatabaseFacadeFactory( DatabaseInfo.ENTERPRISE, EnterpriseEditionModule::new )
+        new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, EnterpriseEditionModule::new )
                 .initFacade( storeDir, config, dependencies, this );
     }
 }

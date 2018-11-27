@@ -124,7 +124,7 @@ public class ExternallyManagedPageCache implements PageCache
             config.augment( GraphDatabaseSettings.ephemeral, Settings.FALSE );
             config.augment( GraphDatabaseSettings.active_database, absoluteStoreDir.getName() );
             config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
-            return new GraphDatabaseFacadeFactory( DatabaseInfo.ENTERPRISE, EnterpriseEditionModule::new )
+            return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, EnterpriseEditionModule::new )
             {
                 @Override
                 protected PlatformModule createPlatform( File storeDir, Config config, Dependencies dependencies )

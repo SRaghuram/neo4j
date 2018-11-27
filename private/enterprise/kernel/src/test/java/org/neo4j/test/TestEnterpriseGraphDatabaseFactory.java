@@ -56,7 +56,7 @@ public class TestEnterpriseGraphDatabaseFactory extends TestGraphDatabaseFactory
                 config.augment( GraphDatabaseSettings.ephemeral, Settings.FALSE );
                 config.augment( GraphDatabaseSettings.active_database, absoluteStoreDir.getName() );
                 config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
-                return new GraphDatabaseFacadeFactory( DatabaseInfo.ENTERPRISE, EnterpriseEditionModule::new )
+                return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, EnterpriseEditionModule::new )
                 {
                     @Override
                     protected PlatformModule createPlatform( File storeDir, Config config, Dependencies dependencies )
@@ -103,13 +103,13 @@ public class TestEnterpriseGraphDatabaseFactory extends TestGraphDatabaseFactory
 
         TestEnterpriseGraphDatabaseFacadeFactory( TestGraphDatabaseFactoryState state, boolean impermanent )
         {
-            super( state, impermanent, DatabaseInfo.ENTERPRISE, EnterpriseEditionModule::new );
+            super( state, impermanent, DatabaseInfo.COMMERCIAL, EnterpriseEditionModule::new );
         }
     }
 
     @Override
     public String getEdition()
     {
-        return Edition.enterprise.toString();
+        return Edition.COMMERCIAL.toString();
     }
 }

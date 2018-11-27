@@ -51,7 +51,7 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
                 config.augment( GraphDatabaseSettings.ephemeral, Settings.FALSE );
                 config.augment( GraphDatabaseSettings.active_database, storeDir.getName() );
                 config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
-                return new GraphDatabaseFacadeFactory( DatabaseInfo.ENTERPRISE, CommercialEditionModule::new )
+                return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
                 {
                     @Override
                     protected PlatformModule createPlatform( File storeDir, Config config, Dependencies dependencies )
@@ -96,7 +96,7 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
     @Override
     public String getEdition()
     {
-        return Edition.enterprise.toString();
+        return Edition.COMMERCIAL.toString();
     }
 
     private static class TestCommercialGraphDatabaseFacadeFactory extends TestGraphDatabaseFacadeFactory
@@ -104,7 +104,7 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
 
         TestCommercialGraphDatabaseFacadeFactory( TestGraphDatabaseFactoryState state, boolean impermanent )
         {
-            super( state, impermanent, DatabaseInfo.ENTERPRISE, CommercialEditionModule::new );
+            super( state, impermanent, DatabaseInfo.COMMERCIAL, CommercialEditionModule::new );
         }
     }
 }
