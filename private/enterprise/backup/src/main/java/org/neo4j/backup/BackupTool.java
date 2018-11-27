@@ -6,14 +6,12 @@
 package org.neo4j.backup;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.neo4j.backup.impl.BackupClient;
@@ -26,7 +24,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Args;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.Service;
-import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.MismatchingStoreIdException;
@@ -214,23 +211,20 @@ public class BackupTool
 
     private static Config readConfiguration( Args arguments ) throws ToolFailureException
     {
-        Map<String, String> specifiedConfig = stringMap();
-
         String configFilePath = arguments.get( CONFIG, null );
         if ( configFilePath != null )
         {
             File configFile = new File( configFilePath );
             try
             {
-                specifiedConfig = MapUtil.load( configFile );
+                return Config.fromFile( configFile ).build();
             }
-            catch ( IOException e )
+            catch ( Exception e )
             {
-                throw new ToolFailureException( String.format( "Could not read configuration file [%s]",
-                        configFilePath ), e );
+                throw new ToolFailureException( String.format( "Could not read configuration file [%s]", configFilePath ), e );
             }
         }
-        return Config.defaults( specifiedConfig );
+        return Config.defaults();
     }
 
     private static URI resolveBackupUri( String from, Args arguments, Config config ) throws ToolFailureException

@@ -6,9 +6,7 @@
 package org.neo4j.backup.impl;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -26,7 +24,6 @@ import org.neo4j.commandline.arguments.common.OptionalCanonicalPath;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.TimeUtil;
-import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.util.OptionalHostnamePort;
@@ -177,6 +174,7 @@ class OnlineBackupContextFactory
             Config config = builder.withHome( homeDir )
                                    .withSetting( logical_logs_location, logPath.toString() )
                                    .withConnectorsDisabled()
+                                   .withNoThrowOnFileLoadFailure() // Online backup does not require the presence of a neo4j.conf file.
                                    .build();
             additionalConfig.map( this::loadAdditionalConfigFile ).ifPresent( config::augment );
 
@@ -223,15 +221,6 @@ class OnlineBackupContextFactory
 
     private Config loadAdditionalConfigFile( Path path )
     {
-        try ( InputStream in = Files.newInputStream( path ) )
-        {
-            return Config.fromSettings( MapUtil.load( in ) ).build();
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException(
-                    "Could not read additional configuration from " + path + ". " +
-                    "The file either does not exist, is not a regular file, or is not readable.", e );
-        }
+        return Config.fromFile( path ).build();
     }
 }

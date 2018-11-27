@@ -12,7 +12,6 @@ import org.mockito.ArgumentCaptor;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,7 +31,6 @@ import org.neo4j.test.rule.system.SystemExitRule;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -211,7 +209,6 @@ public class BackupToolTest
         {
             // then
             assertThat( e.getMessage(), containsString( "Could not read configuration file" ) );
-            assertThat( e.getCause(), instanceOf( IOException.class ) );
         }
 
         verifyZeroInteractions( service );
