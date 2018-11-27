@@ -50,7 +50,7 @@ class NodeIndexContainsScanOperator(nodeOffset: Int,
                                valueIndexCursor,
                                IndexOrder.NONE,
                                property.maybeCachedNodePropertySlot.isDefined,
-                               IndexQuery.stringContains(index.properties()(0), value.stringValue()))
+                               IndexQuery.stringContains(index.properties()(0), value))
 
           case Values.NO_VALUE =>
             // CONTAINS null does not produce any rows
