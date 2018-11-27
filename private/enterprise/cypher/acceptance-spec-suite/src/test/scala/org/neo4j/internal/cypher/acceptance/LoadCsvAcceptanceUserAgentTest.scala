@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.interpreted.CSVResources
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
-import org.neo4j.cypher.internal.v3_5.util.helpers.StringHelper.RichString
+import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.scalatest.BeforeAndAfterAll
 import sun.net.www.protocol.http.HttpURLConnection
 

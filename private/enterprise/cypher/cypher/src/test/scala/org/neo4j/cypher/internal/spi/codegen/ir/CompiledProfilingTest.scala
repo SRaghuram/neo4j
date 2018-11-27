@@ -27,9 +27,9 @@ import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, NodeProxy}
 import org.neo4j.test.TestGraphDatabaseFactory
-import org.neo4j.cypher.internal.v3_5.expressions.SignedDecimalIntegerLiteral
-import org.neo4j.cypher.internal.v3_5.util.attribution.Id
-import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v4_0.expressions.SignedDecimalIntegerLiteral
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
 

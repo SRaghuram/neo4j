@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
-import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class ArgumentOperatorTest extends CypherFunSuite {
 

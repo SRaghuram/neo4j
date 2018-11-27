@@ -14,7 +14,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 import org.neo4j.test.TestGraphDatabaseFactory
 import org.neo4j.values.storable.DurationValue
 import org.neo4j.values.utils.TemporalParseException
-import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 abstract class TimeZoneAcceptanceTest(timezone: String) extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 

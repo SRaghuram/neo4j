@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast
 
-import org.neo4j.cypher.internal.v3_5.ast.semantics.{SemanticCheck, SemanticCheckResult, SemanticCheckableExpression}
-import org.neo4j.cypher.internal.v3_5.expressions.{Expression, LogicalProperty, PropertyKeyName}
-import org.neo4j.cypher.internal.v3_5.util.AssertionUtils.ifAssertionsEnabled
-import org.neo4j.cypher.internal.v3_5.util.{InputPosition, InternalException, Rewritable}
+import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticCheck, SemanticCheckResult, SemanticCheckableExpression}
+import org.neo4j.cypher.internal.v4_0.expressions.{Expression, LogicalProperty, PropertyKeyName}
+import org.neo4j.cypher.internal.v4_0.util.AssertionUtils.ifAssertionsEnabled
+import org.neo4j.cypher.internal.v4_0.util.{InputPosition, InternalException, Rewritable}
 
 abstract class RuntimeProperty(val prop: LogicalProperty) extends LogicalProperty with SemanticCheckableExpression{
   override def semanticCheck(ctx: Expression.SemanticContext): SemanticCheck = SemanticCheckResult.success

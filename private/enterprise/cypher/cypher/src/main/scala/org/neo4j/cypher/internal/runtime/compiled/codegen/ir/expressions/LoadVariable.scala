@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
-import org.neo4j.cypher.internal.v3_5.util.InternalException
+import org.neo4j.cypher.internal.v4_0.util.InternalException
 
 case class LoadVariable(variable: Variable) extends CodeGenExpression {
 

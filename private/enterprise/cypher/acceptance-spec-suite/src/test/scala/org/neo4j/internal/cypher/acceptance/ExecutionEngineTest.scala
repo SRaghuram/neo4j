@@ -23,7 +23,7 @@ import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.coreapi.TopLevelTransaction
 import org.neo4j.test.{TestEnterpriseGraphDatabaseFactory, TestGraphDatabaseFactory}
-import org.neo4j.cypher.internal.v3_5.frontend.phases.CompilationPhaseTracer.CompilationPhase
+import org.neo4j.cypher.internal.v4_0.frontend.phases.CompilationPhaseTracer.CompilationPhase
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

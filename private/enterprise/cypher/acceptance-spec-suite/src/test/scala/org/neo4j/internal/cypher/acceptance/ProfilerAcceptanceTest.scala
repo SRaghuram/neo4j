@@ -14,7 +14,7 @@ import org.neo4j.cypher.{ExecutionEngineFunSuite, ProfilerStatisticsNotReadyExce
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
-import org.neo4j.cypher.internal.v3_5.util.helpers.StringHelper.RichString
+import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 
 import scala.reflect.ClassTag
 

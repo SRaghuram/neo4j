@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.ExecutionContextOrdering
 import org.neo4j.values.{AnyValue, AnyValues}
-import org.neo4j.cypher.internal.v3_5.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 case class SortSlottedPipe(source: Pipe,
                            orderBy: Seq[ColumnOrder],

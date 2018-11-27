@@ -18,7 +18,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.graphdb.security.URLAccessRule
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 import org.neo4j.test.{TestEnterpriseGraphDatabaseFactory, TestGraphDatabaseFactory}
-import org.neo4j.cypher.internal.v3_5.util.helpers.StringHelper.RichString
+import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.scalatest.BeforeAndAfterAll
 
 import scala.collection.JavaConverters._

@@ -6,7 +6,7 @@
 package org.neo4j.cypher
 
 import org.neo4j.test.{TestEnterpriseGraphDatabaseFactory, TestGraphDatabaseFactory}
-import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 trait EnterpriseGraphDatabaseTestSupport extends GraphDatabaseTestSupport {
   self: CypherFunSuite =>

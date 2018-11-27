@@ -26,8 +26,8 @@ import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.MapValue
-import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v3_5.util.InternalNotification
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 
 object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 

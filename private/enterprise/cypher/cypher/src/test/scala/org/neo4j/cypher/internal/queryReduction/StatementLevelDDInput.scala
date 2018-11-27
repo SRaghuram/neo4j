@@ -8,8 +8,8 @@ package org.neo4j.cypher.internal.queryReduction
 import org.neo4j.cypher.internal.queryReduction.ast.ASTNodeHelper._
 import org.neo4j.cypher.internal.queryReduction.ast.copyNodeWith
 import org.neo4j.cypher.internal.queryReduction.ast.copyNodeWith.NodeConverter
-import org.neo4j.cypher.internal.v3_5.ast._
-import org.neo4j.cypher.internal.v3_5.util._
+import org.neo4j.cypher.internal.v4_0.ast._
+import org.neo4j.cypher.internal.v4_0.util._
 
 class StatementLevelDDInput(statement: Statement,
                             level: Int,

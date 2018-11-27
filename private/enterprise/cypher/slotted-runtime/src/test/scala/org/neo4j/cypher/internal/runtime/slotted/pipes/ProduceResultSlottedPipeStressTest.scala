@@ -15,9 +15,9 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.Record
 import org.neo4j.values.AnyValue
-import org.neo4j.cypher.internal.v3_5.util.attribution.Id
-import org.neo4j.cypher.internal.v3_5.util.symbols.CTNode
-import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.util.symbols.CTNode
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class ProduceResultSlottedPipeStressTest extends CypherFunSuite {
 

@@ -10,7 +10,7 @@ import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
-import org.neo4j.cypher.internal.v3_5.expressions.SemanticDirection
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.scalacheck.{Arbitrary, Gen, Shrink}
 import org.scalatest.prop.PropertyChecks
 

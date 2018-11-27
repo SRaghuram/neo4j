@@ -21,11 +21,11 @@ import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.{CursorFactory, NodeCursor, PropertyCursor, Read, _}
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI
-import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v3_5.expressions.SemanticDirection
-import org.neo4j.cypher.internal.v3_5.frontend.helpers._
-import org.neo4j.cypher.internal.v3_5.util.symbols
-import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.v4_0.frontend.helpers._
+import org.neo4j.cypher.internal.v4_0.util.symbols
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 /**
   * These are not test in the normal sense that they assert on some result,

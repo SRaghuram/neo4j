@@ -16,9 +16,9 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{RelationshipValue, VirtualValues}
-import org.neo4j.cypher.internal.v3_5.expressions.SemanticDirection
-import org.neo4j.cypher.internal.v3_5.util.InternalException
-import org.neo4j.cypher.internal.v3_5.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 import scala.collection.mutable
 

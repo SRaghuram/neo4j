@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.{ExecutionEngineFunSuite, PatternGen, QueryStatisticsTestSupport}
 import org.neo4j.graphdb.ResourceIterator
-import org.neo4j.cypher.internal.v3_5.expressions.SemanticDirection
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.scalacheck.{Gen, Shrink}
 
 /*

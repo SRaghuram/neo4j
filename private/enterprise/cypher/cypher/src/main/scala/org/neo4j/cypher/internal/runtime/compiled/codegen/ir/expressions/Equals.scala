@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.v3_5.util.symbols.{CTBoolean, CTMap, ListType}
-import org.neo4j.cypher.internal.v3_5.util.{IncomparableValuesException, symbols}
+import org.neo4j.cypher.internal.v4_0.util.symbols.{CTBoolean, CTMap, ListType}
+import org.neo4j.cypher.internal.v4_0.util.{IncomparableValuesException, symbols}
 
 case class Equals(lhs: CodeGenExpression, rhs: CodeGenExpression) extends CodeGenExpression {
 

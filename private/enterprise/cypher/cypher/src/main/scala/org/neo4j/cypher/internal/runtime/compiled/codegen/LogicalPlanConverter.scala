@@ -18,11 +18,11 @@ import org.neo4j.cypher.internal.v4_0.logical.plans.ColumnOrder
 import org.neo4j.cypher.internal.v4_0.logical
 import org.neo4j.cypher.internal.v4_0.logical
 import org.neo4j.cypher.internal.v4_0.logical
-import org.neo4j.cypher.internal.v3_5.expressions.{Expression, FunctionInvocation, functions => ast_functions}
-import org.neo4j.cypher.internal.v3_5.util.Eagerly.immutableMapValues
-import org.neo4j.cypher.internal.v3_5.util.Foldable._
-import org.neo4j.cypher.internal.v3_5.util.{InternalException, One, ZeroOneOrMany, symbols}
-import org.neo4j.cypher.internal.v3_5.{expressions => ast}
+import org.neo4j.cypher.internal.v4_0.expressions.{Expression, FunctionInvocation, functions => ast_functions}
+import org.neo4j.cypher.internal.v4_0.util.Eagerly.immutableMapValues
+import org.neo4j.cypher.internal.v4_0.util.Foldable._
+import org.neo4j.cypher.internal.v4_0.util.{InternalException, One, ZeroOneOrMany, symbols}
+import org.neo4j.cypher.internal.v4_0.{expressions => ast}
 
 object LogicalPlanConverter {
 

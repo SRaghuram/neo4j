@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.values.AnyValue
-import org.neo4j.cypher.internal.v3_5.util.symbols
+import org.neo4j.cypher.internal.v4_0.util.symbols
 
 class ProduceResultOperator(slots: SlotConfiguration, fieldNames: Array[String]) extends LazyReduceOperator {
 

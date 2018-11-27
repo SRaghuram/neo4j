@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQue
 import org.neo4j.cypher.internal.runtime.vectorized.MorselExecutionContext
 import org.neo4j.values.storable.Values
 import org.neo4j.values.{AnyValue, AnyValues}
-import org.neo4j.cypher.internal.v3_5.util.symbols.CTAny
+import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
 
 /*
 Vectorized version of the min and max aggregation functions

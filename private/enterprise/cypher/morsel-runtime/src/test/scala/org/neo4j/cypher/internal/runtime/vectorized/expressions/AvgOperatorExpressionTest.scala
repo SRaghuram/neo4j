@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.vectorized.operators.DummyExpression
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.longValue
 import org.neo4j.values.virtual.VirtualValues.list
-import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class AvgOperatorExpressionTest extends CypherFunSuite {
 

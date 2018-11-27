@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQue
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api._
 import org.neo4j.values.storable.{TextValue, Values}
-import org.neo4j.cypher.internal.v3_5.util.CypherTypeException
+import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 
 class NodeIndexContainsScanOperator(nodeOffset: Int,
                                     label: Int,

@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils.makeSetValueInSlotFunctionFor
 import org.neo4j.values.AnyValue
-import org.neo4j.cypher.internal.v3_5.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
                                               slots: SlotConfiguration,
