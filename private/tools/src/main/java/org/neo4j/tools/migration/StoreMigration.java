@@ -87,9 +87,6 @@ public class StoreMigration
         StoreLogService logService = StoreLogService.withUserLogProvider( userLogProvider )
                 .withInternalLog( config.get( store_internal_log_path ) ).build( fs );
 
-        VisibleMigrationProgressMonitor progressMonitor =
-                new VisibleMigrationProgressMonitor( logService.getUserLog( StoreMigration.class ) );
-
         LifeSupport life = new LifeSupport();
 
         life.add( logService );
@@ -120,9 +117,9 @@ public class StoreMigration
             life.start();
 
             long startTime = System.currentTimeMillis();
-            DatabaseMigrator migrator = new DatabaseMigrator( progressMonitor, fs, config, logService,
-                    indexProviderMap, pageCache, RecordFormatSelector.selectForConfig( config, userLogProvider ), tailScanner,
-                    jobScheduler );
+            DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService,
+                    indexProviderMap,
+                    pageCache, tailScanner, jobScheduler );
             migrator.migrate( databaseLayout );
 
             // Append checkpoint so the last log entry will have the latest version
