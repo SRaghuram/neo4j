@@ -91,7 +91,7 @@ class ReadReplicaStartupProcess implements Lifecycle
     }
 
     @Override
-    public void start()
+    public void start() throws Throwable
     {
         TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
         Map<String,? extends LocalDatabase> dbsToSync = copyRegisteredDatabases();
@@ -136,15 +136,8 @@ class ReadReplicaStartupProcess implements Lifecycle
             }
         }
 
-        try
-        {
-            databaseService.start();
-            catchupProcessManager.start();
-        }
-        catch ( Throwable e )
-        {
-            throw new RuntimeException( e );
-        }
+        databaseService.start();
+        catchupProcessManager.start();
     }
 
     private HashMap<String,? extends LocalDatabase> copyRegisteredDatabases()
