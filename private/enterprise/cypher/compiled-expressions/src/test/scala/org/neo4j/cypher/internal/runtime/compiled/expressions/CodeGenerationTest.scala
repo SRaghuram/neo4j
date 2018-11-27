@@ -15,7 +15,7 @@ import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, SlotConfiguration}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, MapExecutionContext}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CoerceToPredicate
@@ -2330,65 +2330,122 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("map projection node with map context") {
-    val propertyMap = map(Array("prop"), Array(stringValue("hello")))
-    val node = nodeValue(1, EMPTY_TEXT_ARRAY, propertyMap)
-    when(ctx.contains("n")).thenReturn(true)
-    when(ctx.apply("n")).thenReturn(node)
-    when(db.nodeAsMap(any[Long], any[NodeCursor], any[PropertyCursor])).thenReturn(propertyMap)
+      val propertyMap = map(Array("prop"), Array(stringValue("hello")))
+      val node = nodeValue(1, EMPTY_TEXT_ARRAY, propertyMap)
+      when(ctx.contains("n")).thenReturn(true)
+      when(ctx.apply("n")).thenReturn(node)
+      when(db.nodeAsMap(any[Long], any[NodeCursor], any[PropertyCursor])).thenReturn(propertyMap)
 
-    compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")))
-      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-    compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")))
-      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(map(Array("foo"), Array(stringValue("projected"))))
+      compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")))
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")))
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
   }
 
-  test("map projection node with slotted context") {
+  test("map projection node from long slot") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
     val offset = 32
     val nodeId = 11
-    val slots = SlotConfiguration(Map("n" -> LongSlot(offset, nullable = false, symbols.CTNode)), 1, 0)
-
     val node = nodeValue(nodeId, EMPTY_TEXT_ARRAY, propertyMap)
     when(ctx.getLongAt(offset)).thenReturn(nodeId)
     when(db.nodeById(nodeId)).thenReturn(node)
     when(db.nodeAsMap(any[Long], any[NodeCursor], any[PropertyCursor])).thenReturn(propertyMap)
+    for (nullable <- List(true, false)) {
+      val slots = SlotConfiguration(Map("n" -> LongSlot(offset, nullable, symbols.CTNode)), 1, 0)
+      compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+    }
+  }
 
-    compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
-      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-    compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
-      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(map(Array("foo"), Array(stringValue("projected"))))
+  test("map projection node from ref slot") {
+    val propertyMap = map(Array("prop"), Array(stringValue("hello")))
+    val offset = 32
+    val nodeId = 11
+    val node = nodeValue(nodeId, EMPTY_TEXT_ARRAY, propertyMap)
+    when(ctx.getRefAt(offset)).thenReturn(node)
+    when(db.nodeAsMap(any[Long], any[NodeCursor], any[PropertyCursor])).thenReturn(propertyMap)
+    for (nullable <- List(true, false)) {
+      val slots = SlotConfiguration(Map("n" -> RefSlot(offset, nullable, symbols.CTNode)), 0, 1)
+      compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+    }
   }
 
   test("map projection relationship with map context") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
     val relationship = relationshipValue(1, nodeValue(11, EMPTY_TEXT_ARRAY, EMPTY_MAP),
-                                         nodeValue(12, EMPTY_TEXT_ARRAY,EMPTY_MAP), stringValue("R"), propertyMap)
+                                         nodeValue(12, EMPTY_TEXT_ARRAY, EMPTY_MAP), stringValue("R"), propertyMap)
     when(ctx.contains("r")).thenReturn(true)
     when(ctx.apply("r")).thenReturn(relationship)
     when(db.relationshipAsMap(any[Long], any[RelationshipScanCursor], any[PropertyCursor])).thenReturn(propertyMap)
 
     compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")))
-      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
     compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")))
-      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(map(Array("foo"), Array(stringValue("projected"))))
+      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
   }
 
-  test("map projection relationship with slotted context") {
+  test("map projection relationship from long slot") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
     val offset = 32
     val relationshipId = 1337
-    val slots = SlotConfiguration(Map("r" -> LongSlot(offset, nullable = true, symbols.CTRelationship)), 1, 0)
-
-    val relationship = relationshipValue(1, nodeValue(11, EMPTY_TEXT_ARRAY, EMPTY_MAP),
-                                         nodeValue(12, EMPTY_TEXT_ARRAY,EMPTY_MAP), stringValue("R"), propertyMap)
+    val relationship = relationshipValue(relationshipId, nodeValue(11, EMPTY_TEXT_ARRAY, EMPTY_MAP),
+                                         nodeValue(12, EMPTY_TEXT_ARRAY, EMPTY_MAP), stringValue("R"), propertyMap)
     when(ctx.getLongAt(offset)).thenReturn(relationshipId)
     when(db.relationshipById(relationshipId)).thenReturn(relationship)
     when(db.relationshipAsMap(any[Long], any[RelationshipScanCursor], any[PropertyCursor])).thenReturn(propertyMap)
+    for (nullable <- List(true, false)) {
+      val slots = SlotConfiguration(Map("r" -> LongSlot(offset, nullable, symbols.CTRelationship)), 1, 0)
+      compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots)
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots)
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+    }
+  }
 
-    compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots)
-      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-    compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots)
-      .evaluate(ctx, db, EMPTY_MAP, cursors)should equal(map(Array("foo"), Array(stringValue("projected"))))
+  test("map projection relationship from ref slot") {
+    val propertyMap = map(Array("prop"), Array(stringValue("hello")))
+    val offset = 32
+    val relationshipId = 1337
+    val relationship = relationshipValue(relationshipId, nodeValue(11, EMPTY_TEXT_ARRAY, EMPTY_MAP),
+                                         nodeValue(12, EMPTY_TEXT_ARRAY, EMPTY_MAP), stringValue("R"), propertyMap)
+    when(ctx.getRefAt(offset)).thenReturn(relationship)
+    when(db.relationshipAsMap(any[Long], any[RelationshipScanCursor], any[PropertyCursor])).thenReturn(propertyMap)
+    for (nullable <- List(true, false)) {
+      val slots = SlotConfiguration(Map("r" -> RefSlot(offset, nullable, symbols.CTRelationship)), 0, 1)
+      compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots)
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots)
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+    }
+  }
+
+  test("map projection mapValue with map context") {
+    val propertyMap = map(Array("prop"), Array(stringValue("hello")))
+    when(ctx.contains("map")).thenReturn(true)
+    when(ctx.apply("map")).thenReturn(propertyMap)
+
+    compile(mapProjection("map", includeAllProps = true, "foo" -> literalString("projected")))
+      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+    compile(mapProjection("map", includeAllProps = false, "foo" -> literalString("projected")))
+      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+  }
+
+  test("map projection mapValue from ref slot") {
+    val propertyMap = map(Array("prop"), Array(stringValue("hello")))
+    val offset = 32
+    when(ctx.getRefAt(offset)).thenReturn(propertyMap)
+    for (nullable <- List(true, false)) {
+      val slots = SlotConfiguration(Map("n" -> RefSlot(offset, nullable, symbols.CTMap)), 0, 1)
+      compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
+        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+    }
   }
 
   private def mapProjection(name: String, includeAllProps: Boolean, items: (String,Expression)*) =

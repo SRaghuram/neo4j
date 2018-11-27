@@ -208,25 +208,30 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
         if (!includeAllProps) {
           Some(IntermediateExpression(
-            block(buildMapValue :+ invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")):_*),
+            block(buildMapValue :+ invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")): _*),
             expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ maybeVariable, maybeNullCheck.toSet))
 
-        }else if (buildMapValue.isEmpty) {
+        } else if (buildMapValue.isEmpty) {
           Some(IntermediateExpression(
             block(buildMapValue ++ Seq(
-                invokeStatic(
-                  method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("asMapValue"),
-                  accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)): _*),
-            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ maybeVariable, maybeNullCheck.toSet))
+              invokeStatic(
+                method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor](
+                  "asMapValue"),
+                accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)): _*),
+            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ maybeVariable,
+            maybeNullCheck.toSet))
         } else {
           Some(IntermediateExpression(
             block(buildMapValue ++ Seq(
-            invoke(
-            invokeStatic(
-              method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("asMapValue"),
-              accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
-            method[MapValue, MapValue, MapValue]("updatedWith"), invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")))): _*),
-            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ maybeVariable, maybeNullCheck.toSet))
+              invoke(
+                invokeStatic(
+                  method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor](
+                    "asMapValue"),
+                  accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
+                method[MapValue, MapValue, MapValue]("updatedWith"),
+                invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")))): _*),
+            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ maybeVariable,
+            maybeNullCheck.toSet))
         }
       }
 
@@ -2158,13 +2163,11 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         if (nullable) Option(equal(getRefAt(offset, currentContext), noValue)) else None, None)
     case _ =>
       val local = namer.nextVariableName()
-      (oneTime(
-        block(
-          assign(local,
+      (block(oneTime(
+       assign(local,
                  invokeStatic(
                    method[CompiledHelpers, AnyValue, ExecutionContext, String]("loadVariable"),
-                   loadContext(currentContext), constant(name))),
-          load(local))),
+                   loadContext(currentContext), constant(name)))), load(local)),
         Some(equal(load(local), noValue)), Some(variable[AnyValue](local, constant(null))))
   }
 }
