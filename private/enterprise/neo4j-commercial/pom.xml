@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.neo4j</groupId>
         <artifactId>commercial-parent</artifactId>
-        <version>3.5.0-SNAPSHOT</version>
+        <version>3.5.1-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
 
     <artifactId>neo4j-commercial</artifactId>
-    <version>3.5.0-SNAPSHOT</version>
+    <version>3.5.1-SNAPSHOT</version>
 
     <name>Neo4j - Commercial</name>
     <packaging>jar</packaging>
