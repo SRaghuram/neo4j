@@ -89,7 +89,7 @@ public class HaSettings implements LoadableConfig
 
     @Description( "Interval of pulling updates from master." )
     @Deprecated
-    public static final Setting<Duration> pull_interval = setting( "ha.pull_interval", DURATION, "0s" );
+    public static final Setting<Duration> pull_interval = setting( "ha.pull_interval", DURATION, "10s" );
 
     @Description( "The amount of slaves the master will ask to replicate a committed transaction. " )
     @Deprecated
