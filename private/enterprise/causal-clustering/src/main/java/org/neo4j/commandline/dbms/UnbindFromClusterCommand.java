@@ -49,6 +49,7 @@ public class UnbindFromClusterCommand implements AdminCommand
     {
         return fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
                 .withSetting( GraphDatabaseSettings.active_database, databaseName )
+                .withNoThrowOnFileLoadFailure()
                 .withHome( homeDir ).build();
     }
 
@@ -96,7 +97,7 @@ public class UnbindFromClusterCommand implements AdminCommand
         {
             throw new IncorrectUsage( e.getMessage() );
         }
-        catch ( UnbindFailureException | CannotWriteException | IOException e )
+        catch ( Exception e )
         {
             throw new CommandFailed( e.getMessage(), e );
         }

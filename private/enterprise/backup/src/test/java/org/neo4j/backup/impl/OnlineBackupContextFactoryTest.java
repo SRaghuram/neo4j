@@ -7,7 +7,6 @@ package org.neo4j.backup.impl;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,12 +32,11 @@ import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.any;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
-import static org.junit.internal.matchers.ThrowableCauseMatcher.hasCause;
 import static org.neo4j.backup.impl.SelectedBackupProtocol.ANY;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
@@ -183,7 +181,7 @@ public class OnlineBackupContextFactoryTest
 
         // and
         expected.expect( CommandFailed.class );
-        expected.expectCause( hasCause( any( NoSuchFileException.class ) ) );
+        expected.expectMessage( containsString( "does not exist" ) );
 
         // expect
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
