@@ -15,6 +15,7 @@ import java.util.TreeSet;
 
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.graphdb.QueryExecutionException;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.values.storable.NumberValue;
 import org.neo4j.values.storable.TextValue;
@@ -24,6 +25,8 @@ import org.neo4j.values.storable.Values;
 public interface QueryExecutor
 {
     void executeQuery( String query, Map<String,Object> params, QueryResult.QueryResultVisitor resultVisitor );
+
+    Transaction beginTx();
 
     default long executeQueryLong( String query )
     {

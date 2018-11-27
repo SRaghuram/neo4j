@@ -5,6 +5,7 @@
  */
 package com.neo4j.security;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -12,9 +13,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.cypher.result.QueryResult;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.Credential;
@@ -333,8 +336,8 @@ class SystemGraphInitializer
         {
             Pair<Integer,Integer> numberOfDeletedUsersAndRoles = Pair.of( 0, 0 );
 
-//            try ( Transaction transaction = queryExecutor.systemDbBeginTransaction() )
-//            {
+            try ( Transaction transaction = queryExecutor.beginTx() )
+            {
                 // If a reset of all existing auth data was requested we do it within the same transaction as the import
                 if ( importOptions.shouldResetSystemGraphAuthBeforeImport )
                 {
@@ -355,10 +358,10 @@ class SystemGraphInitializer
                         systemGraphOperations.addRoleToUser( role.name(), username );
                     }
                 }
-//                transaction.success();
-//            }
+                transaction.success();
+            }
 
-//            assert validateImportSucceeded( userRepository, roleRepository ); // TODO: Should this really only be called as part of an assert?
+            assert validateImportSucceeded( userRepository, roleRepository );
 
             // Log what happened to the security log
             if ( importOptions.shouldResetSystemGraphAuthBeforeImport )
@@ -419,39 +422,39 @@ class SystemGraphInitializer
         return Pair.of( usernames.size(), roleNames.size() );
     }
 
-//    private boolean validateImportSucceeded( UserRepository userRepository, RoleRepository roleRepository ) throws Throwable
-//    {
-//        // Take a new snapshot of the import repositories
-//        ListSnapshot<User> users = userRepository.getPersistedSnapshot();
-//        ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
-//
-////        try ( Transaction transaction = queryExecutor.systemDbBeginTransaction() )
-////        {
-//            Set<String> systemGraphUsers = getAllUsernames();
-//            List<String> repoUsernames = users.values().stream().map( User::name ).collect( Collectors.toList() );
-//            if ( !systemGraphUsers.containsAll( repoUsernames ) )
-//            {
-//                throw new IOException( "Users were not imported correctly" );
-//            }
-//
-//            List<String> repoRoleNames = roles.values().stream().map( RoleRecord::name ).collect( Collectors.toList() );
-//            Set<String> systemGraphRoles = getAllRoleNames();
-//            if ( !systemGraphRoles.containsAll( repoRoleNames ) )
-//            {
-//                throw new IOException( "Roles were not imported correctly" );
-//            }
-//
-//            for ( RoleRecord role : roles.values() )
-//            {
-//                Set<String> usernamesForRole = getUsernamesForRole( role.name() );
-//                if ( !usernamesForRole.containsAll( role.users() ) )
-//                {
-//                    throw new IOException( "Role assignments were not imported correctly" );
-//                }
-//            }
-//
-////            transaction.success();
-////        }
-//        return true;
-//    }
+    private boolean validateImportSucceeded( UserRepository userRepository, RoleRepository roleRepository ) throws Throwable
+    {
+        // Take a new snapshot of the import repositories
+        ListSnapshot<User> users = userRepository.getPersistedSnapshot();
+        ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
+
+        try ( Transaction transaction = queryExecutor.beginTx() )
+        {
+            Set<String> systemGraphUsers = systemGraphOperations.getAllUsernames();
+            List<String> repoUsernames = users.values().stream().map( User::name ).collect( Collectors.toList() );
+            if ( !systemGraphUsers.containsAll( repoUsernames ) )
+            {
+                throw new IOException( "Users were not imported correctly" );
+            }
+
+            List<String> repoRoleNames = roles.values().stream().map( RoleRecord::name ).collect( Collectors.toList() );
+            Set<String> systemGraphRoles = systemGraphOperations.getAllRoleNames();
+            if ( !systemGraphRoles.containsAll( repoRoleNames ) )
+            {
+                throw new IOException( "Roles were not imported correctly" );
+            }
+
+            for ( RoleRecord role : roles.values() )
+            {
+                Set<String> usernamesForRole = systemGraphOperations.getUsernamesForRole( role.name() );
+                if ( !usernamesForRole.containsAll( role.users() ) )
+                {
+                    throw new IOException( "Role assignments were not imported correctly" );
+                }
+            }
+
+            transaction.success();
+        }
+        return true;
+    }
 }

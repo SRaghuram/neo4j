@@ -6,6 +6,7 @@
 package com.neo4j.security;
 
 import java.io.File;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
@@ -99,14 +100,24 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
 
         return database ->
         {
-            QueryExecutor queryExecutor = ( query, params, resultVisitor ) ->
+            QueryExecutor queryExecutor = new QueryExecutor()
             {
-                try ( Transaction tx = database.beginTx() )
+                @Override
+                public void executeQuery( String query, Map<String,Object> params, QueryResult.QueryResultVisitor resultVisitor )
                 {
-                    Result result = database.execute( query, params );
-                    QueryResult queryResult = ((QueryResultProvider) result).queryResult();
-                    queryResult.accept( resultVisitor );
-                    tx.success();
+                    try ( Transaction tx = database.beginTx() )
+                    {
+                        Result result = database.execute( query, params );
+                        QueryResult queryResult = ((QueryResultProvider) result).queryResult();
+                        queryResult.accept( resultVisitor );
+                        tx.success();
+                    }
+                }
+
+                @Override
+                public Transaction beginTx()
+                {
+                    return database.beginTx();
                 }
             };
 

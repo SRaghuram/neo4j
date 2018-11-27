@@ -37,6 +37,7 @@ class ContextSwitchingSystemGraphQueryExecutor implements QueryExecutor
         this.activeDbName = activeDbName;
     }
 
+    @Override
     public void executeQuery( String query, Map<String,Object> params, QueryResult.QueryResultVisitor resultVisitor )
     {
         final ThreadToStatementContextBridge statementContext = getThreadToStatementContextBridge();
@@ -84,7 +85,8 @@ class ContextSwitchingSystemGraphQueryExecutor implements QueryExecutor
         queryResult.accept( resultVisitor );
     }
 
-    Transaction systemDbBeginTransaction()
+    @Override
+    public Transaction beginTx()
     {
         final ThreadToStatementContextBridge statementContext = getThreadToStatementContextBridge();
         final Runnable onClose;
