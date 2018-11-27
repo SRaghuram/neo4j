@@ -27,7 +27,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
   val VERBOSE = false
 
-  override def databaseConfig() = super.databaseConfig() ++ Map(
+  override def databaseConfig(): collection.Map[Setting[_], String] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_min_replan_interval -> "0",
     GraphDatabaseSettings.cypher_compiler_tracing -> "true",
     GraphDatabaseSettings.pagecache_memory -> "8M"
@@ -63,7 +63,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
       cypher_idp_solver_duration_threshold, iterationDurationThresholds, Map.empty)
 
     // THEN
-    iterationDurationThresholds.slice(0, iterationDurationThresholds.size - 1).foreach { (duration) =>
+    iterationDurationThresholds.slice(0, iterationDurationThresholds.size - 1).foreach { duration =>
       withClue(s"For duration threshold at $duration: ") {
         idpInnerIterations(duration) should be < idpInnerIterations(iterationDurationThresholds.last)
       }
@@ -94,6 +94,33 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
     assertMinExpandsAndJoins(plan, Map("expands" -> numberOfPatternRelationships, "joins" -> 1))
     // For length 12 we improved compiler times from tens of minutes down to ~3s, we think this test of 120s is stable on a wide range of computing hardware
     duration should be <= 120000L
+  }
+
+  test("should plan a large star relationship pattern") {
+    for (numberOfPatternRelationships <- Range(9, 50, 9))
+    {
+      // GIVEN
+      makeStarDataset(numberOfPatternRelationships)
+
+      // WHEN
+      val query = makeStarPatternQuery(numberOfPatternRelationships)
+      if (VERBOSE) {
+        println(s"Running IDP on pattern expression of length $numberOfPatternRelationships")
+        println(s"\t$query")
+      }
+      val start = System.currentTimeMillis()
+      val result = executeSingle(s"EXPLAIN CYPHER planner=IDP $query", Map.empty)
+      val duration = System.currentTimeMillis() - start
+      if (VERBOSE) {
+        println(result.executionPlanDescription())
+        println(s"IDP took ${duration}ms to solve length $numberOfPatternRelationships")
+      }
+
+      // THEN
+      val plan = result.executionPlanDescription()
+      val counts = countExpandsAndJoins(plan)
+      counts("expands") should equal(numberOfPatternRelationships)
+    }
   }
 
   test("very long pattern expressions should be solvable with multiple planners giving identical results using index lookups, expands and joins") {
@@ -138,7 +165,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
       data + (planner -> times)
     }
     if (VERBOSE) {
-      Seq("Compile Time", "Query Time", "Number of Joins in Plan", "Number of Results").zipWithIndex.foreach { (pair) =>
+      Seq("Compile Time", "Query Time", "Number of Joins in Plan", "Number of Results").zipWithIndex.foreach { pair =>
         val name = pair._1
         val index = pair._2
         println(s"\n$name\n")
@@ -197,7 +224,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
       }
       acc
     }
-    if (VERBOSE) configValues.foreach { (configValue) =>
+    if (VERBOSE) configValues.foreach { configValue =>
       println(s"$configValue\t${idpInnerIterations(configValue)}")
     }
     idpInnerIterations.toMap[Any, Int]
@@ -220,12 +247,28 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
       a <- 0 to size;
       b <- 0 to size
     ) yield {
-      if (a > 0) relate(nodes(s"n(${a - 1},${b})"), nodes(s"n(${a},${b})"), "KNOWS", s"n(${a - 1},${b}-n(${a},${b})")
-      if (b > 0) relate(nodes(s"n(${a},${b - 1})"), nodes(s"n(${a},${b})"), "KNOWS", s"n(${a},${b - 1}-n(${a},${b})")
+      if (a > 0) relate(nodes(s"n(${a - 1},$b)"), nodes(s"n($a,$b)"), "KNOWS", s"n(${a - 1},$b-n($a,$b)")
+      if (b > 0) relate(nodes(s"n($a,${b - 1})"), nodes(s"n($a,$b)"), "KNOWS", s"n($a,${b - 1}-n($a,$b)")
     }
   }
 
-  private def runWithConfig(m: (Setting[_], String)*)(run: (ExecutionEngine, GraphDatabaseCypherService) => Unit) = {
+  private def makeStarDataset(size: Int): Unit = graph.inTx {
+    val center = createLabeledNode("Center")
+
+    for (i <- 1 to size) {
+      val node = createLabeledNode(s"Label$i")
+      relate(center, node, s"REL$i")
+    }
+  }
+
+  private def makeStarPatternQuery(size: Int): String = {
+    val (matchStatement, returnStatement) = (1 to size).foldLeft(("MATCH (c:Center) WITH c LIMIT 1 ", "RETURN c")) {
+      (strings, i) => (strings._1 + s"MATCH (c)-[:REL$i]->(n$i:Label$i) ", strings._2 + s", n$i")
+    }
+    matchStatement + returnStatement
+  }
+
+  private def runWithConfig(m: (Setting[_], String)*)(run: (ExecutionEngine, GraphDatabaseCypherService) => Unit): Unit = {
     val config: util.Map[String, String] = m.map {
       case (setting, settingValue) => setting.name() -> settingValue
     }.toMap.asJava
