@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
+import com.neo4j.security.CommercialSecurityModule;
 
 import java.time.Clock;
 
@@ -25,11 +26,12 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
-import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
+import org.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
@@ -137,8 +139,19 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
     @Override
     public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
     {
-        //TODO: change to commercial security module here when ready
-        EnterpriseEditionModule.createEnterpriseSecurityModule( this, platformModule, procedures );
+        SecurityProvider securityProvider;
+        if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
+        {
+            CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( platformModule, this,
+                    platformModule.logService.getUserLog( CommercialReadReplicaEditionModule.class ), procedures, "commercial-security-module" );
+            platformModule.life.add( securityModule );
+            securityProvider = securityModule;
+        }
+        else
+        {
+            securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
+        }
+        setSecurityProvider( securityProvider );
     }
 
     private void initGlobalGuard( Clock clock, LogService logService )
@@ -148,5 +161,4 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
             globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( clock, logService );
         }
     }
-
 }

@@ -374,7 +374,7 @@ public class CausalClusterInProcessBuilder
                 int httpsPort = portFactory.httpsReadReplicaPort( replicaId );
 
                 String homeDir = "replica-" + replicaId;
-                EnterpriseInProcessServerBuilder builder = new EnterpriseInProcessServerBuilder( clusterPath.toFile(), homeDir );
+                EnterpriseInProcessServerBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
 
                 String homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath().toString();
                 builder.withConfig( GraphDatabaseSettings.neo4j_home.name(), homePath );

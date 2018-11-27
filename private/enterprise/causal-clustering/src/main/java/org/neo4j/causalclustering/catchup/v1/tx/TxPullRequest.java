@@ -11,6 +11,8 @@ import org.neo4j.causalclustering.catchup.RequestMessageType;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
 
+import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
+
 public class TxPullRequest implements DatabaseCatchupRequest
 {
     private final long previousTxId;
@@ -19,6 +21,10 @@ public class TxPullRequest implements DatabaseCatchupRequest
 
     public TxPullRequest( long previousTxId, StoreId expectedStoreId, String databaseName )
     {
+        if ( previousTxId < BASE_TX_ID )
+        {
+            throw new IllegalArgumentException( "Cannot request transaction from " + previousTxId );
+        }
         this.previousTxId = previousTxId;
         this.expectedStoreId = expectedStoreId;
         this.databaseName = databaseName;

@@ -20,15 +20,17 @@ import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenS
 import org.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import org.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
+import org.neo4j.causalclustering.helper.TemporaryDatabase;
 import org.neo4j.causalclustering.identity.MemberId;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdType;
@@ -44,6 +46,7 @@ import org.neo4j.kernel.recovery.RecoveryRequiredChecker;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN;
@@ -67,45 +70,48 @@ public class CoreBootstrapper
     private static final long FIRST_TERM = 0L;
 
     private final DatabaseService databaseService;
+    private final TemporaryDatabase.Factory tempDatabaseFactory;
+    private final File bootstrapDirectory;
+    private final Map<String,DatabaseInitializer> databaseInitializers;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final Config config;
-    private final LogProvider logProvider;
     private final RecoveryRequiredChecker recoveryRequiredChecker;
     private final Log log;
 
-    CoreBootstrapper( DatabaseService databaseService, FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache )
+    CoreBootstrapper( DatabaseService databaseService, TemporaryDatabase.Factory tempDatabaseFactory, File bootstrapDirectory,
+            Map<String,DatabaseInitializer> databaseInitializers, FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache )
     {
         this.databaseService = databaseService;
-        this.pageCache = pageCache;
+        this.tempDatabaseFactory = tempDatabaseFactory;
+        this.bootstrapDirectory = bootstrapDirectory; // typically: data/bootstrap/
+        this.databaseInitializers = databaseInitializers;
         this.fs = fs;
         this.config = config;
-        this.logProvider = logProvider;
+        this.pageCache = pageCache;
         this.log = logProvider.getLog( getClass() );
         this.recoveryRequiredChecker = new RecoveryRequiredChecker( fs, pageCache, config );
     }
 
-    private void updateSnapshot( String databaseName, LocalDatabase localDatabase, CoreSnapshot coreSnapshot ) throws IOException
+    public CoreSnapshot bootstrap( Set<MemberId> members ) throws IOException
     {
-        DatabaseLayout databaseLayout = localDatabase.databaseLayout();
-        if ( recoveryRequiredChecker.isRecoveryRequiredAt( databaseLayout ) )
+        if ( fs.fileExists( bootstrapDirectory ) )
         {
-            String message = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
-                    "instance of Neo4j or a Neo4j backup";
-            log.error( message );
-            throw new IllegalStateException( message );
+            throw new IllegalStateException( "Directory should not exist: " + bootstrapDirectory );
         }
-        StoreFactory factory = new StoreFactory( databaseLayout, config,
-                new DefaultIdGeneratorFactory( fs ), pageCache, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
-        NeoStores neoStores = factory.openAllNeoStores( true );
-        neoStores.close();
 
-        coreSnapshot.add( databaseName, CoreStateFiles.ID_ALLOCATION, deriveIdAllocationState( databaseLayout ) );
-        coreSnapshot.add( databaseName, CoreStateFiles.LOCK_TOKEN, new ReplicatedLockTokenState() );
-        appendNullTransactionLogEntryToSetRaftIndexToMinusOne( databaseLayout );
+        try
+        {
+            fs.mkdirs( bootstrapDirectory );
+            return bootstrap0( members );
+        }
+        finally
+        {
+            fs.deleteRecursively( bootstrapDirectory );
+        }
     }
 
-    public CoreSnapshot bootstrap( Set<MemberId> members ) throws IOException
+    private CoreSnapshot bootstrap0( Set<MemberId> members ) throws IOException
     {
         CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
@@ -113,10 +119,84 @@ public class CoreBootstrapper
 
         for ( Map.Entry<String,? extends LocalDatabase> database : databaseService.registeredDatabases().entrySet() )
         {
-            updateSnapshot( database.getKey(), database.getValue(), coreSnapshot );
+            String databaseName = database.getKey();
+            DatabaseLayout databaseLayout = database.getValue().databaseLayout();
+            assert databaseName.equals( databaseLayout.getDatabaseName() );
+
+            bootstrapDatabase( databaseName, databaseLayout );
+
+            IdAllocationState idAllocationState = deriveIdAllocationState( databaseLayout );
+            coreSnapshot.add( databaseName, CoreStateFiles.ID_ALLOCATION, idAllocationState );
+            coreSnapshot.add( databaseName, CoreStateFiles.LOCK_TOKEN, new ReplicatedLockTokenState() );
         }
 
         return coreSnapshot;
+    }
+
+    private void bootstrapDatabase( String databaseName, DatabaseLayout databaseLayout ) throws IOException
+    {
+        if ( recoveryRequiredChecker.isRecoveryRequiredAt( databaseLayout ) )
+        {
+            String message = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
+                    "instance of Neo4j or a Neo4j backup";
+            log.error( message );
+            throw new IllegalStateException( message );
+        }
+
+        if ( !NeoStores.isStorePresent( pageCache, databaseLayout ) )
+        {
+            File databaseDirectory = databaseLayout.databaseDirectory();
+            fs.deleteRecursively( databaseDirectory );
+
+            String txLogsDirectoryName = "tx-logs";
+            File txLogsAfterBootstrap = new File( databaseDirectory, txLogsDirectoryName );
+
+            DatabaseLayout bootstrapDatabaseLayout = StoreLayout.of( bootstrapDirectory ).databaseLayout( "bootstrap.db" );
+            File bootstrapDatabaseDirectory = bootstrapDatabaseLayout.databaseDirectory();
+            initializeDatabase( bootstrapDatabaseDirectory, databaseInitializers.get( databaseName ), txLogsDirectoryName );
+
+            fs.renameFile( bootstrapDatabaseDirectory, databaseDirectory );
+            moveTransactionLogs( txLogsAfterBootstrap, config.get( GraphDatabaseSettings.logical_logs_location ) );
+            if ( !fs.deleteFile( txLogsAfterBootstrap ) )
+            {
+                log.warn( "Could not delete: " + txLogsAfterBootstrap );
+            }
+        }
+
+        appendNullTransactionLogEntryToSetRaftIndexToMinusOne( databaseLayout );
+    }
+
+    private void moveTransactionLogs( File fromDirectory, File toDirectory ) throws IOException
+    {
+        if ( fromDirectory.equals( toDirectory ) )
+        {
+            return;
+        }
+
+        fs.mkdirs( toDirectory );
+        File[] txLogFiles = fs.listFiles( fromDirectory );
+
+        if ( txLogFiles == null )
+        {
+            throw new IllegalStateException( "Could not list files in: " + fromDirectory );
+        }
+
+        for ( File txLogFile : txLogFiles )
+        {
+            fs.moveToDirectory( txLogFile, toDirectory );
+        }
+    }
+
+    private void initializeDatabase( File bootstrapDatabaseDirectory, DatabaseInitializer databaseInitializer, String logsDirectoryName )
+    {
+        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapDatabaseDirectory, logsDirectoryName,
+                config.get( record_format ) ) )
+        {
+            if ( databaseInitializer != null )
+            {
+                databaseInitializer.initialize( temporaryDatabase.graphDatabaseService() );
+            }
+        }
     }
 
     private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( DatabaseLayout databaseLayout ) throws IOException

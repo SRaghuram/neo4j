@@ -5,6 +5,7 @@
  */
 package com.neo4j.harness.internal;
 
+import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 
 import java.io.File;
@@ -31,5 +32,11 @@ public class CommercialInProcessServerBuilder extends EnterpriseInProcessServerB
     {
         config.augment( CausalClusteringSettings.discovery_implementation, discoveryServiceFactory.name() );
         return new CommercialNeoServer( config, graphFactory, dependencies );
+    }
+
+    @Override
+    protected GraphFactory createGraphFactory( Config config )
+    {
+        return new CommercialGraphFactory();
     }
 }

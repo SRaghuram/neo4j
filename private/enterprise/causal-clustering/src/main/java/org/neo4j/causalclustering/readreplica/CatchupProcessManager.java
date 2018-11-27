@@ -7,8 +7,10 @@ package org.neo4j.causalclustering.readreplica;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -42,6 +44,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.util.VisibleForTesting;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
 import static org.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.fixedTimeout;
 
@@ -124,13 +127,35 @@ public class CatchupProcessManager extends SafeLifecycle
     }
 
     @Override
-    public void start0()
+    public void start0() throws Throwable
     {
         catchupProcesses = databaseService.registeredDatabases().entrySet().stream()
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> catchupProcessFactory.create( e.getKey(), e.getValue() ) ) );
         initDatabaseHealth();
-        initTimer();
         txPulling.start();
+        initTimer();
+
+        for ( CatchupPollingProcess catchupProcess : catchupProcesses.values() )
+        {
+            waitForUpToDateStore( catchupProcess );
+        }
+    }
+
+    private void waitForUpToDateStore( CatchupPollingProcess catchupProcess ) throws InterruptedException, ExecutionException
+    {
+        boolean upToDate = false;
+        do
+        {
+            try
+            {
+                upToDate = catchupProcess.upToDateFuture().get( 1, MINUTES );
+            }
+            catch ( TimeoutException e )
+            {
+                log.warn( "Waiting for up-to-date store. State: " + catchupProcess.describeState() );
+            }
+        }
+        while ( !upToDate );
     }
 
     @Override
@@ -145,17 +170,6 @@ public class CatchupProcessManager extends SafeLifecycle
         log.error( "Unexpected issue in catchup process. No more catchup requests will be scheduled.", e );
         databaseHealth.panic( e );
         isPanicked = true;
-    }
-
-    public String describeState()
-    {
-        StringBuilder state = new StringBuilder();
-        catchupProcesses.values().forEach( catchupProcess ->
-        {
-            state.append( catchupProcess.describeState() );
-            state.append( System.getProperty( "line.separator" ) );
-        } );
-        return state.toString();
     }
 
     private CatchupPollingProcess createCatchupProcess( String databaseName, LocalDatabase localDatabase  )
@@ -179,7 +193,6 @@ public class CatchupProcessManager extends SafeLifecycle
         localDatabase.dependencies().satisfyDependencies( catchupProcess );
         txPulling.add( batchingTxApplier );
         txPulling.add( catchupProcess );
-        txPulling.add( new WaitForUpToDateStore( catchupProcess, logProvider ) );
         return catchupProcess;
     }
 

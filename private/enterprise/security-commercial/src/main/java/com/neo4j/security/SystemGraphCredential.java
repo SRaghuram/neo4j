@@ -22,7 +22,7 @@ class SystemGraphCredential implements Credential
     private final SimpleHash hashedCredentials;
     private static final String credentialSeparator = ",";
 
-    SystemGraphCredential( SecureHasher secureHasher, SimpleHash hash )
+    private SystemGraphCredential( SecureHasher secureHasher, SimpleHash hash )
     {
         this.secureHasher = secureHasher;
         this.hashedCredentials = hash;
@@ -71,15 +71,16 @@ class SystemGraphCredential implements Credential
         } );
     }
 
+    static SystemGraphCredential createCredentialForPassword( byte[] password, SecureHasher secureHasher )
+    {
+        SimpleHash hash = secureHasher.hash( password );
+        return new SystemGraphCredential( secureHasher, hash );
+    }
+
     @Override
     public String serialize()
     {
         return serialize( this );
-    }
-
-    SimpleHash hashedCredentials()
-    {
-        return hashedCredentials;
     }
 
     static String serialize( SystemGraphCredential credential )

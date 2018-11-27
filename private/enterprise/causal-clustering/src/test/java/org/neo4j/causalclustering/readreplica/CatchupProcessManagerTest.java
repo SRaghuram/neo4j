@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -118,7 +119,9 @@ public class CatchupProcessManagerTest
         CatchupProcessManager.CatchupProcessFactory factory = ( dbName, ignored ) ->
         {
             startedCatchupProcs.add( dbName );
-            return mock( CatchupPollingProcess.class );
+            CatchupPollingProcess catchupProcess = mock( CatchupPollingProcess.class );
+            when( catchupProcess.upToDateFuture() ).thenReturn( CompletableFuture.completedFuture( true ) );
+            return catchupProcess;
         };
         catchupProcessManager = new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService, startStopOnStoreCopy,
                 () -> databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),

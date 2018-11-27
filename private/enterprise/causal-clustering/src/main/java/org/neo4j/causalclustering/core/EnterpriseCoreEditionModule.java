@@ -11,6 +11,8 @@ import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -20,7 +22,6 @@ import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.RegularCatchupServerHandler;
-import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.DefaultDatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.PipelineBuilders;
@@ -38,6 +39,7 @@ import org.neo4j.causalclustering.core.state.ClusteringModule;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
 import org.neo4j.causalclustering.core.state.CoreStateService;
 import org.neo4j.causalclustering.core.state.CoreStateStorageService;
+import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.causalclustering.core.state.storage.StateStorage;
 import org.neo4j.causalclustering.diagnostics.CoreMonitor;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -142,6 +144,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     private final CoreServerModule coreServerModule;
     private final CoreStateService coreStateService;
     protected final DefaultDatabaseService<CoreLocalDatabase> databaseService;
+    protected final Map<String,DatabaseInitializer> databaseInitializers = new HashMap<>();
     //TODO: Find a way to be more generic about this to help with 4.0 plans
     private final String activeDatabaseName;
     private final PlatformModule platformModule;
@@ -227,8 +230,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, platformModule, logProvider, config );
         dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
 
-        ClusteringModule clusteringModule = getClusteringModule( platformModule, discoveryServiceFactory, storage,
-                identityModule, dependencies, databaseService );
+        ClusteringModule clusteringModule = getClusteringModule( platformModule, discoveryServiceFactory, storage, identityModule, dependencies );
 
         PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, logProvider, config, dependencies );
 
@@ -353,9 +355,9 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     }
 
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
-            CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies, DatabaseService databaseService )
+            CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies )
     {
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService, databaseInitializers );
     }
 
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
@@ -480,7 +482,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
             coreStateService.create( db );
             databaseManager.createDatabase( databaseName );
         }
-        catch ( Throwable e )
+        catch ( Exception e )
         {
             throw new RuntimeException( e );
         }
