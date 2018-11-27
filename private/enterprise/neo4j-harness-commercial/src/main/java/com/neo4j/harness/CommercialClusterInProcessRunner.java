@@ -12,6 +12,7 @@ import java.nio.file.Path;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.CausalClusterInProcessBuilder;
+import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 
@@ -32,6 +33,7 @@ public class CommercialClusterInProcessRunner
                             .withLogger( toOutputStream( System.out ) )
                             .atPath( clusterPath )
                             .withConfig( GraphDatabaseSettings.auth_enabled.name(), "true" )
+                            .withConfig( SecuritySettings.auth_provider.name(), SecuritySettings.SYSTEM_GRAPH_REALM_NAME )
                             .build();
 
             System.out.println( "Waiting for cluster to boot up..." );
