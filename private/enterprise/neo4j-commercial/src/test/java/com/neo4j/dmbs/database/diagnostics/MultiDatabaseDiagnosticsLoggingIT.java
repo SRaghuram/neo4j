@@ -11,10 +11,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
@@ -61,7 +61,7 @@ class MultiDatabaseDiagnosticsLoggingIT
         provider.assertNoLoggingOccurred();
 
         DatabaseManager databaseManager = resolver.resolveDependency( DatabaseManager.class );
-        GraphDatabaseFacade newDatabase = databaseManager.createDatabase( "NewDatabase" );
+        DatabaseContext databaseContext = databaseManager.createDatabase( "NewDatabase" );
         provider.assertContainsMessageContaining( "Database: NewDatabase" );
         provider.assertContainsMessageContaining( "Version" );
         provider.assertContainsMessageContaining( "Store files" );
