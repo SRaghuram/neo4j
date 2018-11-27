@@ -19,7 +19,8 @@ object Pipeline {
     * Debug print method toggled by the DEBUG flag and with output prefixed with the current thread name
     * The argument string is evaluated lazily (unfortunately call-by-name doesn't work with function values)
     */
-  val dprintln: (() => String) => Unit = // Contrary to what your IDE may claim the extra parenthesis are necessary here
+  //noinspection ScalaUnnecessaryParentheses
+  val dprintln: (() => String) => Unit =
     if (DEBUG)
       (s: () => String) => println(s"[${Thread.currentThread().getName}] ${s()}")
     else

@@ -30,7 +30,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
     pipeline.construct
   }
 
-  override protected def build(plan: LogicalPlan): Pipeline = {
+  override protected def onLeaf(plan: LogicalPlan, source: Option[Pipeline]): Pipeline = {
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
     val argumentSize = physicalPlan.argumentSizes(id)
@@ -94,11 +94,10 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
         throw new CantCompileQueryException(s"$p not supported in morsel runtime")
     }
 
-    new StreamingPipeline(thisOp, slots, None)
+    new StreamingPipeline(thisOp, slots, source)
   }
 
-  override protected def build(plan: LogicalPlan, from: Pipeline): Pipeline = {
-    val source = from
+  override protected def onOneChildPlan(plan: LogicalPlan, source: Pipeline): Pipeline = {
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
 
@@ -201,13 +200,22 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
     }
   }
 
-  override protected def build(plan: LogicalPlan, lhs: Pipeline, rhs: Pipeline): Pipeline = {
+  override protected def onTwoChildPlanComingFromLeft(plan: LogicalPlan, lhs: Pipeline): Option[Pipeline]= {
+    plan match {
+      case _: plans.Apply =>
+        // Connect the lhs pipeline to the rhs pipeline (the return value here will be used as source to the rhs pipeline)
+        Some(lhs)
+
+      case _ =>
+        None
+    }
+  }
+
+  override protected def onTwoChildPlanComingFromRight(plan: LogicalPlan, lhs: Pipeline, rhs: Pipeline): Pipeline = {
     val slots = physicalPlan.slotConfigurations(plan.id)
 
     plan match {
       case _: plans.Apply =>
-        //        // lhs => rhs => ...
-        lhs.connectPipeline(Some(rhs), None)
         rhs
 
       case p =>

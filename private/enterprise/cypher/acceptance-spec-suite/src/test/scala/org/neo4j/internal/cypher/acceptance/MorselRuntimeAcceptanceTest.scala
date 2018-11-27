@@ -40,17 +40,6 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     result.getExecutionPlanDescription.getArguments.get("runtime") should equal("MORSEL")
   }
 
-  test("should fallback if morsel doesn't support query") {
-    //Given
-    val result = graph.execute("CYPHER runtime=morsel MATCH (n)-[*]->(m) RETURN n")
-
-    // When (exhaust result)
-    result.resultAsString()
-
-    //Then
-    result.getExecutionPlanDescription.getArguments.get("runtime") should not equal "MORSEL"
-  }
-
   test("should warn that morsels are experimental") {
     //Given
     import scala.collection.JavaConverters._
@@ -355,28 +344,6 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     result.getExecutionPlanDescription.getArguments.get("runtime") should equal("MORSEL")
   }
 
-  test("don't stall for nested plan expressions") {
-    // Given
-    graph.execute( """CREATE (a:A)
-                     |CREATE (a)-[:T]->(:B),
-                     |       (a)-[:T]->(:C)""".stripMargin)
-
-
-    // When
-    val result =
-      graph.execute( """ CYPHER runtime=morsel
-                       | MATCH (n)
-                       | RETURN CASE
-                       |          WHEN id(n) >= 0 THEN (n)-->()
-                       |          ELSE 42
-                       |        END AS p""".stripMargin)
-
-    // Then
-    //note that this query is currently not using morsel, however there was a bug leading to
-    //a blocked threads for nested queries
-   asScalaResult(result).toList should not be empty
-  }
-
   test("aggregation should not overflow morsel") {
     // Given
     graph.execute( """
@@ -445,7 +412,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     asScalaResult(result).toList should have size 5
   }
 
-  ignore("should support apply") {
+  test("should support apply") {
 
     graph.createIndex("Person", "name")
     graph.inTx(graph.schema().awaitIndexesOnline(10, TimeUnit.MINUTES))
@@ -462,15 +429,17 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
 
     // When
     val result = graph.execute(s"CYPHER runtime=morsel $query")
+
     // Then
     val resultSet = asScalaResult(result).toSet
-    println(result.getExecutionPlanDescription)
   }
 }
+
 
 class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], String] = Map(
+    GraphDatabaseSettings.cypher_hints_error -> "true",
     GraphDatabaseSettings.cypher_morsel_size -> "4",
     GraphDatabaseSettings.cypher_worker_count -> "0"
   )
@@ -479,7 +448,54 @@ class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
 class SequentialMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], String] = Map(
+    GraphDatabaseSettings.cypher_hints_error -> "true",
     GraphDatabaseSettings.cypher_morsel_size -> "4",
     GraphDatabaseSettings.cypher_worker_count -> "1"
   )
+}
+
+/**
+  * These tests can only be run with cypher_hints_error = false
+  * since they test with queries that are not supported.
+  * Use this configuration to also test the edge case of morsel_size = 1.
+  */
+class MorselRuntimeNotSupportedAcceptanceTest extends MorselRuntimeAcceptanceTest {
+  override def databaseConfig(): Map[Setting[_], String] = Map(
+    GraphDatabaseSettings.cypher_hints_error -> "false",
+    GraphDatabaseSettings.cypher_morsel_size -> "1",
+    GraphDatabaseSettings.cypher_worker_count -> "0"
+  )
+
+  test("should fallback if morsel doesn't support query") {
+    //Given
+    val result = graph.execute("CYPHER runtime=morsel MATCH (n)-[*]->(m) RETURN n")
+
+    // When (exhaust result)
+    result.resultAsString()
+
+    //Then
+    result.getExecutionPlanDescription.getArguments.get("runtime") should not equal "MORSEL"
+  }
+
+  test("don't stall for nested plan expressions") {
+    // Given
+    graph.execute( """CREATE (a:A)
+                     |CREATE (a)-[:T]->(:B),
+                     |       (a)-[:T]->(:C)""".stripMargin)
+
+
+    // When
+    val result =
+      graph.execute( """ CYPHER runtime=morsel
+                       | MATCH (n)
+                       | RETURN CASE
+                       |          WHEN id(n) >= 0 THEN (n)-->()
+                       |          ELSE 42
+                       |        END AS p""".stripMargin)
+
+    // Then
+    //note that this query is currently not using morsel, however there was a bug leading to
+    //a blocked threads for nested queries
+    asScalaResult(result).toList should not be empty
+  }
 }

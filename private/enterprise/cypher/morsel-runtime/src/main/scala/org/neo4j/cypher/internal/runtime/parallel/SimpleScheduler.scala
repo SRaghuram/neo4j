@@ -35,7 +35,7 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executor: Executor
   def isMultiThreaded: Boolean = true
 
   def schedule(task: Task[THREAD_LOCAL_RESOURCE], upstreamWorkUnit: Option[WorkUnitEvent], queryTracer: QueryExecutionTracer): Future[TaskResult[THREAD_LOCAL_RESOURCE]] = {
-    dprintln(() => s"SimpleScheduler schedule $task ${throw new IllegalStateException()}")
+    dprintln(() => s"SimpleScheduler schedule $task")
     val scheduledWorkUnitEvent = queryTracer.scheduleWorkUnit(task, upstreamWorkUnit)
     val callableTask =
       new Callable[TaskResult[THREAD_LOCAL_RESOURCE]] {
