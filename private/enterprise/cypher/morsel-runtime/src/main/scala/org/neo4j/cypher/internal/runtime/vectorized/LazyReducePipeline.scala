@@ -36,7 +36,8 @@ class LazyReducePipeline(start: LazyReduceOperator,
                             context: QueryContext,
                             state: QueryState,
                             cursors: ExpressionCursors,
-                            from: AbstractPipelineTask): Option[Task[ExpressionCursors]] = {
+                            pipelineArgument: PipelineArgument,
+                            from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] = {
     state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, cursors, from)
   }
 
@@ -54,7 +55,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
     private val reduceTaskState = new AtomicReference[ReduceTaskState](NoTaskScheduled)
 
     override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                              from: AbstractPipelineTask): Option[Task[ExpressionCursors]] = {
+                              from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] = {
       // First we put the next morsel in the queue
       queue.add(inputMorsel)
 
@@ -85,9 +86,10 @@ class LazyReducePipeline(start: LazyReduceOperator,
           workIdentity,
           context,
           nextState,
+          from.pipelineArgument,
           from.ownerPipeline,
           downstream)
-      }
+      }.toSeq
     }
 
     override def trySetTaskDone(task: LazyReduceOperatorTask, morselsProcessed: Int): Boolean = {
@@ -110,14 +112,14 @@ class LazyReducePipeline(start: LazyReduceOperator,
       }
     }
 
-    override def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
+    override def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
       val tasksLeft = taskCount.decrementAndGet()
       if (Pipeline.DEBUG) {
         dprintln(() => "taskCount [%3d]: completed %s".format(tasksLeft, toString))
       }
 
       if (tasksLeft >= 0) {
-        None
+        Seq.empty
       } else {
         throw new IllegalStateException("Reference counting of tasks has failed: now at task count " + tasksLeft)
       }

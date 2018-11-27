@@ -7,8 +7,9 @@ package org.neo4j.cypher.internal.runtime.vectorized
 
 import java.util
 
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
-import org.neo4j.cypher.internal.runtime.parallel.{Task, HasWorkIdentity}
+import org.neo4j.cypher.internal.runtime.parallel.{HasWorkIdentity, Task}
 
 /**
   * Physical immutable operator. [[StreamingOperator#init]] is thread-safe, and creates a [[ContinuableOperatorTask]]
@@ -19,6 +20,25 @@ import org.neo4j.cypher.internal.runtime.parallel.{Task, HasWorkIdentity}
   */
 trait StreamingOperator extends HasWorkIdentity {
   def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask
+}
+
+/**
+  * Physical immutable operator. [[StreamingMergeOperator#init]] is thread-safe, and creates two [[ContinuableOperatorTask]]s
+  * which can be executed.
+  *
+  * Operators are expected to operate in a streaming fashion, where every inputMorsel
+  * results in a new task.
+  *
+  * If initFromLhs returns a PipelineArgument the owner StreamingJoinPipeline will take care of scheduling a task from the
+  * leaf pipeline of the RHS upstream. The PipelineArgument will be passed to this RHS task, and along subsequent tasks until
+  * it eventually arrives in the initFromRhs.
+  */
+trait StreamingMergeOperator extends HasWorkIdentity {
+  def initFromLhs(context: QueryContext, state: QueryState, inputLhsMorsel: MorselExecutionContext, cursors: ExpressionCursors):
+    (Option[ContinuableOperatorTask], Option[PipelineArgument])
+  def initFromRhs(context: QueryContext, state: QueryState, inputRhsMorsel: MorselExecutionContext, cursors: ExpressionCursors, pipelineArgument: PipelineArgument):
+    Option[ContinuableOperatorTask]
+  def argumentSize: SlotConfiguration.Size
 }
 
 /**
@@ -145,9 +165,9 @@ trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
 trait ReduceCollector {
 
   def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                   from: AbstractPipelineTask): Option[Task[ExpressionCursors]]
+                   from: AbstractPipelineTask): Seq[Task[ExpressionCursors]]
 
   def produceTaskScheduled(): Unit
 
-  def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]]
+  def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Seq[Task[ExpressionCursors]]
 }

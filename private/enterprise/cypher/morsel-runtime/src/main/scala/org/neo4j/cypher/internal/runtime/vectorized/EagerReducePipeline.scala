@@ -66,7 +66,7 @@ class EagerReducePipeline(start: EagerReduceOperator,
   override val workIdentity: WorkIdentity = composeWorkIdentities(start, operators)
 
   override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                            from: AbstractPipelineTask): Option[Task[ExpressionCursors]] = {
+                            pipelineArgument: PipelineArgument, from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] = {
     state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, cursors, from)
   }
 
@@ -78,9 +78,9 @@ class EagerReducePipeline(start: EagerReduceOperator,
     private val taskCount = new AtomicInteger(0)
 
     override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                             from: AbstractPipelineTask): Option[Task[ExpressionCursors]] = {
+                             from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] = {
       eagerData.add(inputMorsel)
-      None
+      Seq.empty
     }
 
     override def produceTaskScheduled(): Unit = {
@@ -89,7 +89,7 @@ class EagerReducePipeline(start: EagerReduceOperator,
         dprintln(() => "taskCount [%3d]: scheduled %s".format(tasks, toString))
     }
 
-    override def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
+    override def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
       val tasksLeft = taskCount.decrementAndGet()
       if (Pipeline.DEBUG)
         dprintln(() => "taskCount [%3d]: completed %s".format(tasksLeft, toString))
@@ -99,11 +99,11 @@ class EagerReducePipeline(start: EagerReduceOperator,
         val reduceTask = start.init(context, state, inputMorsels, cursors)
         // init next reduce
         val nextState = initDownstreamReduce(state)
-        Some(pipelineTask(reduceTask, context, nextState))
+        Seq(pipelineTask(reduceTask, context, nextState, PipelineArgument.EMPTY))
       } else if (tasksLeft < 0) {
         throw new IllegalStateException("Reference counting of tasks has failed: now at task count " + tasksLeft)
       } else {
-        None
+        Seq.empty
       }
     }
   }

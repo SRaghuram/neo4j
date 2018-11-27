@@ -11,9 +11,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlottedIndexedProper
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekModeFactory
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyTypes
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeekModeFactory, LazyLabel, LazyTypes}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.AggregationExpressionOperator
@@ -191,7 +189,8 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
           val runtimeExpression = converters.toCommandExpression(id, collection)
           new UnwindOperator(WorkIdentity.fromPlan(plan), runtimeExpression, offset)
 
-        case p => throw new CantCompileQueryException(s"$p not supported in morsel runtime")
+        case p =>
+          throw new CantCompileQueryException(s"$p not supported in morsel runtime")
       }
 
     thisOp match {
@@ -225,8 +224,22 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
       case _: plans.Apply =>
         rhs
 
-      case p =>
-        throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
+      case _ =>
+        val thisOp = plan match {
+
+          case _: plans.CartesianProduct =>
+            val argumentSize = physicalPlan.argumentSizes(plan.id)
+            new CartesianProductOperator(WorkIdentity.fromPlan(plan), argumentSize)
+
+          case p =>
+            throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
+        }
+
+        thisOp match {
+          case so: StreamingMergeOperator =>
+            new StreamingMergePipeline(so, slots, lhs, rhs)
+          // NOTE: Currently we cannot get StreamingOperators, StatelessOperators or ReduceOperators here
+        }
     }
   }
 }

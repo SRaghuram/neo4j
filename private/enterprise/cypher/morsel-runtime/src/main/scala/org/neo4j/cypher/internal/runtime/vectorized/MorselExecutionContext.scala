@@ -26,6 +26,8 @@ object MorselExecutionContext {
 
 class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow: Int, private val refsPerRow: Int, private var currentRow: Int) extends ExecutionContext {
 
+  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, currentRow)
+
   def moveToNextRow(): Unit = {
     currentRow += 1
   }

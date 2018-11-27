@@ -18,6 +18,8 @@ import scala.collection.Map
 
 abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
 
+  val MORSEL_SIZE = 4 // The morsel size to use in the config for testing
+
   test("should not use morsel by default") {
     //Given
     val result = graph.execute("MATCH (n) RETURN n")
@@ -433,14 +435,99 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     // Then
     val resultSet = asScalaResult(result).toSet
   }
-}
 
+  // Test with some interesting cases around the morsel size boundary
+  Seq(MORSEL_SIZE-1, MORSEL_SIZE, MORSEL_SIZE+1).foreach(scanSize =>
+    test(s"cartesian product scan size $scanSize") {
+      //GIVEN
+      for (i <- 1 to scanSize) {
+        createLabeledNode(Map("prop" -> s"a$i"), "A")
+        createLabeledNode(Map("prop" -> s"b$i"), "B")
+      }
+      val query =
+        """
+          |MATCH (node_a:A), (node_b:B)
+          |WITH node_a.prop as a, node_b.prop as b
+          |RETURN a, b""".stripMargin
+
+      //WHEN
+      val slottedResult = graph.execute(s"CYPHER runtime=slotted $query")
+      val slottedResultList = sortedScalaListOfABTuples(slottedResult)
+
+      val morselResult = graph.execute(s"CYPHER runtime=morsel $query")
+      val morselResultList = sortedScalaListOfABTuples(morselResult)
+
+      //THEN
+      // The output order will differ between runtimes so we need to compare the sorted result
+      morselResultList shouldEqual slottedResultList
+    })
+
+  test(s"cartesian product lhs scan size 0") {
+    //GIVEN
+    for (i <- 1 to MORSEL_SIZE) {
+      // Only create nodes queried on the RHS
+      createLabeledNode(Map("prop" -> s"b$i"), "B")
+    }
+
+    val query =
+      """MATCH (node_a:A), (node_b:B)
+        |WITH node_a.prop as a, node_b.prop as b
+        |RETURN a, b""".stripMargin
+
+    //WHEN
+    val morselResult = graph.execute(s"CYPHER runtime=morsel $query")
+    val morselResultList = sortedScalaListOfABTuples(morselResult)
+
+    //THEN
+    morselResultList shouldBe empty
+  }
+
+  test(s"cartesian product on rhs of apply") {
+    //GIVEN
+    for (i <- 1 to MORSEL_SIZE) {
+      // Only create nodes queried on the RHS
+      createLabeledNode(Map("prop" -> s"a$i"), "A")
+      createLabeledNode(Map("prop" -> s"b$i"), "B")
+    }
+
+    val query =
+      """WITH 42 as i
+        |MATCH (node_a:A), (node_b:B)
+        |WITH node_a.prop as a, node_b.prop as b
+        |RETURN a, b""".stripMargin
+
+    //WHEN
+    val slottedResult = graph.execute(s"CYPHER runtime=slotted $query")
+    val slottedResultList = sortedScalaListOfABTuples(slottedResult)
+
+    val morselResult = graph.execute(s"CYPHER runtime=morsel $query")
+    val morselResultList = sortedScalaListOfABTuples(morselResult)
+
+    //THEN
+    // The output order will differ between runtimes so we need to compare the sorted result
+    morselResultList shouldEqual slottedResultList
+  }
+
+  private def sortedScalaListOfABTuples(result: Result): Seq[(String, String)] = {
+    import scala.collection.JavaConverters._
+
+    result.map {
+      new java.util.function.Function[java.util.Map[String, AnyRef], (String, String)] {
+        override def apply(m: java.util.Map[String, AnyRef]): (String, String) = {
+          val a = m.get("a")
+          val b = m.get("b")
+          a.asInstanceOf[String] -> b.asInstanceOf[String]
+        }
+      }
+    }.asScala.toList.sorted
+  }
+}
 
 class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], String] = Map(
     GraphDatabaseSettings.cypher_hints_error -> "true",
-    GraphDatabaseSettings.cypher_morsel_size -> "4",
+    GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
     GraphDatabaseSettings.cypher_worker_count -> "0"
   )
 }
@@ -449,7 +536,7 @@ class SequentialMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest 
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
   override def databaseConfig(): Map[Setting[_], String] = Map(
     GraphDatabaseSettings.cypher_hints_error -> "true",
-    GraphDatabaseSettings.cypher_morsel_size -> "4",
+    GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
     GraphDatabaseSettings.cypher_worker_count -> "1"
   )
 }

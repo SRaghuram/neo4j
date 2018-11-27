@@ -6,9 +6,8 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity}
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 
 /**
   * A streaming pipeline.
@@ -21,12 +20,12 @@ class StreamingPipeline(start: StreamingOperator,
     val streamTask = start.init(context, state, inputMorsel, cursors)
     // init next reduce
     val nextState = initDownstreamReduce(state)
-    pipelineTask(streamTask, context, nextState)
+    pipelineTask(streamTask, context, nextState, PipelineArgument.EMPTY)
   }
 
   override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                            from: AbstractPipelineTask): Option[Task[ExpressionCursors]] =
-    Some(pipelineTask(start.init(context, state, inputMorsel, cursors), context, state))
+                            pipelineArgument: PipelineArgument, from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] =
+    Seq(pipelineTask(start.init(context, state, inputMorsel, cursors), context, state, pipelineArgument))
 
   override val workIdentity: WorkIdentity = composeWorkIdentities(start, operators)
 }

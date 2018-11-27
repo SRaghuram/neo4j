@@ -21,6 +21,7 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
                                     downstream: Option[Pipeline]) extends Task[ExpressionCursors] {
 
   def ownerPipeline: Pipeline
+  def pipelineArgument: PipelineArgument
 
   protected def getQueryContext: QueryContext = {
     if (state.singeThreaded) {
@@ -37,17 +38,21 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
     }
   }
 
-  protected def getDownstreamTasks(cursors: ExpressionCursors, currentRow: MorselExecutionContext, queryContext: QueryContext): Seq[Task[ExpressionCursors]] = {
-    currentRow.resetToFirstRow()
-    val downstreamTasks = downstream.flatMap(_.acceptMorsel(currentRow, queryContext, state, cursors, this)).toSeq
+  protected def getDownstreamTasks(cursors: ExpressionCursors, outputRow: MorselExecutionContext, queryContext: QueryContext): Seq[Task[ExpressionCursors]] = {
+    outputRow.resetToFirstRow()
+    val downstreamTasks = downstream.map(_.acceptMorsel(outputRow, queryContext, state, cursors, pipelineArgument, this)).getOrElse(Seq.empty)
 
     if (org.neo4j.cypher.internal.runtime.vectorized.Pipeline.DEBUG && downstreamTasks.nonEmpty) {
       dprintln(() => s">>> downstream tasks=$downstreamTasks")
     }
 
+    // REV: I think that this reduceCollector can never be None or else there may be nothing tracking that we have completed when we get no more tasks
     state.reduceCollector match {
-      case Some(collector) if !canContinue =>
-        downstreamTasks ++ collector.produceTaskCompleted(queryContext, state, cursors)
+      case Some(x) if !canContinue =>
+        // Signal the downstream reduce collector that we have completed. This may produce new tasks from the
+        // downstream reduce pipeline if it has received enough completed tasks to proceed.
+        val downstreamReduceTasks = x.produceTaskCompleted(queryContext, state, cursors)
+        downstreamTasks ++ downstreamReduceTasks
 
       case _ =>
         downstreamTasks
@@ -68,6 +73,7 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
   * @param workIdentity         description of computation performed by this task
   * @param originalQueryContext the query context
   * @param state                the current QueryState
+  * @param pipelineArgument     an argument passed to this task
   * @param ownerPipeline        the Pipeline from where this task originated
   * @param downstream           the downstream Pipeline
   */
@@ -77,6 +83,7 @@ case class PipelineTask(start: ContinuableOperatorTask,
                         workIdentity: WorkIdentity,
                         originalQueryContext: QueryContext,
                         state: QueryState,
+                        pipelineArgument: PipelineArgument,
                         ownerPipeline: Pipeline,
                         downstream: Option[Pipeline])
   extends AbstractPipelineTask(operators, slots, workIdentity, originalQueryContext, state, downstream) {
@@ -125,6 +132,7 @@ case class PipelineTask(start: ContinuableOperatorTask,
   * @param workIdentity         description of computation performed by this task
   * @param originalQueryContext the query context
   * @param state                the current QueryState
+  * @param pipelineArgument     an argument passed to this task
   * @param ownerPipeline        the Pipeline from where this task originated
   * @param downstream           the downstream Pipeline
   */
@@ -134,6 +142,7 @@ case class LazyReducePipelineTask(start: LazyReduceOperatorTask,
                                   workIdentity: WorkIdentity,
                                   originalQueryContext: QueryContext,
                                   state: QueryState,
+                                  pipelineArgument: PipelineArgument,
                                   ownerPipeline: Pipeline,
                                   downstream: Option[Pipeline])
   extends AbstractPipelineTask(operators, slots, workIdentity, originalQueryContext, state, downstream) {

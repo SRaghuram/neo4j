@@ -38,7 +38,7 @@ abstract class Pipeline() extends HasWorkIdentity {
   // abstract
   def upstream: Option[Pipeline]
   def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                   from: AbstractPipelineTask): Option[Task[ExpressionCursors]]
+                   pipelineArgument: PipelineArgument, from: AbstractPipelineTask): Seq[Task[ExpressionCursors]]
   def slots: SlotConfiguration
 
   protected def composeWorkIdentities(first: HasWorkIdentity, others: Seq[HasWorkIdentity]): WorkIdentity = {
@@ -97,7 +97,7 @@ abstract class Pipeline() extends HasWorkIdentity {
   protected def produceTaskScheduledForReduceCollector(state: QueryState): Unit =
     state.reduceCollector.foreach(_.produceTaskScheduled())
 
-  protected def pipelineTask(startOperatorTask: ContinuableOperatorTask, context: QueryContext, state: QueryState): PipelineTask = {
+  protected def pipelineTask(startOperatorTask: ContinuableOperatorTask, context: QueryContext, state: QueryState, pipelineArgument: PipelineArgument): PipelineTask = {
     produceTaskScheduledForReduceCollector(state)
     PipelineTask(startOperatorTask,
                  operators,
@@ -105,7 +105,19 @@ abstract class Pipeline() extends HasWorkIdentity {
                  workIdentity,
                  context,
                  state,
+                 pipelineArgument,
                  this,
                  downstream)
   }
 }
+
+object PipelineArgument {
+  val EMPTY: PipelineArgument = new PipelineArgument {}
+}
+
+/**
+  * An argument that can be passed to a pipeline task that will be forwarded to downstream pipeline tasks
+  * TBD: This could be merged into QueryState if we copy the QueryState at the appropriate points
+  *      which would resemble how we do things in the interpreted/slotted runtime
+  */
+trait PipelineArgument
