@@ -6,7 +6,6 @@
 package com.neo4j.security;
 
 import java.io.File;
-import java.util.Map;
 import java.util.function.Supplier;
 
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
@@ -94,25 +93,20 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     /**
      * To be used in clusters.
      */
-    // TODO: Maybe move this somewhere else...
-    public DatabaseInitializer markForExternalBootstrappingAndGetBootstrapper()
+    public DatabaseInitializer markForExternalBootstrappingAndGetInitializer()
     {
         useExternalBootstrapping = true;
 
         return database ->
         {
-            QueryExecutor queryExecutor = new QueryExecutor()
+            QueryExecutor queryExecutor = ( query, params, resultVisitor ) ->
             {
-                @Override
-                public void executeQuery( String query, Map<String,Object> params, QueryResult.QueryResultVisitor resultVisitor )
+                try ( Transaction tx = database.beginTx() )
                 {
-                    try ( Transaction tx = database.beginTx() )
-                    {
-                        Result result = database.execute( query, params );
-                        QueryResult queryResult = ((QueryResultProvider) result).queryResult();
-                        queryResult.accept( resultVisitor );
-                        tx.success();
-                    }
+                    Result result = database.execute( query, params );
+                    QueryResult queryResult = ((QueryResultProvider) result).queryResult();
+                    queryResult.accept( resultVisitor );
+                    tx.success();
                 }
             };
 
@@ -164,7 +158,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         File roleImportFile = new File( parentFile, ROLE_IMPORT_FILENAME );
 
         boolean shouldPerformImport = fileSystem.fileExists( userImportFile ) || fileSystem.fileExists( roleImportFile );
-        boolean mayPerformMigration = !shouldPerformImport && mayPerformMigration( config, accessCapability );
+        boolean mayPerformMigration = !shouldPerformImport && mayPerformMigration( accessCapability );
         boolean shouldPurgeImportRepositoriesAfterSuccessfulImport = shouldPerformImport;
         boolean shouldResetSystemGraphAuthBeforeImport = false;
 
@@ -213,7 +207,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         );
     }
 
-    private static boolean mayPerformMigration( Config config, AccessCapability accessCapability )
+    private static boolean mayPerformMigration( AccessCapability accessCapability )
     {
         boolean mayPerformMigration = false;
 

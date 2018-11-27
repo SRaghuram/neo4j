@@ -157,7 +157,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
         {
             CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( platformModule, this,
                     platformModule.logging.getUserLog( CommercialCoreEditionModule.class ), procedures, "commercial-security-module" );
-            securityDatabaseInitializer = securityModule.markForExternalBootstrappingAndGetBootstrapper();
+            securityDatabaseInitializer = securityModule.markForExternalBootstrappingAndGetInitializer();
             platformModule.life.add( securityModule );
             securityProvider = securityModule;
         }
