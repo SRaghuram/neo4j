@@ -17,8 +17,6 @@ import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.CoreStateFiles;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -33,11 +31,9 @@ import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.management.CausalClustering;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Optional.of;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class CausalClusteringBeanTest
 {
@@ -54,20 +50,17 @@ public class CausalClusteringBeanTest
     public void setUp()
     {
         Dependencies dependencies = new Dependencies();
-        DatabaseManager databaseManager = mock( DatabaseManager.class );
-        Database dataSource = mock( Database.class );
-        DatabaseContext databaseContext = mock( DatabaseContext.class );
-        when( databaseContext.getDependencies() ).thenReturn( dependencies );
-        when( databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ) ).thenReturn( of( databaseContext ) );
-        when( dataSource.getDatabaseLayout() ).thenReturn( testDirectory.databaseLayout() );
+        Database database = mock( Database.class );
+        when( database.getDependencyResolver() ).thenReturn( dependencies );
+        when( database.getDatabaseLayout() ).thenReturn( testDirectory.databaseLayout() );
         KernelData kernelData = new KernelData( fs, mock( PageCache.class ), new File( "storeDir" ), Config.defaults() );
 
         dependencies.satisfyDependency( clusterStateDirectory );
         dependencies.satisfyDependency( raftMachine );
         dependencies.satisfyDependency( DatabaseInfo.CORE );
 
-        when( dataSource.getDependencyResolver() ).thenReturn( dependencies );
-        ManagementData data = new ManagementData( new CausalClusteringBean(), kernelData, databaseManager, ManagementSupport.load() );
+        when( database.getDependencyResolver() ).thenReturn( dependencies );
+        ManagementData data = new ManagementData( new CausalClusteringBean(), kernelData, database, ManagementSupport.load() );
 
         ccBean = (CausalClustering) new CausalClusteringBean().createMBean( data );
     }

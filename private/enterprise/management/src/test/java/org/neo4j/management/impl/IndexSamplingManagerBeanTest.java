@@ -8,10 +8,7 @@ package org.neo4j.management.impl;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Optional;
-
 import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.database.Database;
@@ -28,7 +25,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.TokenRead.NO_TOKEN;
 
 public class IndexSamplingManagerBeanTest
@@ -42,16 +38,13 @@ public class IndexSamplingManagerBeanTest
 
     private Database database;
     private IndexingService indexingService;
-    private DatabaseManager databaseManager;
 
     @Before
     public void setup()
     {
         Dependencies dependencies = mock( Dependencies.class );
         DatabaseContext databaseContext = mock( DatabaseContext.class );
-        databaseManager = mock( DatabaseManager.class );
         database = mock( Database.class );
-        when( databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ) ).thenReturn( Optional.of( databaseContext ) );
         when( databaseContext.getDependencies() ).thenReturn( dependencies );
         when( dependencies.resolveDependency( Database.class ) ).thenReturn( database );
         StorageEngine storageEngine = mock( StorageEngine.class );
@@ -73,7 +66,7 @@ public class IndexSamplingManagerBeanTest
     public void samplingTriggeredWhenIdsArePresent() throws IndexNotFoundKernelException
     {
         // Given
-        StoreAccess storeAccess = new StoreAccess( databaseManager );
+        StoreAccess storeAccess = new StoreAccess( database );
 
         // When
         storeAccess.triggerIndexSampling( EXISTING_LABEL, EXISTING_PROPERTY, false );
@@ -88,7 +81,7 @@ public class IndexSamplingManagerBeanTest
     public void forceSamplingTriggeredWhenIdsArePresent() throws IndexNotFoundKernelException
     {
         // Given
-        StoreAccess storeAccess = new StoreAccess( databaseManager );
+        StoreAccess storeAccess = new StoreAccess( database );
 
         // When
         storeAccess.triggerIndexSampling( EXISTING_LABEL, EXISTING_PROPERTY, true );
@@ -103,7 +96,7 @@ public class IndexSamplingManagerBeanTest
     public void exceptionThrownWhenMissingLabel()
     {
         // Given
-        StoreAccess storeAccess = new StoreAccess( databaseManager );
+        StoreAccess storeAccess = new StoreAccess( database );
 
         // When
         storeAccess.triggerIndexSampling( NON_EXISTING_LABEL, EXISTING_PROPERTY, false );
@@ -113,7 +106,7 @@ public class IndexSamplingManagerBeanTest
     public void exceptionThrownWhenMissingProperty()
     {
         // Given
-        StoreAccess storeAccess = new StoreAccess( databaseManager );
+        StoreAccess storeAccess = new StoreAccess( database );
 
         // When
         storeAccess.triggerIndexSampling( EXISTING_LABEL, NON_EXISTING_PROPERTY, false );
