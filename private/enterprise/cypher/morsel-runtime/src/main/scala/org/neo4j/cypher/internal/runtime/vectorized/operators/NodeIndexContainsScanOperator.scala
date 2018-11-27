@@ -43,7 +43,7 @@ class NodeIndexContainsScanOperator(nodeOffset: Int,
 
         value match {
           case value: TextValue =>
-            val indexQuery = IndexQuery.stringContains(property.propertyKeyId, value.stringValue())
+            val indexQuery = IndexQuery.stringContains(property.propertyKeyId, value)
             read.nodeIndexSeek(index, valueIndexCursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
 
           case Values.NO_VALUE =>
