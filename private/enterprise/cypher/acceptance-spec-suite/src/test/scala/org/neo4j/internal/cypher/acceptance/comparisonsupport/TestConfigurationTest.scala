@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V3_1, V3_4, V3_5}
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
 
 class TestConfigurationTest extends CypherFunSuite {
 

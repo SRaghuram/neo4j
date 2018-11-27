@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.codegen;
 
-import org.opencypher.v9_0.util.attribution.Id;
+import org.neo4j.cypher.internal.v3_5.util.attribution.Id;
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.QueryExecutionEvent;
 

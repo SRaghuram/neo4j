@@ -19,8 +19,8 @@ import org.neo4j.kernel.impl.util.ValueUtils.{fromNodeProxy, fromRelationshipPro
 import org.neo4j.values.storable.Values.{longValue, stringArray, stringValue}
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 import org.neo4j.values.virtual.{NodeValue, RelationshipValue, VirtualValues}
-import org.opencypher.v9_0.util.symbols._
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v3_5.util.symbols._
+import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
 
 import scala.collection.immutable
 

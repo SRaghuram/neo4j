@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.queryReduction
 
 import org.neo4j.cypher.internal.queryReduction.ast.ASTNodeHelper._
-import org.opencypher.v9_0.ast._
+import org.neo4j.cypher.internal.v3_5.ast._
 
 class StatementGTRInput(initialStatement: Statement) extends GTRInput[Statement](initialStatement) {
   override def depth: Int = getDepth(currentTree)

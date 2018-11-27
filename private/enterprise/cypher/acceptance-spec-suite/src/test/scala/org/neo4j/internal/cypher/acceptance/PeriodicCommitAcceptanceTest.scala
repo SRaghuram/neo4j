@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore
-import org.opencypher.v9_0.util.helpers.StringHelper.RichString
+import org.neo4j.cypher.internal.v3_5.util.helpers.StringHelper.RichString
 
 class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
   with TxCountsTrackingTestSupport

@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQue
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{NumberValue, Values}
-import org.opencypher.v9_0.util.symbols.CTAny
+import org.neo4j.cypher.internal.v3_5.util.symbols.CTAny
 
 /*
 Vectorized version of the count aggregation function

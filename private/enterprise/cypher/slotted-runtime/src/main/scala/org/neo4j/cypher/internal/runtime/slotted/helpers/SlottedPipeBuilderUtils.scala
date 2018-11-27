@@ -11,8 +11,8 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNul
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue, VirtualValues}
-import org.opencypher.v9_0.util.symbols.{CTNode, CTRelationship, CypherType}
-import org.opencypher.v9_0.util.{AssertionUtils, InternalException, ParameterWrongTypeException}
+import org.neo4j.cypher.internal.v3_5.util.symbols.{CTNode, CTRelationship, CypherType}
+import org.neo4j.cypher.internal.v3_5.util.{AssertionUtils, InternalException, ParameterWrongTypeException}
 
 object SlottedPipeBuilderUtils {
   // TODO: Check if having try/catch blocks inside some of these generated functions prevents inlining or other JIT optimizations
