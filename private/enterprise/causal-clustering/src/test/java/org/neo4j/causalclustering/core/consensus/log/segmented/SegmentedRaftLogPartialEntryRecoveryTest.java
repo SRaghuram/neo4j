@@ -59,7 +59,7 @@ public class SegmentedRaftLogPartialEntryRecoveryTest
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
     {
-        File directory = new File( CoreStateFiles.RAFT_LOG.directoryFullName() );
+        File directory = new File( CoreStateFiles.RAFT_LOG.directoryName() );
         logDirectory = dir.directory( directory.getName() );
 
         LogProvider logProvider = getInstance();

@@ -78,7 +78,7 @@ public class UnbindFromClusterCommand implements AdminCommand
                 confirmTargetDirectoryIsWritable( DatabaseLayout.of( pathToSpecificDatabase.toFile() ).getStoreLayout() );
             }
 
-            ClusterStateDirectory clusterStateDirectory = ClusterStateDirectory.withoutInitializing( dataDirectory );
+            ClusterStateDirectory clusterStateDirectory = ClusterStateDirectory.withoutInitializing( outsideWorld.fileSystem(), dataDirectory );
 
             if ( outsideWorld.fileSystem().fileExists( clusterStateDirectory.get() ) )
             {

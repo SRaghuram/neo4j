@@ -41,8 +41,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
         final File dataDir = config.get( GraphDatabaseSettings.data_directory );
         try
         {
-            clusterStateDirectory = new ClusterStateDirectory( dataDir, storeDirectory, true )
-                    .initialize( fs, config.get( GraphDatabaseSettings.active_database ) ).get();
+            clusterStateDirectory = new ClusterStateDirectory( fs, dataDir, storeDirectory, true ).initialize().get();
         }
         catch ( ClusterStateException e )
         {
@@ -94,7 +93,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
             return;
         }
 
-        for ( File file : fs.listFiles( clusterStateDirectory, ( dir, name ) -> !name.equals( CoreStateFiles.RAFT_LOG.directoryFullName() ) ) )
+        for ( File file : fs.listFiles( clusterStateDirectory, ( dir, name ) -> !name.equals( CoreStateFiles.RAFT_LOG.directoryName() ) ) )
         {
             addDirectory( "ccstate", file, sources );
         }

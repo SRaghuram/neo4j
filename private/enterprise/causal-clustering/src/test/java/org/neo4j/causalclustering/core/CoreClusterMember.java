@@ -124,7 +124,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
 
         this.discoveryServiceFactory = discoveryServiceFactory;
         File dataDir = new File( neo4jHome, "data" );
-        clusterStateDir = ClusterStateDirectory.withoutInitializing( dataDir ).get();
+        clusterStateDir = ClusterStateDirectory.withoutInitializing( null, dataDir ).get();
         raftLogDir = CoreStateFiles.RAFT_LOG.at( clusterStateDir );
         databasesDirectory = new File( dataDir, "databases" );
         defaultDatabaseDirectory = new File( databasesDirectory, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
@@ -198,7 +198,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         return defaultDatabaseDirectory;
     }
 
-    public File databasesDirectory()
+    protected File databasesDirectory()
     {
         return databasesDirectory;
     }

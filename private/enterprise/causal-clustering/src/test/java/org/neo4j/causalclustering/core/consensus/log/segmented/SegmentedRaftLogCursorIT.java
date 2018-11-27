@@ -47,7 +47,7 @@ public class SegmentedRaftLogCursorIT
             fileSystem = new EphemeralFileSystemAbstraction();
         }
 
-        File directory = new File( CoreStateFiles.RAFT_LOG.directoryFullName() );
+        File directory = new File( CoreStateFiles.RAFT_LOG.directoryName() );
         fileSystem.mkdir( directory );
 
         LogProvider logProvider = getInstance();

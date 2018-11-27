@@ -20,7 +20,7 @@ public class CommercialCoreClusterMember extends CoreClusterMember
 {
     private final SslDiscoveryServiceFactory discoveryServiceFactory;
 
-    public CommercialCoreClusterMember( int serverId,
+    CommercialCoreClusterMember( int serverId,
                                         int discoveryPort,
                                         int txPort,
                                         int raftPort,

@@ -16,12 +16,8 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class ClusterStateDirectoryTest
 {
@@ -57,8 +53,8 @@ public class ClusterStateDirectoryTest
         fs.create( oldClusterStateFile ).close();
 
         // when
-        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, storeDir, false );
-        clusterStateDirectory.initialize( fs, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( fs, dataDir, storeDir, false );
+        clusterStateDirectory.initialize();
 
         // then
         assertEquals( clusterStateDirectory.get(), stateDir );
@@ -80,88 +76,11 @@ public class ClusterStateDirectoryTest
         fs.create( oldClusterStateFile ).close();
 
         // when
-        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, storeDir, false );
-        clusterStateDirectory.initialize( fs, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( fs, dataDir, storeDir, false );
+        clusterStateDirectory.initialize();
 
         // then
         assertEquals( clusterStateDirectory.get(), stateDir );
         assertTrue( fs.fileExists( new File( clusterStateDirectory.get(), fileName ) ) );
-    }
-
-    @Test
-    public void shouldMigrateDatabaseStateToSubDirectory() throws Exception
-    {
-        //given
-        fs.mkdirs( stateDir );
-        File rootIdAlloc = CoreStateFiles.ID_ALLOCATION.at( stateDir );
-        File rootLockToken = CoreStateFiles.LOCK_TOKEN.at( stateDir );
-        fs.create( rootIdAlloc );
-        fs.create( rootLockToken );
-        String databaseName = "arbitrary.db";
-        File expectedDatabaseStateDirectory = new File( new File( stateDir, "db" ), databaseName );
-
-        //when
-        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, false );
-        clusterStateDirectory.initialize( fs, databaseName );
-
-        //then
-        assertTrue( fs.fileExists( expectedDatabaseStateDirectory ) );
-        assertTrue( fs.fileExists( CoreStateFiles.ID_ALLOCATION.at( expectedDatabaseStateDirectory ) ) );
-        assertTrue( fs.fileExists( CoreStateFiles.LOCK_TOKEN.at( expectedDatabaseStateDirectory ) ) );
-        assertFalse( fs.fileExists( rootIdAlloc ) );
-        assertFalse( fs.fileExists( rootLockToken ) );
-    }
-
-    @Test
-    public void shouldThrowOnMissingDatabaseFilesDuringMigration() throws Exception
-    {
-        //given
-        fs.mkdirs( stateDir );
-        File rootIdAlloc = CoreStateFiles.ID_ALLOCATION.at( stateDir );
-        // missing: CoreStateFiles.LOCK_TOKEN.at( stateDir );
-
-        fs.create( rootIdAlloc );
-        String databaseName = "graph.db";
-
-        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, false );
-
-        try
-        {
-            //when
-            clusterStateDirectory.initialize( fs, databaseName );
-            fail();
-        }
-        catch ( ClusterStateException e )
-        {
-            assertThat( e.getMessage(), equalTo( ClusterStateDirectory.MISSING_FILES_MESSAGE ) );
-        }
-    }
-
-    @Test
-    public void shouldThrowOnPreExistingDatabaseStateDuringMigration() throws Exception
-    {
-        //given
-        fs.mkdirs( stateDir );
-        File rootIdAlloc = CoreStateFiles.ID_ALLOCATION.at( stateDir );
-        File rootLockToken = CoreStateFiles.LOCK_TOKEN.at( stateDir );
-        fs.create( rootIdAlloc );
-        fs.create( rootLockToken );
-        String databaseName = "graph.db";
-
-        File existingDatabaseStateDirectory = new File( new File( stateDir, "db" ), databaseName );
-        fs.mkdirs( existingDatabaseStateDirectory );
-
-        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( dataDir, false );
-
-        try
-        {
-            //when
-            clusterStateDirectory.initialize( fs, databaseName );
-            fail();
-        }
-        catch ( ClusterStateException e )
-        {
-            assertThat( e.getMessage(), equalTo( ClusterStateDirectory.OVERLAPPING_DATABASE_STATE_MESSAGE ) );
-        }
     }
 }

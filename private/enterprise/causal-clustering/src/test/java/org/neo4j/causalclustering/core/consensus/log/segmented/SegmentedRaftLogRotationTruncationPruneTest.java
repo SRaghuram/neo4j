@@ -113,7 +113,7 @@ public class SegmentedRaftLogRotationTruncationPruneTest
 
     private RaftLog createRaftLog() throws Exception
     {
-        File directory = new File( CoreStateFiles.RAFT_LOG.directoryFullName() );
+        File directory = new File( CoreStateFiles.RAFT_LOG.directoryName() );
         FileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
         fileSystem.mkdir( directory );
 

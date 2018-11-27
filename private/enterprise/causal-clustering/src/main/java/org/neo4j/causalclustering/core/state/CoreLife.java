@@ -107,6 +107,10 @@ public class CoreLife extends SafeLifecycle
                 databaseService.start();
                 databaseService.stop();
             }
+            else
+            {
+                log.info( "No recovery required for " + db.databaseName() );
+            }
         }
     }
 

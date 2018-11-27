@@ -6,14 +6,11 @@
 package org.neo4j.causalclustering.core.state;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.consensus.log.RaftLog;
 import org.neo4j.causalclustering.core.consensus.log.segmented.SegmentedRaftLog;
 import org.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
@@ -31,18 +28,28 @@ import org.neo4j.causalclustering.identity.DatabaseName;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
 
+import static java.util.Arrays.asList;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.global_session_tracker_state_size;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.id_alloc_state_size;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.last_flushed_state_size;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_membership_state_size;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.replicated_lock_token_state_size;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.term_state_size;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.vote_state_size;
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.FileType.DUAL;
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.FileType.NONE;
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.FileType.SEGMENTED;
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.FileType.SIMPLE;
 
-//TODO: This class is useful, but needs heavy doc block
+/**
+ * Enumerates and categorises core cluster state files.
+ *
+ * @param <STATE> The state type.
+ */
+@SuppressWarnings( {"WeakerAccess", "deprecation"} )
 public class CoreStateFiles<STATE>
 {
-
     enum FileType
     {
         /**
@@ -62,81 +69,50 @@ public class CoreStateFiles<STATE>
          */
         NONE( ignored -> null );
 
-        private final Function<String,String> dir;
+        private final Function<String,String> directoryFunction;
 
-        FileType( Function<String,String> dir )
+        FileType( Function<String,String> directoryFunction )
         {
-            this.dir = dir;
+            this.directoryFunction = directoryFunction;
         }
     }
 
-    private static SafeStateMarshal<RaftLog> unsupportedRaftLogMarshal = new SafeStateMarshal<RaftLog>()
-    {
-        @Override
-        protected RaftLog unmarshal0( ReadableChannel channel )
-        {
-            throw new UnsupportedOperationException( "You cannot directly unmarshal a RaftLog" );
-        }
-
-        @Override
-        public RaftLog startState()
-        {
-            return null;
-        }
-
-        @Override
-        public long ordinal( RaftLog log )
-        {
-            return 0;
-        }
-
-        @Override
-        public void marshal( RaftLog log, WritableChannel channel ) throws IOException
-        {
-            throw new IOException( "You cannot directly marshal a RaftLog!" );
-        }
-    };
-
-    //Ordinals for existing CoreState types must be in this order for backwards compatibility with 3.4
     public static final CoreStateFiles<ReplicatedLockTokenState> LOCK_TOKEN =
-            new CoreStateFiles<>( "lock-token", DUAL, new ReplicatedLockTokenState.Marshal(), CausalClusteringSettings.replicated_lock_token_state_size, 0 );
+            new CoreStateFiles<>( "lock-token", DUAL, new ReplicatedLockTokenState.Marshal(), replicated_lock_token_state_size, CoreStateType.LOCK_TOKEN );
     public static final CoreStateFiles<GlobalSessionTrackerState> SESSION_TRACKER =
-            new CoreStateFiles<>( "session-tracker", DUAL, new GlobalSessionTrackerState.Marshal(), CausalClusteringSettings.global_session_tracker_state_size,
-                    1 );
+            new CoreStateFiles<>( "session-tracker", DUAL, new GlobalSessionTrackerState.Marshal(), global_session_tracker_state_size,
+                    CoreStateType.SESSION_TRACKER );
     public static final CoreStateFiles<IdAllocationState> ID_ALLOCATION =
-            new CoreStateFiles<>( "id-allocation", DUAL, new IdAllocationState.Marshal(), CausalClusteringSettings.id_alloc_state_size, 2 );
-    public static final CoreStateFiles<RaftCoreState> RAFT_CORE_STATE = new CoreStateFiles<>( "core", NONE, new RaftCoreState.Marshal(), 3 );
-
-    public static final CoreStateFiles<DatabaseName> DB_NAME = new CoreStateFiles<>( "db-name", SIMPLE, new DatabaseName.Marshal(), 4 );
-    public static final CoreStateFiles<ClusterId> CLUSTER_ID = new CoreStateFiles<>( "cluster-id", SIMPLE, new ClusterId.Marshal(), 5 );
-    public static final CoreStateFiles<MemberId> CORE_MEMBER_ID = new CoreStateFiles<>( "core-member-id", SIMPLE, new MemberId.Marshal(), 6 );
-
-    //Raft Core state is different from other core state in that you cannot create Storage and marshal raft state to it. However it is still needed in this
-    // "enum" in case of migrations.
-    public static final CoreStateFiles<RaftLog> RAFT_LOG = new CoreStateFiles<>( "raft-log", SEGMENTED, unsupportedRaftLogMarshal, 7 );
+            new CoreStateFiles<>( "id-allocation", DUAL, new IdAllocationState.Marshal(), id_alloc_state_size, CoreStateType.ID_ALLOCATION );
+    public static final CoreStateFiles<RaftCoreState> RAFT_CORE_STATE =
+            new CoreStateFiles<>( "core", NONE, new RaftCoreState.Marshal(), CoreStateType.RAFT_CORE_STATE );
+    public static final CoreStateFiles<DatabaseName> DB_NAME = new CoreStateFiles<>( "db-name", SIMPLE, new DatabaseName.Marshal(), CoreStateType.DB_NAME );
+    public static final CoreStateFiles<ClusterId> CLUSTER_ID = new CoreStateFiles<>( "cluster-id", SIMPLE, new ClusterId.Marshal(), CoreStateType.CLUSTER_ID );
+    public static final CoreStateFiles<MemberId> CORE_MEMBER_ID =
+            new CoreStateFiles<>( "core-member-id", SIMPLE, new MemberId.Marshal(), CoreStateType.CORE_MEMBER_ID );
+    public static final CoreStateFiles<RaftLog> RAFT_LOG = new CoreStateFiles<>( "raft-log", SEGMENTED, null, CoreStateType.RAFT_LOG );
     public static final CoreStateFiles<TermState> RAFT_TERM =
-            new CoreStateFiles<>( "term", DUAL, new TermState.Marshal(), CausalClusteringSettings.term_state_size, 8 );
+            new CoreStateFiles<>( "term", DUAL, new TermState.Marshal(), term_state_size, CoreStateType.RAFT_TERM );
     public static final CoreStateFiles<VoteState> RAFT_VOTE =
-            new CoreStateFiles<>( "vote", DUAL, new VoteState.Marshal(), CausalClusteringSettings.vote_state_size, 9 );
+            new CoreStateFiles<>( "vote", DUAL, new VoteState.Marshal(), vote_state_size, CoreStateType.RAFT_VOTE );
     public static final CoreStateFiles<RaftMembershipState> RAFT_MEMBERSHIP =
-            new CoreStateFiles<>( "membership", DUAL, new RaftMembershipState.Marshal(), CausalClusteringSettings.raft_membership_state_size, 10 );
-
+            new CoreStateFiles<>( "membership", DUAL, new RaftMembershipState.Marshal(), raft_membership_state_size, CoreStateType.RAFT_MEMBERSHIP );
     public static final CoreStateFiles<Long> LAST_FLUSHED =
-            new CoreStateFiles<>( "last-flushed", DUAL, new LongIndexMarshal(), CausalClusteringSettings.last_flushed_state_size, 11 );
+            new CoreStateFiles<>( "last-flushed", DUAL, new LongIndexMarshal(), last_flushed_state_size, CoreStateType.LAST_FLUSHED );
 
     // for testing purposes
     public static <S> CoreStateFiles<S> DUMMY( SafeStateMarshal<S> marshal )
     {
-        return new CoreStateFiles<>( "dummy", SIMPLE, marshal, -1 );
+        return new CoreStateFiles<>( "dummy", SIMPLE, marshal, CoreStateType.DUMMY );
     }
 
     private static List<CoreStateFiles<?>> values;
 
     static
     {
-        values = Arrays.asList( ID_ALLOCATION, LOCK_TOKEN, DB_NAME, CLUSTER_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP,
-                RAFT_CORE_STATE, LAST_FLUSHED, SESSION_TRACKER );
-        values.sort( Comparator.comparingInt( a -> a.ordinal ) );
+        values = asList( ID_ALLOCATION, LOCK_TOKEN, DB_NAME, CLUSTER_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
+                LAST_FLUSHED, SESSION_TRACKER );
+        values.sort( Comparator.comparingInt( CoreStateFiles::typeId ) );
         values = Collections.unmodifiableList( values );
     }
 
@@ -145,39 +121,39 @@ public class CoreStateFiles<STATE>
         return values;
     }
 
-    private final String directoryBaseName;
+    private final String baseName;
     private final FileType fileType;
     private final SafeStateMarshal<STATE> marshal;
     private final Setting<Integer> rotationSizeSetting;
-    private final int ordinal;
+    private final CoreStateType typeId;
 
-    private CoreStateFiles( String directoryBaseName, FileType fileType, SafeStateMarshal<STATE> marshal, int ordinal )
+    private CoreStateFiles( String baseName, FileType fileType, SafeStateMarshal<STATE> marshal, CoreStateType typeId )
     {
-        this( directoryBaseName, fileType, marshal, null, ordinal );
+        this( baseName, fileType, marshal, null, typeId );
     }
 
-    private CoreStateFiles( String directoryBaseName, FileType fileType, SafeStateMarshal<STATE> marshal, Setting<Integer> rotationSizeSetting, int ordinal )
+    private CoreStateFiles( String baseName, FileType fileType, SafeStateMarshal<STATE> marshal, Setting<Integer> rotationSizeSetting, CoreStateType typeId )
     {
-        this.directoryBaseName = directoryBaseName;
+        this.baseName = baseName;
         this.fileType = fileType;
         this.marshal = marshal;
-        this.ordinal = ordinal;
+        this.typeId = typeId;
         this.rotationSizeSetting = rotationSizeSetting;
     }
 
     public File at( File root )
     {
-        return new File( root, fileType.dir.apply( directoryBaseName ) );
+        return new File( root, directoryName() );
     }
 
-    public String directoryBaseName()
+    public String baseName()
     {
-        return directoryBaseName;
+        return baseName;
     }
 
-    public String directoryFullName()
+    public String directoryName()
     {
-        return fileType.dir.apply( directoryBaseName );
+        return fileType.directoryFunction.apply( baseName );
     }
 
     public FileType fileType()
@@ -189,24 +165,28 @@ public class CoreStateFiles<STATE>
     {
         if ( rotationSizeSetting == null )
         {
-            throw new UnsupportedOperationException( "Simple Core state does not rotate and so has no rotation size setting!" );
+            throw new UnsupportedOperationException( "This type does not rotate and thus has no rotation size setting: " + this );
         }
         return config.get( rotationSizeSetting );
     }
 
     public SafeStateMarshal<STATE> marshal()
     {
+        if ( marshal == null )
+        {
+            throw new UnsupportedOperationException( "This type does not have a marshal registered." + this );
+        }
         return marshal;
     }
 
-    public int ordinal()
+    public int typeId()
     {
-        return ordinal;
+        return typeId.typeId();
     }
 
     @Override
     public String toString()
     {
-        return directoryFullName();
+        return directoryName();
     }
 }
