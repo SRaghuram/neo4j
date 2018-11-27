@@ -118,7 +118,7 @@ public class ProcedureResourcesIT
         }
     }
 
-    private Result exhaust( Result execute )
+    private static Result exhaust( Result execute )
     {
         while ( execute.hasNext() )
         {
@@ -253,6 +253,12 @@ public class ProcedureResourcesIT
             break;
         case "dbms.killConnections":
             proc.withParam( "['bolt-1234']" );
+            break;
+        case "dbms.killTransaction":
+            proc.withParam( "'transaction-1234'" );
+            break;
+        case "dbms.killTransactions":
+            proc.withParam( "['transaction-1234']" );
             break;
         case "dbms.setTXMetaData":
             proc.withParam( "{realUser:'MyMan'}" );
