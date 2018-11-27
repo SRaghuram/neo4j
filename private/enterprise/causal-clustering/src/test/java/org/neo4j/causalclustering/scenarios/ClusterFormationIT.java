@@ -5,49 +5,55 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
-import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.core.CoreGraphDatabase;
+import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
-import org.neo4j.test.causalclustering.ClusterRule;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
+@ClusterExtension
 public class ClusterFormationIT
 {
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 0 );
+    @Inject
+    private ClusterFactory clusterFactory;
+
+    public final ClusterConfig clusterConfig = ClusterConfig.clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 );
 
     private Cluster<?> cluster;
 
-    @Before
-    public void setup() throws Exception
+    private int idCounter = 100;
+
+    @BeforeAll
+    void setup() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
     }
 
     @Test
-    public void shouldSupportBuiltInProcedures()
+    void shouldSupportBuiltInProcedures()
     {
-        cluster.addReadReplicaWithId( 0 ).start();
+        cluster.addReadReplicaWithId( idCounter++ ).start();
 
         Stream.concat(
             cluster.readReplicas().stream().map( ReadReplica::database),
@@ -74,30 +80,31 @@ public class ClusterFormationIT
     }
 
     @Test
-    public void shouldBeAbleToAddAndRemoveCoreMembers()
+    void shouldBeAbleToAddAndRemoveCoreMembers()
     {
         // when
-        cluster.getCoreMemberById( 0 ).shutdown();
-        cluster.getCoreMemberById( 0 ).start();
+        CoreClusterMember coreMemberById = getExitingCoreMember();
+        coreMemberById.shutdown();
+        coreMemberById.start();
 
         // then
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
 
         // when
-        cluster.removeCoreMemberWithServerId( 1 );
+        removeCoreMember();
 
         // then
         assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology() );
 
         // when
-        cluster.addCoreMemberWithId( 4 ).start();
+        cluster.addCoreMemberWithId( idCounter++ ).start();
 
         // then
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
     }
 
     @Test
-    public void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad()
+    void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad()
     {
         // given
         ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -112,20 +119,21 @@ public class ClusterFormationIT
         } );
 
         // when
-        cluster.getCoreMemberById( 0 ).shutdown();
-        cluster.getCoreMemberById( 0 ).start();
+        CoreClusterMember coreMember = getExitingCoreMember();
+        coreMember.shutdown();
+        coreMember.start();
 
         // then
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
 
         // when
-        cluster.removeCoreMemberWithServerId( 0 );
+        removeCoreMember();
 
         // then
         assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology() );
 
         // when
-        cluster.addCoreMemberWithId( 4 ).start();
+        cluster.addCoreMemberWithId( idCounter++ ).start();
 
         // then
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
@@ -134,7 +142,7 @@ public class ClusterFormationIT
     }
 
     @Test
-    public void shouldBeAbleToRestartTheCluster() throws Exception
+    void shouldBeAbleToRestartTheCluster() throws Exception
     {
         // when started then
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
@@ -147,14 +155,24 @@ public class ClusterFormationIT
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
 
         // when
-        cluster.removeCoreMemberWithServerId( 1 );
+        removeCoreMember();
 
-        cluster.addCoreMemberWithId( 3 ).start();
+        cluster.addCoreMemberWithId( idCounter++ ).start();
         cluster.shutdown();
 
         cluster.start();
 
         // then
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
+    }
+
+    private CoreClusterMember getExitingCoreMember()
+    {
+        return cluster.coreMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Could not find any available cores" ) );
+    }
+
+    private void removeCoreMember()
+    {
+        cluster.removeCoreMember( getExitingCoreMember() );
     }
 }

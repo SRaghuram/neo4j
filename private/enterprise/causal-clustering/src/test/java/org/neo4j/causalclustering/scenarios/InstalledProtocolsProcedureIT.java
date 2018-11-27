@@ -5,17 +5,16 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
 import org.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedureTest;
@@ -26,7 +25,10 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.test.causalclustering.ClusterRule;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.Inject;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -42,26 +44,31 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 /**
  * @see InstalledProtocolsProcedureTest
  */
+@ClusterExtension
 public class InstalledProtocolsProcedureIT
 {
-    @Rule
-    public ClusterRule clusterRule = new ClusterRule()
+    @Inject
+    private ClusterFactory clusterFactory;
+
+    public final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
             .withSharedCoreParam( CausalClusteringSettings.leader_election_timeout, "2s" )
             .withSharedCoreParam( CausalClusteringSettings.compression_implementations, "snappy" )
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 );
+
     private Cluster<?> cluster;
     private CoreClusterMember leader;
 
-    @Before
-    public void startUp() throws Exception
+    @BeforeAll
+    void startUp() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
         leader = cluster.awaitLeader();
     }
 
     @Test
-    public void shouldSeeOutboundInstalledProtocolsOnLeader() throws Throwable
+    void shouldSeeOutboundInstalledProtocolsOnLeader() throws Throwable
     {
         String modifiers = new StringJoiner( ",", "[", "]" )
                 .add( COMPRESSION_SNAPPY.implementation() )
@@ -80,7 +87,7 @@ public class InstalledProtocolsProcedureIT
     }
 
     @Test
-    public void shouldSeeInboundInstalledProtocolsOnLeader() throws Throwable
+    void shouldSeeInboundInstalledProtocolsOnLeader() throws Throwable
     {
         assertEventually( "should see inbound installed protocols on core " + leader.serverId(),
                 () -> installedProtocols( leader.database(), INBOUND ),

@@ -5,8 +5,11 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -16,13 +19,14 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 
 import org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess;
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.driver.internal.logging.JULogging;
 import org.neo4j.driver.v1.AccessMode;
@@ -42,38 +46,62 @@ import org.neo4j.driver.v1.exceptions.SessionExpiredException;
 import org.neo4j.driver.v1.summary.ServerInfo;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterators;
-import org.neo4j.test.causalclustering.ClusterRule;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.driver.v1.Values.parameters;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class BoltCausalClusteringIT
+@ClusterExtension
+@ExtendWith( SuppressOutputExtension.class )
+class BoltCausalClusteringIT
 {
     private static final long DEFAULT_TIMEOUT_MS = 15_000;
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( 3 );
-    @Rule
-    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+
+    @Inject
+    private ClusterFactory clusterFactory;
 
     private Cluster<?> cluster;
 
-    @Test
-    public void shouldExecuteReadAndWritesWhenDriverSuppliedWithAddressOfLeader() throws Exception
+    @BeforeAll
+    void startCluster() throws Exception
     {
-        // given
-        cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
+        cluster = clusterFactory.createCluster( ClusterConfig
+                .clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withSharedCoreParams( stringMap( CausalClusteringSettings.cluster_routing_ttl.name(), "3s" ) ) );
+        cluster.start();
+    }
+
+    @BeforeEach
+    void removePersons() throws TimeoutException
+    {
+        try ( Driver driver = GraphDatabase.driver( cluster.awaitLeader().routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
+                Session session = driver.session( AccessMode.WRITE ) )
+        {
+            // when
+            session.run( "MATCH (n:Person) DELETE n" ).consume();
+        }
+    }
+
+    @Test
+    void shouldExecuteReadAndWritesWhenDriverSuppliedWithAddressOfLeader() throws Exception
+    {
+        //given
         cluster.coreTx( ( db, tx ) ->
         {
             Iterators.count( db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
@@ -85,13 +113,18 @@ public class BoltCausalClusteringIT
 
         // then
         assertEquals( 1, count );
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            Iterators.count( db.execute( "DROP CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
+            tx.success();
+        } );
     }
 
     @Test
-    public void shouldExecuteReadAndWritesWhenDriverSuppliedWithAddressOfFollower() throws Exception
+    void shouldExecuteReadAndWritesWhenDriverSuppliedWithAddressOfFollower() throws Exception
     {
-        // given
-        cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
+        //given
         cluster.coreTx( ( db, tx ) ->
         {
             Iterators.count( db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
@@ -103,6 +136,12 @@ public class BoltCausalClusteringIT
 
         // then
         assertEquals( 1, count );
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            Iterators.count( db.execute( "DROP CONSTRAINT ON (p:Person) ASSERT p.name is UNIQUE" ) );
+            tx.success();
+        } );
     }
 
     private static int executeWriteAndReadThroughBolt( CoreClusterMember core ) throws TimeoutException
@@ -121,18 +160,16 @@ public class BoltCausalClusteringIT
     }
 
     @Test
-    public void shouldNotBeAbleToWriteOnAReadSession() throws Exception
+    void shouldNotBeAbleToWriteOnAReadSession() throws Exception
     {
         // given
-        cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
-
         assertEventually( "Failed to execute write query on read server", () ->
         {
             switchLeader( cluster.awaitLeader() );
             CoreClusterMember leader = cluster.awaitLeader();
-            Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
 
-            try ( Session session = driver.session( AccessMode.READ ) )
+            try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
+                    Session session = driver.session( AccessMode.READ ) )
             {
                 // when
                 session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
@@ -143,62 +180,40 @@ public class BoltCausalClusteringIT
                 assertEquals( "Write queries cannot be performed in READ access mode.", ex.getMessage() );
                 return true;
             }
-            finally
-            {
-                driver.close();
-            }
         }, is( true ), 30, SECONDS );
     }
 
     @Test
-    public void sessionShouldExpireOnLeaderSwitch() throws Exception
+    void sessionShouldExpireOnLeaderSwitch() throws Exception
     {
         // given
-        cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
-
         CoreClusterMember leader = cluster.awaitLeader();
 
-        Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
-        try ( Session session = driver.session() )
+        try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) ); Session session = driver.session() )
         {
             session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
 
             // when
             switchLeader( leader );
 
-            session.run( "CREATE (n:Person {name: 'Mark'})" ).consume();
-
-            fail( "Should have thrown exception" );
-        }
-        catch ( SessionExpiredException sep )
-        {
-            // then
-            assertEquals( String.format( "Server at %s no longer accepts writes", leader.boltAdvertisedAddress() ),
-                    sep.getMessage() );
-        }
-        finally
-        {
-            driver.close();
+            SessionExpiredException sep =
+                    Assertions.assertThrows( SessionExpiredException.class, () -> session.run( "CREATE (n:Person {name: 'Mark'})" ).consume() );
+            assertEquals( String.format( "Server at %s no longer accepts writes", leader.boltAdvertisedAddress() ), sep.getMessage() );
         }
     }
 
     @Test
-    public void shouldBeAbleToGetClusterOverview() throws Exception
+    void shouldBeAbleToGetClusterOverview() throws Exception
     {
         // given
-        cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
-
         CoreClusterMember leader = cluster.awaitLeader();
 
-        Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
-        try ( Session session = driver.session() )
+        int clusterSize = cluster.readReplicas().size() + cluster.coreMembers().size();
+
+        try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) ); Session session = driver.session() )
         {
             StatementResult overview = session.run( "CALL dbms.cluster.overview" );
-            assertThat(overview.list(), hasSize( 3 ));
-        }
-        finally
-        {
-            driver.close();
+            assertThat( overview.list(), hasSize( clusterSize ) );
         }
     }
 
@@ -286,11 +301,9 @@ public class BoltCausalClusteringIT
     }
 
     @Test
-    public void shouldPickANewServerToWriteToOnLeaderSwitch() throws Throwable
+    void shouldPickANewServerToWriteToOnLeaderSwitch() throws Throwable
     {
         // given
-        cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
-
         CoreClusterMember leader = cluster.awaitLeader();
 
         CountDownLatch leaderSwitchLatch = new CountDownLatch( 1 );
@@ -299,8 +312,7 @@ public class BoltCausalClusteringIT
 
         Config config = Config.build().withLogging( new JULogging( Level.OFF ) ).toConfig();
         Set<String> seenAddresses = new HashSet<>();
-        try ( Driver driver = GraphDatabase
-                .driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ), config ) )
+        try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ), config ) )
         {
             boolean success = false;
 
@@ -345,11 +357,9 @@ public class BoltCausalClusteringIT
     }
 
     @Test
-    public void sessionCreationShouldFailIfCallingDiscoveryProcedureOnEdgeServer() throws Exception
+    void sessionCreationShouldFailIfCallingDiscoveryProcedureOnEdgeServer()
     {
         // given
-        cluster = clusterRule.withNumberOfReadReplicas( 1 ).startCluster();
-
         ReadReplica readReplica = cluster.getReadReplicaById( 0 );
         try
         {
@@ -371,10 +381,9 @@ public class BoltCausalClusteringIT
        c) keeps working if a new session is created after that exception, again with no access mode specified.
      */
     @Test
-    public void shouldReadAndWriteToANewSessionCreatedAfterALeaderSwitch() throws Exception
+    void shouldReadAndWriteToANewSessionCreatedAfterALeaderSwitch() throws Exception
     {
         // given
-        cluster = clusterRule.withNumberOfReadReplicas( 1 ).startCluster();
         CoreClusterMember leader = cluster.awaitLeader();
 
         try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) ) )
@@ -397,9 +406,7 @@ public class BoltCausalClusteringIT
                 catch ( SessionExpiredException sep )
                 {
                     // then
-                    assertEquals(
-                            String.format( "Server at %s no longer accepts writes", leader.boltAdvertisedAddress() ),
-                            sep.getMessage() );
+                    assertEquals( String.format( "Server at %s no longer accepts writes", leader.boltAdvertisedAddress() ), sep.getMessage() );
                 }
                 catch ( InterruptedException e )
                 {
@@ -421,10 +428,9 @@ public class BoltCausalClusteringIT
 
     // Ensure that Bookmarks work with single instances using a driver created using a bolt[not+routing] URI.
     @Test
-    public void bookmarksShouldWorkWithDriverPinnedToSingleServer() throws Exception
+    void bookmarksShouldWorkWithDriverPinnedToSingleServer() throws Exception
     {
         // given
-        cluster = clusterRule.withNumberOfReadReplicas( 1 ).startCluster();
         CoreClusterMember leader = cluster.awaitLeader();
 
         try ( Driver driver = GraphDatabase.driver( leader.directURI(), AuthTokens.basic( "neo4j", "neo4j" ) ) )
@@ -452,10 +458,9 @@ public class BoltCausalClusteringIT
     }
 
     @Test
-    public void shouldUseBookmarkFromAReadSessionInAWriteSession() throws Exception
+    void shouldUseBookmarkFromAReadSessionInAWriteSession() throws Exception
     {
         // given
-        cluster = clusterRule.withNumberOfReadReplicas( 1 ).startCluster();
         CoreClusterMember leader = cluster.awaitLeader();
 
         try ( Driver driver = GraphDatabase.driver( leader.directURI(), AuthTokens.basic( "neo4j", "neo4j" ) ) )
@@ -500,11 +505,9 @@ public class BoltCausalClusteringIT
     }
 
     @Test
-    public void shouldUseBookmarkFromAWriteSessionInAReadSession() throws Throwable
+    void shouldUseBookmarkFromAWriteSessionInAReadSession() throws Throwable
     {
         // given
-        cluster = clusterRule.withNumberOfReadReplicas( 1 ).startCluster();
-
         CoreClusterMember leader = cluster.awaitLeader();
         ReadReplica readReplica = cluster.getReadReplicaById( 0 );
 
@@ -543,13 +546,9 @@ public class BoltCausalClusteringIT
     }
 
     @Test
-    public void shouldSendRequestsToNewlyAddedReadReplicas() throws Throwable
+    void shouldSendRequestsToNewlyAddedReadReplicas() throws Throwable
     {
         // given
-        cluster = clusterRule.withNumberOfReadReplicas( 1 )
-                .withSharedCoreParams( stringMap( CausalClusteringSettings.cluster_routing_ttl.name(), "1s" ) )
-                .startCluster();
-
         CoreClusterMember leader = cluster.awaitLeader();
         Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
 
@@ -597,7 +596,6 @@ public class BoltCausalClusteringIT
 
                         return null;
                     } );
-
                 }
                 catch ( Throwable throwable )
                 {
@@ -610,11 +608,9 @@ public class BoltCausalClusteringIT
     }
 
     @Test
-    public void shouldHandleLeaderSwitch() throws Exception
+    void shouldHandleLeaderSwitch() throws Exception
     {
         // given
-        cluster = clusterRule.startCluster();
-
         CoreClusterMember leader = cluster.awaitLeader();
 
         try ( Driver driver = GraphDatabase.driver( leader.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) ) )
@@ -626,8 +622,7 @@ public class BoltCausalClusteringIT
                 {
                     switchLeader( leader );
 
-                    tx.run( "CREATE (person:Person {name: {name}, title: {title}})",
-                            parameters( "name", "Webber", "title", "Mr" ) );
+                    tx.run( "CREATE (person:Person {name: {name}, title: {title}})", parameters( "name", "Webber", "title", "Mr" ) );
                     tx.success();
                 }
                 catch ( SessionExpiredException ignored )
@@ -640,8 +635,7 @@ public class BoltCausalClusteringIT
             {
                 try ( Transaction tx = s.beginTransaction() )
                 {
-                    tx.run( "CREATE (person:Person {name: {name}, title: {title}})",
-                            parameters( "name", "Webber", "title", "Mr" ) );
+                    tx.run( "CREATE (person:Person {name: {name}, title: {title}})", parameters( "name", "Webber", "title", "Mr" ) );
                     tx.success();
                 }
                 return s.lastBookmark();
@@ -661,15 +655,16 @@ public class BoltCausalClusteringIT
     }
 
     @Test
-    public void transactionsShouldNotAppearOnTheReadReplicaWhilePollingIsPaused() throws Throwable
+    void transactionsShouldNotAppearOnTheReadReplicaWhilePollingIsPaused() throws Throwable
     {
         // given
-        Map<String,String> params = stringMap( GraphDatabaseSettings.keep_logical_logs.name(), "keep_none",
-                GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
-                GraphDatabaseSettings.check_point_interval_time.name(), "100ms",
-                CausalClusteringSettings.cluster_allow_reads_on_followers.name(), "false");
+        Map<String,String> params =
+                stringMap( GraphDatabaseSettings.keep_logical_logs.name(), "keep_none", GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
+                        GraphDatabaseSettings.check_point_interval_time.name(), "100ms", CausalClusteringSettings.cluster_allow_reads_on_followers.name(),
+                        "false" );
 
-        Cluster<?> cluster = clusterRule.withSharedCoreParams( params ).withNumberOfReadReplicas( 1 ).startCluster();
+        Cluster<?> cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withSharedCoreParams( params ).withNumberOfReadReplicas( 1 ) );
+        cluster.start();
 
         Driver driver = GraphDatabase.driver( cluster.awaitLeader().routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
 
@@ -684,8 +679,7 @@ public class BoltCausalClusteringIT
 
         ReadReplica replica = cluster.findAnyReadReplica();
 
-        CatchupPollingProcess pollingClient = replica.database().getDependencyResolver()
-                .resolveDependency( CatchupPollingProcess.class );
+        CatchupPollingProcess pollingClient = replica.database().getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
 
         pollingClient.stop();
 
@@ -699,8 +693,7 @@ public class BoltCausalClusteringIT
                 writeSession.writeTransaction( tx ->
                 {
 
-                    tx.run( "UNWIND range(1, {nodesToCreate}) AS i CREATE (n:Person {name: 'Jim'})",
-                            Values.parameters( "nodesToCreate", nodesToCreate ) );
+                    tx.run( "UNWIND range(1, {nodesToCreate}) AS i CREATE (n:Person {name: 'Jim'})", Values.parameters( "nodesToCreate", nodesToCreate ) );
                     return null;
                 } );
 
@@ -728,6 +721,8 @@ public class BoltCausalClusteringIT
         }
 
         assertEquals( numberOfRequests, happyCount );
+
+        cluster.shutdown();
     }
 
     private static void executeReadQuery( Session session )
@@ -739,8 +734,7 @@ public class BoltCausalClusteringIT
         }
     }
 
-    private static <T> T inExpirableSession( Driver driver, Function<Driver,Session> acquirer, Function<Session,T> op )
-            throws TimeoutException
+    private static <T> T inExpirableSession( Driver driver, Function<Driver,Session> acquirer, Function<Session,T> op ) throws TimeoutException
     {
         long endTime = System.currentTimeMillis() + DEFAULT_TIMEOUT_MS;
 

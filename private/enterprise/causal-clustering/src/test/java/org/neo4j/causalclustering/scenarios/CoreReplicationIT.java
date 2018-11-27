@@ -5,9 +5,9 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -16,51 +16,68 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
-import org.neo4j.causalclustering.common.Cluster;
-import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
-import org.neo4j.test.causalclustering.ClusterRule;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.Inject;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static org.neo4j.causalclustering.helpers.DataCreator.countNodes;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class CoreReplicationIT
+@ClusterExtension
+class CoreReplicationIT
 {
-    @Rule
-    public final ClusterRule clusterRule =
-            new ClusterRule()
-                    .withNumberOfCoreMembers( 3 )
-                    .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
-                    .withNumberOfReadReplicas( 0 )
-                    .withTimeout( 1000, SECONDS );
+    @Inject
+    private ClusterFactory clusterFactory;
 
     private Cluster<?> cluster;
 
-    @Before
-    public void setup() throws Exception
+    private int coreIdCounter = 100;
+    private long nodesBeforeTest;
+
+    private final ClusterConfig clusterConfig = ClusterConfig
+            .clusterConfig()
+            .withNumberOfCoreMembers( 3 )
+            .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
+            .withNumberOfReadReplicas( 0 )
+            .withTimeout( 1000, SECONDS );
+
+    @BeforeAll
+    void setup() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+    }
+
+    @BeforeEach
+    void calculateNrOfNodes() throws TimeoutException
+    {
+        nodesBeforeTest = countNodes( cluster.awaitLeader() );
     }
 
     @Test
-    public void shouldReplicateTransactionsToCoreMembers() throws Exception
+    void shouldReplicateTransactionsToCoreMembers() throws Exception
     {
         // when
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
@@ -71,12 +88,12 @@ public class CoreReplicationIT
         } );
 
         // then
-        assertEquals( 1, countNodes( leader ) );
+        assertEquals( nodesBeforeTest + 1, countNodes( leader ) );
         dataMatchesEventually( leader, cluster.coreMembers() );
     }
 
     @Test
-    public void shouldNotAllowWritesFromAFollower() throws Exception
+    void shouldNotAllowWritesFromAFollower() throws TimeoutException
     {
         // given
         cluster.awaitLeader();
@@ -86,25 +103,18 @@ public class CoreReplicationIT
         // when
         try ( Transaction tx = follower.beginTx() )
         {
-            follower.createNode();
-            tx.success();
-            fail( "Should have thrown exception" );
-        }
-        catch ( WriteOperationsNotAllowedException ex )
-        {
-            // expected
+            WriteOperationsNotAllowedException ex = assertThrows( WriteOperationsNotAllowedException.class, follower::createNode );
             assertThat( ex.getMessage(), containsString( "No write operations are allowed" ) );
         }
     }
 
     @Test
-    public void pageFaultsFromReplicationMustCountInMetrics() throws Exception
+    void pageFaultsFromReplicationMustCountInMetrics() throws Exception
     {
         // Given initial pin counts on all members
         Function<CoreClusterMember,PageCacheCounters> getPageCacheCounters =
                 ccm -> ccm.database().getDependencyResolver().resolveDependency( PageCacheCounters.class );
-        List<PageCacheCounters> countersList =
-                cluster.coreMembers().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
+        List<PageCacheCounters> countersList = cluster.coreMembers().stream().map( getPageCacheCounters ).collect( Collectors.toList() );
         long[] initialPins = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();
 
         // when the leader commits a write transaction,
@@ -138,7 +148,7 @@ public class CoreReplicationIT
     }
 
     @Test
-    public void shouldNotAllowSchemaChangesFromAFollower() throws Exception
+    void shouldNotAllowSchemaChangesFromAFollower() throws Exception
     {
         // given
         cluster.awaitLeader();
@@ -148,19 +158,14 @@ public class CoreReplicationIT
         // when
         try ( Transaction tx = follower.beginTx() )
         {
-            follower.schema().constraintFor( Label.label( "Foo" ) ).assertPropertyIsUnique( "name" ).create();
-            tx.success();
-            fail( "Should have thrown exception" );
-        }
-        catch ( WriteOperationsNotAllowedException ex )
-        {
-            // expected
+            WriteOperationsNotAllowedException ex = assertThrows( WriteOperationsNotAllowedException.class,
+                    () -> follower.schema().constraintFor( Label.label( "Foo" ) ).assertPropertyIsUnique( "name" ).create() );
             assertThat( ex.getMessage(), containsString( "No write operations are allowed" ) );
         }
     }
 
     @Test
-    public void shouldNotAllowTokenCreationFromAFollowerWithNoInitialTokens() throws Exception
+    void shouldNotAllowTokenCreationFromAFollowerWithNoInitialTokens() throws Exception
     {
         // given
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
@@ -177,12 +182,8 @@ public class CoreReplicationIT
         // when
         try ( Transaction tx = follower.beginTx() )
         {
-            follower.getAllNodes().iterator().next().setProperty( "name", "Mark" );
-            tx.success();
-            fail( "Should have thrown exception" );
-        }
-        catch ( WriteOperationsNotAllowedException ex )
-        {
+            WriteOperationsNotAllowedException ex =
+                    assertThrows( WriteOperationsNotAllowedException.class, () -> follower.getAllNodes().iterator().next().setProperty( "name", "Mark" ) );
             assertThat( ex.getMessage(), containsString( "No write operations are allowed" ) );
         }
     }
@@ -193,12 +194,12 @@ public class CoreReplicationIT
     }
 
     @Test
-    public void shouldReplicateTransactionToCoreMemberAddedAfterInitialStartUp() throws Exception
+    void shouldReplicateTransactionToCoreMemberAddedAfterInitialStartUp() throws Exception
     {
         // given
         cluster.getCoreMemberById( 0 ).shutdown();
 
-        cluster.addCoreMemberWithId( 3 ).start();
+        cluster.addCoreMemberWithId( coreIdCounter++ ).start();
         cluster.getCoreMemberById( 0 ).start();
 
         cluster.coreTx( ( db, tx ) ->
@@ -209,7 +210,7 @@ public class CoreReplicationIT
         } );
 
         // when
-        cluster.addCoreMemberWithId( 4 ).start();
+        cluster.addCoreMemberWithId( coreIdCounter++ ).start();
         CoreClusterMember last = cluster.coreTx( ( db, tx ) ->
         {
             Node node = db.createNode();
@@ -218,12 +219,12 @@ public class CoreReplicationIT
         } );
 
         // then
-        assertEquals( 2, countNodes( last ) );
+        assertEquals( nodesBeforeTest + 2, countNodes( last ) );
         dataMatchesEventually( last, cluster.coreMembers() );
     }
 
     @Test
-    public void shouldReplicateTransactionAfterLeaderWasRemovedFromCluster() throws Exception
+    void shouldReplicateTransactionAfterLeaderWasRemovedFromCluster() throws Exception
     {
         // given
         cluster.coreTx( ( db, tx ) ->
@@ -236,6 +237,7 @@ public class CoreReplicationIT
         // when
         cluster.removeCoreMember( cluster.awaitLeader() );
         cluster.awaitLeader( 1, TimeUnit.MINUTES ); // <- let's give a bit more time for the leader to show up
+
         CoreClusterMember last = cluster.coreTx( ( db, tx ) ->
         {
             Node node = db.createNode();
@@ -244,12 +246,12 @@ public class CoreReplicationIT
         } );
 
         // then
-        assertEquals( 2, countNodes( last ) );
+        assertEquals( nodesBeforeTest + 2, countNodes( last ) );
         dataMatchesEventually( last, cluster.coreMembers() );
     }
 
     @Test
-    public void shouldReplicateToCoreMembersAddedAfterInitialTransactions() throws Exception
+    void shouldReplicateToCoreMembersAddedAfterInitialTransactions() throws Exception
     {
         // when
         CoreClusterMember last = null;
@@ -263,16 +265,16 @@ public class CoreReplicationIT
             } );
         }
 
-        cluster.addCoreMemberWithId( 3 ).start();
-        cluster.addCoreMemberWithId( 4 ).start();
+        cluster.addCoreMemberWithId( coreIdCounter++ ).start();
+        cluster.addCoreMemberWithId( coreIdCounter++ ).start();
 
         // then
-        assertEquals( 15, countNodes( last ) );
+        assertEquals( nodesBeforeTest + 15, countNodes( last ) );
         dataMatchesEventually( last, cluster.coreMembers() );
     }
 
     @Test
-    public void shouldReplicateTransactionsToReplacementCoreMembers() throws Exception
+    void shouldReplicateTransactionsToReplacementCoreMembers() throws Exception
     {
         // when
         cluster.coreTx( ( db, tx ) ->
@@ -293,14 +295,16 @@ public class CoreReplicationIT
         } );
 
         // then
-        assertEquals( 1, countNodes( leader ) );
+        assertEquals( nodesBeforeTest + 1, countNodes( leader ) );
         dataMatchesEventually( leader, cluster.coreMembers() );
     }
 
     @Test
-    public void shouldBeAbleToShutdownWhenTheLeaderIsTryingToReplicateTransaction() throws Exception
+    void shouldBeAbleToShutdownWhenTheLeaderIsTryingToReplicateTransaction() throws Exception
     {
         // given
+        Cluster<?> cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
         cluster.coreTx( ( db, tx ) ->
         {
             Node node = db.createNode( label( "boo" ) );

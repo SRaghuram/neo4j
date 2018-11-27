@@ -5,40 +5,43 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.graphdb.Node;
-import org.neo4j.test.causalclustering.ClusterRule;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.Inject;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.graphdb.Label.label;
 
-public class WillNotBecomeLeaderIT
+@ClusterExtension
+class WillNotBecomeLeaderIT
 {
-    @Rule
-    public final ClusterRule clusterRule =
-            new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 )
-                    .withDiscoveryServiceType( EnterpriseDiscoveryServiceType.HAZELCAST )
-                    .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" );
+    @Inject
+    private ClusterFactory clusterFactory;
 
-    @Rule
-    public ExpectedException exceptionMatcher = ExpectedException.none();
+    private final ClusterConfig clusterConfig = ClusterConfig
+            .clusterConfig()
+            .withNumberOfCoreMembers( 3 )
+            .withNumberOfReadReplicas( 0 )
+            .withDiscoveryServiceType( EnterpriseDiscoveryServiceType.HAZELCAST )
+            .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, "true" );
 
     @Test
-    public void clusterShouldNotElectNewLeader() throws Exception
+    void clusterShouldNotElectNewLeader() throws Exception
     {
         // given
         int leaderId = 0;
 
-        clusterRule.withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, x ->
+        clusterConfig.withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, x ->
         {
             if ( x == leaderId )
             {
@@ -50,7 +53,7 @@ public class WillNotBecomeLeaderIT
             }
         } );
 
-        Cluster<?> cluster = clusterRule.createCluster();
+        Cluster<?> cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
         assertEquals( leaderId, cluster.awaitLeader().serverId() );
 
@@ -65,15 +68,6 @@ public class WillNotBecomeLeaderIT
         cluster.removeCoreMemberWithServerId( leaderId );
 
         // Then
-        try
-        {
-            cluster.awaitLeader(10, SECONDS);
-
-            fail( "Should not have elected a leader" );
-        }
-        catch ( TimeoutException ex )
-        {
-            // Successful
-        }
+        assertThrows( TimeoutException.class, () -> cluster.awaitLeader( 10, SECONDS ) );
     }
 }
