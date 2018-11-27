@@ -464,7 +464,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   private def executeAndEnsureError(query: String, expected: Seq[String], params: (String,Any)*) {
-    import org.opencypher.v9_0.util.helpers.StringHelper._
+    import org.neo4j.cypher.internal.v3_5.util.helpers.StringHelper._
 
     import scala.collection.JavaConverters._
 

@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
-import org.opencypher.v9_0.util.CypherTypeException;
+import org.neo4j.cypher.internal.v3_5.util.CypherTypeException;
 
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext;

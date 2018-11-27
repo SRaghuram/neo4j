@@ -10,8 +10,8 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttr
 import org.neo4j.cypher.internal.compiler.v4_0.phases.LogicalPlanState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
-import org.opencypher.v9_0.util.attribution.Id
-import org.opencypher.v9_0.util.{CypherException, InternalException}
+import org.neo4j.cypher.internal.v3_5.util.attribution.Id
+import org.neo4j.cypher.internal.v3_5.util.{CypherException, InternalException}
 
 trait DebugPrettyPrinter {
   val PRINT_QUERY_TEXT = true

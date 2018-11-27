@@ -34,8 +34,8 @@ import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.{Value, ValueComparator, Values}
 import org.neo4j.values.virtual._
 import org.neo4j.values.{AnyValue, AnyValues}
-import org.opencypher.v9_0.frontend.helpers.using
-import org.opencypher.v9_0.util.CypherExecutionException
+import org.neo4j.cypher.internal.v3_5.frontend.helpers.using
+import org.neo4j.cypher.internal.v3_5.util.CypherExecutionException
 
 /**
   * Contains common code generation constructs.

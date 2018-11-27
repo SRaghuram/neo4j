@@ -24,11 +24,11 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeProperty, Rela
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans.{UnwindCollection, _}
-import org.opencypher.v9_0.ast.semantics.SemanticTable
-import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.util.LabelId
-import org.opencypher.v9_0.util.symbols.{CTAny, CTList, CTNode, CTRelationship}
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v3_5.expressions._
+import org.neo4j.cypher.internal.v3_5.util.LabelId
+import org.neo4j.cypher.internal.v3_5.util.symbols.{CTAny, CTList, CTNode, CTRelationship}
+import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
 
 //noinspection NameBooleanParameters
 class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSupport2 {

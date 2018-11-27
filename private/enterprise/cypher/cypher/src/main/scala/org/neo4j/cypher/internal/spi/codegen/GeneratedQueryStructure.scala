@@ -29,9 +29,9 @@ import org.neo4j.internal.kernel.api._
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
-import org.opencypher.v9_0.frontend.helpers.using
-import org.opencypher.v9_0.util.attribution.Id
-import org.opencypher.v9_0.util.symbols
+import org.neo4j.cypher.internal.v3_5.frontend.helpers.using
+import org.neo4j.cypher.internal.v3_5.util.attribution.Id
+import org.neo4j.cypher.internal.v3_5.util.symbols
 
 import scala.collection.mutable
 

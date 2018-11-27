@@ -9,8 +9,8 @@ import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ExpressionConverter._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGenExpression, CodeGenType}
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
-import org.opencypher.v9_0.expressions.{functions => astFunctions}
-import org.opencypher.v9_0.{expressions => ast}
+import org.neo4j.cypher.internal.v3_5.expressions.{functions => astFunctions}
+import org.neo4j.cypher.internal.v3_5.{expressions => ast}
 
 /*
 * Conversion methods for aggregation functions

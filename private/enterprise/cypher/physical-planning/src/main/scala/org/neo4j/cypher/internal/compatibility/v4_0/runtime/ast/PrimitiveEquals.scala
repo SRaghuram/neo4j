@@ -5,6 +5,6 @@
  */
 package org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast
 
-import org.opencypher.v9_0.expressions.Expression
+import org.neo4j.cypher.internal.v3_5.expressions.Expression
 
 case class PrimitiveEquals(a: Expression, b: Expression) extends RuntimeExpression
