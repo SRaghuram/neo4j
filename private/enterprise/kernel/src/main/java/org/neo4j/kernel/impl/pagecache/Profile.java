@@ -5,6 +5,7 @@
  */
 package org.neo4j.kernel.impl.pagecache;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -97,7 +98,7 @@ final class Profile implements Comparable<Profile>
         OutputStream sink = fs.openAsOutputStream( profileFile, false );
         try
         {
-            return new GZIPOutputStream( sink );
+            return new BufferedOutputStream( new GZIPOutputStream( sink ) );
         }
         catch ( IOException e )
         {
