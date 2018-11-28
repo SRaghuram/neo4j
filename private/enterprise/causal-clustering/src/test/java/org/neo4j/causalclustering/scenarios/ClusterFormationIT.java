@@ -41,8 +41,6 @@ public class ClusterFormationIT
 
     private Cluster<?> cluster;
 
-    private int idCounter = 100;
-
     @BeforeAll
     void setup() throws Exception
     {
@@ -53,8 +51,6 @@ public class ClusterFormationIT
     @Test
     void shouldSupportBuiltInProcedures()
     {
-        cluster.addReadReplicaWithId( idCounter++ ).start();
-
         Stream.concat(
             cluster.readReplicas().stream().map( ReadReplica::database),
             cluster.coreMembers().stream().map(CoreClusterMember::database)
@@ -83,9 +79,9 @@ public class ClusterFormationIT
     void shouldBeAbleToAddAndRemoveCoreMembers()
     {
         // when
-        CoreClusterMember coreMemberById = getExitingCoreMember();
-        coreMemberById.shutdown();
-        coreMemberById.start();
+        CoreClusterMember coreMember = getExistingCoreMember();
+        coreMember.shutdown();
+        coreMember.start();
 
         // then
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
@@ -97,7 +93,7 @@ public class ClusterFormationIT
         assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology() );
 
         // when
-        cluster.addCoreMemberWithId( idCounter++ ).start();
+        cluster.newCoreMember().start();
 
         // then
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
@@ -119,7 +115,7 @@ public class ClusterFormationIT
         } );
 
         // when
-        CoreClusterMember coreMember = getExitingCoreMember();
+        CoreClusterMember coreMember = getExistingCoreMember();
         coreMember.shutdown();
         coreMember.start();
 
@@ -133,7 +129,7 @@ public class ClusterFormationIT
         assertEquals( 2, cluster.numberOfCoreMembersReportedByTopology() );
 
         // when
-        cluster.addCoreMemberWithId( idCounter++ ).start();
+        cluster.newCoreMember().start();
 
         // then
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
@@ -157,7 +153,7 @@ public class ClusterFormationIT
         // when
         removeCoreMember();
 
-        cluster.addCoreMemberWithId( idCounter++ ).start();
+        cluster.newCoreMember().start();
         cluster.shutdown();
 
         cluster.start();
@@ -166,13 +162,13 @@ public class ClusterFormationIT
         assertEquals( 3, cluster.numberOfCoreMembersReportedByTopology() );
     }
 
-    private CoreClusterMember getExitingCoreMember()
+    private CoreClusterMember getExistingCoreMember()
     {
         return cluster.coreMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Could not find any available cores" ) );
     }
 
     private void removeCoreMember()
     {
-        cluster.removeCoreMember( getExitingCoreMember() );
+        cluster.removeCoreMember( getExistingCoreMember() );
     }
 }
