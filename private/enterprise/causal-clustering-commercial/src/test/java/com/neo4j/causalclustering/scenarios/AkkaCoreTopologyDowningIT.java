@@ -10,20 +10,23 @@ import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import org.hamcrest.Matchers;
+import org.junit.After;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.NoOpHostnameResolver;
-import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.neo4j.causalclustering.discovery.TopologyServiceNoRetriesStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
@@ -38,6 +41,24 @@ import org.neo4j.time.Clocks;
 // But much of the code path is the same.
 public class AkkaCoreTopologyDowningIT
 {
+    private List<TopologyServiceComponents> services = new ArrayList<>();
+
+    @After
+    public void tearDown()
+    {
+        for ( TopologyServiceComponents service : services )
+        {
+            try
+            {
+                stopShutdown( service );
+            }
+            catch ( Throwable throwable )
+            {
+                throwable.printStackTrace();
+            }
+        }
+    }
+
     @Test
     public void shouldReconnectAfterDowning() throws Throwable
     {
@@ -45,15 +66,15 @@ public class AkkaCoreTopologyDowningIT
         int port1 = PortAuthority.allocatePort();
         int port2 = PortAuthority.allocatePort();
 
-        Pair<AkkaCoreTopologyService,TestActorSystemLifecycle> akkaCoreTopologyService1 = createAndStart( port1, port2 );
-        Pair<AkkaCoreTopologyService,TestActorSystemLifecycle> akkaCoreTopologyService2 = createAndStart( port2, port1 );
+        TopologyServiceComponents akkaCoreTopologyService1 = createAndStart( port1, port2 );
+        TopologyServiceComponents akkaCoreTopologyService2 = createAndStart( port2, port1 );
 
         // and a working discovery cluster
         assertEventuallyHasTopologySize( akkaCoreTopologyService1, 2 );
         assertEventuallyHasTopologySize( akkaCoreTopologyService2, 2 );
 
         // When down one
-        akkaCoreTopologyService1.other().down( port2 );
+        akkaCoreTopologyService1.actorSystemLifecycle().down( port2 );
 
         // Then it is removed
         assertEventuallyHasTopologySize( akkaCoreTopologyService1, 1 );
@@ -61,24 +82,62 @@ public class AkkaCoreTopologyDowningIT
         // And it reappears
         assertEventuallyHasTopologySize( akkaCoreTopologyService1, 2 );
         assertEventuallyHasTopologySize( akkaCoreTopologyService2, 2 );
-
-        // Cleanup
-        akkaCoreTopologyService1.first().stop();
-        akkaCoreTopologyService2.first().stop();
-        akkaCoreTopologyService1.first().shutdown();
-        akkaCoreTopologyService2.first().shutdown();
     }
 
-    private void assertEventuallyHasTopologySize( Pair<AkkaCoreTopologyService,TestActorSystemLifecycle> services, int expected ) throws InterruptedException
+    @Test
+    public void shouldRestartIfInitialDiscoMembersNoLongerValid() throws Throwable
     {
-        Assert.assertEventually( () -> services.first().allCoreServers().members().entrySet(), Matchers.hasSize( expected ), 1, TimeUnit.MINUTES );
+        // Given two topology services
+        int port1 = PortAuthority.allocatePort();
+        int port2 = PortAuthority.allocatePort();
+
+        TopologyServiceComponents akkaCoreTopologyService1 = createAndStart( port1, port2 );
+        TopologyServiceComponents akkaCoreTopologyService2 = createAndStart( port2, port1 );
+
+        // and a working discovery cluster
+        assertEventuallyHasTopologySize( akkaCoreTopologyService1, 2 );
+        assertEventuallyHasTopologySize( akkaCoreTopologyService2, 2 );
+
+        // When add 3rd
+        int port3 = PortAuthority.allocatePort();
+        TopologyServiceComponents akkaCoreTopologyService3 = createAndStart( port3, port1, port2 );
+
+        // And 3rd connected
+        assertEventuallyHasTopologySize( akkaCoreTopologyService1, 3 );
+        assertEventuallyHasTopologySize( akkaCoreTopologyService2, 3 );
+        assertEventuallyHasTopologySize( akkaCoreTopologyService3, 3 );
+
+        // And shutdown 2nd
+        stopShutdown( akkaCoreTopologyService2 );
+
+        // And 2nd's gone
+        assertEventuallyHasTopologySize( akkaCoreTopologyService1, 2 );
+        assertEventuallyHasTopologySize( akkaCoreTopologyService3, 2 );
+
+        // And down 1st from 3rd
+        akkaCoreTopologyService3.actorSystemLifecycle().down( port1 );
+
+        // Then 1st is removed
+        assertEventuallyHasTopologySize( akkaCoreTopologyService3, 1 );
+
+        // And 1st reappears
+        assertEventuallyHasTopologySize( akkaCoreTopologyService1, 2 );
+        assertEventuallyHasTopologySize( akkaCoreTopologyService3, 2 );
     }
 
-    private Pair<AkkaCoreTopologyService,TestActorSystemLifecycle> createAndStart( int myPort, int otherPort ) throws Throwable
+    private void assertEventuallyHasTopologySize( TopologyServiceComponents services, int expected ) throws InterruptedException
+    {
+        Assert.assertEventually( () -> services.topologyService().allCoreServers().members().entrySet(), Matchers.hasSize( expected ), 5, TimeUnit.MINUTES );
+    }
+
+    private TopologyServiceComponents createAndStart( int myPort, int... otherPorts ) throws Throwable
     {
         Config config = Config.defaults();
         config.augment( CausalClusteringSettings.discovery_listen_address, "localhost:" + myPort );
-        config.augment( CausalClusteringSettings.initial_discovery_members, "localhost:" + myPort + ",localhost:" + otherPort );
+        String initialDiscoMembers = IntStream.concat( IntStream.of( myPort ), IntStream.of( otherPorts ) )
+                .mapToObj( port -> "localhost:" + port )
+                .collect( Collectors.joining( "," ) );
+        config.augment( CausalClusteringSettings.initial_discovery_members, initialDiscoMembers );
         BoltConnector boltConnector = new BoltConnector( "bolt" );
         AdvertisedSocketAddress boltAddress = new AdvertisedSocketAddress( "localhost", PortAuthority.allocatePort() );
         config.augment( boltConnector.type.name(), "BOLT" );
@@ -91,11 +150,10 @@ public class AkkaCoreTopologyDowningIT
         config.augment( "dbms.logs.debug.level", "DEBUG" );
         LogProvider logProvider = NullLogProvider.getInstance();
 
-        RemoteMembersResolver resolver = NoOpHostnameResolver.resolver( config );
         int parallelism = config.get( CausalClusteringSettings.middleware_akka_default_parallelism_level );
         ForkJoinPool pool = new ForkJoinPool( parallelism, ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true );
-        ActorSystemFactory actorSystemFactory = new ActorSystemFactory( resolver, Optional.empty(), pool, config, logProvider  );
-        TestActorSystemLifecycle actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory );
+        ActorSystemFactory actorSystemFactory = new ActorSystemFactory( Optional.empty(), pool, config, logProvider  );
+        TestActorSystemLifecycle actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, config, logProvider );
         AkkaCoreTopologyService service = new AkkaCoreTopologyService(
                 config,
                 new MemberId( UUID.randomUUID() ),
@@ -110,20 +168,51 @@ public class AkkaCoreTopologyDowningIT
         service.init();
         service.start();
 
-        return Pair.of( service, actorSystemLifecycle );
+        TopologyServiceComponents pair = new TopologyServiceComponents( service, actorSystemLifecycle );
+        services.add( pair );
+        return pair;
+    }
+
+    private void stopShutdown( TopologyServiceComponents service ) throws Throwable
+    {
+        service.topologyService().stop();
+        service.topologyService().shutdown();
+        services.remove( service );
     }
 
     private static class TestActorSystemLifecycle extends ActorSystemLifecycle
     {
-        TestActorSystemLifecycle( ActorSystemFactory actorSystemFactory )
+        TestActorSystemLifecycle( ActorSystemFactory actorSystemFactory, Config config, LogProvider logProvider )
         {
-            super( actorSystemFactory, NullLogProvider.getInstance() );
+            super( actorSystemFactory, NoOpHostnameResolver.resolver( config ), config, logProvider );
         }
 
         void down( int port )
         {
             Address address = new Address( "akka", ActorSystemFactory.ACTOR_SYSTEM_NAME, "localhost", port );
             actorSystemComponents.cluster().down( address );
+        }
+    }
+
+    private static class TopologyServiceComponents
+    {
+        private final AkkaCoreTopologyService topologyService;
+        private final TestActorSystemLifecycle actorSystemLifecycle;
+
+        private TopologyServiceComponents( AkkaCoreTopologyService topologyService, TestActorSystemLifecycle actorSystemLifecycle )
+        {
+            this.topologyService = topologyService;
+            this.actorSystemLifecycle = actorSystemLifecycle;
+        }
+
+        AkkaCoreTopologyService topologyService()
+        {
+            return topologyService;
+        }
+
+        TestActorSystemLifecycle actorSystemLifecycle()
+        {
+            return actorSystemLifecycle;
         }
     }
 }

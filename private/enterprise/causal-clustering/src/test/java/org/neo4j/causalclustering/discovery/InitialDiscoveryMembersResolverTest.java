@@ -21,9 +21,11 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.function.Function.identity;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
 
@@ -32,6 +34,16 @@ public class InitialDiscoveryMembersResolverTest
 {
     @Mock
     private HostnameResolver hostnameResolver;
+
+    private AdvertisedSocketAddress input1 = new AdvertisedSocketAddress( "foo.bar", 123 );
+    private AdvertisedSocketAddress input2 = new AdvertisedSocketAddress( "baz.bar", 432 );
+    private AdvertisedSocketAddress input3 = new AdvertisedSocketAddress( "quux.bar", 789 );
+
+    private AdvertisedSocketAddress output1 = new AdvertisedSocketAddress( "a.b", 3 );
+    private AdvertisedSocketAddress output2 = new AdvertisedSocketAddress( "b.b", 34 );
+    private AdvertisedSocketAddress output3 = new AdvertisedSocketAddress( "c.b", 7 );
+
+    private String configString = Stream.of( input1, input2, input3 ).map( AdvertisedSocketAddress::toString ).collect( Collectors.joining( "," ) );
 
     @Test
     public void shouldReturnEmptyCollectionIfEmptyInitialMembers()
@@ -55,16 +67,6 @@ public class InitialDiscoveryMembersResolverTest
     public void shouldResolveAndReturnAllConfiguredAddresses()
     {
         // given
-        AdvertisedSocketAddress input1 = new AdvertisedSocketAddress( "foo.bar", 123 );
-        AdvertisedSocketAddress input2 = new AdvertisedSocketAddress( "baz.bar", 432 );
-        AdvertisedSocketAddress input3 = new AdvertisedSocketAddress( "quux.bar", 789 );
-
-        AdvertisedSocketAddress output1 = new AdvertisedSocketAddress( "a.b", 3 );
-        AdvertisedSocketAddress output2 = new AdvertisedSocketAddress( "b.b", 34 );
-        AdvertisedSocketAddress output3 = new AdvertisedSocketAddress( "c.b", 7 );
-
-        String configString = Stream.of( input1, input2, input3 ).map( AdvertisedSocketAddress::toString ).collect( Collectors.joining( "," ) );
-
         Config config = Config.builder()
                 .withSetting( initial_discovery_members, configString )
                 .build();
@@ -81,6 +83,53 @@ public class InitialDiscoveryMembersResolverTest
 
         // then
         assertThat( result, containsInAnyOrder( output1, output2, output3 ) );
+    }
+
+    @Test
+    public void shouldDeDupeConfiguredAddresses()
+    {
+        // given
+        Config config = Config.builder()
+                .withSetting( initial_discovery_members, configString )
+                .build();
+
+        when( hostnameResolver.resolve( any() ) ).thenReturn( singletonList( output1 ) );
+
+        InitialDiscoveryMembersResolver
+                hostnameResolvingInitialDiscoveryMembersResolver = new InitialDiscoveryMembersResolver( hostnameResolver, config );
+
+        // when
+        Collection<AdvertisedSocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
+
+        // then
+        assertThat( result, contains( output1 ) );
+    }
+
+    /**
+     * A consistent order of addresses appears to prevent some flakiness in integration tests. Presumably this would also prevent some flakiness in
+     * production deployments.
+     */
+    @Test
+    public void shouldReturnConfiguredAddressesInOrder()
+    {
+        // given
+        Config config = Config.builder()
+                .withSetting( initial_discovery_members, configString )
+                .build();
+
+        when( hostnameResolver.resolve( any() ) )
+                .thenReturn( singletonList( output3 ) )
+                .thenReturn( singletonList( output1 ) )
+                .thenReturn( singletonList( output2  ));
+
+        InitialDiscoveryMembersResolver
+                hostnameResolvingInitialDiscoveryMembersResolver = new InitialDiscoveryMembersResolver( hostnameResolver, config );
+
+        // when
+        Collection<AdvertisedSocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
+
+        // then
+        assertThat( result, contains( output1, output2, output3 ) );
     }
 
     @Test

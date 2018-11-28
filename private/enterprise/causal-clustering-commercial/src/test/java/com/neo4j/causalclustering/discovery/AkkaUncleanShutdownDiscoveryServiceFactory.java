@@ -20,6 +20,10 @@ public class AkkaUncleanShutdownDiscoveryServiceFactory extends CommercialAkkaDi
     @Override
     protected ActorSystemLifecycle actorSystemLifecycle( Config config, ExecutorService executor, LogProvider logProvider, RemoteMembersResolver resolver )
     {
-        return new ActorSystemUncleanShutdownLifecycle( actorSystemFactory( resolver, executor, config, logProvider ), logProvider );
+        return new ActorSystemUncleanShutdownLifecycle(
+                actorSystemFactory( executor, config, logProvider ),
+                resolver,
+                config,
+                logProvider );
     }
 }

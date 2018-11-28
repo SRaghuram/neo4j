@@ -6,8 +6,10 @@
 package org.neo4j.causalclustering.discovery;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -26,12 +28,28 @@ public class InitialDiscoveryMembersResolver implements RemoteMembersResolver
     }
 
     @Override
-    public <T> Collection<T> resolve( Function<AdvertisedSocketAddress,T> transform )
+    public <C extends Collection<T>,T> C resolve( Function<AdvertisedSocketAddress,T> transform, Supplier<C> collectionFactory )
     {
         return advertisedSocketAddresses
                 .stream()
                 .flatMap( raw -> hostnameResolver.resolve( raw ).stream() )
+                .sorted( advertisedSockedAddressComparator )
+                .distinct()
                 .map( transform )
-                .collect( Collectors.toSet() );
+                .collect( Collectors.toCollection( collectionFactory ) );
+    }
+
+    private static final Comparator<AdvertisedSocketAddress> advertisedSockedAddressComparator =
+            Comparator.comparing( AdvertisedSocketAddress::getHostname ).thenComparingInt( AdvertisedSocketAddress::getPort );
+
+    public static Comparator<AdvertisedSocketAddress> advertisedSocketAddressComparator()
+    {
+        return advertisedSockedAddressComparator;
+    }
+
+    @Override
+    public boolean useOverrides()
+    {
+        return hostnameResolver.useOverrides();
     }
 }

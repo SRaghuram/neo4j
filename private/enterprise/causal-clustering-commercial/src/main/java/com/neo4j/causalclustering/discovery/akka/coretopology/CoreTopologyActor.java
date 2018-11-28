@@ -7,11 +7,15 @@ package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.actor.AbstractActorWithTimers;
 import akka.actor.ActorRef;
+import akka.actor.Address;
 import akka.actor.Props;
 import akka.cluster.Cluster;
+import akka.cluster.Member;
 import akka.stream.javadsl.SourceQueueWithComplete;
 
+import java.util.Collection;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.CoreTopology;
@@ -22,7 +26,7 @@ import org.neo4j.logging.LogProvider;
 
 public class CoreTopologyActor extends AbstractActorWithTimers
 {
-    public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopology> topologyUpdateSink, ActorRef rrTopologyActor, ActorRef replicator,
+    public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink, ActorRef rrTopologyActor, ActorRef replicator,
             Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
     {
         return Props.create( CoreTopologyActor.class,
@@ -31,9 +35,11 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     public static final String NAME = "cc-core-topology-actor";
 
-    private final SourceQueueWithComplete<CoreTopology> topologyUpdateSink;
+    private final SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink;
     private final TopologyBuilder topologyBuilder;
     private final String databaseName;
+
+    private final Address myAddress;
 
     private final Log log;
 
@@ -48,7 +54,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
     private CoreTopology coreTopology;
 
     CoreTopologyActor( MemberId myself,
-            SourceQueueWithComplete<CoreTopology> topologyUpdateSink,
+            SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
             ActorRef readReplicaTopologyActor,
             ActorRef replicator,
             Cluster cluster,
@@ -65,6 +71,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         this.log = logProvider.getLog( getClass() );
         this.clusterView = ClusterViewMessage.EMPTY;
         this.coreTopology = CoreTopology.EMPTY;
+        this.myAddress = cluster.selfAddress();
 
         // Children, who will be sending messages to us
         ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, logProvider ) );
@@ -113,7 +120,12 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         if ( !this.coreTopology.equals( newCoreTopology ) || !Objects.equals( this.coreTopology.clusterId(),  newCoreTopology.clusterId() ) )
         {
             this.coreTopology = newCoreTopology;
-            topologyUpdateSink.offer( newCoreTopology );
+            Collection<Address> akkaMemberAddresses = clusterView.members()
+                    .stream()
+                    .map( Member::address )
+                    .filter( addr -> !addr.equals( myAddress ) )
+                    .collect( Collectors.toList() );
+            topologyUpdateSink.offer( new CoreTopologyMessage( newCoreTopology, akkaMemberAddresses ) );
             readReplicaTopologyActor.tell( newCoreTopology, getSelf() );
         }
     }

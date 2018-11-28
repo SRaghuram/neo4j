@@ -26,8 +26,7 @@ import org.neo4j.scheduler.JobScheduler;
 
 public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
-   protected abstract ActorSystemFactory actorSystemFactory( RemoteMembersResolver remoteMembersResolver, ExecutorService executor, Config config,
-           LogProvider logProvider );
+   protected abstract ActorSystemFactory actorSystemFactory( ExecutorService executor, Config config, LogProvider logProvider );
 
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
@@ -67,7 +66,7 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
 
     protected ActorSystemLifecycle actorSystemLifecycle( Config config, ExecutorService executor, LogProvider logProvider, RemoteMembersResolver resolver )
     {
-        return new ActorSystemLifecycle( actorSystemFactory( resolver, executor, config, logProvider ), logProvider );
+        return new ActorSystemLifecycle( actorSystemFactory( executor, config, logProvider ), resolver, config, logProvider );
     }
 
 }

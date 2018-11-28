@@ -10,6 +10,8 @@ import scala.concurrent.duration.FiniteDuration;
 
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 
 /**
@@ -17,9 +19,9 @@ import org.neo4j.logging.LogProvider;
  */
 public class ActorSystemUncleanShutdownLifecycle extends ActorSystemLifecycle
 {
-    public ActorSystemUncleanShutdownLifecycle( ActorSystemFactory actorSystemFactory, LogProvider logProvider )
+    public ActorSystemUncleanShutdownLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, Config config, LogProvider logProvider )
     {
-        super( actorSystemFactory, logProvider );
+        super( actorSystemFactory, resolver, config, logProvider );
     }
 
     @Override

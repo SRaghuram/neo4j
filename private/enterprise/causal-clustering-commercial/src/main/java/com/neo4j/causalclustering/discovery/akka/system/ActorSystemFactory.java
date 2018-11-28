@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka.system;
 
-import akka.actor.ActorPath;
-import akka.actor.ActorPaths;
 import akka.actor.ActorSystem;
 import akka.actor.BootstrapSetup;
 import akka.actor.ProviderSelection;
@@ -17,11 +15,8 @@ import akka.remote.artery.tcp.SSLEngineProviderSetup;
 import scala.concurrent.ExecutionContextExecutor;
 
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 
@@ -33,24 +28,14 @@ public class ActorSystemFactory
     private final TypesafeConfigService configService;
     private final ExecutorService executor;
 
-    public ActorSystemFactory( RemoteMembersResolver remoteMembersResolver, Optional<SSLEngineProvider> sslEngineProvider, ExecutorService executor,
-            Config config, LogProvider logProvider )
+    public ActorSystemFactory( Optional<SSLEngineProvider> sslEngineProvider, ExecutorService executor, Config config, LogProvider logProvider )
     {
         this.executor = executor;
         this.logProvider = logProvider;
         this.sslEngineProvider = sslEngineProvider;
         TypesafeConfigService.ArteryTransport arteryTransport =
                 sslEngineProvider.isPresent() ? TypesafeConfigService.ArteryTransport.TLS_TCP : TypesafeConfigService.ArteryTransport.TCP;
-        this.configService = new TypesafeConfigService( remoteMembersResolver, arteryTransport, config );
-    }
-
-    Set<ActorPath> initialClientContacts()
-    {
-        return configService
-                .initialActorSystemPaths()
-                .stream()
-                .map( systemPath -> ActorPaths.fromString( String.format( "%s/system/receptionist", systemPath ) ) )
-                .collect( Collectors.toSet() );
+        this.configService = new TypesafeConfigService( arteryTransport, config );
     }
 
     ActorSystem createActorSystem( ProviderSelection providerSelection )

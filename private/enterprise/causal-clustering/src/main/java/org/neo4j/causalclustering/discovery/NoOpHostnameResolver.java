@@ -24,4 +24,10 @@ public class NoOpHostnameResolver implements HostnameResolver
     {
         return singleton(advertisedSocketAddresses);
     }
+
+    @Override
+    public boolean useOverrides()
+    {
+        return true;
+    }
 }

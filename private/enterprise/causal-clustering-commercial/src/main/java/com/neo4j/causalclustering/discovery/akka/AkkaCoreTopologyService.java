@@ -13,6 +13,7 @@ import akka.event.EventStream;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterIdSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
+import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
@@ -70,7 +71,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     {
         actorSystemLifecycle.createClusterActorSystem();
 
-        SourceQueueWithComplete<CoreTopology> coreTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
+        SourceQueueWithComplete<CoreTopologyMessage> coreTopologySink = actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
         SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( topologyState::onTopologyUpdate );
         SourceQueueWithComplete<Map<String,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( topologyState::onDbLeaderUpdate );
 
@@ -79,13 +80,14 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         ActorRef rrTopologyActor = readReplicaTopologyActor( rrTopologySink );
         ActorRef coreTopologyActor = coreTopologyActor( cluster, replicator, coreTopologySink, rrTopologyActor );
         ActorRef directoryActor = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
-        startNeedToRestartListeningActor( cluster );
+        startRestartNeededListeningActor( cluster );
 
         coreTopologyActorRef = Optional.of( coreTopologyActor );
         directoryActorRef = Optional.of( directoryActor );
     }
 
-    private ActorRef coreTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<CoreTopology> topologySink, ActorRef rrTopologyActor )
+    private ActorRef coreTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<CoreTopologyMessage> topologySink,
+            ActorRef rrTopologyActor )
     {
         TopologyBuilder topologyBuilder = new TopologyBuilder( config, cluster.selfUniqueAddress(), logProvider );
         Props coreTopologyProps = CoreTopologyActor.props(
@@ -114,12 +116,18 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         return actorSystemLifecycle.applicationActorOf( readReplicaTopologyProps, ReadReplicaTopologyActor.NAME );
     }
 
-    private ActorRef startNeedToRestartListeningActor( Cluster cluster )
+    private ActorRef startRestartNeededListeningActor( Cluster cluster )
     {
         Runnable restart = () -> executor.submit( this::restart );
         EventStream eventStream = actorSystemLifecycle.eventStream();
         Props props = RestartNeededListeningActor.props( restart, eventStream, cluster, logProvider );
         return actorSystemLifecycle.applicationActorOf( props, RestartNeededListeningActor.NAME );
+    }
+
+    private void onCoreTopologyMessage( CoreTopologyMessage coreTopologyMessage )
+    {
+        this.topologyState.onTopologyUpdate( coreTopologyMessage.coreTopology() );
+        actorSystemLifecycle.addSeenAddresses( coreTopologyMessage.akkaMembers() );
     }
 
     @Override

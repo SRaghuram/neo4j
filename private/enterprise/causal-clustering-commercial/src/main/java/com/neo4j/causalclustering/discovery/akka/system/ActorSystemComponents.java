@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka.system;
 
-import akka.actor.ActorPath;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.CoordinatedShutdown;
@@ -17,12 +16,9 @@ import akka.cluster.ddata.DistributedData;
 import akka.stream.ActorMaterializer;
 import akka.stream.ActorMaterializerSettings;
 
-import java.util.Set;
-
 public class ActorSystemComponents
 {
     private final ActorSystem actorSystem;
-    private final Set<ActorPath> initialClientContacts;
 
     private Cluster cluster;
     private ActorRef replicator;
@@ -34,7 +30,6 @@ public class ActorSystemComponents
     public ActorSystemComponents( ActorSystemFactory actorSystemFactory, ProviderSelection providerSelection )
     {
         this.actorSystem = actorSystemFactory.createActorSystem( providerSelection );
-        this.initialClientContacts = actorSystemFactory.initialClientContacts();
         this.coordinatedShutdown = CoordinatedShutdown.get( actorSystem );
     }
 
@@ -79,15 +74,6 @@ public class ActorSystemComponents
             materializer = ActorMaterializer.create( settings, actorSystem );
         }
         return materializer;
-    }
-
-    ClusterClientSettings clusterClientSettings()
-    {
-        if ( clusterClientSettings == null )
-        {
-            clusterClientSettings = ClusterClientSettings.create( actorSystem ).withInitialContacts( initialClientContacts );
-        }
-        return clusterClientSettings;
     }
 
     public CoordinatedShutdown coordinatedShutdown()

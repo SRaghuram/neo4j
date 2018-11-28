@@ -12,4 +12,9 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 public interface HostnameResolver
 {
     Collection<AdvertisedSocketAddress> resolve( AdvertisedSocketAddress advertisedSocketAddresses );
+
+    default boolean useOverrides()
+    {
+        return false;
+    }
 }

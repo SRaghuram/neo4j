@@ -26,7 +26,6 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplica
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import com.typesafe.config.ConfigFactory;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,19 +36,16 @@ import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
-import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
 public final class TypesafeConfigService
 {
-    public static final String DISCOVERY_SINK_DISPATCHER = "discovery-dispatcher";
-    private static final String AKKA_SCHEME = "akka://";
+    static final String DISCOVERY_SINK_DISPATCHER = "discovery-dispatcher";
 
     public enum ArteryTransport
     {
@@ -67,20 +63,17 @@ public final class TypesafeConfigService
 
     private final Config config;
     private final ArteryTransport arteryTransport;
-    private final RemoteMembersResolver remoteMembersResolver;
 
-    public TypesafeConfigService( RemoteMembersResolver remoteMembersResolver, ArteryTransport arteryTransport, Config config )
+    public TypesafeConfigService( ArteryTransport arteryTransport, Config config )
     {
         this.config = config;
         this.arteryTransport = arteryTransport;
-        this.remoteMembersResolver = remoteMembersResolver;
     }
 
     public com.typesafe.config.Config generate()
     {
         return ConfigFactory.empty()
                 .withFallback( shutdownConfig() )
-                .withFallback( clusterConfig() )
                 .withFallback( transportConfig() )
                 .withFallback( serializationConfig() )
                 .withFallback( failureDetectorConfig() )
@@ -98,23 +91,6 @@ public final class TypesafeConfigService
         configMap.put( "akka.cluster.run-coordinated-shutdown-when-down", "off" );
 
         return ConfigFactory.parseMap( configMap );
-    }
-
-    private com.typesafe.config.Config clusterConfig()
-    {
-        Collection<String> seedAkkaClusterNodes = initialActorSystemPaths();
-
-        EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
-
-        Map<String,Object> configMap = new HashMap<>();
-        configMap.put( "akka.cluster.seed-nodes", seedAkkaClusterNodes );
-        configMap.put( "akka.cluster.roles", Collections.singletonList( mode.name() ) );
-        return ConfigFactory.parseMap( configMap );
-    }
-
-    Collection<String> initialActorSystemPaths()
-    {
-        return remoteMembersResolver.resolve( resolvedAddress -> AKKA_SCHEME + ActorSystemFactory.ACTOR_SYSTEM_NAME + "@" + resolvedAddress );
     }
 
     private com.typesafe.config.Config transportConfig()
@@ -173,7 +149,7 @@ public final class TypesafeConfigService
         return ConfigFactory.parseMap( configMap );
     }
 
-    private String hostname( SocketAddress socketAddress )
+    static String hostname( SocketAddress socketAddress )
     {
         if ( socketAddress.isIPv6() )
         {

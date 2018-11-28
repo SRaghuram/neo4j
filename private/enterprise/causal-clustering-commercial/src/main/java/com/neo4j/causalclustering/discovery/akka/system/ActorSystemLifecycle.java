@@ -6,7 +6,10 @@
 package com.neo4j.causalclustering.discovery.akka.system;
 
 import akka.Done;
+import akka.actor.ActorPath;
+import akka.actor.ActorPaths;
 import akka.actor.ActorRef;
+import akka.actor.Address;
 import akka.actor.CoordinatedShutdown;
 import akka.actor.Props;
 import akka.actor.ProviderSelection;
@@ -22,13 +25,22 @@ import akka.stream.javadsl.Source;
 import akka.stream.javadsl.SourceQueueWithComplete;
 
 import java.time.Duration;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;
+
+import static com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory.ACTOR_SYSTEM_NAME;
+import static com.neo4j.causalclustering.discovery.akka.system.ClusterJoiningActor.AKKA_SCHEME;
 
 /**
  * Wraps an actor system and top level actors and streams. Gracefully stops everything on shutdown. Create an actor system first.
@@ -39,25 +51,44 @@ public class ActorSystemLifecycle
     static final int ACTOR_SHUTDOWN_TIMEOUT_S = 15;
 
     private final ActorSystemFactory actorSystemFactory;
+    private final Set<Address> allSeenAddresses = new HashSet<>();
+    private final RemoteMembersResolver resolver;
+    private final Config config;
     private final Log log;
+    private final LogProvider logProvider;
 
     @VisibleForTesting
     protected ActorSystemComponents actorSystemComponents;
 
-    public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, LogProvider logProvider )
+    public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, Config config, LogProvider logProvider )
     {
         this.actorSystemFactory = actorSystemFactory;
+        this.resolver = resolver;
+        this.config = config;
         this.log = logProvider.getLog( getClass() );
+        this.logProvider = logProvider;
     }
 
     public void createClusterActorSystem()
     {
         this.actorSystemComponents = new ActorSystemComponents( actorSystemFactory,  ProviderSelection.cluster() );
+        Props props = ClusterJoiningActor.props( cluster(), resolver, config, logProvider );
+        applicationActorOf( props, ClusterJoiningActor.NAME )
+                .tell( ClusterJoiningActor.JoinMessage.initial( allSeenAddresses ), ActorRef.noSender() );
+        allSeenAddresses.clear();
     }
 
     public void createClientActorSystem()
     {
         this.actorSystemComponents = new ActorSystemComponents( actorSystemFactory, ProviderSelection.remote() );
+    }
+
+    public void addSeenAddresses( Collection<Address> addresses )
+    {
+        if ( resolver.useOverrides() )
+        {
+            allSeenAddresses.addAll( addresses );
+        }
     }
 
     public void shutdown() throws Throwable
@@ -135,7 +166,7 @@ public class ActorSystemLifecycle
 
     private static class ShutdownByNeo4jLifecycle implements CoordinatedShutdown.Reason
     {
-        public static ShutdownByNeo4jLifecycle INSTANCE = new ShutdownByNeo4jLifecycle();
+        static ShutdownByNeo4jLifecycle INSTANCE = new ShutdownByNeo4jLifecycle();
     }
 
     public Cluster cluster()
@@ -155,6 +186,14 @@ public class ActorSystemLifecycle
 
     public ClusterClientSettings clusterClientSettings()
     {
-        return actorSystemComponents.clusterClientSettings();
+        Set<ActorPath> actorPaths = resolver.resolve( this::toActorPath, HashSet::new );
+
+        return ClusterClientSettings.create( actorSystemComponents.actorSystem() ).withInitialContacts( actorPaths );
+    }
+
+    private ActorPath toActorPath( AdvertisedSocketAddress addr )
+    {
+        String path = String.format( "%s://%s@%s/system/receptionist", AKKA_SCHEME, ACTOR_SYSTEM_NAME, addr.toString() );
+        return ActorPaths.fromString( path );
     }
 }
