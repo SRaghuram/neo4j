@@ -27,8 +27,8 @@ import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
 import org.neo4j.kernel.impl.storemigration.CountsMigrator;
 import org.neo4j.kernel.impl.storemigration.StoreMigrator;
-import org.neo4j.kernel.impl.storemigration.StoreVersionCheck;
-import org.neo4j.kernel.impl.storemigration.StoreVersionCheck.Result;
+import org.neo4j.kernel.impl.storemigration.RecordStoreVersionCheck;
+import org.neo4j.kernel.impl.storemigration.RecordStoreVersionCheck.Result;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
@@ -69,7 +69,7 @@ public class StoreMigratorTest
         {
             // For test code sanity
             String fromStoreVersion = StoreVersion.HIGH_LIMIT_V3_0_0.versionString();
-            Result hasVersionResult = new StoreVersionCheck( pageCache ).hasVersion(
+            Result hasVersionResult = new RecordStoreVersionCheck( pageCache ).hasVersion(
                     databaseLayout.metadataStore(), fromStoreVersion );
             assertTrue( hasVersionResult.actualVersion, hasVersionResult.outcome.isSuccessful() );
 

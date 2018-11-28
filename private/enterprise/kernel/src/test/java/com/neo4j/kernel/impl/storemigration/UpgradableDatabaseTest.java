@@ -33,7 +33,7 @@ import org.neo4j.kernel.impl.store.format.standard.StandardFormatFamily;
 import org.neo4j.kernel.impl.store.format.standard.StandardV2_3;
 import org.neo4j.kernel.impl.storemigration.MigrationTestUtils;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
-import org.neo4j.kernel.impl.storemigration.StoreVersionCheck;
+import org.neo4j.kernel.impl.storemigration.RecordStoreVersionCheck;
 import org.neo4j.kernel.impl.storemigration.UpgradableDatabase;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
@@ -154,7 +154,7 @@ public class UpgradableDatabaseTest
 
         private UpgradableDatabase getUpgradableDatabase()
         {
-            return new UpgradableDatabase( new StoreVersionCheck( pageCacheRule.getPageCache( fileSystem ) ),
+            return new UpgradableDatabase( new RecordStoreVersionCheck( pageCacheRule.getPageCache( fileSystem ) ),
                     getRecordFormat(), tailScanner );
         }
     }
@@ -243,7 +243,7 @@ public class UpgradableDatabaseTest
 
         private UpgradableDatabase getUpgradableDatabase()
         {
-            return new UpgradableDatabase( new StoreVersionCheck( pageCacheRule.getPageCache( fileSystem ) ),
+            return new UpgradableDatabase( new RecordStoreVersionCheck( pageCacheRule.getPageCache( fileSystem ) ),
                     getRecordFormat(), tailScanner );
         }
     }
