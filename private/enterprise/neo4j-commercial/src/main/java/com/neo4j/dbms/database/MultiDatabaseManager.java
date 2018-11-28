@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -36,6 +37,7 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     private final Procedures procedures;
     private final Logger log;
     private final GraphDatabaseFacade graphDatabaseFacade;
+    private volatile boolean started;
 
     public MultiDatabaseManager( PlatformModule platform, AbstractEditionModule edition, Procedures procedures,
             Logger log, GraphDatabaseFacade graphDatabaseFacade )
@@ -59,7 +61,11 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
         Database database = dataSource.database;
         facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, database.getTokenHolders() );
-        DatabaseContext databaseContext = new DatabaseContext( database, database.getDependencyResolver(), graphDatabaseFacade );
+        if ( started )
+        {
+            database.start();
+        }
+        DatabaseContext databaseContext = new DatabaseContext( database, facade );
         databaseMap.put( databaseName, databaseContext );
         return databaseContext;
     }
@@ -76,29 +82,42 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         DatabaseContext databaseContext = databaseMap.remove( databaseName );
         if ( databaseContext != null )
         {
+            stopDatabase( databaseName, databaseContext );
             shutdownDatabase( databaseName, databaseContext );
+        }
+    }
+
+    @Override
+    public void start() throws Throwable
+    {
+        started = true;
+        Throwable startException = doWithAllDatabases( this::startDatabase );
+        if ( startException != null )
+        {
+            throw startException;
         }
     }
 
     @Override
     public void stop() throws Throwable
     {
-        Throwable stopException = null;
-        for ( Map.Entry<String, DatabaseContext> databaseContextEntry : databaseMap.entrySet() )
-        {
-            try
-            {
-                shutdownDatabase( databaseContextEntry.getKey(), databaseContextEntry.getValue() );
-            }
-            catch ( Throwable t )
-            {
-                stopException = Exceptions.chain( stopException, t );
-            }
-        }
-        databaseMap.clear();
+        started = false;
+        Throwable stopException = doWithAllDatabases( this::stopDatabase );
         if ( stopException != null )
         {
             throw stopException;
+        }
+
+    }
+
+    @Override
+    public void shutdown() throws Throwable
+    {
+        Throwable shutdownException = doWithAllDatabases( this::shutdownDatabase );
+        databaseMap.clear();
+        if ( shutdownException != null )
+        {
+            throw shutdownException;
         }
     }
 
@@ -110,11 +129,41 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         return databaseNames;
     }
 
+    private Throwable doWithAllDatabases( BiConsumer<String, DatabaseContext> consumer )
+    {
+        Throwable combinedException = null;
+        for ( Map.Entry<String,DatabaseContext> databaseContextEntry : databaseMap.entrySet() )
+        {
+            try
+            {
+                consumer.accept( databaseContextEntry.getKey(), databaseContextEntry.getValue() );
+            }
+            catch ( Throwable t )
+            {
+                combinedException = Exceptions.chain( combinedException, t );
+            }
+        }
+        return combinedException;
+    }
+
+    private void startDatabase( String databaseName, DatabaseContext context )
+    {
+        log.log( "Starting '%s' database.", databaseName );
+        Database database = context.getDatabase();
+        database.start();
+    }
+
+    private void stopDatabase( String databaseName, DatabaseContext context )
+    {
+        log.log( "Stop '%s' database.", databaseName );
+        Database database = context.getDatabase();
+        database.stop();
+    }
+
     private void shutdownDatabase( String databaseName, DatabaseContext context )
     {
         log.log( "Shutting down '%s' database.", databaseName );
         Database database = context.getDatabase();
-        database.stop();
         database.shutdown();
     }
 }

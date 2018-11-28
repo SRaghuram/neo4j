@@ -34,7 +34,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.security.User;
-import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
@@ -481,7 +480,7 @@ public class SystemGraphRealmTest
             {
                 DependencyResolver dependencyResolver = testSystemDb.getDependencyResolver();
                 Database database = dependencyResolver.resolveDependency( Database.class );
-                return Optional.of( new DatabaseContext( database, (Dependencies) dependencyResolver, testSystemDb ) );
+                return Optional.of( new DatabaseContext( database, testSystemDb ) );
             }
             return Optional.empty();
         }

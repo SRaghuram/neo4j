@@ -132,6 +132,7 @@ class MultiDatabaseManagerIT
     {
         DatabaseManager databaseManager = getDatabaseManager();
         databaseManager.stop();
+        databaseManager.shutdown();
         List<String> databases = databaseManager.listDatabases();
         assertThat( databases, empty() );
     }

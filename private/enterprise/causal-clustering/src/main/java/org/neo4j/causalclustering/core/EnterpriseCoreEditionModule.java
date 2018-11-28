@@ -126,7 +126,6 @@ import org.neo4j.udc.UsageData;
 import static java.util.Arrays.asList;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_messages_log_path;
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.LAST_FLUSHED;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -227,7 +226,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         //Build local databases object
         final Supplier<DatabaseManager> databaseManagerSupplier = () -> platformModule.dependencies.resolveDependency( DatabaseManager.class );
         final Supplier<DatabaseHealth> databaseHealthSupplier =
-                () -> databaseManagerSupplier.get().getDatabaseContext( DEFAULT_DATABASE_NAME )
+                () -> databaseManagerSupplier.get().getDatabaseContext( config.get( GraphDatabaseSettings.active_database ) )
                         .map( DatabaseContext::getDependencies )
                         .map( resolver -> resolver.resolveDependency( DatabaseHealth.class ) )
                         .orElseThrow( () -> new IllegalStateException( "Default database not found." ) );

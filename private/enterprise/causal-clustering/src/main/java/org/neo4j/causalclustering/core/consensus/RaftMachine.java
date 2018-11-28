@@ -117,7 +117,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData
 
     public void triggerElection( Clock clock ) throws IOException
     {
-            handle( RaftMessages.ReceivedInstantAwareMessage.of( clock.instant(), new RaftMessages.Timeout.Election( myself ) ) );
+        handle( RaftMessages.ReceivedInstantAwareMessage.of( clock.instant(), new RaftMessages.Timeout.Election( myself ) ) );
     }
 
     public void panic()
