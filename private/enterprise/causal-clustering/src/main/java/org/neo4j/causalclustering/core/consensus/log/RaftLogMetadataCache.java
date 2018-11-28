@@ -73,11 +73,6 @@ public class RaftLogMetadataCache
             return entryTerm;
         }
 
-        public LogPosition getStartPosition()
-        {
-            return startPosition;
-        }
-
         @Override
         public boolean equals( Object o )
         {

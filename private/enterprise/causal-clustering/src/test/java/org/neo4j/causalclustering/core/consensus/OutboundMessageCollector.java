@@ -54,19 +54,4 @@ public class OutboundMessageCollector implements Outbound<MemberId, RaftMessages
         List<RaftMessages.RaftMessage> messages = sentMessages.get( member );
         return messages != null && messages.size() != 0;
     }
-
-    public boolean hasEntriesTo( MemberId member, RaftLogEntry... expectedMessages )
-    {
-        List<RaftLogEntry> actualMessages = new ArrayList<>();
-
-        for ( Message message : sentTo( member ) )
-        {
-            if ( message instanceof RaftMessages.AppendEntries.Request )
-            {
-                Collections.addAll( actualMessages, ((RaftMessages.AppendEntries.Request) message).entries() );
-            }
-        }
-
-        return actualMessages.containsAll( Arrays.asList( expectedMessages ) );
-    }
 }

@@ -65,14 +65,6 @@ public class CoreSnapshot
         return get( null, type );
     }
 
-    public <T> void forEachSnapshotOfType( CoreStateFiles<T> type, BiConsumer<String, T> consumer )
-    {
-        //noinspection unchecked
-        snapshotCollection.entrySet().stream()
-                .filter( entry -> entry.getKey().other().equals( type ) )
-                .forEach( entry -> consumer.accept( entry.getKey().first(), (T) entry.getValue() ) );
-    }
-
     public int size()
     {
         return snapshotCollection.size();

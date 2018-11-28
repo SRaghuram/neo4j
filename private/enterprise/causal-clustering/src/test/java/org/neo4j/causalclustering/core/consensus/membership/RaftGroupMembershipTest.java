@@ -33,12 +33,6 @@ import static org.neo4j.causalclustering.identity.RaftTestMember.member;
 @RunWith( MockitoJUnitRunner.class )
 public class RaftGroupMembershipTest
 {
-    @Mock
-    private Outbound<MemberId, Message> outbound;
-
-    @Mock
-    private Inbound inbound;
-
     @Test
     public void shouldNotFormGroupWithoutAnyBootstrapping()
     {
