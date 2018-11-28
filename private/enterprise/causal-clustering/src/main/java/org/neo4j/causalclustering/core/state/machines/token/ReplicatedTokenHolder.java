@@ -99,6 +99,6 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
             throw new RuntimeException( "Unable to create token '" + tokenName + "'", e );
         }
 
-        return ReplicatedTokenRequestMarshalV1.commandBytes( commands );
+        return StorageCommandMarshal.commandsToBytes( commands );
     }
 }
