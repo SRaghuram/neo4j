@@ -5,51 +5,54 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.helpers.DataCreator;
-import org.neo4j.test.causalclustering.ClusterRule;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static org.neo4j.causalclustering.helpers.DataCreator.countNodes;
 
-@RunWith( Parameterized.class )
+@ClusterExtension
 public abstract class BaseClusterIpFamilyIT
 {
     protected BaseClusterIpFamilyIT( DiscoveryServiceType discoveryServiceType, IpFamily ipFamily, boolean useWildcard )
     {
-        clusterRule.withDiscoveryServiceType( discoveryServiceType );
-        clusterRule.withIpFamily( ipFamily ).useWildcard( useWildcard );
+        clusterConfig.withDiscoveryServiceType( discoveryServiceType );
+        clusterConfig.withIpFamily( ipFamily ).useWildcard( useWildcard );
     }
 
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
+    @Inject
+    private ClusterFactory clusterFactory;
+
+    private final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 3 )
             .withSharedCoreParam( CausalClusteringSettings.disable_middleware_logging, "false" )
             .withSharedReadReplicaParam( CausalClusteringSettings.disable_middleware_logging, "false" )
             .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, "0" )
-            .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, "0" );;
+            .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, "0" );
 
     private Cluster<?> cluster;
 
-    @Before
-    public void setup() throws Exception
+    @BeforeAll
+    void setup() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
     }
 
     @Test
-    public void shouldSetupClusterWithIPv6() throws Exception
+    void shouldSetupClusterWithIPv6() throws Exception
     {
         // given
         int numberOfNodes = 10;

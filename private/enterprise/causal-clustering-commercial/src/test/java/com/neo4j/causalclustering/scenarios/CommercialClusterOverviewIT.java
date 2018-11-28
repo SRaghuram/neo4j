@@ -5,22 +5,21 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import org.junit.runners.Parameterized;
-
-import java.util.Collections;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 
 import org.neo4j.causalclustering.scenarios.BaseClusterOverviewIT;
 
-public class CommercialClusterOverviewIT extends BaseClusterOverviewIT
-{
-    public CommercialClusterOverviewIT( CommercialDiscoveryServiceType discoveryServiceType )
-    {
-        super( discoveryServiceType );
-    }
+class CommercialClusterOverviewIT
 
-    @Parameterized.Parameters( name = "discovery-{0}" )
-    public static Iterable<CommercialDiscoveryServiceType> data()
+{
+    @Nested
+    @DisplayName( "discovery-akka" )
+    class Akka extends BaseClusterOverviewIT
     {
-        return Collections.singletonList( CommercialDiscoveryServiceType.AKKA );
+        Akka()
+        {
+            super( CommercialDiscoveryServiceType.AKKA );
+        }
     }
 }

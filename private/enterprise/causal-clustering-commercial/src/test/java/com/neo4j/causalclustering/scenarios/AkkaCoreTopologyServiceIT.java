@@ -10,9 +10,9 @@ import org.junit.Test;
 
 import org.neo4j.causalclustering.scenarios.BaseCoreTopologyServiceIT;
 
-public class AkkaCoreTopologyServiceIT extends BaseCoreTopologyServiceIT
+class AkkaCoreTopologyServiceIT extends BaseCoreTopologyServiceIT
 {
-    public AkkaCoreTopologyServiceIT()
+    AkkaCoreTopologyServiceIT()
     {
         super( CommercialDiscoveryServiceType.AKKA );
     }

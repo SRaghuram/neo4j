@@ -5,13 +5,11 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.Collections;
@@ -23,25 +21,30 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.helpers.DataCreator;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.graphdb.Node;
-import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.test.causalclustering.ClusterRule;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.causalclustering.TestStoreId.getStoreIds;
 import static org.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static org.neo4j.graphdb.Label.label;
 
-@RunWith( Parameterized.class )
+@ClusterExtension
+@ExtendWith( DefaultFileSystemExtension.class )
+@TestInstance( TestInstance.Lifecycle.PER_METHOD )
 public abstract class BaseMultiClusteringIT
 {
     protected static Set<String> DB_NAMES_1 = Collections.singleton( "default" );
@@ -49,43 +52,36 @@ public abstract class BaseMultiClusteringIT
     protected static Set<String> DB_NAMES_3 = Stream.of( "foo", "bar", "baz" ).collect( Collectors.toSet() );
 
     private final Set<String> dbNames;
-    private final ClusterRule clusterRule;
-    private final DefaultFileSystemRule fileSystemRule;
-    private final DiscoveryServiceType discoveryType;
+    private final ClusterConfig clusterConfig;
 
-    @Rule
-    public final RuleChain ruleChain;
     private Cluster<?> cluster;
-    private FileSystemAbstraction fs;
-    @Rule
-    public Timeout globalTimeout = Timeout.seconds(300);
+    @Inject
+    private DefaultFileSystemAbstraction fs;
 
-    protected BaseMultiClusteringIT( String ignoredName, int numCores, int numReplicas, Set<String> dbNames,
-            DiscoveryServiceType discoveryServiceType )
+    @Inject
+    private ClusterFactory clusterFactory;
+
+    protected BaseMultiClusteringIT( int numCores, int numReplicas, Set<String> dbNames, DiscoveryServiceType discoveryServiceType )
     {
         this.dbNames = dbNames;
-        this.discoveryType = discoveryServiceType;
 
-        this.clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( numCores )
-            .withNumberOfReadReplicas( numReplicas )
-            .withDatabaseNames( dbNames );
-
-        this.fileSystemRule = new DefaultFileSystemRule();
-
-        this.ruleChain = RuleChain.outerRule( fileSystemRule ).around( clusterRule );
+        this.clusterConfig = ClusterConfig
+                .clusterConfig()
+                .withNumberOfCoreMembers( numCores )
+                .withNumberOfReadReplicas( numReplicas )
+                .withDatabaseNames( dbNames )
+                .withDiscoveryServiceType( discoveryServiceType );
     }
 
-    @Before
-    public void setup() throws Exception
+    @BeforeEach
+    void setup() throws Exception
     {
-        clusterRule.withDiscoveryServiceType( discoveryType );
-        fs = fileSystemRule.get();
-        cluster = clusterRule.startCluster();
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
     }
 
     @Test
-    public void shouldRunDistinctTransactionsAndDiverge() throws Exception
+    void shouldRunDistinctTransactionsAndDiverge() throws Exception
     {
         int numNodes = 1;
         Map<CoreClusterMember, List<CoreClusterMember>> leaderMap = new HashMap<>();
@@ -117,7 +113,7 @@ public abstract class BaseMultiClusteringIT
 
         Set<Long> nodesPerDb = leaderMap.keySet().stream()
                 .map( DataCreator::countNodes ).collect( Collectors.toSet() );
-        assertEquals("Each logical database in the multicluster should have a unique number of nodes.", nodesPerDb.size(), dbNames.size() );
+        assertEquals( nodesPerDb.size(), dbNames.size(), "Each logical database in the multicluster should have a unique number of nodes." );
         for ( Map.Entry<CoreClusterMember, List<CoreClusterMember>> subCluster : leaderMap.entrySet() )
         {
             dataMatchesEventually( subCluster.getKey(), subCluster.getValue() );
@@ -126,7 +122,7 @@ public abstract class BaseMultiClusteringIT
     }
 
     @Test
-    public void distinctDatabasesShouldHaveDistinctStoreIds() throws Exception
+    void distinctDatabasesShouldHaveDistinctStoreIds() throws Exception
     {
         for ( String dbName : dbNames )
         {
@@ -146,11 +142,11 @@ public abstract class BaseMultiClusteringIT
 
         Set<StoreId> storeIds = getStoreIds( storeDirs, fs );
         int expectedNumStoreIds = dbNames.size();
-        assertEquals( "Expected distinct store ids for distinct sub clusters.", expectedNumStoreIds, storeIds.size());
+        assertEquals( expectedNumStoreIds, storeIds.size(), "Expected distinct store ids for distinct sub clusters." );
     }
 
     @Test
-    public void rejoiningFollowerShouldDownloadSnapshotFromCorrectDatabase() throws Exception
+    void rejoiningFollowerShouldDownloadSnapshotFromCorrectDatabase() throws Exception
     {
         String dbName = getFirstDbName( dbNames );
         int followerId = cluster.getMemberWithAnyRole( dbName, Role.FOLLOWER ).serverId();
@@ -178,7 +174,7 @@ public abstract class BaseMultiClusteringIT
         boolean followerIsHealthy = cluster.healthyCoreMembers().stream()
                 .anyMatch( m -> m.serverId() == followerId );
 
-        assertTrue( "Rejoining / lagging follower is expected to be healthy.", followerIsHealthy );
+        assertTrue( followerIsHealthy, "Rejoining / lagging follower is expected to be healthy." );
 
         CoreClusterMember follower = cluster.getCoreMemberById( followerId );
 
@@ -193,34 +189,26 @@ public abstract class BaseMultiClusteringIT
 
         Set<StoreId> storeIds = getStoreIds( storeDirs, fs );
         String message = "All members of a sub-cluster should have the same store Id after downloading a snapshot.";
-        assertEquals( message, 1, storeIds.size() );
+        assertEquals( 1, storeIds.size(), message );
     }
 
     @Test
-    public void shouldNotBeAbleToChangeClusterMembersDatabaseName() throws Exception
+    void shouldNotBeAbleToChangeClusterMembersDatabaseName()
     {
         CoreClusterMember member = cluster.coreMembers().stream().findFirst().orElseThrow( IllegalArgumentException::new );
 
-        Cluster.shutdownCoreMember( member );
+        member.shutdown();
 
         //given
         member.updateConfig( CausalClusteringSettings.database, "new_name" );
 
-        try
-        {
-            //when
-            Cluster.startCoreMember( member );
-            fail( "Cluster member should fail to restart after database name change." );
-        }
-        catch ( ExecutionException e )
-        {
-            //expected
-        }
+        // when then
+        assertThrows( RuntimeException.class, member::start );
     }
 
     //TODO: Test that rejoining followers wait for majority of hosts *for each database* to be available before joining
 
-    private static String getFirstDbName( Set<String> dbNames ) throws Exception
+    private static String getFirstDbName( Set<String> dbNames )
     {
         return dbNames.stream()
                 .findFirst()

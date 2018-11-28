@@ -40,8 +40,8 @@ import org.neo4j.causalclustering.core.state.machines.locks.LeaderOnlyLockManage
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.IpFamily;
-import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.helper.ErrorHandler;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
@@ -236,11 +236,6 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
         shutdownCoreMembers( coreMembers() );
     }
 
-    public static void shutdownCoreMember( CoreClusterMember member )
-    {
-        shutdownCoreMembers( Collections.singleton( member ) );
-    }
-
     private static void shutdownCoreMembers( Collection<CoreClusterMember> members )
     {
         try ( ErrorHandler errorHandler = new ErrorHandler( "Error when trying to shutdown core members" ) )
@@ -274,6 +269,12 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
             list.add( task );
         }
         return list;
+    }
+
+    public void removeCoreMembers( Collection<CoreClusterMember> coreClusterMembers )
+    {
+        shutdownCoreMembers( coreClusterMembers );
+        coreMembers.values().removeAll( coreClusterMembers );
     }
 
     public void removeCoreMemberWithServerId( int serverId )
@@ -311,7 +312,7 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
         }
     }
 
-    private void removeReadReplica( ReadReplica memberToRemove )
+    public void removeReadReplica( ReadReplica memberToRemove )
     {
         memberToRemove.shutdown();
         readReplicas.values().remove( memberToRemove );
@@ -568,11 +569,6 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
     public void startCoreMembers() throws InterruptedException, ExecutionException
     {
         startCoreMembers( coreMembers.values() );
-    }
-
-    public static void startCoreMember( CoreClusterMember member ) throws InterruptedException, ExecutionException
-    {
-        startCoreMembers( Collections.singleton( member ) );
     }
 
     private static void startCoreMembers( Collection<CoreClusterMember> members ) throws InterruptedException, ExecutionException

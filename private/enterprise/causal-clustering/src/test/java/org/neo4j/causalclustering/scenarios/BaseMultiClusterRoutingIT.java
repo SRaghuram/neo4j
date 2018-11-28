@@ -6,13 +6,9 @@
 package org.neo4j.causalclustering.scenarios;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,69 +31,66 @@ import org.neo4j.causalclustering.routing.multi_cluster.MultiClusterRoutingResul
 import org.neo4j.causalclustering.routing.multi_cluster.procedure.MultiClusterRoutingResultFormat;
 import org.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames;
 import org.neo4j.graphdb.Result;
-import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.util.ValueUtils;
-import org.neo4j.test.causalclustering.ClusterRule;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.causalclustering.routing.multi_cluster.procedure.ParameterNames.DATABASE;
 import static org.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames.GET_ROUTERS_FOR_ALL_DATABASES;
 import static org.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames.GET_ROUTERS_FOR_DATABASE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@RunWith( Parameterized.class )
+@ClusterExtension
+@ExtendWith( {DefaultFileSystemExtension.class} )
 public abstract class BaseMultiClusterRoutingIT
 {
 
     protected static Set<String> DB_NAMES_1 = Stream.of( "foo", "bar" ).collect( Collectors.toSet() );
-    protected static Set<String> DB_NAMES_2 = Collections.singleton( "default" );
-    protected static Set<String> DB_NAMES_3 = Stream.of( "foo", "bar", "baz" ).collect( Collectors.toSet() );
+    static Set<String> DB_NAMES_2 = Collections.singleton( "default" );
+    static Set<String> DB_NAMES_3 = Stream.of( "foo", "bar", "baz" ).collect( Collectors.toSet() );
 
     private final Set<String> dbNames;
-    private final ClusterRule clusterRule;
-    private final DefaultFileSystemRule fileSystemRule;
-    private final DiscoveryServiceType discoveryType;
+    private final ClusterConfig clusterConfig;
     private final int numCores;
 
     private Cluster<?> cluster;
-    private FileSystemAbstraction fs;
 
-    @Rule
-    public final RuleChain ruleChain;
+    @Inject
+    private DefaultFileSystemAbstraction fs;
 
-    @Rule
-    public Timeout globalTimeout = Timeout.seconds(300);
+    @Inject
+    private ClusterFactory clusterFactory;
 
-    protected BaseMultiClusterRoutingIT( String ignoredName, int numCores, int numReplicas, Set<String> dbNames, DiscoveryServiceType discoveryType )
+    protected BaseMultiClusterRoutingIT( int numCores, int numReplicas, Set<String> dbNames, DiscoveryServiceType discoveryType )
     {
         this.dbNames = dbNames;
-        this.discoveryType = discoveryType;
-
-        this.clusterRule = new ClusterRule()
+        this.clusterConfig = ClusterConfig
+                .clusterConfig()
                 .withNumberOfCoreMembers( numCores )
                 .withNumberOfReadReplicas( numReplicas )
-                .withDatabaseNames( dbNames );
+                .withDatabaseNames( dbNames )
+                .withDiscoveryServiceType( discoveryType );
         this.numCores = numCores;
-
-        this.fileSystemRule = new DefaultFileSystemRule();
-        this.ruleChain = RuleChain.outerRule( fileSystemRule ).around( clusterRule );
     }
 
-    @Before
-    public void setup() throws Exception
+    @BeforeAll
+    void setup() throws Exception
     {
-        clusterRule.withDiscoveryServiceType( discoveryType );
-        fs = fileSystemRule.get();
-        cluster = clusterRule.startCluster();
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
     }
 
     @Test
-    public void superCallShouldReturnAllRouters()
+    void superCallShouldReturnAllRouters()
     {
         List<CoreGraphDatabase> dbs = dbNames.stream()
                 .map( n -> cluster.getMemberWithAnyRole( n, Role.FOLLOWER, Role.LEADER ).database() ).collect( Collectors.toList() );
@@ -106,18 +99,18 @@ public abstract class BaseMultiClusterRoutingIT
                 .map( db -> callProcedure( db, GET_ROUTERS_FOR_ALL_DATABASES, Collections.emptyMap() ) );
 
         List<MultiClusterRoutingResult> results = optResults.filter( Optional::isPresent ).map( Optional::get ).collect( Collectors.toList() );
-        assertEquals("There should be a result for each database against which the procedure is executed.",  dbNames.size(), results.size() );
+        assertEquals( dbNames.size(), results.size(), "There should be a result for each database against which the procedure is executed." );
 
         boolean consistentResults = results.stream().distinct().count() == 1;
         assertThat( "The results should be the same, regardless of which database the procedure is executed against.", consistentResults );
 
         Function<Map<String,List<Endpoint>>, Integer> countHosts = m -> m.values().stream().mapToInt( List::size ).sum();
         int resultsAllCores = results.stream().findFirst().map(r -> countHosts.apply( r.routers() ) ).orElse( 0 );
-        assertEquals( "The results of the procedure should return all core hosts in the topology.", numCores, resultsAllCores );
+        assertEquals( numCores, resultsAllCores, "The results of the procedure should return all core hosts in the topology." );
     }
 
     @Test
-    public void subCallShouldReturnLocalRouters()
+    void subCallShouldReturnLocalRouters()
     {
         String dbName = getFirstDbName( dbNames );
         Stream<CoreGraphDatabase> members = dbNames.stream().map( n -> cluster.getMemberWithAnyRole( n, Role.FOLLOWER, Role.LEADER ).database() );
@@ -133,14 +126,14 @@ public abstract class BaseMultiClusterRoutingIT
         Optional<MultiClusterRoutingResult> firstResult = results.stream().findFirst();
 
         int numRouterSets = firstResult.map( r -> r.routers().size() ).orElse( 0 );
-        assertEquals( "There should only be routers returned for a single database.", 1, numRouterSets );
+        assertEquals( 1, numRouterSets, "There should only be routers returned for a single database." );
 
         boolean correctResultDbName = firstResult.map( r -> r.routers().containsKey( dbName ) ).orElse( false );
         assertThat( "The results should contain routers for the database passed to the procedure.", correctResultDbName );
     }
 
     @Test
-    public void procedureCallsShouldReflectMembershipChanges() throws Exception
+    void procedureCallsShouldReflectMembershipChanges() throws Exception
     {
         String dbName = getFirstDbName( dbNames );
         CoreClusterMember follower = cluster.getMemberWithAnyRole( dbName, Role.FOLLOWER );

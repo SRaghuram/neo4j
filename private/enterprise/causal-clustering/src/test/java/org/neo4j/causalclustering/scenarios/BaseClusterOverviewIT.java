@@ -6,14 +6,20 @@
 package org.neo4j.causalclustering.scenarios;
 
 import org.hamcrest.Matcher;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.Clock;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.causalclustering.common.Cluster;
@@ -22,11 +28,16 @@ import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.scenarios.ClusterOverviewHelper.MemberInfo;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.test.causalclustering.ClusterRule;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
 import static org.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static org.neo4j.causalclustering.discovery.RoleInfo.READ_REPLICA;
@@ -38,12 +49,9 @@ import static org.neo4j.causalclustering.scenarios.ClusterOverviewHelper.contain
 import static org.neo4j.causalclustering.scenarios.ClusterOverviewHelper.containsRole;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
-@RunWith( Parameterized.class )
 public abstract class BaseClusterOverviewIT
 {
-
-    @Rule
-    public ClusterRule clusterRule = new ClusterRule()
+    private final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
             .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
             .withSharedReadReplicaParam( CausalClusteringSettings.cluster_topology_refresh, "5s" )
             .withSharedCoreParam( CausalClusteringSettings.disable_middleware_logging, "false" )
@@ -51,225 +59,211 @@ public abstract class BaseClusterOverviewIT
             .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, "0" )
             .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, "0" );
 
+    private int idCounter = 100;
+
     protected BaseClusterOverviewIT( DiscoveryServiceType discoveryServiceType )
     {
-        clusterRule.withDiscoveryServiceType( discoveryServiceType );
+        clusterConfig.withDiscoveryServiceType( discoveryServiceType );
     }
 
-    @Test
-    public void shouldDiscoverCoreMembers() throws Exception
+    @Nested
+    @ClusterExtension
+    class SharedCluster
     {
-        // given
-        int coreMembers = 3;
-        clusterRule.withNumberOfCoreMembers( coreMembers );
-        clusterRule.withNumberOfReadReplicas( 0 );
+        @Inject
+        private ClusterFactory clusterFactory;
 
-        // when
-        Cluster<?> cluster = clusterRule.startCluster();
+        private Cluster<?> cluster;
 
-        Matcher<List<MemberInfo>> expected = allOf(
-                containsMemberAddresses( cluster.coreMembers() ),
-                containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 1 ), ClusterOverviewHelper.doesNotContainRole( READ_REPLICA ) );
+        @BeforeAll
+        void startCluster() throws ExecutionException, InterruptedException
+        {
+            cluster = clusterFactory.createCluster( clusterConfig.withNumberOfCoreMembers( 5 ).withNumberOfReadReplicas( 6 ) );
+            cluster.start();
+        }
 
-        // then
-        assertAllEventualOverviews( cluster, expected );
+        @Test
+        void shouldDiscoverCoreMembersAndReadReplicas() throws Exception
+        {
+            // given
+            int replicaCount = cluster.readReplicas().size();
+
+            // when
+            Matcher<List<MemberInfo>> expected =
+                    allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( LEADER, 1 ), containsRole( FOLLOWER, 2 ),
+                            containsRole( READ_REPLICA, replicaCount ) );
+
+            // then
+            assertAllEventualOverviews( cluster, expected );
+        }
+
+        @Test
+        void shouldDiscoverReadReplicasAfterRestartingCores() throws Exception
+        {
+            // given
+            int coreMembers = cluster.coreMembers().size();
+            int readReplicas = cluster.readReplicas().size();
+
+            // when
+            cluster.shutdownCoreMembers();
+            cluster.startCoreMembers();
+
+            Matcher<List<MemberInfo>> expected = allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( LEADER, 1 ),
+                    containsRole( FOLLOWER, coreMembers - 1 ), containsRole( READ_REPLICA, readReplicas ) );
+
+            // then
+            assertAllEventualOverviews( cluster, expected );
+        }
+
+        @Test
+        void shouldDiscoverNewCoreMembers() throws Exception
+        {
+            // given
+            int initialCoreMembers = cluster.coreMembers().size();
+            int readReplicas = cluster.readReplicas().size();
+
+            // when
+            int extraCoreMembers = 2;
+            int finalCoreMembers = initialCoreMembers + extraCoreMembers;
+            IntStream
+                    .range( 0, extraCoreMembers )
+                    .mapToObj( ignored -> cluster.addCoreMemberWithId( initialCoreMembers + idCounter++ ) )
+                    .parallel()
+                    .forEach( CoreClusterMember::start );
+
+            Matcher<List<MemberInfo>> expected =
+                    allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( READ_REPLICA, readReplicas ),
+                            containsRole( LEADER, 1 ), containsRole( FOLLOWER, finalCoreMembers - 1 ) );
+
+            // then
+            assertAllEventualOverviews( cluster, expected );
+        }
+
+        @Test
+        void shouldDiscoverNewReadReplicas() throws Exception
+        {
+            // given
+            int coreMembers = cluster.coreMembers().size();
+            int initialReadReplicas = cluster.readReplicas().size();
+
+            // when
+            IntStream.range( 0, 2 ).map( ignored -> idCounter++ ).mapToObj( id -> cluster.addReadReplicaWithId( id ) ).parallel().forEach( ReadReplica::start );
+
+            Matcher<List<MemberInfo>> expected = allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( LEADER, 1 ),
+                    containsRole( FOLLOWER, coreMembers - 1 ), containsRole( READ_REPLICA, initialReadReplicas + 2 ) );
+
+            // then
+            assertAllEventualOverviews( cluster, expected );
+        }
+
+        @Test
+        void shouldDiscoverRemovalOfReadReplicas() throws Exception
+        {
+            // given
+            int initialReadReplicas = cluster.readReplicas().size();
+
+            assertAllEventualOverviews( cluster, containsRole( READ_REPLICA, initialReadReplicas ) );
+
+            // when
+            cluster.removeReadReplicaWithMemberId( getRunningReadReplicaId( cluster ) );
+            cluster.removeReadReplicaWithMemberId( getRunningReadReplicaId( cluster ) );
+
+            // then
+            assertAllEventualOverviews( cluster, containsRole( READ_REPLICA, initialReadReplicas - 2 ) );
+        }
+
+        @Test
+        void shouldDiscoverRemovalOfCoreMembers() throws Exception
+        {
+            // given
+            int coresToRemove = 2;
+            int coreMembers = cluster.coreMembers().size();
+            assertTrue(coreMembers > coresToRemove, "Expected at least " + coreMembers + " cores. Found " + coreMembers);
+
+            assertAllEventualOverviews( cluster, allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 1 ) ) );
+
+            // when
+            cluster.coreMembers().stream().skip( coreMembers - coresToRemove ).parallel().forEach( core -> cluster.removeCoreMember( core ) );
+
+            // then
+            assertAllEventualOverviews( cluster, allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 1 - coresToRemove ) ), asSet( 0, 1 ),
+                    Collections.emptySet() );
+        }
     }
 
-    @Test
-    public void shouldDiscoverCoreMembersAndReadReplicas() throws Exception
+    @Nested
+    @ClusterExtension
+    @TestInstance( TestInstance.Lifecycle.PER_METHOD )
+    class UniqueCluster
     {
-        // given
-        int coreMembers = 3;
-        clusterRule.withNumberOfCoreMembers( coreMembers );
-        int replicaCount = 3;
-        clusterRule.withNumberOfReadReplicas( replicaCount );
+        @Inject
+        private ClusterFactory clusterFactory;
 
-        // when
-        Cluster<?> cluster = clusterRule.startCluster();
+        @Test
+        void shouldDiscoverRemovalOfReadReplicaThatWasInitiallyAssociatedWithACoreThatWasAlsoRemoved() throws Throwable
+        {
+            Cluster<?> cluster = clusterFactory.createCluster( clusterConfig.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 6 ) );
+            cluster.start();
+            int coreMembers = cluster.coreMembers().size();
+            int readReplicas = cluster.readReplicas().size();
 
-        Matcher<List<MemberInfo>> expected = allOf(
-                containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
-                containsRole( LEADER, 1 ), containsRole( FOLLOWER, 2 ), containsRole( READ_REPLICA, replicaCount ) );
+            assertAllEventualOverviews( cluster,
+                    allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 1 ), containsRole( READ_REPLICA, readReplicas ) ) );
 
-        // then
-        assertAllEventualOverviews( cluster, expected );
+            cluster.removeCoreMemberWithServerId( getRunningCoreId( cluster ) );
+
+            assertAllEventualOverviews( cluster,
+                    allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 2 ), containsRole( READ_REPLICA, readReplicas ) ) );
+
+            cluster.readReplicas().parallelStream().forEach( cluster::removeReadReplica );
+
+            assertAllEventualOverviews( cluster,
+                    allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 2 ), containsRole( READ_REPLICA, 0 ) ) );
+        }
+
+        @Test
+        void shouldDiscoverTimeoutBasedLeaderStepdown() throws Exception
+        {
+            Cluster<?> cluster = clusterFactory.createCluster( clusterConfig.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 ) );
+
+            cluster.start();
+
+            List<CoreClusterMember> followers = cluster.getAllMembersWithRole( Role.FOLLOWER );
+            CoreClusterMember leader = cluster.getMemberWithRole( Role.LEADER );
+            cluster.removeCoreMembers( followers );
+
+            assertEventualOverview( containsRole( LEADER, 0 ), leader, "core" );
+        }
+
+        @Test
+        void shouldDiscoverGreaterTermBasedLeaderStepdown() throws Exception
+        {
+            Cluster<?> cluster = clusterFactory.createCluster( clusterConfig.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 ) );
+            cluster.start();
+
+            int originalCoreMembers = cluster.coreMembers().size();
+
+            CoreClusterMember leader = cluster.awaitLeader();
+            leader.config().augment( CausalClusteringSettings.refuse_to_be_leader, Settings.TRUE );
+
+            List<MemberInfo> preElectionOverview = clusterOverview( leader.database() );
+
+            CoreClusterMember follower = cluster.getMemberWithRole( Role.FOLLOWER );
+            follower.raft().triggerElection( Clock.systemUTC() );
+
+            assertEventualOverview(
+                    allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, originalCoreMembers - 1 ), not( equalTo( preElectionOverview ) ) ), leader,
+                    "core" );
+        }
     }
 
-    @Test
-    public void shouldDiscoverReadReplicasAfterRestartingCores() throws Exception
+    private static int getRunningCoreId( Cluster<?> cluster )
     {
-        // given
-        int coreMembers = 3;
-        int readReplicas = 3;
-        clusterRule.withNumberOfCoreMembers( coreMembers );
-        clusterRule.withNumberOfReadReplicas( readReplicas );
-
-        // when
-        Cluster<?> cluster = clusterRule.startCluster();
-        cluster.shutdownCoreMembers();
-        cluster.startCoreMembers();
-
-        Matcher<List<MemberInfo>> expected = allOf(
-                containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
-                containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 1 ), containsRole( READ_REPLICA, readReplicas ) );
-
-        // then
-        assertAllEventualOverviews( cluster, expected );
+        return cluster.coreMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Unale to find a running core" ) ).serverId();
     }
 
-    @Test
-    public void shouldDiscoverNewCoreMembers() throws Exception
+    private static int getRunningReadReplicaId( Cluster<?> cluster )
     {
-        // given
-        int initialCoreMembers = 3;
-        clusterRule.withNumberOfCoreMembers( initialCoreMembers );
-        clusterRule.withNumberOfReadReplicas( 0 );
-
-        Cluster<?> cluster = clusterRule.startCluster();
-
-        // when
-        int extraCoreMembers = 2;
-        int finalCoreMembers = initialCoreMembers + extraCoreMembers;
-        IntStream.range( 0, extraCoreMembers ).forEach( idx -> cluster.addCoreMemberWithId( initialCoreMembers + idx ).start() );
-
-        Matcher<List<MemberInfo>> expected = allOf(
-                containsMemberAddresses( cluster.coreMembers() ),
-                containsRole( LEADER, 1 ), containsRole( FOLLOWER, finalCoreMembers - 1 ) );
-
-        // then
-        assertAllEventualOverviews( cluster, expected );
-    }
-
-    @Test
-    public void shouldDiscoverNewReadReplicas() throws Exception
-    {
-        // given
-        int coreMembers = 3;
-        int initialReadReplicas = 2;
-        clusterRule.withNumberOfCoreMembers( coreMembers );
-        clusterRule.withNumberOfReadReplicas( initialReadReplicas );
-
-        Cluster<?> cluster = clusterRule.startCluster();
-
-        // when
-        cluster.addReadReplicaWithId( initialReadReplicas ).start();
-        cluster.addReadReplicaWithId( initialReadReplicas + 1 ).start();
-
-        Matcher<List<MemberInfo>> expected = allOf(
-                containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
-                containsRole( LEADER, 1 ),
-                containsRole( FOLLOWER, coreMembers - 1 ),
-                containsRole( READ_REPLICA, initialReadReplicas + 2 ) );
-
-        // then
-        assertAllEventualOverviews( cluster, expected );
-    }
-
-    @Test
-    public void shouldDiscoverRemovalOfReadReplicas() throws Exception
-    {
-        // given
-        int coreMembers = 3;
-        int initialReadReplicas = 3;
-        clusterRule.withNumberOfCoreMembers( coreMembers );
-        clusterRule.withNumberOfReadReplicas( initialReadReplicas );
-
-        Cluster<?> cluster = clusterRule.startCluster();
-
-        assertAllEventualOverviews( cluster, containsRole( READ_REPLICA, initialReadReplicas ) );
-
-        // when
-        cluster.removeReadReplicaWithMemberId( 0 );
-        cluster.removeReadReplicaWithMemberId( 1 );
-
-        // then
-        assertAllEventualOverviews( cluster, containsRole( READ_REPLICA, initialReadReplicas - 2 ) );
-    }
-
-    @Test
-    public void shouldDiscoverRemovalOfCoreMembers() throws Exception
-    {
-        // given
-        int coreMembers = 5;
-        clusterRule.withNumberOfCoreMembers( coreMembers );
-        clusterRule.withNumberOfReadReplicas( 0 );
-
-        Cluster<?> cluster = clusterRule.startCluster();
-
-        assertAllEventualOverviews( cluster, allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 1 ) ) );
-
-        // when
-        cluster.removeCoreMemberWithServerId( 0 );
-        cluster.removeCoreMemberWithServerId( 1 );
-
-        // then
-        assertAllEventualOverviews( cluster, allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 1 - 2 ) ),
-                asSet( 0, 1 ), Collections.emptySet() );
-    }
-
-    @Test
-    public void shouldDiscoverRemovalOfReadReplicaThatWasInitiallyAssociatedWithACoreThatWasAlsoRemoved() throws Throwable
-    {
-        int coreMembers = 3;
-        int readReplicas = 6;
-
-        Cluster<?> cluster = clusterRule
-                .withNumberOfCoreMembers( coreMembers )
-                .withNumberOfReadReplicas( readReplicas )
-                .startCluster();
-
-        assertAllEventualOverviews( cluster, allOf(
-                containsRole( LEADER, 1 ),
-                containsRole( FOLLOWER, coreMembers - 1 ),
-                containsRole( READ_REPLICA, readReplicas ) ) );
-
-        cluster.removeCoreMemberWithServerId( 0 );
-
-        assertAllEventualOverviews( cluster, allOf(
-                containsRole( LEADER, 1 ),
-                containsRole( FOLLOWER, coreMembers - 2 ),
-                containsRole( READ_REPLICA, readReplicas ) ) );
-
-        IntStream.range( 0, readReplicas ).parallel().forEach( cluster::removeReadReplicaWithMemberId );
-
-        assertAllEventualOverviews( cluster, allOf(
-                containsRole( LEADER, 1 ),
-                containsRole( FOLLOWER, coreMembers - 2 ),
-                containsRole( READ_REPLICA, 0 ) ) );
-    }
-
-    @Test
-    public void shouldDiscoverTimeoutBasedLeaderStepdown() throws Exception
-    {
-        clusterRule.withNumberOfCoreMembers( 3 );
-        clusterRule.withNumberOfReadReplicas( 0 );
-
-        Cluster<?> cluster = clusterRule.startCluster();
-        List<CoreClusterMember> followers = cluster.getAllMembersWithRole( Role.FOLLOWER );
-        CoreClusterMember leader = cluster.getMemberWithRole( Role.LEADER );
-        followers.forEach( CoreClusterMember::shutdown );
-
-        assertEventualOverview( containsRole( LEADER, 0 ), leader, "core" );
-    }
-
-    @Test
-    public void shouldDiscoverGreaterTermBasedLeaderStepdown() throws Exception
-    {
-        int originalCoreMembers = 3;
-        clusterRule.withNumberOfCoreMembers( originalCoreMembers ).withNumberOfReadReplicas( 0 );
-
-        Cluster<?> cluster = clusterRule.startCluster();
-        CoreClusterMember leader = cluster.awaitLeader();
-        leader.config().augment( CausalClusteringSettings.refuse_to_be_leader, Settings.TRUE );
-
-        List<MemberInfo> preElectionOverview = clusterOverview( leader.database() );
-
-        CoreClusterMember follower = cluster.getMemberWithRole( Role.FOLLOWER );
-        follower.raft().triggerElection( Clock.systemUTC() );
-
-        assertEventualOverview( allOf(
-                containsRole( LEADER, 1 ),
-                containsRole( FOLLOWER, originalCoreMembers - 1 ),
-                not( equalTo( preElectionOverview ) ) ), leader, "core" );
+        return cluster.readReplicas().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Could not find a running read replica" ) ).serverId();
     }
 }

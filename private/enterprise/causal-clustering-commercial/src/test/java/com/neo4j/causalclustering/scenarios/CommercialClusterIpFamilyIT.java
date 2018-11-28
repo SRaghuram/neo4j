@@ -5,33 +5,48 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Nested;
 
-import java.util.Arrays;
-import java.util.Collection;
-
-import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.scenarios.BaseClusterIpFamilyIT;
 
 import static org.neo4j.causalclustering.discovery.IpFamily.IPV4;
 import static org.neo4j.causalclustering.discovery.IpFamily.IPV6;
 
-public class CommercialClusterIpFamilyIT extends BaseClusterIpFamilyIT
+class CommercialClusterIpFamilyIT
 {
-    @Parameterized.Parameters( name = "{0} {1} useWildcard={2}" )
-    public static Collection<Object[]> data()
+    @Nested
+    class AkkaIpv4NoWildcard extends BaseClusterIpFamilyIT
     {
-        return Arrays.asList( new Object[][]{
-                {CommercialDiscoveryServiceType.AKKA, IPV4, false},
-                {CommercialDiscoveryServiceType.AKKA, IPV6, false},
-
-                {CommercialDiscoveryServiceType.AKKA, IPV4, true},
-                {CommercialDiscoveryServiceType.AKKA, IPV6, true}
-        } );
+        AkkaIpv4NoWildcard()
+        {
+            super( CommercialDiscoveryServiceType.AKKA, IPV4, false );
+        }
     }
 
-    public CommercialClusterIpFamilyIT( CommercialDiscoveryServiceType discoveryServiceType, IpFamily ipFamily, boolean useWildcard )
+    @Nested
+    class AkkaIpv6NoWildcard extends BaseClusterIpFamilyIT
     {
-        super( discoveryServiceType, ipFamily, useWildcard );
+        AkkaIpv6NoWildcard()
+        {
+            super( CommercialDiscoveryServiceType.AKKA, IPV6, false );
+        }
+    }
+
+    @Nested
+    class AkkaIpv4Wildcard extends BaseClusterIpFamilyIT
+    {
+        AkkaIpv4Wildcard()
+        {
+            super( CommercialDiscoveryServiceType.AKKA, IPV4, true );
+        }
+    }
+
+    @Nested
+    class AkkaIpv6Wildcard extends BaseClusterIpFamilyIT
+    {
+        AkkaIpv6Wildcard()
+        {
+            super( CommercialDiscoveryServiceType.AKKA, IPV6, true );
+        }
     }
 }

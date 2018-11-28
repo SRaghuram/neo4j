@@ -6,8 +6,9 @@
 package org.neo4j.causalclustering.scenarios;
 
 import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.UUID;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -23,21 +24,21 @@ import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.Clocks;
 
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public abstract class BaseCoreTopologyServiceIT
 {
-    protected final DiscoveryServiceType discoveryServiceType;
-    protected CoreTopologyService service;
+    private final DiscoveryServiceType discoveryServiceType;
 
     protected BaseCoreTopologyServiceIT( DiscoveryServiceType discoveryServiceType )
     {
         this.discoveryServiceType = discoveryServiceType;
     }
 
-    @Before
-    public void setUp()
+    @Test()
+    void shouldBeAbleToStartAndStopWithoutSuccessfulJoin()
     {
         // Random members that does not exists, discovery will never succeed
         String initialHosts = "localhost:" + PortAuthority.allocatePort() + ",localhost:" + PortAuthority.allocatePort();
@@ -46,10 +47,10 @@ public abstract class BaseCoreTopologyServiceIT
         config.augment( CausalClusteringSettings.discovery_listen_address, "localhost:" + PortAuthority.allocatePort() );
 
         JobScheduler jobScheduler = createInitialisedScheduler();
-        InitialDiscoveryMembersResolver initialDiscoveryMemberResolver =
-                new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
+        InitialDiscoveryMembersResolver
+                initialDiscoveryMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
 
-        service = discoveryServiceType.createFactory().coreTopologyService(
+        CoreTopologyService service = discoveryServiceType.createFactory().coreTopologyService(
                 config,
                 new MemberId( UUID.randomUUID() ),
                 jobScheduler,
@@ -59,15 +60,14 @@ public abstract class BaseCoreTopologyServiceIT
                 new NoRetriesStrategy(),
                 new Monitors(),
                 Clocks.systemClock() );
-    }
 
-    @Test( timeout = 120_000 )
-    public void shouldBeAbleToStartAndStopWithoutSuccessfulJoin() throws Throwable
-    {
-        service.init();
-        service.start();
-        service.stop();
-        service.shutdown();
+        assertTimeout( Duration.ofSeconds( 120 ), () ->
+        {
+            service.init();
+            service.start();
+            service.stop();
+            service.shutdown();
+        } );
     }
 
 }

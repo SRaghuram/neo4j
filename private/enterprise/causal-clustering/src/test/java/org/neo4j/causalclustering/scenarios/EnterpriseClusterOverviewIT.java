@@ -5,18 +5,30 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.runners.Parameterized;
 
-public class EnterpriseClusterOverviewIT extends BaseClusterOverviewIT
+class EnterpriseClusterOverviewIT
 {
-    public EnterpriseClusterOverviewIT( DiscoveryServiceType discoveryServiceType )
+    @Nested
+    @DisplayName( "hazelcast" )
+    class Hz extends BaseClusterOverviewIT
     {
-        super( discoveryServiceType );
+        Hz()
+        {
+            super( EnterpriseDiscoveryServiceType.HAZELCAST );
+        }
     }
 
-    @Parameterized.Parameters( name = "discovery-{0}" )
-    public static DiscoveryServiceType[] data()
+    @Nested
+    @DisplayName( "shared" )
+    class Shared extends BaseClusterOverviewIT
     {
-        return EnterpriseDiscoveryServiceType.values();
+        Shared()
+        {
+            super( EnterpriseDiscoveryServiceType.SHARED );
+        }
     }
 }

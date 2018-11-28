@@ -5,32 +5,22 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import org.junit.runners.Parameterized;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Set;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 
 import org.neo4j.causalclustering.scenarios.BaseMultiClusteringIT;
 
 import static com.neo4j.causalclustering.scenarios.CommercialDiscoveryServiceType.AKKA;
 
-public class CommercialMultiClusteringIT extends BaseMultiClusteringIT
+class CommercialMultiClusteringIT
 {
-    public CommercialMultiClusteringIT( String ignoredName, int numCores, int numReplicas, Set<String> dbNames,
-            CommercialDiscoveryServiceType discoveryServiceType )
+    @Nested
+    @DisplayName( "[akka discovery, 6 core hosts, 2 databases]" )
+    class Akka6core2db extends BaseMultiClusteringIT
     {
-        super( ignoredName, numCores, numReplicas, dbNames, discoveryServiceType );
+        Akka6core2db()
+        {
+            super( 6, 0, DB_NAMES_2, AKKA );
+        }
     }
-
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection<Object[]> data()
-    {
-        return Arrays.asList( new Object[][]
-            {
-                { "[akka discovery, 6 core hosts, 2 databases]", 6, 0, DB_NAMES_2, AKKA }
-            }
-        );
-    }
-
 }
