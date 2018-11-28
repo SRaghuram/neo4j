@@ -8,6 +8,7 @@ package org.neo4j.test.causalclustering;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.IOException;
@@ -21,7 +22,7 @@ import org.neo4j.test.rule.TestDirectory;
  * Extension for cluster ITs. Allows the user to {@link Inject} a {@link ClusterFactory} into the test class. Clusters created will have the same lifecycle
  * as the {@link TestInstance.Lifecycle} of the root class.
  */
-class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> implements AfterEachCallback
+class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> implements AfterEachCallback, BeforeEachCallback
 {
     private static final String CLUSTER = "cluster";
     private static final ExtensionContext.Namespace CLUSTER_NAMESPACE = ExtensionContext.Namespace.create( CLUSTER );
@@ -41,6 +42,16 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
                 errorHandler.execute( clusterFactory::shutdownAll );
                 errorHandler.execute( () -> clusterFactory.testDirectory().complete( !context.getExecutionException().isPresent() ) );
             }
+        }
+    }
+
+    @Override
+    public void beforeEach( ExtensionContext context ) throws Exception
+    {
+        TrackingClusterFactory clusterFactory = (TrackingClusterFactory) getStoredValue( context );
+        if ( clusterFactory.getLifecycle() == TestInstance.Lifecycle.PER_METHOD )
+        {
+            clusterFactory.testDirectory().prepareDirectory( context.getRequiredTestClass(), context.getRequiredTestMethod().getName() );
         }
     }
 
