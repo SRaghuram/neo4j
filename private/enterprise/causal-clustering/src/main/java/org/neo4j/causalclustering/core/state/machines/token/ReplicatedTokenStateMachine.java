@@ -71,8 +71,7 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
         {
             try
             {
-                // TODO: Check up on the usage of V1 here.
-                Collection<StorageCommand> commands = ReplicatedTokenRequestMarshalV1.extractCommands( tokenRequest.commandBytes() );
+                Collection<StorageCommand> commands = StorageCommandMarshal.bytesToCommands( tokenRequest.commandBytes() );
                 tokenId = applyToStore( commands, commandIndex );
             }
             catch ( NoSuchEntryException e )

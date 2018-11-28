@@ -29,7 +29,7 @@ import org.neo4j.storageengine.api.TransactionApplicationMode;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV1.commandBytes;
+import static org.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal.commandsToBytes;
 import static org.neo4j.causalclustering.core.state.machines.token.TokenType.LABEL;
 import static org.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -50,7 +50,7 @@ public class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( mock( TransactionCommitProcess.class ), -1 );
 
         // when
-        byte[] commandBytes = commandBytes( tokenCommands( EXPECTED_TOKEN_ID ) );
+        byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID ) );
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes ), 1, r -> {} );
 
         // then
@@ -68,9 +68,9 @@ public class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( mock( TransactionCommitProcess.class ), -1 );
 
         ReplicatedTokenRequest winningRequest =
-                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes( tokenCommands( EXPECTED_TOKEN_ID ) ) );
+                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID ) ) );
         ReplicatedTokenRequest losingRequest =
-                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes( tokenCommands( UNEXPECTED_TOKEN_ID ) ) );
+                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID ) ) );
 
         // when
         stateMachine.applyCommand( winningRequest, 1, r -> {} );
@@ -93,7 +93,7 @@ public class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( commitProcess, -1 );
 
         // when
-        byte[] commandBytes = commandBytes( tokenCommands( EXPECTED_TOKEN_ID ) );
+        byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID ) );
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes ), logIndex, r -> {} );
 
         // then

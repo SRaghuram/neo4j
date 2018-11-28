@@ -16,8 +16,8 @@ import java.util.UUID;
 
 import org.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import org.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
+import org.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal;
 import org.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
-import org.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV1;
 import org.neo4j.causalclustering.core.state.machines.token.TokenType;
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionFactory;
@@ -103,7 +103,7 @@ public class CoreReplicatedContentMarshalV1Test
         after.setNameId( 3232 );
         commands.add( new Command.LabelTokenCommand( before, after ) );
         ReplicatedContent message = new ReplicatedTokenRequest( "some.graph.db",
-                TokenType.LABEL, "theLabel", ReplicatedTokenRequestMarshalV1.commandBytes( commands ) );
+                TokenType.LABEL, "theLabel", StorageCommandMarshal.commandsToBytes( commands ) );
         assertMarshalingEquality( buffer, message );
     }
 
