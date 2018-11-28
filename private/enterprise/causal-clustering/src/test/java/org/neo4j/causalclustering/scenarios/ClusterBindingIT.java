@@ -257,8 +257,9 @@ public class ClusterBindingIT
 
     private void changeClusterId( CoreClusterMember coreMember ) throws IOException
     {
-        File clusterIdState = CoreStateFiles.CLUSTER_ID.at( coreMember.clusterStateDirectory() );
-        SimpleStorage<ClusterId> clusterIdStorage = new SimpleFileStorage<>( fs, clusterIdState, new ClusterId.Marshal(), NullLogProvider.getInstance() );
+        File clusterIdStateDir = CoreStateFiles.CLUSTER_ID.at( coreMember.clusterStateDirectory() );
+        File clusterIdStateFile = new File( clusterIdStateDir, CoreStateFiles.CLUSTER_ID.baseName() );
+        SimpleStorage<ClusterId> clusterIdStorage = new SimpleFileStorage<>( fs, clusterIdStateFile, new ClusterId.Marshal(), NullLogProvider.getInstance() );
         clusterIdStorage.writeState( new ClusterId( UUID.randomUUID() ) );
     }
 

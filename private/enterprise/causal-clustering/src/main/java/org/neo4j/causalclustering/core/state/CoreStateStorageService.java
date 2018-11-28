@@ -99,7 +99,8 @@ public class CoreStateStorageService
         DurableStateStorage<E> durableStore;
         if ( simpleStorage.contains( type ) )
         {
-            File simpleStateFile = type.at( clusterStateDirectory.get() );
+            File simpleStateDirectory = type.at( clusterStateDirectory.get() );
+            File simpleStateFile = new File( simpleStateDirectory, type.baseName() );
             return new SimpleFileStorage<>( fs, simpleStateFile, type.marshal(), logProvider );
         }
         else if ( perDbStorage.contains( type ) )
@@ -109,8 +110,7 @@ public class CoreStateStorageService
         }
         else
         {
-            File f = type.at( clusterStateDirectory.get() );
-            durableStore = new DurableStateStorage<>( fs, f, type, type.rotationSize( config ), logProvider );
+            durableStore = new DurableStateStorage<>( fs, clusterStateDirectory.get(), type, type.rotationSize( config ), logProvider );
         }
         life.add( durableStore );
         return durableStore;
