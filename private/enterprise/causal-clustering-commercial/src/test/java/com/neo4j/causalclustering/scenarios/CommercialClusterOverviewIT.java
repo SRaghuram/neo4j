@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Nested;
 import org.neo4j.causalclustering.scenarios.BaseClusterOverviewIT;
 
 class CommercialClusterOverviewIT
-
 {
     @Nested
     @DisplayName( "discovery-akka" )
