@@ -53,7 +53,6 @@ class CoreReplicationIT
 
     private Cluster<?> cluster;
 
-    private int coreIdCounter = 100;
     private long nodesBeforeTest;
 
     private final ClusterConfig clusterConfig = ClusterConfig
@@ -199,7 +198,7 @@ class CoreReplicationIT
         // given
         cluster.getCoreMemberById( 0 ).shutdown();
 
-        cluster.addCoreMemberWithId( coreIdCounter++ ).start();
+        cluster.newCoreMember().start();
         cluster.getCoreMemberById( 0 ).start();
 
         cluster.coreTx( ( db, tx ) ->
@@ -210,7 +209,7 @@ class CoreReplicationIT
         } );
 
         // when
-        cluster.addCoreMemberWithId( coreIdCounter++ ).start();
+        cluster.newCoreMember().start();
         CoreClusterMember last = cluster.coreTx( ( db, tx ) ->
         {
             Node node = db.createNode();
@@ -265,8 +264,8 @@ class CoreReplicationIT
             } );
         }
 
-        cluster.addCoreMemberWithId( coreIdCounter++ ).start();
-        cluster.addCoreMemberWithId( coreIdCounter++ ).start();
+        cluster.newCoreMember().start();
+        cluster.newCoreMember().start();
 
         // then
         assertEquals( nodesBeforeTest + 15, countNodes( last ) );
