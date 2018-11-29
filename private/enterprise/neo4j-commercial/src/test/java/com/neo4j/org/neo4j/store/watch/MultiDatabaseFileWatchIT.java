@@ -17,10 +17,10 @@ import java.io.File;
 import java.nio.file.WatchKey;
 import java.util.concurrent.CountDownLatch;
 
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.watcher.FileWatchEventListener;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.util.watcher.FileSystemWatcherService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -38,9 +38,9 @@ class MultiDatabaseFileWatchIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
-    private GraphDatabaseFacade firstDatabase;
-    private GraphDatabaseFacade secondDatabase;
-    private GraphDatabaseFacade thirdDatabase;
+    private DatabaseContext firstContext;
+    private DatabaseContext secondContext;
+    private DatabaseContext thirdContext;
     private AssertableLogProvider logProvider;
 
     @BeforeEach
@@ -49,9 +49,9 @@ class MultiDatabaseFileWatchIT
         logProvider = new AssertableLogProvider( true );
         database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newEmbeddedDatabase( testDirectory.storeDir() );
         DatabaseManager databaseManager = getDatabaseManager();
-        firstDatabase = databaseManager.createDatabase( "first" );
-        secondDatabase = databaseManager.createDatabase( "second" );
-        thirdDatabase = databaseManager.createDatabase( "third" );
+        firstContext = databaseManager.createDatabase( "first" );
+        secondContext = databaseManager.createDatabase( "second" );
+        thirdContext = databaseManager.createDatabase( "third" );
     }
 
     @AfterEach
@@ -66,7 +66,7 @@ class MultiDatabaseFileWatchIT
     {
         assertTimeoutPreemptively( ofSeconds( 60 ), () ->
         {
-            File firstDbMetadataStore = firstDatabase.databaseLayout().metadataStore();
+            File firstDbMetadataStore = firstContext.getDatabase().getDatabaseLayout().metadataStore();
             FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
             DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( firstDbMetadataStore.getName() );
             fileSystemWatcher.getFileWatcher().addFileWatchEventListener( deletionListener );
@@ -86,9 +86,9 @@ class MultiDatabaseFileWatchIT
     {
         assertTimeoutPreemptively( ofSeconds( 60 ), () ->
         {
-            File firstDbMetadataStore = firstDatabase.databaseLayout().metadataStore();
-            File secondDbNodeStore = secondDatabase.databaseLayout().nodeStore();
-            File thirdDbRelStore = thirdDatabase.databaseLayout().relationshipStore();
+            File firstDbMetadataStore = firstContext.getDatabase().getDatabaseLayout().metadataStore();
+            File secondDbNodeStore = secondContext.getDatabase().getDatabaseLayout().nodeStore();
+            File thirdDbRelStore = thirdContext.getDatabase().getDatabaseLayout().relationshipStore();
 
             FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
             DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( thirdDbRelStore.getName() );
