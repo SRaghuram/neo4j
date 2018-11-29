@@ -287,8 +287,8 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
         .containingArgument("{n.prop1 : cached[n.prop1]}")
-        .withDBHits(0).withLHS(includeSomewhere
-          .aPlan("NodeIndexScan")
+        .withDBHits(0).onTopOf(includeSomewhere
+          .aPlan("NodeIndexSeekByRange")
             .withExactVariables("n", "cached[n.prop1]"))
 
     result.size should be(6L)
@@ -308,8 +308,8 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       .containingArgument("{n.prop1 : n.prop1, n.prop2 : n.prop2}")
       .withDBHits()
         .onTopOf(includeSomewhere.aPlan("Union")
-          .withLHS(includeSomewhere.aPlan("NodeIndexScan"))
-          .withRHS(includeSomewhere.aPlan("NodeIndexScan"))
+          .withLHS(includeSomewhere.aPlan("NodeIndexSeekByRange"))
+          .withRHS(includeSomewhere.aPlan("NodeIndexSeekByRange"))
         )
 
     result.size should be(4L)

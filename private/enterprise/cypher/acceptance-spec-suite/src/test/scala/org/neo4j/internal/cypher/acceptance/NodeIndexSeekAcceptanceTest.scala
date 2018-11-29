@@ -82,9 +82,9 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion((plan) => {
-        plan should includeSomewhere.nTimes(2, aPlan("NodeIndexScan"))
+        plan should includeSomewhere.nTimes(2, aPlan("NodeIndexSeekByRange"))
         plan should includeSomewhere.aPlan("Union")
-      }))
+      }, expectPlansToFail = Configs.Version3_4))
 
     result.columnAs("c").toSet should be(Set(nodes(1), nodes(11)))
   }
