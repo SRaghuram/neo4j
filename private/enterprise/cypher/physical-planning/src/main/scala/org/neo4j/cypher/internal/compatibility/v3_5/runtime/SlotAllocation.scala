@@ -304,7 +304,7 @@ object SlotAllocation {
     lp match {
 
       case Distinct(_, groupingExpressions) =>
-        val result = SlotConfiguration.empty
+        val result = source.emptyWithCachedProperties()
         addGroupingMap(groupingExpressions, source, result)
         result
 

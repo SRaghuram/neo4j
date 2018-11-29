@@ -151,6 +151,12 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   private val primitiveNodeSetters: mutable.Map[String, (ExecutionContext, Long) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long) => Unit]()
   private val primitiveRelationshipSetters: mutable.Map[String, (ExecutionContext, Long) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long) => Unit]()
 
+  def emptyWithCachedProperties(): SlotConfiguration = {
+    val config = new SlotConfiguration(mutable.Map.empty, mutable.Map.empty, 0, 0)
+    cachedProperties.foreach { case (key, _) => config.newCachedProperty(key) }
+    config
+  }
+
   def size() = SlotConfiguration.Size(numberOfLongs, numberOfReferences)
 
   def addAlias(newKey: String, existingKey: String): SlotConfiguration = {
@@ -355,6 +361,10 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
         sortedCached = sortedCached.tail
       }
     }
+  }
+
+  def foreachCachedSlot[U](onCachedNodeProperty: ((CachedNodeProperty, RefSlot)) => Unit): Unit = {
+    cachedProperties.foreach(onCachedNodeProperty)
   }
 
   // NOTE: This will give duplicate slots when we have aliases

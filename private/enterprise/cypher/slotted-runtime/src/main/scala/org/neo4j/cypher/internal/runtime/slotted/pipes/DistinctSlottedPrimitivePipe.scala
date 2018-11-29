@@ -56,6 +56,7 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
           if (seen.add(new Key(keys))) {
             // Found something! Set it as the next element to yield, and exit
             val outgoing = SlottedExecutionContext(slots)
+            outgoing.copyCachedFrom(next)
             for (setter <- setValuesInOutput) {
               setter(next, state, outgoing)
             }
