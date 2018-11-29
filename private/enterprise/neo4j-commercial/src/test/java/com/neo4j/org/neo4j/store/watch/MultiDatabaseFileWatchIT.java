@@ -117,33 +117,14 @@ class MultiDatabaseFileWatchIT
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }
 
-    private static class ModificationEventListener implements FileWatchEventListener
+    private static class DeletionLatchEventListener implements FileWatchEventListener
     {
-        final String expectedFileName;
-        private final CountDownLatch modificationLatch = new CountDownLatch( 1 );
-
-        ModificationEventListener( String expectedFileName )
-        {
-            this.expectedFileName = expectedFileName;
-        }
-
-        @Override
-        public void fileModified( WatchKey key, String fileName )
-        {
-            if ( expectedFileName.equals( fileName ) )
-            {
-                modificationLatch.countDown();
-            }
-        }
-    }
-
-    private static class DeletionLatchEventListener extends ModificationEventListener
-    {
+        private final String expectedFileName;
         private final CountDownLatch deletionLatch = new CountDownLatch( 1 );
 
         DeletionLatchEventListener( String expectedFileName )
         {
-            super( expectedFileName );
+            this.expectedFileName = expectedFileName;
         }
 
         @Override
