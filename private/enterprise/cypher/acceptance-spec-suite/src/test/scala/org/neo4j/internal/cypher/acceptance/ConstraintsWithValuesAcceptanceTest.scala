@@ -66,6 +66,39 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     assertIndexScan(standardResult, "Awesome")
   }
 
+  test("should use index when existence constraint for multiple returned properties") {
+    // Given
+    createSingleIndexes()
+    graph.createExistenceConstraint("Awesome", "prop1")
+    graph.createExistenceConstraint("Awesome", "prop2")
+
+    createLabeledNode(Map("prop1" -> 45, "prop2" -> 7, "prop3" -> "abc"), "Awesome")
+
+    // When
+    val query = s"MATCH (n:Awesome) RETURN n.prop1, n.prop2, n.prop3"
+
+    // NodeIndexScan is not supported in the compiled runtime
+    val supportedConfig = Configs.All - TestConfiguration(Versions.V4_0, Planners.all, Runtimes(Runtimes.CompiledBytecode, Runtimes.CompiledSource))
+
+    val result = executeWith(supportedConfig, query)
+
+    // Then
+    result.executionPlanDescription() should (
+      not(includeSomewhere.aPlan("Projection").withDBHits()) and
+        includeSomewhere.aPlan("NodeIndexScan")
+          .containingVariablesRegex("n".r, "cached\\[n\\.prop(1|2)\\]".r))
+
+    val expectedResult = Set(
+      Map("n.prop1" -> 40, "n.prop2" -> 5, "n.prop3" -> null),
+      Map("n.prop1" -> 41, "n.prop2" -> 2, "n.prop3" -> null),
+      Map("n.prop1" -> 42, "n.prop2" -> 3, "n.prop3" -> null),
+      Map("n.prop1" -> 43, "n.prop2" -> 1, "n.prop3" -> null),
+      Map("n.prop1" -> 44, "n.prop2" -> 3, "n.prop3" -> null),
+      Map("n.prop1" -> 45, "n.prop2" -> 7, "n.prop3" -> "abc"))
+
+    result.toSet should equal(expectedResult)
+  }
+
   test("should use index when node key constraint for property") {
     // Given
     graph.createNodeKeyConstraint("Awesome", "prop1")
