@@ -102,7 +102,7 @@ public class CommandApplicationProcess
 
         synchronized void setKeepRunning( boolean keepRunning )
         {
-            if ( panic )
+            if ( panic && keepRunning )
             {
                 throw new IllegalStateException( "The applier has panicked" );
             }
