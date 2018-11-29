@@ -74,7 +74,7 @@ class MultiDatabaseFileWatchIT
 
             deletionListener.awaitDeletionNotification();
 
-            logProvider.assertContainsMessageContaining( "'neostore' which belongs to the 'first' database was deleted while it was running." );
+            logProvider.assertLogStringContains( "'neostore' which belongs to the 'first' database was deleted while it was running." );
             logProvider.assertNoMessagesContaining( "'neostore' which belongs to the 'second' database was deleted while it was running." );
             logProvider.assertNoMessagesContaining( "'neostore' which belongs to the 'third' database was deleted while it was running." );
         } );
@@ -100,9 +100,9 @@ class MultiDatabaseFileWatchIT
 
             deletionListener.awaitDeletionNotification();
 
-            logProvider.assertContainsMessageContaining( "'neostore' which belongs to the 'first' database was deleted while it was running." );
-            logProvider.assertContainsMessageContaining( "'neostore.nodestore.db' which belongs to the 'second' database was deleted while it was running." );
-            logProvider.assertContainsMessageContaining(
+            logProvider.assertLogStringContains( "'neostore' which belongs to the 'first' database was deleted while it was running." );
+            logProvider.assertLogStringContains( "'neostore.nodestore.db' which belongs to the 'second' database was deleted while it was running." );
+            logProvider.assertLogStringContains(
                     "'neostore.relationshipstore.db' which belongs to the 'third' database was deleted while it was running." );
         } );
     }
