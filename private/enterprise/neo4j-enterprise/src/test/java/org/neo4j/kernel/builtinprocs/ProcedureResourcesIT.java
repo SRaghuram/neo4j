@@ -394,6 +394,12 @@ public class ProcedureResourcesIT
             // Grabs schema lock an so can not execute concurrently with node creation
             proc.skip = true;
             break;
+        case "db.stats.retrieve":
+            proc.withParam( "'TOKENS'" );
+            break;
+        case "db.stats.retrieveAllAnonymized":
+            proc.withParam( "'myGraphToken'" );
+            break;
         default:
         }
         return proc;
