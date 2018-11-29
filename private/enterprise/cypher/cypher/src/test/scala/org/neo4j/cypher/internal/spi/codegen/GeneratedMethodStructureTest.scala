@@ -219,7 +219,6 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
         tracer = body.field(typeRef[QueryExecutionTracer], "tracer"),
         params = body.field(typeRef[util.Map[String, Object]], "params"),
         queryContext = body.field(typeRef[QueryContext], "queryContext"),
-        skip = body.field(typeRef[Boolean], "skip"),
         cursors = body.field(typeRef[CursorFactory], "cursors"),
         nodeCursor = body.field(typeRef[NodeCursor], "nodeCursor"),
         relationshipScanCursor = body.field(typeRef[RelationshipScanCursor], "relationshipScanCursor"),
