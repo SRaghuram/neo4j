@@ -29,7 +29,8 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -71,7 +72,7 @@ public class HalfCreatedConstraintIT
         }
         catch ( IllegalStateException e )
         {
-            assertEquals( "Index entered a FAILED state. Please see database logs.", e.getMessage() );
+            assertThat( e.getMessage(), containsString( "Index entered a FAILED state. Please see database logs.: Cause of failure:" ) );
         }
     }
 
