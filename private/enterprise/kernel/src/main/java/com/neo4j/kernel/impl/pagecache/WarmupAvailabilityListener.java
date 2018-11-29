@@ -102,7 +102,7 @@ class WarmupAvailabilityListener implements AvailabilityListener
         available = false;
         if ( jobHandle != null )
         {
-            jobHandle.cancel( false );
+            jobHandle.cancel();
             jobHandle = null;
         }
     }

@@ -123,7 +123,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     {
         if ( readerPoolPruner != null )
         {
-            readerPoolPruner.cancel( false );
+            readerPoolPruner.cancel();
         }
         readerPool.close();
         state.segments.close();

@@ -93,7 +93,7 @@ public class PruningScheduler extends LifecycleAdapter
         stopped = true;
         if ( handle != null )
         {
-            handle.cancel( false );
+            handle.cancel();
         }
         Predicates.awaitForever( checkPointingCondition, 100, MILLISECONDS );
     }

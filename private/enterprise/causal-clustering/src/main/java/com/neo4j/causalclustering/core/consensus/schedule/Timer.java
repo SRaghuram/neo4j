@@ -140,7 +140,7 @@ public class Timer
                 }
                 else if ( cancelMode == CancelMode.ASYNC_INTERRUPT )
                 {
-                    job.cancel( true );
+                    job.cancel();
                 }
             }
             catch ( Exception e )
