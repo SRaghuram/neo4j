@@ -63,6 +63,7 @@ import static org.neo4j.kernel.impl.store.id.IdType.RELATIONSHIP_TYPE_TOKEN;
 import static org.neo4j.kernel.impl.store.id.IdType.RELATIONSHIP_TYPE_TOKEN_NAME;
 import static org.neo4j.kernel.impl.store.id.IdType.SCHEMA;
 import static org.neo4j.kernel.impl.store.id.IdType.STRING_BLOCK;
+import static org.neo4j.kernel.recovery.Recovery.recoveryRequiredChecker;
 
 public class CoreBootstrapper
 {
@@ -90,7 +91,7 @@ public class CoreBootstrapper
         this.config = config;
         this.pageCache = pageCache;
         this.log = logProvider.getLog( getClass() );
-        this.recoveryRequiredChecker = new RecoveryRequiredChecker( fs, pageCache, config );
+        this.recoveryRequiredChecker = recoveryRequiredChecker( fs, pageCache, config );
     }
 
     public CoreSnapshot bootstrap( Set<MemberId> members ) throws IOException

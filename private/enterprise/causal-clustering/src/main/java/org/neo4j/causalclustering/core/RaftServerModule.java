@@ -52,6 +52,7 @@ import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_in_q
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_in_queue_max_batch_bytes;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_in_queue_max_bytes;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_in_queue_size;
+import static org.neo4j.kernel.recovery.Recovery.recoveryRequiredChecker;
 
 class RaftServerModule
 {
@@ -129,7 +130,8 @@ class RaftServerModule
                 new LoggingInbound<>( nettyHandler, messageLogger, identityModule.myself() );
         loggingRaftInbound.registerHandler( messageHandlerChain );
 
-        RecoveryRequiredChecker recoveryChecker = new RecoveryRequiredChecker( platformModule.fileSystem, platformModule.pageCache, platformModule.config );
+        RecoveryRequiredChecker recoveryChecker =
+                recoveryRequiredChecker( platformModule.fileSystem, platformModule.pageCache, platformModule.config );
 
         //TODO: Understand that we add the CatchupServer to life here because we need to enforce an ordering between Raft and Catchup, but we should surface
         // all the separate components and do this ordered adding to life somewhere top level. Putting this in this method is just a bit weird.
