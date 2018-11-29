@@ -103,45 +103,10 @@ object Templates {
       override def accept(innerBody: CodeBlock): Unit = result = happyPath(innerBody)
     }, new Consumer[CodeBlock] {
       override def accept(innerError: CodeBlock): Unit = {
-        innerError.put(innerError.self(), fields.skip, Expression.constant(true))
         result = onFailure(innerError)
+        innerError.continueIfPossible()
       }
     }, param[EntityNotFoundException](namer.newVarName()))
-    result
-  }
-
-  def handleEntityNotFoundAndKernelExceptions[V](generate: CodeBlock, fields: Fields, finalizers: Seq[Boolean => CodeBlock => Unit], namer: Namer)
-                                                (happyPath: CodeBlock => V)(onFailure: CodeBlock => V): V = {
-    var result = null.asInstanceOf[V]
-    val e1 = namer.newVarName()
-    val e2 = namer.newVarName()
-    generate.tryCatch(new Consumer[CodeBlock] {
-      override def accept(outerBody: CodeBlock): Unit = {
-        outerBody.tryCatch(new Consumer[CodeBlock] {
-          override def accept(innerBody: CodeBlock): Unit =  result = happyPath(innerBody)
-        }, new Consumer[CodeBlock] {
-          override def accept(innerError: CodeBlock): Unit = {
-            innerError.put(innerError.self(), fields.skip, Expression.constant(true))
-            result = onFailure(innerError)
-          }
-        }, param[EntityNotFoundException](e1))
-      }
-    },new Consumer[CodeBlock] {
-      override def accept(handle: CodeBlock): Unit = {
-        finalizers.foreach(block => block(false)(handle))
-        handle.throwException(Expression.invoke(
-          Expression.newInstance(typeRef[CypherExecutionException]),
-          MethodReference.constructorReference(typeRef[CypherExecutionException], typeRef[String], typeRef[Throwable]),
-          Expression
-            .invoke(handle.load(e2), method[KernelException, String]("getUserMessage", typeRef[TokenNameLookup]),
-                    Expression.invoke(
-                      Expression.newInstance(typeRef[SilentTokenNameLookup]),
-                      MethodReference
-                        .constructorReference(typeRef[SilentTokenNameLookup], typeRef[TokenRead]),
-                      Expression.get(handle.self(), fields.tokenRead))), handle.load(e2)
-        ))
-      }
-    }, param[KernelException](e2))
     result
   }
 
@@ -209,7 +174,6 @@ object Templates {
     put(self(classHandle), typeRef[MapValue], "params", load("params", typeRef[MapValue])).
     put(self(classHandle), typeRef[EmbeddedProxySPI], "proxySpi",
              invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, EmbeddedProxySPI]("entityAccessor"))).
-    put(self(classHandle), typeRef[Boolean], "skip", Expression.constant(false)).
     build()
 
   def getOrLoadCursors(clazz: ClassGenerator, fields: Fields) = {
