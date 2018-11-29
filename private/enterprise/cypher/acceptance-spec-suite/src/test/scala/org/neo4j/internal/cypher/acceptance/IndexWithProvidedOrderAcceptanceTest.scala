@@ -219,9 +219,11 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
-        includeSomewhere.aPlan("Limit")
-          .onTopOf(aPlan("Projection")
-            .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+        includeSomewhere.aPlan("Optional")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+            )
           )
 
       val expected = expectedOrder(List(
@@ -239,9 +241,12 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
-        includeSomewhere.aPlan("Limit")
-          .onTopOf(aPlan("Projection")
-            .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1"))))
+        includeSomewhere.aPlan("Optional")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+            )
+          )
 
       val expected = expectedOrder(List(
         Map(s"$functionName(n.prop1)" -> 35.5), // min
@@ -254,12 +259,15 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
       val result = executeWith(Configs.InterpretedAndSlotted,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n.prop1 AS prop RETURN $functionName(prop) AS extreme", executeBefore = createSomeNodes)
 
-      val plan = result.executionPlanDescription()
-      plan should includeSomewhere.aPlan("Limit")
-      plan should includeSomewhere.aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1"))
-      plan shouldNot includeSomewhere.aPlan("Sort")
-      plan shouldNot includeSomewhere.aPlan("Aggregation")
-      plan shouldNot includeSomewhere.aPlan("EagerAggregation")
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("Optional")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("Projection")
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+              )
+            )
+          )
 
       val expected = expectedOrder(List(
         Map("extreme" -> 40), // min
@@ -268,15 +276,35 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
       result.toList should equal(List(expected))
     }
 
+    test(s"$cypherToken-$functionName: should use provided index order for empty index"){
+      graph.createIndex("B", "prop")
+
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n: B) WHERE n.prop > 0 RETURN $functionName(n.prop)", executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("Optional")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop]", "n").withOrder(providedOrder("n.prop")))
+            )
+          )
+
+      val expected = List(Map(s"$functionName(n.prop)" -> null))
+      result.toList should equal(expected)
+    }
+
     test(s"$cypherToken-$functionName: should use provided index order with ORDER BY on same property") {
       val result = executeWith(Configs.InterpretedAndSlotted,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1) ORDER BY $functionName(n.prop1) $cypherToken", executeBefore = createSomeNodes)
 
-      val plan = result.executionPlanDescription()
-      plan should includeSomewhere.aPlan("Limit")
-      plan should includeSomewhere.aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1"))
-      plan shouldNot includeSomewhere.aPlan("Sort")
-      plan shouldNot includeSomewhere.aPlan("EagerAggregation")
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("Optional")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+            )
+          )
 
       val expected = expectedOrder(List(
         Map(s"$functionName(n.prop1)" -> 40), // min
@@ -309,9 +337,11 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
 
       result.executionPlanDescription() should
         includeSomewhere.aPlan("Projection")
-          .onTopOf(aPlan("Limit")
-            .onTopOf(aPlan("Projection")
-              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop3]", "n").withOrder(providedOrder("n.prop3")))
+          .onTopOf(aPlan("Optional")
+            .onTopOf(aPlan("Limit")
+              .onTopOf(aPlan("Projection")
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop3]", "n").withOrder(providedOrder("n.prop3")))
+              )
             )
           )
 
@@ -406,12 +436,30 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
 
       result.toSet should equal(expected)
     }
+
+    test(s"$cypherToken-$functionName: should plan aggregation without index") {
+
+      createLabeledNode(Map("foo" -> 2), "B")
+
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:B) WHERE n.foo > 0 RETURN $functionName(n.foo)", executeBefore = createSomeNodes)
+
+      val plan = result.executionPlanDescription()
+      plan should includeSomewhere.aPlan("NodeByLabelScan")
+      plan should includeSomewhere.aPlan("EagerAggregation")
+
+      val expected = functionName match {
+        case "min" => Set(Map(s"$functionName(n.foo)" -> 1))
+        case "max" => Set(Map(s"$functionName(n.foo)" -> 2))
+      }
+      result.toSet should equal(expected)
+    }
   }
 
   // Only tested in ASC mode because it's hard to make compatibility check out otherwise
   test("ASC: Order by index backed property in a plan with an outer join") {
     // Be careful with what is created in createSomeNodes. It underwent careful cardinality tuning to get exactly the plan we want here.
-    val result =  executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """MATCH (b:B {foo:1, bar:1})
         |OPTIONAL MATCH (a:Awesome)-[r]->(b) USING JOIN ON b
         |WHERE a.prop3 > 'foo'
