@@ -325,4 +325,14 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result.toList should equal(List(Map("count" -> 4, "avg" -> 3.5)))
   }
 
+  test("should handle aggregation with label not in the semantic table") {
+    val query = "MATCH (n: NotExistingLabel) RETURN min(n.prop1)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")
+
+    result.toList should equal(List(Map("min(n.prop1)" -> null)))
+  }
+
 }
