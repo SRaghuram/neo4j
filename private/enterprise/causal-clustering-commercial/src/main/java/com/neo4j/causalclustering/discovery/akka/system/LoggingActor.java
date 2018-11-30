@@ -34,7 +34,7 @@ public class LoggingActor extends AbstractActor implements RequiresMessageQueue<
     {
         LoggingActor.logProviders.put( system, logProvider );
         logProvider.getLog( LoggingActor.class )
-                .debug( "Added logProvider for %s. %n logProviders and Actor systems remaining.", system.name(), logProviders.size() );
+                .debug( "Added logProvider for %s. %d LogProviders and ActorSystems remaining.", system.name(), logProviders.size() );
     }
 
     /**
@@ -56,7 +56,7 @@ public class LoggingActor extends AbstractActor implements RequiresMessageQueue<
     {
         Optional<LogProvider> removed = Optional.ofNullable( logProviders.remove( system ) );
         removed.ifPresent( log -> log.getLog( LoggingActor.class )
-                .debug( "Removed logProvider for %s. %d logProviders and Actor systems remaining.", system.name(), logProviders.size() ) );
+                .debug( "Removed logProvider for %s. %d LogProviders and ActorSystems remaining.", system.name(), logProviders.size() ) );
     }
 
     @Override

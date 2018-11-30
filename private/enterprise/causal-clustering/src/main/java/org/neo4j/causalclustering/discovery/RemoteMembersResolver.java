@@ -5,12 +5,21 @@
  */
 package org.neo4j.causalclustering.discovery;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 
 public interface RemoteMembersResolver
 {
-    <REMOTE> Collection<REMOTE> resolve( Function<AdvertisedSocketAddress,REMOTE> transform );
+    default <REMOTE> Collection<REMOTE> resolve( Function<AdvertisedSocketAddress,REMOTE> transform )
+    {
+        return resolve( transform, ArrayList::new );
+    }
+
+    <COLL extends Collection<REMOTE>,REMOTE> COLL resolve( Function<AdvertisedSocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory );
+
+    boolean useOverrides();
 }

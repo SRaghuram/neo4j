@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery.akka.coretopology
 
 import java.util
 import java.util.Collections
+import java.util.concurrent.TimeUnit
 
 import akka.actor.Address
 import akka.cluster.ClusterEvent.{ClusterDomainEvent, UnreachableMember}
@@ -15,10 +16,13 @@ import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.verify
+import org.neo4j.causalclustering.core.CausalClusteringSettings.{akka_failure_detector_acceptable_heartbeat_pause, akka_failure_detector_heartbeat_interval}
 import org.neo4j.helpers.collection.Iterators
+import org.neo4j.kernel.configuration.Config
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.immutable.SortedSet
+import scala.concurrent.duration.FiniteDuration
 
 class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
 
@@ -154,6 +158,22 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
           Then("Receive ClusterViewMessage with converged set")
           coreTopologyProbe.expectMsg(max = defaultWaitTime, ClusterViewMessage.EMPTY.withConverged(true))
         }
+        "send latest cluster view to downing actor after inactivity" in new Fixture {
+          Given("An initial actor state with an unreachable member")
+          val initialEvent = ClusterEvent.CurrentClusterState(members = upAsSet, unreachable = Set(upMembers.head))
+          clusterStateRef ! initialEvent
+
+          And("a reachable member event")
+          val reachableEvent = ClusterEvent.ReachableMember(upMembers.head)
+          clusterStateRef ! reachableEvent
+
+          When("time passes")
+          Then("receive ClusterViewMessage with unreachable member removed")
+          val timePasses =
+            config.get(akka_failure_detector_heartbeat_interval) plus config.get(akka_failure_detector_acceptable_heartbeat_pause) multipliedBy  2
+          val toWait = FiniteDuration(defaultWaitTime.toMillis + timePasses.toMillis, TimeUnit.MILLISECONDS)
+          downingProbe.expectMsg(max = toWait, new ClusterViewMessage(false, upAsJavaSet, Collections.emptySet()))
+        }
       }
     }
 
@@ -162,7 +182,12 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
   trait Fixture {
     val cluster = mock[Cluster]
     val coreTopologyProbe = TestProbe("CoreTopology")
-    val clusterStateRef = system.actorOf(ClusterStateActor.props(cluster, coreTopologyProbe.ref, NullLogProvider.getInstance()))
+    val downingProbe = TestProbe("Downing")
+    val config = Config.defaults()
+    config.augment(akka_failure_detector_heartbeat_interval, "1s")
+    config.augment(akka_failure_detector_acceptable_heartbeat_pause, "1s")
+    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, config, NullLogProvider.getInstance())
+    val clusterStateRef = system.actorOf(props)
   }
 
 }

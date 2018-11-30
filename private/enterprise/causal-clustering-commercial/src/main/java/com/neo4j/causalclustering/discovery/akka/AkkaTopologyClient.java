@@ -48,14 +48,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public void init0()
-    {
-        actorSystemLifecycle.createClientActorSystem();
-    }
-
-    @Override
     public void start0()
     {
+        actorSystemLifecycle.createClientActorSystem();
         startTopologyActors();
     }
 
@@ -80,12 +75,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public void stop0()
-    {
-    }
-
-    @Override
-    public void shutdown0() throws Throwable
+    public void stop0() throws Throwable
     {
         actorSystemLifecycle.shutdown();
     }

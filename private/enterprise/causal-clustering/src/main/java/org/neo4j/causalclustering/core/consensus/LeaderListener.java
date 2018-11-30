@@ -24,7 +24,7 @@ public interface LeaderListener
 
     /**
      * Standard catch-all method which delegates leader events to their appropriate handlers
-     * in the appropriate order, i.e. calls step down logic (if necessary) befor leader switch
+     * in the appropriate order, i.e. calls step down logic (if necessary) before leader switch
      * logic.
      *
      * @param outcome The outcome which contains details of the leader event

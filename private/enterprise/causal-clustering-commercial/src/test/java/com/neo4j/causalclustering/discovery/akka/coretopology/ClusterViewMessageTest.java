@@ -26,6 +26,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.hamcrest.Matchers.empty;
 import static org.junit.Assert.assertThat;
 
 public class ClusterViewMessageTest
@@ -170,19 +171,66 @@ public class ClusterViewMessageTest
     public void shouldBeAbleToUpdateAMemberFromWeaklyUpToUp()
     {
         // given
-        Member member = createMember( 1, MemberStatus.weaklyUp() );
-        TreeSet<Member> members = new TreeSet<>( Member.ordering() );
-        members.add( member );
-        ClusterViewMessage clusterView = new ClusterViewMessage( false, members, Collections.emptySet() );
-        Member memberUp = new Member( member.uniqueAddress(), member.upNumber(), MemberStatus.up(), roles );
+        ClusterViewMessage clusterView = ClusterViewMessage.EMPTY.withMember( memberweaklyUp );
+
+        Member memberUp = new Member( memberweaklyUp.uniqueAddress(), memberweaklyUp.upNumber(), MemberStatus.up(), roles );
 
         // when
-        ClusterViewMessage modifiedClusterView = clusterView.withMember( memberUp );
+        ClusterViewMessage result = clusterView.withMember( memberUp );
 
         // then
-        assertThat( modifiedClusterView.members(), Matchers.contains( memberUp ) );
-        Optional<Member> returnedMember = modifiedClusterView.members().stream().filter( m -> m.equals( memberUp ) ).findFirst();
+        assertThat( result.members(), Matchers.contains( memberUp ) );
+        Optional<Member> returnedMember = result.members().stream().filter( m -> m.equals( memberUp ) ).findFirst();
         assertThat( returnedMember.map( Member::status ), OptionalMatchers.contains( Matchers.equalTo( MemberStatus.up() ) ) );
+    }
+
+    @Test
+    public void shouldNotIncludeInUnreachableWhenUpdatingFromWeaklyUpToUp()
+    {
+        // given
+        ClusterViewMessage clusterView = ClusterViewMessage.EMPTY.withMember( memberweaklyUp );
+
+        Member memberUp = new Member( memberweaklyUp.uniqueAddress(), memberweaklyUp.upNumber(), MemberStatus.up(), roles );
+
+        // when
+        ClusterViewMessage result = clusterView.withMember( memberUp );
+
+        // then
+        assertThat( result.unreachable(), empty() );
+    }
+
+    @Test
+    public void shouldBeAbleToUpdateUnreachableMemberFromWeaklyUpToUp()
+    {
+        // given
+        ClusterViewMessage initial = ClusterViewMessage.EMPTY
+                .withMember( memberweaklyUp )
+                .withUnreachable( memberweaklyUp );
+
+        Member memberUp = new Member( memberweaklyUp.uniqueAddress(), memberweaklyUp.upNumber(), MemberStatus.up(), roles );
+
+        // when
+        ClusterViewMessage result = initial.withMember( memberUp );
+
+        // then
+        assertThat( result.unreachable(), Matchers.contains( memberUp ) );
+        Optional<Member> returnedMember = result.unreachable().stream().filter( m -> m.equals( memberUp ) ).findFirst();
+        assertThat( returnedMember.map( Member::status ), OptionalMatchers.contains( Matchers.equalTo( MemberStatus.up() ) ) );
+    }
+
+    @Test
+    public void shouldRemoveFromUnreachableWhenRemovingFromView()
+    {
+        // given
+        ClusterViewMessage initial = ClusterViewMessage.EMPTY
+                .withMember( memberup )
+                .withUnreachable( memberup );
+
+        // when
+        ClusterViewMessage result = initial.withoutMember( memberup );
+
+        // then
+        assertThat( result.unreachable(), empty() );
     }
 
     private ClusterViewMessage createClusterViewWithMembers( MemberStatus status )

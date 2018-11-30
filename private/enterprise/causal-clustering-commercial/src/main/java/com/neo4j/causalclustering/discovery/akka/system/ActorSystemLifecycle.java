@@ -6,81 +6,101 @@
 package com.neo4j.causalclustering.discovery.akka.system;
 
 import akka.Done;
+import akka.actor.ActorPath;
+import akka.actor.ActorPaths;
 import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
+import akka.actor.Address;
 import akka.actor.CoordinatedShutdown;
 import akka.actor.Props;
 import akka.actor.ProviderSelection;
 import akka.cluster.Cluster;
 import akka.cluster.client.ClusterClientReceptionist;
 import akka.cluster.client.ClusterClientSettings;
-import akka.cluster.ddata.DistributedData;
+import akka.event.EventStream;
 import akka.japi.function.Procedure;
 import akka.pattern.PatternsCS;
-import akka.stream.ActorMaterializer;
-import akka.stream.ActorMaterializerSettings;
 import akka.stream.OverflowStrategy;
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.stream.javadsl.SourceQueueWithComplete;
 
 import java.time.Duration;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.util.VisibleForTesting;
+
+import static com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory.ACTOR_SYSTEM_NAME;
+import static com.neo4j.causalclustering.discovery.akka.system.ClusterJoiningActor.AKKA_SCHEME;
 
 /**
  * Wraps an actor system and top level actors and streams. Gracefully stops everything on shutdown. Create an actor system first.
  */
 public class ActorSystemLifecycle
 {
-    private static final int SHUTDOWN_TIMEOUT_S = 15;
+    static final int SYSTEM_SHUTDOWN_TIMEOUT_S = 60;
+    static final int ACTOR_SHUTDOWN_TIMEOUT_S = 15;
 
     private final ActorSystemFactory actorSystemFactory;
+    private final Set<Address> allSeenAddresses = new HashSet<>();
+    private final RemoteMembersResolver resolver;
+    private final Config config;
     private final Log log;
+    private final LogProvider logProvider;
 
-    private Cluster cluster;
-    private ActorRef replicator;
-    private ActorMaterializer materializer;
-    private ActorSystem actorSystem;
-    private ClusterClientReceptionist clusterClientReceptionist;
-    private ClusterClientSettings clusterClientSettings;
-    private CoordinatedShutdown coordinatedShutdown;
+    @VisibleForTesting
+    protected ActorSystemComponents actorSystemComponents;
 
-    public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, LogProvider logProvider )
+    public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, Config config, LogProvider logProvider )
     {
         this.actorSystemFactory = actorSystemFactory;
+        this.resolver = resolver;
+        this.config = config;
         this.log = logProvider.getLog( getClass() );
+        this.logProvider = logProvider;
     }
 
     public void createClusterActorSystem()
     {
-        createActorSystem(ProviderSelection.cluster() );
+        this.actorSystemComponents = new ActorSystemComponents( actorSystemFactory,  ProviderSelection.cluster() );
+        Props props = ClusterJoiningActor.props( cluster(), resolver, config, logProvider );
+        applicationActorOf( props, ClusterJoiningActor.NAME )
+                .tell( ClusterJoiningActor.JoinMessage.initial( allSeenAddresses ), ActorRef.noSender() );
+        allSeenAddresses.clear();
     }
 
     public void createClientActorSystem()
     {
-        createActorSystem( ProviderSelection.remote() );
+        this.actorSystemComponents = new ActorSystemComponents( actorSystemFactory, ProviderSelection.remote() );
     }
 
-    private void createActorSystem( ProviderSelection remote )
+    public void addSeenAddresses( Collection<Address> addresses )
     {
-        this.actorSystem = actorSystemFactory.createActorSystem( remote );
-        this.coordinatedShutdown = CoordinatedShutdown.get( actorSystem );
+        if ( resolver.useOverrides() )
+        {
+            allSeenAddresses.addAll( addresses );
+        }
     }
 
     public void shutdown() throws Throwable
     {
+        if ( actorSystemComponents == null )
+        {
+            return;
+        }
+
         try
         {
-            CoordinatedShutdown
-                    .get( actorSystem )
-                    .runAll( ShutdownByNeo4jLifecycle.INSTANCE )
-                    .toCompletableFuture()
-                    .get( SHUTDOWN_TIMEOUT_S, TimeUnit.SECONDS );
+            doShutdown( actorSystemComponents );
         }
         catch ( Exception e )
         {
@@ -89,65 +109,28 @@ public class ActorSystemLifecycle
         }
         finally
         {
-            LoggingActor.disable( actorSystem );
-            actorSystem = null;
+            LoggingActor.disable( actorSystemComponents.actorSystem() );
+            actorSystemComponents = null;
         }
     }
 
-    public Cluster cluster()
+    void doShutdown( ActorSystemComponents actorSystemComponents ) throws Exception
     {
-        if ( cluster == null )
-        {
-            cluster = Cluster.get( actorSystem );
-        }
-        return cluster;
-    }
-
-    public ActorRef replicator()
-    {
-        if ( replicator == null )
-        {
-            replicator = DistributedData.get( actorSystem ).replicator();
-        }
-        return replicator;
-    }
-
-    public ClusterClientReceptionist clusterClientReceptionist()
-    {
-        if ( clusterClientReceptionist == null )
-        {
-            clusterClientReceptionist = ClusterClientReceptionist.get( actorSystem );
-        }
-        return clusterClientReceptionist;
-    }
-
-    private ActorMaterializer materializer()
-    {
-        if ( materializer == null )
-        {
-            ActorMaterializerSettings settings = ActorMaterializerSettings.create( actorSystem )
-                    .withDispatcher( TypesafeConfigService.DISCOVERY_SINK_DISPATCHER );
-            materializer = ActorMaterializer.create( settings, actorSystem );
-        }
-        return materializer;
-    }
-
-    public ClusterClientSettings clusterClientSettings()
-    {
-        if ( clusterClientSettings == null )
-        {
-            clusterClientSettings = ClusterClientSettings.create( actorSystem ).withInitialContacts( actorSystemFactory.initialClientContacts() );
-        }
-        return clusterClientSettings;
+        actorSystemComponents
+                .coordinatedShutdown()
+                .runAll( ShutdownByNeo4jLifecycle.INSTANCE )
+                .toCompletableFuture()
+                .get( SYSTEM_SHUTDOWN_TIMEOUT_S, TimeUnit.SECONDS );
     }
 
     public <T> SourceQueueWithComplete<T> queueMostRecent( Procedure<T> sink )
     {
         SourceQueueWithComplete<T> queue = Source.<T>queue( 1, OverflowStrategy.dropHead() )
                 .to( Sink.foreach( sink ) )
-                .run( materializer() );
+                .run( actorSystemComponents.materializer() );
 
-        coordinatedShutdown.addTask( CoordinatedShutdown.PhaseServiceStop(), "queue-" + UUID.randomUUID(), () -> completeQueue( queue ) );
+        actorSystemComponents.coordinatedShutdown()
+                .addTask( CoordinatedShutdown.PhaseServiceStop(), "queue-" + UUID.randomUUID(), () -> completeQueue( queue ) );
 
         return queue;
     }
@@ -160,23 +143,57 @@ public class ActorSystemLifecycle
 
     public ActorRef applicationActorOf( Props props, String name )
     {
-        ActorRef actorRef = actorSystem.actorOf( props, name );
-        coordinatedShutdown.addTask( CoordinatedShutdown.PhaseServiceUnbind(), name + "-shutdown", () -> gracefulShutdown( actorRef ) );
+        ActorRef actorRef = actorSystemComponents.actorSystem().actorOf( props, name );
+        actorSystemComponents.coordinatedShutdown()
+                .addTask( CoordinatedShutdown.PhaseServiceUnbind(), name + "-shutdown", () -> gracefulShutdown( actorRef ) );
         return actorRef;
     }
 
     public ActorRef systemActorOf( Props props, String name )
     {
-        return actorSystem.actorOf( props, name );
+        return actorSystemComponents.actorSystem().actorOf( props, name );
     }
 
     private CompletionStage<Done> gracefulShutdown( ActorRef actor )
     {
-        return PatternsCS.gracefulStop( actor, Duration.ofSeconds( SHUTDOWN_TIMEOUT_S ) ).thenApply( ignored -> Done.done() );
+        return PatternsCS.gracefulStop( actor, Duration.ofSeconds( ACTOR_SHUTDOWN_TIMEOUT_S ) ).thenApply( ignored -> Done.done() );
+    }
+
+    public EventStream eventStream()
+    {
+        return actorSystemComponents.actorSystem().eventStream();
     }
 
     private static class ShutdownByNeo4jLifecycle implements CoordinatedShutdown.Reason
     {
-        public static ShutdownByNeo4jLifecycle INSTANCE = new ShutdownByNeo4jLifecycle();
+        static ShutdownByNeo4jLifecycle INSTANCE = new ShutdownByNeo4jLifecycle();
+    }
+
+    public Cluster cluster()
+    {
+        return actorSystemComponents.cluster();
+    }
+
+    public ActorRef replicator()
+    {
+        return actorSystemComponents.replicator();
+    }
+
+    public ClusterClientReceptionist clusterClientReceptionist()
+    {
+        return actorSystemComponents.clusterClientReceptionist();
+    }
+
+    public ClusterClientSettings clusterClientSettings()
+    {
+        Set<ActorPath> actorPaths = resolver.resolve( this::toActorPath, HashSet::new );
+
+        return ClusterClientSettings.create( actorSystemComponents.actorSystem() ).withInitialContacts( actorPaths );
+    }
+
+    private ActorPath toActorPath( AdvertisedSocketAddress addr )
+    {
+        String path = String.format( "%s://%s@%s/system/receptionist", AKKA_SCHEME, ACTOR_SYSTEM_NAME, addr.toString() );
+        return ActorPaths.fromString( path );
     }
 }

@@ -31,6 +31,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -134,12 +135,12 @@ public class KubernetesResolver implements RemoteMembersResolver
     }
 
     @Override
-    public <T> Collection<T> resolve( Function<AdvertisedSocketAddress,T> transform )
+    public <C extends Collection<T>,T> C resolve( Function<AdvertisedSocketAddress,T> transform, Supplier<C> collectionFactory )
     {
         try
         {
             httpClient.start();
-            return kubernetesClient.resolve( null ).stream().map( transform ).collect( Collectors.toList() );
+            return kubernetesClient.resolve( null ).stream().map( transform ).collect( Collectors.toCollection( collectionFactory ) );
         }
         catch ( Exception e )
         {
@@ -156,6 +157,12 @@ public class KubernetesResolver implements RemoteMembersResolver
                 log.warn( "Unable to shut down HTTP client", e );
             }
         }
+    }
+
+    @Override
+    public boolean useOverrides()
+    {
+        return false;
     }
 
     /**

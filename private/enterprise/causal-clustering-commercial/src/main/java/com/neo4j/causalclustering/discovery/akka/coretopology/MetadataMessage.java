@@ -15,6 +15,9 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.collection.Streams;
+import org.neo4j.util.VisibleForTesting;
+
+import static java.util.Collections.unmodifiableMap;
 
 public class MetadataMessage
 {
@@ -24,12 +27,16 @@ public class MetadataMessage
 
     public MetadataMessage( LWWMap<UniqueAddress,CoreServerInfoForMemberId> metadata )
     {
-        this.metadata = metadata.getEntries();
+        this( metadata.getEntries() );
     }
 
+    /**
+     * Warning: doesn't ensure inner map is immutable
+     */
+    @VisibleForTesting
     public MetadataMessage( Map<UniqueAddress,CoreServerInfoForMemberId> metadata )
     {
-        this.metadata = Collections.unmodifiableMap( metadata );
+        this.metadata = unmodifiableMap( metadata );
     }
 
     public Optional<CoreServerInfoForMemberId> getOpt( UniqueAddress address )
