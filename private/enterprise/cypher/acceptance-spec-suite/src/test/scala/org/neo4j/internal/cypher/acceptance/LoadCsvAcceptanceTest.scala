@@ -165,12 +165,11 @@ class LoadCsvAcceptanceTest
     Files.write(path,"foo".getBytes)
     assert(Files.exists(path))
 
-    val normalized = path.normalize()
-    val filePathForQuery = normalized.toUri
+    val filePathForQuery = path.normalize().toUri
     val result = executeWith(interpretedAndSlotted4_0, s"LOAD CSV FROM '$filePathForQuery' AS line CREATE (a {name: line[0]}) RETURN a.name, filename()")
     assertStats(result, nodesCreated = 1, propertiesWritten = 1)
     resourceMonitor.assertClosedAndClear(1)
-    result.toList should equal(List(Map("a.name" -> "foo", "filename()" -> normalized.toString)))
+    result.toList should equal(List(Map("a.name" -> "foo", "filename()" -> filePathForQuery.getPath)))
   }
 
   test("make sure to release all possible locks/references on input files") {
