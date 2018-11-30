@@ -8,11 +8,11 @@ package org.neo4j.internal.cypher.acceptance
 import java.time._
 
 import org.neo4j.cypher.{ExecutionEngineFunSuite, FakeClock}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
 
 class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport with FakeClock {
 
-  val supported = (Configs.Version3_5 + Configs.Version3_4 + Configs.Version3_1) - Configs.Compiled
+  val supported: TestConfiguration = (Configs.Version3_5 + Configs.Version3_4 + Configs.Version3_1) - Configs.Compiled
 
   test("should get current default datetime") {
     val result = executeWith(supported, "RETURN datetime() as now")
@@ -62,11 +62,20 @@ class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
     now shouldBe a[LocalTime]
   }
 
-  test("timstamp should be query local") {
+  test("timestamp should be query local") {
     //older versions don't use the clock which we fake in this test
     val result = executeSingle("UNWIND range(1, 1000) AS ignore RETURN timestamp() AS t").toList
 
     result.map(m => m("t")).distinct should have size 1
+  }
+
+  test("timestamp should not be case sensitive") {
+    val past = ZonedDateTime.of(1980, 3, 11, 0, 0, 0, 0,
+                                ZoneId.systemDefault())
+    //older versions don't use the clock which we fake in this test
+    val result = executeSingle("RETURN timeStamP() AS t").toList
+
+    result.map(m => m("t")).head.asInstanceOf[Long] > past.toEpochSecond shouldBe true
   }
 
   def single[T](values: Iterator[T]):T = {
