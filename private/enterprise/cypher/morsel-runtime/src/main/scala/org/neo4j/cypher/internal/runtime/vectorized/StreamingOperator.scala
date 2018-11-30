@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized
 import java.util
 
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
-import org.neo4j.cypher.internal.runtime.parallel.Task
+import org.neo4j.cypher.internal.runtime.parallel.{Task, HasWorkIdentity}
 
 /**
   * Physical immutable operator. [[StreamingOperator#init]] is thread-safe, and creates a [[ContinuableOperatorTask]]
@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.parallel.Task
   * Operators are expected to operate in a streaming fashion, where every inputMorsel
   * results in a new task.
   */
-trait StreamingOperator {
+trait StreamingOperator extends HasWorkIdentity {
   def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask
 }
 
@@ -28,7 +28,7 @@ trait StreamingOperator {
   * [[EagerReduceOperator]]s act as a barrier between pipelines, where all input morsels of the upstream pipeline
   * have to be collected before the reduce can start.
   */
-trait EagerReduceOperator {
+trait EagerReduceOperator extends HasWorkIdentity {
   def init(context: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask
 }
 
@@ -36,7 +36,7 @@ trait EagerReduceOperator {
   * Physical immutable operator. [[LazyReduceOperator#init]] is thread-safe, and creates a [[ContinuableOperatorTask]]
   * which can be executed.
   */
-trait LazyReduceOperator {
+trait LazyReduceOperator extends HasWorkIdentity {
   /**
     * Create a task that
     * - pulls from the queue and processes the morsels
@@ -53,7 +53,7 @@ trait LazyReduceOperator {
   * Physical immutable operator. Thread-safe. In contrast to [[StreamingOperator]] and [[EagerReduceOperator]], [[StatelessOperator]]
   * has no init-method to generate a task, but performs it's logic directly in the [[StatelessOperator#operate]] call.
   */
-trait StatelessOperator extends OperatorTask
+trait StatelessOperator extends OperatorTask with HasWorkIdentity
 
 /**
   * Operator related task.
@@ -147,7 +147,7 @@ trait ReduceCollector {
   def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
                    from: AbstractPipelineTask): Option[Task[ExpressionCursors]]
 
-  def produceTaskScheduled(task: String): Unit
+  def produceTaskScheduled(): Unit
 
-  def produceTaskCompleted(task: String, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]]
+  def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]]
 }

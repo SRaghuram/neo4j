@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.parallel.Task
+import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity}
 import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
 
 /**
@@ -30,10 +30,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
                          override val slots: SlotConfiguration,
                          override val upstream: Option[Pipeline]) extends ReducePipeline {
 
-  override def toString: String = {
-    val classNames = (start +: operators).map(op => op.getClass.getSimpleName)
-    s"LazyReducePipeline(${classNames.mkString(",")})"
-  }
+  override val workIdentity: WorkIdentity = composeWorkIdentities(start, operators)
 
   override def acceptMorsel(inputMorsel: MorselExecutionContext,
                             context: QueryContext,
@@ -81,10 +78,11 @@ class LazyReducePipeline(start: LazyReduceOperator,
       maybeNextTask.map { reduceTask =>
         val nextState = initDownstreamReduce(state)
         produceTaskScheduledForReduceCollector(nextState)
-        LazyReducePipelineTask(reduceTask,
+        LazyReducePipelineTask(
+          reduceTask,
           operators,
           slots,
-          this.toString,
+          workIdentity,
           context,
           nextState,
           from.ownerPipeline,
@@ -105,17 +103,17 @@ class LazyReducePipeline(start: LazyReduceOperator,
       }
     }
 
-    override def produceTaskScheduled(task: String): Unit = {
+    override def produceTaskScheduled(): Unit = {
       val tasks = taskCount.incrementAndGet()
       if (Pipeline.DEBUG) {
-        dprintln(() => "taskCount [%3d]: scheduled %s".format(tasks, task))
+        dprintln(() => "taskCount [%3d]: scheduled %s".format(tasks, toString))
       }
     }
 
-    override def produceTaskCompleted(task: String, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
+    override def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
       val tasksLeft = taskCount.decrementAndGet()
       if (Pipeline.DEBUG) {
-        dprintln(() => "taskCount [%3d]: completed %s".format(tasksLeft, task))
+        dprintln(() => "taskCount [%3d]: completed %s".format(tasksLeft, toString))
       }
 
       if (tasksLeft >= 0) {

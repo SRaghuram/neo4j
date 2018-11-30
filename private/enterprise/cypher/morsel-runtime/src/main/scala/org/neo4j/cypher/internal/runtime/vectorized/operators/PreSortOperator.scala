@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.DefaultComparatorTopTable
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -22,7 +23,8 @@ import scala.collection.JavaConverters._
  * Responsible for sorting the Morsel in place, which will then be merged together with other sorted Morsels
  * If countExpression != None, this sorts the first N rows of the morsel in place. If N > morselSize, this is equivalent to sorting everything.
  */
-class PreSortOperator(orderBy: Seq[ColumnOrder],
+class PreSortOperator(val workIdentity: WorkIdentity,
+                      orderBy: Seq[ColumnOrder],
                       countExpression: Option[Expression] = None) extends StatelessOperator {
 
     override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {

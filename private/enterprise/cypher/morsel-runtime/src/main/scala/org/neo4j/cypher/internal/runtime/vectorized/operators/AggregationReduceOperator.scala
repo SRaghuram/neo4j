@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.{AggregationHelper, AggregationReducer}
@@ -15,7 +16,8 @@ import scala.collection.mutable
 /*
 Responsible for reducing the output of AggregationMapperOperatorNoGrouping
  */
-class AggregationReduceOperator(aggregations: Array[AggregationOffsets],
+class AggregationReduceOperator(val workIdentity: WorkIdentity,
+                                aggregations: Array[AggregationOffsets],
                                 groupings: Array[GroupingOffsets]) extends EagerReduceOperator {
 
   //These are assigned at compile time to save some time at runtime

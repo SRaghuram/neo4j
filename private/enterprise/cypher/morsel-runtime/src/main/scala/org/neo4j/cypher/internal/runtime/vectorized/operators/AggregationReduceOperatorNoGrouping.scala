@@ -5,13 +5,15 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.vectorized._
 
 /*
 Responsible for reducing the output of AggregationMapperOperatorNoGrouping
  */
-class AggregationReduceOperatorNoGrouping(aggregations: Array[AggregationOffsets]) extends EagerReduceOperator {
+class AggregationReduceOperatorNoGrouping(val workIdentity: WorkIdentity,
+                                          aggregations: Array[AggregationOffsets]) extends EagerReduceOperator {
 
   override def init(queryContext: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask =
     new OTask(inputMorsels.toArray)

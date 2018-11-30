@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext}
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
@@ -16,11 +17,13 @@ class AggregationMapperOperatorNoGroupingTest extends CypherFunSuite {
 
   private val cursors = new ExpressionCursors(mock[CursorFactory])
 
+  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
+
   test("single aggregation on a single morsel") {
     // Given
     val numberOfLongs = 1
     val numberOfReferences = 1
-    val aggregation = new AggregationMapperOperatorNoGrouping(Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0))))
+    val aggregation = new AggregationMapperOperatorNoGrouping(workId, Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0))))
     val longs = Array[Long](0,1,2,3,4,5,6,7,8,9)
     val refs = new Array[AnyValue](10)
     val data = new Morsel(longs, refs, longs.length)
@@ -36,10 +39,12 @@ class AggregationMapperOperatorNoGroupingTest extends CypherFunSuite {
     val numberOfLongs = 2
     val numberOfReferences = 1
 
-    val aggregation = new AggregationMapperOperatorNoGrouping(Array(
-      AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0)),
-      AggregationOffsets(1, 1, DummyEvenNodeIdAggregation(1))
-    ))
+    val aggregation = new AggregationMapperOperatorNoGrouping(
+      workId,
+      Array(
+        AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0)),
+        AggregationOffsets(1, 1, DummyEvenNodeIdAggregation(1))
+      ))
 
     //this is interpreted as n1,n2,n1,n2...
     val longs = Array[Long](0,1,2,3,4,5,6,7,8,9)

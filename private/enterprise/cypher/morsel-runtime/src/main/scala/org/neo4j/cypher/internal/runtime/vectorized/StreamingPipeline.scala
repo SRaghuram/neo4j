@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.parallel.Task
+import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity}
 
 /**
   * A streaming pipeline.
@@ -28,8 +28,5 @@ class StreamingPipeline(start: StreamingOperator,
                             from: AbstractPipelineTask): Option[Task[ExpressionCursors]] =
     Some(pipelineTask(start.init(context, state, inputMorsel, cursors), context, state))
 
-  override def toString: String = {
-    val x = (start +: operators).map(x => x.getClass.getSimpleName)
-    s"StreamingPipeline(${x.mkString(",")})"
-  }
+  override val workIdentity: WorkIdentity = composeWorkIdentities(start, operators)
 }

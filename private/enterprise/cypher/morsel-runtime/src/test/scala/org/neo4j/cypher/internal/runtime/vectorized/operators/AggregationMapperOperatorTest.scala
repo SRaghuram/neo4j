@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.RefSlot
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext}
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
@@ -19,12 +20,14 @@ class AggregationMapperOperatorTest extends CypherFunSuite {
 
   private val cursors = new ExpressionCursors(mock[CursorFactory])
 
+  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
+
   test("single grouping key aggregation") {
     // Given
     val numberOfLongs = 1
     val numberOfReferences = 2
     val groupSlot = RefSlot(0, nullable = false, CTAny)
-    val aggregation = new AggregationMapperOperator(
+    val aggregation = new AggregationMapperOperator(workId,
                                                     Array(AggregationOffsets(1, 1, DummyEvenNodeIdAggregation(0))),
                                                     Array(GroupingOffsets(groupSlot, groupSlot,
                                                                           new DummyExpression(stringValue("A"), stringValue("B")))))
@@ -47,7 +50,7 @@ class AggregationMapperOperatorTest extends CypherFunSuite {
     val numberOfReferences = 3
     val groupSlot1 = RefSlot(0, nullable = false, CTAny)
     val groupSlot2 = RefSlot(1, nullable = false, CTAny)
-    val aggregation = new AggregationMapperOperator(
+    val aggregation = new AggregationMapperOperator(workId,
                                                     Array(AggregationOffsets(2, 2, DummyEvenNodeIdAggregation(0))),
                                                     Array(GroupingOffsets(groupSlot1, groupSlot1,
                                                                           new DummyExpression(stringValue("A"), stringValue("B"))),
@@ -95,7 +98,7 @@ class AggregationMapperOperatorTest extends CypherFunSuite {
     val groupSlot1 = RefSlot(0, nullable = false, CTAny)
     val groupSlot2 = RefSlot(1, nullable = false, CTAny)
     val groupSlot3 = RefSlot(2, nullable = false, CTAny)
-    val aggregation = new AggregationMapperOperator(
+    val aggregation = new AggregationMapperOperator(workId,
                                                     Array(AggregationOffsets(3, 3, DummyEvenNodeIdAggregation(0))),
                                                     Array(GroupingOffsets(groupSlot1, groupSlot1,
                                                                           new DummyExpression(stringValue("A"), stringValue("B"))),
@@ -133,7 +136,7 @@ class AggregationMapperOperatorTest extends CypherFunSuite {
     val groupSlot3 = RefSlot(2, nullable = false, CTAny)
     val groupSlot4 = RefSlot(3, nullable = false, CTAny)
     val groupSlot5 = RefSlot(4, nullable = false, CTAny)
-    val aggregation = new AggregationMapperOperator(
+    val aggregation = new AggregationMapperOperator(workId,
                                                     Array(AggregationOffsets(5, 5, DummyEvenNodeIdAggregation(0))),
                                                     Array(GroupingOffsets(groupSlot1, groupSlot1,
                                                                           new DummyExpression(stringValue("A"), stringValue("B"))),

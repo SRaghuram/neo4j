@@ -111,6 +111,10 @@ abstract class SchedulerTest extends CypherFunSuite {
     }
 
     override def canContinue: Boolean = buffer.nonEmpty
+
+    override def workId: Int = 0
+
+    override def workDescription: String = getClass.getSimpleName
   }
 
   case class PushToEager(subResults: Seq[Int], eager: SumAggregator) extends Task[Resource.type] {
@@ -126,6 +130,10 @@ abstract class SchedulerTest extends CypherFunSuite {
     }
 
     override def canContinue: Boolean = resultSequence.hasNext
+
+    override def workId: Int = 1
+
+    override def workDescription: String = getClass.getSimpleName
   }
 
   case class SubTasker(subtasks: Seq[Task[Resource.type]]) extends Task[Resource.type] {
@@ -137,6 +145,10 @@ abstract class SchedulerTest extends CypherFunSuite {
       else Nil
 
     override def canContinue: Boolean = taskSequence.nonEmpty
+
+    override def workId: Int = 2
+
+    override def workDescription: String = getClass.getSimpleName
   }
 
   case class NoopTask(f: () => Any) extends Task[Resource.type] {
@@ -146,5 +158,9 @@ abstract class SchedulerTest extends CypherFunSuite {
     }
 
     override def canContinue: Boolean = false
+
+    override def workId: Int = 3
+
+    override def workDescription: String = getClass.getSimpleName
   }
 }

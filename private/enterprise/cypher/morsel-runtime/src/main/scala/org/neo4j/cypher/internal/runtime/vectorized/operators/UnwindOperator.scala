@@ -9,11 +9,13 @@ import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.ListSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => InterpretedQueryState}
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 
-class UnwindOperator(collection: Expression,
+class UnwindOperator(val workIdentity: WorkIdentity,
+                     collection: Expression,
                      offset: Int)
   extends StreamingOperator with ListSupport {
 

@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekModeFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyTypes
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.AggregationExpressionOperator
 import org.neo4j.cypher.internal.runtime.vectorized.operators._
@@ -38,17 +39,20 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
     val thisOp = plan match {
       case plans.AllNodesScan(column, _) =>
         new AllNodeScanOperator(
+          WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           argumentSize)
 
       case plans.NodeByLabelScan(column, label, _) =>
         new LabelScanOperator(
+          WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           LazyLabel(label)(SemanticTable()),
           argumentSize)
 
       case plans.NodeIndexScan(column, labelToken, property, _, _) =>
         new NodeIndexScanOperator(
+          WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           labelToken.nameId.id,
           SlottedIndexedProperty(column, property, slots),
@@ -57,6 +61,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
 
       case NodeIndexContainsScan(column, labelToken, property, valueExpr, _, indexOrder) =>
         new NodeIndexContainsScanOperator(
+          WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           labelToken.nameId.id,
           SlottedIndexedProperty(column, property, slots),
@@ -66,6 +71,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
       case plans.NodeIndexSeek(column, label, properties, valueExpr, _,  indexOrder) =>
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
         new NodeIndexSeekOperator(
+          WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           label,
           properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
@@ -78,6 +84,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
       case plans.NodeUniqueIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(valueExpr)
         new NodeIndexSeekOperator(
+          WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           label,
           properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
@@ -88,7 +95,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
           indexSeekMode)
 
       case plans.Argument(_) =>
-        new ArgumentOperator(argumentSize)
+        new ArgumentOperator(WorkIdentity.fromPlan(plan), argumentSize)
 
       case p =>
         throw new CantCompileQueryException(s"$p not supported in morsel runtime")
@@ -103,36 +110,36 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
 
       val thisOp = plan match {
         case plans.ProduceResult(_, columns) =>
-          new ProduceResultOperator(slots, columns.toArray)
+          new ProduceResultOperator(WorkIdentity.fromPlan(plan), slots, columns.toArray)
 
         case plans.Selection(predicate, _) =>
-          new FilterOperator(converters.toCommandPredicate(id, predicate))
+          new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandPredicate(id, predicate))
 
         case plans.Expand(lhs, fromName, dir, types, to, relName, ExpandAll) =>
           val fromOffset = slots.getLongOffsetFor(fromName)
           val relOffset = slots.getLongOffsetFor(relName)
           val toOffset = slots.getLongOffsetFor(to)
           val lazyTypes = LazyTypes(types.toArray)(SemanticTable())
-          new ExpandAllOperator(fromOffset, relOffset, toOffset, dir, lazyTypes)
+          new ExpandAllOperator(WorkIdentity.fromPlan(plan), fromOffset, relOffset, toOffset, dir, lazyTypes)
 
         case plans.Projection(_, expressions) =>
           val projectionOps = expressions.map {
             case (key, e) => slots(key) -> converters.toCommandExpression(id, e)
           }
-          new ProjectOperator(projectionOps)
+          new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps)
 
         case plans.Sort(_, sortItems) =>
           val ordering = sortItems.map(translateColumnOrder(slots, _))
-          val preSorting = new PreSortOperator(ordering)
+          val preSorting = new PreSortOperator(WorkIdentity.fromPlan(plan), ordering)
           source.addOperator(preSorting)
-          new MergeSortOperator(ordering)
+          new MergeSortOperator(WorkIdentity.fromPlan(plan), ordering)
 
         case Top(_, sortItems, limit) =>
           val ordering = sortItems.map(translateColumnOrder(slots, _))
           val countExpression = converters.toCommandExpression(id, limit)
-          val preTop = new PreSortOperator(ordering, Some(countExpression))
+          val preTop = new PreSortOperator(WorkIdentity.fromPlan(plan), ordering, Some(countExpression))
           source.addOperator(preTop)
-          new MergeSortOperator(ordering, Some(countExpression))
+          new MergeSortOperator(WorkIdentity.fromPlan(plan), ordering, Some(countExpression))
 
         case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
           val aggregations = aggregationExpression.map {
@@ -146,8 +153,8 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
           }.toArray
 
           //add mapper to source
-          source.addOperator(new AggregationMapperOperatorNoGrouping(aggregations))
-          new AggregationReduceOperatorNoGrouping(aggregations)
+          source.addOperator(new AggregationMapperOperatorNoGrouping(WorkIdentity.fromPlan(plan), aggregations))
+          new AggregationReduceOperatorNoGrouping(WorkIdentity.fromPlan(plan), aggregations)
 
         case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
           val groupings = groupingExpressions.map {
@@ -172,8 +179,8 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
           }.toArray
 
           //add mapper to source
-          source.addOperator(new AggregationMapperOperator(aggregations, groupings))
-          new AggregationReduceOperator(aggregations, groupings)
+          source.addOperator(new AggregationMapperOperator(WorkIdentity.fromPlan(plan), aggregations, groupings))
+          new AggregationReduceOperator(WorkIdentity.fromPlan(plan), aggregations, groupings)
 
         case plans.UnwindCollection(src, variable, collection) =>
           val offset = slots.get(variable) match {
@@ -182,7 +189,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
               throw new InternalException("Weird slot found for UNWIND")
           }
           val runtimeExpression = converters.toCommandExpression(id, collection)
-          new UnwindOperator(runtimeExpression, offset)
+          new UnwindOperator(WorkIdentity.fromPlan(plan), runtimeExpression, offset)
 
         case p => throw new CantCompileQueryException(s"$p not supported in morsel runtime")
       }

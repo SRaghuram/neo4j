@@ -6,12 +6,14 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.{IndexOrder, IndexReadSession, NodeValueIndexCursor}
 
 
-class NodeIndexScanOperator(nodeOffset: Int,
+class NodeIndexScanOperator(val workIdentity: WorkIdentity,
+                            nodeOffset: Int,
                             label: Int,
                             property: SlottedIndexedProperty,
                             queryIndexId: Int,

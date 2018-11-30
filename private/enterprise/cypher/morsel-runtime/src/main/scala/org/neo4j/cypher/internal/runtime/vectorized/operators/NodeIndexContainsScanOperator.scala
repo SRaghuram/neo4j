@@ -9,12 +9,14 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, 
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api._
 import org.neo4j.values.storable.{TextValue, Values}
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 
-class NodeIndexContainsScanOperator(nodeOffset: Int,
+class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
+                                    nodeOffset: Int,
                                     label: Int,
                                     property: SlottedIndexedProperty,
                                     valueExpr: Expression,

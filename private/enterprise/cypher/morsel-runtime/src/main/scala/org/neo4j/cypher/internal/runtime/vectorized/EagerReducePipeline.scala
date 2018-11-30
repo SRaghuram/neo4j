@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.parallel.Task
+import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity}
 import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
 
 import scala.collection.JavaConverters._
@@ -63,10 +63,7 @@ class EagerReducePipeline(start: EagerReduceOperator,
                           override val slots: SlotConfiguration,
                           override val upstream: Option[Pipeline]) extends ReducePipeline {
 
-  override def toString: String = {
-    val classNames = (start +: operators).map(op => op.getClass.getSimpleName)
-    s"EagerReducePipeline(${classNames.mkString(",")})"
-  }
+  override val workIdentity: WorkIdentity = composeWorkIdentities(start, operators)
 
   override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
                             from: AbstractPipelineTask): Option[Task[ExpressionCursors]] = {
@@ -86,16 +83,16 @@ class EagerReducePipeline(start: EagerReduceOperator,
       None
     }
 
-    override def produceTaskScheduled(task: String): Unit = {
+    override def produceTaskScheduled(): Unit = {
       val tasks = taskCount.incrementAndGet()
       if (Pipeline.DEBUG)
-        dprintln(() => "taskCount [%3d]: scheduled %s".format(tasks, task))
+        dprintln(() => "taskCount [%3d]: scheduled %s".format(tasks, toString))
     }
 
-    override def produceTaskCompleted(task: String, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
+    override def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Option[Task[ExpressionCursors]] = {
       val tasksLeft = taskCount.decrementAndGet()
       if (Pipeline.DEBUG)
-        dprintln(() => "taskCount [%3d]: completed %s".format(tasksLeft, task))
+        dprintln(() => "taskCount [%3d]: completed %s".format(tasksLeft, toString))
 
       if (tasksLeft == 0) {
         val inputMorsels: Array[MorselExecutionContext] = eagerData.asScala.toArray

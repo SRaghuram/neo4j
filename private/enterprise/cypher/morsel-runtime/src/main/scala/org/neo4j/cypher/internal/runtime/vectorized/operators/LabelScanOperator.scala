@@ -8,10 +8,14 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 
-class LabelScanOperator(offset: Int, label: LazyLabel, argumentSize: SlotConfiguration.Size)
+class LabelScanOperator(val workIdentity: WorkIdentity,
+                        offset: Int,
+                        label: LazyLabel,
+                        argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperator[NodeLabelIndexCursor](offset) {
 
   override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {

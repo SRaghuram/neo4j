@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
@@ -16,6 +17,8 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 class ArgumentOperatorTest extends CypherFunSuite {
 
   private val cursors = new ExpressionCursors(mock[CursorFactory])
+
+  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
   test("should copy argument over and produce a single row") {
     // Given
@@ -40,7 +43,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     val outputRow = MorselExecutionContext(outputMorsel, outputLongs, outputRefs)
 
     // operator and argument size
-    val operator = new ArgumentOperator(SlotConfiguration.Size(1, 1))
+    val operator = new ArgumentOperator(workId, SlotConfiguration.Size(1, 1))
 
     // When
     operator.init(null, null, inputRow, cursors).operate(outputRow, null, EmptyQueryState(), cursors)

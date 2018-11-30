@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.{AggregationHelper, AggregationMapper}
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -20,7 +21,8 @@ Responsible for aggregating the data coming from a single morsel. This is equiva
 step of map-reduce. Each thread performs it its local aggregation on the data local to it. In
 the subsequent reduce steps these local aggregations are merged into a single global aggregate.
  */
-class AggregationMapperOperator(aggregations: Array[AggregationOffsets],
+class AggregationMapperOperator(val workIdentity: WorkIdentity,
+                                aggregations: Array[AggregationOffsets],
                                 groupings: Array[GroupingOffsets]) extends StatelessOperator {
 
   //These are assigned at compile time to save some time at runtime

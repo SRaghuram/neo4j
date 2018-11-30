@@ -7,7 +7,8 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.RefSlot
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, QueryState, _}
+import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
+import org.neo4j.cypher.internal.runtime.vectorized.{Morsel, _}
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -19,12 +20,15 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
 
   private val cursors = new ExpressionCursors(mock[CursorFactory])
 
+  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
+
   test("single grouping key single morsel aggregation") {
     // Given
     val numberOfLongs = 0
     val numberOfReferences = 2
     val groupSlot = RefSlot(0, nullable = false, CTAny)
-    val aggregation = new AggregationReduceOperator(Array(AggregationOffsets(1, 1, DummyEvenNodeIdAggregation(0))),
+    val aggregation = new AggregationReduceOperator(workId,
+                                                    Array(AggregationOffsets(1, 1, DummyEvenNodeIdAggregation(0))),
                                                     Array(GroupingOffsets(groupSlot, groupSlot, new DummyExpression())))
     val in = 1 to 5 map ( i => {
       val refs = new Array[AnyValue](10)
@@ -54,7 +58,8 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
     val numberOfReferences = 3
     val groupSlot1 = RefSlot(0, nullable = false, CTAny)
     val groupSlot2 = RefSlot(1, nullable = false, CTAny)
-    val aggregation = new AggregationReduceOperator(Array(AggregationOffsets(2, 2, DummyEvenNodeIdAggregation(0))),
+    val aggregation = new AggregationReduceOperator(workId,
+                                                    Array(AggregationOffsets(2, 2, DummyEvenNodeIdAggregation(0))),
                                                     Array(GroupingOffsets(groupSlot1, groupSlot1,
                                                                           new DummyExpression()),
                                                           GroupingOffsets(groupSlot2, groupSlot2,
@@ -93,7 +98,7 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
     val groupSlot1 = RefSlot(0, nullable = false, CTAny)
     val groupSlot2 = RefSlot(1, nullable = false, CTAny)
     val groupSlot3 = RefSlot(2, nullable = false, CTAny)
-    val aggregation = new AggregationReduceOperator(
+    val aggregation = new AggregationReduceOperator(workId,
                                                     Array(AggregationOffsets(3, 3, DummyEvenNodeIdAggregation(0))),
                                                     Array(GroupingOffsets(groupSlot1, groupSlot1, new DummyExpression()),
                                                           GroupingOffsets(groupSlot2, groupSlot2, new DummyExpression()),
@@ -139,7 +144,7 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
     val groupSlot3 = RefSlot(2, nullable = false, CTAny)
     val groupSlot4 = RefSlot(3, nullable = false, CTAny)
     val groupSlot5 = RefSlot(4, nullable = false, CTAny)
-    val aggregation = new AggregationReduceOperator(
+    val aggregation = new AggregationReduceOperator(workId,
                                                     Array(AggregationOffsets(5, 5, DummyEvenNodeIdAggregation(0))),
                                                     Array(GroupingOffsets(groupSlot1, groupSlot1, new DummyExpression()),
                                                           GroupingOffsets(groupSlot2, groupSlot2, new DummyExpression()),

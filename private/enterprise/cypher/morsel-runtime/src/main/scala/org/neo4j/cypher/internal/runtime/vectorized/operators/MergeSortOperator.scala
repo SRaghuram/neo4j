@@ -10,6 +10,7 @@ import java.util.{Comparator, PriorityQueue}
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -19,7 +20,8 @@ import org.neo4j.values.storable.NumberValue
   * This operator takes pre-sorted inputs, and merges them together, producing a stream of Morsels with the sorted data
   * If countExpression != None, this expression evaluates to a limit for TopN
   */
-class MergeSortOperator(orderBy: Seq[ColumnOrder],
+class MergeSortOperator(val workIdentity: WorkIdentity,
+                        orderBy: Seq[ColumnOrder],
                         countExpression: Option[Expression] = None) extends EagerReduceOperator {
 
   private val comparator: Comparator[MorselExecutionContext] = orderBy

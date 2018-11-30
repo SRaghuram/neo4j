@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.parallel.Task
+import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity, WorkIdentityImpl, HasWorkIdentity}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -31,7 +31,7 @@ object Pipeline {
   * A pipeline of physical operators. Consists of one [[StreamingOperator]] or [[EagerReduceOperator]], called
   * the start operator, and 0-n [[StatelessOperator]]s.
   */
-abstract class Pipeline() {
+abstract class Pipeline() extends HasWorkIdentity {
 
   self =>
 
@@ -40,6 +40,14 @@ abstract class Pipeline() {
   def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
                    from: AbstractPipelineTask): Option[Task[ExpressionCursors]]
   def slots: SlotConfiguration
+
+  protected def composeWorkIdentities(first: HasWorkIdentity, others: Seq[HasWorkIdentity]): WorkIdentity = {
+    val workIdentities = (Seq(first) ++ others).map(_.workIdentity)
+    val description = s"${workIdentities.map(_.workDescription).mkString(",")}"
+    WorkIdentityImpl(workIdentities.head.workId, description)
+  }
+
+  override final def toString: String = s"${getClass.getSimpleName}[${workIdentity.workId}](${workIdentity.workDescription})"
 
   // operators
   protected val operators: ArrayBuffer[StatelessOperator] = new ArrayBuffer[StatelessOperator]
@@ -87,14 +95,14 @@ abstract class Pipeline() {
   }
 
   protected def produceTaskScheduledForReduceCollector(state: QueryState): Unit =
-    state.reduceCollector.foreach(_.produceTaskScheduled(this.toString))
+    state.reduceCollector.foreach(_.produceTaskScheduled())
 
   protected def pipelineTask(startOperatorTask: ContinuableOperatorTask, context: QueryContext, state: QueryState): PipelineTask = {
     produceTaskScheduledForReduceCollector(state)
     PipelineTask(startOperatorTask,
                  operators,
                  slots,
-                 this.toString,
+                 workIdentity,
                  context,
                  state,
                  this,

@@ -138,6 +138,10 @@ class ThreadSafeDataWriterTest extends CypherFunSuite {
     override def executeWorkUnit(resource: Resource.type): Seq[Task[Resource.type]] = Nil
 
     override def canContinue: Boolean = false
+
+    override def workId: Int = 0
+
+    override def workDescription: String = getClass.getSimpleName
   }
 
 }

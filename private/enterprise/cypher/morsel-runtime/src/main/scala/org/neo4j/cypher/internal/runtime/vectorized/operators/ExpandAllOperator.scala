@@ -7,12 +7,14 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyTypes
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 
-class ExpandAllOperator(fromOffset: Int,
+class ExpandAllOperator(val workIdentity: WorkIdentity,
+                        fromOffset: Int,
                         relOffset: Int,
                         toOffset: Int,
                         dir: SemanticDirection,

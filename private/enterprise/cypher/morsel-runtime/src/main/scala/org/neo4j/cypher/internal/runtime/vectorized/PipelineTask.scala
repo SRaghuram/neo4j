@@ -8,14 +8,14 @@ package org.neo4j.cypher.internal.runtime.vectorized
 import java.util
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.parallel.Task
+import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity}
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
 
 abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
                                     slots: SlotConfiguration,
-                                    name: String,
+                                    workIdentity: WorkIdentity,
                                     originalQueryContext: QueryContext,
                                     state: QueryState,
                                     downstream: Option[Pipeline]) extends Task[ExpressionCursors] {
@@ -46,13 +46,17 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
     }
 
     state.reduceCollector match {
-      case Some(x) if !canContinue =>
-        downstreamTasks ++ x.produceTaskCompleted(name, queryContext, state, cursors)
+      case Some(collector) if !canContinue =>
+        downstreamTasks ++ collector.produceTaskCompleted(queryContext, state, cursors)
 
       case _ =>
         downstreamTasks
     }
   }
+
+  override def workId: Int = workIdentity.workId
+
+  override def workDescription: String = workIdentity.workDescription
 }
 
 /**
@@ -61,7 +65,7 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
   * @param start                task for executing the start operator
   * @param operators            the subsequent [[OperatorTask]]s
   * @param slots                the slotConfiguration of this Pipeline
-  * @param name                 name of this task
+  * @param workIdentity         description of computation performed by this task
   * @param originalQueryContext the query context
   * @param state                the current QueryState
   * @param ownerPipeline        the Pipeline from where this task originated
@@ -70,12 +74,12 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
 case class PipelineTask(start: ContinuableOperatorTask,
                         operators: IndexedSeq[OperatorTask],
                         slots: SlotConfiguration,
-                        name: String,
+                        workIdentity: WorkIdentity,
                         originalQueryContext: QueryContext,
                         state: QueryState,
                         ownerPipeline: Pipeline,
                         downstream: Option[Pipeline])
-  extends AbstractPipelineTask(operators, slots, name, originalQueryContext, state, downstream) {
+  extends AbstractPipelineTask(operators, slots, workIdentity, originalQueryContext, state, downstream) {
 
   override def executeWorkUnit(cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
     val outputMorsel = Morsel.create(slots, state.morselSize)
@@ -87,7 +91,7 @@ case class PipelineTask(start: ContinuableOperatorTask,
     doStatelessOperators(cursors, outputRow, queryContext)
 
     if (org.neo4j.cypher.internal.runtime.vectorized.Pipeline.DEBUG) {
-      dprintln(() => s"Pipeline: $name")
+      dprintln(() => s"Pipeline: $toString")
 
       val longCount = slots.numberOfLongs
       val refCount = slots.numberOfReferences
@@ -107,8 +111,6 @@ case class PipelineTask(start: ContinuableOperatorTask,
   }
 
   override def canContinue: Boolean = start.canContinue
-
-  override def toString: String = name
 }
 
 /**
@@ -120,7 +122,7 @@ case class PipelineTask(start: ContinuableOperatorTask,
   * @param start                task for executing the start operator
   * @param operators            the subsequent [[OperatorTask]]s
   * @param slots                the slotConfiguration of this Pipeline
-  * @param name                 name of this task
+  * @param workIdentity         description of computation performed by this task
   * @param originalQueryContext the query context
   * @param state                the current QueryState
   * @param ownerPipeline        the Pipeline from where this task originated
@@ -129,12 +131,12 @@ case class PipelineTask(start: ContinuableOperatorTask,
 case class LazyReducePipelineTask(start: LazyReduceOperatorTask,
                                   operators: IndexedSeq[OperatorTask],
                                   slots: SlotConfiguration,
-                                  name: String,
+                                  workIdentity: WorkIdentity,
                                   originalQueryContext: QueryContext,
                                   state: QueryState,
                                   ownerPipeline: Pipeline,
                                   downstream: Option[Pipeline])
-  extends AbstractPipelineTask(operators, slots, name, originalQueryContext, state, downstream) {
+  extends AbstractPipelineTask(operators, slots, workIdentity, originalQueryContext, state, downstream) {
 
   override def executeWorkUnit(cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
     val queryContext = getQueryContext
@@ -144,6 +146,4 @@ case class LazyReducePipelineTask(start: LazyReduceOperatorTask,
   }
 
   override def canContinue: Boolean = false
-
-  override def toString: String = name
 }

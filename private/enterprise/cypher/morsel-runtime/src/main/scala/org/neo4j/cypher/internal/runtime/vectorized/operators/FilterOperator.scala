@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.Values
@@ -15,7 +16,8 @@ import org.neo4j.values.storable.Values
 /**
  * Takes an input morsel and compacts all rows to the beginning of it, only keeping the rows that match a predicate
  */
-class FilterOperator(predicate: Predicate) extends StatelessOperator {
+class FilterOperator(val workIdentity: WorkIdentity,
+                     predicate: Predicate) extends StatelessOperator {
 
     override def operate(readingRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 

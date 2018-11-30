@@ -11,20 +11,23 @@ import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.interpreted.ImplicitDummyPos
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{ListLiteral, Literal}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexMockingHelp, LockingUniqueIndexSeek}
+import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext}
-import org.neo4j.cypher.internal.v4_0.logical.plans.{CompositeQueryExpression, IndexOrderNone, ManyQueryExpression}
+import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, LabelToken, PropertyKeyName, PropertyKeyToken}
+import org.neo4j.cypher.internal.v4_0.logical.plans._
+import org.neo4j.cypher.internal.v4_0.util.{LabelId, PropertyKeyId}
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.NodeValue
-import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, LabelToken, PropertyKeyName, PropertyKeyToken}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTNode}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.v4_0.util.{LabelId, PropertyKeyId}
 
 class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos with IndexMockingHelp {
 
   private val cursors = new ExpressionCursors(mock[CursorFactory])
+
+  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
   private val label = LabelToken(LabelName("LabelName") _, LabelId(11))
   private val propertyKey = Seq(PropertyKeyToken(PropertyKeyName("PropertyName") _, PropertyKeyId(10)))
@@ -62,7 +65,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
+    val operator = new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
       ManyQueryExpression(ListLiteral(
         Literal("hello"),
         Literal("bye")
@@ -105,7 +108,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       .newReference("n." + propertyKeys(0).name, nullable = false, CTAny)
       .newReference("n." + propertyKeys(1).name, nullable = false, CTAny)
     val properties = propertyKeys.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
+    val operator = new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
       CompositeQueryExpression(Seq(
         ManyQueryExpression(ListLiteral(
           Literal("hello"), Literal("bye")
@@ -151,7 +154,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
 
-    val operator = new NodeIndexSeekOperator(slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
+    val operator = new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
       ManyQueryExpression(ListLiteral(Literal("hello"), Literal("world"))), LockingUniqueIndexSeek)
 
     // When

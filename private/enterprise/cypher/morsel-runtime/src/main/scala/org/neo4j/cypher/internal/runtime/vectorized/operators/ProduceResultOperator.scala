@@ -13,11 +13,12 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.values.AnyValue
 import org.neo4j.cypher.internal.v4_0.util.symbols
 
-class ProduceResultOperator(slots: SlotConfiguration, fieldNames: Array[String]) extends LazyReduceOperator {
+class ProduceResultOperator(val workIdentity: WorkIdentity, slots: SlotConfiguration, fieldNames: Array[String]) extends LazyReduceOperator {
 
   override def init(context: QueryContext,
                     state: QueryState,

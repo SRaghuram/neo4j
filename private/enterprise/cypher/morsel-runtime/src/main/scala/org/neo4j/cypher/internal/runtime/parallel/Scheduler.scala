@@ -27,7 +27,7 @@ trait Scheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable] {
 /**
   * A single task
   */
-trait Task[THREAD_LOCAL_RESOURCE <: AutoCloseable] {
+trait Task[THREAD_LOCAL_RESOURCE <: AutoCloseable] extends WorkIdentity {
 
   /**
     * Execute the next work-unit of this task. After the first call, [[executeWorkUnit]] will be
@@ -43,6 +43,8 @@ trait Task[THREAD_LOCAL_RESOURCE <: AutoCloseable] {
     * @return true if there is another work unit to execute.
     */
   def canContinue: Boolean
+
+  override def toString: String = s"${getClass.getSimpleName}[$workId]($workDescription)"
 }
 
 /**

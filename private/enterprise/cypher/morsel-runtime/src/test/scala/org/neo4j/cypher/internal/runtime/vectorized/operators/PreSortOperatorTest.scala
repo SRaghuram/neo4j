@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot}
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
+import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.slotted.pipes.Ascending
 import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext}
 import org.neo4j.internal.kernel.api.CursorFactory
@@ -20,12 +21,14 @@ class PreSortOperatorTest extends CypherFunSuite {
 
   private val cursors = new ExpressionCursors(mock[CursorFactory])
 
+  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
+
   test("sort a morsel with a single long column") {
     val numberOfLongs = 1
     val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
-    val sortOperator = new PreSortOperator(columnOrdering)
+    val sortOperator = new PreSortOperator(workId, columnOrdering)
 
     val longs = Array[Long](9, 8, 7, 6, 5, 4, 3, 2, 1)
     val data = new Morsel(longs, Array[AnyValue](), longs.length)
@@ -41,7 +44,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val slot1 = LongSlot(0, nullable = false, CTNode)
     val slot2 = RefSlot(0, nullable = false, CTNumber)
     val columnOrdering = Seq(Ascending(slot2))
-    val sortOperator = new PreSortOperator(columnOrdering)
+    val sortOperator = new PreSortOperator(workId, columnOrdering)
 
     val longs = Array[Long](
       6, 5, 4,
@@ -73,7 +76,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val slot1 = LongSlot(0, nullable = false, CTNode)
     val slot2 = LongSlot(1, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot1))
-    val sortOperator = new PreSortOperator(columnOrdering)
+    val sortOperator = new PreSortOperator(workId, columnOrdering)
 
     val longs = Array[Long](
       9, 0,
@@ -108,7 +111,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
-    val sortOperator = new PreSortOperator(columnOrdering)
+    val sortOperator = new PreSortOperator(workId, columnOrdering)
 
     val longs = new Array[Long](10)
     val data = new Morsel(longs, Array[AnyValue](), 0)
@@ -123,7 +126,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
-    val sortOperator = new PreSortOperator(columnOrdering)
+    val sortOperator = new PreSortOperator(workId, columnOrdering)
 
     val data = new Morsel(Array.empty, Array[AnyValue](), 0)
 
@@ -137,7 +140,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
-    val topOperator = new PreSortOperator(columnOrdering, Some(Literal(3)))
+    val topOperator = new PreSortOperator(workId, columnOrdering, Some(Literal(3)))
 
     val longs = Array[Long](9, 8, 7, 6, 5, 4, 3, 2, 1)
     val data = new Morsel(longs, Array[AnyValue](), longs.length)
@@ -153,7 +156,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
-    val topOperator = new PreSortOperator(columnOrdering, Some(Literal(20)))
+    val topOperator = new PreSortOperator(workId, columnOrdering, Some(Literal(20)))
 
     val longs = Array[Long](9, 8, 7, 6, 5, 4, 3, 2, 1)
     val data = new Morsel(longs, Array[AnyValue](), longs.length)
@@ -170,7 +173,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val slot1 = LongSlot(0, nullable = false, CTNode)
     val slot2 = RefSlot(0, nullable = false, CTNumber)
     val columnOrdering = Seq(Ascending(slot2))
-    val topOperator = new PreSortOperator(columnOrdering, Some(Literal(3)))
+    val topOperator = new PreSortOperator(workId, columnOrdering, Some(Literal(3)))
 
     val longs = Array[Long](
       6, 5, 4,
@@ -197,7 +200,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
-    val topOperator = new PreSortOperator(columnOrdering, Some(Literal(3)))
+    val topOperator = new PreSortOperator(workId, columnOrdering, Some(Literal(3)))
 
     val longs = new Array[Long](10)
     val data = new Morsel(longs, Array[AnyValue](), 0)
@@ -213,7 +216,7 @@ class PreSortOperatorTest extends CypherFunSuite {
     val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
-    val topOperator = new PreSortOperator(columnOrdering, Some(Literal(3)))
+    val topOperator = new PreSortOperator(workId, columnOrdering, Some(Literal(3)))
 
     val data = new Morsel(Array.empty, Array[AnyValue](), 0)
 

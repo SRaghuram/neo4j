@@ -10,10 +10,12 @@ import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.IndexReadSession
 
-class ProjectOperator(val projectionOps: Map[Slot, Expression]) extends StatelessOperator {
+class ProjectOperator(val workIdentity: WorkIdentity,
+                      val projectionOps: Map[Slot, Expression]) extends StatelessOperator {
 
   private val project = projectionOps.map {
     case (LongSlot(_, _, _),_) =>
