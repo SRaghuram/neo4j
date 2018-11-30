@@ -13,11 +13,10 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.JobScheduler;
 
 @FunctionalInterface
 public interface LocalDatabaseFactory<DB extends LocalDatabase>
 {
      DB create( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogFiles txLogs,
-            StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable, JobScheduler jobScheduler );
+             StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable );
 }

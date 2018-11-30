@@ -116,7 +116,7 @@ public class StubLocalDatabaseService implements DatabaseService
     private LocalDatabase stubDatabaseFromConfig( LocalDatabaseConfig config )
     {
         return new StubLocalDatabase( config.databaseName, () -> config.databaseManager, config.databaseLayout,
-                config.logProvider, config.isAvailable, config.monitors, config.jobScheduler );
+                config.logProvider, config.isAvailable, config.monitors );
     }
 
     public class LocalDatabaseConfig

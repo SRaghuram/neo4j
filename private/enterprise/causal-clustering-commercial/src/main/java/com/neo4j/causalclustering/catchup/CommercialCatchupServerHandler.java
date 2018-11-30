@@ -101,7 +101,7 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
     private GetStoreFileRequestHandler buildStoreFileRequestHandler( LocalDatabase localDatabase,
             CatchupServerProtocol protocol )
     {
-        return new GetStoreFileRequestHandler( protocol, localDatabase::database, localDatabase.checkPointerService(),
+        return new GetStoreFileRequestHandler( protocol, localDatabase::database,
                 new StoreFileStreamingProtocol(), fs, logProvider );
     }
 
@@ -115,7 +115,7 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
     private GetIndexSnapshotRequestHandler buildIndexSnapshotRequestHandler( LocalDatabase localDatabase,
             CatchupServerProtocol protocol )
     {
-        return new GetIndexSnapshotRequestHandler( protocol, localDatabase::database, localDatabase.checkPointerService(),
+        return new GetIndexSnapshotRequestHandler( protocol, localDatabase::database,
                 new StoreFileStreamingProtocol(), fs, logProvider );
     }
 

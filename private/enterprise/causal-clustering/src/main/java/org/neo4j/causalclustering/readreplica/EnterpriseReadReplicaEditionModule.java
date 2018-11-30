@@ -20,7 +20,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
-import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.RegularCatchupServerHandler;
 import org.neo4j.causalclustering.common.DefaultDatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
@@ -63,7 +62,6 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
@@ -214,7 +212,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
             Supplier<DatabaseManager> databaseManagerSupplier, LogProvider logProvider, Config config )
     {
         return new DefaultDatabaseService<>( ReadReplicaLocalDatabase::new, databaseManagerSupplier, platformModule.storeLayout,
-                availabilityGuard, databaseHealthSupplier, fileSystem, platformModule.pageCache, platformModule.jobScheduler, logProvider, config );
+                availabilityGuard, databaseHealthSupplier, fileSystem, platformModule.pageCache, logProvider, config );
     }
 
     //TODO: Put method on common interface to prevent visibility changes, need to override in commercial edition modules.
@@ -223,13 +221,8 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
         //TODO: Remove all these suppliers!
         Supplier<LocalDatabase> localDatabase = () -> databaseService.get( activeDatabaseName ).orElseThrow( IllegalStateException::new );
 
-        // TODO: Error handling
-        CheckPointerService checkPointerService = new CheckPointerService(
-                () -> localDatabase.get().dependencies().resolveDependency( CheckPointer.class ),
-                platformModule.jobScheduler, Group.CHECKPOINT );
-
         return new RegularCatchupServerHandler( platformModule.monitors, logProvider, () -> localDatabase.get().storeId(),
-                () -> localDatabase.get().database(), databaseService::areAvailable, fileSystem, null, checkPointerService );
+                () -> localDatabase.get().database(), databaseService::areAvailable, fileSystem, null );
     }
 
     @Override

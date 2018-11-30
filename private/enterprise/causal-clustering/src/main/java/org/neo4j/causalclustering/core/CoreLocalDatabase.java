@@ -17,7 +17,6 @@ import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngine;
 
 public final class CoreLocalDatabase extends AbstractLocalDatabase
@@ -26,9 +25,9 @@ public final class CoreLocalDatabase extends AbstractLocalDatabase
     private PerDatabaseCoreStateComponents databaseState;
 
     public CoreLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogFiles txLogs,
-            StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable, JobScheduler jobScheduler )
+            StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable )
     {
-        super( databaseName, databaseManagerSupplier, databaseLayout, txLogs, storeFiles, logProvider, isAvailable, jobScheduler );
+        super( databaseName, databaseManagerSupplier, databaseLayout, txLogs, storeFiles, logProvider, isAvailable );
     }
 
     public void setCommitProcessDependencies( TransactionAppender appender, StorageEngine storageEngine )

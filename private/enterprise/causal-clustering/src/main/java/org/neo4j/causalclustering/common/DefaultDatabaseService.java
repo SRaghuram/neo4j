@@ -47,7 +47,6 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
     private final StoreLayout storeLayout;
-    private final JobScheduler jobScheduler;
     private final LogProvider logProvider;
     private final Log log;
     private final Config config;
@@ -57,7 +56,7 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
 
     public DefaultDatabaseService( LocalDatabaseFactory<DB> databaseFactory, Supplier<DatabaseManager> databaseManagerSupplier, StoreLayout storeLayout,
             AvailabilityGuard availabilityGuard, Supplier<DatabaseHealth> databaseHealthSupplier, FileSystemAbstraction fs,
-            PageCache pageCache, JobScheduler jobScheduler, LogProvider logProvider, Config config )
+            PageCache pageCache, LogProvider logProvider, Config config )
     {
 
         this.databaseManagerSupplier = databaseManagerSupplier;
@@ -69,7 +68,6 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
         this.log = logProvider.getLog( this.getClass() );
         this.config = config;
         this.databases = new LinkedHashMap<>();
-        this.jobScheduler = jobScheduler;
         this.databaseFactory = databaseFactory;
         this.pageCache = pageCache;
         raiseAvailabilityGuard( notStoppedReq );
@@ -159,8 +157,7 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
         StoreFiles storeFiles = new StoreFiles( fs, pageCache );
         DatabaseLayout dbLayout = storeLayout.databaseLayout( databaseName );
         LogFiles logFiles = buildLocalDatabaseLogFiles( dbLayout );
-        return databaseFactory.create( databaseName, databaseManagerSupplier, dbLayout, logFiles, storeFiles, logProvider, this::areAvailable,
-                jobScheduler );
+        return databaseFactory.create( databaseName, databaseManagerSupplier, dbLayout, logFiles, storeFiles, logProvider, this::areAvailable );
     }
 
     public Map<String,DB> registeredDatabases()

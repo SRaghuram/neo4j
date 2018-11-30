@@ -11,21 +11,17 @@ import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.Group;
-import org.neo4j.scheduler.JobScheduler;
 
 public abstract class AbstractLocalDatabase extends SafeLifecycle implements LocalDatabase
 {
@@ -36,20 +32,17 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     private final String databaseName;
     private final BooleanSupplier isAvailable;
     private final LogFiles txLogs;
-    private final CheckPointerService checkPointerService;
 
     private volatile StoreId storeId;
 
     public AbstractLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogFiles txLogs,
-            StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable, JobScheduler jobScheduler )
+            StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable )
     {
         this.databaseLayout = databaseLayout;
         this.storeFiles = storeFiles;
         this.txLogs = txLogs;
         this.databaseManagerSupplier = databaseManagerSupplier;
         this.databaseName = databaseName;
-        this.checkPointerService = new CheckPointerService( () -> dependencies().resolveDependency( CheckPointer.class ),
-                jobScheduler, Group.CHECKPOINT );
         this.isAvailable = isAvailable;
         this.log = logProvider.getLog( getClass() );
     }
@@ -97,12 +90,6 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     public Monitors monitors()
     {
         return database().getMonitors();
-    }
-
-    @Override
-    public CheckPointerService checkPointerService()
-    {
-        return checkPointerService;
     }
 
     @Override

@@ -28,7 +28,6 @@ import java.util.stream.Stream;
 import org.neo4j.causalclustering.ReplicationModule;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
-import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.RegularCatchupServerHandler;
 import org.neo4j.causalclustering.common.DefaultDatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
@@ -113,7 +112,6 @@ import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
@@ -121,7 +119,6 @@ import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.scheduler.Group;
 import org.neo4j.time.Clocks;
 import org.neo4j.udc.UsageData;
 
@@ -334,7 +331,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
             Supplier<DatabaseManager> databaseManagerSupplier, LogProvider logProvider, Config config )
     {
         return new DefaultDatabaseService<>( CoreLocalDatabase::new, databaseManagerSupplier, platformModule.storeLayout,
-                availabilityGuard, databaseHealthSupplier, fileSystem, platformModule.pageCache, platformModule.jobScheduler, logProvider, config );
+                availabilityGuard, databaseHealthSupplier, fileSystem, platformModule.pageCache, logProvider, config );
     }
 
     protected CatchupServerHandler getHandlerFactory( PlatformModule platformModule,
@@ -343,12 +340,8 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         //TODO: Undo all the suppliers here when we fix the init order
         Supplier<LocalDatabase> localDatabase = () -> databaseService.get( activeDatabaseName ).orElseThrow( IllegalStateException::new );
 
-        CheckPointerService checkPointerService =
-                new CheckPointerService( () -> localDatabase.get().dependencies().resolveDependency( CheckPointer.class ),
-                        platformModule.jobScheduler, Group.CHECKPOINT );
-
         return new RegularCatchupServerHandler( platformModule.monitors, logProvider, () -> localDatabase.get().storeId(),
-                () -> localDatabase.get().database(), databaseService::areAvailable, fileSystem, snapshotService, checkPointerService );
+                () -> localDatabase.get().database(), databaseService::areAvailable, fileSystem, snapshotService );
     }
 
     CoreStateService coreStateComponents()

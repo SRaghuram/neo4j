@@ -10,7 +10,6 @@ import org.mockito.InOrder;
 
 import java.time.Clock;
 
-import org.neo4j.causalclustering.helpers.FakeJobScheduler;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.StoreLayout;
@@ -153,6 +152,6 @@ public class DatabaseServiceTest
     {
         return new DefaultDatabaseService<>( StubLocalDatabase::new, () -> databaseManager, mock( StoreLayout.class ), availabilityGuard,
                 () -> mock( DatabaseHealth.class ), mock( FileSystemAbstraction.class ), mock( PageCache.class ),
-                new FakeJobScheduler(), NullLogProvider.getInstance(), Config.defaults() );
+                NullLogProvider.getInstance(), Config.defaults() );
     }
 }

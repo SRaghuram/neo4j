@@ -5,9 +5,9 @@
  */
 package org.neo4j.causalclustering.catchup.storecopy;
 
-import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 
 class DataSourceChecks
 {
@@ -20,9 +20,9 @@ class DataSourceChecks
         return storeId.equalToKernelStoreId( dataSource.getStoreId() );
     }
 
-    static boolean isTransactionWithinReach( long transactionId, CheckPointerService checkPointerService )
+    static boolean isTransactionWithinReach( long transactionId, CheckPointer checkPointer )
     {
-        return checkPointerService.lastCheckPointedTransactionId() >= transactionId;
+        return checkPointer.lastCheckPointedTransactionId() >= transactionId;
     }
 
 }

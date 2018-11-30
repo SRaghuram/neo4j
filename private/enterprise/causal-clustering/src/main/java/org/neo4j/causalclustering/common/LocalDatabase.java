@@ -8,7 +8,6 @@ package org.neo4j.causalclustering.common;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
@@ -38,12 +37,6 @@ public interface LocalDatabase extends Lifecycle
      * @return monitors for this database
      */
     Monitors monitors();
-
-    /**
-     * Returns a per-database {@link CheckPointerService}
-     * @return check pointer service this database
-     */
-    CheckPointerService checkPointerService();
 
     /**
      * Returns a per-database {@link Dependencies} object.

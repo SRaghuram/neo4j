@@ -32,19 +32,16 @@ import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
-import org.neo4j.scheduler.Group;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
 import static org.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.COMPRESSION;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 class TestCatchupServer extends Server
 {
@@ -62,7 +59,6 @@ class TestCatchupServer extends Server
         ApplicationProtocolRepository catchupRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
         ModifierProtocolRepository modifierRepository = new ModifierProtocolRepository( ModifierProtocols.values(), singletonList( modifierProtocols ) );
 
-        Supplier<CheckPointer> checkPointer = () -> graphDb.getDependencyResolver().resolveDependency( CheckPointer.class );
         BooleanSupplier availability = () -> graphDb.getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class ).isAvailable();
         Supplier<Database> dataSource = () -> graphDb.getDependencyResolver().resolveDependency( Database.class );
 
@@ -70,9 +66,8 @@ class TestCatchupServer extends Server
         StoreId storeId = new StoreId( kernelStoreId.getCreationTime(), kernelStoreId.getRandomId(), kernelStoreId.getUpgradeTime(),
                 kernelStoreId.getUpgradeId() );
 
-        CheckPointerService checkPointerService = new CheckPointerService( checkPointer, createInitialisedScheduler(), Group.CHECKPOINT );
         RegularCatchupServerHandler catchupServerHandler = new RegularCatchupServerHandler( new Monitors(), logProvider,
-                () -> storeId, dataSource, availability, fileSystem, null, checkPointerService );
+                () -> storeId, dataSource, availability, fileSystem, null );
 
         NettyPipelineBuilderFactory pipelineBuilder = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
 

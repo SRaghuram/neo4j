@@ -17,7 +17,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
-import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
 import org.neo4j.causalclustering.messaging.StoreCopyRequest;
@@ -25,8 +24,11 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.Group;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
 import static java.lang.String.format;
@@ -38,14 +40,13 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
 {
     private final CatchupServerProtocol protocol;
     private final Supplier<Database> dataSource;
-    private final CheckPointerService checkPointerService;
     private final StoreFileStreamingProtocol storeFileStreamingProtocol;
 
     private final FileSystemAbstraction fs;
     private final Log log;
 
-    StoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource, CheckPointerService checkPointerService,
-            StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider, Class<T> clazz )
+    StoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource, StoreFileStreamingProtocol storeFileStreamingProtocol,
+            FileSystemAbstraction fs, LogProvider logProvider, Class<T> clazz )
     {
         super( clazz );
         this.protocol = protocol;
@@ -53,7 +54,6 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         this.storeFileStreamingProtocol = storeFileStreamingProtocol;
         this.fs = fs;
         this.log = logProvider.getLog( StoreCopyRequestHandler.class );
-        this.checkPointerService = checkPointerService;
     }
 
     @Override
@@ -64,15 +64,15 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         try
         {
             Database database = dataSource.get();
+            CheckPointer checkPointer = database.getDependencyResolver().resolveDependency( CheckPointer.class );
             if ( !hasSameStoreId( request.expectedStoreId(), database ) )
             {
                 responseStatus = StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH;
             }
-            else if ( !isTransactionWithinReach( request.requiredTransactionId(), checkPointerService ) )
+            else if ( !isTransactionWithinReach( request.requiredTransactionId(), checkPointer ) )
             {
                 responseStatus = StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND;
-                checkPointerService.tryAsyncCheckpoint(
-                        e -> log.error( "Failed to do a checkpoint that was invoked after a too far behind error on store copy request", e ) );
+                tryAsyncCheckpoint( database, checkPointer );
             }
             else
             {
@@ -113,12 +113,27 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         return f -> f.file().getName().equals( fileName );
     }
 
+    private void tryAsyncCheckpoint( Database db, CheckPointer checkPointer )
+    {
+        db.getScheduler().schedule( Group.CHECKPOINT, () ->
+        {
+            try
+            {
+                checkPointer.tryCheckPointNoWait( new SimpleTriggerInfo( "Store file copy" ) );
+            }
+            catch ( IOException e )
+            {
+                log.error( "Failed to do a checkpoint that was invoked after a too far behind error on store copy request", e );
+            }
+        } );
+    }
+
     public static class GetStoreFileRequestHandler extends StoreCopyRequestHandler<GetStoreFileRequest>
     {
-        public GetStoreFileRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource, CheckPointerService checkPointerService,
+        public GetStoreFileRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
+            super( protocol, dataSource, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
@@ -136,10 +151,9 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
     public static class GetIndexSnapshotRequestHandler extends StoreCopyRequestHandler<GetIndexFilesRequest>
     {
         public GetIndexSnapshotRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource,
-                CheckPointerService checkPointerService, StoreFileStreamingProtocol storeFileStreamingProtocol,
-                FileSystemAbstraction fs, LogProvider logProvider )
+                StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider, GetIndexFilesRequest.class );
+            super( protocol, dataSource, storeFileStreamingProtocol, fs, logProvider, GetIndexFilesRequest.class );
         }
 
         @Override

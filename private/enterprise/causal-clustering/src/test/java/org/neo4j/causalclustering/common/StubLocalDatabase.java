@@ -17,7 +17,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.JobScheduler;
 
 /**
  * StubLocalDatabase for testing.
@@ -30,15 +29,15 @@ public class StubLocalDatabase extends AbstractLocalDatabase
 
     /* This constructor is provided so that StubLocalDatabase can still conform to the LocalDatabaseFactory interface */
     StubLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogFiles ignoredTxLogs,
-            StoreFiles ignoredStoreFiles, LogProvider logProvider, BooleanSupplier isAvailable, JobScheduler jobScheduler )
+            StoreFiles ignoredStoreFiles, LogProvider logProvider, BooleanSupplier isAvailable )
     {
-        this( databaseName, databaseManagerSupplier, databaseLayout, logProvider, isAvailable, null, jobScheduler );
+        this( databaseName, databaseManagerSupplier, databaseLayout, logProvider, isAvailable, null );
     }
 
     StubLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogProvider logProvider,
-            BooleanSupplier isAvailable, Monitors monitors, JobScheduler jobScheduler )
+            BooleanSupplier isAvailable, Monitors monitors )
     {
-        super( databaseName, databaseManagerSupplier, databaseLayout, null, null, logProvider, isAvailable, jobScheduler );
+        super( databaseName, databaseManagerSupplier, databaseLayout, null, null, logProvider, isAvailable );
 
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         storeId = new StoreId( rng.nextInt(), rng.nextInt(), rng.nextInt(), rng.nextInt() );

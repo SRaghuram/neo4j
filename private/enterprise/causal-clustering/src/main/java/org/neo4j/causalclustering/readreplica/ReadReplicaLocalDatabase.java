@@ -14,15 +14,13 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.JobScheduler;
 
 public class ReadReplicaLocalDatabase extends AbstractLocalDatabase
 {
-
     ReadReplicaLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogFiles txLogs,
-            StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable, JobScheduler jobScheduler )
+            StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable )
     {
-        super( databaseName, databaseManagerSupplier, databaseLayout, txLogs, storeFiles, logProvider, isAvailable, jobScheduler );
+        super( databaseName, databaseManagerSupplier, databaseLayout, txLogs, storeFiles, logProvider, isAvailable );
     }
 
     @Override

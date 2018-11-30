@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
-import org.neo4j.causalclustering.catchup.CheckPointerService;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
 import org.neo4j.causalclustering.helpers.FakeJobScheduler;
@@ -31,7 +30,6 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.TriggerInfo;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
@@ -54,8 +52,6 @@ public class StoreCopyRequestHandlerTest
     private EmbeddedChannel embeddedChannel;
     private CatchupServerProtocol catchupServerProtocol;
     private JobScheduler jobScheduler = new FakeJobScheduler();
-    private CheckPointerService checkPointerService =
-            new CheckPointerService( () -> checkPointer, jobScheduler, Group.CHECKPOINT );
 
     @Before
     public void setup()
@@ -66,9 +62,11 @@ public class StoreCopyRequestHandlerTest
                 new NiceStoreCopyRequestHandler( catchupServerProtocol, () -> database, new StoreFileStreamingProtocol(),
                         fileSystemAbstraction, NullLogProvider.getInstance() );
         Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependency( checkPointer );
         when( database.getStoreId() ).thenReturn( new org.neo4j.storageengine.api.StoreId( 1, 2, 5, 3, 4 ) );
         when( database.getDependencyResolver() ).thenReturn( dependencies );
         when( database.getDatabaseLayout() ).thenReturn( DatabaseLayout.of( new File( "." ) ) );
+        when( database.getScheduler() ).thenReturn( jobScheduler );
         embeddedChannel = new EmbeddedChannel( storeCopyRequestHandler );
     }
 
@@ -175,7 +173,7 @@ public class StoreCopyRequestHandlerTest
                 StoreFileStreamingProtocol storeFileStreamingProtocol,
                 FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
+            super( protocol, dataSource, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
@@ -190,7 +188,7 @@ public class StoreCopyRequestHandlerTest
         private EvilStoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, checkPointerService, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
+            super( protocol, dataSource, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
@@ -219,6 +217,13 @@ public class StoreCopyRequestHandlerTest
 
         @Override
         public long tryCheckPoint( TriggerInfo triggerInfo )
+        {
+            incrementInvocationCounter( _tryCheckPoint );
+            return _tryCheckPoint.orElseThrow( exceptionIfEmpty );
+        }
+
+        @Override
+        public long tryCheckPointNoWait( TriggerInfo triggerInfo )
         {
             incrementInvocationCounter( _tryCheckPoint );
             return _tryCheckPoint.orElseThrow( exceptionIfEmpty );

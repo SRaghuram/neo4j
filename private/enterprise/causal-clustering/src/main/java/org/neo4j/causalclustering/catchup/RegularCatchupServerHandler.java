@@ -34,11 +34,10 @@ public class RegularCatchupServerHandler implements CatchupServerHandler
     private final BooleanSupplier dataSourceAvailabilitySupplier;
     private final FileSystemAbstraction fs;
     private final CoreSnapshotService snapshotService;
-    private final CheckPointerService checkPointerService;
 
     public RegularCatchupServerHandler( Monitors monitors, LogProvider logProvider, Supplier<StoreId> storeIdSupplier,
             Supplier<Database> dataSourceSupplier, BooleanSupplier dataSourceAvailabilitySupplier, FileSystemAbstraction fs,
-            CoreSnapshotService snapshotService, CheckPointerService checkPointerService )
+            CoreSnapshotService snapshotService )
     {
         this.monitors = monitors;
         this.logProvider = logProvider;
@@ -47,7 +46,6 @@ public class RegularCatchupServerHandler implements CatchupServerHandler
         this.dataSourceAvailabilitySupplier = dataSourceAvailabilitySupplier;
         this.fs = fs;
         this.snapshotService = snapshotService;
-        this.checkPointerService = checkPointerService;
     }
 
     @Override
@@ -72,14 +70,14 @@ public class RegularCatchupServerHandler implements CatchupServerHandler
     @Override
     public ChannelHandler getStoreFileRequestHandler( CatchupServerProtocol catchupServerProtocol )
     {
-        return new StoreCopyRequestHandler.GetStoreFileRequestHandler( catchupServerProtocol, dataSourceSupplier, checkPointerService,
+        return new StoreCopyRequestHandler.GetStoreFileRequestHandler( catchupServerProtocol, dataSourceSupplier,
                 new StoreFileStreamingProtocol(), fs, logProvider );
     }
 
     @Override
     public ChannelHandler getIndexSnapshotRequestHandler( CatchupServerProtocol catchupServerProtocol )
     {
-        return new StoreCopyRequestHandler.GetIndexSnapshotRequestHandler( catchupServerProtocol, dataSourceSupplier, checkPointerService,
+        return new StoreCopyRequestHandler.GetIndexSnapshotRequestHandler( catchupServerProtocol, dataSourceSupplier,
                 new StoreFileStreamingProtocol(), fs, logProvider );
     }
 
