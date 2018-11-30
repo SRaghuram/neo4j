@@ -192,6 +192,16 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result.toList should equal(List(Map("min(property)" -> 40)))
   }
 
+  test("should handle aggregation with node projection without renaming") {
+    val query = "MATCH (n: Awesome) WITH n LIMIT 1 RETURN count(n)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")
+
+    result.toList should equal(List(Map("count(n)" -> 1)))
+  }
+
   test("should use index provided values for multiple aggregations on same property") {
     val query = "MATCH (n: Awesome) RETURN min(n.prop1) AS min, max(n.prop1) AS max, avg(n.prop1) AS avg"
     val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
