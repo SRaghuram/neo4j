@@ -437,6 +437,22 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
       result.toSet should equal(expected)
     }
 
+    test(s"$cypherToken-$functionName: should plan aggregation for index scan") {
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:Awesome) RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
+
+      // index scan provide values but not order, since we don't know the property type
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("EagerAggregation")
+          .onTopOf(aPlan("NodeIndexScan").withExactVariables("cached[n.prop1]", "n"))
+
+      val expected = expectedOrder(List(
+        Map(s"$functionName(n.prop1)" -> 40), // min
+        Map(s"$functionName(n.prop1)" -> 44) // max
+      )).head
+      result.toList should equal(List(expected))
+    }
+
     test(s"$cypherToken-$functionName: should plan aggregation without index") {
 
       createLabeledNode(Map("foo" -> 2), "B")
