@@ -13,6 +13,7 @@ import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 
+import java.time.Duration;
 import java.util.Map;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -39,13 +40,13 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     public static final String NAME = "cc-client-topology-actor";
 
+    private final Duration refresh;
     private final MemberId myself;
     private final ReadReplicaInfo readReplicaInfo;
     private final SourceQueueWithComplete<CoreTopology> coreTopologySink;
     private final SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink;
     private final SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink;
     private final ActorRef clusterClient;
-    private final Config config;
     private final Log log;
 
     ClientTopologyActor( MemberId myself, SourceQueueWithComplete<CoreTopology> coreTopologySink, SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink,
@@ -56,9 +57,9 @@ public class ClientTopologyActor extends AbstractActorWithTimers
         this.rrTopologySink = rrTopologySink;
         this.discoverySink = discoverySink;
         this.clusterClient = clusterClient;
-        this.config = config;
         this.log = logProvider.getLog( getClass() );
         this.readReplicaInfo = ReadReplicaInfo.from( config );
+        this.refresh = config.get( CausalClusteringSettings.cluster_topology_refresh );
     }
 
     @Override
@@ -75,7 +76,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     @Override
     public void preStart()
     {
-        getTimers().startPeriodicTimer( REFRESH, Refresh.instance, config.get( CausalClusteringSettings.cluster_topology_refresh ) );
+        getTimers().startPeriodicTimer( REFRESH, Refresh.instance, refresh );
         sendInfo();
     }
 

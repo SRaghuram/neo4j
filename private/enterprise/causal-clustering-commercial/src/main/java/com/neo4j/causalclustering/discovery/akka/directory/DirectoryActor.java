@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.directory;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
+import akka.cluster.UniqueAddress;
 import akka.cluster.ddata.ORMap;
 import akka.cluster.ddata.ORMapKey;
 import akka.japi.pf.ReceiveBuilder;
@@ -49,7 +50,7 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,Replica
     }
 
     @Override
-    protected void removeDataFromReplicator()
+    protected void removeDataFromReplicator( UniqueAddress uniqueAddress )
     {
         // no op
     }

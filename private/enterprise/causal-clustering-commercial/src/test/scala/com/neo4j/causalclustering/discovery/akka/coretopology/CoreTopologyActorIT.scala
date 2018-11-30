@@ -133,8 +133,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
     val materializer = ActorMaterializer()
 
-    val topologySink = Source.queue[CoreTopology](1, OverflowStrategy.dropHead)
-      .to(Sink.foreach(updateSink.onTopologyUpdate))
+    val topologySink = Source.queue[CoreTopologyMessage](1, OverflowStrategy.dropHead)
+      .to(Sink.foreach(msg => updateSink.onTopologyUpdate(msg.coreTopology)))
       .run(materializer)
 
     val config = {
@@ -165,12 +165,16 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
       .thenReturn(expectedCoreTopology)
 
     val readReplicaProbe = TestProbe("readReplicaActor")
+    val cluster = mock[Cluster]
+    val myAddress = Address("akka", system.name, "myHost", 12)
+    Mockito.when(cluster.selfAddress).thenReturn(myAddress)
+
     val props = CoreTopologyActor.props(
       new MemberId(UUID.randomUUID()),
       topologySink,
       readReplicaProbe.ref,
       replicatorProbe.ref,
-      mock[Cluster],
+      cluster,
       topologyBuilder,
       config,
       NullLogProvider.getInstance())

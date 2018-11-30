@@ -5,6 +5,9 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
+import org.junit.Test;
+
 import org.neo4j.causalclustering.scenarios.BaseCoreTopologyServiceIT;
 
 public class AkkaCoreTopologyServiceIT extends BaseCoreTopologyServiceIT
@@ -12,5 +15,15 @@ public class AkkaCoreTopologyServiceIT extends BaseCoreTopologyServiceIT
     public AkkaCoreTopologyServiceIT()
     {
         super( CommercialDiscoveryServiceType.AKKA );
+    }
+
+    @Test
+    public void shouldRestart() throws Throwable
+    {
+        service.init();
+        service.start();
+        ((AkkaCoreTopologyService)service).restart();
+        service.stop();
+        service.shutdown();
     }
 }

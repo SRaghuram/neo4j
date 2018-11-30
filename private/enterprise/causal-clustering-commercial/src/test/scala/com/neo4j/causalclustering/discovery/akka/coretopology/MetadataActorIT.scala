@@ -61,6 +61,21 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
       coreTopologyProbe.expectMsg(new MetadataMessage(metadata1))
       coreTopologyProbe.expectMsg(new MetadataMessage(metadata1.merge(metadata2)))
     }
+
+    "cleanup metadata" in new Fixture {
+      Given("a cleanup message")
+      val memberAddress = UniqueAddress(Address("udp", system.name, "1.2.3.4", 8213), 1L)
+      val message = new CleanupMessage(memberAddress)
+
+      And("initial update")
+      expectReplicatorUpdates(replicator, dataKey)
+
+      When("receive cleanup message")
+      replicatedDataActorRef ! message
+
+      Then("update replicator")
+      expectReplicatorUpdates(replicator, dataKey)
+    }
   }
 
   class Fixture extends ReplicatedDataActorFixture[LWWMap[UniqueAddress, CoreServerInfoForMemberId]] {

@@ -67,6 +67,11 @@ public class CausalClusteringSettings implements LoadableConfig
     @Description( "Configures the time after which we give up trying to bind to a cluster formed of the other initial discovery members." )
     public static final Setting<Duration> cluster_binding_timeout = setting( "causal_clustering.cluster_binding_timeout", DURATION, "5m" );
 
+    @Internal
+    @Description( "Configures the time after which we retry binding to a cluster. Only applies to Akka discovery. " +
+            "A discovery type of DNS/SRV/K8S will be queried again on retry." )
+    public static final Setting<Duration> cluster_binding_retry_timeout = setting( "causal_clustering.cluster_binding_retry_timeout", DURATION, "1m" );
+
     @Description( "Prevents the current instance from volunteering to become Raft leader. Defaults to false, and " +
             "should only be used in exceptional circumstances by expert users. Using this can result in reduced " +
             "availability for the cluster." )
