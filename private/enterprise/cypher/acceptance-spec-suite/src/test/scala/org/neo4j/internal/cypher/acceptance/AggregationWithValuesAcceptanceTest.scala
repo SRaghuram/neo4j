@@ -121,17 +121,73 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result.toList should equal(List(Map("res" -> List("abc", "cc"))))
   }
 
-  test("cannot use index provided values after renaming") {
-    val query = "PROFILE MATCH (n: Awesome) WITH n.prop1 AS property RETURN min(property)"
+  test("should use index provided values with renamed property") {
+    val query = "MATCH (n: Awesome) WITH n.prop1 AS property RETURN min(property)"
     val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
 
-    result.executionPlanDescription() should includeSomewhere.aPlan("NodeByLabelScan")
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
 
-    /*
-     * TODO: this is not yet supported but would be nice if it was
-     * result.executionPlanDescription() should
-     *    includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
-     */
+    result.toList should equal(List(Map("min(property)" -> 40)))
+  }
+
+  test("should use index provided values after renaming multiple properties") {
+    val query = "MATCH (n: Awesome) WITH n.prop1 AS property, n.prop2 AS prop RETURN min(property)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
+
+    result.toList should equal(List(Map("min(property)" -> 40)))
+  }
+
+  test("should use index provided values after multiple renamings") {
+    val query =
+      """
+        | MATCH (n: Awesome)
+        | WITH n.prop1 AS property
+        | WITH property AS prop
+        | RETURN min(prop)
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
+
+    result.toList should equal(List(Map("min(prop)" -> 40)))
+  }
+
+  test("should use index provided values after multiple renamings with reused names") {
+    val query =
+      """
+        | MATCH (n: Awesome)
+        | WITH n.prop1 AS property
+        | WITH property AS prop, 1 as property
+        | RETURN min(prop)
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
+
+    result.toList should equal(List(Map("min(prop)" -> 40)))
+  }
+
+  test("should use index provided values after multiple renamings with reused names 2") {
+    val query =
+      """
+        | MATCH (n: Awesome)
+        | WITH n.prop1 AS prop, 1 AS property
+        | WITH prop AS property
+        | RETURN min(property)
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
 
     result.toList should equal(List(Map("min(property)" -> 40)))
   }
