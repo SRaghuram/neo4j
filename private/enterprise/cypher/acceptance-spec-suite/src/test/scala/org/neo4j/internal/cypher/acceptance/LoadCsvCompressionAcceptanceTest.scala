@@ -13,7 +13,6 @@ import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import org.eclipse.jetty.server.handler.{AbstractHandler, ContextHandler, ContextHandlerCollection}
 import org.eclipse.jetty.server.{Handler, Request, Server, ServerConnector}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, LoadExternalResourceException}
-import org.neo4j.ports.allocation.PortAuthority
 import org.scalatest.BeforeAndAfterAll
 
 class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with BeforeAndAfterAll {
@@ -80,10 +79,10 @@ class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with Befo
   private class TestServer {
 
      //assign the correct port when server has started.
-     private val _port = PortAuthority.allocatePort()
+     private var _port = -1
      private val _host = InetAddress.getLoopbackAddress.getHostAddress
-     //let jetty pick a random available port for us
-     private val server: Server = new Server(new InetSocketAddress(_host, _port))
+     //let bind() pick a random available port for us
+     private val server: Server = new Server(new InetSocketAddress(_host, 0))
      private val handlers = new ContextHandlerCollection()
      addHandler("/csv", new CsvHandler)
      addHandler("/gzip", new GzipCsvHandler)
@@ -92,6 +91,9 @@ class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with Befo
 
      def start(): Unit = {
        server.start()
+       //find the port that we're using.
+       _port = server.getConnectors()(0).asInstanceOf[ServerConnector].getLocalPort
+       assert(_port > 0)
        if (!server.isRunning) throw new IllegalStateException("Started server is not running: " + server.getState)
      }
 
