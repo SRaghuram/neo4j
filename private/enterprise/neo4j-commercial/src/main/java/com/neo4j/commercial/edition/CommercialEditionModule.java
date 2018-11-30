@@ -5,6 +5,8 @@
  */
 package com.neo4j.commercial.edition;
 
+import com.neo4j.causalclustering.catchup.CommercialCatchupServerHandler;
+import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
@@ -12,15 +14,22 @@ import com.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 
 import java.time.Clock;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.neo4j.causalclustering.common.PipelineBuilders;
+import org.neo4j.causalclustering.core.SupportedProtocolCreator;
+import org.neo4j.causalclustering.core.TransactionBackupServiceProvider;
+import org.neo4j.causalclustering.net.InstalledProtocolHandler;
+import org.neo4j.causalclustering.net.Server;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.internal.kernel.api.Kernel;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
@@ -33,8 +42,11 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
+import org.neo4j.kernel.impl.util.Dependencies;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
 import static java.lang.String.format;
@@ -48,6 +60,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         super( platformModule );
         globalTransactionStats = new GlobalTransactionStats();
         initGlobalGuard( platformModule.clock, platformModule.logService );
+        initBackupIfNeeded( platformModule, platformModule.config );
     }
 
     protected Function<String,TokenHolders> createTokenHolderProvider( PlatformModule platform )
@@ -150,5 +163,35 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         {
             globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( clock, logService );
         }
+    }
+
+    private void initBackupIfNeeded( PlatformModule platformModule, Config config )
+    {
+        Dependencies dependencies = platformModule.dependencies;
+        Supplier<DatabaseManager> databaseManagerSupplier = dependencies.provideDependency( DatabaseManager.class );
+        FileSystemAbstraction fs = platformModule.fileSystem;
+        JobScheduler jobScheduler = platformModule.jobScheduler;
+
+        LogProvider internalLogProvider = platformModule.logService.getInternalLogProvider();
+        LogProvider userLogProvider = platformModule.logService.getUserLogProvider();
+
+        SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, internalLogProvider );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( SecurePipelineFactory::new, internalLogProvider, config, dependencies );
+
+        TransactionBackupServiceProvider backupServiceProvider = new TransactionBackupServiceProvider(
+                internalLogProvider,
+                userLogProvider,
+                supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
+                supportedProtocolCreator.createSupportedModifierProtocols(),
+                pipelineBuilders.backupServer(),
+                new CommercialCatchupServerHandler( databaseManagerSupplier, internalLogProvider, fs ),
+                new InstalledProtocolHandler(),
+                config.get( GraphDatabaseSettings.active_database ),
+                jobScheduler
+        );
+
+        Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
+
+        backupServer.ifPresent( platformModule.life::add );
     }
 }

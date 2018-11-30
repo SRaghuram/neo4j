@@ -11,6 +11,7 @@ import java.util.Map;
 
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.server.security.enterprise.auth.EmbeddedInteraction;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.test.rule.TestDirectory;
@@ -28,6 +29,7 @@ class SystemGraphEmbeddedInteraction extends EmbeddedInteraction
     protected void init( GraphDatabaseBuilder builder, Map<String, String> config ) throws Throwable
     {
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
+        builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
         super.init( builder, config );
     }
 

@@ -12,12 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.neo4j.causalclustering.catchup.CatchupErrorResponse;
-import org.neo4j.causalclustering.catchup.CatchupResult;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
-import org.neo4j.causalclustering.catchup.ResponseMessageType;
-import org.neo4j.causalclustering.common.DatabaseService;
-import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
 
 /**
@@ -25,20 +20,18 @@ import org.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
  *
  * @param <T> The type of request to multiplex.
  */
-public class MultiplexingCatchupRequestHandler<T extends DatabaseCatchupRequest> extends SimpleChannelInboundHandler<T>
+class MultiplexingCatchupRequestHandler<T extends DatabaseCatchupRequest> extends SimpleChannelInboundHandler<T>
 {
-    private final Function<LocalDatabase,SimpleChannelInboundHandler<T>> handlerFactory;
-    private final DatabaseService databaseService;
+    private final Class<T> messageType;
+    private final Function<String,SimpleChannelInboundHandler<T>> handlerFactory;
     private final Map<String,SimpleChannelInboundHandler<T>> wrappedHandlers;
     private final CatchupServerProtocol protocol;
-    private final UnknownDatabaseHandler UNKNOWN_DATABASE_HANDLER = new UnknownDatabaseHandler();
 
-    MultiplexingCatchupRequestHandler( CatchupServerProtocol protocol, Function<LocalDatabase,SimpleChannelInboundHandler<T>> handlerFactory,
-            Class<T> handlerTypeHint, DatabaseService databaseService )
+    MultiplexingCatchupRequestHandler( CatchupServerProtocol protocol, Function<String,SimpleChannelInboundHandler<T>> handlerFactory, Class<T> messageType )
     {
-        super( handlerTypeHint );
+        super( messageType );
+        this.messageType = messageType;
         this.handlerFactory = handlerFactory;
-        this.databaseService = databaseService;
         this.wrappedHandlers = new HashMap<>();
         this.protocol = protocol;
     }
@@ -48,23 +41,13 @@ public class MultiplexingCatchupRequestHandler<T extends DatabaseCatchupRequest>
     {
         String databaseName = request.databaseName();
 
-        SimpleChannelInboundHandler<T> handler = databaseService.get( databaseName )
-                .map( localDatabase -> wrappedHandlers.computeIfAbsent( databaseName, ignored -> handlerFactory.apply( localDatabase ) ) )
-                .orElse( UNKNOWN_DATABASE_HANDLER );
+        SimpleChannelInboundHandler<T> handler = wrappedHandlers.computeIfAbsent( databaseName, handlerFactory );
+        if ( handler == null )
+        {
+            handler = new UnknownDatabaseHandler<>( messageType, protocol );
+        }
 
         handler.channelRead( ctx, request );
-    }
-
-    private class UnknownDatabaseHandler extends SimpleChannelInboundHandler<T>
-    {
-        @Override
-        protected void channelRead0( ChannelHandlerContext ctx, T msg )
-        {
-            ctx.write( ResponseMessageType.ERROR );
-            ctx.writeAndFlush( new CatchupErrorResponse( CatchupResult.E_DATABASE_UNKNOWN,
-                    String.format( "CatchupRequest %s refused as intended database %s does not exist on this machine.", msg, msg.databaseName() ) ) );
-            protocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
-        }
     }
 }
 

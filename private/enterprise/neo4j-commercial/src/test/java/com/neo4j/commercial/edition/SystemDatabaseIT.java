@@ -25,6 +25,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
@@ -63,8 +64,11 @@ class SystemDatabaseIT
     @BeforeEach
     void setUp()
     {
-        database = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
-                .setConfig( auth_provider, SYSTEM_GRAPH_REALM_NAME ).newGraphDatabase();
+        database = new CommercialGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+                .setConfig( auth_provider, SYSTEM_GRAPH_REALM_NAME )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, "false" )
+                .newGraphDatabase();
         databaseManager = getDatabaseManager( database );
         defaultDb = getDatabaseByName( databaseManager, DEFAULT_DATABASE_NAME );
         systemDb = getDatabaseByName( databaseManager, SYSTEM_DATABASE_NAME );
@@ -181,7 +185,10 @@ class SystemDatabaseIT
         try
         {
             File disabledSystemDbDirectory = testDirectory.databaseDir( "disabledSystemDb" );
-            databaseWithoutSystemDb = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledSystemDbDirectory ).newGraphDatabase();
+            databaseWithoutSystemDb = new CommercialGraphDatabaseFactory()
+                    .newEmbeddedDatabaseBuilder( disabledSystemDbDirectory )
+                    .setConfig( OnlineBackupSettings.online_backup_enabled, "false" )
+                    .newGraphDatabase();
             DatabaseManager databaseManager = getDatabaseManager( databaseWithoutSystemDb );
             assertFalse( databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME ).isPresent() );
         }

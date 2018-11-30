@@ -15,6 +15,7 @@ import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 import com.neo4j.security.CommercialSecurityModule;
 
 import java.time.Clock;
+import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -66,7 +67,8 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     protected CatchupServerHandler getHandlerFactory( PlatformModule platformModule,
             FileSystemAbstraction fileSystem, CoreSnapshotService snapshotService )
     {
-        return new CommercialCatchupServerHandler( databaseService, logProvider, fileSystem, snapshotService );
+        Supplier<DatabaseManager> databaseManagerSupplier = platformModule.dependencies.provideDependency( DatabaseManager.class );
+        return new CommercialCatchupServerHandler( databaseManagerSupplier, logProvider, fileSystem, snapshotService );
     }
 
     @Override
