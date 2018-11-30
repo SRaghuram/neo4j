@@ -18,7 +18,13 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, MapExecutionContext}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
+import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.v4_0.expressions
+import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.logical.plans.CoerceToPredicate
+import org.neo4j.cypher.internal.v4_0.util._
+import org.neo4j.cypher.internal.v4_0.util.symbols.{CypherType, ListType}
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.CoordinateReferenceSystem.{Cartesian, WGS84}
@@ -28,12 +34,6 @@ import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues._
 import org.neo4j.values.virtual.{MapValue, NodeValue, RelationshipValue, VirtualValues}
 import org.neo4j.values.{AnyValue, AnyValues}
-import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
-import org.neo4j.cypher.internal.v4_0.expressions
-import org.neo4j.cypher.internal.v4_0.expressions._
-import org.neo4j.cypher.internal.v4_0.util._
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CypherType, ListType}
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.scalatest.matchers.{MatchResult, Matcher}
 
 import scala.collection.mutable
@@ -1158,6 +1158,18 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi"))), cursors) should equal(NO_VALUE)
   }
 
+  test("in") {
+    val compiled= compile(in(parameter("a"), parameter("b")))
+
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(intValue(3), list(intValue(1), intValue(2), intValue(3)))), cursors) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(intValue(4), list(intValue(1), intValue(2), intValue(3)))), cursors) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, list(intValue(1), intValue(2), intValue(3)))), cursors) should equal(NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(NO_VALUE, EMPTY_LIST)), cursors) should equal(Values.FALSE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(intValue(3), list(intValue(1), NO_VALUE, intValue(3)))), cursors) should equal(Values.TRUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(intValue(4), list(intValue(1), NO_VALUE, intValue(3)))), cursors) should equal(Values.NO_VALUE)
+    compiled.evaluate(ctx, db, map(Array("a", "b"), Array(intValue(4), NO_VALUE)), cursors) should equal(Values.NO_VALUE)
+  }
+
   test("should compare values using <") {
     for (left <- allValues)
       for (right <- allValues) {
@@ -2040,7 +2052,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(VirtualValues.EMPTY_LIST)
+    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(EMPTY_LIST)
   }
 
   test("nested list expressions local access only") {
@@ -2228,7 +2240,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiled = compile(extract("bar", literalList(), literalInt(42)))
 
     //Then
-    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(VirtualValues.EMPTY_LIST)
+    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(EMPTY_LIST)
   }
 
 
@@ -2552,6 +2564,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   private def endsWith(lhs: Expression, rhs: Expression) = EndsWith(lhs, rhs)(pos)
 
   private def contains(lhs: Expression, rhs: Expression) = Contains(lhs, rhs)(pos)
+
+  private def in(lhs: Expression, rhs: Expression) = In(lhs, rhs)(pos)
 
   private def coerceTo(expression: Expression, typ: CypherType) = CoerceTo(expression, typ)
 

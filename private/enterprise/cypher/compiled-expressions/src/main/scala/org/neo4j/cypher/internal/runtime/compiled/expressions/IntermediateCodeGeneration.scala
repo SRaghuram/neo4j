@@ -14,7 +14,12 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepres
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
+import org.neo4j.cypher.internal.v4_0.expressions
+import org.neo4j.cypher.internal.v4_0.expressions._
+import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.logical.plans.{CoerceToPredicate, NestedPlanExpression}
+import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTBoolean, CTDate, CTDateTime, CTDuration, CTFloat, CTGeometry, CTInteger, CTLocalDateTime, CTLocalTime, CTMap, CTNode, CTNumber, CTPath, CTPoint, CTRelationship, CTString, CTTime, CypherType, ListType}
+import org.neo4j.cypher.internal.v4_0.util.{CypherTypeException, InternalException}
 import org.neo4j.cypher.operations.{CypherBoolean, CypherCoercions, CypherFunctions, CypherMath}
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
@@ -22,11 +27,6 @@ import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipSc
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual._
-import org.neo4j.cypher.internal.v4_0.expressions
-import org.neo4j.cypher.internal.v4_0.expressions._
-import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTBoolean, CTDate, CTDateTime, CTDuration, CTFloat, CTGeometry, CTInteger, CTLocalDateTime, CTLocalTime, CTMap, CTNode, CTNumber, CTPath, CTPoint, CTRelationship, CTString, CTTime, CypherType, ListType}
-import org.neo4j.cypher.internal.v4_0.util.{CypherTypeException, InternalException}
 
 import scala.collection.mutable
 
@@ -1015,6 +1015,23 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
+        IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables :+ local, Set(nullChecks))
+      }
+
+    case In(lhs, rhs) =>
+      for {l <- internalCompileExpression(lhs, currentContext)
+           r <- internalCompileExpression(rhs, currentContext)  } yield {
+
+        val variableName = namer.nextVariableName()
+        val local = variable[Value](variableName, noValue)
+        val lazySet = oneTime(assign(variableName,
+                                     nullCheck(r)(invokeStatic(
+                                       method[CypherBoolean, Value, AnyValue, AnyValue]("in"), l.ir,
+                                       nullCheck(r)(r.ir)))))
+
+        val ops = block(lazySet, load(variableName))
+        val nullChecks = block(lazySet, equal(load(variableName), noValue))
+
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables :+ local, Set(nullChecks))
       }
 
