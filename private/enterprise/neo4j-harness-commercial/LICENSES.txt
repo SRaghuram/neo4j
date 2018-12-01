@@ -32,6 +32,7 @@ Apache Software License, Version 2.0
   Apache Shiro :: Cryptography :: Hashing
   Apache Shiro :: Event
   Apache Shiro :: Lang
+  Bean Validation API
   Caffeine cache
   Commons Lang
   config
