@@ -65,6 +65,7 @@ Apache Software License, Version 2.0
   grpc
   hazelcast-all
   Jackson
+  javax.inject
   JAX-RS provider for JSON content type
   jersey-container-servlet
   jersey-container-servlet-core
