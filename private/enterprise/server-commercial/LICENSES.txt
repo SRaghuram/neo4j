@@ -39,6 +39,7 @@ Apache Software License, Version 2.0
   Graphite Integration for Metrics
   hazelcast-all
   Jackson
+  Javassist
   javax.inject
   JAX-RS provider for JSON content type
   jersey-container-servlet
