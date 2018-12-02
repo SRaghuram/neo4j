@@ -23,7 +23,7 @@ import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.impl.spi.SimpleKernelContext;
-import org.neo4j.kernel.impl.storemigration.DatabaseMigrator;
+import org.neo4j.kernel.impl.storemigration.DatabaseMigratorImpl;
 import org.neo4j.kernel.impl.storemigration.StoreMigrator;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
@@ -115,10 +115,10 @@ public class StoreMigration
             life.start();
 
             long startTime = System.currentTimeMillis();
-            DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService,
+            DatabaseMigratorImpl migrator = new DatabaseMigratorImpl( fs, config, logService,
                     indexProviderMap,
-                    pageCache, tailScanner, jobScheduler );
-            migrator.migrate( databaseLayout );
+                    pageCache, tailScanner, jobScheduler, databaseLayout );
+            migrator.migrate();
 
             // Append checkpoint so the last log entry will have the latest version
             appendCheckpoint( logFiles, tailScanner );
