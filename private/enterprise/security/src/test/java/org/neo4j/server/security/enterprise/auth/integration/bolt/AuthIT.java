@@ -19,9 +19,11 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -325,6 +327,12 @@ public class AuthIT extends AuthTestBase
             userManager.addRoleToUser( PredefinedRoles.PUBLISHER, WRITE_USER );
             userManager.newRole( "role1", PROC_USER );
         }
+    }
+
+    @BeforeEach
+    public void beforeEach() throws IOException
+    {
+        restartDatabaseIfNeeded( READ_USER, password );
     }
 
     @Override

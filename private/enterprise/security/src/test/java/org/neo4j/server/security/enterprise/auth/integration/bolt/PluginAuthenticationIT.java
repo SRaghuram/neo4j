@@ -7,7 +7,9 @@ package org.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -47,6 +49,12 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
                     .map( s -> StringUtils.prependIfMissing( s, SecuritySettings.PLUGIN_REALM_NAME_PREFIX ) )
                     .collect( Collectors.toList() )
     );
+
+    @BeforeEach
+    public void beforeEach() throws IOException
+    {
+        restartDatabaseIfNeeded( "neo4j", "neo4j" );
+    }
 
     @Override
     protected Map<Setting<?>,String> getSettings()

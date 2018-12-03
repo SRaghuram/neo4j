@@ -17,8 +17,10 @@ import org.apache.directory.server.core.integ.FrameworkRunner;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
@@ -69,6 +71,12 @@ public class LdapExamplePluginAuthenticationIT extends EnterpriseAuthenticationT
     {
         super.setup();
         getLdapServer().setConfidentialityRequired( false );
+    }
+
+    @BeforeEach
+    public void beforeEach() throws IOException
+    {
+        restartDatabaseIfNeeded( "neo", "abc123" );
     }
 
     @Override

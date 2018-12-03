@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.net.URL;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.AuthTokens;
@@ -56,7 +57,7 @@ import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 
 public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestUnit
 {
-    private static final Config config = Config.build().withLogging( DEV_NULL_LOGGING ).toConfig();
+    private static final Config config = Config.build().withLogging( DEV_NULL_LOGGING ).withConnectionTimeout( 10000, TimeUnit.MILLISECONDS ).toConfig();
 
     private TestDirectory testDirectory = TestDirectory.testDirectory( getClass() );
 
@@ -72,10 +73,24 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
               .withSetting( new BoltConnector( "bolt" ).type, "BOLT" )
               .withSetting( new BoltConnector( "bolt" ).enabled, "true" )
               .withSetting( new BoltConnector( "bolt" ).encryption_level, OPTIONAL.name() )
-              .withSetting( new BoltConnector( "bolt" ).listen_address, "localhost:0" );
+              .withSetting( new BoltConnector( "bolt" ).listen_address, "127.0.0.1:0" ); //"localhost:0"
         dbRule.withSettings( getSettings() );
         dbRule.ensureStarted();
         dbRule.resolveDependency( Procedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
+    }
+
+    void restartDatabaseIfNeeded( String username, String password ) throws IOException
+    {
+        try
+        {
+            Driver driver = connectDriver( username, password );
+            driver.session().close();
+            driver.close();
+        }
+        catch ( ServiceUnavailableException e )
+        {
+            restartServerWithOverriddenSettings();
+        }
     }
 
     protected abstract Map<Setting<?>,String> getSettings();
@@ -238,12 +253,29 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         {
             token = AuthTokens.basic( username, password, realm );
         }
-        return connectDriver( token );
+        return connectDriver( token, username, password );
     }
 
     private Driver connectDriver( AuthToken token )
     {
-        return GraphDatabase.driver( "bolt://" + dbRule.resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" ).toString(), token, config );
+        return connectDriver( token, null, null );
+    }
+
+    private Driver connectDriver( AuthToken token, String username, String password )
+    {
+        try
+        {
+            return GraphDatabase.driver( "bolt://" +
+                            dbRule.resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" ).toString(), token, config );
+        }
+        catch ( AuthenticationException e )
+        {
+            if ( username != null && password != null )
+            {
+                throw new FullCredentialsAuthenticationException( e, username, password );
+            }
+            throw e;
+        }
     }
 
     void assertRoles( Driver driver, String... roles )
