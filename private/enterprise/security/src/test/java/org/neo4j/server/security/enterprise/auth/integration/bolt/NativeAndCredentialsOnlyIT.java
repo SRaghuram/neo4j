@@ -6,7 +6,9 @@
 package org.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
@@ -15,6 +17,12 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 public class NativeAndCredentialsOnlyIT extends EnterpriseAuthenticationTestBase
 {
+    @BeforeEach
+    public void beforeEach() throws IOException
+    {
+        restartDatabaseIfNeeded( "", "BASE64-ENC-PASSWORD" );
+    }
+
     @Override
     protected Map<Setting<?>, String> getSettings()
     {

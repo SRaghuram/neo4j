@@ -26,6 +26,7 @@ import org.apache.shiro.realm.ldap.JndiLdapContextFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
@@ -112,6 +113,12 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         sslLdapPort = ldapServer.getPortSSL();
         ldapServer.setConfidentialityRequired( false );
         super.setup();
+    }
+
+    @BeforeEach
+    public void beforeEach() throws IOException
+    {
+        restartDatabaseIfNeeded( "smith", "abc123" );
     }
 
     @Override

@@ -18,8 +18,10 @@ import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -80,6 +82,12 @@ public class ADAuthIT extends EnterpriseAuthenticationTestBase
         ldapPort = ldapServer.getPort();
         ldapServer.setConfidentialityRequired( false );
         super.setup();
+    }
+
+    @BeforeEach
+    public void beforeEach() throws IOException
+    {
+        restartDatabaseIfNeeded( "neo4j", "abc123" );
     }
 
     @SuppressWarnings( "deprecation" )
