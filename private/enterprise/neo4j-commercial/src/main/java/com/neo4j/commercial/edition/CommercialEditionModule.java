@@ -35,6 +35,7 @@ import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
@@ -171,6 +172,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         Supplier<DatabaseManager> databaseManagerSupplier = dependencies.provideDependency( DatabaseManager.class );
         FileSystemAbstraction fs = platformModule.fileSystem;
         JobScheduler jobScheduler = platformModule.jobScheduler;
+        ConnectorPortRegister portRegister = platformModule.connectorPortRegister;
 
         LogProvider internalLogProvider = platformModule.logService.getInternalLogProvider();
         LogProvider userLogProvider = platformModule.logService.getUserLogProvider();
@@ -187,7 +189,8 @@ public class CommercialEditionModule extends EnterpriseEditionModule
                 new CommercialCatchupServerHandler( databaseManagerSupplier, internalLogProvider, fs ),
                 new InstalledProtocolHandler(),
                 config.get( GraphDatabaseSettings.active_database ),
-                jobScheduler
+                jobScheduler,
+                portRegister
         );
 
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );

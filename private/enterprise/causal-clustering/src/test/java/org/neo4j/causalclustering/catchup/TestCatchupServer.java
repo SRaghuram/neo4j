@@ -35,7 +35,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.ports.allocation.PortAuthority;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -48,7 +47,7 @@ class TestCatchupServer extends Server
     TestCatchupServer( FileSystemAbstraction fileSystem, GraphDatabaseAPI graphDb, LogProvider logProvider, ExecutorService executor )
     {
         super( childInitializer( fileSystem, graphDb, logProvider ), logProvider, logProvider,
-                new ListenSocketAddress( "localhost", PortAuthority.allocatePort() ), "fake-catchup-server", executor );
+                new ListenSocketAddress( "localhost", 0 ), "fake-catchup-server", executor );
     }
 
     private static ChildInitializer childInitializer( FileSystemAbstraction fileSystem, GraphDatabaseAPI graphDb, LogProvider logProvider )

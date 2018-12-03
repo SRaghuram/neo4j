@@ -23,12 +23,15 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.causalclustering.helper.SuspendableLifeCycleLifeStateChangeTest;
 import org.neo4j.causalclustering.helper.SuspendableLifeCycleSuspendedStateChangeTest;
+import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.ports.allocation.PortAuthority;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -37,6 +40,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class ServerStateTest
 {
+    private static final String SERVER_NAME = "serverName";
+
     private static final LogProvider logProvider = NullLogProvider.getInstance();
 
     private static Bootstrap bootstrap;
@@ -134,10 +139,39 @@ public class ServerStateTest
         assertTrue( canConnect() );
     }
 
+    @Test
+    public void shouldRegisterAddressInPortRegister() throws Throwable
+    {
+        String name = "TheServer";
+        ConnectorPortRegister portRegister = new ConnectorPortRegister();
+
+        Server server = createServer( name, portRegister );
+        try
+        {
+            assertNull( portRegister.getLocalAddress( name ) );
+
+            server.start();
+            assertEquals( new HostnamePort( server.address().getHostname(), server.address().getPort() ), portRegister.getLocalAddress( name ) );
+
+            server.stop();
+            assertNull( portRegister.getLocalAddress( name ) );
+        }
+        finally
+        {
+            server.stop();
+            server.shutdown();
+        }
+    }
+
     private Server createServer()
     {
-        return new Server( channel -> {}, logProvider, logProvider,
-                           new ListenSocketAddress( "localhost", PortAuthority.allocatePort() ), "serverName", executor );
+        return createServer( SERVER_NAME, new ConnectorPortRegister() );
+    }
+
+    private Server createServer( String name, ConnectorPortRegister portRegister )
+    {
+        return new Server( channel -> {}, null, logProvider, logProvider, new ListenSocketAddress( "localhost", 0 ),
+                name, executor, portRegister );
     }
 
     private boolean canConnect() throws InterruptedException

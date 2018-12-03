@@ -27,6 +27,7 @@ import org.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
 import org.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import org.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.Group;
@@ -56,6 +57,7 @@ public final class CatchupServerBuilder
         private JobScheduler scheduler;
         private LogProvider debugLogProvider = NullLogProvider.getInstance();
         private LogProvider userLogProvider = NullLogProvider.getInstance();
+        private ConnectorPortRegister portRegister;
         private String serverName = "catchup-server";
 
         private StepBuilder()
@@ -140,6 +142,13 @@ public final class CatchupServerBuilder
         }
 
         @Override
+        public AcceptsOptionalParams portRegister( ConnectorPortRegister portRegister )
+        {
+            this.portRegister = portRegister;
+            return this;
+        }
+
+        @Override
         public Server build()
         {
             ApplicationProtocolRepository applicationProtocolRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
@@ -156,7 +165,8 @@ public final class CatchupServerBuilder
                     protocolInstallerRepository, pipelineBuilder, debugLogProvider );
             Executor executor = scheduler.executor( Group.CATCHUP_SERVER );
 
-            return new Server( handshakeServerInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor );
+            return new Server( handshakeServerInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor,
+                    portRegister );
         }
     }
 
@@ -205,6 +215,7 @@ public final class CatchupServerBuilder
         AcceptsOptionalParams serverName( String serverName );
         AcceptsOptionalParams userLogProvider( LogProvider userLogProvider );
         AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider );
+        AcceptsOptionalParams portRegister( ConnectorPortRegister portRegister );
         Server build();
     }
 

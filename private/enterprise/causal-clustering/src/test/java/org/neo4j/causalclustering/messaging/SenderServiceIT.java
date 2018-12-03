@@ -50,7 +50,6 @@ import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.rule.CleanupRule;
 
 import static java.util.Collections.emptyList;
@@ -98,7 +97,6 @@ public class SenderServiceIT
     public void shouldSendAndReceive() throws Throwable
     {
         // given: raft server handler
-        int port = PortAuthority.allocatePort();
         Semaphore messageReceived = new Semaphore( 0 );
         ChannelInboundHandler nettyHandler = new ChannelInboundHandlerAdapter()
         {
@@ -108,7 +106,7 @@ public class SenderServiceIT
                 messageReceived.release();
             }
         };
-        Server raftServer = raftServer( nettyHandler, port );
+        Server raftServer = raftServer( nettyHandler );
         raftServer.start();
 
         // given: raft messaging service
@@ -116,7 +114,7 @@ public class SenderServiceIT
         sender.start();
 
         // when
-        AdvertisedSocketAddress to = new AdvertisedSocketAddress( "localhost", port );
+        AdvertisedSocketAddress to = new AdvertisedSocketAddress( raftServer.address().getHostname(), raftServer.address().getPort() );
         MemberId memberId = new MemberId( UUID.randomUUID() );
         ClusterId clusterId = new ClusterId( UUID.randomUUID() );
 
@@ -133,7 +131,7 @@ public class SenderServiceIT
         raftServer.stop();
     }
 
-    private Server raftServer( ChannelInboundHandler nettyHandler, int port )
+    private Server raftServer( ChannelInboundHandler nettyHandler )
     {
         NettyPipelineBuilderFactory pipelineFactory = new NettyPipelineBuilderFactory( VOID_WRAPPER );
 
@@ -147,7 +145,7 @@ public class SenderServiceIT
         HandshakeServerInitializer channelInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 installer, pipelineFactory, logProvider );
 
-        ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", port );
+        ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", 0 );
         ExecutorService serverExecutor = cleanupRule.add( Executors.newCachedThreadPool() );
         return new Server( channelInitializer, null, logProvider, logProvider, listenAddress, "raft-server", serverExecutor );
     }

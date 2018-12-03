@@ -5,7 +5,6 @@
  */
 package org.neo4j.causalclustering.helpers;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.apache.commons.codec.Charsets;
 
 import java.io.File;
@@ -28,15 +27,19 @@ import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.core.TransactionBackupServiceProvider;
 import org.neo4j.causalclustering.net.Server;
 import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -108,13 +111,13 @@ public final class CausalClusteringTestHelpers
         return String.format( "%s:%s", hostnamePort.getHostname(), hostnamePort.getPort() );
     }
 
-    public static String backupAddress( GraphDatabaseFacade graphDatabaseFacade )
+    public static String backupAddress( GraphDatabaseService db )
     {
-        ListenSocketAddress backupAddress = graphDatabaseFacade
+        return ((GraphDatabaseAPI) db)
                 .getDependencyResolver()
-                .resolveDependency( Config.class )
-                .get( OnlineBackupSettings.online_backup_listen_address );
-        return String.format( "%s:%s", backupAddress.getHostname(), backupAddress.getPort() );
+                .resolveDependency( ConnectorPortRegister.class )
+                .getLocalAddress( TransactionBackupServiceProvider.BACKUP_SERVER_NAME )
+                .toString();
     }
 
     public static Map<Integer, String> distributeDatabaseNamesToHostNums( int nHosts, Set<String> databaseNames )

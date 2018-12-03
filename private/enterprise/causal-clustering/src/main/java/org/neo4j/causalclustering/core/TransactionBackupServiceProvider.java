@@ -19,11 +19,14 @@ import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import org.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 public class TransactionBackupServiceProvider
 {
+    public static final String BACKUP_SERVER_NAME = "backup-server";
+
     private final LogProvider logProvider;
     private final LogProvider userLogProvider;
     private final ChannelInboundHandler parentHandler;
@@ -32,11 +35,21 @@ public class TransactionBackupServiceProvider
     private final NettyPipelineBuilderFactory serverPipelineBuilderFactory;
     private final CatchupServerHandler catchupServerHandler;
     private final JobScheduler scheduler;
-    private String activeDatabaseName;
+    private final ConnectorPortRegister portRegister;
+    private final String activeDatabaseName;
 
     public TransactionBackupServiceProvider( LogProvider logProvider, LogProvider userLogProvider, ApplicationSupportedProtocols catchupProtocols,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, NettyPipelineBuilderFactory serverPipelineBuilderFactory,
             CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, String activeDatabaseName, JobScheduler scheduler )
+    {
+        this( logProvider, userLogProvider, catchupProtocols, supportedModifierProtocols, serverPipelineBuilderFactory, catchupServerHandler,
+                parentHandler, activeDatabaseName, scheduler, null );
+    }
+
+    public TransactionBackupServiceProvider( LogProvider logProvider, LogProvider userLogProvider, ApplicationSupportedProtocols catchupProtocols,
+            Collection<ModifierSupportedProtocols> supportedModifierProtocols, NettyPipelineBuilderFactory serverPipelineBuilderFactory,
+            CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, String activeDatabaseName, JobScheduler scheduler,
+            ConnectorPortRegister portRegister )
     {
         this.logProvider = logProvider;
         this.userLogProvider = userLogProvider;
@@ -47,6 +60,7 @@ public class TransactionBackupServiceProvider
         this.catchupServerHandler = catchupServerHandler;
         this.activeDatabaseName = activeDatabaseName;
         this.scheduler = scheduler;
+        this.portRegister = portRegister;
     }
 
     public Optional<Server> resolveIfBackupEnabled( Config config )
@@ -66,7 +80,8 @@ public class TransactionBackupServiceProvider
                     .scheduler( scheduler )
                     .userLogProvider( userLogProvider )
                     .debugLogProvider( logProvider )
-                    .serverName( "backup-server" )
+                    .portRegister( portRegister )
+                    .serverName( BACKUP_SERVER_NAME )
                     .build();
             return Optional.of( catchupServer );
         }

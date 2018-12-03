@@ -18,13 +18,13 @@ import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
 import static org.neo4j.graphdb.Label.label;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -66,7 +66,7 @@ class CommercialGraphDatabaseBackupIT
         File backupsDir = testDirectory.directory( "backups" );
 
         int exitCode = TestHelpers.runBackupToolFromOtherJvmToGetExitCode( storeDir,
-                "--from=127.0.0.1:6362",
+                "--from=" + backupAddress( db ),
                 "--backup-dir=" + backupsDir,
                 "--name=" + backupDirName );
 
@@ -77,13 +77,11 @@ class CommercialGraphDatabaseBackupIT
 
     private GraphDatabaseService newCommercialDb( File storeDir, boolean backupEnabled )
     {
-        GraphDatabaseBuilder builder = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir );
-        if ( backupEnabled )
-        {
-            builder.setConfig( OnlineBackupSettings.online_backup_enabled, "true" );
-            builder.setConfig( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:6362" );
-        }
-        return builder.newGraphDatabase();
+        return new TestCommercialGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( storeDir )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.toString( backupEnabled ) )
+                .setConfig( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:0" )
+                .newGraphDatabase();
     }
 
     private static void createNodes( GraphDatabaseService db, int count )

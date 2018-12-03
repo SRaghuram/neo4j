@@ -6,7 +6,6 @@
 package org.neo4j.causalclustering.scenarios;
 
 import org.junit.After;
-import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -18,16 +17,10 @@ import java.util.concurrent.Executors;
 import org.neo4j.causalclustering.net.Server;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.ports.allocation.PortAuthority;
-import org.neo4j.test.causalclustering.ClusterRule;
 
 public class ConnectionInfoIT
 {
     private Socket testSocket;
-
-    @Rule
-    public final ClusterRule clusterRule =
-            new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 );
 
     @After
     public void teardown() throws IOException
@@ -42,7 +35,7 @@ public class ConnectionInfoIT
     public void testAddressAlreadyBoundMessage() throws Throwable
     {
         // given
-        testSocket = bindPort( "localhost", PortAuthority.allocatePort() );
+        testSocket = bindPort( "localhost", 0 );
 
         // when
         AssertableLogProvider logProvider = new AssertableLogProvider();
