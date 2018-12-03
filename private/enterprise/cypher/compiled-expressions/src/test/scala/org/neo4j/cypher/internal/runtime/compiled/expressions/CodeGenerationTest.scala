@@ -2477,12 +2477,6 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     CodeGeneration.compileProjection(compiler.compileProjection(compiled))
   }
 
-  private def function(name: String, es: Expression*) =
-    FunctionInvocation(FunctionName(name)(pos), distinct = false, es.toIndexedSeq)(pos)
-
-  private def function(name: String) =
-    FunctionInvocation(Namespace()(pos), FunctionName(name)(pos), distinct = false, IndexedSeq.empty)(pos)
-
   private def add(l: Expression, r: Expression) = expressions.Add(l, r)(pos)
 
   private def unaryAdd(source: Expression) = UnaryAdd(source)(pos)
@@ -2639,7 +2633,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   private def reverse(s: String) = new StringBuilder(s).reverse.toString()
 
-  private val allValues = Seq.empty//numericalValues ++ textualValues
+  private val allValues = numericalValues ++ textualValues
 
   case class compareUsingLessThan(left: Any, right: Any) extends compareUsing(left, right, "<")
 
