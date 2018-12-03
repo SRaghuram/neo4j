@@ -59,8 +59,6 @@ public abstract class BaseClusterOverviewIT
             .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, "0" )
             .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, "0" );
 
-    private int idCounter = 100;
-
     protected BaseClusterOverviewIT( DiscoveryServiceType discoveryServiceType )
     {
         clusterConfig.withDiscoveryServiceType( discoveryServiceType );
@@ -127,7 +125,7 @@ public abstract class BaseClusterOverviewIT
             int finalCoreMembers = initialCoreMembers + extraCoreMembers;
             IntStream
                     .range( 0, extraCoreMembers )
-                    .mapToObj( ignored -> cluster.addCoreMemberWithId( initialCoreMembers + idCounter++ ) )
+                    .mapToObj( ignored -> cluster.newCoreMember() )
                     .parallel()
                     .forEach( CoreClusterMember::start );
 
@@ -147,7 +145,7 @@ public abstract class BaseClusterOverviewIT
             int initialReadReplicas = cluster.readReplicas().size();
 
             // when
-            IntStream.range( 0, 2 ).map( ignored -> idCounter++ ).mapToObj( id -> cluster.addReadReplicaWithId( id ) ).parallel().forEach( ReadReplica::start );
+            IntStream.range( 0, 2 ).mapToObj( ignore -> cluster.newReadReplica() ).parallel().forEach( ReadReplica::start );
 
             Matcher<List<MemberInfo>> expected = allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( LEADER, 1 ),
                     containsRole( FOLLOWER, coreMembers - 1 ), containsRole( READ_REPLICA, initialReadReplicas + 2 ) );
