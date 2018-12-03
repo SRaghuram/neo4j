@@ -67,6 +67,22 @@ public class TxPullRequestHandlerTest
     }
 
     @Test
+    public void shouldFailWithStoreUnavailableIfTxStoreHasClosed() throws Exception
+    {
+        // given
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenThrow( IllegalStateException.class );
+        ChannelFuture channelFuture = mock( ChannelFuture.class );
+        when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
+
+        // when
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId ) );
+
+        // then
+        verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
+        verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_UNAVAILABLE, -1L ) );
+    }
+
+    @Test
     public void shouldRespondWithCompleteStreamOfTransactions() throws Exception
     {
         // given
@@ -111,7 +127,7 @@ public class TxPullRequestHandlerTest
         verify( context, never() ).writeAndFlush( isA( ChunkedTransactionStream.class ) );
 
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
-        verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_TRANSACTION_PRUNED, 15L ) );
+        verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_TRANSACTION_PRUNED, -1L ) );
         logProvider.assertAtLeastOnce( inLog( TxPullRequestHandler.class )
                 .info( "Failed to serve TxPullRequest for tx %d because the transaction does not exist.", 14L ) );
     }
@@ -132,7 +148,7 @@ public class TxPullRequestHandlerTest
 
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
-        verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_ID_MISMATCH, 15L ) );
+        verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_ID_MISMATCH, -1L ) );
         logProvider.assertAtLeastOnce( inLog( TxPullRequestHandler.class )
                 .info( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different " +
                         "from this machine with %s", 2L, clientStoreId, serverStoreId ) );
@@ -153,7 +169,7 @@ public class TxPullRequestHandlerTest
 
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
-        verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_UNAVAILABLE, 15L ) );
+        verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_UNAVAILABLE, -1L ) );
         logProvider.assertAtLeastOnce( inLog( TxPullRequestHandler.class )
                 .info( "Failed to serve TxPullRequest for tx %d because the local database is unavailable.", 2L ) );
     }

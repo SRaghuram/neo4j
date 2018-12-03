@@ -17,12 +17,11 @@ import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol.State;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
 import org.neo4j.causalclustering.identity.StoreId;
-import org.neo4j.cursor.IOCursor;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.NeoStoreDataSource;
-import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
+import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
@@ -62,18 +61,61 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
     protected void channelRead0( ChannelHandlerContext ctx, final TxPullRequest msg ) throws Exception
     {
         monitor.increment();
+        Prepare prepare = prepareRequest( ctx, msg );
 
-        if ( msg.previousTxId() <= 0 )
+        if ( prepare.isComplete() )
         {
-            log.error( "Illegal tx pull request" );
-            endInteraction( ctx, E_INVALID_REQUEST, -1 );
+            prepare.complete( ctx );
+            protocol.expect( State.MESSAGE_TYPE );
             return;
         }
 
-        StoreId localStoreId = storeIdSupplier.get();
-        StoreId expectedStoreId = msg.expectedStoreId();
+        TxPullingContext txPullingContext = prepare.txPullingContext();
 
+        ChunkedTransactionStream txStream =
+                new ChunkedTransactionStream( log, txPullingContext.localStoreId, txPullingContext.firstTxId, txPullingContext.txIdPromise,
+                        txPullingContext.transactions, protocol );
+        // chunked transaction stream ends the interaction internally and closes the cursor
+        ctx.writeAndFlush( txStream ).addListener( f ->
+        {
+            if ( log.isDebugEnabled() || !f.isSuccess() )
+            {
+                String message =
+                        format( "Streamed transactions [%d--%d] to %s", txPullingContext.firstTxId, txStream.lastTxId(), ctx.channel().remoteAddress() );
+                if ( f.isSuccess() )
+                {
+                    log.debug( message );
+                }
+                else
+                {
+                    log.warn( message, f.cause() );
+                }
+            }
+        } );
+
+    }
+
+    private Prepare prepareRequest( ChannelHandlerContext ctx, TxPullRequest msg ) throws IOException
+    {
         long firstTxId = msg.previousTxId() + 1;
+        if ( msg.previousTxId() <= 0 )
+        {
+            log.error( "Illegal tx pull request" );
+            return Prepare.fail( E_INVALID_REQUEST );
+        }
+        if ( !databaseAvailable.getAsBoolean() )
+        {
+            log.info( "Failed to serve TxPullRequest for tx %d because the local database is unavailable.", firstTxId );
+            return Prepare.fail( E_STORE_UNAVAILABLE );
+        }
+        StoreId expectedStoreId = msg.expectedStoreId();
+        StoreId localStoreId = storeIdSupplier.get();
+        if ( localStoreId == null || !localStoreId.equals( expectedStoreId ) )
+        {
+            log.info( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different " + "from this machine with %s", firstTxId,
+                    expectedStoreId, localStoreId );
+            return Prepare.fail( E_STORE_ID_MISMATCH );
+        }
 
         /*
          * This is the minimum transaction id we must send to consider our streaming operation successful. The kernel can
@@ -82,69 +124,99 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
          * of the consistent recovery contract which requires us to stream transactions at least as far as the time when the
          * file copy operation completed.
          */
-        long txIdPromise = transactionIdStore.getLastCommittedTransactionId();
-        IOCursor<CommittedTransactionRepresentation> txCursor = getCursor( txIdPromise, ctx, firstTxId, localStoreId, expectedStoreId );
-
-        if ( txCursor != null )
+        long txIdPromise;
+        try
         {
-            ChunkedTransactionStream txStream = new ChunkedTransactionStream( log, localStoreId, firstTxId, txIdPromise, txCursor, protocol );
-            // chunked transaction stream ends the interaction internally and closes the cursor
-            ctx.writeAndFlush( txStream ).addListener( f ->
-            {
-                if ( log.isDebugEnabled() || !f.isSuccess() )
-                {
-                    String message = format( "Streamed transactions [%d--%d] to %s", firstTxId, txStream.lastTxId(), ctx.channel().remoteAddress() );
-                    if ( f.isSuccess() )
-                    {
-                        log.debug( message );
-                    }
-                    else
-                    {
-                        log.warn( message, f.cause() );
-                    }
-                }
-            } );
+            txIdPromise = transactionIdStore.getLastCommittedTransactionId();
         }
-    }
-
-    private IOCursor<CommittedTransactionRepresentation> getCursor( long txIdPromise, ChannelHandlerContext ctx, long firstTxId,
-            StoreId localStoreId, StoreId expectedStoreId ) throws IOException
-    {
-        if ( localStoreId == null || !localStoreId.equals( expectedStoreId ) )
+        catch ( IllegalStateException e )
         {
-            log.info( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different " +
-                    "from this machine with %s", firstTxId, expectedStoreId, localStoreId );
-            endInteraction( ctx, E_STORE_ID_MISMATCH, txIdPromise );
-            return null;
+            return Prepare.fail( E_STORE_UNAVAILABLE );
         }
-        else if ( !databaseAvailable.getAsBoolean() )
+        if ( txIdPromise < firstTxId )
         {
-            log.info( "Failed to serve TxPullRequest for tx %d because the local database is unavailable.", firstTxId );
-            endInteraction( ctx, E_STORE_UNAVAILABLE, txIdPromise );
-            return null;
-        }
-        else if ( txIdPromise < firstTxId )
-        {
-            endInteraction( ctx, SUCCESS_END_OF_STREAM, txIdPromise );
-            return null;
+            return Prepare.complete( txIdPromise );
         }
 
         try
         {
-            return logicalTransactionStore.getTransactions( firstTxId );
+            TransactionCursor transactions = logicalTransactionStore.getTransactions( firstTxId );
+            if ( transactions == null )
+            {
+                log.info( "Unable to get transaction cursor from logical transaction store" );
+                Prepare.fail( E_STORE_UNAVAILABLE );
+            }
+            return Prepare.readyToSend( new TxPullingContext( transactions, localStoreId, firstTxId, txIdPromise ) );
         }
         catch ( NoSuchTransactionException e )
         {
             log.info( "Failed to serve TxPullRequest for tx %d because the transaction does not exist.", firstTxId );
-            endInteraction( ctx, E_TRANSACTION_PRUNED, txIdPromise );
-            return null;
+            return Prepare.fail( E_TRANSACTION_PRUNED );
         }
     }
 
-    private void endInteraction( ChannelHandlerContext ctx, CatchupResult status, long lastCommittedTransactionId )
+    private static class TxPullingContext
     {
-        ctx.write( ResponseMessageType.TX_STREAM_FINISHED );
-        ctx.writeAndFlush( new TxStreamFinishedResponse( status, lastCommittedTransactionId ) );
-        protocol.expect( State.MESSAGE_TYPE );
+        private final TransactionCursor transactions;
+        private final StoreId localStoreId;
+        private final long firstTxId;
+        private final long txIdPromise;
+
+        TxPullingContext( TransactionCursor transactions, StoreId localStoreId, long firstTxId, long txIdPromise )
+        {
+            this.transactions = transactions;
+            this.localStoreId = localStoreId;
+            this.firstTxId = firstTxId;
+            this.txIdPromise = txIdPromise;
+        }
+    }
+
+    private static class Prepare
+    {
+        private final CatchupResult catchupResult;
+        private final long txId;
+        private final TxPullingContext txPullingContext;
+
+        private Prepare( CatchupResult catchupResult, long txId, TxPullingContext txPullingContext )
+        {
+            this.catchupResult = catchupResult;
+            this.txId = txId;
+            this.txPullingContext = txPullingContext;
+        }
+
+        static Prepare fail( CatchupResult catchupResult )
+        {
+            return new Prepare( catchupResult, -1, null );
+        }
+
+        static Prepare readyToSend( TxPullingContext txPullingContext )
+        {
+            return new Prepare( null, txPullingContext.txIdPromise, txPullingContext );
+        }
+
+        static Prepare complete( long txIdPromise )
+        {
+            return new Prepare( SUCCESS_END_OF_STREAM, txIdPromise, null );
+        }
+
+        public boolean isComplete()
+        {
+            return catchupResult != null;
+        }
+
+        private void complete( ChannelHandlerContext ctx )
+        {
+            if ( catchupResult == null )
+            {
+                throw new IllegalStateException( "Cannot complete catchup request." );
+            }
+            ctx.write( ResponseMessageType.TX_STREAM_FINISHED );
+            ctx.writeAndFlush( new TxStreamFinishedResponse( catchupResult, txId ) );
+        }
+
+        TxPullingContext txPullingContext()
+        {
+            return txPullingContext;
+        }
     }
 }
