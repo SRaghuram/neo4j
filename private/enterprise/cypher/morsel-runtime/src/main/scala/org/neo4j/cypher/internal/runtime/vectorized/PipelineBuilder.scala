@@ -224,22 +224,13 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
       case _: plans.Apply =>
         rhs
 
-      case _ =>
-        val thisOp = plan match {
+      case _: plans.CartesianProduct =>
+        val argumentSize = physicalPlan.argumentSizes(plan.id)
+        val operator = new CartesianProductOperator(WorkIdentity.fromPlan(plan), argumentSize)
+        new StreamingMergePipeline(operator.asInstanceOf[StreamingMergeOperator[PipelineArgument]], slots, lhs, rhs)
 
-          case _: plans.CartesianProduct =>
-            val argumentSize = physicalPlan.argumentSizes(plan.id)
-            new CartesianProductOperator(WorkIdentity.fromPlan(plan), argumentSize)
-
-          case p =>
-            throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
-        }
-
-        thisOp match {
-          case so: StreamingMergeOperator =>
-            new StreamingMergePipeline(so, slots, lhs, rhs)
-          // NOTE: Currently we cannot get StreamingOperators, StatelessOperators or ReduceOperators here
-        }
+      case p =>
+        throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
     }
   }
 }

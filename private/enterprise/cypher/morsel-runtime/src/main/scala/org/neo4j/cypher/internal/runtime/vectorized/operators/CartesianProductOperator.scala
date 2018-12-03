@@ -10,12 +10,13 @@ import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.vectorized._
 
-class CartesianProductOperator(val workIdentity: WorkIdentity, override val argumentSize: SlotConfiguration.Size) extends StreamingMergeOperator {
+class CartesianProductOperator(val workIdentity: WorkIdentity, override val argumentSize: SlotConfiguration.Size)
+  extends StreamingMergeOperator[RhsPipelineArgument] {
 
   override def initFromLhs(queryContext: QueryContext,
                            state: QueryState,
                            lhsInputMorsel: MorselExecutionContext,
-                           cursors: ExpressionCursors): (Option[ContinuableOperatorTask], Option[PipelineArgument]) = {
+                           cursors: ExpressionCursors): (Option[ContinuableOperatorTask], Option[RhsPipelineArgument]) = {
     if (lhsInputMorsel.hasMoreRows) {
       val pipelineArgument = RhsPipelineArgument(lhsInputMorsel)
       (None, Some(pipelineArgument)) // Returning Some argument here will make the pipeline schedule a task for the right-hand side
@@ -30,8 +31,8 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
                            state: QueryState,
                            rhsInputMorsel: MorselExecutionContext,
                            cursors: ExpressionCursors,
-                           pipelineArgument: PipelineArgument): Option[ContinuableOperatorTask] = {
-    val lhsInputMorsel = pipelineArgument.asInstanceOf[RhsPipelineArgument].lhsMorsel
+                           pipelineArgument: RhsPipelineArgument): Option[ContinuableOperatorTask] = {
+    val lhsInputMorsel = pipelineArgument.lhsMorsel
 
     // We need to copy the ExecutionContext around the Morsel so we can have our own iteration state
     val newLhsInputMorsel = lhsInputMorsel.shallowCopy()
@@ -71,5 +72,6 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
     override def canContinue: Boolean = lhsInputRow.hasMoreRows || rhsInputRow.hasMoreRows
   }
 
-  private case class RhsPipelineArgument(lhsMorsel: MorselExecutionContext) extends PipelineArgument
 }
+
+case class RhsPipelineArgument(lhsMorsel: MorselExecutionContext) extends PipelineArgument
