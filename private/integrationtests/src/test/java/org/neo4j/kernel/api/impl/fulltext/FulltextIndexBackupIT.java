@@ -33,7 +33,7 @@ import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_server;
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -74,7 +74,7 @@ public class FulltextIndexBackupIT
         GraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
         GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( dir.storeDir() );
         builder.setConfig( online_backup_enabled, "true" );
-        builder.setConfig( online_backup_server, "127.0.0.1:" + backupPort );
+        builder.setConfig( online_backup_listen_address, "127.0.0.1:" + backupPort );
         db = (GraphDatabaseAPI) builder.newGraphDatabase();
         cleanup.add( db );
     }

@@ -30,7 +30,7 @@ public class DatabaseConfiguration
     public static Map<String,String> configureBackup( Map<String,String> settings, String hostname, int port )
     {
         settings.put( OnlineBackupSettings.online_backup_enabled.name(), TRUE );
-        settings.put( OnlineBackupSettings.online_backup_server.name(), hostname + ":" + port );
+        settings.put( OnlineBackupSettings.online_backup_listen_address.name(), hostname + ":" + port );
         return settings;
     }
 }

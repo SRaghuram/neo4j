@@ -53,7 +53,7 @@ public class TransactionBackupServiceProvider
     {
         if ( config.get( OnlineBackupSettings.online_backup_enabled ) )
         {
-            ListenSocketAddress backupAddress = HostnamePortAsListenAddress.resolve( config, OnlineBackupSettings.online_backup_server );
+            ListenSocketAddress backupAddress = config.get( OnlineBackupSettings.online_backup_listen_address );
             logProvider.getLog( TransactionBackupServiceProvider.class ).info( "Binding backup service on address %s", backupAddress );
             Server catchupServer = CatchupServerBuilder.builder()
                     .catchupServerHandler( catchupServerHandler )

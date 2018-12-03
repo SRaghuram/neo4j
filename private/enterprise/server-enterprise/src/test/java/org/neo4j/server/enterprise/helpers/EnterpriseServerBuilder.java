@@ -40,7 +40,7 @@ public class EnterpriseServerBuilder extends CommunityServerBuilder
         EnterpriseServerBuilder server = server();
         server.onRandomPorts();
         server.withProperty( new BoltConnector( "bolt" ).listen_address.name(), "localhost:0" );
-        server.withProperty( OnlineBackupSettings.online_backup_server.name(), "127.0.0.1:0" );
+        server.withProperty( OnlineBackupSettings.online_backup_listen_address.name(), "127.0.0.1:0" );
         return server;
     }
 
@@ -102,7 +102,7 @@ public class EnterpriseServerBuilder extends CommunityServerBuilder
     {
         Map<String, String> configuration = super.createConfiguration( temporaryFolder );
 
-        configuration.put( OnlineBackupSettings.online_backup_server.name(), "127.0.0.1:0" );
+        configuration.put( OnlineBackupSettings.online_backup_listen_address.name(), "127.0.0.1:0" );
         configuration.putIfAbsent( MetricsSettings.csvPath.name(), new File( temporaryFolder, "metrics" ).getAbsolutePath() );
 
         return configuration;

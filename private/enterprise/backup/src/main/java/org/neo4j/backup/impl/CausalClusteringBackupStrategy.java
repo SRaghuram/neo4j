@@ -42,7 +42,7 @@ class CausalClusteringBackupStrategy extends LifecycleAdapter implements BackupS
     public Fallible<BackupStageOutcome> performFullBackup( DatabaseLayout targetDatabaseLayout, Config config,
                                                            OptionalHostnamePort userProvidedAddress )
     {
-        AdvertisedSocketAddress fromAddress = addressResolver.resolveCorrectCCAddress( config, userProvidedAddress );
+        AdvertisedSocketAddress fromAddress = addressResolver.resolveCorrectAddress( config, userProvidedAddress );
         log.info( "Resolved address for catchup protocol is " + fromAddress );
         StoreId storeId;
         try
@@ -77,7 +77,7 @@ class CausalClusteringBackupStrategy extends LifecycleAdapter implements BackupS
     public Fallible<BackupStageOutcome> performIncrementalBackup( DatabaseLayout databaseLayout, Config config,
                                                                   OptionalHostnamePort userProvidedAddress )
     {
-        AdvertisedSocketAddress fromAddress = addressResolver.resolveCorrectCCAddress( config, userProvidedAddress );
+        AdvertisedSocketAddress fromAddress = addressResolver.resolveCorrectAddress( config, userProvidedAddress );
         log.info( "Resolved address for catchup protocol is " + fromAddress );
         StoreId storeId;
         try

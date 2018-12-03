@@ -111,7 +111,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         config.put( new HttpConnector( "http", Encryption.NONE ).enabled.name(), "true" );
         config.put( new HttpConnector( "http", Encryption.NONE ).listen_address.name(), listenAddress( listenAddress, httpPort ) );
         config.put( new HttpConnector( "http", Encryption.NONE ).advertised_address.name(), advertisedAddress( advertisedAddress, httpPort ) );
-        config.put( OnlineBackupSettings.online_backup_server.name(), listenAddress( listenAddress, backupPort ) );
+        config.put( OnlineBackupSettings.online_backup_listen_address.name(), listenAddress( listenAddress, backupPort ) );
         config.put( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
         config.put( GraphDatabaseSettings.auth_store.name(), new File( parentDir, "auth" ).getAbsolutePath() );
         config.putAll( extraParams );

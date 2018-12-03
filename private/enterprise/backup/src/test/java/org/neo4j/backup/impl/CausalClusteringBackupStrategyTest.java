@@ -52,7 +52,7 @@ public class CausalClusteringBackupStrategyTest
     @Before
     public void setup() throws IOException, StoreIdDownloadFailedException
     {
-        when( addressResolver.resolveCorrectCCAddress( any(), any() ) ).thenReturn( resolvedFromAddress );
+        when( addressResolver.resolveCorrectAddress( any(), any() ) ).thenReturn( resolvedFromAddress );
         when( storeFiles.readStoreId( any() ) ).thenReturn( expectedStoreId );
         when( backupDelegator.fetchStoreId( any() ) ).thenReturn( expectedStoreId );
         subject = new CausalClusteringBackupStrategy( backupDelegator, addressResolver, NullLogProvider.getInstance(), storeFiles );
@@ -63,7 +63,7 @@ public class CausalClusteringBackupStrategyTest
     {
         // given
         AdvertisedSocketAddress expectedAddress = new AdvertisedSocketAddress( "expected-host", 1298 );
-        when( addressResolver.resolveCorrectCCAddress( any(), any() ) ).thenReturn( expectedAddress );
+        when( addressResolver.resolveCorrectAddress( any(), any() ) ).thenReturn( expectedAddress );
 
         // when
         subject.performIncrementalBackup( desiredBackupLayout, config, userProvidedAddress );
@@ -77,7 +77,7 @@ public class CausalClusteringBackupStrategyTest
     {
         // given
         AdvertisedSocketAddress expectedAddress = new AdvertisedSocketAddress( "expected-host", 1578 );
-        when( addressResolver.resolveCorrectCCAddress( any(), any() ) ).thenReturn( expectedAddress );
+        when( addressResolver.resolveCorrectAddress( any(), any() ) ).thenReturn( expectedAddress );
 
         // when
         subject.performFullBackup( desiredBackupLayout, config, userProvidedAddress );

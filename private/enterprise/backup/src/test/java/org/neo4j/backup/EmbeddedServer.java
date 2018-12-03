@@ -23,7 +23,7 @@ public class EmbeddedServer implements ServerInterface
     {
         GraphDatabaseBuilder graphDatabaseBuilder = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir );
         graphDatabaseBuilder.setConfig( OnlineBackupSettings.online_backup_enabled, Settings.TRUE );
-        graphDatabaseBuilder.setConfig( OnlineBackupSettings.online_backup_server, serverAddress );
+        graphDatabaseBuilder.setConfig( OnlineBackupSettings.online_backup_listen_address, serverAddress );
         graphDatabaseBuilder.setConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
         this.db = graphDatabaseBuilder.newGraphDatabase();
     }

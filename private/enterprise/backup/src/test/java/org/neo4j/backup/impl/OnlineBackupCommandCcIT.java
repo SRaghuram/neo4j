@@ -63,7 +63,7 @@ import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_server;
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.joining;
@@ -142,7 +142,7 @@ public class OnlineBackupCommandCcIT
         try
         {
             // then backup is successful
-            String address = cluster.awaitLeader().config().get( online_backup_server ).toString();
+            String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
             assertEquals( 0, runBackupOtherJvm( address, DATABASE_NAME ) );
         }
         finally
@@ -159,7 +159,7 @@ public class OnlineBackupCommandCcIT
         int[] backupPorts = new int[]{PortAuthority.allocatePort(), PortAuthority.allocatePort(), PortAuthority.allocatePort()};
         String value = "localhost:%d";
         clusterRule = clusterRule.withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, "true" )
-                .withInstanceCoreParam( online_backup_server, i -> format( value, backupPorts[i] ) );
+                .withInstanceCoreParam( online_backup_listen_address, i -> format( value, backupPorts[i] ) );
         Cluster<?> cluster = startCluster( recordFormat );
         String customAddress = "localhost:" + backupPorts[0];
 
@@ -185,7 +185,7 @@ public class OnlineBackupCommandCcIT
         int[] backupPorts = new int[]{PortAuthority.allocatePort(), PortAuthority.allocatePort(), PortAuthority.allocatePort()};
         String value = "localhost:%d";
         clusterRule = clusterRule.withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, "false" )
-                .withInstanceCoreParam( online_backup_server, i -> format( value, backupPorts[i] ) );
+                .withInstanceCoreParam( online_backup_listen_address, i -> format( value, backupPorts[i] ) );
         startCluster( recordFormat );
         String customAddress = "localhost:" + backupPorts[0];
 
@@ -241,7 +241,7 @@ public class OnlineBackupCommandCcIT
         // given database exists with data
         Cluster cluster = startCluster( recordFormat );
         createSomeData( cluster );
-        String address = cluster.awaitLeader().config().get( online_backup_server ).toString();
+        String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
         String name = UUID.randomUUID().toString();
         File backupLocation = new File( backupStoreDir, name );
@@ -265,7 +265,7 @@ public class OnlineBackupCommandCcIT
         // given database exists with data
         Cluster cluster = startCluster( recordFormat );
         createSomeData( cluster );
-        String address = cluster.awaitLeader().config().get( online_backup_server ).toString();
+        String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
         String name = UUID.randomUUID().toString();
         File backupLocation = new File( backupStoreDir, name );

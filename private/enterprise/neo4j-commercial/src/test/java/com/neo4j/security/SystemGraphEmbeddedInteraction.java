@@ -6,12 +6,12 @@
 package com.neo4j.security;
 
 import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.util.Map;
 
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.server.security.enterprise.auth.EmbeddedInteraction;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.test.rule.TestDirectory;

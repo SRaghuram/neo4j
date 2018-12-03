@@ -97,7 +97,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
           .withSetting( UdcSettings.udc_enabled, Settings.FALSE )
           .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.TRUE )
-          .withSetting( OnlineBackupSettings.online_backup_server, "localhost:" + backupPort )
+                .withSetting( OnlineBackupSettings.online_backup_listen_address, "localhost:" + backupPort )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" );
         db.ensureStarted();
 
@@ -138,7 +138,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         int backupPort = PortAuthority.allocatePort();
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
           .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.TRUE )
-          .withSetting( OnlineBackupSettings.online_backup_server, "localhost:" + backupPort )
+                .withSetting( OnlineBackupSettings.online_backup_listen_address, "localhost:" + backupPort )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "1ms" );
         db.ensureStarted();
 

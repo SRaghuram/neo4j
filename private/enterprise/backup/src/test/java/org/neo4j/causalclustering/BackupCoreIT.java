@@ -107,7 +107,7 @@ public class BackupCoreIT
     {
         Map<String, String> config = MapUtil.stringMap(
                 GraphDatabaseSettings.record_format.name(), Standard.LATEST_NAME,
-                OnlineBackupSettings.online_backup_server.name(), "127.0.0.1:" + PortAuthority.allocatePort()
+                OnlineBackupSettings.online_backup_listen_address.name(), "127.0.0.1:" + PortAuthority.allocatePort()
         );
 
         return Config.defaults( config );

@@ -33,7 +33,6 @@ import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
@@ -111,11 +110,11 @@ public final class CausalClusteringTestHelpers
 
     public static String backupAddress( GraphDatabaseFacade graphDatabaseFacade )
     {
-        HostnamePort backupAddress = graphDatabaseFacade
+        ListenSocketAddress backupAddress = graphDatabaseFacade
                 .getDependencyResolver()
                 .resolveDependency( Config.class )
-                .get( OnlineBackupSettings.online_backup_server );
-        return String.format( "%s:%s", backupAddress.getHost(), backupAddress.getPort() );
+                .get( OnlineBackupSettings.online_backup_listen_address );
+        return String.format( "%s:%s", backupAddress.getHostname(), backupAddress.getPort() );
     }
 
     public static Map<Integer, String> distributeDatabaseNamesToHostNums( int nHosts, Set<String> databaseNames )

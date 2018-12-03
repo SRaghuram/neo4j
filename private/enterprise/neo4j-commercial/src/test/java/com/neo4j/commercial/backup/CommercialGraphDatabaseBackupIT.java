@@ -5,7 +5,9 @@
  */
 package com.neo4j.commercial.backup;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.util.TestHelpers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,12 +19,10 @@ import java.util.stream.Collectors;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.util.TestHelpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.graphdb.Label.label;
@@ -81,7 +81,7 @@ class CommercialGraphDatabaseBackupIT
         if ( backupEnabled )
         {
             builder.setConfig( OnlineBackupSettings.online_backup_enabled, "true" );
-            builder.setConfig( OnlineBackupSettings.online_backup_server, "127.0.0.1:6362" );
+            builder.setConfig( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:6362" );
         }
         return builder.newGraphDatabase();
     }

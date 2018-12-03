@@ -190,7 +190,7 @@ class EncryptedBackupIT
         @Test
         void unencryptedBackupAgainstBackupAddress() throws IOException, TimeoutException
         {
-            IntSupplier backupClient = backupClientWithoutEncryption( cluster, OnlineBackupSettings.online_backup_server );
+            IntSupplier backupClient = backupClientWithoutEncryption( cluster, OnlineBackupSettings.online_backup_listen_address );
             if ( encryptedBackupPort )
             {
                 shouldNotBeSuccessful( backupClient );
@@ -204,7 +204,7 @@ class EncryptedBackupIT
         @Test
         void unencryptedBackupAgainstReplicaBackupAddress() throws IOException, TimeoutException
         {
-            IntSupplier backupClient = backupClientWithoutEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_server );
+            IntSupplier backupClient = backupClientWithoutEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_listen_address );
             if ( encryptedBackupPort )
             {
                 shouldNotBeSuccessful( backupClient );
@@ -246,14 +246,14 @@ class EncryptedBackupIT
         @Test
         void transactionEncryptedBackupAgainstBackupAddress() throws IOException, TimeoutException
         {
-            IntSupplier backupClient = backupClientWithClusterEncryption( cluster, OnlineBackupSettings.online_backup_server );
+            IntSupplier backupClient = backupClientWithClusterEncryption( cluster, OnlineBackupSettings.online_backup_listen_address );
             shouldNotBeSuccessful( backupClient ); // keys shouldn't match
         }
 
         @Test
         void transactionEncryptedBackupAgainstReplicaBackupAddress() throws IOException, TimeoutException
         {
-            IntSupplier backupClient = backupClientWithClusterEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_server );
+            IntSupplier backupClient = backupClientWithClusterEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_listen_address );
             shouldNotBeSuccessful( backupClient ); // keys shouldn't match
         }
 
@@ -274,7 +274,7 @@ class EncryptedBackupIT
         @Test
         void backupEncryptedBackupAgainstBackupAddress() throws IOException, TimeoutException
         {
-            IntSupplier backupClient = backupClientWithBackupEncryption( cluster, OnlineBackupSettings.online_backup_server );
+            IntSupplier backupClient = backupClientWithBackupEncryption( cluster, OnlineBackupSettings.online_backup_listen_address );
             if ( encryptedBackupPort )
             {
                 shouldBeSuccessful( cluster, backupClient );
@@ -288,7 +288,7 @@ class EncryptedBackupIT
         @Test
         void backupEncryptedBackupAgainstReplicaBackupAddress() throws IOException, TimeoutException
         {
-            IntSupplier backupClient = backupClientWithBackupEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_server );
+            IntSupplier backupClient = backupClientWithBackupEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_listen_address );
             if ( encryptedBackupPort )
             {
                 shouldBeSuccessful( cluster, backupClient );
