@@ -15,7 +15,7 @@ case class Versions(versions: Version*) {
 object Versions {
   implicit def versionToVersions(version: Version): Versions = Versions(version)
 
-  val orderedVersions: Seq[Version] = Seq(V3_4, V4_0)
+  val orderedVersions: Seq[Version] = Seq(V3_5, V4_0)
 
   val oldest: Version = orderedVersions.head
   val latest: Version = orderedVersions.last
@@ -26,8 +26,8 @@ object Versions {
     if (versions.nonEmpty) Versions(versions: _*) else all
   }
 
-  object V3_4 extends Version("3.4") {
-    // 3.4 has 4.0 runtime
+  object V3_5 extends Version("3.5") {
+    // 3.5 has 4.0 runtime
     override val acceptedRuntimeVersionNames = Set("4.0")
   }
 

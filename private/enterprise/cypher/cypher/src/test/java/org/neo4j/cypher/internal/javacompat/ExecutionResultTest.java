@@ -276,7 +276,7 @@ public class ExecutionResultTest
     @Test
     public void shouldContainCompletePlanFromFromLegacyVersions()
     {
-        for ( String version : new String[]{"3.4", "4.0"} )
+        for ( String version : new String[]{"3.5", "4.0"} )
         {
             // Given
             Result result = db.execute( String.format( "EXPLAIN CYPHER %s MATCH (n) RETURN n", version ) );
@@ -301,7 +301,7 @@ public class ExecutionResultTest
             tx.success();
         }
 
-        for ( String version : new String[]{"3.4", "4.0"} )
+        for ( String version : new String[]{"3.5", "4.0"} )
         {
             // When
             Result result = db.execute( String.format( "PROFILE CYPHER %s MATCH (n) RETURN n", version ) );

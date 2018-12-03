@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_4
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_5
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V4_0
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
@@ -21,7 +21,7 @@ class TestConfigurationTest extends CypherFunSuite {
 
   test("should parse just version") {
     TestConfiguration("4.0") should be(TestConfiguration(Versions.V4_0, Planners.all, Runtimes.all))
-    TestConfiguration("3.4") should be(TestConfiguration(Versions.V3_4, Planners.all, Runtimes.all))
+    TestConfiguration("3.4") should be(TestConfiguration(Versions.V3_5, Planners.all, Runtimes.all))
   }
 
   test("should parse just planner") {
@@ -45,13 +45,13 @@ class TestConfigurationTest extends CypherFunSuite {
   test("should parse multiple lines") {
     TestConfiguration(
       """4.0 planner=cost runtime=compiled
-        |3.4 runtime=interpreted""".stripMargin) should be(TestConfiguration(Versions.V4_0, Planners.Cost, Runtimes.CompiledBytecode) + TestConfiguration(Versions.V3_4, Planners.all, Runtimes.Interpreted))
+        |3.5 runtime=interpreted""".stripMargin) should be(TestConfiguration(Versions.V4_0, Planners.Cost, Runtimes.CompiledBytecode) + TestConfiguration(Versions.V3_5, Planners.all, Runtimes.Interpreted))
     TestConfiguration(
-      """3.4
+      """3.5
         |4.0
       """.stripMargin
     ) should be(
-      TestConfiguration(Versions(V3_4, V4_0),
+      TestConfiguration(Versions(V3_5, V4_0),
         Planners.all,
         Runtimes.all
       ))

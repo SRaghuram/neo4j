@@ -387,7 +387,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   }
 
 
-  private val configurationWithPatternExpressionFix = Configs.InterpretedAndSlotted - TestConfiguration("3.4 runtime=slotted")
+  private val configurationWithPatternExpressionFix = Configs.InterpretedAndSlotted
 
   test("solve pattern expressions in set node properties") {
     setup()

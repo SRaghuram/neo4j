@@ -24,7 +24,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should be able to switch between versions") {
     runWithConfig() {
       db =>
-        db.execute(s"CYPHER 3.4 $QUERY").asScala.toList shouldBe empty
+        db.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
         db.execute(s"CYPHER 4.0 $QUERY").asScala.toList shouldBe empty
     }
   }
@@ -32,7 +32,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should be able to switch between versions2") {
     runWithConfig() {
       db =>
-        db.execute(s"CYPHER 3.4 $QUERY").asScala.toList shouldBe empty
+        db.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
         db.execute(s"CYPHER 4.0 $QUERY").asScala.toList shouldBe empty
     }
   }
@@ -40,12 +40,12 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should be able to override config") {
     runWithConfig(GraphDatabaseSettings.cypher_parser_version -> "4.0") {
       db =>
-        db.execute(s"CYPHER 3.4 $QUERY").asScala.toList shouldBe empty
+        db.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
     }
   }
 
   test("should be able to override config2") {
-    runWithConfig(GraphDatabaseSettings.cypher_parser_version -> "3.4") {
+    runWithConfig(GraphDatabaseSettings.cypher_parser_version -> "3.5") {
       db =>
         db.execute(s"CYPHER 4.0 $QUERY").asScala.toList shouldBe empty
     }
@@ -70,7 +70,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should handle profile in interpreted runtime") {
     runWithConfig() {
       db =>
-        assertProfiled(db, "CYPHER 3.4 runtime=interpreted PROFILE MATCH (n) RETURN n")
+        assertProfiled(db, "CYPHER 3.5 runtime=interpreted PROFILE MATCH (n) RETURN n")
         assertProfiled(db, "CYPHER 4.0 runtime=interpreted PROFILE MATCH (n) RETURN n")
     }
   }
@@ -78,7 +78,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should allow the use of explain in the supported compilers") {
     runWithConfig() {
       db =>
-        assertExplained(db, "CYPHER 3.4 EXPLAIN MATCH (n) RETURN n")
+        assertExplained(db, "CYPHER 3.5 EXPLAIN MATCH (n) RETURN n")
         assertExplained(db, "CYPHER 4.0 EXPLAIN MATCH (n) RETURN n")
     }
   }
@@ -86,8 +86,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should allow executing enterprise queries") {
     runWithConfig() {
       db =>
-        assertVersionAndRuntime(db, "3.4", "slotted")
-        assertVersionAndRuntime(db, "3.4", "compiled")
+        assertVersionAndRuntime(db, "3.5", "slotted")
+        assertVersionAndRuntime(db, "3.5", "compiled")
         assertVersionAndRuntime(db, "4.0", "slotted")
         assertVersionAndRuntime(db, "4.0", "compiled")
     }

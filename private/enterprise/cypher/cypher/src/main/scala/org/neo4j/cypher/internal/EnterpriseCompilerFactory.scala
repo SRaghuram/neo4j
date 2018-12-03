@@ -7,8 +7,12 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
+import org.neo4j.cypher.CypherPlannerOption
+import org.neo4j.cypher.CypherRuntimeOption
+import org.neo4j.cypher.CypherUpdateStrategy
+import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.internal.compatibility._
-import org.neo4j.cypher.internal.compatibility.v3_4.Cypher3_4Planner
+import org.neo4j.cypher.internal.compatibility.v3_5.Cypher3_5Planner
 import org.neo4j.cypher.internal.compatibility.v4_0.Cypher4_0Planner
 import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
@@ -18,12 +22,15 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.parallel._
 import org.neo4j.cypher.internal.runtime.vectorized.Dispatcher
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
-import org.neo4j.cypher.{CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy, CypherVersion}
-import org.neo4j.internal.kernel.api.{CursorFactory, Kernel, SchemaRead}
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.Kernel
+import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.monitoring.{Monitors => KernelMonitors}
-import org.neo4j.logging.{Log, LogProvider}
-import org.neo4j.scheduler.{Group, JobScheduler}
+import org.neo4j.logging.Log
+import org.neo4j.logging.LogProvider
+import org.neo4j.scheduler.Group
+import org.neo4j.scheduler.JobScheduler
 
 class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
                                 graph: GraphDatabaseQueryService,
@@ -33,7 +40,7 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
                                 runtimeConfig: CypherRuntimeConfiguration
                                ) extends CompilerFactory {
   /*
-  One compiler is created for every Planner:Runtime:Version combination, e.g., Cost-Morsel-3.4 & Cost-Morsel-4.0.
+  One compiler is created for every Planner:Runtime:Version combination, e.g., Cost-Morsel-3.5 & Cost-Morsel-4.0.
   Each compiler contains a runtime instance, and each morsel runtime instance requires a dispatcher instance.
   This ensures only one (shared) dispatcher/tracer instance is created, even when there are multiple morsel runtime instances.
    */
@@ -51,8 +58,8 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
 
     val log = logProvider.getLog(getClass)
     val planner = cypherVersion match {
-      case CypherVersion.v3_4 =>
-        Cypher3_4Planner(
+      case CypherVersion.`v3_5` =>
+        Cypher3_5Planner(
           plannerConfig,
           MasterCompiler.CLOCK,
           kernelMonitors,

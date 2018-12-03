@@ -637,7 +637,7 @@ order by a.COL1""".format(a, b))
 
     val testConfiguration =
       TestConfiguration(
-        """3.4
+        """3.5
           |4.0
         """.stripMargin)
 

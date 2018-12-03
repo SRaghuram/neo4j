@@ -497,7 +497,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
     result.toList should equal(List(Map("c" -> node2), Map("c" -> node3)))
   }
 
-  private val configurationWithPatternExpressionFix = Configs.InterpretedAndSlotted - TestConfiguration("3.4 runtime=slotted")
+  private val configurationWithPatternExpressionFix = Configs.InterpretedAndSlotted
 
   test("nested pattern comprehension") {
     // given

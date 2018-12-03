@@ -12,18 +12,18 @@ import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
 import org.neo4j.test.TestEnterpriseGraphDatabaseFactory
 
-class Compatibility34TCKTests extends EnterpriseBaseTCKTests {
+class Compatibility3_5AcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
-  // If you want to only run a specific feature or scenario, go to the BaseTCKTests
+  // If you want to only run a specific feature or scenario, go to the BaseAcceptanceTest
 
   @TestFactory
-  def runCompatibility34(): util.Collection[DynamicTest] = {
-    createTests(scenarios, Compatibility34TestConfig, new TestEnterpriseGraphDatabaseFactory())
+  def runCompatibility3_5(): util.Collection[DynamicTest] = {
+    createTests(scenarios, Compatibility3_5TestConfig, new TestEnterpriseGraphDatabaseFactory())
   }
 
   @Disabled
-  def generateBlacklistCompatibility34(): Unit = {
-    printComputedBlacklist(scenarios, Compatibility34TestConfig, new TestEnterpriseGraphDatabaseFactory())
+  def generateBlacklistCompatibility3_5(): Unit = {
+    printComputedBlacklist(scenarios, Compatibility3_5TestConfig, new TestEnterpriseGraphDatabaseFactory())
     fail("Do not forget to add @Disabled to this method")
   }
 }
