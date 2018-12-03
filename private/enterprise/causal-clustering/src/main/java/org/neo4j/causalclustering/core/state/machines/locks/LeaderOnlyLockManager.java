@@ -99,7 +99,7 @@ public class LeaderOnlyLockManager implements Locks
         Future<Object> future;
         try
         {
-            future = replicator.replicate( lockTokenRequest, true );
+            future = replicator.replicate( lockTokenRequest );
         }
         catch ( ReplicationFailureException e )
         {

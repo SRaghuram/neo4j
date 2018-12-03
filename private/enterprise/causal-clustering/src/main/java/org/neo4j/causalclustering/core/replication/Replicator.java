@@ -18,9 +18,7 @@ public interface Replicator
      * mechanisms must be used to achieve required delivery semantics.
      *
      * @param content      The content to replicated.
-     * @param trackResult  Whether to track the result for this operation.
-     *
      * @return A future that will receive the result when available. Only valid if trackResult is set.
      */
-    Future<Object> replicate( ReplicatedContent content, boolean trackResult ) throws ReplicationFailureException;
+    Future<Object> replicate( ReplicatedContent content ) throws ReplicationFailureException;
 }

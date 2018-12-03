@@ -71,7 +71,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( databaseName, type, tokenName, createCommands( tokenName ) );
         try
         {
-            Future<Object> future = replicator.replicate( tokenRequest, true );
+            Future<Object> future = replicator.replicate( tokenRequest );
             return (int) future.get();
         }
         catch ( ReplicationFailureException | InterruptedException e )

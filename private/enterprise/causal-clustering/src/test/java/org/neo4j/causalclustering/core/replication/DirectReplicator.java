@@ -22,16 +22,10 @@ public class DirectReplicator<Command extends ReplicatedContent> implements Repl
     }
 
     @Override
-    public synchronized Future<Object> replicate( ReplicatedContent content, boolean trackResult )
+    public synchronized Future<Object> replicate( ReplicatedContent content )
     {
         AtomicReference<CompletableFuture<Object>> futureResult = new AtomicReference<>( new CompletableFuture<>() );
-        stateMachine.applyCommand( (Command) content, commandIndex++, result ->
-        {
-            if ( trackResult )
-            {
-                futureResult.getAndUpdate( result::apply );
-            }
-        } );
+        stateMachine.applyCommand( (Command) content, commandIndex++, result -> futureResult.getAndUpdate( result::apply ) );
 
         return futureResult.get();
     }

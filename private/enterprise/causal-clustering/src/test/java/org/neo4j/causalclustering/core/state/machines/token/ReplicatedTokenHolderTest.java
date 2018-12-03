@@ -89,7 +89,7 @@ public class ReplicatedTokenHolderTest
 
         TokenRegistry registry = new TokenRegistry( "Label" );
         int generatedTokenId = 1;
-        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseName, registry, ( content, trackResult ) ->
+        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseName, registry, content ->
         {
             CompletableFuture<Object> completeFuture = new CompletableFuture<>();
             completeFuture.complete( generatedTokenId );

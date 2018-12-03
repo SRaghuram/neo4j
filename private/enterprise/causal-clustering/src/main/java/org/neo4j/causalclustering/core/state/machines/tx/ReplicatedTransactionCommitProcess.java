@@ -39,7 +39,7 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
         Future<Object> futureTxId;
         try
         {
-            futureTxId = replicator.replicate( transaction, true );
+            futureTxId = replicator.replicate( transaction );
         }
         catch ( ReplicationFailureException e )
         {

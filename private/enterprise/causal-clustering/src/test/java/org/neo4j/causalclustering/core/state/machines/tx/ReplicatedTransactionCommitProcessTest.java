@@ -19,7 +19,6 @@ import org.neo4j.storageengine.api.TransactionApplicationMode;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -42,7 +41,7 @@ public class ReplicatedTransactionCommitProcessTest
         CompletableFuture<Object> futureTxId = new CompletableFuture<>();
         futureTxId.complete( 5L );
 
-        when( replicator.replicate( any( ReplicatedContent.class ), anyBoolean() ) ).thenReturn( futureTxId );
+        when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( futureTxId );
         ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DEFAULT_DATABASE_NAME );
 
         // when

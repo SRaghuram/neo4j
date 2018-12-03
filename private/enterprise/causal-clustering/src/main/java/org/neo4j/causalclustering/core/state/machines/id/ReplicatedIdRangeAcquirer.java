@@ -67,7 +67,7 @@ public class ReplicatedIdRangeAcquirer
     {
         try
         {
-            return (Boolean) replicator.replicate( idAllocationRequest, true ).get();
+            return (Boolean) replicator.replicate( idAllocationRequest ).get();
         }
         catch ( Exception e )
         {

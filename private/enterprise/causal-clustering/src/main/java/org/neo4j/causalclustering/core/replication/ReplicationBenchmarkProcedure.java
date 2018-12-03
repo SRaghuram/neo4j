@@ -126,7 +126,7 @@ public class ReplicationBenchmarkProcedure
             {
                 while ( !stopped )
                 {
-                    Future<Object> future = replicator.replicate( new DummyRequest( new byte[blockSize] ), true );
+                    Future<Object> future = replicator.replicate( new DummyRequest( new byte[blockSize] ) );
                     DummyRequest request = (DummyRequest) future.get();
                     totalRequests++;
                     totalBytes += request.byteCount();

@@ -87,7 +87,7 @@ class RaftReplicatorTest
         replicator.onLeaderSwitch( leaderInfo );
 
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
-        Thread replicatingThread = replicatingThread( replicator, content, false );
+        Thread replicatingThread = replicatingThread( replicator, content );
 
         // when
         replicatingThread.start();
@@ -121,7 +121,7 @@ class RaftReplicatorTest
         replicator.onLeaderSwitch( leaderInfo );
 
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
-        Thread replicatingThread = replicatingThread( replicator, content, false );
+        Thread replicatingThread = replicatingThread( replicator, content );
 
         // when
         replicatingThread.start();
@@ -148,7 +148,7 @@ class RaftReplicatorTest
         RaftReplicator replicator = getReplicator( outbound, capturedProgress, new Monitors() );
         replicator.onLeaderSwitch( leaderInfo );
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
-        Thread replicatingThread = replicatingThread( replicator, content, true );
+        Thread replicatingThread = replicatingThread( replicator, content );
 
         // when
         replicatingThread.start();
@@ -180,7 +180,7 @@ class RaftReplicatorTest
         RaftReplicator replicator = getReplicator( outbound, capturedProgress, monitors );
         replicator.onLeaderSwitch( leaderInfo );
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
-        ReplicatingThread replicatingThread = replicatingThread( replicator, content, true );
+        ReplicatingThread replicatingThread = replicatingThread( replicator, content );
 
         // when
         replicatingThread.start();
@@ -205,7 +205,7 @@ class RaftReplicatorTest
         replicator.onLeaderSwitch( leaderInfo );
 
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
-        ReplicatingThread replicatingThread = replicatingThread( replicator, content, true );
+        ReplicatingThread replicatingThread = replicatingThread( replicator, content );
 
         // when
         replicatingThread.start();
@@ -225,7 +225,7 @@ class RaftReplicatorTest
         replicator.onLeaderSwitch( leaderInfo );
 
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
-        ReplicatingThread replicatingThread = replicatingThread( replicator, content, true );
+        ReplicatingThread replicatingThread = replicatingThread( replicator, content );
 
         // when
         replicatingThread.start();
@@ -246,7 +246,7 @@ class RaftReplicatorTest
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
 
         // when
-        assertThrows( ReplicationFailureException.class, () -> replicator.replicate( content, true ) );
+        assertThrows( ReplicationFailureException.class, () -> replicator.replicate( content ) );
     }
 
     @Test
@@ -262,13 +262,13 @@ class RaftReplicatorTest
 
         // set initial leader, sens to that leader
         replicator.onLeaderSwitch( lastLeader );
-        replicator.replicate( content, false );
+        replicator.replicate( content );
         assertEquals( outbound.lastTo, lastLeader.memberId() );
 
         // update with valid new leader, sends to new leader
         lastLeader = new LeaderInfo( new MemberId( UUID.randomUUID() ), 1 );
         replicator.onLeaderSwitch( lastLeader );
-        replicator.replicate( content, false );
+        replicator.replicate( content );
         assertEquals( outbound.lastTo, lastLeader.memberId() );
     }
 
@@ -282,7 +282,7 @@ class RaftReplicatorTest
         replicator.onLeaderSwitch( leaderInfo );
 
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
-        ReplicatingThread replicatingThread = replicatingThread( replicator, content, false );
+        ReplicatingThread replicatingThread = replicatingThread( replicator, content );
 
         // when
         replicatingThread.start();
@@ -302,9 +302,9 @@ class RaftReplicatorTest
                 NullLogProvider.getInstance(), databaseService, monitors );
     }
 
-    private ReplicatingThread replicatingThread( RaftReplicator replicator, ReplicatedInteger content, boolean trackResult )
+    private ReplicatingThread replicatingThread( RaftReplicator replicator, ReplicatedInteger content )
     {
-        return new ReplicatingThread( replicator, content, trackResult );
+        return new ReplicatingThread( replicator, content );
     }
 
     private class ReplicatingThread extends Thread
@@ -312,14 +312,12 @@ class RaftReplicatorTest
 
         private final RaftReplicator replicator;
         private final ReplicatedInteger content;
-        private final boolean trackResult;
         private volatile Exception replicationException;
 
-        ReplicatingThread( RaftReplicator replicator, ReplicatedInteger content, boolean trackResult )
+        ReplicatingThread( RaftReplicator replicator, ReplicatedInteger content )
         {
             this.replicator = replicator;
             this.content = content;
-            this.trackResult = trackResult;
         }
 
         @Override
@@ -327,18 +325,15 @@ class RaftReplicatorTest
         {
             try
             {
-                Future<Object> futureResult = replicator.replicate( content, trackResult );
-                if ( trackResult )
+                Future<Object> futureResult = replicator.replicate( content );
+                try
                 {
-                    try
-                    {
-                        futureResult.get();
-                    }
-                    catch ( ExecutionException e )
-                    {
-                        replicationException = e;
-                        throw new IllegalStateException();
-                    }
+                    futureResult.get();
+                }
+                catch ( ExecutionException e )
+                {
+                    replicationException = e;
+                    throw new IllegalStateException();
                 }
             }
             catch ( Exception e )

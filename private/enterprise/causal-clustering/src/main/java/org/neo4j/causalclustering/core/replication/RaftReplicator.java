@@ -61,17 +61,17 @@ public class RaftReplicator implements Replicator, LeaderListener
     }
 
     @Override
-    public Future<Object> replicate( ReplicatedContent command, boolean trackResult ) throws ReplicationFailureException
+    public Future<Object> replicate( ReplicatedContent command ) throws ReplicationFailureException
     {
         MemberId currentLeader = leaderProvider.currentLeader();
         if ( currentLeader == null )
         {
             throw new ReplicationFailureException( "Replication aborted since no leader was available" );
         }
-        return replicate0( command, trackResult, currentLeader );
+        return replicate0( command, currentLeader );
     }
 
-    private Future<Object> replicate0( ReplicatedContent command, boolean trackResult, MemberId leader ) throws ReplicationFailureException
+    private Future<Object> replicate0( ReplicatedContent command, MemberId leader ) throws ReplicationFailureException
     {
         replicationMonitor.startReplication();
         try
@@ -110,17 +110,7 @@ public class RaftReplicator implements Replicator, LeaderListener
                 progressTracker.abort( operation );
                 throw new ReplicationFailureException( "Interrupted while replicating", e );
             }
-
-            BiConsumer<Object,Throwable> cleanup = ( ignored1, ignored2 ) -> sessionPool.releaseSession( session );
-
-            if ( trackResult )
-            {
-                progress.futureResult().whenComplete( cleanup );
-            }
-            else
-            {
-                cleanup.accept( null, null );
-            }
+            progress.futureResult().whenComplete( ( ignored1, ignored2 ) -> sessionPool.releaseSession( session ) );
             replicationMonitor.successfulReplication();
             return progress.futureResult();
         }
