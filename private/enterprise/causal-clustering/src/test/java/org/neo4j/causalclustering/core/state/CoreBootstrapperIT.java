@@ -30,6 +30,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.recovery.RecoveryRequiredException;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionStore;
@@ -127,7 +128,7 @@ public class CoreBootstrapperIT
     }
 
     @Test
-    public void shouldFailToBootstrapIfClusterIsInNeedOfRecovery() throws IOException
+    public void shouldFailToBootstrapIfClusterIsInNeedOfRecovery() throws Exception
     {
         // given
         int nodeCount = 100;
@@ -159,12 +160,9 @@ public class CoreBootstrapperIT
             bootstrapper.bootstrap( membership );
             fail();
         }
-        catch ( Exception e )
+        catch ( RecoveryRequiredException e )
         {
-            String errorMessage = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
-                    "instance of Neo4j or a Neo4j backup";
-            assertEquals( e.getMessage(), errorMessage );
-            assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( errorMessage) );
+            assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( e.getMessage() ) );
         }
     }
 
@@ -206,10 +204,7 @@ public class CoreBootstrapperIT
         }
         catch ( Exception e )
         {
-            String errorMessage = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
-                    "instance of Neo4j or a Neo4j backup";
-            assertEquals( e.getMessage(), errorMessage );
-            assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( errorMessage) );
+            assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( e.getMessage() ) );
         }
     }
 

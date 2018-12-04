@@ -29,7 +29,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.recovery.RecoveryRequiredChecker;
+import org.neo4j.kernel.impl.recovery.RecoveryRequiredException;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
@@ -48,6 +48,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.kernel.impl.recovery.RecoveryRequiredChecker.assertRecoveryIsNotRequired;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN;
@@ -77,8 +78,8 @@ public class CoreBootstrapper
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final Config config;
-    private final RecoveryRequiredChecker recoveryRequiredChecker;
     private final Log log;
+    private final Monitors monitors;
 
     CoreBootstrapper( DatabaseService databaseService, TemporaryDatabase.Factory tempDatabaseFactory, File bootstrapDirectory,
             Map<String,DatabaseInitializer> databaseInitializers, FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache,
@@ -92,10 +93,10 @@ public class CoreBootstrapper
         this.config = config;
         this.pageCache = pageCache;
         this.log = logProvider.getLog( getClass() );
-        this.recoveryRequiredChecker = new RecoveryRequiredChecker( fs, pageCache, config, monitors );
+        this.monitors = monitors;
     }
 
-    public CoreSnapshot bootstrap( Set<MemberId> members ) throws IOException
+    public CoreSnapshot bootstrap( Set<MemberId> members ) throws Exception
     {
         if ( fs.fileExists( bootstrapDirectory ) )
         {
@@ -113,7 +114,7 @@ public class CoreBootstrapper
         }
     }
 
-    private CoreSnapshot bootstrap0( Set<MemberId> members ) throws IOException
+    private CoreSnapshot bootstrap0( Set<MemberId> members ) throws Exception
     {
         CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
@@ -135,15 +136,9 @@ public class CoreBootstrapper
         return coreSnapshot;
     }
 
-    private void bootstrapDatabase( String databaseName, DatabaseLayout databaseLayout ) throws IOException
+    private void bootstrapDatabase( String databaseName, DatabaseLayout databaseLayout ) throws IOException, RecoveryRequiredException
     {
-        if ( recoveryRequiredChecker.isRecoveryRequiredAt( databaseLayout ) )
-        {
-            String message = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
-                    "instance of Neo4j or a Neo4j backup";
-            log.error( message );
-            throw new IllegalStateException( message );
-        }
+        checkRecovered(databaseLayout);
 
         if ( !NeoStores.isStorePresent( pageCache, databaseLayout ) )
         {
@@ -164,8 +159,20 @@ public class CoreBootstrapper
                 log.warn( "Could not delete: " + txLogsAfterBootstrap );
             }
         }
-
         appendNullTransactionLogEntryToSetRaftIndexToMinusOne( databaseLayout );
+    }
+
+        private void checkRecovered( DatabaseLayout databaseLayout ) throws IOException, RecoveryRequiredException
+    {
+        try
+        {
+            assertRecoveryIsNotRequired( fs, pageCache, config, databaseLayout, monitors );
+        }
+        catch ( RecoveryRequiredException e )
+        {
+            log.error( e.getMessage() );
+            throw e;
+        }
     }
 
     private void moveTransactionLogs( File fromDirectory, File toDirectory ) throws IOException
