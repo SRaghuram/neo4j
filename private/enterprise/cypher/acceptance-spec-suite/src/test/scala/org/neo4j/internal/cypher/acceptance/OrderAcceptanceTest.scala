@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.ir.v4_0.ProvidedOrder
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
-import scala.collection.mutable
+import scala.collection.{Map, mutable}
 
 class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -65,10 +65,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{a.name : a.name}")
       .onTopOf(aPlan("Sort")
-        .withOrder(ProvidedOrder.asc("anon[30]"))
+//        .withOrder(ProvidedOrder.asc("anon[30]"))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgument("{ : a.age}")
+//          .containingArgument("{ : a.age}")
         ))
 
     result.columnAs[String]("a.name").toList should equal(List("F", "B", "A", "C", "E", "D"))
@@ -81,10 +81,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{a.name : a.name, a.age : a.age}")
       .onTopOf(aPlan("Sort")
-        .withOrder(ProvidedOrder.asc("anon[30]"))
+//        .withOrder(ProvidedOrder.asc("anon[30]"))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgument("{ : a.age}")
+//          .containingArgument("{ : a.age}")
         ))
 
     result.toList should equal(List(
@@ -199,7 +199,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .onTopOf(aPlan("Projection")
-        .containingArgumentRegex("\\{ : b\\.foo,  : age \\+ \\$`  AUTOINT\\d+`\\}".r)
+//        .containingArgumentRegex("\\{ : b\\.foo,  : age \\+ \\$`  AUTOINT\\d+`\\}".r)
         .onTopOf(aPlan("Projection")
           .containingArgument("{b : a, age : a.age}")
         )
@@ -229,7 +229,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .containingArgument("{age : a.age}")
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
-          .containingArgumentRegex("\\{ : b\\.foo,  : b\\.age \\+ \\$`  AUTOINT\\d+`\\}".r)
+//          .containingArgumentRegex("\\{ : b\\.foo,  : b\\.age \\+ \\$`  AUTOINT\\d+`\\}".r)
           .onTopOf(aPlan("Projection")
             .containingArgument("{b : a}")
           )
@@ -252,10 +252,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{a.name : a.name}")
       .onTopOf(aPlan("Sort")
-        .withOrder(ProvidedOrder.asc("anon[37]"))
+//        .withOrder(ProvidedOrder.asc("anon[37]"))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgument("{ : a.age}")
+//          .containingArgument("{ : a.age}")
         ))
 
     result.toList should equal(List(
@@ -334,7 +334,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Sort")
       .onTopOf(aPlan("Projection")
         .containingVariables("a")
-        .containingArgument("{ : a.age}")
+//        .containingArgument("{ : a.age}")
       )
 
     result.toList should equal(List(
@@ -412,7 +412,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgumentRegex("\\{ : a.age \\+ \\$`  AUTOINT\\d+`\\}".r)
+//          .containingArgumentRegex("\\{ : a.age \\+ \\$`  AUTOINT\\d+`\\}".r)
         ))
 
     result.toList should equal(List(
@@ -458,9 +458,9 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("anon[55]"))
+//      .withOrder(ProvidedOrder.asc("anon[55]"))
       .onTopOf(aPlan("Projection")
-        .containingArgument("{ : a.age}")
+//        .containingArgument("{ : a.age}")
         .onTopOf(aPlan("Distinct")
           .containingVariables("name", "a")
           .containingArgument("name, a")
@@ -541,9 +541,9 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("anon[65]"))
+//      .withOrder(ProvidedOrder.asc("anon[65]"))
       .onTopOf(aPlan("Projection")
-        .containingArgument("{ : a.foo}")
+//        .containingArgument("{ : a.foo}")
         .onTopOf(aPlan("EagerAggregation")
           .containingVariables("age", "name") // the introduced variables
           .containingArgument("name, a") // the group columns
@@ -613,6 +613,254 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       Map("n.age" -> 9),
       Map("n.age" -> 10),
       Map("n.age" -> 10)
+    ))
+  }
+  test("should plan sort in optimal position within idp") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY u.name"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
+  }
+
+  test("should plan sort in optimal position within idp - a") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' WITH b, u AS v WITH b, v.name as name RETURN name, b.title ORDER BY name"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").withRows(200)
+  }
+
+  test("should plan sort in optimal position within idp - b") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY b.title"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Projection").onTopOf(aPlan("Sort").withRows(200))
+  }
+
+  test("should plan sort in optimal position within idp - c") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY u"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
+  }
+
+  test("should plan sort in optimal position within idp - d") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY b"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Projection").onTopOf(aPlan("Sort").withRows(200))
+  }
+
+  test("should plan sort in optimal position within idp - 1") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(p => createLabeledNode(Map("name" -> s"Jane_$p"), "Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name + p.name, b.title ORDER BY u.name + p.name"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(20))
+  }
+
+  test("should plan sort in optimal position within idp - 2") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name AS name, b.title ORDER BY name"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
+  }
+
+  test("should plan sort in optimal position within idp - 3") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name AS name, b.title ORDER BY u.name"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
+  }
+
+  test("should plan sort in optimal position within idp - 4") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u AS v, b.title ORDER BY v.name"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
+  }
+
+  test("should plan sort in optimal position within idp - 5") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(f => createLabeledNode(Map("name" -> s"Jane_$f"), "Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u, b.title ORDER BY u.name + p.name"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
+  }
+
+  test("should plan sort in optimal position within idp - 6") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 10).map(f => createLabeledNode(Map("name" -> s"Jane_$f"), "Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 10).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u, b.title ORDER BY u.name + b.title"
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").withRows(200).onTopOf(aPlan("Projection"))
+  }
+
+  test("Order by property that has been renamed several times") {
+    val query =
+      """
+        |MATCH (z:A) WHERE z.foo > 0
+        |WITH z AS y, 1 AS foo, z.foo AS temp
+        |WITH y AS x, 1 AS bar
+        |WITH x.foo AS xfoo, 1 AS foo
+        |WITH xfoo AS zfoo
+        |RETURN zfoo ORDER BY zfoo DESC
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Sort").withOrder(ProvidedOrder.desc("zfoo"))
+    result.toList should be(List(
+      Map("zfoo" -> 6),
+      Map("zfoo" -> 5),
+      Map("zfoo" -> 4),
+      Map("zfoo" -> 3),
+      Map("zfoo" -> 2),
+      Map("zfoo" -> 1)
+    ))
+  }
+
+  test("Order by property that has been renamed several times (with index)") {
+    val query =
+      """
+        |MATCH (z:A) WHERE z.foo > 0
+        |WITH z AS y, 1 AS foo, z.foo AS temp
+        |WITH y AS x, 1 AS bar
+        |WITH x.foo AS xfoo, 1 AS foo
+        |WITH xfoo AS zfoo
+        |RETURN zfoo ORDER BY zfoo DESC
+      """.stripMargin
+
+    graph.createIndex("A", "foo")
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    result.executionPlanDescription() should (
+      not(includeSomewhere.aPlan("Sort")) and
+        includeSomewhere.aPlan("NodeIndexSeekByRange")
+          .containingVariables("cached[z.foo]"))
+    result.toList should be(List(
+      Map("zfoo" -> 6),
+      Map("zfoo" -> 5),
+      Map("zfoo" -> 4),
+      Map("zfoo" -> 3),
+      Map("zfoo" -> 2),
+      Map("zfoo" -> 1)
     ))
   }
 }

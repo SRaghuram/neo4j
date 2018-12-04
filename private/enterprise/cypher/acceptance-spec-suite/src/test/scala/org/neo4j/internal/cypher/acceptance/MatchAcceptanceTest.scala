@@ -30,9 +30,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       }
     }
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY u.name"
-    val result = execute(query)
-    println(result.toComparableResult.mkString("\n"))
-    println(result.executionPlanDescription())
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
   }
 
   test("should handle negative node id gracefully") {
