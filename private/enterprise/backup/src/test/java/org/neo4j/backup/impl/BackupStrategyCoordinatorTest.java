@@ -5,12 +5,12 @@
  */
 package org.neo4j.backup.impl;
 
-import java.nio.file.Path;
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import java.nio.file.Path;
 
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.OutsideWorld;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.backup.ExceptionMatchers.exceptionContainsSuppressedThrowable;
+import static org.neo4j.test.matchers.CommonMatchers.hasSuppressed;
 
 public class BackupStrategyCoordinatorTest
 {
@@ -140,7 +140,7 @@ public class BackupStrategyCoordinatorTest
                 .thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, firstCause ) );
 
         // then the command failed exception contains the specified causes
-        expectedException.expect( exceptionContainsSuppressedThrowable( firstCause ) );
+        expectedException.expect( hasSuppressed( firstCause ) );
         expectedException.expect( CommandFailed.class );
         expectedException.expectMessage( "Failed to run a backup using the available strategies." );
 
