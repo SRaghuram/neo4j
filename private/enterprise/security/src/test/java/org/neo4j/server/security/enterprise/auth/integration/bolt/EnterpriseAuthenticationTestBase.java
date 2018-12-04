@@ -17,6 +17,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
+import java.net.InetAddress;
 import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -69,28 +70,15 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     @Before
     public void setup() throws Exception
     {
+        String host = InetAddress.getLoopbackAddress().getHostAddress() + ":0";
         dbRule.withSetting( GraphDatabaseSettings.auth_enabled, "true" )
               .withSetting( new BoltConnector( "bolt" ).type, "BOLT" )
               .withSetting( new BoltConnector( "bolt" ).enabled, "true" )
               .withSetting( new BoltConnector( "bolt" ).encryption_level, OPTIONAL.name() )
-              .withSetting( new BoltConnector( "bolt" ).listen_address, "127.0.0.1:0" ); //"localhost:0"
+              .withSetting( new BoltConnector( "bolt" ).listen_address, host );
         dbRule.withSettings( getSettings() );
         dbRule.ensureStarted();
         dbRule.resolveDependency( Procedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
-    }
-
-    void restartDatabaseIfNeeded( String username, String password ) throws IOException
-    {
-        try
-        {
-            Driver driver = connectDriver( username, password );
-            driver.session().close();
-            driver.close();
-        }
-        catch ( ServiceUnavailableException e )
-        {
-            restartServerWithOverriddenSettings();
-        }
     }
 
     protected abstract Map<Setting<?>,String> getSettings();
@@ -104,6 +92,22 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     {
         dbRule.restartDatabase( configChanges );
     }
+
+     void checkIfLdapServerIsReachable()
+     {
+         //import org.apache.shiro.realm.ldap.JndiLdapContextFactory;
+         //JndiLdapContextFactory jndiLdapContextFactory = new JndiLdapContextFactory();
+         try
+         {
+             //connecting to ldap server
+             //ldap bind?
+             // something about the queryForAuthenticationInfoUsingStartTls ?
+         }
+         catch ( Throwable e ) //what error we now might get...
+         {
+             //throw exception with message about the ldap server being down
+         }
+     }
 
     void assertAuth( String username, String password )
     {

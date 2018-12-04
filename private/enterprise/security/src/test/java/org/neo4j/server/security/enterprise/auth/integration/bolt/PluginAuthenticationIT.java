@@ -50,12 +50,6 @@ public class PluginAuthenticationIT extends EnterpriseAuthenticationTestBase
                     .collect( Collectors.toList() )
     );
 
-    @BeforeEach
-    public void beforeEach() throws IOException
-    {
-        restartDatabaseIfNeeded( "neo4j", "neo4j" );
-    }
-
     @Override
     protected Map<Setting<?>,String> getSettings()
     {

@@ -17,12 +17,6 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 public class NativeAndCredentialsOnlyIT extends EnterpriseAuthenticationTestBase
 {
-    @BeforeEach
-    public void beforeEach() throws IOException
-    {
-        restartDatabaseIfNeeded( "", "BASE64-ENC-PASSWORD" );
-    }
-
     @Override
     protected Map<Setting<?>, String> getSettings()
     {

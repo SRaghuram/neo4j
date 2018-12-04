@@ -115,12 +115,6 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         super.setup();
     }
 
-    @BeforeEach
-    public void beforeEach() throws IOException
-    {
-        restartDatabaseIfNeeded( "smith", "abc123" );
-    }
-
     @Override
     protected Map<Setting<?>,String> getSettings()
     {
