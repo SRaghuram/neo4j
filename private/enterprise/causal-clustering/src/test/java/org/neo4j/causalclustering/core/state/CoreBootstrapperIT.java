@@ -127,7 +127,7 @@ public class CoreBootstrapperIT
     }
 
     @Test
-    public void shouldFailToBootstrapIfClusterIsInNeedOfRecovery() throws IOException
+    public void shouldFailToBootstrapIfClusterIsInNeedOfRecovery() throws Exception
     {
         // given
         int nodeCount = 100;
@@ -159,12 +159,9 @@ public class CoreBootstrapperIT
             bootstrapper.bootstrap( membership );
             fail();
         }
-        catch ( Exception e )
+        catch ( IllegalStateException e )
         {
-            String errorMessage = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
-                    "instance of Neo4j or a Neo4j backup";
-            assertEquals( e.getMessage(), errorMessage );
-            assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( errorMessage) );
+            assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( e.getMessage() ) );
         }
     }
 
@@ -206,10 +203,7 @@ public class CoreBootstrapperIT
         }
         catch ( Exception e )
         {
-            String errorMessage = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
-                    "instance of Neo4j or a Neo4j backup";
-            assertEquals( e.getMessage(), errorMessage );
-            assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( errorMessage) );
+            assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( e.getMessage() ) );
         }
     }
 
