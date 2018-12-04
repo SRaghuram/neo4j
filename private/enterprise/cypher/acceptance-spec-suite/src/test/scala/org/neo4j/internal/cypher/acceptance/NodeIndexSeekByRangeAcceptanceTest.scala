@@ -1267,7 +1267,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                 planComparisonStrategy = ComparePlansWithAssertion(plan => {
                   //THEN
                   plan should includeSomewhere.aPlan(IndexSeekByRange.name).containingVariables("n", "cached[n.prop1]")
-                }, Configs.Version3_5))
+                }))
   }
 
   private def createTestModelBigEnoughToConsiderPickingIndexSeek: Int = {

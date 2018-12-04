@@ -408,7 +408,7 @@ order by a.COL1""".format(a, b))
   test("createEngineWithSpecifiedParserVersion") {
     val db: GraphDatabaseService = new TestGraphDatabaseFactory()
                             .newImpermanentDatabaseBuilder(new File("target/engineWithSpecifiedParser"))
-                            .setConfig(GraphDatabaseSettings.cypher_parser_version, "3.4")
+                            .setConfig(GraphDatabaseSettings.cypher_parser_version, "3.5")
                             .newGraphDatabase()
     val engine = createEngine(db)
 

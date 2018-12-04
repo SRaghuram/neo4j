@@ -46,7 +46,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
       })
 
       val query =
-        s"""CYPHER 3.4 runtime=$runtime LOAD CSV WITH HEADERS FROM '$url' AS row
+        s"""CYPHER 3.5 runtime=$runtime LOAD CSV WITH HEADERS FROM '$url' AS row
            | MATCH (o:Order) WHERE o.OrderId = row.OrderId
            | MERGE (x:Order {OrderId:o.otherOrderId})
            | RETURN o, x""".stripMargin
@@ -101,7 +101,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
       })
 
       val query =
-        s"""CYPHER 3.4 runtime=$runtime LOAD CSV WITH HEADERS FROM '$url' AS row
+        s"""CYPHER 3.5 runtime=$runtime LOAD CSV WITH HEADERS FROM '$url' AS row
            | MATCH (o:Order) WHERE o.OrderId = row.OrderId
            | WITH count(o) as count
            | RETURN 1/count""".stripMargin

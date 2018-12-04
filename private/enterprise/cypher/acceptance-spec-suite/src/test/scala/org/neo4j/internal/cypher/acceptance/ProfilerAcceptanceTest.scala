@@ -123,8 +123,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       )
   }
 
-  test("PROFILE for Cypher 3.4") {
-    val result = graph.execute("cypher 3.4 profile match (n) where (n)-[:FOO]->() return *")
+  test("PROFILE for Cypher 3.5") {
+    val result = graph.execute("cypher 3.5 profile match (n) where (n)-[:FOO]->() return *")
 
     // materialize
     result.resultAsString()

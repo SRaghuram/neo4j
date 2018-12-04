@@ -146,7 +146,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
         intercept[QueryExecutionException](db.execute("CYPHER 3.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
         intercept[QueryExecutionException](db.execute("CYPHER 3.2 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
         intercept[QueryExecutionException](db.execute("CYPHER 3.3 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-        intercept[QueryExecutionException](db.execute("CYPHER 3.5 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+        intercept[QueryExecutionException](db.execute("CYPHER 3.4 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
         intercept[QueryExecutionException](db.execute("CYPHER 3.6 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
     }
   }

@@ -10,6 +10,7 @@ import org.neo4j.graphdb.Node
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 
 class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
+
   test("test that index seek is planned on the RHS using information from the LHS") {
     // given
 
@@ -132,8 +133,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
       """.stripMargin
 
     val result = executeWith(Configs.All - Configs.Compiled, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop) > b.prop2"),
-        expectPlansToFail = Configs.Version3_5))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop) > b.prop2")))
 
     result.columnAs[Node]("a").toList should equal(List(aNodes(123), aNodes(124), aNodes(125)))
   }
@@ -148,8 +148,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
       """.stripMargin
 
     val result = executeWith(Configs.All - Configs.Compiled, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop STARTS WITH b.prop2)"),
-        expectPlansToFail = Configs.Version3_5))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop STARTS WITH b.prop2)")))
 
     result.columnAs[Node]("a").toSet should equal(Set(aNodes(12), aNodes(120), aNodes(121), aNodes(122), aNodes(123), aNodes(124), aNodes(125)))
   }
@@ -204,8 +203,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
     // Matches the word "distance" anywhere in the argument string
     val distanceRegex = ".*distance.*".r
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgumentRegex(distanceRegex),
-        expectPlansToFail = Configs.Version3_5))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgumentRegex(distanceRegex)))
 
     result.columnAs[Node]("id(a)").toList should equal(List(99, 100, 101))
   }

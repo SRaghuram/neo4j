@@ -657,7 +657,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     val result =
       executeWith(
-        Configs.InterpretedAndSlotted - Configs.Version3_5,
+        Configs.InterpretedAndSlotted,
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
           .containingArgument(s":$LABEL($PROPERTY) > min AND :$LABEL($PROPERTY) < max"))
@@ -687,7 +687,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     val result =
       executeWith(
-        Configs.InterpretedAndSlotted - Configs.Version3_5,
+        Configs.InterpretedAndSlotted,
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
           .containingArgument(s":$LABEL($PROPERTY) > point({x: min.x, y: min.y}) AND :$LABEL($PROPERTY) < max"))
