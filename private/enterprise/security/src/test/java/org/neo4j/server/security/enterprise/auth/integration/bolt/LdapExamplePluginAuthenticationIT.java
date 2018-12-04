@@ -73,12 +73,6 @@ public class LdapExamplePluginAuthenticationIT extends EnterpriseAuthenticationT
         getLdapServer().setConfidentialityRequired( false );
     }
 
-    @BeforeEach
-    public void beforeEach() throws IOException
-    {
-        restartDatabaseIfNeeded( "neo", "abc123" );
-    }
-
     @Override
     protected Map<Setting<?>, String> getSettings()
     {

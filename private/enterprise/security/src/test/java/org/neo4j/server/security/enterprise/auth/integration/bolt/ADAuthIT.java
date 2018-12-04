@@ -84,12 +84,6 @@ public class ADAuthIT extends EnterpriseAuthenticationTestBase
         super.setup();
     }
 
-    @BeforeEach
-    public void beforeEach() throws IOException
-    {
-        restartDatabaseIfNeeded( "neo4j", "abc123" );
-    }
-
     @SuppressWarnings( "deprecation" )
     @Override
     protected Map<Setting<?>, String> getSettings()

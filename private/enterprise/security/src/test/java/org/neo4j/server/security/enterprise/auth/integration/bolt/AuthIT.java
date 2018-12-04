@@ -329,12 +329,6 @@ public class AuthIT extends AuthTestBase
         }
     }
 
-    @BeforeEach
-    public void beforeEach() throws IOException
-    {
-        restartDatabaseIfNeeded( READ_USER, password );
-    }
-
     @Override
     protected Map<Setting<?>, String> getSettings()
     {
