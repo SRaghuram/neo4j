@@ -135,7 +135,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         }
         if ( txIdPromise < firstTxId )
         {
-            return Prepare.complete( txIdPromise );
+            return Prepare.nothingToSend( txIdPromise );
         }
 
         try
@@ -194,7 +194,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
             return new Prepare( null, txPullingContext.txIdPromise, txPullingContext );
         }
 
-        static Prepare complete( long txIdPromise )
+        static Prepare nothingToSend( long txIdPromise )
         {
             return new Prepare( SUCCESS_END_OF_STREAM, txIdPromise, null );
         }
