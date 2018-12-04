@@ -30,7 +30,7 @@ object Configs {
   def InterpretedAndSlottedAndMorsel: TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
 
   // Configurations for versions
-  def Version3_4: TestConfiguration = TestConfiguration(V3_5, Planners.all, Runtimes.all)
+  def Version3_5: TestConfiguration = TestConfiguration(V3_5, Planners.all, Runtimes.all)
 
   def Version4_0: TestConfiguration = TestConfiguration(V4_0, Planners.all, Runtimes.all)
 

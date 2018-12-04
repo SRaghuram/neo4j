@@ -21,7 +21,7 @@ class TestConfigurationTest extends CypherFunSuite {
 
   test("should parse just version") {
     TestConfiguration("4.0") should be(TestConfiguration(Versions.V4_0, Planners.all, Runtimes.all))
-    TestConfiguration("3.4") should be(TestConfiguration(Versions.V3_5, Planners.all, Runtimes.all))
+    TestConfiguration("3.5") should be(TestConfiguration(Versions.V3_5, Planners.all, Runtimes.all))
   }
 
   test("should parse just planner") {

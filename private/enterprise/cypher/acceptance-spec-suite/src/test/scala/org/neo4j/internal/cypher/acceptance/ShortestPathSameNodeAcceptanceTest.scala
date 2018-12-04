@@ -20,10 +20,7 @@ import org.neo4j.values.virtual.VirtualValues
 
 class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTestSupport with CypherComparisonSupport {
 
-  val expectedToFail = TestConfiguration(
-    Versions(V3_5, V4_0),
-    Planners(Planners.Cost),
-    Runtimes(Runtimes.Interpreted, Runtimes.Slotted, Runtimes.SlottedWithCompiledExpressions))
+  private val expectedToFail = Configs.InterpretedAndSlotted
 
   def setupModel(db: GraphDatabaseCypherService) {
     db.inTx {

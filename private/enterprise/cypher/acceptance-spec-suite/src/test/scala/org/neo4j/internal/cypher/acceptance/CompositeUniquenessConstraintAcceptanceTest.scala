@@ -13,27 +13,23 @@ class CompositeUniquenessConstraintAcceptanceTest extends ExecutionEngineFunSuit
 
   test("should be able to create and remove single property uniqueness constraint") {
 
-    val testconfiguration = Configs.Version3_4 + Configs.Version4_0
     // When
-    executeWith(testconfiguration, "CREATE CONSTRAINT ON (n:Person) ASSERT (n.email) IS UNIQUE")
+    executeWith(Configs.All, "CREATE CONSTRAINT ON (n:Person) ASSERT (n.email) IS UNIQUE")
 
     // Then
     graph should haveConstraints("UNIQUENESS:Person(email)")
 
     // When
-    executeWith(testconfiguration, "DROP CONSTRAINT ON (n:Person) ASSERT (n.email) IS UNIQUE")
+    executeWith(Configs.All, "DROP CONSTRAINT ON (n:Person) ASSERT (n.email) IS UNIQUE")
 
     // Then
     graph should not(haveConstraints("UNIQUENESS:Person(email)"))
   }
 
-  val singlePropertyUniquenessFailConf =
-    TestConfiguration(Versions(V4_0, V3_5), Planners.Cost, Runtimes.all)
-
   test("should fail to to create composite uniqueness constraints") {
     // When
 
-    failWithError(singlePropertyUniquenessFailConf + Configs.Morsel,
+    failWithError(Configs.All + Configs.Morsel,
       "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS UNIQUE",
       List("Only single property uniqueness constraints are supported"))
 
@@ -43,7 +39,7 @@ class CompositeUniquenessConstraintAcceptanceTest extends ExecutionEngineFunSuit
 
   test("should fail to to drop composite uniqueness constraints") {
     // When
-    failWithError(singlePropertyUniquenessFailConf,
+    failWithError(Configs.All,
       "DROP CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS UNIQUE",
       List("Only single property uniqueness constraints are supported"))
 

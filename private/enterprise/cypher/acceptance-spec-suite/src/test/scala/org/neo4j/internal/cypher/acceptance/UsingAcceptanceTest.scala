@@ -364,7 +364,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |USING JOIN ON a
          |RETURN a.prop AS res""".stripMargin
 
-    val result = executeWith(Configs.Version4_0 + Configs.Version3_4, query,
+    val result = executeWith(Configs.Version4_0 + Configs.Version3_5, query,
                              planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("a"))))
 
     result.toList should equal (List(Map("res" -> "foo")))
@@ -380,7 +380,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
           |USING JOIN ON b
           |RETURN b.prop AS res""".stripMargin
 
-    val result = executeWith(Configs.Version4_0 + Configs.Version3_4, query,
+    val result = executeWith(Configs.Version4_0 + Configs.Version3_5, query,
                              planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b"))))
 
     result.toList should equal (List(Map("res" -> "bar")))
@@ -775,7 +775,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         | WHERE f.bar=5 and f.baz=3
         | RETURN f
       """.stripMargin
-    val result = executeWith(Configs.Version4_0 + Configs.Version3_4 - Configs.Compiled, query,
+    val result = executeWith(Configs.Version4_0 + Configs.Version3_5 - Configs.Compiled, query,
                              planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))
       }))

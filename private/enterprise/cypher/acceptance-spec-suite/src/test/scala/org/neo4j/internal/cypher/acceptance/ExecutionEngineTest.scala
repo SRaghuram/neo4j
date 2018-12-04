@@ -30,7 +30,7 @@ import scala.collection.mutable
 
 class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CreateTempFileTestSupport with CypherComparisonSupport {
 
-  private val startConf = Configs.InterpretedRuntime - Configs.Version3_4
+  private val startConf = Configs.InterpretedRuntime - Configs.Version3_5
 
   test("shouldGetRelationshipById") {
     val n = createNode()

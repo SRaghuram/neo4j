@@ -122,7 +122,7 @@ class LoadCsvAcceptanceTest
     }
   }
 
-  private val interpretedAndSlotted4_0 = Configs.InterpretedAndSlotted - Configs.Version3_4
+  private val interpretedAndSlotted4_0 = Configs.InterpretedAndSlotted - Configs.Version3_5
 
   test("should return correct linenumber") {
     val url = createCSVTempFileURL("neo")({

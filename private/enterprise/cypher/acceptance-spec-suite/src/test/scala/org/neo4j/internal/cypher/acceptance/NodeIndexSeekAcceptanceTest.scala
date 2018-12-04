@@ -84,7 +84,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
       planComparisonStrategy = ComparePlansWithAssertion((plan) => {
         plan should includeSomewhere.nTimes(2, aPlan("NodeIndexSeekByRange"))
         plan should includeSomewhere.aPlan("Union")
-      }, expectPlansToFail = Configs.Version3_4))
+      }, expectPlansToFail = Configs.Version3_5))
 
     result.columnAs("c").toSet should be(Set(nodes(1), nodes(11)))
   }
@@ -441,10 +441,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     resampleIndexes()
 
     // When
-    val plansToFail = TestConfiguration(V3_5, Planners.all, Runtimes.all)
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":L1(prop3) < m.prop4"),
-        expectPlansToFail = plansToFail))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":L1(prop3) < m.prop4")))
 
     // Then
     result.toList should equal(List(Map("n" -> node1), Map("n" -> node2)))
