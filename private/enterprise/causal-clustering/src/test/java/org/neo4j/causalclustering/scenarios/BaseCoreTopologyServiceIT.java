@@ -5,7 +5,7 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -31,14 +31,15 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 public abstract class BaseCoreTopologyServiceIT
 {
     private final DiscoveryServiceType discoveryServiceType;
+    protected CoreTopologyService service;
 
     protected BaseCoreTopologyServiceIT( DiscoveryServiceType discoveryServiceType )
     {
         this.discoveryServiceType = discoveryServiceType;
     }
 
-    @Test()
-    void shouldBeAbleToStartAndStopWithoutSuccessfulJoin()
+    @BeforeEach
+    void setUp()
     {
         // Random members that does not exists, discovery will never succeed
         String initialHosts = "localhost:" + PortAuthority.allocatePort() + ",localhost:" + PortAuthority.allocatePort();
@@ -47,20 +48,17 @@ public abstract class BaseCoreTopologyServiceIT
         config.augment( CausalClusteringSettings.discovery_listen_address, "localhost:" + PortAuthority.allocatePort() );
 
         JobScheduler jobScheduler = createInitialisedScheduler();
-        InitialDiscoveryMembersResolver
-                initialDiscoveryMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
+        InitialDiscoveryMembersResolver initialDiscoveryMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
 
-        CoreTopologyService service = discoveryServiceType.createFactory().coreTopologyService(
-                config,
-                new MemberId( UUID.randomUUID() ),
-                jobScheduler,
-                NullLogProvider.getInstance(),
-                NullLogProvider.getInstance(),
-                initialDiscoveryMemberResolver,
-                new NoRetriesStrategy(),
-                new Monitors(),
-                Clocks.systemClock() );
+        service = discoveryServiceType
+                .createFactory()
+                .coreTopologyService( config, new MemberId( UUID.randomUUID() ), jobScheduler, NullLogProvider.getInstance(), NullLogProvider.getInstance(),
+                        initialDiscoveryMemberResolver, new NoRetriesStrategy(), new Monitors(), Clocks.systemClock() );
+    }
 
+    @Test
+    void shouldBeAbleToStartAndStopWithoutSuccessfulJoin()
+    {
         assertTimeout( Duration.ofSeconds( 120 ), () ->
         {
             service.init();

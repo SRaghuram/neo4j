@@ -15,17 +15,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.time.Clock;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
+import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.scenarios.ClusterOverviewHelper.MemberInfo;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.test.causalclustering.ClusterConfig;
@@ -45,10 +42,10 @@ import static org.neo4j.causalclustering.scenarios.ClusterOverviewHelper.assertA
 import static org.neo4j.causalclustering.scenarios.ClusterOverviewHelper.assertEventualOverview;
 import static org.neo4j.causalclustering.scenarios.ClusterOverviewHelper.clusterOverview;
 import static org.neo4j.causalclustering.scenarios.ClusterOverviewHelper.containsAllMemberAddresses;
-import static org.neo4j.causalclustering.scenarios.ClusterOverviewHelper.containsMemberAddresses;
 import static org.neo4j.causalclustering.scenarios.ClusterOverviewHelper.containsRole;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
+@ExtendWith( SuppressOutputExtension.class )
 public abstract class BaseClusterOverviewIT
 {
     private final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()

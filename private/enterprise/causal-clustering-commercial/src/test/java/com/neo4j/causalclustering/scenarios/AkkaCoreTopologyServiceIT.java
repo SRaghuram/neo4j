@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.causalclustering.scenarios.BaseCoreTopologyServiceIT;
 
@@ -18,7 +18,7 @@ class AkkaCoreTopologyServiceIT extends BaseCoreTopologyServiceIT
     }
 
     @Test
-    public void shouldRestart() throws Throwable
+    void shouldRestart() throws Throwable
     {
         service.init();
         service.start();
