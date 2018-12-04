@@ -27,12 +27,17 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
     private var cursor: NodeLabelIndexCursor = _
 
     override protected def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
-      cursor = context.transactionalContext.cursors.allocateNodeLabelIndexCursor()
-      val read = context.transactionalContext.dataRead
       val maybeLabelId = label.getOptId(context)
-      if (maybeLabelId.isDefined)
-        read.nodeLabelScan(maybeLabelId.get.id, cursor)
-      cursor
+      maybeLabelId match {
+        case Some(id) =>
+          cursor = context.transactionalContext.cursors.allocateNodeLabelIndexCursor()
+          val read = context.transactionalContext.dataRead
+          read.nodeLabelScan(id, cursor)
+          cursor
+
+        case _ =>
+          null // No data to iterate
+      }
     }
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {

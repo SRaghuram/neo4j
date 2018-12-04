@@ -20,10 +20,6 @@ class StreamingMergePipeline(val start: StreamingMergeOperator[PipelineArgument]
 
   override val upstream = Some(lhsUpstream)
 
-  def init(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState): PipelineTask = {
-    throw new IllegalStateException("We cannot have a join pipeline as a leaf pipeline")
-  }
-
   override def connectPipeline(downstream: Option[Pipeline], downstreamReduce: Option[ReducePipeline]): Unit = {
     this.downstream = downstream
     this.downstreamReduce = downstreamReduce
