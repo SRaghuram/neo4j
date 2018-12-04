@@ -104,14 +104,24 @@ public class RaftReplicator implements Replicator, LeaderListener
             progress.awaitResult();
             replicationMonitor.successfulReplication();
         }
+        catch ( InterruptedException e )
+        {
+            Thread.currentThread().interrupt();
+            handleError( operation, e );
+        }
         catch ( Throwable t )
         {
-            progressTracker.abort( operation );
-            replicationMonitor.failedReplication( t );
-            throw new ReplicationFailureException( "Failure during replication", t );
+            handleError( operation, t );
         }
         sessionPool.releaseSession( session );
         return progress.result();
+    }
+
+    private void handleError( DistributedOperation operation, Throwable t ) throws ReplicationFailureException
+    {
+        progressTracker.abort( operation );
+        replicationMonitor.failedReplication( t );
+        throw new ReplicationFailureException( "Failure during replication", t );
     }
 
     @Override
