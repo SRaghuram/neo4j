@@ -30,7 +30,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.index.Index;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -67,7 +66,6 @@ public class CatchupServerIT
     private static final String PROP_NAME = "name";
     private static final String PROP = "prop";
     public static final Label LABEL = label( "MyLabel" );
-    private static final String INDEX = "index";
 
     private GraphDatabaseAPI graphDb;
     private TestCatchupServer catchupServer;
@@ -88,7 +86,6 @@ public class CatchupServerIT
     {
         temporaryDirectory = testDirectory.directory( "temp" );
         graphDb = (GraphDatabaseAPI) new TestGraphDatabaseFactory().setFileSystem( fsa ).newEmbeddedDatabase( testDirectory.databaseDir() );
-        createLegacyIndex();
         createPropertyIndex();
         addData( graphDb );
 
@@ -291,7 +288,7 @@ public class CatchupServerIT
         try ( Stream<StoreFileMetadata> countStoreStream = database.getDatabaseFileListing().builder().excludeAll()
                 .includeNeoStoreFiles().build().stream();
                 Stream<StoreFileMetadata> explicitIndexStream = database.getDatabaseFileListing().builder().excludeAll()
-                         .includeExplicitIndexStoreStoreFiles().build().stream() )
+                         .build().stream() )
         {
             return Stream.concat( countStoreStream.filter( isCountFile( database.getDatabaseLayout() ) ), explicitIndexStream ).map(
                     StoreFileMetadata::file ).collect( toList() );
@@ -301,7 +298,7 @@ public class CatchupServerIT
     private List<String> getExpectedStoreFiles( Database database ) throws IOException
     {
         DatabaseFileListing.StoreFileListingBuilder builder = database.getDatabaseFileListing().builder();
-        builder.excludeLogFiles().excludeExplicitIndexStoreFiles().excludeSchemaIndexStoreFiles().excludeAdditionalProviders();
+        builder.excludeLogFiles().excludeSchemaIndexStoreFiles().excludeAdditionalProviders();
         try ( Stream<StoreFileMetadata> stream = builder.build().stream() )
         {
             return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( sfm -> sfm.file().getName() ).collect( toList() );
@@ -332,16 +329,6 @@ public class CatchupServerIT
         try ( Transaction tx = graphDb.beginTx() )
         {
             graphDb.schema().indexFor( LABEL ).on( PROP_NAME ).create();
-            tx.success();
-        }
-    }
-
-    private void createLegacyIndex()
-    {
-        try ( Transaction tx = graphDb.beginTx() )
-        {
-            Index<Node> nodeIndex = graphDb.index().forNodes( INDEX );
-            nodeIndex.add( graphDb.createNode(), "some-key", "som-value" );
             tx.success();
         }
     }

@@ -201,15 +201,6 @@ public class RebuildFromLogsTest
                             }
                         }
                     }
-                },
-        EXPLICIT_INDEX_NODE( CREATE_NODE )
-                {
-                    @Override
-                    void applyTx( GraphDatabaseService graphDb )
-                    {
-                        Node node = firstNode( graphDb );
-                        graphDb.index().forNodes( name() ).add( node, "foo", "bar" );
-                    }
                 };
 
         private static Node firstNode( GraphDatabaseService graphDb )

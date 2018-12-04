@@ -19,7 +19,6 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.extension.DatabaseKernelExtensions;
-import org.neo4j.kernel.impl.api.DefaultExplicitIndexProvider;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.spi.KernelContext;
@@ -96,15 +95,13 @@ public class StoreMigration
         life.add( logService );
 
         // Add participants from kernel extensions...
-        DefaultExplicitIndexProvider migrationIndexProvider = new DefaultExplicitIndexProvider();
-
         Log log = userLogProvider.getLog( StoreMigration.class );
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         try ( PageCache pageCache = createPageCache( fs, config, jobScheduler ) )
         {
             Dependencies deps = new Dependencies();
             Monitors monitors = new Monitors();
-            deps.satisfyDependencies( fs, config, migrationIndexProvider, pageCache, logService, monitors,
+            deps.satisfyDependencies( fs, config, pageCache, logService, monitors,
                     RecoveryCleanupWorkCollector.immediate() );
 
             KernelContext kernelContext = new SimpleKernelContext( storeDirectory, DatabaseInfo.UNKNOWN, deps );
@@ -124,8 +121,8 @@ public class StoreMigration
 
             long startTime = System.currentTimeMillis();
             DatabaseMigrator migrator = new DatabaseMigrator( progressMonitor, fs, config, logService,
-                    indexProviderMap, migrationIndexProvider,
-                    pageCache, RecordFormatSelector.selectForConfig( config, userLogProvider ), tailScanner, jobScheduler );
+                    indexProviderMap, pageCache, RecordFormatSelector.selectForConfig( config, userLogProvider ), tailScanner,
+                    jobScheduler );
             migrator.migrate( databaseLayout );
 
             // Append checkpoint so the last log entry will have the latest version

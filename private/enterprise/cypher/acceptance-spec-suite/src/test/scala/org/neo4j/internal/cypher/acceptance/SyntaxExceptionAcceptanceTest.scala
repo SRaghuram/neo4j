@@ -13,38 +13,10 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
 
   // Not TCK material; START, shortestPath
 
-  test("should raise error when missing index value") {
-    test(
-      "start s = node:index(key=) return s",
-      "Invalid input ')': expected whitespace, \"...string...\" or a parameter (line 1, column 26)"
-    )
-  }
-
-  test("should give nice error when missing equals sign") {
-    test(
-      "start n=node:customer(id : {id}) return n",
-      "Invalid input ':': expected whitespace, comment or '=' (line 1, column 26)"
-    )
-  }
-
-  test("should raise error when missing index key") {
-    test(
-      "start s = node:index(=\"value\") return s",
-      "Invalid input '=': expected whitespace, an identifier, \"...string...\" or a parameter (line 1, column 22)"
-    )
-  }
-
   test("start without node or rel") {
     test(
       "start s return s",
       "Invalid input 'r': expected whitespace, comment or '=' (line 1, column 9)"
-    )
-  }
-
-  test("should complain about a string being expected") {
-    test(
-      "start s=node:index(key = value) return s",
-      "Invalid input 'v': expected whitespace, comment, \"...string...\" or a parameter (line 1, column 26)"
     )
   }
 
@@ -101,36 +73,6 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
     test(
       "start a==node(0) return a",
       "Invalid input '=' (line 1, column 9)"
-    )
-  }
-
-  test("handles multiline queries") {
-    test(
-      """start
-         a=node(0),
-         b=node(0),
-         c=node(0),
-         d=node(0),
-         e=node(0),
-         f=node(0),
-         g=node(0),
-         s=node:index(key = value) return s""",
-      "Invalid input 'v': expected whitespace, comment, \"...string...\" or a parameter (line 9, column 29)"
-    )
-  }
-
-  test("create node without") {
-    test(
-      """start
-         a=node(0),
-         b=node(0),
-         c=node(0),
-         d=node(0),
-         e=node(0),
-         f=node(0),
-         g=node(0),
-         s=node:index(key = value) return s""",
-      "Invalid input 'v': expected whitespace, comment, \"...string...\" or a parameter (line 9, column 29)"
     )
   }
 

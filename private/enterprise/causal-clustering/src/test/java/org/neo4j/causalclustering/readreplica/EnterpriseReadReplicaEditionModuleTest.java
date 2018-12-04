@@ -5,21 +5,20 @@
  */
 package org.neo4j.causalclustering.readreplica;
 
-import java.util.function.Predicate;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.function.Predicate;
+
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith( TestDirectoryExtension.class )
 class EnterpriseReadReplicaEditionModuleTest
@@ -37,7 +36,6 @@ class EnterpriseReadReplicaEditionModuleTest
         assertFalse( filter.test( metadataStoreName ) );
         assertFalse( filter.test( databaseLayout.nodeStore().getName() ) );
         assertTrue( filter.test( TransactionLogFiles.DEFAULT_NAME + ".1" ) );
-        assertTrue( filter.test( IndexConfigStore.INDEX_DB_FILE_NAME + ".any" ) );
         assertTrue( filter.test( metadataStoreName + PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 }

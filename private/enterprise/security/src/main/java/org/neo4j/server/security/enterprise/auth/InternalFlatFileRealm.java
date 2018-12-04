@@ -430,11 +430,6 @@ public class InternalFlatFileRealm extends AuthorizingRealm implements RealmLife
         return getAuthorizationInfo( principalCollection );
     }
 
-    private int numberOfUsers()
-    {
-        return userRepository.numberOfUsers();
-    }
-
     private int numberOfRoles()
     {
         return roleRepository.numberOfRoles();

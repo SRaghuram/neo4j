@@ -41,8 +41,6 @@ public class ProcedureResourcesIT
             .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
 
     private final String indexDefinition = ":Label(prop)";
-    private final String explicitIndexName = "explicitIndex";
-    private final String relExplicitIndexName = "relExplicitIndex";
     private final String ftsNodesIndex = "'ftsNodes'";
     private final String ftsRelsIndex = "'ftsRels'";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -59,7 +57,6 @@ public class ProcedureResourcesIT
     {
         // when
         createIndex();
-        createExplicitIndex();
         createFulltextIndexes();
         for ( ProcedureSignature procedure : db.getDependencyResolver().resolveDependency( Procedures.class ).getAllProcedures() )
         {
@@ -147,16 +144,6 @@ public class ProcedureResourcesIT
         {
             db.execute( "call db.index.fulltext.createNodeIndex(" + ftsNodesIndex + ", ['Label'], ['prop'])" ).close();
             db.execute( "call db.index.fulltext.createRelationshipIndex(" + ftsRelsIndex + ", ['Label'], ['prop'])" ).close();
-            tx.success();
-        }
-    }
-
-    private void createExplicitIndex()
-    {
-        try ( Transaction tx = db.beginTx() )
-        {
-            db.index().forNodes( explicitIndexName );
-            db.index().forRelationships( relExplicitIndexName );
             tx.success();
         }
     }
@@ -265,99 +252,6 @@ public class ProcedureResourcesIT
             break;
         case "dbms.listActiveLocks":
             proc.withParam( "'query-1234'" );
-            break;
-        case "db.index.explicit.seekNodes":
-            proc.withParam( "'" + explicitIndexName + "'" );
-            proc.withParam( "'noKey'" );
-            proc.withParam( "'noValue'" );
-            break;
-        case "db.index.explicit.searchNodes":
-            proc.withParam( "'" + explicitIndexName + "'" );
-            proc.withParam( "'noKey:foo*'" );
-            break;
-        case "db.index.explicit.searchRelationships":
-            proc.withParam( "'" + relExplicitIndexName + "'" );
-            proc.withParam( "'noKey:foo*'" );
-            break;
-        case "db.index.explicit.searchRelationshipsIn":
-            proc.withParam( "'" + relExplicitIndexName + "'" );
-
-            proc.withParam( "n" );
-            proc.withParam( "'noKey:foo*'" );
-            proc.withSetup( "OPTIONAL MATCH (n) WITH n LIMIT 1", "YIELD relationship AS r RETURN r" );
-            break;
-        case "db.index.explicit.searchRelationshipsOut":
-            proc.withParam( "'" + relExplicitIndexName + "'" );
-            proc.withParam( "n" );
-            proc.withParam( "'noKey:foo*'" );
-            proc.withSetup( "OPTIONAL MATCH (n) WITH n LIMIT 1", "YIELD relationship AS r RETURN r" );
-            break;
-        case "db.index.explicit.searchRelationshipsBetween":
-            proc.withParam( "'" + relExplicitIndexName + "'" );
-            proc.withParam( "n" );
-            proc.withParam( "n" );
-            proc.withParam( "'noKey:foo*'" );
-            proc.withSetup( "OPTIONAL MATCH (n) WITH n LIMIT 1", "YIELD relationship AS r RETURN r" );
-            break;
-        case "db.index.explicit.seekRelationships":
-            proc.withParam( "'" + relExplicitIndexName + "'" );
-            proc.withParam( "'noKey'" );
-            proc.withParam( "'noValue'" );
-            break;
-        case "db.index.explicit.auto.seekNodes":
-            proc.withParam( "'noKey'" );
-            proc.withParam( "'noValue'" );
-            break;
-        case "db.index.explicit.auto.searchNodes":
-            proc.withParam( "'noKey:foo*'" );
-            break;
-        case "db.index.explicit.auto.searchRelationships":
-            proc.withParam( "'noKey:foo*'" );
-            break;
-        case "db.index.explicit.auto.seekRelationships":
-            proc.withParam( "'noKey'" );
-            proc.withParam( "'noValue'" );
-            break;
-        case "db.index.explicit.existsForNodes":
-            proc.withParam( "'" + explicitIndexName + "'" );
-            break;
-        case "db.index.explicit.existsForRelationships":
-            proc.withParam( "'" + explicitIndexName + "'" );
-            break;
-        case "db.index.explicit.forNodes":
-            proc.withParam( "'" + explicitIndexName + "'" );
-            break;
-        case "db.index.explicit.forRelationships":
-            proc.withParam( "'" + explicitIndexName + "'" );
-            break;
-        case "db.index.explicit.addNode":
-            proc.withParam( "'" + explicitIndexName + "'" );
-            proc.withParam( "n" );
-            proc.withParam( "'prop'" );
-            proc.withParam( "'value'");
-            proc.withSetup( "OPTIONAL MATCH (n) WITH n LIMIT 1", "YIELD success RETURN success" );
-            break;
-        case "db.index.explicit.addRelationship":
-            proc.withParam( "'" + explicitIndexName + "'" );
-            proc.withParam( "r" );
-            proc.withParam( "'prop'" );
-            proc.withParam( "'value'");
-            proc.withSetup( "OPTIONAL MATCH ()-[r]->() WITH r LIMIT 1", "YIELD success RETURN success" );
-            break;
-        case "db.index.explicit.removeNode":
-            proc.withParam( "'" + explicitIndexName + "'" );
-            proc.withParam( "n" );
-            proc.withParam( "'prop'" );
-            proc.withSetup( "OPTIONAL MATCH (n) WITH n LIMIT 1", "YIELD success RETURN success" );
-            break;
-        case "db.index.explicit.removeRelationship":
-            proc.withParam( "'" + explicitIndexName + "'" );
-            proc.withParam( "r" );
-            proc.withParam( "'prop'" );
-            proc.withSetup( "OPTIONAL MATCH ()-[r]->() WITH r LIMIT 1", "YIELD success RETURN success" );
-            break;
-        case "db.index.explicit.drop":
-            proc.withParam( "'" + explicitIndexName + "'" );
             break;
         case "dbms.setConfigValue":
             proc.withParam( "'dbms.logs.query.enabled'" );

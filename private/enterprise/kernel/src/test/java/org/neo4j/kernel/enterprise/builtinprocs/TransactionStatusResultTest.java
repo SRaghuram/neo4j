@@ -22,7 +22,6 @@ import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.api.explicitindex.AutoIndexing;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
@@ -40,7 +39,6 @@ import org.neo4j.kernel.impl.api.state.ConstraintIndexCreator;
 import org.neo4j.kernel.impl.api.transaction.trace.TransactionInitializationTrace;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.impl.factory.CanWrite;
-import org.neo4j.kernel.impl.index.ExplicitIndexStore;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -242,13 +240,12 @@ class TransactionStatusResultTest
             KernelTransactionImplementation transaction = new KernelTransactionImplementation( Config.defaults(),
                         mock( StatementOperationParts.class ), mock( SchemaWriteGuard.class ), new TransactionHooks(),
                         mock( ConstraintIndexCreator.class ), new Procedures(), TransactionHeaderInformationFactory.DEFAULT,
-                        mock( TransactionCommitProcess.class ), new DatabaseTransactionStats(), () -> null,
+                        mock( TransactionCommitProcess.class ), new DatabaseTransactionStats(),
                         mock( Pool.class ), Clocks.fakeClock(),
                         new AtomicReference<>( CpuClock.NOT_AVAILABLE ), new AtomicReference<>( HeapAllocation.NOT_AVAILABLE ),
                         TransactionTracer.NULL,
                         LockTracer.NONE, PageCursorTracerSupplier.NULL,
                         mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
-                        AutoIndexing.UNSUPPORTED, mock( ExplicitIndexStore.class ),
                         EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
                         mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ), new Dependencies() )
             {

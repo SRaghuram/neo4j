@@ -398,13 +398,6 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
                 ((CommunicationException) e).getRootCause() instanceof ConnectException;
     }
 
-    private boolean isAuthorizationExceptionAnLdapReadTimeout( AuthorizationException e )
-    {
-        // Shiro's doGetAuthorizationInfo() wraps a NamingException in an AuthorizationException
-        return e.getCause() != null && e.getCause() instanceof NamingException &&
-               e.getCause().getMessage().contains( JNDI_LDAP_READ_TIMEOUT_MESSAGE_PART );
-    }
-
     private void cacheAuthorizationInfo( String username, Set<String> roleNames )
     {
         // Use the existing authorizationCache in our base class

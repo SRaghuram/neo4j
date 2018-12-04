@@ -54,7 +54,6 @@ import org.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import org.neo4j.kernel.impl.factory.ReadOnly;
-import org.neo4j.kernel.impl.index.IndexConfigStore;
 import org.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import org.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -236,7 +235,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
     static Predicate<String> fileWatcherFileNameFilter()
     {
         return Predicates.any( fileName -> fileName.startsWith( TransactionLogFiles.DEFAULT_NAME ),
-                fileName -> fileName.startsWith( IndexConfigStore.INDEX_DB_FILE_NAME ), filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
+                filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 
     @Override
