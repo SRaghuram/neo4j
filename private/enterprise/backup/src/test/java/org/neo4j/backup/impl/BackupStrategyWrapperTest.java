@@ -8,6 +8,7 @@ package org.neo4j.backup.impl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,13 +28,16 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Answers.RETURNS_MOCKS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyVararg;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -62,29 +66,25 @@ class BackupStrategyWrapperTest
     private final Config config = mock( Config.class );
     private final OptionalHostnamePort userProvidedAddress = new OptionalHostnamePort( (String) null, null, null );
     private final String databaseName = "graph.db";
-    private final Fallible<BackupStageOutcome> SUCCESS = new Fallible<>( BackupStageOutcome.SUCCESS, null );
-    private final Fallible<BackupStageOutcome> FAILURE = new Fallible<>( BackupStageOutcome.FAILURE, null );
     private final PageCache pageCache = mock( PageCache.class );
     private final LogProvider logProvider = mock( LogProvider.class );
     private final Log log = mock( Log.class );
 
     @BeforeEach
-    void setup() throws IOException
+    void setup() throws Exception
     {
         desiredBackupLayout = testDirectory.databaseLayout( "desiredBackupLayout" );
         reportDir = testDirectory.directory( "reportDir" ).toPath();
         availableFreshBackupLocation = testDirectory.directory( "availableFreshBackupLocation" ).toPath();
         Path availableOldBackupLocation = testDirectory.directory( "availableOldBackupLocation" ).toPath();
 
-        when( pageCache.map( any(), anyInt(), anyVararg() ) ).thenReturn( mock( PagedFile.class, RETURNS_MOCKS ) );
+        when( pageCache.map( any(), anyInt(), any() ) ).thenReturn( mock( PagedFile.class, RETURNS_MOCKS ) );
         when( outsideWorld.fileSystem() ).thenReturn( fileSystemAbstraction );
         when( backupCopyService.findAnAvailableLocationForNewFullBackup( any() ) ).thenReturn( availableFreshBackupLocation );
         when( backupCopyService.findNewBackupLocationForBrokenExisting( any() ) ).thenReturn( availableOldBackupLocation );
-        when( backupStrategyImplementation.performFullBackup( any(), any(), any() ) ).thenReturn( SUCCESS );
         when( logProvider.getLog( (Class) any() ) ).thenReturn( log );
 
-        backupWrapper =
-                spy( new BackupStrategyWrapper( backupStrategyImplementation, backupCopyService, fileSystemAbstraction, pageCache, config, logProvider ) );
+        backupWrapper = spy( new BackupStrategyWrapper( backupStrategyImplementation, backupCopyService, fileSystemAbstraction, pageCache, logProvider ) );
     }
 
     @Test
@@ -104,7 +104,7 @@ class BackupStrategyWrapperTest
     }
 
     @Test
-    void fullBackupIsPerformedWhenNoOtherBackupExists()
+    void fullBackupIsPerformedWhenNoOtherBackupExists() throws Exception
     {
         // given
         requiredArguments = requiredArguments( true );
@@ -121,31 +121,32 @@ class BackupStrategyWrapperTest
     }
 
     @Test
-    void fullBackupIsIgnoredIfNoOtherBackupAndNotFallback()
+    void fullBackupIsIgnoredIfNoOtherBackupAndNotFallback() throws Exception
     {
         // given there is an existing backup
-        when( backupCopyService.backupExists( any() ) ).thenReturn( false );
+        when( backupCopyService.backupExists( any() ) ).thenReturn( true );
 
         // and we don't want to fallback to full backups
         requiredArguments = requiredArguments( false );
         onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
 
         // and incremental backup fails because it's a different store
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn( FAILURE );
+        BackupExecutionException incrementalBackupError = new BackupExecutionException( "Store mismatch" );
+        doThrow( incrementalBackupError ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
 
         // when
-        backupWrapper.doBackup( onlineBackupContext );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then full backup wasnt performed
         verify( backupStrategyImplementation, never() ).performFullBackup( any(), any(), any() );
+        assertEquals( incrementalBackupError, error );
     }
 
     @Test
-    void fullBackupIsNotPerformedWhenAnIncrementalBackupIsSuccessful()
+    void fullBackupIsNotPerformedWhenAnIncrementalBackupIsSuccessful() throws Exception
     {
         // given
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn( SUCCESS );
 
         // and
         requiredArguments = requiredArguments( true );
@@ -159,7 +160,7 @@ class BackupStrategyWrapperTest
     }
 
     @Test
-    void failedIncrementalFallsBackToFullWhenOptionSet()
+    void failedIncrementalFallsBackToFullWhenOptionSet() throws Exception
     {
         // given conditions for incremental exist
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
@@ -167,37 +168,39 @@ class BackupStrategyWrapperTest
         onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
 
         // and incremental fails
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn(
-                new Fallible<>( BackupStageOutcome.FAILURE, null ) );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
 
         // when
-        backupWrapper.doBackup( onlineBackupContext );
+        assertDoesNotThrow( () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then
-        verify( backupStrategyImplementation ).performFullBackup( any(), any(), any() );
+        InOrder inOrder = inOrder( backupStrategyImplementation );
+        inOrder.verify( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
+        inOrder.verify( backupStrategyImplementation ).performFullBackup( any(), any(), any() );
     }
 
     @Test
-    void fallbackDoesNotHappenIfNotSpecified()
+    void fallbackDoesNotHappenIfNotSpecified() throws Exception
     {
         // given
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn(
-                new Fallible<>( BackupStageOutcome.FAILURE, null ) );
+        BackupExecutionException incrementalBackupError = new BackupExecutionException( "Oops" );
+        doThrow( incrementalBackupError ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
 
         // and
         requiredArguments = requiredArguments( false );
         onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
 
         // when
-        backupWrapper.doBackup( onlineBackupContext );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then
         verify( backupStrategyImplementation, never() ).performFullBackup( any(), any(), any() );
+        assertEquals( incrementalBackupError, error );
     }
 
     @Test
-    void failedBackupsDontMoveExisting() throws IOException
+    void failedBackupsDontMoveExisting() throws Exception
     {
         // given a backup already exists
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
@@ -207,15 +210,13 @@ class BackupStrategyWrapperTest
         onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
 
         // and an incremental backup fails
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn(
-                new Fallible<>( BackupStageOutcome.FAILURE, null ) );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
 
         // and full backup fails
-        when( backupStrategyImplementation.performFullBackup( any(), any(), any() ) ).thenReturn(
-                new Fallible<>( BackupStageOutcome.FAILURE, null ) );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performFullBackup( any(), any(), any() );
 
         // when backup is performed
-        backupWrapper.doBackup( onlineBackupContext );
+        assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then existing backup hasn't moved
         verify( backupStrategyImplementation ).performFullBackup( any(), any(), any() );
@@ -223,7 +224,7 @@ class BackupStrategyWrapperTest
     }
 
     @Test
-    void successfulFullBackupsMoveExistingBackup() throws IOException
+    void successfulFullBackupsMoveExistingBackup() throws Exception
     {
         // given backup exists
         desiredBackupLayout = testDirectory.databaseLayout( "some-preexisting-backup" );
@@ -244,31 +245,27 @@ class BackupStrategyWrapperTest
                 .thenReturn( temporaryFullBackupLocation );
 
         // and incremental fails
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn(
-                new Fallible<>( BackupStageOutcome.FAILURE, null ) );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
 
         // and full passes
-        when( backupStrategyImplementation.performFullBackup( any(), any(), any() ) ).thenReturn(
-                new Fallible<>( BackupStageOutcome.SUCCESS, null ) );
+        doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any(), any() );
 
         // when
-        Fallible<BackupStrategyOutcome> state = backupWrapper.doBackup( onlineBackupContext );
+        assertDoesNotThrow( () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then original existing backup is moved to err directory
         verify( backupCopyService ).moveBackupLocation( eq( desiredBackupLayout.databaseDirectory().toPath() ), eq( newLocationForExistingBackup ) );
 
         // and new successful backup is renamed to original expected name
         verify( backupCopyService ).moveBackupLocation( eq( temporaryFullBackupLocation ), eq( desiredBackupLayout.databaseDirectory().toPath() ) );
-
-        // and backup was successful
-        assertEquals( BackupStrategyOutcome.SUCCESS, state.getState() );
     }
 
     @Test
-    void failureDuringMoveCausesAbsoluteFailure() throws IOException
+    void failureDuringMoveCausesException() throws Exception
     {
         // given moves fail
-        doThrow( IOException.class ).when( backupCopyService ).moveBackupLocation( any(), any() );
+        IOException ioException = new IOException();
+        doThrow( ioException ).when( backupCopyService ).moveBackupLocation( any(), any() );
 
         // and fallback to full
         requiredArguments = requiredArguments( true );
@@ -278,26 +275,23 @@ class BackupStrategyWrapperTest
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
 
         // and incremental fails
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn(
-                new Fallible<>( BackupStageOutcome.FAILURE, null ) );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
 
         // and full passes
-        when( backupStrategyImplementation.performFullBackup( any(), any(), any() ) ).thenReturn(
-                new Fallible<>( BackupStageOutcome.SUCCESS, null ) );
+        doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any(), any() );
 
         // when
-        Fallible<BackupStrategyOutcome> state = backupWrapper.doBackup( onlineBackupContext );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then result was catastrophic and contained reason
-        assertEquals( BackupStrategyOutcome.ABSOLUTE_FAILURE, state.getState() );
-        assertEquals( IOException.class, state.getCause().get().getClass() );
+        assertEquals( ioException, error.getCause() );
 
-        // and full backup was definitely performed
+        // and full backup was definitely executed
         verify( backupStrategyImplementation ).performFullBackup( any(), any(), any() );
     }
 
     @Test
-    void performingFullBackupInvokesRecovery() throws IOException
+    void performingFullBackupInvokesRecovery() throws Exception
     {
         // given full backup flag is set
         requiredArguments = requiredArguments( true );
@@ -307,11 +301,11 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper ).recoverBackup( any() );
+        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ) );
     }
 
     @Test
-    void performingIncrementalBackupDoesNotInvokeRecovery() throws IOException
+    void performingIncrementalBackupInvokesRecovery() throws Exception
     {
         // given backup exists
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
@@ -319,17 +313,17 @@ class BackupStrategyWrapperTest
         onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
 
         // and incremental backups are successful
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn( SUCCESS );
+        doNothing().when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper, never() ).recoverBackup( any() );
+        verify( backupWrapper ).performRecovery( any(), any() );
     }
 
     @Test
-    void successfulBackupsAreRecovered() throws IOException
+    void successfulBackupsAreRecovered() throws Exception
     {
         // given
         fallbackToFullPasses();
@@ -339,25 +333,25 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper ).recoverBackup( any() );
+        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ) );
     }
 
     @Test
-    void unsuccessfulBackupsAreNotRecovered() throws IOException
+    void unsuccessfulBackupsAreNotRecovered() throws Exception
     {
         // given
         bothBackupsFail();
         onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
 
         // when
-        backupWrapper.doBackup( onlineBackupContext );
+        assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then
-        verify( backupWrapper, never() ).recoverBackup( any() );
+        verify( backupWrapper, never() ).performRecovery( any(), any() );
     }
 
     @Test
-    void successfulFullBackupsAreRecoveredEvenIfNoBackupExisted() throws IOException
+    void successfulFullBackupsAreRecoveredEvenIfNoBackupExisted() throws Exception
     {
         // given a backup exists
         when( backupCopyService.backupExists( desiredBackupLayout ) ).thenReturn( false );
@@ -372,11 +366,11 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper ).recoverBackup( any() );
+        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ) );
     }
 
     @Test
-    void recoveryIsPerformedBeforeRename() throws IOException
+    void recoveryIsPerformedBeforeRename() throws Exception
     {
         // given
         fallbackToFullPasses();
@@ -391,7 +385,7 @@ class BackupStrategyWrapperTest
     }
 
     @Test
-    void logsAreClearedAfterIncrementalBackup() throws IOException
+    void logsAreClearedAfterIncrementalBackup() throws Exception
     {
         // given backup exists
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
@@ -411,7 +405,7 @@ class BackupStrategyWrapperTest
     }
 
     @Test
-    void logsAreNotClearedWhenIncrementalNotSuccessful() throws IOException
+    void logsAreNotClearedWhenIncrementalNotSuccessful() throws Exception
     {
         // given backup exists
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
@@ -424,14 +418,14 @@ class BackupStrategyWrapperTest
         onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
 
         // when backups are performed
-        backupWrapper.doBackup( onlineBackupContext );
+        assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then do not
         verify( backupCopyService, never() ).clearIdFiles( any() );
     }
 
     @Test
-    void logsAreClearedWhenFullBackupIsSuccessful() throws IOException
+    void logsAreClearedWhenFullBackupIsSuccessful() throws Exception
     {
         // given a backup doesn't exist
         when( backupCopyService.backupExists( any() ) ).thenReturn( false );
@@ -448,7 +442,7 @@ class BackupStrategyWrapperTest
     }
 
     @Test
-    void logsAreNotClearedWhenFullBackupIsNotSuccessful() throws IOException
+    void logsAreNotClearedWhenFullBackupIsNotSuccessful() throws Exception
     {
         // given a backup doesn't exist
         when( backupCopyService.backupExists( any() ) ).thenReturn( false );
@@ -458,14 +452,14 @@ class BackupStrategyWrapperTest
         onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
 
         // when
-        backupWrapper.doBackup( onlineBackupContext );
+        assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then
         verify( backupCopyService, never() ).clearIdFiles( any() );
     }
 
     @Test
-    void logsWhenIncrementalFailsAndFallbackToFull()
+    void logsWhenIncrementalFailsAndFallbackToFull() throws Exception
     {
         // given backup exists
         when( backupCopyService.backupExists( any() ) ).thenReturn( false );
@@ -483,37 +477,37 @@ class BackupStrategyWrapperTest
 
     // ====================================================================================================
 
-    private void incrementalBackupIsSuccessful( boolean isSuccessful )
+    private void incrementalBackupIsSuccessful( boolean isSuccessful ) throws Exception
     {
         if ( isSuccessful )
         {
-            when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn(
-                    new Fallible<>( BackupStageOutcome.SUCCESS, null ) );
-            return;
+            doNothing().when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
         }
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn(
-                new Fallible<>( BackupStageOutcome.FAILURE, null ) );
+        else
+        {
+            doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
+        }
     }
 
-    private void bothBackupsFail()
+    private void bothBackupsFail() throws Exception
     {
         requiredArguments = requiredArguments( true );
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn( FAILURE );
-        when( backupStrategyImplementation.performFullBackup( any(), any(), any() ) ).thenReturn( FAILURE );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performFullBackup( any(), any(), any() );
     }
 
-    private void fallbackToFullPasses()
+    private void fallbackToFullPasses() throws Exception
     {
         requiredArguments = requiredArguments( true );
-        when( backupStrategyImplementation.performIncrementalBackup( any(), any(), any() ) ).thenReturn( FAILURE );
-        when( backupStrategyImplementation.performFullBackup( any(), any(), any() ) ).thenReturn( SUCCESS );
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), any() );
+        doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any(), any() );
     }
 
     private OnlineBackupRequiredArguments requiredArguments( boolean fallbackToFull )
     {
         File databaseDirectory = desiredBackupLayout.databaseDirectory();
         return new OnlineBackupRequiredArguments( userProvidedAddress, databaseName, desiredBackupLayout.getStoreLayout().storeDirectory().toPath(),
-                databaseDirectory.getName(), SelectedBackupProtocol.ANY, fallbackToFull, true, 1000, reportDir );
+                databaseDirectory.getName(), fallbackToFull, true, 1000, reportDir );
     }
 
     private static ConsistencyFlags consistencyFlags()

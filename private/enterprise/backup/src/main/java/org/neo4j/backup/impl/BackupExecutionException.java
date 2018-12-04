@@ -5,9 +5,14 @@
  */
 package org.neo4j.backup.impl;
 
-class ConsistencyCheckFailedException extends Exception
+class BackupExecutionException extends Exception
 {
-    ConsistencyCheckFailedException( Throwable cause )
+    BackupExecutionException( String message )
+    {
+        super( message );
+    }
+
+    BackupExecutionException( Throwable cause )
     {
         super( cause );
     }

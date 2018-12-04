@@ -388,7 +388,6 @@ public class OnlineBackupCommandCcIT
             // when full backup
             assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode(
                     "--from", customAddress,
-                    "--protocol=catchup",
                     "--cc-report-dir=" + backupStoreDir,
                     "--backup-dir=" + backupStoreDir,
                     "--name=" + backupName ) );
@@ -399,8 +398,9 @@ public class OnlineBackupCommandCcIT
             // and incremental backup
             assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode(
                     "--from", customAddress,
-                    "--protocol=catchup",
-                    "--cc-report-dir=" + backupStoreDir, "--backup-dir=" + backupStoreDir, "--name=" + backupName, arg( ARG_NAME_FALLBACK_FULL, false ) ) );
+                    "--cc-report-dir=" + backupStoreDir,
+                    "--backup-dir=" + backupStoreDir,
+                    "--name=" + backupName, arg( ARG_NAME_FALLBACK_FULL, false ) ) );
 
             // then
             assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( backupName, backupStoreDir ) );

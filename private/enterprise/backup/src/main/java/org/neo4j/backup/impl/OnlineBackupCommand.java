@@ -13,7 +13,6 @@ import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.admin.OutsideWorld;
 
 import static java.lang.String.format;
-import static org.neo4j.backup.impl.SelectedBackupProtocol.CATCHUP;
 
 class OnlineBackupCommand implements AdminCommand
 {
@@ -44,7 +43,6 @@ class OnlineBackupCommand implements AdminCommand
     public void execute( String[] args ) throws IncorrectUsage, CommandFailed
     {
         OnlineBackupContext onlineBackupContext = contextBuilder.createContext( args );
-        validateArguments( onlineBackupContext.getRequiredArguments() );
         try ( BackupSupportingClasses backupSupportingClasses = backupSupportingClassesFactory.createSupportingClasses( onlineBackupContext ) )
         {
             // Make sure destination exists
@@ -57,48 +55,6 @@ class OnlineBackupCommand implements AdminCommand
 
             backupStrategyCoordinator.performBackup( onlineBackupContext );
             outsideWorld.stdOutLine( "Backup complete." );
-        }
-    }
-
-    private void validateArguments( OnlineBackupRequiredArguments arguments ) throws IncorrectUsage
-    {
-        checkProtocolCompatibilityWithMultiDatabase( arguments );
-        informAboutProtocolApplicability( arguments );
-    }
-
-    /**
-     * Remote database names cannot be specified in the common protocol.
-     */
-    private void checkProtocolCompatibilityWithMultiDatabase( OnlineBackupRequiredArguments arguments ) throws IncorrectUsage
-    {
-        if ( arguments.getDatabaseName().isPresent() )
-        {
-            if ( !arguments.getSelectedBackupProtocol().equals( CATCHUP ) )
-            {
-                throw new IncorrectUsage( "Only the catchup protocol supports specifying the remote database name." );
-            }
-        }
-    }
-
-    /**
-     * A soft warning to users of the backup client.
-     */
-    private void informAboutProtocolApplicability( OnlineBackupRequiredArguments arguments )
-    {
-        SelectedBackupProtocol selectedBackupProtocol = arguments.getSelectedBackupProtocol();
-        if ( !SelectedBackupProtocol.ANY.equals( selectedBackupProtocol ) )
-        {
-            final String compatibleProducts;
-            switch ( selectedBackupProtocol )
-            {
-            case CATCHUP:
-                compatibleProducts = "causal clustering";
-                break;
-            default:
-                throw new IllegalArgumentException( "Unhandled protocol " + selectedBackupProtocol );
-            }
-            outsideWorld.stdOutLine( format( "The selected protocol `%s` means that it is only compatible with %s instances", selectedBackupProtocol.getName(),
-                    compatibleProducts ) );
         }
     }
 

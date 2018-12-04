@@ -12,9 +12,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 
 interface BackupStrategy extends Lifecycle
 {
-    Fallible<BackupStageOutcome> performIncrementalBackup(
-            DatabaseLayout targetDatabaseLayout, Config config, OptionalHostnamePort userProvidedAddress );
+    void performIncrementalBackup( DatabaseLayout targetDbLayout, Config config, OptionalHostnamePort address ) throws BackupExecutionException;
 
-    Fallible<BackupStageOutcome> performFullBackup(
-            DatabaseLayout targetDatabaseLayout, Config config, OptionalHostnamePort userProvidedAddress );
+    void performFullBackup( DatabaseLayout targetDbLayout, Config config, OptionalHostnamePort address ) throws BackupExecutionException;
 }

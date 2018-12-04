@@ -18,7 +18,6 @@ import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 
-import static org.neo4j.backup.impl.SelectedBackupProtocol.CATCHUP;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
 import static org.neo4j.helpers.Exceptions.findCauseOrSuppressed;
 import static org.neo4j.helpers.collection.Iterators.asSet;
@@ -57,7 +56,6 @@ class BackupHelper
 
         OnlineBackupCommandBuilder backupCommand = new OnlineBackupCommandBuilder()
                 .withOutput( NULL_OUTPUT_STREAM )
-                .withSelectedBackupStrategy( CATCHUP )
                 .withConsistencyCheck( true )
                 .withHost( address.getHostname() )
                 .withPort( address.getPort() );

@@ -98,7 +98,6 @@ public class BackupCoreIT
         args.add( "--from=" + from );
         args.add( "--cc-report-dir=" + backupsDir );
         args.add( "--backup-dir=" + backupsDir );
-        args.add( "--protocol=catchup" );
         args.add( "--name=" + name );
         return args.toArray( new String[0] );
     }

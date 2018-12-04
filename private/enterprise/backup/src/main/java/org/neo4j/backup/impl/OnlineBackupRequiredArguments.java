@@ -20,10 +20,9 @@ class OnlineBackupRequiredArguments
     private final boolean doConsistencyCheck;
     private final long timeout;
     private final Path reportDir;
-    private final SelectedBackupProtocol selectedBackupProtocol;
 
     OnlineBackupRequiredArguments( OptionalHostnamePort address, String databaseName, Path directory, String name,
-            SelectedBackupProtocol selectedBackupProtocol, boolean fallbackToFull, boolean doConsistencyCheck, long timeout, Path reportDir )
+            boolean fallbackToFull, boolean doConsistencyCheck, long timeout, Path reportDir )
     {
         this.address = address;
         this.databaseName = databaseName;
@@ -33,7 +32,6 @@ class OnlineBackupRequiredArguments
         this.doConsistencyCheck = doConsistencyCheck;
         this.timeout = timeout;
         this.reportDir = reportDir;
-        this.selectedBackupProtocol = selectedBackupProtocol;
     }
 
     public OptionalHostnamePort getAddress()
@@ -79,10 +77,5 @@ class OnlineBackupRequiredArguments
     public Path getResolvedLocationFromName()
     {
         return directory.resolve( name );
-    }
-
-    public SelectedBackupProtocol getSelectedBackupProtocol()
-    {
-        return selectedBackupProtocol;
     }
 }

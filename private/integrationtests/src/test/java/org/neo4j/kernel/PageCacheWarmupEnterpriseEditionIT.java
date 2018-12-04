@@ -110,7 +110,6 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         File backupDir = testDirectory.cleanDirectory( "backup" );
         assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( backupDir,
                 "--from", "localhost:" + backupPort,
-                "--protocol=catchup",
                 "--cc-report-dir=" + backupDir,
                 "--name=graph.db-backup",
                 "--backup-dir=" + backupDir ) );
@@ -150,7 +149,6 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
             File backupDir = testDirectory.cleanDirectory( "backup" );
             assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( backupDir,
                     "--from", "localhost:" + backupPort,
-                    "--protocol=catchup",
                     "--name=graph.db-backup",
                     "--cc-report-dir=" + backupDir,
                     "--backup-dir=" + backupDir ) );

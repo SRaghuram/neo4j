@@ -7,9 +7,6 @@ package org.neo4j.backup.impl;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Supplier;
 
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.OutsideWorld;
@@ -30,8 +27,8 @@ import static java.lang.String.format;
  */
 class BackupStrategyCoordinator
 {
-    private static final int STATUS_CC_ERROR = 2;
-    private static final int STATUS_CC_INCONSISTENT = 3;
+    private static final int STATUS_CONSISTENCY_CHECK_ERROR = 2;
+    private static final int STATUS_CONSISTENCY_CHECK_INCONSISTENT = 3;
 
     private ConsistencyCheckService consistencyCheckService;
     private final OutsideWorld outsideWorld;
@@ -58,37 +55,27 @@ class BackupStrategyCoordinator
      */
     public void performBackup( OnlineBackupContext onlineBackupContext ) throws CommandFailed
     {
-        // Convenience
         OnlineBackupRequiredArguments requiredArgs = onlineBackupContext.getRequiredArguments();
         Path destination = onlineBackupContext.getResolvedLocationFromName();
         ConsistencyFlags consistencyFlags = onlineBackupContext.getConsistencyFlags();
 
-        List<Throwable> causesOfFailure = new ArrayList<>();
-        Fallible<BackupStrategyOutcome> throwableWithState = strategy.doBackup( onlineBackupContext );
-        if ( throwableWithState.getState() == BackupStrategyOutcome.CORRECT_STRATEGY_FAILED )
+        try
         {
-            throw commandFailedWithCause( throwableWithState ).get();
+            strategy.doBackup( onlineBackupContext );
         }
-        throwableWithState.getCause().ifPresent( causesOfFailure::add );
-        if ( !BackupStrategyOutcome.SUCCESS.equals( throwableWithState.getState() ) )
+        catch ( BackupExecutionException e )
         {
-            CommandFailed commandFailed = new CommandFailed( "Failed to run a backup using the available strategies." );
-            causesOfFailure.forEach( commandFailed::addSuppressed );
-            throw commandFailed;
+            throw new CommandFailed( "Execution of backup failed", e.getCause() != null ? e.getCause() : e );
         }
+        catch ( Throwable t )
+        {
+            throw new CommandFailed( "Execution of backup failed", t );
+        }
+
         if ( requiredArgs.isDoConsistencyCheck() )
         {
             performConsistencyCheck( onlineBackupContext.getConfig(), requiredArgs, consistencyFlags, DatabaseLayout.of( destination.toFile() ) );
         }
-    }
-
-    private static Supplier<CommandFailed> commandFailedWithCause( Fallible<BackupStrategyOutcome> cause )
-    {
-        if ( cause.getCause().isPresent() )
-        {
-            return () -> new CommandFailed( "Execution of backup failed", cause.getCause().get() );
-        }
-        return () -> new CommandFailed( "Execution of backup failed" );
     }
 
     private void performConsistencyCheck(
@@ -111,7 +98,8 @@ class BackupStrategyCoordinator
 
             if ( !ccResult.isSuccessful() )
             {
-                throw new CommandFailed( format( "Inconsistencies found. See '%s' for details.", ccResult.reportFile() ), STATUS_CC_INCONSISTENT );
+                throw new CommandFailed( format( "Inconsistencies found. See '%s' for details.", ccResult.reportFile() ),
+                        STATUS_CONSISTENCY_CHECK_INCONSISTENT );
             }
         }
         catch ( Throwable e )
@@ -120,7 +108,7 @@ class BackupStrategyCoordinator
             {
                 throw (CommandFailed) e;
             }
-            throw new CommandFailed( "Failed to do consistency check on backup: " + e.getMessage(), e, STATUS_CC_ERROR );
+            throw new CommandFailed( "Failed to do consistency check on backup: " + e.getMessage(), e, STATUS_CONSISTENCY_CHECK_ERROR );
         }
     }
 }

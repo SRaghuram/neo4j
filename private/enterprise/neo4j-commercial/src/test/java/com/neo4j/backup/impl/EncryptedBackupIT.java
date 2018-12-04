@@ -38,7 +38,6 @@ import java.util.function.IntSupplier;
 
 import org.neo4j.backup.impl.OnlineBackupCommandBuilder;
 import org.neo4j.backup.impl.OnlineBackupCommandCcIT;
-import org.neo4j.backup.impl.SelectedBackupProtocol;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -501,9 +500,7 @@ class EncryptedBackupIT
          */
         private static int runBackupSameJvm( File neo4jHome, String backupName, String host ) throws CommandFailed, IncorrectUsage
         {
-            return new OnlineBackupCommandBuilder().withSelectedBackupStrategy( SelectedBackupProtocol.CATCHUP )
-                           .withHost( host )
-                           .backup( neo4jHome, backupName ) ? 0 : 1;
+            return new OnlineBackupCommandBuilder().withHost( host ).backup( neo4jHome, backupName ) ? 0 : 1;
         }
 
         private static void backupDataMatchesDatabase( Cluster<?> cluster, File backupDir, String backupName )

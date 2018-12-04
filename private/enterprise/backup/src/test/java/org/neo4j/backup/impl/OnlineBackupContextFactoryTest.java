@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -37,7 +36,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.backup.impl.SelectedBackupProtocol.ANY;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 
@@ -278,39 +276,6 @@ public class OnlineBackupContextFactoryTest
         OnlineBackupContextFactory builder = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = builder.createContext( "--backup-dir=" + backupDir, "--name=" + name );
         assertThat( context.getConfig().get( transaction_logs_root_path ).getAbsolutePath(), is( backupPath.toString() ) );
-    }
-
-    @Test
-    public void defaultProtocolIsAny() throws CommandFailed, IncorrectUsage
-    {
-        // given
-        OnlineBackupContextFactory builder = new OnlineBackupContextFactory( homeDir, configDir );
-
-        // when context resolved without proto override value
-        OnlineBackupContext context = builder.createContext( requiredAnd() );
-
-        // then
-        assertEquals( ANY, context.getRequiredArguments().getSelectedBackupProtocol() );
-    }
-
-    @Test
-    public void overrideWithLegacy() throws CommandFailed, IncorrectUsage
-    {
-        // with
-        List<String> input = Arrays.asList( "catchup" );
-        List<SelectedBackupProtocol> expected = Arrays.asList( SelectedBackupProtocol.CATCHUP );
-
-        for ( int useCase = 0; useCase < input.size(); useCase++ )
-        {
-            // given
-            OnlineBackupContextFactory builder = new OnlineBackupContextFactory( homeDir, configDir );
-
-            // when
-            OnlineBackupContext context = builder.createContext( requiredAnd( "--protocol=" + input.get( useCase ) ) );
-
-            // then
-            assertEquals( expected.get( useCase ), context.getRequiredArguments().getSelectedBackupProtocol() );
-        }
     }
 
     @Test

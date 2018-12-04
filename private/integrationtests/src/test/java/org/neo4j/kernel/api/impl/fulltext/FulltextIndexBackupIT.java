@@ -87,7 +87,6 @@ public class FulltextIndexBackupIT
         File backup = dir.storeDir( "backup" );
         runBackupToolFromOtherJvmToGetExitCode( backup,
                 "--from", "127.0.0.1:" + backupPort,
-                "--protocol=catchup",
                 "--name=name",
                 "--cc-report-dir=" + backup,
                 "--backup-dir=" + backup );
@@ -105,7 +104,6 @@ public class FulltextIndexBackupIT
 
         runBackupToolFromOtherJvmToGetExitCode( backup,
                 "--from", "127.0.0.1:" + backupPort,
-                "--protocol=catchup",
                 "--name=name",
                 "--cc-report-dir=" + backup,
                 "--backup-dir=" + backup );
@@ -130,7 +128,6 @@ public class FulltextIndexBackupIT
 
         runBackupToolFromOtherJvmToGetExitCode( backup,
                 "--from", "127.0.0.1:" + backupPort,
-                "--protocol=catchup",
                 "--name=name",
                 "--cc-report-dir=" + backup,
                 "--backup-dir=" + backup );

@@ -22,15 +22,12 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.test.matchers.CommonMatchers.hasSuppressed;
 
 public class BackupStrategyCoordinatorTest
 {
@@ -70,38 +67,9 @@ public class BackupStrategyCoordinatorTest
     }
 
     @Test
-    public void backupIsInvalidIfTheCorrectMethodFailed_firstFails() throws CommandFailed
-    {
-        // given
-        when( firstStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.CORRECT_STRATEGY_FAILED, null ) );
-
-        // then
-        expectedException.expect( CommandFailed.class );
-        expectedException.expectMessage( containsString( "Execution of backup failed" ) );
-
-        // when
-        subject.performBackup( onlineBackupContext );
-    }
-
-    @Test
-    public void backupFailsIfAllStrategiesAreIncorrect() throws CommandFailed
-    {
-        // given
-        when( firstStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, null ) );
-
-        // then
-        expectedException.expect( CommandFailed.class );
-        expectedException.expectMessage( equalTo( "Failed to run a backup using the available strategies." ) );
-
-        // when
-        subject.performBackup( onlineBackupContext );
-    }
-
-    @Test
     public void consistencyCheckIsRunIfSpecified() throws CommandFailed, ConsistencyCheckIncompleteException
     {
         // given
-        anyStrategyPasses();
         when( requiredArguments.isDoConsistencyCheck() ).thenReturn( true );
         when( consistencyCheckService.runFullConsistencyCheck( any(), any(), eq( progressMonitorFactory ), any( LogProvider.class ), any(), eq( false ), any(),
                 any() ) ).thenReturn( consistencyCheckResult );
@@ -118,7 +86,6 @@ public class BackupStrategyCoordinatorTest
     public void consistencyCheckIsNotRunIfNotSpecified() throws CommandFailed, ConsistencyCheckIncompleteException
     {
         // given
-        anyStrategyPasses();
         when( requiredArguments.isDoConsistencyCheck() ).thenReturn( false );
 
         // when
@@ -130,29 +97,9 @@ public class BackupStrategyCoordinatorTest
     }
 
     @Test
-    public void allFailureCausesAreCollectedAndAttachedToCommandFailedException() throws CommandFailed
-    {
-        // given expected causes for failure
-        RuntimeException firstCause = new RuntimeException( "First cause" );
-
-        // and strategies fail with given causes
-        when( firstStrategy.doBackup( any() ) )
-                .thenReturn( new Fallible<>( BackupStrategyOutcome.INCORRECT_STRATEGY, firstCause ) );
-
-        // then the command failed exception contains the specified causes
-        expectedException.expect( hasSuppressed( firstCause ) );
-        expectedException.expect( CommandFailed.class );
-        expectedException.expectMessage( "Failed to run a backup using the available strategies." );
-
-        // when
-        subject.performBackup( onlineBackupContext );
-    }
-
-    @Test
     public void commandFailedWhenConsistencyCheckFails() throws ConsistencyCheckIncompleteException, CommandFailed
     {
         // given
-        anyStrategyPasses();
         when( requiredArguments.isDoConsistencyCheck() ).thenReturn( true );
         when( consistencyCheckResult.isSuccessful() ).thenReturn( false );
         when( consistencyCheckService.runFullConsistencyCheck( any(), any(), eq( progressMonitorFactory ), any( LogProvider.class ), any(), eq( false ), any(),
@@ -164,13 +111,5 @@ public class BackupStrategyCoordinatorTest
 
         // when
         subject.performBackup( onlineBackupContext );
-    }
-
-    /**
-     * Fixture for other tests
-     */
-    private void anyStrategyPasses()
-    {
-        when( firstStrategy.doBackup( any() ) ).thenReturn( new Fallible<>( BackupStrategyOutcome.SUCCESS, null ) );
     }
 }

@@ -43,7 +43,6 @@ public class OnlineBackupCommandBuilder
     private Boolean checkConsistency;
     private File consistencyReportLocation;
     private Config additionalConfig;
-    private SelectedBackupProtocol selectedBackupProtocol;
     private Boolean consistencyCheckGraph;
     private Boolean consistencyCheckIndexes;
     private Boolean consistencyCheckLabel;
@@ -129,12 +128,7 @@ public class OnlineBackupCommandBuilder
         return this;
     }
 
-    public OnlineBackupCommandBuilder withSelectedBackupStrategy( SelectedBackupProtocol selectedBackupStrategy )
-    {
-        this.selectedBackupProtocol = selectedBackupStrategy;
-        return this;
-    }
-
+    // todo: this does not need to return a boolean!
     public boolean backup( File neo4jHome, String backupName ) throws CommandFailed, IncorrectUsage
     {
         File targetLocation = new File( neo4jHome, backupName );
@@ -169,7 +163,6 @@ public class OnlineBackupCommandBuilder
                 argBackupLocation( targetLocation ),
                 argFrom(),
                 argFallbackToFull(),
-                argSelectedProtocol(),
                 argTimeout(),
                 argCheckConsistency(),
                 argReportDir(),
@@ -236,14 +229,6 @@ public class OnlineBackupCommandBuilder
     {
         return Optional.ofNullable( fallbackToFull )
                 .map( flag -> format( "--fallback-to-full=%s", flag ) )
-                .orElse( "" );
-    }
-
-    private String argSelectedProtocol()
-    {
-        return Optional.ofNullable( selectedBackupProtocol )
-                .map( SelectedBackupProtocol::getName )
-                .map( argValue -> format( "--%s=%s", OnlineBackupContextFactory.ARG_NAME_PROTO_OVERRIDE, argValue ) )
                 .orElse( "" );
     }
 

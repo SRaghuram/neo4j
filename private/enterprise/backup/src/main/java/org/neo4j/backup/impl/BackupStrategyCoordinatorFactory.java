@@ -12,7 +12,6 @@ import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 
 /*
@@ -50,20 +49,13 @@ class BackupStrategyCoordinatorFactory
         FileSystemAbstraction fs = outsideWorld.fileSystem();
         BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ) );
         ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( outsideWorld.errorStream() );
-        long timeout = onlineBackupContext.getRequiredArguments().getTimeout();
-        Config config = onlineBackupContext.getConfig();
+        long timeout = onlineBackupContext.getRequiredArguments().getTimeout(); // todo: this should be used!
 
         StoreFiles storeFiles = new StoreFiles( fs, pageCache );
-        BackupStrategy ccStrategy = new CausalClusteringBackupStrategy( backupDelegator, addressResolver, logProvider, storeFiles );
+        BackupStrategy backupStrategy = new DefaultBackupStrategy( backupDelegator, addressResolver, logProvider, storeFiles );
 
-        BackupStrategyWrapper ccStrategyWrapper = wrap( ccStrategy, copyService, pageCache, config, fs );
+        BackupStrategyWrapper strategyWrapper = new BackupStrategyWrapper( backupStrategy, copyService, fs, pageCache, logProvider );
 
-        return new BackupStrategyCoordinator( consistencyCheckService, outsideWorld, logProvider, progressMonitorFactory, ccStrategyWrapper );
-    }
-
-    private BackupStrategyWrapper wrap( BackupStrategy strategy, BackupCopyService copyService, PageCache pageCache,
-                                        Config config, FileSystemAbstraction fs )
-    {
-        return new BackupStrategyWrapper( strategy, copyService, fs, pageCache, config, logProvider ) ;
+        return new BackupStrategyCoordinator( consistencyCheckService, outsideWorld, logProvider, progressMonitorFactory, strategyWrapper );
     }
 }
