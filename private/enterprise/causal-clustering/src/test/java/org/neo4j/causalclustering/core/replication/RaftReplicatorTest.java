@@ -11,8 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.StubLocalDatabaseService;
@@ -96,6 +94,7 @@ class RaftReplicatorTest
 
         // when
         capturedProgress.last.setReplicated();
+        capturedProgress.last.registerResult( Result.of( 5 ) );
 
         // then
         replicatingThread.join( DEFAULT_TIMEOUT_MS );
@@ -130,6 +129,7 @@ class RaftReplicatorTest
 
         // cleanup
         capturedProgress.last.setReplicated();
+        capturedProgress.last.registerResult( Result.of( 5 ) );
         replicatingThread.join( DEFAULT_TIMEOUT_MS );
 
         verify( replicationMonitor, times( 1 ) ).startReplication();
@@ -160,7 +160,7 @@ class RaftReplicatorTest
 
         // when
         capturedProgress.last.setReplicated();
-        capturedProgress.last.futureResult().complete( 5 );
+        capturedProgress.last.registerResult( Result.of( 5 ) );
         replicatingThread.join( DEFAULT_TIMEOUT_MS );
 
         // then
@@ -254,6 +254,7 @@ class RaftReplicatorTest
     {
         OneProgressTracker oneProgressTracker = new OneProgressTracker();
         oneProgressTracker.last.setReplicated();
+        oneProgressTracker.last.registerResult( Result.of( null ) );
         CapturingOutbound<RaftMessages.RaftMessage> outbound = new CapturingOutbound<>();
         RaftReplicator replicator = getReplicator( outbound, oneProgressTracker, new Monitors() );
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
@@ -291,6 +292,7 @@ class RaftReplicatorTest
         assertEventually( "send count", () -> outbound.count, greaterThan( 1 ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
         replicator.onLeaderSwitch( new LeaderInfo( null, 1 ) );
         capturedProgress.last.setReplicated();
+        capturedProgress.last.registerResult( Result.of( 5 ) );
         replicator.onLeaderSwitch( leaderInfo );
 
         replicatingThread.join( DEFAULT_TIMEOUT_MS );
@@ -325,16 +327,7 @@ class RaftReplicatorTest
         {
             try
             {
-                Future<Object> futureResult = replicator.replicate( content );
-                try
-                {
-                    futureResult.get();
-                }
-                catch ( ExecutionException e )
-                {
-                    replicationException = e;
-                    throw new IllegalStateException();
-                }
+                replicator.replicate( content ).consume();
             }
             catch ( Exception e )
             {
@@ -385,13 +378,13 @@ class RaftReplicatorTest
         @Override
         public void trackResult( DistributedOperation operation, Result result )
         {
-            throw new UnsupportedOperationException();
+            last.registerResult( result );
         }
 
         @Override
         public void abort( DistributedOperation operation )
         {
-            throw new UnsupportedOperationException();
+            // do nothing
         }
 
         @Override

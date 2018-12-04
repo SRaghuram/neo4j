@@ -5,9 +5,6 @@
  */
 package org.neo4j.causalclustering.core.replication;
 
-import java.util.concurrent.Future;
-import java.util.function.BiConsumer;
-
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
 import org.neo4j.causalclustering.core.consensus.LeaderListener;
@@ -16,6 +13,7 @@ import org.neo4j.causalclustering.core.consensus.RaftMessages;
 import org.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor;
 import org.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import org.neo4j.causalclustering.core.replication.session.OperationContext;
+import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.causalclustering.helper.TimeoutStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.messaging.Outbound;
@@ -61,7 +59,7 @@ public class RaftReplicator implements Replicator, LeaderListener
     }
 
     @Override
-    public Future<Object> replicate( ReplicatedContent command ) throws ReplicationFailureException
+    public Result replicate( ReplicatedContent command ) throws ReplicationFailureException
     {
         MemberId currentLeader = leaderProvider.currentLeader();
         if ( currentLeader == null )
@@ -71,54 +69,49 @@ public class RaftReplicator implements Replicator, LeaderListener
         return replicate0( command, currentLeader );
     }
 
-    private Future<Object> replicate0( ReplicatedContent command, MemberId leader ) throws ReplicationFailureException
+    private Result replicate0( ReplicatedContent command, MemberId leader ) throws ReplicationFailureException
     {
         replicationMonitor.startReplication();
+
+        OperationContext session = sessionPool.acquireSession();
+
+        DistributedOperation operation = new DistributedOperation( command, session.globalSession(), session.localOperationId() );
+        Progress progress = progressTracker.start( operation );
+
+        TimeoutStrategy.Timeout progressTimeout = progressTimeoutStrategy.newTimeout();
+        int attempts = 0;
         try
         {
-            OperationContext session = sessionPool.acquireSession();
-
-            DistributedOperation operation = new DistributedOperation( command, session.globalSession(), session.localOperationId() );
-            Progress progress = progressTracker.start( operation );
-
-            TimeoutStrategy.Timeout progressTimeout = progressTimeoutStrategy.newTimeout();
-            int attempts = 0;
-            try
+            while ( true )
             {
-                while ( true )
+                attempts++;
+                if ( attempts > 1 )
                 {
-                    attempts++;
-                    if ( attempts > 1 )
-                    {
-                        log.info( "Retrying replication. Current attempt: %d Content: %s", attempts, command );
-                    }
-                    replicationMonitor.replicationAttempt();
-                    assertDatabaseAvailable();
-                    // blocking at least until the send has succeeded or failed before retrying
-                    outbound.send( leader, new RaftMessages.NewEntry.Request( me, operation ), true );
-                    progress.awaitReplication( progressTimeout.getMillis() );
-                    if ( progress.isReplicated() )
-                    {
-                        break;
-                    }
-                    progressTimeout.increment();
-                    leader = leaderProvider.awaitLeader();
+                    log.info( "Retrying replication. Current attempt: %d Content: %s", attempts, command );
                 }
+                replicationMonitor.replicationAttempt();
+                assertDatabaseAvailable();
+                // blocking at least until the send has succeeded or failed before retrying
+                outbound.send( leader, new RaftMessages.NewEntry.Request( me, operation ), true );
+                progress.awaitReplication( progressTimeout.getMillis() );
+                if ( progress.isReplicated() )
+                {
+                    break;
+                }
+                progressTimeout.increment();
+                leader = leaderProvider.awaitLeader();
             }
-            catch ( InterruptedException e )
-            {
-                progressTracker.abort( operation );
-                throw new ReplicationFailureException( "Interrupted while replicating", e );
-            }
-            progress.futureResult().whenComplete( ( ignored1, ignored2 ) -> sessionPool.releaseSession( session ) );
+            progress.awaitResult();
             replicationMonitor.successfulReplication();
-            return progress.futureResult();
         }
         catch ( Throwable t )
         {
+            progressTracker.abort( operation );
             replicationMonitor.failedReplication( t );
-            throw t;
+            throw new ReplicationFailureException( "Failure during replication", t );
         }
+        sessionPool.releaseSession( session );
+        return progress.result();
     }
 
     @Override
@@ -138,16 +131,9 @@ public class RaftReplicator implements Replicator, LeaderListener
         leaderProvider.setLeader( newLeader );
     }
 
-    private void assertDatabaseAvailable() throws ReplicationFailureException
+    private void assertDatabaseAvailable() throws UnavailableException
     {
-        databaseService.assertHealthy( ReplicationFailureException.class );
-        try
-        {
-            availabilityGuard.await( availabilityTimeoutMillis );
-        }
-        catch ( UnavailableException e )
-        {
-            throw new ReplicationFailureException( "Database is not available, transaction cannot be replicated.", e );
-        }
+        databaseService.assertHealthy( IllegalStateException.class );
+        availabilityGuard.await( availabilityTimeoutMillis );
     }
 }

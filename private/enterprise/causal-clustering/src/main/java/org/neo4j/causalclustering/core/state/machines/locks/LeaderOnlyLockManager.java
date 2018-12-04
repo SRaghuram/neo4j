@@ -13,6 +13,7 @@ import org.neo4j.causalclustering.core.consensus.LeaderLocator;
 import org.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import org.neo4j.causalclustering.core.replication.ReplicationFailureException;
 import org.neo4j.causalclustering.core.replication.Replicator;
+import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.impl.locking.ActiveLock;
@@ -96,10 +97,10 @@ public class LeaderOnlyLockManager implements Locks
         ReplicatedLockTokenRequest lockTokenRequest =
                 new ReplicatedLockTokenRequest( myself, LockToken.nextCandidateId( currentToken.id() ), databaseName );
 
-        Future<Object> future;
+        Result result;
         try
         {
-            future = replicator.replicate( lockTokenRequest );
+            result = replicator.replicate( lockTokenRequest );
         }
         catch ( ReplicationFailureException e )
         {
@@ -108,7 +109,7 @@ public class LeaderOnlyLockManager implements Locks
 
         try
         {
-            boolean success = (boolean) future.get();
+            boolean success = (boolean) result.consume();
             if ( success )
             {
                 return lockTokenRequest.id();
@@ -119,14 +120,9 @@ public class LeaderOnlyLockManager implements Locks
                         NotALeader );
             }
         }
-        catch ( ExecutionException e )
+        catch ( Exception e )
         {
             throw new AcquireLockTimeoutException( e, "Failed to acquire lock token.", NotALeader );
-        }
-        catch ( InterruptedException e )
-        {
-            Thread.currentThread().interrupt();
-            throw new AcquireLockTimeoutException( e, "Failed to acquire lock token.", Interrupted );
         }
     }
 

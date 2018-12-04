@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.neo4j.causalclustering.core.replication.ReplicatedContent;
 import org.neo4j.causalclustering.core.replication.Replicator;
+import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
@@ -38,10 +39,9 @@ public class ReplicatedTransactionCommitProcessTest
     public void shouldReplicateTransaction() throws Exception
     {
         // given
-        CompletableFuture<Object> futureTxId = new CompletableFuture<>();
-        futureTxId.complete( 5L );
+        long futureTxId = 5L;
 
-        when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( futureTxId );
+        when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( Result.of( futureTxId ) );
         ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DEFAULT_DATABASE_NAME );
 
         // when

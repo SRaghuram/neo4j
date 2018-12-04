@@ -18,6 +18,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -135,7 +136,7 @@ public class ProgressTrackerImplTest
         tracker.trackResult( operationA, Result.of( result ) );
 
         // then
-        assertEquals( result, progress.futureResult().get( DEFAULT_TIMEOUT_MS, MILLISECONDS ) );
+        assertEquals( result, progress.result().consume() );
     }
 
     @Test
@@ -158,7 +159,7 @@ public class ProgressTrackerImplTest
 
         // then
         assertFalse( progressA.isReplicated() );
-        assertFalse( progressA.futureResult().isDone() );
+        assertNull( progressA.result() );
     }
 
     private Thread replicationEventWaiter( Progress progress )

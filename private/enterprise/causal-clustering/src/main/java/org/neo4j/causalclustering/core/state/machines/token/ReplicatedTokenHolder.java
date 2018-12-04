@@ -7,8 +7,6 @@ package org.neo4j.causalclustering.core.state.machines.token;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.core.replication.ReplicationFailureException;
@@ -71,14 +69,13 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( databaseName, type, tokenName, createCommands( tokenName ) );
         try
         {
-            Future<Object> future = replicator.replicate( tokenRequest );
-            return (int) future.get();
+            return (int) replicator.replicate( tokenRequest ).consume();
         }
-        catch ( ReplicationFailureException | InterruptedException e )
+        catch ( ReplicationFailureException e )
         {
             throw new org.neo4j.graphdb.TransactionFailureException( "Could not create token", e );
         }
-        catch ( ExecutionException e )
+        catch ( Exception e )
         {
             throw new IllegalStateException( e );
         }

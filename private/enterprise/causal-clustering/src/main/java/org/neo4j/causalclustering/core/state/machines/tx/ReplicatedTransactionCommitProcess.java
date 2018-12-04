@@ -5,9 +5,6 @@
  */
 package org.neo4j.causalclustering.core.state.machines.tx;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-
 import org.neo4j.causalclustering.core.replication.ReplicationFailureException;
 import org.neo4j.causalclustering.core.replication.Replicator;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -36,33 +33,22 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
     {
         TransactionRepresentationReplicatedTransaction transaction = ReplicatedTransaction.from( tx.transactionRepresentation(), databaseName );
 
-        Future<Object> futureTxId;
         try
         {
-            futureTxId = replicator.replicate( transaction );
+            return (long) replicator.replicate( transaction ).consume();
         }
         catch ( ReplicationFailureException e )
         {
             throw new TransactionFailureException( ReplicationFailure, e );
         }
-
-        try
+        catch ( TransactionFailureException e )
         {
-            return (long) futureTxId.get();
+            throw e;
         }
-        catch ( ExecutionException e )
+        catch ( Exception e )
         {
-            if ( e.getCause() instanceof TransactionFailureException )
-            {
-                throw (TransactionFailureException) e.getCause();
-            }
             // TODO: Panic?
             throw new RuntimeException( e );
-        }
-        catch ( InterruptedException e )
-        {
-            // TODO Wait for the transaction to possibly finish within a user configurable time, before aborting.
-            throw new TransactionFailureException( "Interrupted while waiting for txId", e );
         }
     }
 }

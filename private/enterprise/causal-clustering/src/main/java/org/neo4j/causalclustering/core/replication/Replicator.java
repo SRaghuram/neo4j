@@ -5,7 +5,7 @@
  */
 package org.neo4j.causalclustering.core.replication;
 
-import java.util.concurrent.Future;
+import org.neo4j.causalclustering.core.state.Result;
 
 /**
  * Replicate content across a cluster of servers.
@@ -18,7 +18,7 @@ public interface Replicator
      * mechanisms must be used to achieve required delivery semantics.
      *
      * @param content      The content to replicated.
-     * @return A future that will receive the result when available. Only valid if trackResult is set.
+     * @return A {@link Result}
      */
-    Future<Object> replicate( ReplicatedContent content ) throws ReplicationFailureException;
+    Result replicate( ReplicatedContent content ) throws ReplicationFailureException;
 }

@@ -5,10 +5,9 @@
  */
 package org.neo4j.causalclustering.core.replication;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.causalclustering.core.state.machines.StateMachine;
 
 public class DirectReplicator<Command extends ReplicatedContent> implements Replicator
@@ -22,11 +21,18 @@ public class DirectReplicator<Command extends ReplicatedContent> implements Repl
     }
 
     @Override
-    public synchronized Future<Object> replicate( ReplicatedContent content )
+    public synchronized Result replicate( ReplicatedContent content )
     {
-        AtomicReference<CompletableFuture<Object>> futureResult = new AtomicReference<>( new CompletableFuture<>() );
-        stateMachine.applyCommand( (Command) content, commandIndex++, result -> futureResult.getAndUpdate( result::apply ) );
+        AtomicReference<Result> atomicResult = new AtomicReference<>();
+        stateMachine.applyCommand( (Command) content, commandIndex++, atomicResult::set );
 
-        return futureResult.get();
+        try
+        {
+            return atomicResult.get();
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 }

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
+import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.logging.Log;
@@ -126,8 +127,8 @@ public class ReplicationBenchmarkProcedure
             {
                 while ( !stopped )
                 {
-                    Future<Object> future = replicator.replicate( new DummyRequest( new byte[blockSize] ) );
-                    DummyRequest request = (DummyRequest) future.get();
+                    Result result = replicator.replicate( new DummyRequest( new byte[blockSize] ) );
+                    DummyRequest request = (DummyRequest) result.consume();
                     totalRequests++;
                     totalBytes += request.byteCount();
                 }

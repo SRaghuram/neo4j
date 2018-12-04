@@ -5,8 +5,6 @@
  */
 package org.neo4j.causalclustering.core.state;
 
-import java.util.concurrent.CompletableFuture;
-
 public class Result
 {
     private final Exception exception;
@@ -44,20 +42,6 @@ public class Result
         {
             return result;
         }
-    }
-
-    public CompletableFuture<Object> apply( CompletableFuture<Object> future )
-    {
-        if ( exception != null )
-        {
-            future.completeExceptionally( exception );
-        }
-        else
-        {
-            future.complete( result );
-        }
-
-        return future;
     }
 
     @Override

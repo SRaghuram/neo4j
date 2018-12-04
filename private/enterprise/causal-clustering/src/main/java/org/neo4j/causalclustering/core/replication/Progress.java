@@ -5,8 +5,9 @@
  */
 package org.neo4j.causalclustering.core.replication;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
+
+import org.neo4j.causalclustering.core.state.Result;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -16,9 +17,10 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class Progress
 {
     private final Semaphore replicationSignal = new Semaphore( 0 );
-    private final CompletableFuture<Object> futureResult = new CompletableFuture<>();
+    private final Semaphore resultSignal = new Semaphore( 0 );
 
     private volatile boolean isReplicated;
+    private volatile Result result;
 
     public void triggerReplicationEvent()
     {
@@ -39,13 +41,27 @@ public class Progress
         }
     }
 
+    public void awaitResult() throws InterruptedException
+    {
+        if ( this.result == null )
+        {
+            resultSignal.acquire();
+        }
+    }
+
     public boolean isReplicated()
     {
         return isReplicated;
     }
 
-    public CompletableFuture<Object> futureResult()
+    void registerResult( Result result )
     {
-        return futureResult;
+        this.result = result;
+        resultSignal.release();
+    }
+
+    public Result result()
+    {
+        return result;
     }
 }

@@ -59,7 +59,7 @@ public class ProgressTrackerImpl implements ProgressTracker
 
         if ( progress != null )
         {
-            result.apply( progress.futureResult() );
+            progress.registerResult(result);
         }
     }
 

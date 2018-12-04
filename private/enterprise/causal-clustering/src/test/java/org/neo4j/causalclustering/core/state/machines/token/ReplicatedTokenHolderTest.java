@@ -8,9 +8,9 @@ package org.neo4j.causalclustering.core.state.machines.token;
 import org.junit.Test;
 
 import java.util.Collection;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.kernel.impl.core.TokenRegistry;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
@@ -89,12 +89,8 @@ public class ReplicatedTokenHolderTest
 
         TokenRegistry registry = new TokenRegistry( "Label" );
         int generatedTokenId = 1;
-        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseName, registry, content ->
-        {
-            CompletableFuture<Object> completeFuture = new CompletableFuture<>();
-            completeFuture.complete( generatedTokenId );
-            return completeFuture;
-        }, idGeneratorFactory, storageEngineSupplier );
+        ReplicatedTokenHolder tokenHolder =
+                new ReplicatedLabelTokenHolder( databaseName, registry, content -> Result.of( generatedTokenId ), idGeneratorFactory, storageEngineSupplier );
 
         // when
         Integer tokenId = tokenHolder.getOrCreateId( "name1" );
@@ -103,7 +99,6 @@ public class ReplicatedTokenHolderTest
         assertThat( tokenId, equalTo( generatedTokenId ) );
     }
 
-    @SuppressWarnings( "unchecked" )
     private StorageEngine mockedStorageEngine() throws Exception
     {
         StorageEngine storageEngine = mock( StorageEngine.class );
