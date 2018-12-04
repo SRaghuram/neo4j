@@ -40,14 +40,6 @@ public class TransactionBackupServiceProvider
 
     public TransactionBackupServiceProvider( LogProvider logProvider, LogProvider userLogProvider, ApplicationSupportedProtocols catchupProtocols,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, NettyPipelineBuilderFactory serverPipelineBuilderFactory,
-            CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, String activeDatabaseName, JobScheduler scheduler )
-    {
-        this( logProvider, userLogProvider, catchupProtocols, supportedModifierProtocols, serverPipelineBuilderFactory, catchupServerHandler,
-                parentHandler, activeDatabaseName, scheduler, null );
-    }
-
-    public TransactionBackupServiceProvider( LogProvider logProvider, LogProvider userLogProvider, ApplicationSupportedProtocols catchupProtocols,
-            Collection<ModifierSupportedProtocols> supportedModifierProtocols, NettyPipelineBuilderFactory serverPipelineBuilderFactory,
             CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, String activeDatabaseName, JobScheduler scheduler,
             ConnectorPortRegister portRegister )
     {

@@ -21,6 +21,7 @@ import org.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -43,6 +44,7 @@ public abstract class CatchupServersModule
     private final PipelineBuilders pipelineBuilders;
     private final CatchupComponentsService databaseComponents;
     private final LogProvider userLogProvider;
+    private final ConnectorPortRegister portRegister;
 
     public CatchupServersModule( DatabaseService databaseService, PipelineBuilders pipelineBuilders, PlatformModule platformModule )
     {
@@ -54,6 +56,7 @@ public abstract class CatchupServersModule
         this.config = platformModule.config;
         this.lifeSupport = platformModule.life;
         this.scheduler = platformModule.jobScheduler;
+        this.portRegister = platformModule.connectorPortRegister;
 
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
         this.supportedCatchupProtocols = supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration();
@@ -114,7 +117,8 @@ public abstract class CatchupServersModule
                         catchupServerHandler,
                         installedProtocolsHandler,
                         activeDatabaseName,
-                        scheduler );
+                        scheduler,
+                        portRegister );
 
         return transactionBackupServiceProvider.resolveIfBackupEnabled( config );
     }
