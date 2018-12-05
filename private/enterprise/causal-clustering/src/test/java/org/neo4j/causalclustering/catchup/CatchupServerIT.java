@@ -197,6 +197,9 @@ public class CatchupServerIT
         Database database = getDatabase( graphDb );
         List<File> expectingFiles = database.getDatabaseFileListing().builder().excludeAll().includeSchemaIndexStoreFiles().build().stream().map(
                 StoreFileMetadata::file ).collect( toList() );
+        // this test only tests the indexes, not the statistics store
+        File indexStatisticsStoreFile = database.getDatabaseLayout().indexStatisticsStore();
+        expectingFiles.removeIf( file -> file.equals( indexStatisticsStoreFile ) );
         SimpleCatchupClient simpleCatchupClient = new SimpleCatchupClient( graphDb, DEFAULT_DATABASE_NAME, fsa, catchupClient,
                 catchupServer, temporaryDirectory, LOG_PROVIDER );
 
