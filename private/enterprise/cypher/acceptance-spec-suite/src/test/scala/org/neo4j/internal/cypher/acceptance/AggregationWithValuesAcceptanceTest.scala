@@ -15,7 +15,6 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     createSomeNodes()
     graph.createIndex("Awesome", "prop1")
     graph.createIndex("Awesome", "prop2")
-    graph.createIndex("Awesome", "prop1", "prop2")
     graph.createIndex("Awesome", "prop3")
   }
 
@@ -212,20 +211,44 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result.toList should equal(List(Map("min" -> 40, "max" -> 42, "avg" -> 41)))
   }
 
-  test("cannot use index provided values for multiple aggregations on different properties") {
-    val query = "MATCH (n: Awesome) RETURN max(n.prop2) AS max, avg(n.prop1) AS avg"
+  test("cannot use composite index for aggregation") {
+    graph.createIndex("Label", "prop1", "prop2")
+    createLabeledNode(Map("prop1" -> 123, "prop2" -> "abc"), "Label")
+    createLabeledNode(Map("prop1" -> 12), "Label")
+    resampleIndexes()
+
+    val query = "MATCH (n: Label) RETURN min(n.prop1)"
     val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
 
     /*
-     * TODO: this could be supported when we have composite index range scans
-     * result.executionPlanDescription() should
-     *    includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1, n.prop2]") ?
+     * Even if range scans for composite indexes become supported,
+     * we cannot utilize composite indexes for aggregations because of
+     * the case when some nodes only have a subset of the properties in the index
      */
-
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")
 
-    result.toList should equal(List(Map("max" -> 4, "avg" -> 41)))
+    result.toList should equal(List(Map("min(n.prop1)" -> 12)))
+  }
+
+  test("cannot use index provided values for multiple aggregations on different properties") {
+
+    graph.createIndex("Awesome", "prop3", "prop4")
+    createLabeledNode(Map("prop3" -> 123, "prop4" -> "abc"), "Awesome")
+    resampleIndexes()
+
+    val query = "MATCH (n: Awesome) RETURN count(n.prop3), count(n.prop4)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    /*
+     * Even if range scans for composite indexes become supported,
+     * we cannot utilize composite indexes for aggregations because of
+     * the case when some nodes only have a subset of the properties in the index
+     */
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")
+
+    result.toSet should equal(Set(Map("count(n.prop3)" -> 5, "count(n.prop4)" -> 1)))
   }
 
   test("should use index provided values for single aggregation after cartesian product") {
