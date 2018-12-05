@@ -47,8 +47,8 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     // Simple aggregation functions implicitly gives exists
 
     test(s"$i-$func: should use index provided values") {
-      //Compiled does not support NodeIndexScan any more
-      val config = if (supportsCompiled) Configs.InterpretedAndSlotted + Configs.Version3_4 else Configs.InterpretedAndSlotted
+      // Compiled does not support NodeIndexScan so this query is not supported in compiled anymore.
+      val config = if (supportsCompiled) Configs.InterpretedAndSlotted + Configs.Version3_5 else Configs.InterpretedAndSlotted
       val query = s"MATCH (n:Awesome) RETURN $func($funcBody) as aggregation"
       val result = executeWith(config, query, executeBefore = createSomeNodes)
 
@@ -258,7 +258,9 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("Label", "prop2")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN count(m.prop2) AS count"
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_4, query, executeBefore = createSomeNodes)
+
+    // Compiled does not support NodeIndexScan so this query is not supported in compiled anymore.
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_5, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
@@ -318,7 +320,9 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count"
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_4, query, executeBefore = createSomeNodes)
+
+    // Compiled does not support NodeIndexScan so this query is not supported in compiled anymore.
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_5, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", s"cached[n.prop2]")
