@@ -9,12 +9,10 @@ import org.junit.Test;
 
 import org.neo4j.causalclustering.handlers.PipelineWrapper;
 import org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
-import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.kernel.configuration.Config;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.neo4j.backup.impl.BackupSupportingClassesFactoryProvider.getProvidersByPriority;
 
 public class OnlineBackupCommandProviderTest
@@ -23,8 +21,6 @@ public class OnlineBackupCommandProviderTest
     public void communityBackupSupportingFactory()
     {
         BackupModule backupModule = mock( BackupModule.class );
-        OutsideWorld outsideWorld = mock( OutsideWorld.class );
-        when( backupModule.getOutsideWorld() ).thenReturn( outsideWorld );
 
         BackupSupportingClassesFactoryProvider provider = getProvidersByPriority().findFirst().get();
         BackupSupportingClassesFactory factory = provider.getFactory( backupModule );

@@ -86,7 +86,7 @@ class OnlineBackupCommandTest
                         doConsistencyCheck, timeout, reportDirectory );
         OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
 
-        when( backupStrategyCoordinatorFactory.backupStrategyCoordinator( any(), any(), any() ) ).thenReturn( backupStrategyCoordinator );
+        when( backupStrategyCoordinatorFactory.backupStrategyCoordinator( any(), any(), any(), any() ) ).thenReturn( backupStrategyCoordinator );
 
         subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
     }

@@ -26,7 +26,6 @@ import org.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import org.neo4j.causalclustering.protocol.Protocol.CatchupProtocolFeatures;
 import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
-import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -51,7 +50,6 @@ public class BackupSupportingClassesFactory
     protected final FileSystemAbstraction fileSystemAbstraction;
     protected final TransactionLogCatchUpFactory transactionLogCatchUpFactory;
     protected final OutputStream logDestination;
-    protected final OutsideWorld outsideWorld;
     private final JobScheduler jobScheduler;
 
     protected BackupSupportingClassesFactory( BackupModule backupModule )
@@ -59,11 +57,10 @@ public class BackupSupportingClassesFactory
         this.logProvider = backupModule.getLogProvider();
         this.clock = backupModule.getClock();
         this.monitors = backupModule.getMonitors();
-        this.fileSystemAbstraction = backupModule.getFileSystemAbstraction();
+        this.fileSystemAbstraction = backupModule.getFileSystem();
         this.transactionLogCatchUpFactory = backupModule.getTransactionLogCatchUpFactory();
         this.jobScheduler = backupModule.jobScheduler();
-        this.logDestination = backupModule.getOutsideWorld().outStream();
-        this.outsideWorld = backupModule.getOutsideWorld();
+        this.logDestination = backupModule.getStdOut();
     }
 
     /**
@@ -74,7 +71,7 @@ public class BackupSupportingClassesFactory
      */
     BackupSupportingClasses createSupportingClasses( OnlineBackupContext context )
     {
-        monitors.addMonitorListener( new BackupOutputMonitor( outsideWorld ) );
+        monitors.addMonitorListener( new BackupOutputMonitor( logDestination ) );
         PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler );
         return new BackupSupportingClasses(
                 backupDelegatorFromConfig( pageCache, context.getConfig(), context.getRequiredArguments() ),

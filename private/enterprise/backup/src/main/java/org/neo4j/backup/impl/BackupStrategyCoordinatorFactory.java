@@ -7,7 +7,6 @@ package org.neo4j.backup.impl;
 
 import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.com.storecopy.FileMoveProvider;
-import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -20,15 +19,15 @@ import org.neo4j.logging.LogProvider;
  */
 class BackupStrategyCoordinatorFactory
 {
+    private final FileSystemAbstraction fs;
     private final LogProvider logProvider;
     private final ConsistencyCheckService consistencyCheckService;
     private final AddressResolver addressResolver;
-    private final OutsideWorld outsideWorld;
 
     BackupStrategyCoordinatorFactory( BackupModule backupModule )
     {
+        this.fs = backupModule.getFileSystem();
         this.logProvider = backupModule.getLogProvider();
-        this.outsideWorld = backupModule.getOutsideWorld();
 
         this.consistencyCheckService = new ConsistencyCheckService();
         this.addressResolver = new AddressResolver();
@@ -42,13 +41,10 @@ class BackupStrategyCoordinatorFactory
      * @param pageCache the page cache used moving files
      * @return strategy coordinator that handles the which backup strategies are tried and establishes if a backup was successful or not
      */
-    BackupStrategyCoordinator backupStrategyCoordinator(
-            OnlineBackupContext onlineBackupContext,
-            BackupDelegator backupDelegator, PageCache pageCache )
+    BackupStrategyCoordinator backupStrategyCoordinator( OnlineBackupContext onlineBackupContext, BackupDelegator backupDelegator,
+            PageCache pageCache, ProgressMonitorFactory progressMonitorFactory )
     {
-        FileSystemAbstraction fs = outsideWorld.fileSystem();
         BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ) );
-        ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( outsideWorld.errorStream() );
         long timeout = onlineBackupContext.getRequiredArguments().getTimeout(); // todo: this should be used!
 
         StoreFiles storeFiles = new StoreFiles( fs, pageCache );
@@ -56,6 +52,6 @@ class BackupStrategyCoordinatorFactory
 
         BackupStrategyWrapper strategyWrapper = new BackupStrategyWrapper( backupStrategy, copyService, fs, pageCache, logProvider );
 
-        return new BackupStrategyCoordinator( outsideWorld.fileSystem(), consistencyCheckService, logProvider, progressMonitorFactory, strategyWrapper );
+        return new BackupStrategyCoordinator( fs, consistencyCheckService, logProvider, progressMonitorFactory, strategyWrapper );
     }
 }

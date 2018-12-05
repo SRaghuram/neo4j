@@ -5,10 +5,10 @@
  */
 package org.neo4j.backup.impl;
 
+import java.io.OutputStream;
 import java.time.Clock;
 
 import org.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
-import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
@@ -18,9 +18,9 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 public class BackupModule
 {
-    private final OutsideWorld outsideWorld;
+    private final OutputStream stdOut;
     private final LogProvider logProvider;
-    private final FileSystemAbstraction fileSystemAbstraction;
+    private final FileSystemAbstraction fs;
     private final Monitors monitors;
     private final Clock clock;
     private final TransactionLogCatchUpFactory transactionLogCatchUpFactory;
@@ -29,18 +29,19 @@ public class BackupModule
     /**
      * Dependencies that can be resolved immediately after launching the backup tool
      *
-     * @param outsideWorld filesystem and output streams that the tool interacts with
+     * @param stdOut output streams for backup monitoring
+     * @param fs the file system for backup
      * @param logProvider made available to subsequent dependency resolution classes
      * @param monitors will become shared across all resolved dependencies
      */
-    BackupModule( OutsideWorld outsideWorld, LogProvider logProvider, Monitors monitors )
+    BackupModule( OutputStream stdOut, FileSystemAbstraction fs, LogProvider logProvider, Monitors monitors )
     {
-        this.outsideWorld = outsideWorld;
+        this.stdOut = stdOut;
         this.logProvider = logProvider;
         this.monitors = monitors;
         this.clock = Clock.systemDefaultZone();
         this.transactionLogCatchUpFactory = new TransactionLogCatchUpFactory();
-        this.fileSystemAbstraction = outsideWorld.fileSystem();
+        this.fs = fs;
         this.jobScheduler = createInitialisedScheduler();
     }
 
@@ -49,9 +50,9 @@ public class BackupModule
         return logProvider;
     }
 
-    public FileSystemAbstraction getFileSystemAbstraction()
+    public FileSystemAbstraction getFileSystem()
     {
-        return fileSystemAbstraction;
+        return fs;
     }
 
     public Monitors getMonitors()
@@ -69,9 +70,9 @@ public class BackupModule
         return transactionLogCatchUpFactory;
     }
 
-    public OutsideWorld getOutsideWorld()
+    public OutputStream getStdOut()
     {
-        return outsideWorld;
+        return stdOut;
     }
 
     public JobScheduler jobScheduler()

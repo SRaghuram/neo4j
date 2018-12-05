@@ -9,9 +9,13 @@ import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.admin.OutsideWorld;
+import org.neo4j.helpers.progress.ProgressMonitorFactory;
 
 class OnlineBackupCommand implements AdminCommand
 {
+    private static final int STATUS_CONSISTENCY_CHECK_ERROR = 2;
+    private static final int STATUS_CONSISTENCY_CHECK_INCONSISTENT = 3;
+
     private final OutsideWorld outsideWorld;
     private final OnlineBackupContextFactory contextBuilder;
     private final BackupStrategyCoordinatorFactory backupStrategyCoordinatorFactory;
@@ -41,11 +45,29 @@ class OnlineBackupCommand implements AdminCommand
         OnlineBackupContext onlineBackupContext = contextBuilder.createContext( args );
         try ( BackupSupportingClasses backupSupportingClasses = backupSupportingClassesFactory.createSupportingClasses( onlineBackupContext ) )
         {
-            BackupStrategyCoordinator backupStrategyCoordinator =
-                    backupStrategyCoordinatorFactory.backupStrategyCoordinator( onlineBackupContext,
-                            backupSupportingClasses.getBackupDelegator(), backupSupportingClasses.getPageCache() );
+            ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( outsideWorld.errorStream() );
 
-            backupStrategyCoordinator.performBackup( onlineBackupContext );
+            BackupStrategyCoordinator backupStrategyCoordinator = backupStrategyCoordinatorFactory.backupStrategyCoordinator( onlineBackupContext,
+                    backupSupportingClasses.getBackupDelegator(), backupSupportingClasses.getPageCache(), progressMonitorFactory );
+
+            try
+            {
+                backupStrategyCoordinator.performBackup( onlineBackupContext );
+            }
+            catch ( BackupExecutionException e )
+            {
+                throw new CommandFailed( "Execution of backup failed", e.getCause() != null ? e.getCause() : e );
+            }
+            catch ( ConsistencyCheckExecutionException e )
+            {
+                int exitCode = e.consistencyCheckFailedToExecute() ? STATUS_CONSISTENCY_CHECK_ERROR : STATUS_CONSISTENCY_CHECK_INCONSISTENT;
+                throw new CommandFailed( e.getMessage(), e.getCause(), exitCode );
+            }
+            catch ( Exception e )
+            {
+                throw new CommandFailed( "Execution of backup failed", e );
+            }
+
             outsideWorld.stdOutLine( "Backup complete." );
         }
     }

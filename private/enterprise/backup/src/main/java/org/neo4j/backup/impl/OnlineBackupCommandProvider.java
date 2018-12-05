@@ -73,7 +73,7 @@ public class OnlineBackupCommandProvider extends AdminCommand.Provider
         Monitors monitors = new Monitors();
 
         OnlineBackupContextFactory contextBuilder = new OnlineBackupContextFactory( homeDir, configDir );
-        BackupModule backupModule = new BackupModule( outsideWorld, logProvider, monitors );
+        BackupModule backupModule = new BackupModule( outsideWorld.outStream(), outsideWorld.fileSystem(), logProvider, monitors );
 
         BackupSupportingClassesFactoryProvider classesFactoryProvider =
                 getProvidersByPriority().findFirst().orElseThrow( noProviderException() );

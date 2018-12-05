@@ -5,10 +5,8 @@
  */
 package org.neo4j.backup.impl;
 
-import java.io.File;
 import java.nio.file.Path;
 
-import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
@@ -27,9 +25,6 @@ import static java.lang.String.format;
  */
 class BackupStrategyCoordinator
 {
-    private static final int STATUS_CONSISTENCY_CHECK_ERROR = 2;
-    private static final int STATUS_CONSISTENCY_CHECK_INCONSISTENT = 3;
-
     private final FileSystemAbstraction fs;
     private final ConsistencyCheckService consistencyCheckService;
     private final LogProvider logProvider;
@@ -51,9 +46,10 @@ class BackupStrategyCoordinator
      * Will also do consistency checks if specified in {@link OnlineBackupContext}
      *
      * @param onlineBackupContext filesystem, command arguments and configuration
-     * @throws CommandFailed when backup failed or there were issues with consistency checks
+     * @throws BackupExecutionException when backup failed
+     * @throws ConsistencyCheckExecutionException when backup succeeded but consistency check found inconsistencies or failed
      */
-    public void performBackup( OnlineBackupContext onlineBackupContext ) throws CommandFailed
+    public void performBackup( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         OnlineBackupRequiredArguments requiredArgs = onlineBackupContext.getRequiredArguments();
         Path destination = onlineBackupContext.getResolvedLocationFromName();
@@ -61,18 +57,7 @@ class BackupStrategyCoordinator
 
         verifyArguments( onlineBackupContext );
 
-        try
-        {
-            strategy.doBackup( onlineBackupContext );
-        }
-        catch ( BackupExecutionException e )
-        {
-            throw new CommandFailed( "Execution of backup failed", e.getCause() != null ? e.getCause() : e );
-        }
-        catch ( Throwable t )
-        {
-            throw new CommandFailed( "Execution of backup failed", t );
-        }
+        strategy.doBackup( onlineBackupContext );
 
         if ( requiredArgs.isDoConsistencyCheck() )
         {
@@ -82,50 +67,44 @@ class BackupStrategyCoordinator
 
     private void performConsistencyCheck(
             Config config, OnlineBackupRequiredArguments requiredArgs, ConsistencyFlags consistencyFlags,
-            DatabaseLayout layout ) throws CommandFailed
+            DatabaseLayout layout ) throws ConsistencyCheckExecutionException
     {
+        ConsistencyCheckService.Result ccResult;
         try
         {
-            boolean verbose = false;
-            File reportDir = requiredArgs.getReportDir().toFile();
-            ConsistencyCheckService.Result ccResult = consistencyCheckService.runFullConsistencyCheck(
+            ccResult = consistencyCheckService.runFullConsistencyCheck(
                     layout,
                     config,
                     progressMonitorFactory,
                     logProvider,
                     fs,
-                    verbose,
-                    reportDir,
+                    false,
+                    requiredArgs.getReportDir().toFile(),
                     consistencyFlags );
-
-            if ( !ccResult.isSuccessful() )
-            {
-                throw new CommandFailed( format( "Inconsistencies found. See '%s' for details.", ccResult.reportFile() ),
-                        STATUS_CONSISTENCY_CHECK_INCONSISTENT );
-            }
         }
-        catch ( Throwable e )
+        catch ( Throwable t )
         {
-            if ( e instanceof CommandFailed )
-            {
-                throw (CommandFailed) e;
-            }
-            throw new CommandFailed( "Failed to do consistency check on backup: " + e.getMessage(), e, STATUS_CONSISTENCY_CHECK_ERROR );
+            throw new ConsistencyCheckExecutionException( "Failed to do consistency check on the backup", t, true );
+        }
+
+        if ( !ccResult.isSuccessful() )
+        {
+            throw new ConsistencyCheckExecutionException( format( "Inconsistencies found. See '%s' for details.", ccResult.reportFile() ), false );
         }
     }
 
-    private void verifyArguments( OnlineBackupContext onlineBackupContext ) throws CommandFailed
+    private void verifyArguments( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
     {
         // Make sure destination exists
         checkDestination( onlineBackupContext.getRequiredArguments().getDirectory() );
         checkDestination( onlineBackupContext.getRequiredArguments().getReportDir() );
     }
 
-    private void checkDestination( Path path ) throws CommandFailed
+    private void checkDestination( Path path ) throws BackupExecutionException
     {
         if ( !fs.isDirectory( path.toFile() ) )
         {
-            throw new CommandFailed( format( "Directory '%s' does not exist.", path ) );
+            throw new BackupExecutionException( format( "Directory '%s' does not exist.", path ) );
         }
     }
 }

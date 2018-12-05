@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.backup.impl.BackupModule;
 import org.neo4j.causalclustering.handlers.PipelineWrapper;
-import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
@@ -25,12 +24,9 @@ class CommercialBackupSupportingClassesFactoryTest
 
     private final BackupModule backupModule = mock( BackupModule.class );
 
-    private final OutsideWorld outsideWorld = mock( OutsideWorld.class );
-
     @BeforeEach
     void setup()
     {
-        when( backupModule.getOutsideWorld() ).thenReturn( outsideWorld );
         when( backupModule.getLogProvider() ).thenReturn( NullLogProvider.getInstance() );
         subject = new CommercialBackupSupportingClassesFactory( backupModule );
     }
