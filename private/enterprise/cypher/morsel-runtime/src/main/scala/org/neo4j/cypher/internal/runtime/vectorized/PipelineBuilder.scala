@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlottedIndexedProper
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeekModeFactory, LazyLabel, LazyTypes}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.AggregationExpressionOperator
@@ -21,7 +21,11 @@ import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
 
-class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverters, readOnly: Boolean, queryIndexes: QueryIndexes)
+class PipelineBuilder(physicalPlan: PhysicalPlan,
+                      converters: ExpressionConverters,
+                      readOnly: Boolean,
+                      queryIndexes: QueryIndexes,
+                      fallbackPipeMapper: PipeMapper)
   extends TreeBuilder[Pipeline] {
 
   override def create(plan: LogicalPlan): Pipeline = {
@@ -96,11 +100,21 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
       case plans.Argument(_) =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan), argumentSize)
 
+      case p: plans.LazyLogicalPlan =>
+        val pipe = fallbackPipeMapper.onLeaf(plan)
+        new LazySlottedPipeLeafOperator(WorkIdentity.fromPlan(plan), pipe, argumentSize)
+
       case p =>
         throw new CantCompileQueryException(s"$p not supported in morsel runtime")
     }
 
-    new StreamingPipeline(thisOp, slots, source)
+    thisOp match {
+      case co: InitialComposableOperator[_] =>
+        new StreamingComposablePipeline(co, slots, source)
+
+      case so: StreamingOperator =>
+        new StreamingPipeline(so, slots, source)
+    }
   }
 
   override protected def onOneChildPlan(plan: LogicalPlan, source: Pipeline): Pipeline = {
@@ -190,11 +204,36 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
           val runtimeExpression = converters.toCommandExpression(id, collection)
           new UnwindOperator(WorkIdentity.fromPlan(plan), runtimeExpression, offset)
 
+        // Plans that are not supported by slotted pipe fallback (to be supported it needs to be lazy and stateless)
+        case _: plans.Limit | // Limit keeps state (remaining counter) between iterator.next() calls, so we cannot re-create iterator
+             _: plans.Optional | // Optional pipe relies on a pull-based dataflow and needs a different solution for push
+             _: plans.Skip | // Skip pipe eagerly drops n rows upfront which does not work with feed pipe
+             _: plans.Eager | // We do not support eager plans since the resulting iterators cannot be recreated and fed a single input row at a time
+             _: plans.Distinct => // Even though the Distinct pipe is not really eager it still keeps state
+          throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
+
+        // Fallback to use a lazy slotted pipe
         case p =>
-          throw new CantCompileQueryException(s"$p not supported in morsel runtime")
+          source match {
+            case s: StreamingComposablePipeline[_] if s.start.isInstanceOf[LazySlottedPipeStreamingOperator] && !s.hasAdditionalOperators =>
+              val pipeConstructor: Pipe => Pipe =
+                (sourcePipe: Pipe) =>
+                  fallbackPipeMapper.onOneChildPlan(plan, sourcePipe)
+              new LazySlottedPipeComposableOperator(WorkIdentity.fromPlan(plan), pipeConstructor)
+
+            case _ =>
+              val feedPipe = FeedPipe(source.slots)()
+              val pipe = fallbackPipeMapper.onOneChildPlan(plan, feedPipe)
+              new LazySlottedPipeOneChildOperator(WorkIdentity.fromPlan(plan), pipe)
+          }
       }
 
     thisOp match {
+      case co: ComposableOperator[_] =>
+        source.asInstanceOf[StreamingComposablePipeline[_]].addComposableOperator(co)
+        source
+      case co: StreamingOperator with InitialComposableOperator[_] =>
+        new StreamingComposablePipeline(co, slots, Some(source))
       case so: StreamingOperator =>
         new StreamingPipeline(so, slots, Some(source))
       case mo: StatelessOperator =>

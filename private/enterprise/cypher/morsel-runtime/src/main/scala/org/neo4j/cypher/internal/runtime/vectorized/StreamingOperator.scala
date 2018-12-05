@@ -9,7 +9,7 @@ import java.util
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
-import org.neo4j.cypher.internal.runtime.parallel.{HasWorkIdentity, Task}
+import org.neo4j.cypher.internal.runtime.parallel.{HasWorkIdentity, Task, WorkIdentity}
 
 /**
   * Physical immutable operator. [[StreamingOperator#init]] is thread-safe, and creates a [[ContinuableOperatorTask]]

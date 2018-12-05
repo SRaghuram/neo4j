@@ -75,13 +75,13 @@ abstract class Pipeline() extends HasWorkIdentity {
     this.upstream.foreach(_.connectPipeline(Some(this), getThisOrDownstreamReduce(downstreamReduce)))
   }
 
-  def getUpstreamLeafPipeline: StreamingPipeline = {
+  def getUpstreamLeafPipeline: AbstractStreamingPipeline = {
     var leafPipeline = this
     while (leafPipeline.upstream.nonEmpty) {
       leafPipeline = leafPipeline.upstream.get
     }
 
-    leafPipeline.asInstanceOf[StreamingPipeline]
+    leafPipeline.asInstanceOf[AbstractStreamingPipeline]
   }
 
   protected def getThisOrDownstreamReduce(downstreamReduce: Option[ReducePipeline]): Option[ReducePipeline] =

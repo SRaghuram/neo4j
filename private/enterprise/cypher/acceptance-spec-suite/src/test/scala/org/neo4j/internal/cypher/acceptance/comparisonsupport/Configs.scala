@@ -46,8 +46,7 @@ object Configs {
     * I.e. there will be no check to see if they unexpectedly succeed on tests where they were not explicitly requested.
     */
   def Experimental: TestConfiguration =
-  //TestConfiguration(Versions.Default, Planners.Default, Runtimes(Runtimes.Morsel))
-    TestConfiguration.empty
+    TestConfiguration(Versions.V4_0, Planners.all, Runtimes(Runtimes.Morsel))
 
   def Empty: TestConfiguration = TestConfiguration.empty
 
