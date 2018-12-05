@@ -11,5 +11,5 @@ import scala.concurrent.duration.Duration
 
 class SimpleSchedulerTest extends SchedulerTest {
   override def newScheduler(maxConcurrency: Int): Scheduler[Resource.type] =
-    new SimpleScheduler(Executors.newFixedThreadPool(maxConcurrency), Duration(1, TimeUnit.SECONDS), () => Resource)
+    new SimpleScheduler(Executors.newFixedThreadPool(maxConcurrency), Duration(1, TimeUnit.SECONDS), () => Resource, maxConcurrency)
 }

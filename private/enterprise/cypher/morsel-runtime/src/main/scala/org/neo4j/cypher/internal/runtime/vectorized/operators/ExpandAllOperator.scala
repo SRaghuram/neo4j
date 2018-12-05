@@ -10,11 +10,12 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyTypes
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.internal.kernel.api.{NodeCursor, RelationshipGroupCursor, RelationshipTraversalCursor}
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.{allCursor, incomingCursor, outgoingCursor}
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 
 class ExpandAllOperator(val workIdentity: WorkIdentity,
                         fromOffset: Int,
@@ -26,8 +27,8 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
   override def init(queryContext: QueryContext,
                     state: QueryState,
                     inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): ContinuableOperatorTask =
-    new OTask(inputMorsel)
+                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] =
+    IndexedSeq(new OTask(inputMorsel))
 
   class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
 
@@ -41,10 +42,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
     private var traversalCursor: RelationshipTraversalCursor = _
     private var relationships: RelationshipSelectionCursor = _
 
-    protected override def initializeInnerLoop(inputRow: MorselExecutionContext,
-                                               context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources): Boolean = {
+    protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
       val fromNode = inputRow.getLongAt(fromOffset)
       if (entityIsNull(fromNode))
         false
@@ -61,7 +59,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                            context: QueryContext,
                            state: QueryState): Unit = {
 
-      while (outputRow.hasMoreRows && relationships.next()) {
+      while (outputRow.isValidRow && relationships.next()) {
         val relId = relationships.relationshipReference()
         val otherSide = relationships.otherNodeReference()
 

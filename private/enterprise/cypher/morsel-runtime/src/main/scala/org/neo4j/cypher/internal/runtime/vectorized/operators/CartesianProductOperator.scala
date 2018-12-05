@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 
 class CartesianProductOperator(val workIdentity: WorkIdentity, override val argumentSize: SlotConfiguration.Size)
   extends StreamingMergeOperator[RhsPipelineArgument] {
@@ -17,7 +17,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
                            state: QueryState,
                            lhsInputMorsel: MorselExecutionContext,
                            resources: QueryResources): (Option[ContinuableOperatorTask], Option[RhsPipelineArgument]) = {
-    if (lhsInputMorsel.hasMoreRows) {
+    if (lhsInputMorsel.isValidRow) {
       val pipelineArgument = RhsPipelineArgument(lhsInputMorsel)
       (None, Some(pipelineArgument)) // Returning Some argument here will make the pipeline schedule a task for the right-hand side
     }
@@ -49,8 +49,8 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
                          resources: QueryResources): Unit = {
       // Checking rhsInputRow.hasMoreRows in the outer loop may not appear to be strictly necessary, but it will prevent an infinite loop
       // in case we for some reason would receive an empty morsel in lhsInputRow
-      while ((lhsInputRow.hasMoreRows || rhsInputRow.hasMoreRows) && outputRow.hasMoreRows) {
-        while (rhsInputRow.hasMoreRows && outputRow.hasMoreRows) {
+      while ((lhsInputRow.isValidRow || rhsInputRow.isValidRow) && outputRow.isValidRow) {
+        while (rhsInputRow.isValidRow && outputRow.isValidRow) {
           lhsInputRow.copyTo(outputRow)
           rhsInputRow.copyTo(outputRow,
             fromLongOffset = argumentSize.nLongs, fromRefOffset = argumentSize.nReferences, // Skip over arguments since they should be identical to lhsInputRow
@@ -60,10 +60,10 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
           rhsInputRow.moveToNextRow()
         }
         // If we have exhausted the rhs input rows, move to the next lhs input row
-        if (!rhsInputRow.hasMoreRows) {
+        if (!rhsInputRow.isValidRow) {
           lhsInputRow.moveToNextRow()
           // If we are not finished with the lhs input rows, reset the rhs input row to combine its morsel with the new lhs input row
-          if (lhsInputRow.hasMoreRows) {
+          if (lhsInputRow.isValidRow) {
             rhsInputRow.resetToFirstRow()
           }
         }
@@ -72,7 +72,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
       outputRow.finishedWriting()
     }
 
-    override def canContinue: Boolean = lhsInputRow.hasMoreRows || rhsInputRow.hasMoreRows
+    override def canContinue: Boolean = lhsInputRow.isValidRow || rhsInputRow.isValidRow
   }
 
 }

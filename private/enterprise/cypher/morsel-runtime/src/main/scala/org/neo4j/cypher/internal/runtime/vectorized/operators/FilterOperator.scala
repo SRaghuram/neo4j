@@ -31,7 +31,7 @@ class FilterOperator(val workIdentity: WorkIdentity,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession])
 
-      while (readingRow.hasMoreRows) {
+      while (readingRow.isValidRow) {
         val matches = predicate(readingRow, queryState) == Values.TRUE
         if (matches) {
           writingRow.copyFrom(readingRow)

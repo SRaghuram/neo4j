@@ -19,9 +19,11 @@ trait Scheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable] {
     * @param task the initial task to execute
     * @return QueryExecution representing the ongoing execution
     */
-  def execute(task: Task[THREAD_LOCAL_RESOURCE], tracer: SchedulerTracer): QueryExecution
+  def execute(tracer: SchedulerTracer, task: IndexedSeq[Task[THREAD_LOCAL_RESOURCE]]): QueryExecution
 
-  def isMultiThreaded: Boolean
+  def numberOfWorkers: Int
+
+  def isMultiThreaded: Boolean = numberOfWorkers > 1
 }
 
 /**

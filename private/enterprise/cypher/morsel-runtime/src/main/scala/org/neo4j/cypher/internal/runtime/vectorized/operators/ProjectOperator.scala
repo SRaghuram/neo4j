@@ -38,7 +38,7 @@ class ProjectOperator(val workIdentity: WorkIdentity,
                                        resources.expressionCursors,
                                        Array.empty[IndexReadSession])
 
-    while (currentRow.hasMoreRows) {
+    while (currentRow.isValidRow) {
       project.foreach(p => p(currentRow, queryState))
       currentRow.moveToNextRow()
     }

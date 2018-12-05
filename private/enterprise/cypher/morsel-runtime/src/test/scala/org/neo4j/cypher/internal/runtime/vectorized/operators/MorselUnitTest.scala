@@ -5,7 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito._
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentityImpl
@@ -20,7 +24,11 @@ import org.neo4j.cypher.internal.runtime.vectorized.StatelessOperator
 import org.neo4j.cypher.internal.runtime.vectorized.StreamingOperator
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.Scan
 import org.neo4j.values.AnyValue
+
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 abstract class MorselUnitTest extends CypherFunSuite {
   protected val resources = mock[QueryResources](RETURNS_DEEP_STUBS)
@@ -29,10 +37,49 @@ abstract class MorselUnitTest extends CypherFunSuite {
 
   def nodeCursor(longs: Long*): NodeCursor = {
     val cursor = mock[NodeCursor]
-    val bools = longs.map(_ => true) :+ false
-    when(cursor.next()).thenReturn(bools.head, bools.tail: _*)
-    when(cursor.nodeReference()).thenReturn(longs.head, longs.tail: _*)
+    setupNodeCursor(cursor, longs: _*)
     cursor
+  }
+
+  def nodeCursorScan(batchesPerCursor: Map[NodeCursor, List[Longs]]): Scan[NodeCursor] = {
+    val _batchesPerCursor = mutable.Map(batchesPerCursor.toSeq: _*)
+    val scan = mock[Scan[NodeCursor]]
+    when(scan.reserveBatch(any[NodeCursor], anyInt())).thenAnswer(
+      answer { invocationOnMock =>
+        val cursor = invocationOnMock.getArgument[NodeCursor](0)
+        _batchesPerCursor(cursor) match {
+          case returnNow :: returnLater =>
+            setupNodeCursor(cursor, returnNow.longs: _*)
+            _batchesPerCursor(cursor) = returnLater
+            true
+          case Nil =>
+            false
+        }
+    })
+    scan
+  }
+
+  private def setupNodeCursor(cursor: NodeCursor, longs: Long*): Unit = {
+    val _bools = ArrayBuffer(longs.map(_ => true): _*)
+    val _longs = ArrayBuffer(longs: _*)
+    // There can be multiple calls to nodeReference before the next call to next
+    // Therefore we have to use this construct instead of simply `thenReturn`
+    when(cursor.next()).thenAnswer(
+      answer { _ =>
+        if(_bools.nonEmpty) {
+          when(cursor.nodeReference()).thenReturn(_longs.remove(0))
+          _bools.remove(0)
+        } else {
+          false
+        }
+      }
+    )
+  }
+
+  private def answer[T](a: InvocationOnMock => T): Answer[T] = {
+    new Answer[T] {
+      override def answer(invocationOnMock: InvocationOnMock): T = a(invocationOnMock)
+    }
   }
 
   class Input {
@@ -184,9 +231,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
       val morsel = new Morsel(input.longs, input.refs)
       val row = MorselExecutionContext(morsel, input.longSlots, input.refSlots, input.rows)
       (0 until rowNum).foreach(_ => row.moveToNextRow())
-      // TODO operator.init will return Seq in the near future (when we merge the parallel scans PR)
-      // Thus, we prepare here already be allowing to assert on multiple returned tasks
-      val tasks = IndexedSeq(operator.init(context, state, row, resources))
+      val tasks = operator.init(context, state, row, resources)
       new ThenTasks(tasks, context, output)
     }
   }

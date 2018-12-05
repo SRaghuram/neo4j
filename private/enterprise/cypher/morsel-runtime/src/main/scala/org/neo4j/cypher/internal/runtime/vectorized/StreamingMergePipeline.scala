@@ -32,16 +32,16 @@ class StreamingMergePipeline(val start: StreamingMergeOperator[PipelineArgument]
                             state: QueryState,
                             resources: QueryResources,
                             pipelineArgument: PipelineArgument,
-                            from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
+                            from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]] = {
     if (from.ownerPipeline.eq(rhsUpstream)) {
       val maybeTask = start.initFromRhs(context, state, inputMorsel, resources, pipelineArgument)
-      maybeTask.map(pipelineTask(_, context, state, PipelineArgument.EMPTY)).toSeq
+      maybeTask.map(pipelineTask(_, context, state, PipelineArgument.EMPTY)).toIndexedSeq
     } else {
       // We got a morsel from the lhs, which is the primary input to the whole join
       val (maybeTask, maybePipelineArgument) = start.initFromLhs(context, state, inputMorsel, resources)
 
       // Did we get a new task for the LHS?
-      val lhsTasks: Seq[Task[QueryResources]] = maybeTask.map(pipelineTask(_, context, state, PipelineArgument.EMPTY)).toSeq
+      val lhsTasks: IndexedSeq[Task[QueryResources]] = maybeTask.map(pipelineTask(_, context, state, PipelineArgument.EMPTY)).toIndexedSeq
 
       // If a PipelineArgument was returned we should start new tasks from the RHS pipeline
       val rhsTasks: Seq[Task[QueryResources]] = maybePipelineArgument.map { pipelineArgument =>

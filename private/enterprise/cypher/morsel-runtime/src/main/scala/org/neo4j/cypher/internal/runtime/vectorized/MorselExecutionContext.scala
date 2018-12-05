@@ -11,6 +11,9 @@ import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExec
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.{Value, Values}
+import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
 object MorselExecutionContext {
@@ -50,11 +53,11 @@ class MorselExecutionContext(private val morsel: Morsel,
   def moveToRow(row: Int): Unit = currentRow = row
 
   def resetToFirstRow(): Unit = currentRow = 0
+  def resetToBeforeFirstRow(): Unit = currentRow = -1
+  def setToLastRow(): Unit = currentRow = validRows
 
-  /**
-    * Checks if the morsel has more rows
-    */
-  def hasMoreRows: Boolean = currentRow < validRows
+  def isValidRow: Boolean = currentRow < validRows
+  def hasNextRow: Boolean = currentRow + 1 < validRows
 
   def numberOfRows: Int = validRows
 

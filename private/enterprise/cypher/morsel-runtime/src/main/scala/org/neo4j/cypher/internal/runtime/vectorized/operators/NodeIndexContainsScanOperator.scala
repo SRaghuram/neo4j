@@ -11,9 +11,10 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 import org.neo4j.internal.kernel.api._
 import org.neo4j.values.storable.{TextValue, Values}
-import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 
 class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
                                     nodeOffset: Int,
@@ -26,19 +27,17 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
   override def init(context: QueryContext,
                     state: QueryState,
                     inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): ContinuableOperatorTask = {
+                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
     val index = context.transactionalContext.schemaRead.index(label, property.propertyKeyId)
     val indexSession = context.transactionalContext.dataRead.indexReadSession(index)
-    new OTask(inputMorsel, indexSession)
+    IndexedSeq(new OTask(inputMorsel, indexSession))
   }
 
   class OTask(val inputRow: MorselExecutionContext, index: IndexReadSession) extends StreamingContinuableOperatorTask {
 
     private var cursor: NodeValueIndexCursor = _
 
-    override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
-                                               context: QueryContext,
-                                               state: QueryState,
+    override protected def initializeInnerLoop(context: QueryContext, state: QueryState,
                                                resources: QueryResources): Boolean = {
       cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
 

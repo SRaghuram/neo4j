@@ -6,12 +6,10 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity}
 import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
 
@@ -37,7 +35,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
                             state: QueryState,
                             resources: QueryResources,
                             pipelineArgument: PipelineArgument,
-                            from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
+                            from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]] = {
     state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, resources, from)
   }
 
@@ -55,7 +53,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
     private val reduceTaskState = new AtomicReference[ReduceTaskState](NoTaskScheduled)
 
     override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources,
-                              from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
+                              from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]] = {
       // First we put the next morsel in the queue
       queue.add(inputMorsel)
 
@@ -89,7 +87,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
           from.pipelineArgument,
           from.ownerPipeline,
           downstream)
-      }.toSeq
+      }.toIndexedSeq
     }
 
     override def trySetTaskDone(task: LazyReduceOperatorTask, morselsProcessed: Int): Boolean = {

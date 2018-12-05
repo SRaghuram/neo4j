@@ -5,25 +5,26 @@
  */
 package org.neo4j.cypher.internal.runtime.parallel
 
-import scala.collection.mutable
 import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
+
+import scala.collection.mutable
 
 /**
   * Single threaded implementation of the Scheduler trait
   */
 class SingleThreadScheduler[T <: AutoCloseable](threadLocalResourceFactory: () => T) extends Scheduler[T] {
 
-  override def execute(task: Task[T], tracer: SchedulerTracer): QueryExecution = {
-    dprintln(() => s"SingleThreadScheduler execute $task")
-    new SingleThreadQueryExecution(task, tracer.traceQuery())
+  override def execute(tracer: SchedulerTracer, tasks: IndexedSeq[Task[T]]): QueryExecution = {
+    dprintln(() => s"SingleThreadScheduler execute $tasks")
+    new SingleThreadQueryExecution(tasks, tracer.traceQuery())
   }
 
-  def isMultiThreaded: Boolean = false
+  override def numberOfWorkers: Int = 1
 
-  class SingleThreadQueryExecution(initialTask: Task[T], tracer: QueryExecutionTracer) extends QueryExecution {
+  class SingleThreadQueryExecution(initialTasks: IndexedSeq[Task[T]], tracer: QueryExecutionTracer) extends QueryExecution {
 
     private val jobStack: mutable.Stack[(Task[T],ScheduledWorkUnitEvent)] = new mutable.Stack()
-    schedule(initialTask, None)
+    initialTasks.foreach(schedule(_, None))
 
     override def await(): Option[Throwable] = {
 
@@ -59,7 +60,7 @@ class SingleThreadScheduler[T <: AutoCloseable](threadLocalResourceFactory: () =
       }
     }
 
-    private def schedule(task: Task[T], upstreamWorkUnitEvent: Option[WorkUnitEvent]) = {
+    private def schedule(task: Task[T], upstreamWorkUnitEvent: Option[WorkUnitEvent]): Unit = {
       dprintln(() => s"SingleThreadedScheduler schedule $task")
       val scheduledWorkUnitEvent = tracer.scheduleWorkUnit(task, upstreamWorkUnitEvent)
       jobStack.push((task,scheduledWorkUnitEvent))

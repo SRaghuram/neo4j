@@ -8,8 +8,7 @@ package org.neo4j.cypher.internal.runtime.vectorized
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity}
 import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
 
@@ -70,7 +69,7 @@ class EagerReducePipeline(start: EagerReduceOperator,
                             state: QueryState,
                             resources: QueryResources,
                             pipelineArgument: PipelineArgument,
-                            from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
+                            from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]] = {
     state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, resources, from)
   }
 
@@ -85,9 +84,9 @@ class EagerReducePipeline(start: EagerReduceOperator,
                               context: QueryContext,
                               state: QueryState,
                               resources: QueryResources,
-                              from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
+                              from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]] = {
       eagerData.add(inputMorsel)
-      Seq.empty
+      IndexedSeq.empty
     }
 
     override def produceTaskScheduled(): Unit = {

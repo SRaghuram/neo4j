@@ -65,14 +65,14 @@ class MergeSortOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
-      while(!sortedInputs.isEmpty && outputRow.hasMoreRows && totalPos < limit) {
+      while(!sortedInputs.isEmpty && outputRow.isValidRow && totalPos < limit) {
         val nextRow: MorselExecutionContext = sortedInputs.poll()
         outputRow.copyFrom(nextRow)
         totalPos += 1
         nextRow.moveToNextRow()
         outputRow.moveToNextRow()
         // If there is more data in this Morsel, we'll re-insert it into the sortedInputs
-        if (nextRow.hasMoreRows) {
+        if (nextRow.isValidRow) {
           sortedInputs.add(nextRow)
         }
       }

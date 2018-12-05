@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, 
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.internal.kernel.api.{IndexOrder, IndexReadSession, NodeValueIndexCursor}
 
 
@@ -23,17 +24,15 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
   override def init(context: QueryContext,
                     state: QueryState,
                     inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): ContinuableOperatorTask = {
+                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
     val indexSession = state.queryIndexes(queryIndexId)
-    new OTask(inputMorsel, indexSession)
+    IndexedSeq(new OTask(inputMorsel, indexSession))
   }
 
   class OTask(val inputRow: MorselExecutionContext, index: IndexReadSession) extends StreamingContinuableOperatorTask {
     var cursor: NodeValueIndexCursor = _
 
-    protected override def initializeInnerLoop(inputRow: MorselExecutionContext,
-                                               context: QueryContext,
-                                               state: QueryState,
+    protected override def initializeInnerLoop(context: QueryContext, state: QueryState,
                                                resources: QueryResources): Boolean = {
       cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       val read = context.transactionalContext.dataRead

@@ -16,24 +16,21 @@ import org.neo4j.cypher.internal.runtime.vectorized._
 class LazySlottedPipeLeafOperator(val workIdentity: WorkIdentity, val initialSource: Pipe, argumentSize: SlotConfiguration.Size)
   extends LazySlottedPipeStreamingOperator {
 
-  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, resources: QueryResources): ContinuableOperatorTask = {
+  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
     val slottedQueryState: SlottedQueryState = LazySlottedPipeStreamingOperator.createSlottedQueryState(context, state, resources.expressionCursors)
-    new OTask(inputMorsel, slottedQueryState)
+    IndexedSeq(new OTask(inputMorsel, slottedQueryState))
   }
 
   class OTask(val inputRow: MorselExecutionContext, slottedQueryState: SlottedQueryState) extends StreamingContinuableOperatorTask {
     private var iterator: Iterator[ExecutionContext] = _
 
-    override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
-                                               context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
       iterator = finalPipe.createResults(slottedQueryState.withInitialContext(inputRow))
       true
     }
 
     override def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
-      while (outputRow.hasMoreRows && iterator.hasNext) {
+      while (outputRow.isValidRow && iterator.hasNext) {
         val slottedRow = iterator.next().asInstanceOf[SlottedExecutionContext]
         outputRow.copyFrom(slottedRow, slottedRow.slots.numberOfLongs, slottedRow.slots.numberOfReferences)
         outputRow.moveToNextRow()

@@ -56,7 +56,7 @@ class PreSortOperator(val workIdentity: WorkIdentity,
           // a table to hold the top n entries
           val topTable = new DefaultComparatorTopTable(comparator, limit)
 
-          while (currentRow.hasMoreRows) {
+          while (currentRow.isValidRow) {
             topTable.add(outputToInputIndexes(currentRow.getCurrentRow))
             currentRow.moveToNextRow()
           }

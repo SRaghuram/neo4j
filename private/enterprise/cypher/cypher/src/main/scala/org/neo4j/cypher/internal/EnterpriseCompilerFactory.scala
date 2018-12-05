@@ -105,7 +105,7 @@ case class RuntimeEnvironment(config:CypherRuntimeConfiguration,
       else {
         val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
         val executorService = jobScheduler.workStealingExecutor(Group.CYPHER_WORKER, numberOfThreads)
-        new SimpleScheduler(executorService, config.waitTimeout, () => new QueryResources(cursors))
+        new SimpleScheduler(executorService, config.waitTimeout, () => new QueryResources(cursors), numberOfThreads)
       }
     val transactionBinder =
       if (config.workers == 1) NO_TRANSACTION_BINDER

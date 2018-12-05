@@ -40,7 +40,7 @@ class AggregationReduceOperator(val workIdentity: WorkIdentity,
       if (null == aggregates) {
         aggregates = aggregateInputs(inputMorsels)
       }
-      while (aggregates.hasNext && outputRow.hasMoreRows) {
+      while (aggregates.hasNext && outputRow.isValidRow) {
         val (key, reducers) = aggregates.next()
         groupings.project(outputRow, key)
         var i = 0
@@ -62,7 +62,7 @@ class AggregationReduceOperator(val workIdentity: WorkIdentity,
       val result =  mutable.LinkedHashMap[GroupingKey, Array[AggregationReducer]]()
       while (morselPos < inputMorsels.length) {
         val currentIncomingRow = inputMorsels(morselPos)
-        while (currentIncomingRow.hasMoreRows) {
+        while (currentIncomingRow.isValidRow) {
           val key = groupings.getGroupingKey(currentIncomingRow)
           val reducersForKey = result.getOrElseUpdate(key, aggregations.map(_.aggregation.createAggregationReducer))
           var i = 0

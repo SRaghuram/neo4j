@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => InterpretedQueryState}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 
@@ -22,8 +23,8 @@ class UnwindOperator(val workIdentity: WorkIdentity,
   override def init(context: QueryContext,
                     state: QueryState,
                     inputRow: MorselExecutionContext,
-                    resources: QueryResources): ContinuableOperatorTask = {
-    new OTask(inputRow, null)
+                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
+    IndexedSeq(new OTask(inputRow, null))
   }
 
   class OTask(var inputRow: MorselExecutionContext,
@@ -41,13 +42,13 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                                                  resources.expressionCursors,
                                                  Array.empty[IndexReadSession])
 
-      while (inputRow.hasMoreRows && outputRow.hasMoreRows) {
+      while (inputRow.isValidRow && outputRow.isValidRow) {
         if (unwoundValues == null) {
           val value = collection(inputRow, queryState)
           unwoundValues = makeTraversable(value).iterator
         }
 
-        while (unwoundValues.hasNext && outputRow.hasMoreRows) {
+        while (unwoundValues.hasNext && outputRow.isValidRow) {
           val thisValue = unwoundValues.next()
           outputRow.copyFrom(inputRow)
           outputRow.setRefAt(offset, thisValue)
@@ -63,6 +64,6 @@ class UnwindOperator(val workIdentity: WorkIdentity,
       outputRow.finishedWriting()
     }
 
-    override def canContinue: Boolean = unwoundValues != null || inputRow.hasMoreRows
+    override def canContinue: Boolean = unwoundValues != null || inputRow.isValidRow
   }
 }

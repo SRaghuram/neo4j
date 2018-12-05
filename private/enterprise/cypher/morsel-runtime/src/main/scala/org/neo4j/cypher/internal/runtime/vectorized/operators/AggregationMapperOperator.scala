@@ -38,7 +38,7 @@ class AggregationMapperOperator(val workIdentity: WorkIdentity,
                                        Array.empty[IndexReadSession])
 
     //loop over the entire morsel and apply the aggregation
-    while (currentRow.hasMoreRows) {
+    while (currentRow.isValidRow) {
       val groupingValue = groupings.computeGroupingKey(currentRow, queryState)
       val functions = result
         .getOrElseUpdate(groupingValue, aggregations.map(a => a.mapperOutputSlot -> a.aggregation.createAggregationMapper))

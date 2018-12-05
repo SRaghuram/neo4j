@@ -45,7 +45,7 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
                                    outputRow: MorselExecutionContext,
                                    queryContext: QueryContext): Seq[Task[QueryResources]] = {
     outputRow.resetToFirstRow()
-    val downstreamTasks = downstream.map(_.acceptMorsel(outputRow, queryContext, state, resources, pipelineArgument, this)).getOrElse(Seq.empty)
+    val downstreamTasks = downstream.toSeq.flatMap(_.acceptMorsel(outputRow, queryContext, state, resources, pipelineArgument, this))
 
     if (org.neo4j.cypher.internal.runtime.vectorized.Pipeline.DEBUG && downstreamTasks.nonEmpty) {
       dprintln(() => s">>> downstream tasks=$downstreamTasks")

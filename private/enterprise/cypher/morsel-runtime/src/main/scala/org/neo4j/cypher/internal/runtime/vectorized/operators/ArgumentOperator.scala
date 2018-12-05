@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 
 class ArgumentOperator(val workIdentity: WorkIdentity,
                        argumentSize: SlotConfiguration.Size) extends StreamingOperator {
@@ -16,7 +17,7 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
   override def init(queryContext: QueryContext,
                     state: QueryState,
                     inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): ContinuableOperatorTask = new OTask(inputMorsel)
+                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = IndexedSeq(new OTask(inputMorsel))
 
   class OTask(argument: MorselExecutionContext) extends ContinuableOperatorTask {
     override def operate(outputRow: MorselExecutionContext,

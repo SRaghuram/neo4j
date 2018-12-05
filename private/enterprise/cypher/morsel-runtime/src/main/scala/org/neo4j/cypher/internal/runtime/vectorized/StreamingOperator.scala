@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.parallel.{HasWorkIdentity, Task, WorkId
   * results in a new task.
   */
 trait StreamingOperator extends HasWorkIdentity {
-  def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, resources: QueryResources): ContinuableOperatorTask
+  def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, resources: QueryResources): IndexedSeq[ContinuableOperatorTask]
 }
 
 /**
@@ -101,10 +101,7 @@ trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
     *
     * @return true iff the inner loop might result it output rows
     */
-  protected def initializeInnerLoop(inputRow: MorselExecutionContext,
-                                    context: QueryContext,
-                                    state: QueryState,
-                                    resources: QueryResources): Boolean
+  protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean
 
   /**
     * Execute the inner loop for the current input row, and write results to the output.
@@ -125,9 +122,9 @@ trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    while ((inputRow.hasMoreRows || innerLoop) && outputRow.hasMoreRows) {
+    while ((inputRow.isValidRow || innerLoop) && outputRow.isValidRow) {
       if (!innerLoop) {
-        innerLoop = initializeInnerLoop(inputRow, context, state, resources)
+        innerLoop = initializeInnerLoop(context, state, resources)
       }
       // Do we have any output rows for this input row?
       if (innerLoop) {
@@ -142,7 +139,7 @@ trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
         innerLoop(outputRow, context, state)
 
         // If we have not filled the output rows, move to the next input row
-        if (outputRow.hasMoreRows) {
+        if (outputRow.isValidRow) {
           // NOTE: There is a small chance that we run out of output rows and innerLoop iterations simultaneously where we would generate
           // an additional empty work unit that will just close the innerLoop. This could be avoided if we changed the innerLoop interface to something
           // slightly more complicated, but since innerLoop iterations and output morsel size will have to match exactly for this to happen it is
@@ -162,7 +159,7 @@ trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
   }
 
   override def canContinue: Boolean =
-    inputRow.hasMoreRows || innerLoop
+    inputRow.isValidRow || innerLoop
 }
 
 /**
@@ -183,7 +180,7 @@ trait ReduceCollector {
                    context: QueryContext,
                    state: QueryState,
                    resources: QueryResources,
-                   from: AbstractPipelineTask): Seq[Task[QueryResources]]
+                   from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]]
 
   def produceTaskScheduled(): Unit
 

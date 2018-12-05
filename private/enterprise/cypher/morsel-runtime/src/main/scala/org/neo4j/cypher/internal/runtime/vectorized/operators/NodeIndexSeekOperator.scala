@@ -11,10 +11,11 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeek, IndexSeekMode, NodeIndexSeeker, QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
 import org.neo4j.cypher.internal.v4_0.logical.plans.{IndexOrder, QueryExpression}
 import org.neo4j.internal.kernel.api._
 import org.neo4j.values.storable.Value
-import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
 
 class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                             offset: Int,
@@ -34,8 +35,8 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
   override def init(context: QueryContext,
                     state: QueryState,
                     inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): ContinuableOperatorTask = {
-    new OTask(inputMorsel)
+                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
+    IndexedSeq(new OTask(inputMorsel))
   }
 
   override val propertyIds: Array[Int] = properties.map(_.propertyKeyId)
@@ -47,21 +48,18 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     private def next(): Boolean = {
       while (true) {
-        if (nodeCursor != null && nodeCursor.next())
+        if (nodeCursor != null && nodeCursor.next()) {
           return true
-        else if (nodeCursors.hasNext)
+        } else if (nodeCursors.hasNext) {
           nodeCursor = nodeCursors.next()
-        else {
+        } else {
           return false
         }
       }
       false // because scala compiler doesn't realize that this line is unreachable
     }
 
-    override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
-                                               context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
       val queryState = new OldQueryState(context,
                                          resources = null,
                                          params = state.params,
@@ -72,7 +70,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
     }
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
-      while (outputRow.hasMoreRows && next()) {
+      while (outputRow.isValidRow && next()) {
         outputRow.setLongAt(offset, nodeCursor.nodeReference())
         var i = 0
         while (i < indexPropertyIndices.length) {

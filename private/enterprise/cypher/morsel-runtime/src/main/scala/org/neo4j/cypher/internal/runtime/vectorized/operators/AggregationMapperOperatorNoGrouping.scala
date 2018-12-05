@@ -33,7 +33,7 @@ class AggregationMapperOperatorNoGrouping(val workIdentity: WorkIdentity,
                                        Array.empty[IndexReadSession])
 
     //loop over the entire morsel and apply the aggregation
-    while (currentRow.hasMoreRows) {
+    while (currentRow.isValidRow) {
       var accCount = 0
       while (accCount < aggregations.length) {
         aggregationMappers(accCount).map(currentRow, queryState)

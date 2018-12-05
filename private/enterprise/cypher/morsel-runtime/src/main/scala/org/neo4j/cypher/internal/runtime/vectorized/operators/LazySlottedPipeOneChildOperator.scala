@@ -14,10 +14,10 @@ import org.neo4j.cypher.internal.runtime.vectorized._
 
 class LazySlottedPipeOneChildOperator(val workIdentity: WorkIdentity, val initialSource: Pipe) extends LazySlottedPipeStreamingOperator {
 
-  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, resources: QueryResources): ContinuableOperatorTask = {
+  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
     val feedPipeQueryState: FeedPipeQueryState =
       LazySlottedPipeStreamingOperator.createFeedPipeQueryState(inputMorsel, context, state, resources.expressionCursors)
-    new OTask(inputMorsel, feedPipeQueryState)
+    IndexedSeq(new OTask(inputMorsel, feedPipeQueryState))
   }
 
   class OTask(val inputRow: MorselExecutionContext,
@@ -25,10 +25,7 @@ class LazySlottedPipeOneChildOperator(val workIdentity: WorkIdentity, val initia
 
     var iterator: Iterator[ExecutionContext] = _
 
-    protected override def initializeInnerLoop(inputRow: MorselExecutionContext,
-                                               context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources): Boolean = {
+    protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
       // Arm the FeedPipe
       feedPipeQueryState.isNextRowReady = true
       iterator = finalPipe.createResults(feedPipeQueryState)
@@ -36,7 +33,7 @@ class LazySlottedPipeOneChildOperator(val workIdentity: WorkIdentity, val initia
     }
 
     override def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
-      while (outputRow.hasMoreRows && iterator.hasNext) {
+      while (outputRow.isValidRow && iterator.hasNext) {
         val slottedRow = iterator.next().asInstanceOf[SlottedExecutionContext]
         outputRow.copyFrom(slottedRow, slottedRow.slots.numberOfLongs, slottedRow.slots.numberOfReferences)
         outputRow.moveToNextRow()

@@ -8,30 +8,29 @@ package org.neo4j.cypher.internal.runtime.parallel
 import java.util.concurrent._
 import java.util.function.Supplier
 
+import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
+
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
-
-import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
 
 /**
   * A simple implementation of the Scheduler trait
   */
 class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executorService: ExecutorService,
                                                               waitTimeout: Duration,
-                                                              threadLocalResourceFactory: () => THREAD_LOCAL_RESOURCE
+                                                              threadLocalResourceFactory: () => THREAD_LOCAL_RESOURCE,
+                                                              override val numberOfWorkers: Int
                                                              ) extends Scheduler[THREAD_LOCAL_RESOURCE] {
 
   private val threadLocalResource = ThreadLocal.withInitial(new Supplier[THREAD_LOCAL_RESOURCE] {
     override def get(): THREAD_LOCAL_RESOURCE = threadLocalResourceFactory()
   })
 
-  override def execute(task: Task[THREAD_LOCAL_RESOURCE], tracer: SchedulerTracer): QueryExecution = {
-    dprintln(() => s"SimpleScheduler execute $task")
+  override def execute(tracer: SchedulerTracer, tasks: IndexedSeq[Task[THREAD_LOCAL_RESOURCE]]): QueryExecution = {
+    dprintln(() => s"SimpleScheduler execute $tasks")
     val queryTracer: QueryExecutionTracer = tracer.traceQuery()
-    new SimpleQueryExecution(schedule(task, None, queryTracer), this, queryTracer, waitTimeout.toMillis)
+    new SimpleQueryExecution(tasks.map(schedule(_, None, queryTracer)), this, queryTracer, waitTimeout.toMillis)
   }
-
-  def isMultiThreaded: Boolean = true
 
   def schedule(task: Task[THREAD_LOCAL_RESOURCE], upstreamWorkUnit: Option[WorkUnitEvent], queryTracer: QueryExecutionTracer): Future[TaskResult[THREAD_LOCAL_RESOURCE]] = {
     dprintln(() => s"SimpleScheduler schedule $task")
@@ -53,13 +52,13 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executorService: E
     executorService.submit(callableTask)
   }
 
-  class SimpleQueryExecution(initialTask: Future[TaskResult[THREAD_LOCAL_RESOURCE]],
+  class SimpleQueryExecution(initialTasks: IndexedSeq[Future[TaskResult[THREAD_LOCAL_RESOURCE]]],
                              scheduler: SimpleScheduler[THREAD_LOCAL_RESOURCE],
                              queryTracer: QueryExecutionTracer,
                              waitTimeoutMilli: Long) extends QueryExecution {
 
     var inFlightTasks = new ArrayBuffer[Future[TaskResult[THREAD_LOCAL_RESOURCE]]]
-    inFlightTasks += initialTask
+    inFlightTasks ++= initialTasks
 
     override def await(): Option[Throwable] = {
       while (inFlightTasks.nonEmpty) {

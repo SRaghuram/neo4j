@@ -32,7 +32,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity, slots: SlotConfigura
                                      currentRow: MorselExecutionContext): Unit = {
       val resultRow = new MorselResultRow(currentRow, slots, fieldNames, context)
       // Loop over the rows of the morsel and call the visitor for each one
-      while (currentRow.hasMoreRows) {
+      while (currentRow.isValidRow) {
         state.visitor.visit(resultRow)
         currentRow.moveToNextRow()
       }

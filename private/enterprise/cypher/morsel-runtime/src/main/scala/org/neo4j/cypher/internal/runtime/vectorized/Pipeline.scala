@@ -42,7 +42,7 @@ abstract class Pipeline() extends HasWorkIdentity {
                    state: QueryState,
                    resources: QueryResources,
                    pipelineArgument: PipelineArgument,
-                   from: AbstractPipelineTask): Seq[Task[QueryResources]]
+                   from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]]
 
   protected def composeWorkIdentities(first: HasWorkIdentity, others: Seq[HasWorkIdentity]): WorkIdentity = {
     val workIdentities = (Seq(first) ++ others).map(_.workIdentity)

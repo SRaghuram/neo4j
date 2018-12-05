@@ -63,7 +63,7 @@ object MorselSorting {
                                 new Array[AnyValue](inputRow.numberOfRows * inputRow.getRefsPerRow))
     val outputRow = MorselExecutionContext(tempMorsel, inputRow.getLongsPerRow, inputRow.getRefsPerRow, inputRow.numberOfRows)
 
-    while (outputRow.hasMoreRows) {
+    while (outputRow.isValidRow) {
       val fromIndex = outputToInputIndexes(outputRow.getCurrentRow)
       inputRow.moveToRow(fromIndex)
 

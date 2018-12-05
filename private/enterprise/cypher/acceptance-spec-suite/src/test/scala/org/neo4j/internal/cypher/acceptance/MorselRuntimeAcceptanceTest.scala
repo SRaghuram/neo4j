@@ -14,6 +14,7 @@ import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 
+import scala.collection.JavaConverters._
 import scala.collection.Map
 import scala.collection.mutable.ArrayBuffer
 
@@ -239,7 +240,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     val result = graph.execute("CYPHER runtime=morsel MATCH (n) RETURN n.group, collect(n.prop)")
 
     //Then
-    val first :: second :: Nil = asScalaResult(result).toList
+    val first :: second :: Nil = asScalaResult(result).toList.sortBy(_("n.group").asInstanceOf[String])
     first("n.group") should equal("BAR")
     first("collect(n.prop)").asInstanceOf[Seq[_]] should contain theSameElementsAs List(10, 20, 30, 40, 50)
 
@@ -462,6 +463,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
 
     // Then
     val resultSet = asScalaResult(result).toSet
+    resultSet.size should be(100)
   }
 
   // Test with some interesting cases around the morsel size boundary
@@ -536,6 +538,13 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     morselResultList shouldEqual slottedResultList
   }
 
+  test("allnodesscan should find all nodes") {
+    val ids = (1 to 10 map(_ => createNode().getId)).toSet
+
+    val query = "CYPHER runtime=morsel MATCH (n) RETURN id(n)"
+    graph.execute(query).asScala.map(_.get("id(n)").asInstanceOf[Long]).toSet should equal(ids)
+  }
+
   test("don't stall for nested plan expressions") {
     // Given
     graph.execute( """CREATE (a:A)
@@ -557,8 +566,6 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   private def sortedScalaListOfABTuples(result: Result): Seq[(String, String)] = {
-    import scala.collection.JavaConverters._
-
     result.map {
       new java.util.function.Function[java.util.Map[String, AnyRef], (String, String)] {
         override def apply(m: java.util.Map[String, AnyRef]): (String, String) = {

@@ -29,10 +29,10 @@ abstract class SchedulerTest extends CypherFunSuite {
     val taskThreadId = new AtomicLong(testThread)
 
     val sb = new StringBuilder
-    val queryExecution = s.execute(NoopTask(() => {
-      sb ++= "great success"
-      taskThreadId.set(Thread.currentThread().getId)
-    }), tracer)
+    val queryExecution = s.execute(tracer, IndexedSeq(NoopTask(() => {
+          sb ++= "great success"
+          taskThreadId.set(Thread.currentThread().getId)
+        })))
 
     queryExecution.await()
 
@@ -48,9 +48,9 @@ abstract class SchedulerTest extends CypherFunSuite {
     val map = new ConcurrentHashMap[Int, Long]()
     val futures =
       for ( i <- 0 until 1000 ) yield
-        s.execute(NoopTask(() => {
-          map.put(i, Thread.currentThread().getId)
-        }), tracer)
+        s.execute(tracer, IndexedSeq(NoopTask(() => {
+                  map.put(i, Thread.currentThread().getId)
+                })))
 
     futures.foreach(f => f.await())
 
@@ -66,13 +66,12 @@ abstract class SchedulerTest extends CypherFunSuite {
 
     val result: mutable.Set[String] = java.util.concurrent.ConcurrentHashMap.newKeySet[String]()
 
-    val queryExecution = s.execute(
-      SubTasker(List(
-        NoopTask(() => result += "once"),
-        NoopTask(() => result += "upon"),
-        NoopTask(() => result += "a"),
-        NoopTask(() => result += "time")
-      )), tracer)
+    val queryExecution = s.execute(tracer, IndexedSeq(SubTasker(List(
+            NoopTask(() => result += "once"),
+            NoopTask(() => result += "upon"),
+            NoopTask(() => result += "a"),
+            NoopTask(() => result += "time")
+          ))))
 
     queryExecution.await()
     result should equal(Set("once", "upon", "a", "time"))
@@ -88,10 +87,32 @@ abstract class SchedulerTest extends CypherFunSuite {
       PushToEager(List(1,10,100), aggregator),
       PushToEager(List(1000,10000,100000), aggregator)))
 
-    val queryExecution = s.execute(tasks, tracer)
+    val queryExecution = s.execute(tracer, IndexedSeq(tasks))
 
     queryExecution.await()
     aggregator.sum.get() should be(111111)
+  }
+
+  test("should execute multiple initial tasks") {
+    val concurrency = 4
+    val s = newScheduler(concurrency)
+
+    val map = new ConcurrentHashMap[Int, Long]()
+    val futures =
+      for ( slice <- (0 until 1000).grouped(9) ) yield {
+        val tasks: IndexedSeq[NoopTask] = slice.map(i => NoopTask(() => {
+          map.put(i, Thread.currentThread().getId)
+        }))
+
+        s.execute(tracer, tasks)
+      }
+
+    futures.foreach(f => f.await())
+
+    if (s.isMultiThreaded) {
+      val countsPerThread = map.toSeq.groupBy(kv => kv._2).mapValues(_.size)
+      countsPerThread.size() should equal(concurrency)
+    }
   }
 
   // HELPER TASKS

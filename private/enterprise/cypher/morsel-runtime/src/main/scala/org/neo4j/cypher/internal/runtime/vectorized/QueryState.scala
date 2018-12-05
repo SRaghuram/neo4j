@@ -17,4 +17,8 @@ case class QueryState(params: MapValue,
                       morselSize: Int,
                       queryIndexes: Array[IndexReadSession],
                       transactionBinder: TransactionBinder, // hack until we stop prePopulate from using NodeProxy logic
-                      reduceCollector: Option[ReduceCollector] = None)
+                      numberOfWorkers: Int,
+                      reduceCollector: Option[ReduceCollector] = None) {
+
+  def singeThreaded: Boolean = numberOfWorkers == 1
+}
