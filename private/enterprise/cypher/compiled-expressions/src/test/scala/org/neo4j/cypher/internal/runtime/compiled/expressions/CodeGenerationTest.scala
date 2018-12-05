@@ -2485,7 +2485,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   private def compileProjection(projections: Map[Int, Expression]) = {
     val compiler = new IntermediateCodeGeneration(SlotConfiguration.empty)
-    val compiled = projections.mapValues(e => compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e")))
+    val compiled = for ((s,e) <- projections) yield s -> compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e"))
     CodeGeneration.compileProjection(compiler.compileProjection(compiled))
   }
 

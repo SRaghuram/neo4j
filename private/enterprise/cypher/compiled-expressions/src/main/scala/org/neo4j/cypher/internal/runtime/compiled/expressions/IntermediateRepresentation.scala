@@ -276,11 +276,11 @@ case class BooleanOr(lhs: IntermediateRepresentation, rhs: IntermediateRepresent
 
 /**
   * Loads a static field
-  * @param owner The owning class
+  * @param owner Either the owning class or None if it is a local constant
   * @param output The type of the static field
   * @param name The name of the static field
   */
-case class GetStatic(owner: TypeReference, output: TypeReference, name: String) extends IntermediateRepresentation
+case class GetStatic(owner: Option[TypeReference], output: TypeReference, name: String) extends IntermediateRepresentation
 
 /**
   * Instantiate a new object
@@ -337,7 +337,13 @@ case class Method(owner: TypeReference, output: TypeReference, name: String, par
 case class IntermediateExpression(ir: IntermediateRepresentation, fields: Seq[Field],
                                   variables: Seq[LocalVariable], nullCheck: Set[IntermediateRepresentation])
 
-case class Field(typ: TypeReference, name: String, initializer: Option[IntermediateRepresentation] = None)
+sealed trait Field {
+  def typ: TypeReference
+  def name: String
+}
+
+case class InstanceField(typ: TypeReference, name: String, initializer: Option[IntermediateRepresentation] = None) extends Field
+case class StaticField(typ: TypeReference, name: String, value: Option[Any] = None) extends Field
 
 case class LocalVariable(typ: TypeReference, name: String, value: IntermediateRepresentation)
 
@@ -355,10 +361,13 @@ object IntermediateRepresentation {
     }
   }
 
-  def field[TYPE](name: String)(implicit typ: Manifest[TYPE]) = Field(typeRef(typ), name)
+  def field[TYPE](name: String)(implicit typ: Manifest[TYPE]) = InstanceField(typeRef(typ), name)
 
   def field[TYPE](name: String, initializer: IntermediateRepresentation)(implicit typ: Manifest[TYPE]) =
-    Field(typeRef(typ), name, Some(initializer))
+    InstanceField(typeRef(typ), name, Some(initializer))
+
+  def staticConstant[TYPE](name: String, value: AnyRef)(implicit typ: Manifest[TYPE]) =
+    StaticField(typeRef(typ), name, Some(value))
 
   def variable[TYPE](name: String, value: IntermediateRepresentation)(implicit typ: Manifest[TYPE]): LocalVariable =
     LocalVariable(typeRef(typ), name, value)
@@ -422,8 +431,10 @@ object IntermediateRepresentation {
 
   def setField(field: Field, value: IntermediateRepresentation): IntermediateRepresentation = SetField(field, value)
 
+  def getStatic[OUT](name: String)(implicit out: Manifest[OUT]) = GetStatic(None, typeRef(out), name)
+
   def getStatic[OWNER, OUT](name: String)(implicit owner: Manifest[OWNER], out: Manifest[OUT]) =
-    GetStatic(typeRef(owner), typeRef(out), name)
+    GetStatic(Some(typeRef(owner)), typeRef(out), name)
 
   def noValue: IntermediateRepresentation = getStatic[Values, Value]("NO_VALUE")
 

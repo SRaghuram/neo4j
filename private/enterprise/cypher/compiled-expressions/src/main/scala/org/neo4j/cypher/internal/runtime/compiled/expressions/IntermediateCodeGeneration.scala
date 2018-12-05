@@ -142,14 +142,15 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     //literals
-    case d: DoubleLiteral => Some(IntermediateExpression(
-      invokeStatic(method[Values, DoubleValue, Double]("doubleValue"), constant(d.value)), Seq.empty, Seq.empty,
-      Set.empty))
-    case i: IntegerLiteral => Some(IntermediateExpression(
-      invokeStatic(method[Values, LongValue, Long]("longValue"), constant(i.value)), Seq.empty, Seq.empty, Set.empty))
-    case s: expressions.StringLiteral => Some(IntermediateExpression(
-      invokeStatic(method[Values, TextValue, String]("stringValue"), constant(s.value)), Seq.empty, Seq.empty,
-      Set.empty))
+    case d: DoubleLiteral =>
+      val constant = staticConstant[DoubleValue](namer.nextVariableName().toUpperCase, Values.doubleValue(d.value))
+      Some(IntermediateExpression(getStatic[DoubleValue](constant.name), Seq(constant), Seq.empty, Set.empty))
+    case i: IntegerLiteral =>
+      val constant = staticConstant[LongValue](namer.nextVariableName().toUpperCase, Values.longValue(i.value))
+      Some(IntermediateExpression(getStatic[LongValue](constant.name), Seq(constant), Seq.empty, Set.empty))
+    case s: expressions.StringLiteral =>
+      val constant = staticConstant[TextValue](namer.nextVariableName().toUpperCase, Values.stringValue(s.value))
+      Some(IntermediateExpression(getStatic[TextValue](constant.name), Seq(constant), Seq.empty, Set.empty))
     case _: Null => Some(IntermediateExpression(noValue, Seq.empty, Seq.empty, Set(constant(true))))
     case _: True => Some(IntermediateExpression(truthValue, Seq.empty, Seq.empty, Set.empty))
     case _: False => Some(IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty))

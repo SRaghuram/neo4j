@@ -20,10 +20,10 @@ import org.neo4j.codegen.bytecode.ByteCode.BYTECODE
 import org.neo4j.codegen.source.SourceCode.{PRINT_SOURCE, SOURCECODE}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
+import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.MapValue
-import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
 
 /**
   * Produces runnable code from an IntermediateRepresentation
@@ -70,7 +70,10 @@ object CodeGeneration {
       clazz.handle()
     }
 
-    handle.loadAnonymousClass().newInstance().asInstanceOf[CompiledExpression]
+    val clazz = handle.loadAnonymousClass()
+    setConstants(clazz, expression.fields)
+
+    clazz.newInstance().asInstanceOf[CompiledExpression]
   }
 
   def compileProjection(expression: IntermediateExpression): CompiledProjection = {
@@ -78,27 +81,37 @@ object CodeGeneration {
 
       generateConstructor(clazz, expression)
       using(clazz.generate(PROJECT_METHOD)) { block =>
-        expression.variables.distinct.foreach{ v =>
+        expression.variables.distinct.foreach { v =>
           block.assign(v.typ, v.name, compileExpression(v.value, block))
         }
         block.expression(compileExpression(expression.ir, block))
       }
       clazz.handle()
     }
+    val clazz = handle.loadAnonymousClass()
+    setConstants(clazz, expression.fields)
+    clazz.newInstance().asInstanceOf[CompiledProjection]
+  }
 
-    handle.loadAnonymousClass().newInstance().asInstanceOf[CompiledProjection]
+  private def setConstants(clazz: Class[_], fields: Seq[Field]) = {
+    fields.foreach {
+      case StaticField(_, name, Some(value)) =>
+        clazz.getDeclaredField(name).set(null, value)
+      case _ =>
+    }
   }
 
   private def generateConstructor(clazz: ClassGenerator, expression: IntermediateExpression): Unit = {
     using(clazz.generateConstructor()) { block =>
       block.expression(invokeSuper(OBJECT))
-      expression.fields.foreach { f =>
-        val reference = clazz.field(f.typ, f.name)
-        //if fields has initializer set them in the constructor
-        val initializer = f.initializer.map(ir => compileExpression(ir, block))
-        initializer.foreach { value =>
-          block.put(block.self(), reference, value)
-        }
+      expression.fields.foreach {
+        case InstanceField(typ, name, initializer) =>
+          val reference = clazz.field(typ, name)
+          initializer.map(ir => compileExpression(ir, block)).foreach { value =>
+            block.put(block.self(), reference, value)
+          }
+        case StaticField(typ, name, _) =>
+          clazz.publicStaticField(typ, name)
       }
     }
   }
@@ -152,7 +165,7 @@ object CodeGeneration {
                                           values.map(v => compileExpression(v, block)): _*)
 
     //Foo.BAR
-    case GetStatic(owner, typ, name) => getStatic(staticField(owner, typ, name))
+    case GetStatic(owner, typ, name) => getStatic(staticField(owner.getOrElse(block.owner()), typ, name))
 
     //condition ? onTrue : onFalse
     case Ternary(condition, onTrue, onFalse) =>
