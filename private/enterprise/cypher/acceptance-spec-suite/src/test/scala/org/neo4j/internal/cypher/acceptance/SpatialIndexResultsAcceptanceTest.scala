@@ -42,9 +42,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     createLabeledNode("Place")
     graph.execute("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
-    // When
-    val localConfig = Configs.InterpretedAndSlotted
-    val result = executeWith(localConfig,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "MATCH (p:Place) WHERE p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -65,9 +63,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     createLabeledNode("Place")
     graph.execute("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
-    // When
-    val localConfig = Configs.All
-    val result = executeWith(localConfig,
+    val result = executeWith(Configs.All,
       "MATCH (p:Place) WHERE p.location = $param RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -90,9 +86,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     createLabeledNode("Place")
     graph.execute("MATCH (p:Place) SET p.location = [point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'})] RETURN p.location as point")
 
-    // When
-    val localConfig = Configs.All
-    val result = executeWith(localConfig,
+    val result = executeWith(Configs.All,
       "MATCH (p:Place) WHERE p.location = $param RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -118,9 +112,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         | point({y: 56.7, x: 13.78, crs: 'WGS-84'})]
         |RETURN p.location as point""".stripMargin)
 
-    // When
-    val localConfig = Configs.All
-    val result = executeWith(localConfig,
+    val result = executeWith(Configs.All,
       "MATCH (p:Place) WHERE p.location = $param RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -152,9 +144,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         | point({y: 56.7, x: 13.78, crs: 'WGS-84'})]
         |RETURN p.location as point""".stripMargin)
 
-    // When
-    val localConfig = Configs.All
-    val result = executeWith(localConfig,
+    val result = executeWith(Configs.All,
       "MATCH (p:Place) WHERE p.location = $param RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere

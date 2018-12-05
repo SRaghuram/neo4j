@@ -11,14 +11,12 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 
 class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  val expectedToSucceed = Configs.InterpretedAndSlotted
-
-  var aNode: Node = null
-  var bNode: Node = null
-  var cNode: Node = null
-  var dNode: Node = null
-  var eNode: Node = null
-  var fNode: Node = null
+  var aNode: Node = _
+  var bNode: Node = _
+  var cNode: Node = _
+  var dNode: Node = _
+  var eNode: Node = _
+  var fNode: Node = _
 
   override def initTest() {
     super.initTest()
@@ -31,7 +29,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   }
 
   test("should return null when END WITH is used on non-strings"){
-    val result = executeWith(expectedToSucceed,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         | CREATE ({name: 1})
         | WITH *
@@ -42,7 +40,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   }
 
   test("should return null when CONTAINS is used on non-strings"){
-    val result = executeWith(expectedToSucceed,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         | CREATE ({name: 1})
         | WITH *
@@ -53,7 +51,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   }
 
   test("should return null when CONTAINS is used on non-strings that contains integers") {
-    val result = executeWith(expectedToSucceed,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         | CREATE ({name: 1})
         | WITH *
@@ -64,7 +62,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   }
 
   test("should return null when STARTS WITH is used on non-strings"){
-    val result = executeWith(expectedToSucceed,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         | CREATE ({name: 1})
         | WITH *

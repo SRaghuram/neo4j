@@ -9,8 +9,6 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 
 class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
-  private val expectedToSucceed = Configs.InterpretedAndSlotted
-
   test("find friends of others") {
     // given
     createLabeledNode(Map("id" -> 1), "A")
@@ -19,7 +17,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     createLabeledNode(Map("id" -> 3), "B")
 
     // when
-    executeWith(expectedToSucceed, "MATCH (a:A), (b:B) WHERE a.id = b.id RETURN a, b",
+    executeWith(Configs.InterpretedAndSlotted, "MATCH (a:A), (b:B) WHERE a.id = b.id RETURN a, b",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("ValueHashJoin")))
   }
 
@@ -34,7 +32,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     }
 
     // when
-    executeWith(expectedToSucceed, "MATCH (a:A), (b:B) WHERE a.id = b.id RETURN a, b",
+    executeWith(Configs.InterpretedAndSlotted, "MATCH (a:A), (b:B) WHERE a.id = b.id RETURN a, b",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("ValueHashJoin")))
   }
 

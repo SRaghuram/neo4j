@@ -51,7 +51,7 @@ class MemoryPerformanceAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
                   |RETURN ID(a), ID(b), type(r)""".stripMargin
 
     // when
-    executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, query)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
     // then it should not fail or run out of memory
   }
 

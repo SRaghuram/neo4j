@@ -14,8 +14,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
  * [[org.neo4j.cypher.internal.compiler.v4_0.planner.logical.LeafPlanningIntegrationTest]]
  */
 class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport{
-  val expectedToSucceed = Configs.InterpretedAndSlotted
-
   test("should be case sensitive for CONTAINS with indexes") {
     val london = createLabeledNode(Map("name" -> "London"), "Location")
     createLabeledNode(Map("name" -> "LONDON"), "Location")
@@ -32,7 +30,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' RETURN l"
 
-    val result = executeWith(expectedToSucceed, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
 
     result.toList should equal(List(Map("l" -> london)))
@@ -54,7 +52,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' RETURN l"
 
-    val result = executeWith(expectedToSucceed, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
 
     result.toList should equal(List(Map("l" -> london)))
@@ -77,7 +75,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
-    val result = executeWith(expectedToSucceed, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
     planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
 
     result.toList should equal(List(Map("l" -> london)))
@@ -123,7 +121,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) USING INDEX l:Location(name) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
-    val result = executeWith(expectedToSucceed, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -144,7 +142,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS {param} RETURN l"
 
-    val result = executeWith(expectedToSucceed, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")),
       params = Map("param" -> null))
 

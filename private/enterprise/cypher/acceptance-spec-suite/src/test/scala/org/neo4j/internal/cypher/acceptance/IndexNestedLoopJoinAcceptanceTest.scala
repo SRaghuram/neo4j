@@ -132,7 +132,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
         | RETURN a
       """.stripMargin
 
-    val result = executeWith(Configs.All - Configs.Compiled, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop) > b.prop2")))
 
     result.columnAs[Node]("a").toList should equal(List(aNodes(123), aNodes(124), aNodes(125)))
@@ -147,7 +147,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
         | RETURN a
       """.stripMargin
 
-    val result = executeWith(Configs.All - Configs.Compiled, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop STARTS WITH b.prop2)")))
 
     result.columnAs[Node]("a").toSet should equal(Set(aNodes(12), aNodes(120), aNodes(121), aNodes(122), aNodes(123), aNodes(124), aNodes(125)))
@@ -163,7 +163,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
         | RETURN a
       """.stripMargin
 
-    val result = executeWith(Configs.All - Configs.Compiled, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop CONTAINS b.prop2)"),
         expectPlansToFail = Configs.Version3_5))
 
@@ -171,7 +171,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
   }
 
   ignore("should be able to plan index use for ENDS WITH") {
-    val aNodes = (0 to 1250).map(i => createLabeledNode(Map("prop" -> s"prefix${i}"), "Foo"))
+    val aNodes = (0 to 1250).map(i => createLabeledNode(Map("prop" -> s"prefix$i"), "Foo"))
     val bNode = createLabeledNode(Map("prop2" -> "12"), "Bar")
     graph.createIndex("Foo", "prop")
     val query =
@@ -179,7 +179,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
         | RETURN a
       """.stripMargin
 
-    val result = executeWith(Configs.All - Configs.Compiled, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":FOO(prop ENDS WITH b.prop2)"),
         expectPlansToFail = Configs.Version3_5))
 

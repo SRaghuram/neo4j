@@ -18,16 +18,13 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   private val usesExpandInto = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Expand(Into)"))
   private val usesAntiSemiApply = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("AntiSemiApply"))
   private val noTriadic = ComparePlansWithAssertion(_ should not(includeSomewhere.aPlan("TriadicSelection")))
-  private val configs = Configs.InterpretedAndSlotted
-  private val noCompiled = Configs.All - Configs.Compiled
-
   test("find friends of others") {
     // given
     execute( """CREATE (a:Person{name:"a"}), (b:Person{name:"b"}), (c:Person{name:"c"}), (d:Person{name:"d"})
                |CREATE (a)-[:FRIEND]->(c), (b)-[:FRIEND]->(c), (c)-[:FRIEND]->(d)""".stripMargin)
 
     // when
-    val result = executeWith(configs, QUERY, planComparisonStrategy = usesTriadic)
+    val result = executeWith(Configs.InterpretedAndSlotted, QUERY, planComparisonStrategy = usesTriadic)
 
     // then
     result.toSet should equal(Set(
@@ -45,7 +42,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
                |CREATE (a)-[:FRIEND]->(c), (b)-[:FRIEND]->(d), (c)-[:FRIEND]->(e), (d)-[:FRIEND]->(e)""".stripMargin)
 
     // when
-    val result = executeWith(configs, QUERY, planComparisonStrategy = usesTriadic)
+    val result = executeWith(Configs.InterpretedAndSlotted, QUERY, planComparisonStrategy = usesTriadic)
 
     // then
     result.toSet should equal(Set(
@@ -64,7 +61,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
         |CREATE (a)-[:FRIEND]->(b), (b)-[:FRIEND]->(c), (c)-[:FRIEND]->(a)""".stripMargin)
 
     // when
-    val result = executeWith(configs, QUERY, planComparisonStrategy = usesTriadic)
+    val result = executeWith(Configs.InterpretedAndSlotted, QUERY, planComparisonStrategy = usesTriadic)
 
     // then
     result should be(empty)
@@ -85,7 +82,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
                |USING INDEX a:Person(name)
                |WHERE a.name = 'a' AND b.age = 39 AND exists(c.name) AND (a)-[:FRIEND]->(c)
                |RETURN a.name AS l, b.name as m, c.name AS r""".stripMargin
-    val result = executeWith(configs, queryWithPredicates, planComparisonStrategy = noTriadic)
+    val result = executeWith(Configs.InterpretedAndSlotted, queryWithPredicates, planComparisonStrategy = noTriadic)
 
     // then
     result.toSet should equal(Set(Map("l" -> "a", "m" -> "c", "r" -> "d")))
@@ -187,12 +184,12 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     val queries = List(
         Query("non-triadic1", Configs.All, usesExpandInto,    3, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post)<-[:POSTED]-(u) RETURN u, a"),
         Query("non-triadic2", Configs.All, usesExpandInto,    3, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a)<-[:POSTED]-(u) RETURN u, a"),
-        Query("triadic-neg1", configs,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
-        Query("triadic-neg2", configs,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
-        Query("triadic-neg3", configs,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
-        Query("triadic-neg4", noCompiled,  usesAntiSemiApply, 7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
-        Query("triadic-pos1", configs,     usesTriadic,       3, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE (u)-[:POSTED]->(a) RETURN u, a"),
-        Query("triadic-pos2", configs,     usesTriadic,       3, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE (u)-[:POSTED]->(a) RETURN u, a")
+        Query("triadic-neg1", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
+        Query("triadic-neg2", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
+        Query("triadic-neg3", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
+        Query("triadic-neg4", Configs.InterpretedAndSlotted,  usesAntiSemiApply, 7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
+        Query("triadic-pos1", Configs.InterpretedAndSlotted,     usesTriadic,       3, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE (u)-[:POSTED]->(a) RETURN u, a"),
+        Query("triadic-pos2", Configs.InterpretedAndSlotted,     usesTriadic,       3, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE (u)-[:POSTED]->(a) RETURN u, a")
       )
 
     // THEN

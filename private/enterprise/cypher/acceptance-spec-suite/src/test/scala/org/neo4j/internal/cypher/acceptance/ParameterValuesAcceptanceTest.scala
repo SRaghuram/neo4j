@@ -107,49 +107,39 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("match with missing parameter should return error for empty db") {
-    val config = Configs.Version4_0 + Configs.Version3_5
-    failWithError(config, "MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"))
+    failWithError(Configs.All, "MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"))
   }
 
   test("match with missing parameter should return error for non-empty db") {
-    val config = Configs.Version4_0 + Configs.Version3_5 - Configs.Compiled
-    failWithError(config, "CREATE (n:Person) WITH n MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"))
+    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"))
   }
 
   test("match with multiple missing parameters should return error for empty db") {
-    val config = Configs.Version4_0 + Configs.Version3_5
-    failWithError(config, "MATCH (n:Person {name:{name}, age:{age}}) RETURN n", Seq("Expected parameter(s): name, age"))
+    failWithError(Configs.All, "MATCH (n:Person {name:{name}, age:{age}}) RETURN n", Seq("Expected parameter(s): name, age"))
   }
 
   test("match with multiple missing parameters should return error for non-empty db") {
-    val config = Configs.Version4_0 + Configs.Version3_5 - Configs.Compiled
-    failWithError(config, "CREATE (n:Person) WITH n MATCH (n:Person {name:{name}, age:{age}}) RETURN n", Seq("Expected parameter(s): name, age"))
+    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:{name}, age:{age}}) RETURN n", Seq("Expected parameter(s): name, age"))
   }
 
   test("match with misspelled parameter should return error for empty db") {
-    val config = Configs.Version4_0 + Configs.Version3_5
-    failWithError(config, "MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"), params = Map("nam" -> "Neo"))
+    failWithError(Configs.All, "MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"), params = Map("nam" -> "Neo"))
   }
 
   test("match with misspelled parameter should return error for non-empty db") {
-    val config = Configs.Version4_0 + Configs.Version3_5 - Configs.Compiled
-    failWithError(config, "CREATE (n:Person) WITH n MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"), params = Map("nam" -> "Neo"))
+    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:{name}}) RETURN n", Seq("Expected parameter(s): name"), params = Map("nam" -> "Neo"))
   }
 
   test("name of missing parameters should only be returned once") {
-    val config = Configs.Version4_0 + Configs.Version3_5
-    failWithError(config, "RETURN {p} + {p} + {p}", Seq("Expected parameter(s): p"))
-
+    failWithError(Configs.All, "RETURN {p} + {p} + {p}", Seq("Expected parameter(s): p"))
   }
 
   test("explain with missing parameter should NOT return error for empty db") {
-    val config = Configs.All
-    executeWith(config, "EXPLAIN MATCH (n:Person {name:{name}}) RETURN n")
+    executeWith(Configs.All, "EXPLAIN MATCH (n:Person {name:{name}}) RETURN n")
   }
 
   test("explain with missing parameter should NOT return error for non-empty db") {
-    val config = Configs.InterpretedAndSlotted
-    executeWith(config, "EXPLAIN CREATE (n:Person) WITH n MATCH (n:Person {name:{name}}) RETURN n")
+    executeWith(Configs.InterpretedAndSlotted, "EXPLAIN CREATE (n:Person) WITH n MATCH (n:Person {name:{name}}) RETURN n")
   }
 
   test("merge and update using nested parameters list") {

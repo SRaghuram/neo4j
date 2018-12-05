@@ -33,7 +33,8 @@ class LoadCsvAcceptanceTest
     with RunWithConfigTestSupport
     with ResourceTracking {
 
-  private val expectedToFail = Configs.All - Configs.Compiled
+  private val expectedToFail = Configs.InterpretedAndSlotted
+  private val interpretedAndSlotted4_0 = Configs.InterpretedAndSlotted - Configs.Version3_5
 
   override protected def initTest(): Unit = {
     super.initTest()
@@ -122,8 +123,6 @@ class LoadCsvAcceptanceTest
       assertStats(result, nodesCreated = 3, propertiesWritten = 3)
     }
   }
-
-  private val interpretedAndSlotted4_0 = Configs.InterpretedAndSlotted - Configs.Version3_5
 
   test("should return correct linenumber") {
     val url = createCSVTempFileURL("neo")({
@@ -270,7 +269,7 @@ class LoadCsvAcceptanceTest
         writer.println("5,'Emerald',")
     })
     for (url <- urls) {
-      val result = executeWith(Configs.InterpretedAndSlotted + Configs.SlottedRuntime, s"LOAD CSV WITH HEADERS FROM '$url' AS line WITH line WHERE line.x IS NOT NULL RETURN line.name")
+      val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV WITH HEADERS FROM '$url' AS line WITH line WHERE line.x IS NOT NULL RETURN line.name")
       resourceMonitor.assertClosedAndClear(1)
       assert(result.toList === List(
         Map("line.name" -> "'Aardvark'"),

@@ -10,8 +10,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 
 class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  val expectedToFail = Configs.InterpretedAndSlotted
-
   test("optional match and set") {
     val n1 = createLabeledNode("L1")
     val n2 = createLabeledNode("L2")
@@ -70,7 +68,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     createNode()
 
     // when
-    failWithError(expectedToFail, "MATCH (n) SET n.property = [['foo'],['bar']] RETURN n.property",
+    failWithError(Configs.InterpretedAndSlotted, "MATCH (n) SET n.property = [['foo'],['bar']] RETURN n.property",
       List("Collections containing collections can not be stored in properties."))
   }
 
@@ -79,7 +77,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     createNode()
 
     // when
-    failWithError(expectedToFail, "MATCH (n) SET n.property = [null,null] RETURN n.property",
+    failWithError(Configs.InterpretedAndSlotted, "MATCH (n) SET n.property = [null,null] RETURN n.property",
       List("Collections containing null values can not be stored in properties."))
 
   }
@@ -142,7 +140,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
 
   //Not suitable for the TCK
   test("should fail at runtime when the expression is not a node or a relationship") {
-    failWithError(expectedToFail, "SET (CASE WHEN true THEN {node} END).name = 'neo4j' RETURN count(*)",
+    failWithError(Configs.InterpretedAndSlotted, "SET (CASE WHEN true THEN {node} END).name = 'neo4j' RETURN count(*)",
       List("The expression GenericCase(Vector((true,{node})),None) should have been a node or a relationship",
         "Developer: Stefan claims that: This should be a node or a relationship"), params = Map("node" -> 42))
   }

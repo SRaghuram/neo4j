@@ -34,7 +34,7 @@ class HintAcceptanceTest
                   |RETURN a.name, b.name""".stripMargin
 
     executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion((p) => {
+      planComparisonStrategy = ComparePlansWithAssertion( p => {
       p should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
       p should not(includeSomewhere.aPlan("NodeHashJoin"))
     }))
@@ -52,7 +52,7 @@ class HintAcceptanceTest
                   |USING JOIN ON a
                   |RETURN a.name, b.name""".stripMargin
 
-    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = ComparePlansWithAssertion((p) => {
+    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = ComparePlansWithAssertion( p => {
       p should includeSomewhere.aPlan("NodeRightOuterHashJoin")
       p should not(includeSomewhere.aPlan("NodeHashJoin"))
     }))
@@ -68,7 +68,7 @@ class HintAcceptanceTest
         |RETURN *""".stripMargin
 
     executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion((p) => {
+      planComparisonStrategy = ComparePlansWithAssertion( p => {
         p should includeSomewhere.aPlan("NodeRightOuterHashJoin")
       }))
   }
@@ -117,7 +117,7 @@ class HintAcceptanceTest
         |AND date("2017-01-01") <= r.date <= date("2018-01-01")
         |RETURN COUNT(*)""".stripMargin
 
-    val result = executeWith(Configs.Version4_0 + Configs.Version3_5 - Configs.Compiled, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     // Then
     result.toList should be(List(Map("COUNT(*)" -> 1)))

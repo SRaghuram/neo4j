@@ -192,7 +192,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
     val result = graph.execute(query)
 
     assert(result.hasNext)
-    result.next.get("c") shouldEqual(1)
+    result.next.get("c") shouldEqual 1
   }
 
   val MISSING_NODE_ERRORS = List("Failed to create relationship `r`, node `c` is missing. If you prefer to simply ignore rows " +
@@ -205,7 +205,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   test("should throw on CREATE relationship if start-point is missing") {
     graph.execute("CREATE (a), (b)")
 
-    val config = Configs.All - Configs.Compiled
+    val config = Configs.InterpretedAndSlotted
 
     failWithError(config, """MATCH (a), (b)
                             |WHERE id(a)=0 AND id(b)=1
@@ -219,7 +219,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   test("should throw on CREATE relationship if end-point is missing") {
     graph.execute("CREATE (a), (b)")
 
-    val config = Configs.All - Configs.Compiled
+    val config = Configs.InterpretedAndSlotted
 
     failWithError(config, """MATCH (a), (b)
                             |WHERE id(a)=0 AND id(b)=1

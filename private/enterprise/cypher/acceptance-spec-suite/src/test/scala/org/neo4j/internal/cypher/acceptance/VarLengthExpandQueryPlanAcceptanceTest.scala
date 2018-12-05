@@ -280,9 +280,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val configs = Configs.InterpretedAndSlotted
-
-    val result = executeWith(configs, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)

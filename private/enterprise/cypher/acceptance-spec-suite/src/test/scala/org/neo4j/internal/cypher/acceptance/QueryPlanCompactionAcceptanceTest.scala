@@ -12,12 +12,10 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.WindowsStringSafe
 class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
   with CypherComparisonSupport {
 
-  private val expectedToSucceed = Configs.InterpretedAndSlotted
-
   val shouldCompact = ComparePlansWithAssertion(_.toString.split("\\n").exists(line => line.contains("Create") && line.contains("...")) should be(true))
   val shouldNotCompact = ComparePlansWithAssertion(_.toString.split("\\n").exists(line => line.contains("Create") && line.contains("...")) should be(false))
 
-  implicit val windowsSafe = WindowsStringSafe
+  implicit val windowsSafe: WindowsStringSafe.type = WindowsStringSafe
 
   test("Compact very long query containing consecutive update operations") {
     val query =
@@ -529,7 +527,7 @@ class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with Que
         |;""".stripMargin
 
 
-    val result = executeWith(expectedToSucceed, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = shouldCompact)
     assertStats(result, nodesCreated = 171, relationshipsCreated = 253, propertiesWritten = 564, labelsAdded = 171)
   }
@@ -553,7 +551,7 @@ class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with Que
         |  (JoelS)-[:PRODUCED]->(TheMatrix)
         |""".stripMargin
 
-    val result = executeWith(expectedToSucceed, query, planComparisonStrategy = shouldCompact)
+    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = shouldCompact)
     assertStats(result, nodesCreated = 8, relationshipsCreated = 7, propertiesWritten = 21, labelsAdded = 8)
   }
 
@@ -561,7 +559,7 @@ class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with Que
     val query = "EXPLAIN LOAD CSV WITH HEADERS FROM {csv_filename} AS line MERGE (u1:User {login: line.user1}) MERGE " +
       "(u2:User {login: line.user2}) CREATE (u1)-[:FRIEND]->(u2)"
 
-    executeWith(expectedToSucceed, query, planComparisonStrategy = shouldNotCompact, params = Map("csv_filename" -> "x"))
+    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = shouldNotCompact, params = Map("csv_filename" -> "x"))
   }
 
   test("Don't compact query with consecutive expands due to presence of values in 'other' column") {

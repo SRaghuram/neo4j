@@ -197,7 +197,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     createLabeledNode(Map("latitude" -> 12.78, "longitude" -> 56.7), "Place")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Morsel, "MATCH (p:Place) RETURN point({latitude: p.latitude, longitude: p.longitude}) as point",
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (p:Place) RETURN point({latitude: p.latitude, longitude: p.longitude}) as point",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     // Then
@@ -221,7 +221,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     createLabeledNode(Map("latitude" -> 12.78, "longitude" -> 56.7), "Place")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Morsel, "MATCH (p:Place) RETURN point(p) as point",
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (p:Place) RETURN point(p) as point",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     // Then
@@ -286,7 +286,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     createLabeledNode("Place")
 
     // When
-    val config = Configs.InterpretedAndSlotted - Configs.Morsel
+    val config = Configs.InterpretedAndSlotted
     val result = executeWith(config, "MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
@@ -405,7 +405,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     shouldCompareLike("point({longitude: 0, latitude: 0})", "point({x: 0, y: 0})", a_GT_b = null, a_LT_b = null, a_GTEQ_b = null, a_LTEQ_b = null)
   }
 
-  private def shouldCompareLike(a: String, b: String, a_GT_b: Any, a_LT_b: Any, a_GTEQ_b: Any, a_LTEQ_b: Any) = {
+  private def shouldCompareLike(a: String, b: String, a_GT_b: Any, a_LT_b: Any, a_GTEQ_b: Any, a_LTEQ_b: Any): Unit = {
     val query =
       s"""WITH $a as a, $b as b
          |RETURN a > b, a < b, a >= b, a <= b

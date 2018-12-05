@@ -132,7 +132,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "match (n) where (case when id(n) >= 0 then length((n)-->()) else 42 end) > 0 return n",
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) where (case when id(n) >= 0 then length((n)-->()) else 42 end) > 0 return n",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
 
     result.toList should equal(List(
@@ -145,7 +145,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "match (n) where (case when id(n) < 0 then length((n)-->()) else 42 end) > 0 return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) where (case when id(n) < 0 then length((n)-->()) else 42 end) > 0 return n")
 
     result should have size 3
   }
@@ -155,7 +155,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "match (n) where (case when id(n) < 0 then length((n)-[:X]->()) else 42 end) > 0 return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) where (case when id(n) < 0 then length((n)-[:X]->()) else 42 end) > 0 return n")
 
     result should have size 3
   }
@@ -335,7 +335,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val rel = relate(node, endNode, "HAS")
 
     executeWith(Configs.InterpretedAndSlotted, "MATCH (n:A) RETURN (n)-[:HAS]->() as p",
-      planComparisonStrategy = ComparePlansWithAssertion((planDescription) => {
+      planComparisonStrategy = ComparePlansWithAssertion( planDescription => {
         planDescription.find("Argument") shouldNot be(empty)
         planDescription.cd("Argument").arguments should equal(List(EstimatedRows(1)))
         planDescription.find("Expand(All)") shouldNot be(empty)
@@ -382,17 +382,14 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   test("use getDegree for simple pattern expression with rel-type ORs") {
     setup()
 
-    executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "MATCH (n) WHERE length((n)-[:X|Y]->()) > 2 RETURN n",
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) WHERE length((n)-[:X|Y]->()) > 2 RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
-
-
-  private val configurationWithPatternExpressionFix = Configs.InterpretedAndSlotted
 
   test("solve pattern expressions in set node properties") {
     setup()
 
-    executeWith(configurationWithPatternExpressionFix,
+    executeWith(Configs.InterpretedAndSlotted,
       "MATCH (n) SET n.friends = size((n)<--())",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
@@ -400,7 +397,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   test("solve pattern expressions in set relationship properties") {
     setup()
 
-    executeWith(configurationWithPatternExpressionFix,
+    executeWith(Configs.InterpretedAndSlotted,
       "MATCH (n)-[r]-() SET r.friends = size((n)<--())",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
@@ -408,7 +405,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   test("solve pattern expressions in set node/relationship properties") {
     setup()
 
-    executeWith(configurationWithPatternExpressionFix,
+    executeWith(Configs.InterpretedAndSlotted,
       "MATCH (n)-[r]-() UNWIND [n,r] AS x SET x.friends = size((n)<--())",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
@@ -416,7 +413,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   test("solve pattern expressions in set node properties from map") {
     setup()
 
-    executeWith(configurationWithPatternExpressionFix,
+    executeWith(Configs.InterpretedAndSlotted,
       "MATCH (n) SET n += {friends: size((n)<--())}",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
@@ -424,7 +421,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   test("solve pattern expressions in set relationship properties from map") {
     setup()
 
-    executeWith(configurationWithPatternExpressionFix,
+    executeWith(Configs.InterpretedAndSlotted,
       "MATCH (n)-[r]-() SET r += {friends: size((n)<--())}",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }

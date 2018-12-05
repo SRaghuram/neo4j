@@ -52,9 +52,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val dateValue = DateValue.date(2018, 5, 5).asObject()
     createNode(Map("prop" -> dateValue))
 
-    val config = Configs.All
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
-    val result = executeWith(config, query, params = Map("param" -> dateValue))
+    val result = executeWith(Configs.All, query, params = Map("param" -> dateValue))
 
     result.toList should equal(List(Map("prop" -> dateValue)))
   }
@@ -67,9 +66,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
     createNode(Map("prop" -> javaDateArray))
 
-    val config = Configs.All
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
-    val result = executeWith(config, query, params = Map("param" -> javaDateArray))
+    val result = executeWith(Configs.All, query, params = Map("param" -> javaDateArray))
 
     val dateList = result.columnAs("prop").toList.head.asInstanceOf[Iterable[LocalDate]].toList
     dateList should equal(javaDateArray.toList)
@@ -86,9 +84,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val dateArray = new Array[LocalDate](javaDateList.size)
     createNode(Map("prop" -> javaDateList.toArray(dateArray)))
 
-    val config = Configs.All
     val query = "MATCH (n) WHERE n.prop = $param RETURN n.prop as prop"
-    val result = executeWith(config, query, params = Map("param" -> javaDateList))
+    val result = executeWith(Configs.All, query, params = Map("param" -> javaDateList))
 
     val dateList = result.columnAs("prop").toList.head.asInstanceOf[Iterable[LocalDate]].toList
     dateList should equal(javaDateList.asScala)
@@ -104,9 +101,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
     graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava)
 
-    val config = Configs.All
     val query = "MATCH (n) WHERE n.a = $param.a RETURN n.a as a, n.b as b"
-    val result = executeWith(config, query, params = Map("param" -> dateMap))
+    val result = executeWith(Configs.All, query, params = Map("param" -> dateMap))
 
     result.toList should equal(List(Map("a" -> dateMap.get("a"), "b" -> dateMap.get("b"))))
   }
@@ -121,9 +117,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
     graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava)
 
-    val config = Configs.All
     val query = "MATCH (n) RETURN $param, n.a as a, n.b as b"
-    val result = executeWith(config, query, params = Map("param" -> dateMap))
+    val result = executeWith(Configs.All, query, params = Map("param" -> dateMap))
 
     result.toList should equal(List(Map("$param" -> dateMap.asScala, "a" -> dateMap.get("a"), "b" -> dateMap.get("b"))))
   }
@@ -136,9 +131,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    // When
-    val localConfig = Configs.All
-    val result = executeWith(localConfig,
+    val result = executeWith(Configs.All,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -161,9 +154,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    // When
-    val localConfig = Configs.All
-    val result = executeWith(localConfig,
+    val result = executeWith(Configs.All,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -187,9 +178,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    // When
-    val localConfig = Configs.All
-    val result = executeWith(localConfig,
+    val result = executeWith(Configs.All,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -214,9 +203,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       """MATCH (o:Occasion) SET o.timeSpan = [date("2018-04-01"), date("2018-04-02")]
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
-    // When
-    val localConfig = Configs.All
-    val result = executeWith(localConfig,
+    val result = executeWith(Configs.All,
                              "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
                              planComparisonStrategy = ComparePlansWithAssertion({ plan =>
                                plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
@@ -811,8 +798,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       val query = s"RETURN duration('P1Y1M') $op duration('P1Y30D')"
       withClue(s"Executing $query") {
         /**
-          *  Version 3.3 returns null instead due to running with 3.5 runtime
-          *  SyntaxException come from the 3.5 planner and IncomparableValuesException from earlier runtimes
+          *  Version 3.5 returns null instead due to running with 4.0 runtime
+          *  SyntaxException come from the 4.0 planner and IncomparableValuesException from earlier runtimes
           */
         failWithError(Configs.Version4_0, query, Seq("Type mismatch"))
       }
@@ -823,8 +810,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (op <- Seq("<", "<=", ">", ">=")) {
       val query = "RETURN $d1 " + op + " $d2 as x"
       withClue(s"Executing $query") {
-        // TODO: change to using executeWith when compiled supports temporal parameters
-        val res = executeSingle(query, Map("d1" -> DurationValue.duration(1, 0, 0 ,0), "d2" -> DurationValue.duration(0, 30, 0 ,0))).toList
+        val res = executeWith(Configs.InterpretedAndSlotted, query, params = Map("d1" -> DurationValue.duration(1, 0, 0 ,0), "d2" -> DurationValue.duration(0, 30, 0 ,0))).toList
         res should be(List(Map("x" -> null)))
       }
     }

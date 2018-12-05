@@ -15,8 +15,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
  */
 class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport{
 
-  val expectedToSucceed = Configs.InterpretedAndSlotted
-
   test("should use index on IS NOT NULL") {
     // Given
     val person = createLabeledNode(Map("name" -> "Smith"), "Person")
@@ -24,9 +22,9 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     graph.createIndex("Person", "name")
 
     // When
-    val result = executeWith(expectedToSucceed,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "MATCH (p:Person) WHERE p.name IS NOT NULL RETURN p",
-      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+      planComparisonStrategy = ComparePlansWithAssertion( plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexScan")
       }))
@@ -42,9 +40,9 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     graph.createIndex("Person", "name")
 
     // When
-    val result = executeWith(expectedToSucceed,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "MATCH (p:Person) WHERE exists(p.name) RETURN p",
-      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+      planComparisonStrategy = ComparePlansWithAssertion( plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexScan")
       }))

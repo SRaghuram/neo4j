@@ -37,7 +37,7 @@ class StartPointFindingAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
     val n1= createNode("b")
     val n2 = createNode("c")
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, s"match (n) where id(n) IN [${n1.getId}, ${n2.getId}] return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"match (n) where id(n) IN [${n1.getId}, ${n2.getId}] return n")
     result.columnAs("n").toList should equal(Seq(n1, n2))
   }
 
@@ -76,7 +76,7 @@ class StartPointFindingAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
     val rel1 = relate(createNode("a"), createNode("b"))
     val rel2 = relate(createNode("c"), createNode("d"))
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, s"match ()-[r]->() where id(r) IN [${rel1.getId}, ${rel2.getId}] return r")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"match ()-[r]->() where id(r) IN [${rel1.getId}, ${rel2.getId}] return r")
     result.columnAs("r").toList should equal(Seq(rel1, rel2))
   }
 

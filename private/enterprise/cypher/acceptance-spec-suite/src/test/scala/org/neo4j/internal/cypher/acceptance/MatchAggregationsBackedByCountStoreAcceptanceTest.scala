@@ -12,8 +12,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
 class MatchAggregationsBackedByCountStoreAcceptanceTest
   extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport with QueryPlanTestSupport {
 
-  val defaultConfig = Configs.All
-
   test("do not plan counts store lookup for loop matches") {
     val n = createNode()
     // two loops
@@ -656,7 +654,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   private def compareCount(query: String,
                            expectedCount: Any,
-                           expectSucceed: TestConfiguration = defaultConfig,
+                           expectSucceed: TestConfiguration = Configs.All,
                            expectedLogicalPlan: String = "NodeCountFromCountStore",
                            assertCountInTransaction: Boolean = false,
                            executeBefore: () => Unit = () => {}): Unit = {

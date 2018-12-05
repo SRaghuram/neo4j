@@ -41,8 +41,8 @@ class MergeNodeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisti
     graph.inTx {
       val labelB = r.getStartNode.getLabels.iterator().next()
       val labelC = r.getEndNode.getLabels.iterator().next()
-      labelB.name() shouldEqual ("B")
-      labelC.name() shouldEqual ("C")
+      labelB.name() shouldEqual "B"
+      labelC.name() shouldEqual "C"
     }
   }
 
@@ -78,7 +78,7 @@ class MergeNodeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisti
         |MERGE (a)-[r:X]->()
       """.stripMargin
 
-    failWithError(Configs.All - Configs.Compiled, query, Seq(
+    failWithError(Configs.InterpretedAndSlotted, query, Seq(
       "Expected to find a node, but found instead: null",
       "Expected to find a node at a but found nothing Some(null)",
       "Failed to create relationship `r`, node `a` is missing. " +

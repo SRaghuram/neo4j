@@ -149,7 +149,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n4 = createNode(Map("x" -> 50d))
     val n5 = createNode(Map("x" -> 50.toByte))
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, s"match (n) where n.x < 100 return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"match (n) where n.x < 100 return n")
 
     result.columnAs[Node]("n").toList should equal(List(n1, n2, n3, n4, n5))
   }
@@ -362,7 +362,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val r1 = relate(node1, node2, "prop" -> 10)
     val r2 = relate(node1, node2, "prop" -> 0)
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     result.toList should equal(List(Map("r" -> r1)))
   }
@@ -667,9 +667,9 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   // Not TCK material -- id()
   test("should return empty result when there are no relationship with the given id") {
-    executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "MATCH ()-[r]->() WHERE id(r) = 42 RETURN r") shouldBe empty
-    executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "MATCH ()<-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
-    executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "MATCH ()-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH ()-[r]->() WHERE id(r) = 42 RETURN r") shouldBe empty
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH ()<-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH ()-[r]-() WHERE id(r) = 42 RETURN r") shouldBe empty
   }
 
   // Not TCK material -- id()
@@ -804,7 +804,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |         RETURN candidate
       """.stripMargin
 
-    val res = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, query)
+    val res = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     //Then
     res.toList should equal(List(Map("candidate" -> "John"), Map("candidate" -> "Jonathan")))
@@ -821,7 +821,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |         RETURN candidate
       """.stripMargin
 
-    val res = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, query)
+    val res = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     //Then
     res.toList should equal(List(Map("candidate" -> "John"), Map("candidate" -> "Jonathan")))

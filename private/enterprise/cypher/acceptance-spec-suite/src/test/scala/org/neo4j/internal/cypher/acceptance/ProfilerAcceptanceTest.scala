@@ -98,7 +98,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(createNode(), createNode(), "FOO")
 
     //WHEN
-    val result = profileWithExecute(Configs.InterpretedAndSlotted + Configs.Morsel, "match (n) where (n)-[:FOO]->() return *")
+    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (n) where (n)-[:FOO]->() return *")
 
     //THEN
     result.executionPlanDescription() should (
@@ -148,7 +148,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(createNode(), createNode(), "FOO")
 
     //WHEN
-    val result = profileWithExecute(Configs.InterpretedAndSlotted + Configs.Morsel, "match (n) where not (n)-[:FOO]->() return *")
+    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (n) where not (n)-[:FOO]->() return *")
 
     //THEN
     result.executionPlanDescription() should (
@@ -380,7 +380,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("should not have a problem profiling empty results") {
-    val result = profileWithExecute(Configs.InterpretedAndSlotted + Configs.Morsel, "MATCH (n) WHERE (n)-->() RETURN n")
+    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) WHERE (n)-->() RETURN n")
 
     result shouldBe empty
     result.executionPlanDescription().toString should include("AllNodes")
