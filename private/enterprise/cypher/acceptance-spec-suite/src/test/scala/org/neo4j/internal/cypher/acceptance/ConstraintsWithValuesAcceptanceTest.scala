@@ -78,8 +78,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val query = s"MATCH (n:Awesome) RETURN n.prop1, n.prop2, n.prop3"
 
     // NodeIndexScan is not supported in the compiled runtime
-    val supportedConfig = Configs.All - TestConfiguration(Versions.V4_0, Planners.all, Runtimes(Runtimes.CompiledBytecode, Runtimes.CompiledSource))
-
+    val supportedConfig = Configs.InterpretedAndSlotted + Configs.Version3_5
     val result = executeWith(supportedConfig, query)
 
     // Then

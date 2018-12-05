@@ -313,10 +313,10 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val m2 = createLabeledNode(Map("prop1" -> 3, "prop2" -> 3), "Label")
     val m3 = createLabeledNode(Map("prop1" -> 4, "prop2" -> 2), "Label")
     val m4 = createLabeledNode(Map("prop1" -> 5, "prop2" -> 1), "Label")
-    relate(n,m1)
-    relate(n,m2)
-    relate(n,m3)
-    relate(n,m4)
+    relate(n, m1)
+    relate(n, m2)
+    relate(n, m3)
+    relate(n, m4)
     graph.createIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count"
@@ -337,10 +337,10 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val m2 = createLabeledNode(Map("prop1" -> 3, "prop2" -> 3), "Label")
     val m3 = createLabeledNode(Map("prop1" -> 4, "prop2" -> 2), "Label")
     val m4 = createLabeledNode(Map("prop1" -> 5, "prop2" -> 1), "Label")
-    relate(n,m1)
-    relate(n,m2)
-    relate(n,m3)
-    relate(n,m4)
+    relate(n, m1)
+    relate(n, m2)
+    relate(n, m3)
+    relate(n, m4)
     graph.createIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count, avg(m.prop1) AS avg"
@@ -352,6 +352,57 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result.toList should equal(List(Map("count" -> 4, "avg" -> 3.5)))
   }
 
+  test("cannot use index provided values when CREATE before aggregation") {
+    val query = "MATCH (n:Awesome) CREATE (:New {prop:n.prop1}) RETURN avg(n.prop1)"
+    val result1 = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    // With NodeIndexScan only 6 new nodes will be created, but it should be 10 new nodes
+    result1.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeByLabelScan")
+    result1.toList should equal(List(Map("avg(n.prop1)" -> 41)))
+
+    val result2 = executeWith(Configs.All, "MATCH (n:New) RETURN count(n)")
+    result2.toList should equal(List(Map("count(n)" -> 10)))
+  }
+
+  test("cannot use index provided values when CREATE between renaming and aggregation") {
+    val query = "MATCH (n:Awesome) WITH n.prop1 AS prop CREATE (:New {prop:prop}) RETURN avg(prop)"
+    val result1 = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    //With NodeIndexScan only 6 new nodes will be created, but it should be 10 new nodes
+    result1.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeByLabelScan")
+    result1.toList should equal(List(Map("avg(prop)" -> 41)))
+
+    val result2 = executeWith(Configs.All, "MATCH (n:New) RETURN count(n)")
+    result2.toList should equal(List(Map("count(n)" -> 10)))
+  }
+
+  test("cannot use index provided values when CREATE before renaming") {
+    val query = "MATCH (n:Awesome) CREATE (:New {prop:n.prop1}) WITH n.prop1 AS prop RETURN avg(prop)"
+    val result1 = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    //With NodeIndexScan only 6 new nodes will be created, but it should be 10 new nodes
+    result1.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeByLabelScan")
+    result1.toList should equal(List(Map("avg(prop)" -> 41)))
+
+    val result2 = executeWith(Configs.All, "MATCH (n:New) RETURN count(n)")
+    result2.toList should equal(List(Map("count(n)" -> 10)))
+  }
+
+  test("should use index provided values when CREATE after aggregation") {
+    val query = "MATCH (n:Awesome) WITH avg(n.prop1) AS avg CREATE (:New) RETURN avg"
+    val result1 = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result1.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", s"cached[n.prop1]")
+    result1.toList should equal(List(Map("avg" -> 41)))
+
+    val result2 = executeWith(Configs.All, "MATCH (n:New) RETURN count(n)")
+    result2.toList should equal(List(Map("count(n)" -> 1)))
+  }
+
   test("should handle aggregation with label not in the semantic table") {
     val query = "MATCH (n: NotExistingLabel) RETURN min(n.prop1)"
     val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
@@ -361,5 +412,4 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     result.toList should equal(List(Map("min(n.prop1)" -> null)))
   }
-
 }
