@@ -81,6 +81,7 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
         SystemGraphRealm realm = new SystemGraphRealm(
                 systemGraphOperations,
                 new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, authProcedures.securityLog ),
+                true,
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 Mockito.mock( AuthenticationStrategy.class ),

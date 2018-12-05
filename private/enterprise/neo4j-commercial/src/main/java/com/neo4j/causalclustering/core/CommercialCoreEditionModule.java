@@ -26,7 +26,6 @@ import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -46,6 +45,7 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.SslPolicy;
 
 import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -54,7 +54,6 @@ import static com.neo4j.security.configuration.CommercialSecuritySettings.isSyst
 public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 {
     private final GlobalTransactionStats globalTransactionStats;
-    private DatabaseInitializer securityDatabaseInitializer;
 
     CommercialCoreEditionModule( final PlatformModule platformModule, final SslDiscoveryServiceFactory discoveryServiceFactory )
     {
@@ -82,7 +81,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
             ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
 
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService, databaseInitializers );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService, databaseInitializerMap::get );
     }
 
     @Override
@@ -102,13 +101,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     {
         if ( isSystemDatabaseEnabled( config ) )
         {
-            createDatabase( databaseManager, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-            assert databaseInitializers.get( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) == null;
-
-            if ( securityDatabaseInitializer != null )
-            {
-                databaseInitializers.put( GraphDatabaseSettings.SYSTEM_DATABASE_NAME, securityDatabaseInitializer );
-            }
+            createDatabase( databaseManager, SYSTEM_DATABASE_NAME );
         }
         createConfiguredDatabases( databaseManager, config );
     }
@@ -157,7 +150,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
         {
             CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( platformModule, this,
                     platformModule.logging.getUserLog( CommercialCoreEditionModule.class ), procedures, "commercial-security-module" );
-            securityDatabaseInitializer = securityModule.markForExternalBootstrappingAndGetInitializer();
+            securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( SYSTEM_DATABASE_NAME, dbInit ) );
             platformModule.life.add( securityModule );
             securityProvider = securityModule;
         }

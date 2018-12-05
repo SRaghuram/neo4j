@@ -9,6 +9,7 @@ import java.io.File;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.common.DatabaseService;
@@ -45,7 +46,7 @@ public class ClusteringModule
     private final ClusterBinder clusterBinder;
 
     public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, MemberId myself, PlatformModule platformModule,
-            CoreStateStorageService coreStateStorage, DatabaseService databaseService, Map<String,DatabaseInitializer> databaseInitializers )
+            CoreStateStorageService coreStateStorage, DatabaseService databaseService, Function<String,DatabaseInitializer> databaseInitializers )
     {
         LifeSupport life = platformModule.life;
         Config config = platformModule.config;
@@ -65,10 +66,8 @@ public class ClusteringModule
 
         TemporaryDatabase.Factory tempDatabaseFactory = new TemporaryDatabase.Factory( platformModule.pageCache );
 
-        File bootstrapDirectory = new File( config.get( GraphDatabaseSettings.data_directory ), "bootstrap" );
-        CoreBootstrapper coreBootstrapper =
-                new CoreBootstrapper( databaseService, tempDatabaseFactory, bootstrapDirectory, databaseInitializers, fileSystem, config, logProvider,
-                        platformModule.pageCache, platformModule.monitors );
+        CoreBootstrapper coreBootstrapper = new CoreBootstrapper( databaseService, tempDatabaseFactory, databaseInitializers, fileSystem,
+                config, logProvider, platformModule.pageCache );
 
         SimpleStorage<ClusterId> clusterIdStorage;
         SimpleStorage<DatabaseName> dbNameStorage;

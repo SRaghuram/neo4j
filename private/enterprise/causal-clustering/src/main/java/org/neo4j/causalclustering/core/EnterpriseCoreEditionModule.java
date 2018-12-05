@@ -39,7 +39,6 @@ import org.neo4j.causalclustering.core.state.ClusteringModule;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
 import org.neo4j.causalclustering.core.state.CoreStateService;
 import org.neo4j.causalclustering.core.state.CoreStateStorageService;
-import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.causalclustering.core.state.storage.StateStorage;
 import org.neo4j.causalclustering.diagnostics.CoreMonitor;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -85,6 +84,7 @@ import org.neo4j.com.storecopy.StoreUtil;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
@@ -146,7 +146,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     private final CoreServerModule coreServerModule;
     private final CoreStateService coreStateService;
     protected final DefaultDatabaseService<CoreLocalDatabase> databaseService;
-    protected final Map<String,DatabaseInitializer> databaseInitializers = new HashMap<>();
+    protected final Map<String,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
     //TODO: Find a way to be more generic about this to help with 4.0 plans
     private final String activeDatabaseName;
     private final PlatformModule platformModule;
@@ -225,7 +225,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
                 createFileSystemWatcherService( fileSystem, directory, logging, platformModule.jobScheduler, config, fileWatcherFileNameFilter() );
         dependencies.satisfyDependencies( watcherServiceFactory );
 
-        IdentityModule identityModule = new IdentityModule( platformModule, clusterStateDirectory.get() );
+        IdentityModule identityModule = new IdentityModule( platformModule, storage );
 
         //Build local databases object
         final Supplier<DatabaseHealth> databaseHealthSupplier =
@@ -363,7 +363,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
             CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies )
     {
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService, databaseInitializers );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService, databaseInitializerMap::get );
     }
 
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()

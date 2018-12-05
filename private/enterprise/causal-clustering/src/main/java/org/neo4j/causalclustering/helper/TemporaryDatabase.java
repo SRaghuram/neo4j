@@ -6,6 +6,8 @@
 package org.neo4j.causalclustering.helper;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Map;
 
 import org.neo4j.com.storecopy.ExternallyManagedPageCache;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -39,19 +41,15 @@ public class TemporaryDatabase implements AutoCloseable
             this.pageCache = pageCache;
         }
 
-        public TemporaryDatabase startTemporaryDatabase( File tempStore, String txLogsDirectoryName, String recordFormat )
+        public TemporaryDatabase startTemporaryDatabase( File databaseDirectory, Map<String,String> params ) throws IOException
         {
             ExternallyManagedPageCache.GraphDatabaseFactoryWithPageCacheFactory factory =
                     ExternallyManagedPageCache.graphDatabaseFactoryWithPageCache( pageCache );
 
             GraphDatabaseService db = factory
                     .setUserLogProvider( NullLogProvider.getInstance() )
-                    .newEmbeddedDatabaseBuilder( tempStore.getAbsoluteFile() )
-                    .setConfig( GraphDatabaseSettings.record_format, recordFormat )
-                    .setConfig( GraphDatabaseSettings.logical_logs_location, txLogsDirectoryName )
-                    .setConfig( GraphDatabaseSettings.active_database, tempStore.getName() )
-                    .setConfig( GraphDatabaseSettings.pagecache_warmup_enabled, FALSE )
-                    .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
+                    .newEmbeddedDatabaseBuilder( databaseDirectory )
+                    .setConfig( params )
                     .newGraphDatabase();
 
             return new TemporaryDatabase( db );

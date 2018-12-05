@@ -56,8 +56,9 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
     private final boolean authenticationEnabled;
     private final boolean authorizationEnabled;
     private final SecureHasher secureHasher;
-    private final SystemGraphInitializer systemGraphInitializer;
     private final SystemGraphOperations systemGraphOperations;
+    private final SystemGraphInitializer systemGraphInitializer;
+    private boolean initOnStart;
 
     /**
      * This flag is used in the same way as User.PASSWORD_CHANGE_REQUIRED, but it's
@@ -65,14 +66,16 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
      */
     static final String IS_SUSPENDED = "is_suspended";
 
-    SystemGraphRealm( SystemGraphOperations systemGraphOperations, SystemGraphInitializer systemGraphInitializer, SecureHasher secureHasher,
-            PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled, boolean authorizationEnabled )
+    SystemGraphRealm( SystemGraphOperations systemGraphOperations, SystemGraphInitializer systemGraphInitializer, boolean initOnStart,
+            SecureHasher secureHasher, PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,
+            boolean authorizationEnabled )
     {
         super();
         setName( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
 
         this.systemGraphOperations = systemGraphOperations;
         this.systemGraphInitializer = systemGraphInitializer;
+        this.initOnStart = initOnStart;
         this.secureHasher = secureHasher;
         this.passwordPolicy = passwordPolicy;
         this.authenticationStrategy = authenticationStrategy;
@@ -97,7 +100,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
         {
             return;
         }
-        if ( systemGraphInitializer != null )
+        if ( initOnStart )
         {
             systemGraphInitializer.initializeSystemGraph();
         }

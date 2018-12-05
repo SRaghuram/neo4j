@@ -44,7 +44,7 @@ public class CoreStateStorageService
         this.life = lifeSupport;
     }
 
-    <E> SimpleStorage<E> simpleStorage( CoreStateFiles<E> type )
+    public <E> SimpleStorage<E> simpleStorage( CoreStateFiles<E> type )
     {
         if ( type.fileType() == CoreStateFiles.FileType.SIMPLE )
         {
