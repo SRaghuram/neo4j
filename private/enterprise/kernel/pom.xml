@@ -1,27 +1,28 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.neo4j</groupId>
         <artifactId>commercial-parent</artifactId>
         <version>4.0.0-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
-    <artifactId>neo4j-enterprise-kernel</artifactId>
+    <artifactId>neo4j-commercial-kernel</artifactId>
     <version>4.0.0-SNAPSHOT</version>
 
-  <name>Neo4j - Enterprise Graph Database Kernel Features</name>
-  <description>Enterprise features for Neo4j</description>
-  <packaging>jar</packaging>
+    <name>Neo4j - Commercial Parts of Graph Database Kernel</name>
+    <description>Commercial Parts of Graph Database Kernel.</description>
+    <packaging>jar</packaging>
 
-  <properties>
-    <moduleName>org.neo4j.kernel.enterprise</moduleName>
-  </properties>
+    <properties>
+        <moduleName>com.neo4j.kernel.commercial</moduleName>
+    </properties>
 
-  <scm>
-    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
-    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
-    <url>https://github.com/neo4j/neo4j</url>
-  </scm>
+    <scm>
+        <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+        <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+        <url>https://github.com/neo4j/neo4j</url>
+    </scm>
 
     <licenses>
         <license>
@@ -34,29 +35,29 @@
         </license>
     </licenses>
 
-  <build>
-    <plugins>
-      <!-- This module contains public API, run javadoc and revapi -->
-      <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.revapi</groupId>
-        <artifactId>revapi-maven-plugin</artifactId>
-          <configuration>
-              <oldArtifacts>
-                  <oldArtifact>
-                      org.neo4j:neo4j-enterprise-kernel:jar:LATEST
-                  </oldArtifact>
-              </oldArtifacts>
-          </configuration>
-      </plugin>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
+    <build>
+        <plugins>
+            <!-- This module contains public API, run javadoc and revapi -->
+            <plugin>
+                <artifactId>maven-javadoc-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.revapi</groupId>
+                <artifactId>revapi-maven-plugin</artifactId>
+                <configuration>
+                    <oldArtifacts>
+                        <oldArtifact>
+                            org.neo4j:neo4j-enterprise-kernel:jar:LATEST
+                        </oldArtifact>
+                    </oldArtifacts>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
     <dependencies>
         <!-- Neo4j dependencies -->
