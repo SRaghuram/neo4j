@@ -12,6 +12,7 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.helpers.collection.Pair
 import org.neo4j.kernel.monitoring.Monitors
+import org.scalatest.Assertion
 
 /**
   * These tests are similar with the tests in LeafPlanningIntegrationTest, but
@@ -152,7 +153,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
     def aNodesWithPropGen = List(0, 1, 100)
     def bNodesWithPropGen = List(0, 1, 100)
 
-    val dbCounts = for {
+    val dbCounts: List[InitialNumberOfNodes] = for {
       nodesWithoutLabel <- nodesWithoutLabelGen
       aNodesWithoutProp <- aNodesWithoutPropGen
       bNodesWithoutProp <- bNodesWithoutPropGen
@@ -168,7 +169,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
       y
     }
 
-    def test(f: (InitialNumberOfNodes) => Unit) {
+    def test(f: InitialNumberOfNodes => Unit) {
       dbCounts.foreach(f)
     }
   }
@@ -188,7 +189,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
       """.stripMargin
   }
 
-  private def executeOnDbWithInitialNumberOfNodes(f: () => Unit,
+  private def executeOnDbWithInitialNumberOfNodes(f: () => Any,
                                                   config: InitialNumberOfNodes,
                                                   indexedLabels: List[String] = List.empty): Unit = {
     graph.inTx {

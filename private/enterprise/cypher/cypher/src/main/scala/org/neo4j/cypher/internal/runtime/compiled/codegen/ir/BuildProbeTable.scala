@@ -55,7 +55,7 @@ case class BuildRecordingProbeTable(id: String, name: String, nodes: Set[Variabl
 
   private val tupleDescriptor = SimpleTupleDescriptor(fieldToVarName.mapValues(c => c.outgoing.codeGenType))
 
-  override val tableType = if (nodes.size == 1) LongToListTable(tupleDescriptor, varNameToField)
+  override val tableType: RecordingJoinTableType = if (nodes.size == 1) LongToListTable(tupleDescriptor, varNameToField)
                            else LongsToListTable(tupleDescriptor, varNameToField)
 
   val joinData: JoinData = JoinData(fieldToVarName, name, tableType, id)
@@ -70,7 +70,7 @@ case class BuildCountingProbeTable(id: String, name: String, nodes: Set[Variable
 
   override protected def operatorId = Set(id)
 
-  override val tableType = if (nodes.size == 1) LongToCountTable else LongsToCountTable
+  override val tableType: CountingJoinTableType = if (nodes.size == 1) LongToCountTable else LongsToCountTable
 
   override def joinData = {
     JoinData(Map.empty, name, tableType, id)

@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryPlanTestSupport, QueryStatisticsTestSupport}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
+import org.scalatest.Assertion
 
 class MatchAggregationsBackedByCountStoreAcceptanceTest
   extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport with QueryPlanTestSupport {
@@ -395,7 +396,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
     setupBigModel(label2 = "Admin")
 
-    val resultAssertionInTx = Some({ result: RewindableExecutionResult => result.toList should equal(List(Map("userKnows" -> 2, "otherKnows" -> 1))) })
+    val resultAssertionInTx: Option[RewindableExecutionResult => Unit] = Some({ result: RewindableExecutionResult => result.toList should equal(List(Map("userKnows" -> 2, "otherKnows" -> 1))) })
     val result = executeWith(
       expectSucceed,
       query,
@@ -659,7 +660,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
                            assertCountInTransaction: Boolean = false,
                            executeBefore: () => Unit = () => {}): Unit = {
 
-    val resultAssertionInTx =
+    val resultAssertionInTx: Option[RewindableExecutionResult => Unit] =
       if (assertCountInTransaction) {
         Some({ result: RewindableExecutionResult => result.columnAs(result.columns.head).toSet[Any] should equal(Set(expectedCount)) })
       } else {

@@ -11,6 +11,7 @@ Apache Software License, Version 2.0
   Netty/All-in-One
   parboiled-core
   parboiled-scala
+  scalatest
 ------------------------------------------------------------------------------
 
                                  Apache License
@@ -265,6 +266,9 @@ BSD License
   asm
   asm-tree
   Scala Compiler
+  scala-xml
+  scalacheck
+  test-interface
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>

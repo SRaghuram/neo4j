@@ -23,51 +23,51 @@ object TextValueSpecification extends Properties("TextValue") with Configuration
     length <- Gen.chooseNum[Int](0, max)
   } yield (string, start, length)
 
-  property("equals") = forAll { (x: String) =>
+  property("equals") = forAll { x: String =>
     stringValue(x).equals(utf8Value(x.getBytes(StandardCharsets.UTF_8)))
   }
 
-  property("length") = forAll { (x: String) =>
+  property("length") = forAll { x: String =>
     stringValue(x).length() == utf8Value(x.getBytes(StandardCharsets.UTF_8)).length()
   }
 
-  property("hashCode") = forAll { (x: String) =>
+  property("hashCode") = forAll { x: String =>
     stringValue(x).hashCode() == utf8Value(x.getBytes(StandardCharsets.UTF_8)).hashCode()
   }
 
-  property("trim") = forAll { (x: String) =>
+  property("trim") = forAll { x: String =>
     equivalent(stringValue(x).trim(), utf8Value(x.getBytes(StandardCharsets.UTF_8)).trim())
   }
 
-  property("trim") = forAll { (x: String) => {
+  property("trim") = forAll { x: String => {
     val sValue = stringValue(x)
     val utf8StringValue = utf8Value(x.getBytes(StandardCharsets.UTF_8))
     equivalent(sValue.trim(), utf8StringValue.ltrim().rtrim()) &&
       equivalent(utf8StringValue.trim(), sValue.ltrim().rtrim())}
   }
 
-  property("reverse") = forAll { (x: String) =>
+  property("reverse") = forAll { x: String =>
     val sValue = stringValue(x)
     val utf8StringValue = utf8Value(x.getBytes(StandardCharsets.UTF_8))
     equivalent(sValue.reverse(), utf8StringValue.reverse())
   }
 
-  property("ltrim") = forAll { (x: String) =>
+  property("ltrim") = forAll { x: String =>
     equivalent(stringValue(x).ltrim(), utf8Value(x.getBytes(StandardCharsets.UTF_8)).ltrim())
   }
 
-  property("rtrim") = forAll { (x: String) =>
+  property("rtrim") = forAll { x: String =>
     equivalent(stringValue(x).rtrim(), utf8Value(x.getBytes(StandardCharsets.UTF_8)).rtrim())
   }
 
-  property("toLower") = forAll { (x: String) => {
+  property("toLower") = forAll { x: String => {
     val value = stringValue(x)
     val utf8 = utf8Value(x.getBytes(StandardCharsets.UTF_8))
     equivalent(stringValue(x.toLowerCase), value.toLower) &&
       equivalent(value.toLower, utf8.toLower)
   }}
 
-  property("toUpper") = forAll { (x: String) => {
+  property("toUpper") = forAll { x: String => {
     val value = stringValue(x)
     val utf8 = utf8Value(x.getBytes(StandardCharsets.UTF_8))
     equivalent(stringValue(x.toUpperCase), value.toUpper) &&
@@ -94,10 +94,10 @@ object TextValueSpecification extends Properties("TextValue") with Configuration
       val utf8 = utf8Value(x.getBytes(StandardCharsets.UTF_8))
       val split = x.split(find)
       if (x != find) {
-        stringArray(split: _*) == value.split(find) &&
+        stringArray(split: _*) == value.split(find).asArray() &&
           value.split(find) == utf8.split(find)
       } else {
-        value.split(find) == utf8.split(find) && value.split(find) == stringArray("", "")
+        value.split(find) == utf8.split(find) && value.split(find).asArray() == stringArray("", "")
       }
 
   }
@@ -116,7 +116,7 @@ object TextValueSpecification extends Properties("TextValue") with Configuration
       compare == Math.signum(-utf8Y.compareTo(utf8X))
   }
 
-  property("compareTo") = forAll { (x: String) =>
+  property("compareTo") = forAll { x: String =>
     val stringX = stringValue(x)
     val utf8X = utf8Value(x.getBytes(StandardCharsets.UTF_8))
     stringX.compareTo(stringX) == 0 &&
@@ -131,7 +131,7 @@ object TextValueSpecification extends Properties("TextValue") with Configuration
                  utf8Value(string.getBytes(StandardCharsets.UTF_8)).substring(start, length))
   }
 
-  implicit override val generatorDrivenConfig =
+  implicit override val generatorDrivenConfig: TextValueSpecification.PropertyCheckConfiguration =
     PropertyCheckConfig(minSuccessful = 1000)
 
   private def equivalent(t1: TextValue, t2: TextValue) =

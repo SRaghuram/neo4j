@@ -5,7 +5,9 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.joda.time.{DateTime, DateTimeZone}
+import java.time.ZonedDateTime
+import java.util.TimeZone
+
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, TestConfiguration}
 
 /**
@@ -453,10 +455,10 @@ object LdbcQueries {
                    |LIMIT {6}
                    |""".stripMargin
 
-    def params = {
-      val startTime = new DateTime(2000, 1, 3, 0, 0, 0, DateTimeZone.forID("Europe/Stockholm"))
+    def params: Map[String, Any] = {
+      val startTime = ZonedDateTime.of(2000, 1, 3, 0, 0, 0, 0, TimeZone.getTimeZone("Europe/Stockholm").toZoneId)
       val endTime = startTime.plusDays(2)
-      Map("1" -> 1, "2" -> "country1", "3" -> "country2", "4" -> startTime.getMillis, "5" -> endTime.getMillis, "6" -> 10)
+      Map("1" -> 1, "2" -> "country1", "3" -> "country2", "4" -> startTime.toEpochSecond * 1000, "5" -> endTime.toEpochSecond * 1000, "6" -> 10)
     }
 
     def expectedResult = List(
@@ -550,10 +552,10 @@ object LdbcQueries {
                   |ORDER BY postCount DESC, tagName ASC
                   |LIMIT {4}""".stripMargin
 
-    def params = {
-      val startTime = new DateTime(2000, 1, 3, 0, 0, 0,  DateTimeZone.forID("Europe/Stockholm"))
+    def params: Map[String, Long] = {
+      val startTime = ZonedDateTime.of(2000, 1, 3, 0, 0, 0, 0, TimeZone.getTimeZone("Europe/Stockholm").toZoneId)
       val endTime = startTime.plusDays(2)
-      Map("1" -> 1, "2" -> startTime.getMillis, "3" -> endTime.getMillis, "4" -> 10)
+      Map("1" -> 1, "2" -> startTime.toEpochSecond * 1000, "3" -> endTime.toEpochSecond * 1000, "4" -> 10)
     }
 
     def expectedResult = List(
@@ -660,9 +662,9 @@ object LdbcQueries {
                   |LIMIT {3}
                   |""".stripMargin
 
-    def params = {
-      val startTime = new DateTime(2000, 1, 2, 0, 0, 0)
-      Map("1" -> 1, "2" -> startTime.getMillis, "3" -> 4)
+    def params: Map[String, Long] = {
+      val startTime = ZonedDateTime.of(2000, 1, 3, 0, 0, 0, 0, TimeZone.getTimeZone("Europe/Stockholm").toZoneId)
+      Map("1" -> 1, "2" -> startTime.toEpochSecond * 1000, "3" -> 4)
     }
 
     def expectedResult = List(Map("forumName" -> "forum1-ᚠさ丵פش", "postCount" -> 1), Map("forumName" -> "forum3-ᚠさ丵פش", "postCount" -> 1), Map("forumName" -> "forum1-ᚠさ丵פش", "postCount" -> 0))
