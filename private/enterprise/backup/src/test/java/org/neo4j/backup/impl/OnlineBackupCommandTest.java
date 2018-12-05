@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -32,11 +31,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
-import static java.util.Arrays.asList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.text.StringContainsInOrder.stringContainsInOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -94,30 +89,6 @@ class OnlineBackupCommandTest
         when( backupStrategyCoordinatorFactory.backupStrategyCoordinator( any(), any(), any() ) ).thenReturn( backupStrategyCoordinator );
 
         subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
-    }
-
-    @Test
-    void nonExistingBackupDirectoryRaisesException() throws CommandFailed, IncorrectUsage, IOException
-    {
-        // given backup directory is not a directory
-        fs.deleteRecursively( backupDirectory.toFile() );
-        fs.create( backupDirectory.toFile() ).close();
-
-        // then
-        CommandFailed error = assertThrows( CommandFailed.class, this::execute );
-        assertThat( error.getMessage(), stringContainsInOrder( asList( "Directory '", "backupDirectory' does not exist." ) ) );
-    }
-
-    @Test
-    void nonExistingReportDirectoryRaisesException() throws CommandFailed, IncorrectUsage, IOException
-    {
-        // given report directory is not a directory
-        fs.deleteRecursively( reportDirectory.toFile() );
-        fs.create( reportDirectory.toFile() ).close();
-
-        // then
-        CommandFailed error = assertThrows( CommandFailed.class, this::execute );
-        assertThat( error.getMessage(), stringContainsInOrder( asList( "Directory '", "reportDirectory' does not exist." ) ) );
     }
 
     @Test

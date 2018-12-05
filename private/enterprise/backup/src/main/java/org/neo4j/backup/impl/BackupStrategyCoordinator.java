@@ -9,10 +9,10 @@ import java.io.File;
 import java.nio.file.Path;
 
 import org.neo4j.commandline.admin.CommandFailed;
-import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
@@ -30,17 +30,17 @@ class BackupStrategyCoordinator
     private static final int STATUS_CONSISTENCY_CHECK_ERROR = 2;
     private static final int STATUS_CONSISTENCY_CHECK_INCONSISTENT = 3;
 
-    private ConsistencyCheckService consistencyCheckService;
-    private final OutsideWorld outsideWorld;
+    private final FileSystemAbstraction fs;
+    private final ConsistencyCheckService consistencyCheckService;
     private final LogProvider logProvider;
     private final ProgressMonitorFactory progressMonitorFactory;
     private final BackupStrategyWrapper strategy;
 
-    BackupStrategyCoordinator( ConsistencyCheckService consistencyCheckService, OutsideWorld outsideWorld, LogProvider logProvider,
+    BackupStrategyCoordinator( FileSystemAbstraction fs, ConsistencyCheckService consistencyCheckService, LogProvider logProvider,
             ProgressMonitorFactory progressMonitorFactory, BackupStrategyWrapper strategy )
     {
+        this.fs = fs;
         this.consistencyCheckService = consistencyCheckService;
-        this.outsideWorld = outsideWorld;
         this.logProvider = logProvider;
         this.progressMonitorFactory = progressMonitorFactory;
         this.strategy = strategy;
@@ -58,6 +58,8 @@ class BackupStrategyCoordinator
         OnlineBackupRequiredArguments requiredArgs = onlineBackupContext.getRequiredArguments();
         Path destination = onlineBackupContext.getResolvedLocationFromName();
         ConsistencyFlags consistencyFlags = onlineBackupContext.getConsistencyFlags();
+
+        verifyArguments( onlineBackupContext );
 
         try
         {
@@ -91,7 +93,7 @@ class BackupStrategyCoordinator
                     config,
                     progressMonitorFactory,
                     logProvider,
-                    outsideWorld.fileSystem(),
+                    fs,
                     verbose,
                     reportDir,
                     consistencyFlags );
@@ -109,6 +111,21 @@ class BackupStrategyCoordinator
                 throw (CommandFailed) e;
             }
             throw new CommandFailed( "Failed to do consistency check on backup: " + e.getMessage(), e, STATUS_CONSISTENCY_CHECK_ERROR );
+        }
+    }
+
+    private void verifyArguments( OnlineBackupContext onlineBackupContext ) throws CommandFailed
+    {
+        // Make sure destination exists
+        checkDestination( onlineBackupContext.getRequiredArguments().getDirectory() );
+        checkDestination( onlineBackupContext.getRequiredArguments().getReportDir() );
+    }
+
+    private void checkDestination( Path path ) throws CommandFailed
+    {
+        if ( !fs.isDirectory( path.toFile() ) )
+        {
+            throw new CommandFailed( format( "Directory '%s' does not exist.", path ) );
         }
     }
 }

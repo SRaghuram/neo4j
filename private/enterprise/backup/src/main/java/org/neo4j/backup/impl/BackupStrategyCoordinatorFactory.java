@@ -56,6 +56,6 @@ class BackupStrategyCoordinatorFactory
 
         BackupStrategyWrapper strategyWrapper = new BackupStrategyWrapper( backupStrategy, copyService, fs, pageCache, logProvider );
 
-        return new BackupStrategyCoordinator( consistencyCheckService, outsideWorld, logProvider, progressMonitorFactory, strategyWrapper );
+        return new BackupStrategyCoordinator( outsideWorld.fileSystem(), consistencyCheckService, logProvider, progressMonitorFactory, strategyWrapper );
     }
 }

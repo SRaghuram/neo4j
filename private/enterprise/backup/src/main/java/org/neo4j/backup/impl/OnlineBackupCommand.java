@@ -5,14 +5,10 @@
  */
 package org.neo4j.backup.impl;
 
-import java.nio.file.Path;
-
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.admin.OutsideWorld;
-
-import static java.lang.String.format;
 
 class OnlineBackupCommand implements AdminCommand
 {
@@ -45,24 +41,12 @@ class OnlineBackupCommand implements AdminCommand
         OnlineBackupContext onlineBackupContext = contextBuilder.createContext( args );
         try ( BackupSupportingClasses backupSupportingClasses = backupSupportingClassesFactory.createSupportingClasses( onlineBackupContext ) )
         {
-            // Make sure destination exists
-            checkDestination( onlineBackupContext.getRequiredArguments().getDirectory() );
-            checkDestination( onlineBackupContext.getRequiredArguments().getReportDir() );
-
             BackupStrategyCoordinator backupStrategyCoordinator =
                     backupStrategyCoordinatorFactory.backupStrategyCoordinator( onlineBackupContext,
                             backupSupportingClasses.getBackupDelegator(), backupSupportingClasses.getPageCache() );
 
             backupStrategyCoordinator.performBackup( onlineBackupContext );
             outsideWorld.stdOutLine( "Backup complete." );
-        }
-    }
-
-    private void checkDestination( Path path ) throws CommandFailed
-    {
-        if ( !outsideWorld.fileSystem().isDirectory( path.toFile() ) )
-        {
-            throw new CommandFailed( format( "Directory '%s' does not exist.", path ) );
         }
     }
 }
