@@ -44,9 +44,9 @@ public class DumpIndexStatisticsStore
         }
     }
 
-    public static void dumpIndexStatisticsStore( FileSystemAbstraction fs, File path, PrintStream out ) throws Exception
+    private static void dumpIndexStatisticsStore( FileSystemAbstraction fs, File path, PrintStream out ) throws Exception
     {
-        IndexStatisticsStore indexStatisticsStore = null;
+        IndexStatisticsStore indexStatisticsStore;
         SimpleSchemaRuleCache schema = null;
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
                 PageCache pageCache = createPageCache( fs, jobScheduler );
@@ -89,18 +89,7 @@ public class DumpIndexStatisticsStore
             if ( schema != null )
             {
                 SchemaDescriptor descriptor = schema.indexes.get( indexId ).schema();
-                String tokenIds;
-                switch ( descriptor.entityType() )
-                {
-                case NODE:
-                    tokenIds = schema.tokens( schema.labelTokens, "label", descriptor.getEntityTokenIds() );
-                    break;
-                case RELATIONSHIP:
-                    tokenIds = schema.tokens( schema.relationshipTypeTokens, "relationshipType", descriptor.getEntityTokenIds() );
-                    break;
-                default:
-                    throw new IllegalStateException( "Indexing is not supported for EntityType: " + descriptor.entityType() );
-                }
+                String tokenIds = getTokenIds( descriptor );
                 out.printf( "\tIndexStatistics[(%s {%s})]:\tupdates=%d, size=%d%n", tokenIds,
                         schema.tokens( schema.propertyKeyTokens, "propertyKey", descriptor.getPropertyIds() ), updates, size );
             }
@@ -116,18 +105,7 @@ public class DumpIndexStatisticsStore
             if ( schema != null )
             {
                 SchemaDescriptor descriptor = schema.indexes.get( indexId ).schema();
-                String tokenIds;
-                switch ( descriptor.entityType() )
-                {
-                case NODE:
-                    tokenIds = schema.tokens( schema.labelTokens, "label", descriptor.getEntityTokenIds() );
-                    break;
-                case RELATIONSHIP:
-                    tokenIds = schema.tokens( schema.relationshipTypeTokens, "relationshipType", descriptor.getEntityTokenIds() );
-                    break;
-                default:
-                    throw new IllegalStateException( "Indexing is not supported for EntityType: " + descriptor.entityType() );
-                }
+                String tokenIds = getTokenIds( descriptor );
                 out.printf( "\tIndexSample[(%s {%s})]:\tunique=%d, size=%d%n", tokenIds,
                         schema.tokens( schema.propertyKeyTokens, "propertyKey", descriptor.getPropertyIds() ), unique, size );
             }
@@ -135,6 +113,23 @@ public class DumpIndexStatisticsStore
             {
                 out.printf( "\tIndexSample[%d]:\tunique=%d, size=%d%n", indexId, unique, size );
             }
+        }
+
+        private String getTokenIds( SchemaDescriptor descriptor )
+        {
+            String tokenIds;
+            switch ( descriptor.entityType() )
+            {
+            case NODE:
+                tokenIds = schema.tokens( schema.labelTokens, "label", descriptor.getEntityTokenIds() );
+                break;
+            case RELATIONSHIP:
+                tokenIds = schema.tokens( schema.relationshipTypeTokens, "relationshipType", descriptor.getEntityTokenIds() );
+                break;
+            default:
+                throw new IllegalStateException( "Indexing is not supported for EntityType: " + descriptor.entityType() );
+            }
+            return tokenIds;
         }
     }
 }
