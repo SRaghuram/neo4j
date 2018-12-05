@@ -5,9 +5,9 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
-import java.util.Map;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import java.util.Map;
 
 public class EmbeddedConfiguredProceduresIT extends ConfiguredProceduresTestBase<EnterpriseLoginContext>
 {

@@ -52,6 +52,7 @@ import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.storable.Value;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
@@ -70,7 +71,6 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.helpers.collection.Iterators.single;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
-import static org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static org.neo4j.net.ConnectionTrackingIT.TestConnector.BOLT;
 import static org.neo4j.net.ConnectionTrackingIT.TestConnector.HTTP;
 import static org.neo4j.net.ConnectionTrackingIT.TestConnector.HTTPS;

@@ -6,11 +6,11 @@
 package com.neo4j.commercial.edition.factory;
 
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
+import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 
 import java.io.File;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;

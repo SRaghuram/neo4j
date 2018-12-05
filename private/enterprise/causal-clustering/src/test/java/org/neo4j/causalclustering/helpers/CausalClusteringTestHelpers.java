@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.helpers;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.apache.commons.codec.Charsets;
 
 import java.io.File;
@@ -32,7 +33,6 @@ import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;

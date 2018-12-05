@@ -5,6 +5,7 @@
  */
 package org.neo4j.metrics;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
@@ -19,7 +20,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.rule.TestDirectory;
 

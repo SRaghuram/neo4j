@@ -5,6 +5,7 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -17,7 +18,6 @@ import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.scheduler.JobScheduler;

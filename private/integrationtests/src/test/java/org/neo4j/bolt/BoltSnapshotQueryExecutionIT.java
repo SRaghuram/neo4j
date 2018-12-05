@@ -5,6 +5,7 @@
  */
 package org.neo4j.bolt;
 
+import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Rule;
@@ -25,7 +26,6 @@ import org.neo4j.driver.v1.util.Pair;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.IOUtils;

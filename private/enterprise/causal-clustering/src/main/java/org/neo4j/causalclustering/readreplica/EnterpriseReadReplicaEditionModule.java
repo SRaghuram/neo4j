@@ -5,6 +5,14 @@
  */
 package org.neo4j.causalclustering.readreplica;
 
+import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
+import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
+import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
+import com.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
+import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
+import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
+import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
+
 import java.io.File;
 import java.util.concurrent.Executor;
 import java.util.function.Predicate;
@@ -48,15 +56,8 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
-import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
-import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
-import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
-import org.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import org.neo4j.kernel.impl.factory.ReadOnly;
-import org.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
-import org.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;

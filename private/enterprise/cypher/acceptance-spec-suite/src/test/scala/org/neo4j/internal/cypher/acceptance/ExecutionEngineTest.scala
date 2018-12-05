@@ -7,12 +7,14 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.io.{File, PrintWriter}
 
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer.QueryEvent
+import org.neo4j.cypher.internal.v4_0.frontend.phases.CompilationPhaseTracer.CompilationPhase
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
@@ -22,8 +24,7 @@ import org.neo4j.io.fs.FileUtils
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.coreapi.TopLevelTransaction
-import org.neo4j.test.{TestEnterpriseGraphDatabaseFactory, TestGraphDatabaseFactory}
-import org.neo4j.cypher.internal.v4_0.frontend.phases.CompilationPhaseTracer.CompilationPhase
+import org.neo4j.test.TestGraphDatabaseFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

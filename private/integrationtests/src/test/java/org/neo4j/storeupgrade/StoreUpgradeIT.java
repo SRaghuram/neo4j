@@ -5,6 +5,7 @@
  */
 package org.neo4j.storeupgrade;
 
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -47,7 +48,6 @@ import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
-import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;

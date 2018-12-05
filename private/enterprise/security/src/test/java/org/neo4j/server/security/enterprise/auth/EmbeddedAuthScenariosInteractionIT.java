@@ -5,12 +5,12 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.Rule;
 
 import java.util.Map;
 
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<EnterpriseLoginContext>

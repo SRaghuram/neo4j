@@ -5,6 +5,7 @@
  */
 package org.neo4j.procedure;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -29,7 +30,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.proc.JarBuilder;
 import org.neo4j.logging.Log;
 import org.neo4j.test.TestGraphDatabaseFactory;

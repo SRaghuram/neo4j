@@ -5,6 +5,8 @@
  */
 package org.neo4j.causalclustering.core.state;
 
+import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
+
 import java.io.IOException;
 import java.time.Clock;
 import java.util.HashMap;
@@ -55,7 +57,6 @@ import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.core.TokenRegistry;
-import org.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.LocksFactory;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;

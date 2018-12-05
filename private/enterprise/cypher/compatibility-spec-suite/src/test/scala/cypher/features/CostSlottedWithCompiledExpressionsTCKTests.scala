@@ -7,10 +7,10 @@ package cypher.features
 
 import java.util
 
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory
 
 class CostSlottedWithCompiledExpressionsTCKTests extends EnterpriseBaseTCKTests {
 

@@ -5,6 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth.plugin;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -23,7 +25,6 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.LoginContext;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -35,7 +36,6 @@ import org.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
 import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.rule.TestDirectory;
 

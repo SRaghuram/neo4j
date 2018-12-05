@@ -66,7 +66,7 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>neo4j-enterprise-kernel</artifactId>
+            <artifactId>neo4j-commercial-kernel</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>

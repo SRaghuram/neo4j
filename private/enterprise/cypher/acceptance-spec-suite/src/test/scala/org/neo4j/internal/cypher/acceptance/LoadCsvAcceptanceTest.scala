@@ -10,15 +10,16 @@ import java.net.{URL, URLConnection, URLStreamHandler, URLStreamHandlerFactory}
 import java.nio.file.Files
 import java.util.Collections.emptyMap
 
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
+import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.config.Configuration
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.graphdb.security.URLAccessRule
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
-import org.neo4j.test.{TestEnterpriseGraphDatabaseFactory, TestGraphDatabaseFactory}
-import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
+import org.neo4j.test.TestGraphDatabaseFactory
 import org.scalatest.BeforeAndAfterAll
 
 import scala.collection.JavaConverters._

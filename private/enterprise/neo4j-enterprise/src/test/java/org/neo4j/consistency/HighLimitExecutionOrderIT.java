@@ -5,8 +5,9 @@
  */
 package org.neo4j.consistency;
 
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimitWithSmallRecords;
+
 import org.neo4j.consistency.checking.full.ExecutionOrderIntegrationTest;
-import org.neo4j.kernel.impl.store.format.highlimit.HighLimitWithSmallRecords;
 
 public class HighLimitExecutionOrderIT extends ExecutionOrderIntegrationTest
 {

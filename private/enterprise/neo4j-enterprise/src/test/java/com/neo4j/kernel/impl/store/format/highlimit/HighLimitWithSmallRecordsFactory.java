@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.kernel.impl.store.format.highlimit;
+package com.neo4j.kernel.impl.store.format.highlimit;
 
 import org.neo4j.helpers.Service;
 import org.neo4j.kernel.impl.store.format.RecordFormats;

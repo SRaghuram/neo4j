@@ -5,6 +5,9 @@
  */
 package org.neo4j.harness;
 
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,8 +28,6 @@ import org.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.configuration.ServerSettings;

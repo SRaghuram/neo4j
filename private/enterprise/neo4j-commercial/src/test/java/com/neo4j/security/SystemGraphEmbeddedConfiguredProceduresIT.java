@@ -5,9 +5,10 @@
  */
 package com.neo4j.security;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+
 import java.util.Map;
 
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.server.security.enterprise.auth.ConfiguredProceduresTestBase;
 import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 

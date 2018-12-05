@@ -5,6 +5,9 @@
  */
 package org.neo4j.kernel.impl.query;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -39,14 +42,11 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogTimeZone;
 import org.neo4j.server.security.enterprise.auth.EmbeddedInteraction;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.values.virtual.VirtualValues;

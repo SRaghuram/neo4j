@@ -5,6 +5,9 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,12 +40,10 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.query.clientconnection.BoltConnectionInfo;
 import org.neo4j.kernel.impl.util.ValueUtils;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Values;

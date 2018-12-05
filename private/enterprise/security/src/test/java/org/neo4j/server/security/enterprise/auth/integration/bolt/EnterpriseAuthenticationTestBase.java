@@ -5,6 +5,7 @@
  */
 package org.neo4j.server.security.enterprise.auth.integration.bolt;
 
+import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
@@ -42,7 +43,6 @@ import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
 import org.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
 import org.neo4j.test.rule.DbmsRule;
-import org.neo4j.test.rule.EnterpriseDbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;

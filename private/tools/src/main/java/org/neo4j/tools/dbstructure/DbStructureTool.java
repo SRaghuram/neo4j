@@ -5,12 +5,13 @@
  */
 package org.neo4j.tools.dbstructure;
 
+import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.impl.util.dbstructure.DbStructureArgumentFormatter;
 import org.neo4j.kernel.impl.util.dbstructure.DbStructureVisitor;

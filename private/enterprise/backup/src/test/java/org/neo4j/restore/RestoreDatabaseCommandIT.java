@@ -5,6 +5,7 @@
  */
 package org.neo4j.restore;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -26,7 +27,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.locker.StoreLocker;

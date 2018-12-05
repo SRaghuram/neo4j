@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
+import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 import com.neo4j.security.CommercialSecurityModule;
 
@@ -35,7 +36,6 @@ import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
-import org.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;

@@ -6,6 +6,9 @@
 package org.neo4j.server.security.enterprise.auth;
 
 import com.github.benmanes.caffeine.cache.Ticker;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.Realm;
 
@@ -28,9 +31,6 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;

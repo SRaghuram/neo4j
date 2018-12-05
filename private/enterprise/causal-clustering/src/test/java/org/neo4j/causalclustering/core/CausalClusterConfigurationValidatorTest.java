@@ -5,6 +5,8 @@
  */
 package org.neo4j.causalclustering.core;
 
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -19,8 +21,6 @@ import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;

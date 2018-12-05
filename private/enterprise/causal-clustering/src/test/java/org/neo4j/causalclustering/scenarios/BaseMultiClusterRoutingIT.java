@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,10 +26,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
-import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.core.CoreGraphDatabase;
+import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.routing.Endpoint;
 import org.neo4j.causalclustering.routing.multi_cluster.MultiClusterRoutingResult;
 import org.neo4j.causalclustering.routing.multi_cluster.procedure.MultiClusterRoutingResultFormat;
@@ -36,7 +37,6 @@ import org.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames
 import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.test.causalclustering.ClusterRule;

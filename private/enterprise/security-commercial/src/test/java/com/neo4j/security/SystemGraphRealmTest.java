@@ -5,6 +5,7 @@
  */
 package com.neo4j.security;
 
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.ExcessiveAttemptsException;
 import org.junit.jupiter.api.AfterEach;
@@ -50,7 +51,6 @@ import org.neo4j.server.security.enterprise.auth.ShiroAuthToken;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
 import org.neo4j.string.UTF8;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;

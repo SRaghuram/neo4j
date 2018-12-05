@@ -5,6 +5,8 @@
  */
 package org.neo4j.causalclustering.readreplica;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+
 import java.io.File;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +26,6 @@ import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.HttpConnector.Encryption;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Level;
 

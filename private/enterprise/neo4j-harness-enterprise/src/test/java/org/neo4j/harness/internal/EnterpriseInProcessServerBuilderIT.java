@@ -5,6 +5,7 @@
  */
 package org.neo4j.harness.internal;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -16,7 +17,6 @@ import org.neo4j.harness.ServerControls;
 import org.neo4j.harness.TestServerBuilder;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;

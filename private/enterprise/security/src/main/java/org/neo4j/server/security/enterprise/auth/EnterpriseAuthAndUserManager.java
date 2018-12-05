@@ -5,9 +5,10 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 
 public interface EnterpriseAuthAndUserManager extends EnterpriseAuthManager, UserManagerSupplier
 {

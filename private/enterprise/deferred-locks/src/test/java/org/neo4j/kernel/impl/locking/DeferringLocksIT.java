@@ -5,6 +5,7 @@
  */
 package org.neo4j.kernel.impl.locking;
 
+import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -24,7 +25,6 @@ import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.OtherThreadExecutor.WorkerCommand;
 import org.neo4j.test.rule.DbmsRule;
-import org.neo4j.test.rule.EnterpriseDbmsRule;
 import org.neo4j.test.rule.concurrent.OtherThreadRule;
 
 import static org.hamcrest.Matchers.instanceOf;

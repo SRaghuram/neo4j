@@ -5,12 +5,12 @@
  */
 package com.neo4j.security;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.Test;
 
 import java.util.Map;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.server.security.enterprise.auth.AuthProceduresInteractionTestBase;
 import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 

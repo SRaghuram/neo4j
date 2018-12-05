@@ -5,6 +5,9 @@
  */
 package org.neo4j.unsafe.batchinsert;
 
+import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -23,13 +26,10 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.MyRelTypes;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;

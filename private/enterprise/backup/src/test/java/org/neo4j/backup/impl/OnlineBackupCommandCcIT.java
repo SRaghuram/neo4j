@@ -5,6 +5,9 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.util.TestHelpers;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -29,13 +32,13 @@ import java.util.function.IntFunction;
 import java.util.stream.LongStream;
 
 import org.neo4j.causalclustering.ClusterHelper;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.common.EnterpriseCluster;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
-import org.neo4j.causalclustering.common.Cluster;
-import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import org.neo4j.causalclustering.common.EnterpriseCluster;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
@@ -49,8 +52,6 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.NullLogProvider;
@@ -61,8 +62,8 @@ import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
-import org.neo4j.util.TestHelpers;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_server;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.joining;
@@ -72,7 +73,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.backup.impl.OnlineBackupContextFactory.ARG_NAME_FALLBACK_FULL;
-import static org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_server;
 import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
 
 @RunWith( Parameterized.class )

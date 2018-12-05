@@ -5,6 +5,10 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -21,11 +25,8 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;

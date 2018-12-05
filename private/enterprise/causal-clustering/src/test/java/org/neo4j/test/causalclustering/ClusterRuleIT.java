@@ -5,20 +5,20 @@
  */
 package org.neo4j.test.causalclustering;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.common.ClusterMember;
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.HttpConnector;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;

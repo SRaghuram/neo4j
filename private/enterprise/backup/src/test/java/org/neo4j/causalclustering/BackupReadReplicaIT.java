@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -12,17 +13,17 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.causalclustering.ClusterRule;
 import org.neo4j.test.rule.SuppressOutput;
 
+import static com.neo4j.util.TestHelpers.runBackupToolFromOtherJvmToGetExitCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.neo4j.causalclustering.BackupCoreIT.backupArguments;
@@ -30,7 +31,6 @@ import static org.neo4j.causalclustering.BackupCoreIT.createSomeData;
 import static org.neo4j.causalclustering.BackupCoreIT.getConfig;
 import static org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.transactionAddress;
 import static org.neo4j.function.Predicates.awaitEx;
-import static org.neo4j.util.TestHelpers.runBackupToolFromOtherJvmToGetExitCode;
 
 public class BackupReadReplicaIT
 {

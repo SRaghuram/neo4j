@@ -5,17 +5,18 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.RewindableExecutionResult
+import org.neo4j.cypher.internal.v4_0.util.Eagerly
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.kernel.impl.query.TransactionalContext
 import org.neo4j.kernel.monitoring.Monitors
-import org.neo4j.test.{TestEnterpriseGraphDatabaseFactory, TestGraphDatabaseFactory}
+import org.neo4j.test.TestGraphDatabaseFactory
 import org.neo4j.values.virtual.MapValue
-import org.neo4j.cypher.internal.v4_0.util.Eagerly
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
 
 import scala.util.{Failure, Success, Try}
 

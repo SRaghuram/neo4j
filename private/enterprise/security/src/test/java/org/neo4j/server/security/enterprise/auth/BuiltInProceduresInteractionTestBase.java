@@ -5,6 +5,7 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.builtinprocs.QueryId;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.eclipse.jetty.server.Request;
@@ -37,7 +38,6 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.enterprise.builtinprocs.QueryId;
 import org.neo4j.kernel.impl.api.transaction.trace.TransactionTracingLevel;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;

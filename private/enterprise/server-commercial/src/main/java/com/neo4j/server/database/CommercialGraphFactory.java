@@ -10,12 +10,12 @@ import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceFactorySel
 import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.readreplica.CommercialReadReplicaGraphDatabase;
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
 import java.io.File;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.server.database.EnterpriseGraphFactory;
 

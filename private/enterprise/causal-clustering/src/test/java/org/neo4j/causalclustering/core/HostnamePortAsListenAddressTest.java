@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.core;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -15,7 +16,6 @@ import java.util.OptionalInt;
 
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import static org.junit.Assert.assertEquals;
 

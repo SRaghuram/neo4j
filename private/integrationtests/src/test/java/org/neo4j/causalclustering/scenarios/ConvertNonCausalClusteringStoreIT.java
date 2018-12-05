@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -15,17 +16,16 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
-import org.neo4j.causalclustering.helpers.ClassicNeo4jStore;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.core.CoreGraphDatabase;
+import org.neo4j.causalclustering.helpers.ClassicNeo4jStore;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.causalclustering.ClusterRule;

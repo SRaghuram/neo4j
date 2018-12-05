@@ -5,10 +5,10 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+
 import java.util.List;
 import java.util.Map;
-
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;

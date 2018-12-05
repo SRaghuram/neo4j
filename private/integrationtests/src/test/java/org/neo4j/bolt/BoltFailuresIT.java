@@ -5,6 +5,8 @@
  */
 package org.neo4j.bolt;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,9 +27,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.configuration.BoltConnector;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.instanceOf;

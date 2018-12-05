@@ -5,22 +5,22 @@
  */
 package org.neo4j.kernel;
 
+import com.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerMonitorAdapter;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.common.ClusterMember;
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.upstream.strategies.LeaderOnlyStrategy;
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerMonitorAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.test.causalclustering.ClusterRule;
 import org.neo4j.util.concurrent.BinaryLatch;

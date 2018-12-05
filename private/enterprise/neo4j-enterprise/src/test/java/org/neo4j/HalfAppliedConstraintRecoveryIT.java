@@ -5,6 +5,7 @@
  */
 package org.neo4j;
 
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -37,7 +38,6 @@ import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.test.Barrier;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.TestLabels;
 import org.neo4j.test.rule.concurrent.OtherThreadRule;

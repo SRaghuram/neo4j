@@ -5,6 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -19,8 +21,6 @@ import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.DoubleLatch;

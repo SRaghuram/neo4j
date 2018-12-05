@@ -5,6 +5,7 @@
  */
 package org.neo4j.server.rest.security;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.IntNode;
@@ -30,7 +31,6 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.query.clientconnection.HttpConnectionInfo;

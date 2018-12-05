@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
@@ -18,16 +19,15 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.common.Cluster;
-import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.common.EnterpriseCluster;
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.TestDirectory;

@@ -5,6 +5,7 @@
  */
 package org.neo4j.server.security.enterprise.auth.integration.bolt;
 
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -29,7 +30,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static org.hamcrest.MatcherAssert.assertThat;

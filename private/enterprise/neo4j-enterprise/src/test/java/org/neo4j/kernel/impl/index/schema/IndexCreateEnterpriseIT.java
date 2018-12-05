@@ -5,11 +5,11 @@
  */
 package org.neo4j.kernel.impl.index.schema;
 
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.junit.Test;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.SchemaWrite;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 public class IndexCreateEnterpriseIT extends IndexCreateIT

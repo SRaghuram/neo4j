@@ -5,6 +5,9 @@
  */
 package org.neo4j.upgrade;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -20,12 +23,9 @@ import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
-import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import org.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader.UnexpectedUpgradingStoreFormatException;
 import org.neo4j.logging.NullLogProvider;

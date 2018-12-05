@@ -5,7 +5,7 @@
  */
 package org.neo4j.server.rest.dbms;
 
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 
 public class EnterpriseAuthorizationDisabledFilter extends AuthorizationDisabledFilter
 {

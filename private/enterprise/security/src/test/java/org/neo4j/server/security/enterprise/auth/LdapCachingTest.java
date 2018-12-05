@@ -6,6 +6,7 @@
 package org.neo4j.server.security.enterprise.auth;
 
 import com.google.common.testing.FakeTicker;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -28,7 +29,6 @@ import java.util.function.ToIntFunction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.InMemoryUserRepository;

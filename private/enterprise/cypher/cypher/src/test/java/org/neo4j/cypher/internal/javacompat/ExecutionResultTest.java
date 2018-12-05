@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.javacompat;
 
+import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.hamcrest.CoreMatchers;
 import org.junit.Rule;
 import org.junit.Test;
@@ -17,7 +18,6 @@ import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterators;
-import org.neo4j.test.rule.EnterpriseDbmsRule;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;

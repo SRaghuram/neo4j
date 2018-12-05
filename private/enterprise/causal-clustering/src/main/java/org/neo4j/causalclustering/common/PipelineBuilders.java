@@ -5,6 +5,8 @@
  */
 package org.neo4j.causalclustering.common;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+
 import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -12,7 +14,6 @@ import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.causalclustering.handlers.PipelineWrapper;
 import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.LogProvider;
 

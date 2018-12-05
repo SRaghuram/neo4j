@@ -5,6 +5,7 @@
  */
 package org.neo4j.server.rest;
 
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -14,7 +15,6 @@ import java.util.Map;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 
 import static org.hamcrest.MatcherAssert.assertThat;

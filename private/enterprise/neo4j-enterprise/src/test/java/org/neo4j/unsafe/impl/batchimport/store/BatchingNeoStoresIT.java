@@ -5,6 +5,7 @@
  */
 package org.neo4j.unsafe.impl.batchimport.store;
 
+import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -13,7 +14,6 @@ import java.io.File;
 
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;

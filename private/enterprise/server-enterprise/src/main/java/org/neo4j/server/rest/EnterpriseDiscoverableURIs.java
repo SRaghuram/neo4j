@@ -5,9 +5,10 @@
  */
 package org.neo4j.server.rest;
 
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.server.enterprise.EnterpriseServerSettings;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 

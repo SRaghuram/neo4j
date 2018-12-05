@@ -5,13 +5,14 @@
  */
 package org.neo4j.causalclustering.helper;
 
+import com.neo4j.graphdb.factory.ExternallyManagedPageCache;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+
 import java.io.File;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.ExternallyManagedPageCache;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.neo4j.kernel.configuration.Settings.FALSE;

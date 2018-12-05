@@ -5,19 +5,19 @@
  */
 package com.neo4j.server.enterprise;
 
-import java.io.File;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.BaseBootstrapperIT;
 import org.neo4j.server.NeoServer;

@@ -5,13 +5,13 @@
  */
 package org.neo4j.causalclustering.readreplica;
 
+import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Predicate;
 
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;

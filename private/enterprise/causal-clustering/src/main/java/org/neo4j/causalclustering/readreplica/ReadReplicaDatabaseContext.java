@@ -5,6 +5,8 @@
  */
 package org.neo4j.causalclustering.readreplica;
 
+import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
+
 import java.util.function.Function;
 
 import org.neo4j.graphdb.factory.module.PlatformModule;
@@ -25,7 +27,6 @@ import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.ReadOnlyTokenCreator;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
-import org.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;

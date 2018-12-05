@@ -11,9 +11,9 @@ import org.junit.Test;
 
 import java.util.Optional;
 
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.graphdb.Result;
@@ -21,8 +21,8 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.test.causalclustering.ClusterRule;
 
+import static com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext.AUTH_DISABLED;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext.AUTH_DISABLED;
 
 public class CausalClusteringProceduresIT
 {

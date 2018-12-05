@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +21,6 @@ import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.test.causalclustering.ClusterConfig;
 import org.neo4j.test.causalclustering.ClusterExtension;

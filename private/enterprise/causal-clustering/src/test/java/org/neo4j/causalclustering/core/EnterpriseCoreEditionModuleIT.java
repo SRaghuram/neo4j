@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.core;
 
+import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -14,7 +15,6 @@ import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.state.machines.id.FreeIdFilteredIdGeneratorFactory;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.BufferedIdController;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.id.IdController;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;

@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.core;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import io.netty.channel.ChannelInboundHandler;
 
 import java.util.Collection;
@@ -18,7 +19,6 @@ import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import org.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 

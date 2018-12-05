@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.hamcrest.Matchers;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,13 +29,13 @@ import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess;
 import org.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
-import org.neo4j.causalclustering.common.Cluster;
-import org.neo4j.causalclustering.common.ClusterMember;
-import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.function.ThrowingSupplier;
@@ -57,7 +58,6 @@ import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;

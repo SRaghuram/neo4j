@@ -5,6 +5,7 @@
  */
 package org.neo4j.ext.udc.impl;
 
+import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.http.HttpHost;
@@ -36,7 +37,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.Edition;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.mockito.matcher.RegexMatcher;
 import org.neo4j.test.rule.TestDirectory;

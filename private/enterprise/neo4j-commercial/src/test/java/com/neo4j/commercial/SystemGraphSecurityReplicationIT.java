@@ -7,6 +7,8 @@ package com.neo4j.commercial;
 
 import com.neo4j.causalclustering.discovery.CommercialCluster;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,8 +26,6 @@ import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;

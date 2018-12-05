@@ -5,6 +5,8 @@
  */
 package org.neo4j;
 
+import com.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
+import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -46,8 +48,6 @@ import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.api.transaciton.monitor.KernelTransactionMonitor;
-import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
-import org.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;

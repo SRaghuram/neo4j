@@ -5,6 +5,8 @@
  */
 package org.neo4j.causalclustering.helpers;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -15,7 +17,6 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 import org.neo4j.test.TestGraphDatabaseFactory;

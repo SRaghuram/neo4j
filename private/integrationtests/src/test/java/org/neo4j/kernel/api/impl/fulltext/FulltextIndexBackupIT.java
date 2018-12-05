@@ -5,16 +5,18 @@
  */
 package org.neo4j.kernel.api.impl.fulltext;
 
-import java.io.File;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
+import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.util.TestHelpers;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
+
+import java.io.File;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -22,7 +24,6 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -30,8 +31,9 @@ import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.util.TestHelpers;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_server;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -42,8 +44,6 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_RE
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
-import static org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
-import static org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_server;
 
 @Ignore( "This test will remain ignored until standalone instances get backup functionality again" )
 public class FulltextIndexBackupIT

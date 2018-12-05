@@ -5,6 +5,7 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -13,7 +14,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.neo4j.internal.kernel.api.security.AuthSubject;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import org.neo4j.server.security.enterprise.auth.AuthProceduresBase.UserResult;
 
 import static org.hamcrest.MatcherAssert.assertThat;

@@ -5,6 +5,9 @@
  */
 package org.neo4j.causalclustering.core;
 
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -30,8 +33,6 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.HttpConnector.Encryption;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Level;
 

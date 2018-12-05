@@ -5,7 +5,7 @@
  */
 package org.neo4j.consistency;
 
-import org.neo4j.kernel.impl.store.format.highlimit.HighLimitWithSmallRecords;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimitWithSmallRecords;
 
 public class HighLimitConsistencyCheckServiceIT extends ConsistencyCheckServiceIntegrationTest
 {

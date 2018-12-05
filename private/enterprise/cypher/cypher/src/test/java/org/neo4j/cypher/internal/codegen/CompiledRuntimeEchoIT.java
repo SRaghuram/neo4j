@@ -5,10 +5,9 @@
  */
 package org.neo4j.cypher.internal.codegen;
 
+import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.junit.Rule;
 import org.junit.Test;
-
-import org.neo4j.test.rule.EnterpriseDbmsRule;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;

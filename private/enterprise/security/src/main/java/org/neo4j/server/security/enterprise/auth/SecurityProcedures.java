@@ -5,9 +5,10 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;

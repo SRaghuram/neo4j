@@ -48,7 +48,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-kernel-commercial</artifactId>
+            <artifactId>neo4j-commercial-kernel</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -82,7 +82,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-enterprise-kernel</artifactId>
+            <artifactId>neo4j-commercial-kernel</artifactId>
             <type>test-jar</type>
             <version>${project.version}</version>
             <scope>test</scope>

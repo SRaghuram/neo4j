@@ -5,10 +5,11 @@
  */
 package batchimport;
 
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+
 import java.util.function.Function;
 
 import org.neo4j.kernel.impl.store.format.RecordFormats;
-import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporterTest;
 import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;

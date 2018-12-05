@@ -7,6 +7,8 @@ package com.neo4j.commercial.edition;
 
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
+import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
+import com.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 
 import java.time.Clock;
@@ -24,11 +26,9 @@ import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
-import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;

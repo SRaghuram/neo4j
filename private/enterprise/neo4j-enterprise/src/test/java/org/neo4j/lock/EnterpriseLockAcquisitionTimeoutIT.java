@@ -5,10 +5,11 @@
  */
 package org.neo4j.lock;
 
+import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiClient;
+import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLockManager;
+
 import java.util.function.Predicate;
 
-import org.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiClient;
-import org.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLockManager;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.locking.CommunityLockAcquisitionTimeoutIT;
 import org.neo4j.test.OtherThreadExecutor;

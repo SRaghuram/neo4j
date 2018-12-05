@@ -5,6 +5,7 @@
  */
 package org.neo4j.bolt;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -41,7 +42,6 @@ import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.api.KernelTransactions;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.VerboseTimeout;
 

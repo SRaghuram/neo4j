@@ -5,6 +5,8 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -20,8 +22,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;

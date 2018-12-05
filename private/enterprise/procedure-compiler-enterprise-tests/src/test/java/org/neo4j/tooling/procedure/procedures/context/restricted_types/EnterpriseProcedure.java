@@ -5,10 +5,11 @@
  */
 package org.neo4j.tooling.procedure.procedures.context.restricted_types;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.server.security.enterprise.log.SecurityLog;

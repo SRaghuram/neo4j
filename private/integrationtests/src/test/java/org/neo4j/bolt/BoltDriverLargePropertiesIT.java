@@ -5,6 +5,7 @@
  */
 package org.neo4j.bolt;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -24,7 +25,6 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;

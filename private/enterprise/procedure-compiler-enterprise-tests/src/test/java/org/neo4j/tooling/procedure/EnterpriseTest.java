@@ -38,16 +38,16 @@ public class EnterpriseTest
                         .withWarningCount( 3 );
         warningCompilationClause.withWarningContaining(
                 "@org.neo4j.procedure.Context usage warning: found unsupported restricted type " +
-                "<org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager> on EnterpriseProcedure#enterpriseAuthManager.\n" +
+                "<com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager> on EnterpriseProcedure#enterpriseAuthManager.\n" +
                 "  The procedure will not load unless declared via the configuration option 'dbms.security.procedures.unrestricted'.\n" +
                 "  You can ignore this warning by passing the option -AIgnoreContextWarnings to the Java compiler" )
-                .in( sproc ).onLine( 22 );
+                .in( sproc ).onLine( 23 );
         warningCompilationClause.withWarningContaining(
                 "@org.neo4j.procedure.Context usage warning: found unsupported restricted type " +
                 "<org.neo4j.server.security.enterprise.log.SecurityLog> on EnterpriseProcedure#securityLog.\n" +
                 "  The procedure will not load unless declared via the configuration option 'dbms.security.procedures.unrestricted'.\n" +
                 "  You can ignore this warning by passing the option -AIgnoreContextWarnings to the Java compiler" )
-                .in( sproc ).onLine( 25 );
+                .in( sproc ).onLine( 26 );
     }
 
     @Test

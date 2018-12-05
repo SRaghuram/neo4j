@@ -5,6 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import org.apache.shiro.authz.AuthorizationInfo;
 
 import java.util.Collection;
@@ -20,8 +22,6 @@ import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
-import org.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 class StandardEnterpriseLoginContext implements EnterpriseLoginContext
 {

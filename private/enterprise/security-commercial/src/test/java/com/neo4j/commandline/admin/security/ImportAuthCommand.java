@@ -5,6 +5,7 @@
  */
 package com.neo4j.commandline.admin.security;
 
+import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import com.neo4j.security.CommercialSecurityModule;
 
 import java.io.File;
@@ -21,7 +22,6 @@ import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;

@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -15,28 +16,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
-import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.core.CoreGraphDatabase;
+import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.causalclustering.ClusterRule;
 import org.neo4j.test.rule.SuppressOutput;
 
+import static com.neo4j.util.TestHelpers.runBackupToolFromOtherJvmToGetExitCode;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.util.TestHelpers.runBackupToolFromOtherJvmToGetExitCode;
 
 public class BackupCoreIT
 {

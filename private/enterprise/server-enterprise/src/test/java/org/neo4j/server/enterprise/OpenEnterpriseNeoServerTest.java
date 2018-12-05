@@ -5,6 +5,7 @@
  */
 package org.neo4j.server.enterprise;
 
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -15,15 +16,14 @@ import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.mode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.mode;
 
 @ExtendWith( TestDirectoryExtension.class )
 class OpenEnterpriseNeoServerTest

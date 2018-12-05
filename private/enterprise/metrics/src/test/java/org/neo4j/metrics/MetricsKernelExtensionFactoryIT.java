@@ -5,6 +5,9 @@
  */
 package org.neo4j.metrics;
 
+import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -20,11 +23,9 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
@@ -35,7 +36,6 @@ import org.neo4j.metrics.source.db.EntityCountMetrics;
 import org.neo4j.metrics.source.db.TransactionMetrics;
 import org.neo4j.metrics.source.jvm.ThreadMetrics;
 import org.neo4j.test.rule.DbmsRule;
-import org.neo4j.test.rule.EnterpriseDbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.System.currentTimeMillis;

@@ -5,6 +5,7 @@
  */
 package org.neo4j.server;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -12,7 +13,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.server.configuration.ServerSettings;
 
 import static org.junit.Assert.assertEquals;
