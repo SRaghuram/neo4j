@@ -6,9 +6,9 @@
 package org.neo4j.server.security.enterprise.auth;
 
 import org.apache.commons.lang.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,7 +59,10 @@ import org.neo4j.procedure.TerminationGuard;
 import org.neo4j.procedure.UserFunction;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.test.DoubleLatch;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.concurrent.ThreadingExtension;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
@@ -95,6 +98,7 @@ import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 
+@ExtendWith( {TestDirectoryExtension.class, ThreadingExtension.class} )
 public abstract class ProcedureInteractionTestBase<S>
 {
     static final String PROCEDURE_TIMEOUT_ERROR = "Procedure got: Transaction guard check failed";
@@ -128,11 +132,11 @@ public abstract class ProcedureInteractionTestBase<S>
             "writeSubject", "editorSubject", "pwdSubject", "noneSubject", "neo4j"};
     String[] initialRoles = {ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER, EMPTY_ROLE};
 
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    public TestDirectory testDirectory;
 
-    @Rule
-    public final ThreadingRule threading = new ThreadingRule();
+    @Inject
+    public ThreadingRule threading;
 
     private ThreadingRule threading()
     {
@@ -155,7 +159,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 "test.allowedFunc*:role1;test.*estedAllowedProcedure:role1" );
     }
 
-    @Before
+    @BeforeEach
     public void setUp() throws Throwable
     {
         configuredSetup( defaultConfiguration() );
@@ -202,7 +206,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     protected abstract NeoInteractionLevel<S> setUpNeoServer( Map<String,String> config ) throws Throwable;
 
-    @After
+    @AfterEach
     public void tearDown() throws Throwable
     {
         if ( neo != null )

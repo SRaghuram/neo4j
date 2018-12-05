@@ -5,7 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
@@ -54,7 +55,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
     }
 
     @Test
-    public void shouldNotListAnyQueriesIfNotAuthenticated()
+    void shouldNotListAnyQueriesIfNotAuthenticated()
     {
         EnterpriseLoginContext unAuthSubject = createFakeAnonymousEnterpriseLoginContext();
         GraphDatabaseFacade graph = neo.getLocalGraph();
@@ -69,7 +70,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
     }
 
     @Test
-    public void shouldNotKillQueryIfNotAuthenticated() throws Throwable
+    void shouldNotKillQueryIfNotAuthenticated() throws Throwable
     {
         EnterpriseLoginContext unAuthSubject = createFakeAnonymousEnterpriseLoginContext();
 
