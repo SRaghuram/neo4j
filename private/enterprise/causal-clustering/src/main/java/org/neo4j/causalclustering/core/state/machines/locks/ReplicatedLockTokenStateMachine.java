@@ -39,7 +39,7 @@ public class ReplicatedLockTokenStateMachine implements StateMachine<ReplicatedL
         boolean requestAccepted = tokenRequest.id() == LockToken.nextCandidateId( state.candidateId() );
         if ( requestAccepted )
         {
-            state().set( tokenRequest, commandIndex );
+            state = new ReplicatedLockTokenState( commandIndex, tokenRequest );
         }
 
         callback.accept( Result.of( requestAccepted ) );

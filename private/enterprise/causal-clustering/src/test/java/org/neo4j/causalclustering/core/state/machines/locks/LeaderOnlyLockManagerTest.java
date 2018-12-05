@@ -34,7 +34,7 @@ public class LeaderOnlyLockManagerTest
         MemberId me = member( 0 );
 
         ReplicatedLockTokenStateMachine replicatedLockStateMachine =
-                new ReplicatedLockTokenStateMachine( new InMemoryStateStorage( new ReplicatedLockTokenState() ) );
+                new ReplicatedLockTokenStateMachine( new InMemoryStateStorage( ReplicatedLockTokenState.INITIAL_LOCK_TOKEN ) );
 
         DirectReplicator replicator = new DirectReplicator( replicatedLockStateMachine );
 
@@ -61,7 +61,7 @@ public class LeaderOnlyLockManagerTest
         MemberId leader = member( 1 );
 
         ReplicatedLockTokenStateMachine replicatedLockStateMachine =
-                new ReplicatedLockTokenStateMachine( new InMemoryStateStorage( new ReplicatedLockTokenState() ) );
+                new ReplicatedLockTokenStateMachine( new InMemoryStateStorage( ReplicatedLockTokenState.INITIAL_LOCK_TOKEN ) );
         DirectReplicator replicator = new DirectReplicator( replicatedLockStateMachine );
 
         LeaderLocator leaderLocator = mock( LeaderLocator.class );

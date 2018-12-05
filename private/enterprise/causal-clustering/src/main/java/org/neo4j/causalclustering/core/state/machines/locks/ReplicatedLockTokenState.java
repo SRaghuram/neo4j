@@ -19,15 +19,11 @@ import static org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLoc
 
 public class ReplicatedLockTokenState
 {
-    private static long INITIAL_ORDINAL = -1;
-    private long ordinal;
-    private MemberId owner;
-    private int candidateId;
+    public static final ReplicatedLockTokenState INITIAL_LOCK_TOKEN = new ReplicatedLockTokenState( -1, INVALID_REPLICATED_LOCK_TOKEN_REQUEST );
 
-    public ReplicatedLockTokenState()
-    {
-        this( INITIAL_ORDINAL, INVALID_REPLICATED_LOCK_TOKEN_REQUEST );
-    }
+    private final long ordinal;
+    private final MemberId owner;
+    private final int candidateId;
 
     public ReplicatedLockTokenState( long ordinal, ReplicatedLockTokenRequest currentToken )
     {
@@ -39,13 +35,6 @@ public class ReplicatedLockTokenState
        this.ordinal = ordinal;
        this.candidateId = candidateId;
        this.owner = owner;
-    }
-
-    public void set( ReplicatedLockTokenRequest currentToken, long ordinal )
-    {
-        candidateId = currentToken.id();
-        owner = currentToken.owner();
-        this.ordinal = ordinal;
     }
 
     public int candidateId()
@@ -125,7 +114,7 @@ public class ReplicatedLockTokenState
         @Override
         public ReplicatedLockTokenState startState()
         {
-            return new ReplicatedLockTokenState();
+            return INITIAL_LOCK_TOKEN;
         }
 
         @Override
