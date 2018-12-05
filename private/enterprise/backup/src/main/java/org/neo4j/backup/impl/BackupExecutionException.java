@@ -5,7 +5,7 @@
  */
 package org.neo4j.backup.impl;
 
-class BackupExecutionException extends Exception
+public class BackupExecutionException extends Exception
 {
     BackupExecutionException( String message )
     {

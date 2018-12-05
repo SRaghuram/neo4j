@@ -9,18 +9,18 @@ public class ConsistencyCheckExecutionException extends Exception
 {
     private final boolean consistencyCheckFailedToExecute;
 
-    public ConsistencyCheckExecutionException( String message, boolean consistencyCheckFailedToExecute )
+    ConsistencyCheckExecutionException( String message, boolean consistencyCheckFailedToExecute )
     {
         this( message, null, consistencyCheckFailedToExecute );
     }
 
-    public ConsistencyCheckExecutionException( String message, Throwable cause, boolean consistencyCheckFailedToExecute )
+    ConsistencyCheckExecutionException( String message, Throwable cause, boolean consistencyCheckFailedToExecute )
     {
         super( message, cause );
         this.consistencyCheckFailedToExecute = consistencyCheckFailedToExecute;
     }
 
-    public boolean consistencyCheckFailedToExecute()
+    boolean consistencyCheckFailedToExecute()
     {
         return consistencyCheckFailedToExecute;
     }

@@ -7,11 +7,14 @@ package com.neo4j.util;
 
 import java.io.File;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.commandline.admin.AdminTool;
+import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.StreamConsumer;
 
@@ -43,6 +46,24 @@ public class TestHelpers
         ProcessStreamHandler processStreamHandler =
                 new ProcessStreamHandler( process, false, "", StreamConsumer.IGNORE_FAILURES, outPrintStream, errPrintStream );
         return processStreamHandler.waitForResult();
+    }
+
+    public static int runBackupToolFromSameJvm( File neo4jHome, String... args )
+    {
+        try ( ExitCodeMemorizingOutsideWorld outsideWorld = new ExitCodeMemorizingOutsideWorld() )
+        {
+            AdminTool adminTool = new AdminTool( CommandLocator.fromServiceLocator(), outsideWorld, true );
+
+            List<String> allArgs = new ArrayList<>();
+            allArgs.add( "backup" );
+            Collections.addAll( allArgs, args );
+
+            Path homeDir = neo4jHome.getAbsoluteFile().toPath();
+            Path configDir = homeDir.resolve( "conf" );
+            adminTool.execute( homeDir, configDir, allArgs.toArray( new String[0] ) );
+
+            return outsideWorld.getExitCode();
+        }
     }
 }
 

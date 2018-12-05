@@ -19,12 +19,15 @@ import org.junit.runners.Parameterized.Parameters;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -78,6 +81,8 @@ import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
 @RunWith( Parameterized.class )
 public class OnlineBackupCommandCcIT
 {
+    private static final boolean BACKUP_FROM_SAME_JVM = false;
+
     private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
     private final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystemRule );
     private final PageCacheRule pageCacheRule = new PageCacheRule();
@@ -170,9 +175,11 @@ public class OnlineBackupCommandCcIT
         // and an incremental backup is performed
         createSomeData( cluster );
         assertEquals( 0, runBackupOtherJvm( customAddress, DATABASE_NAME ) );
-        assertEquals( 0,
-                runBackupToolFromOtherJvmToGetExitCode( "--from=" + customAddress, "--cc-report-dir=" + backupStoreDir, "--backup-dir=" + backupStoreDir,
-                        "--name=defaultport", arg( ARG_NAME_FALLBACK_FULL, false ) ) );
+        assertEquals( 0, runBackupToolAndGetExitCode(
+                "--from=" + customAddress,
+                "--cc-report-dir=" + backupStoreDir,
+                "--backup-dir=" + backupStoreDir,
+                "--name=defaultport", arg( ARG_NAME_FALLBACK_FULL, false ) ) );
 
         // then the data matches
         assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( DATABASE_NAME, backupStoreDir ) );
@@ -248,7 +255,10 @@ public class OnlineBackupCommandCcIT
         DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation );
 
         // when
-        assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( "--from", address, "--cc-report-dir=" + backupStoreDir, "--backup-dir=" + backupStoreDir,
+        assertEquals( 0, runBackupToolAndGetExitCode(
+                "--from", address,
+                "--cc-report-dir=" + backupStoreDir,
+                "--backup-dir=" + backupStoreDir,
                 "--name=" + name ) );
 
         // then
@@ -272,13 +282,20 @@ public class OnlineBackupCommandCcIT
         DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation );
 
         // when
-        assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( "--from", address, "--cc-report-dir=" + backupStoreDir, "--backup-dir=" + backupStoreDir,
+        assertEquals( 0, runBackupToolAndGetExitCode(
+                "--from", address,
+                "--cc-report-dir=" + backupStoreDir,
+                "--backup-dir=" + backupStoreDir,
                 "--name=" + name ) );
 
         // and
         createSomeData( cluster );
-        assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( "--from", address, "--cc-report-dir=" + backupStoreDir, "--backup-dir=" + backupStoreDir,
-                "--name=" + name, arg( ARG_NAME_FALLBACK_FULL, false ) ) );
+        assertEquals( 0, runBackupToolAndGetExitCode(
+                "--from", address,
+                "--cc-report-dir=" + backupStoreDir,
+                "--backup-dir=" + backupStoreDir,
+                "--name=" + name,
+                arg( ARG_NAME_FALLBACK_FULL, false ) ) );
 
         // then
         assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults() ) );
@@ -301,12 +318,18 @@ public class OnlineBackupCommandCcIT
                 .withSetting( GraphDatabaseSettings.logical_log_rotation_threshold, "1m" )
                 .build();
         File configOverrideFile = testDirectory.file( "neo4j-backup.conf" );
-        OnlineBackupCommandBuilder.writeConfigToFile( config, configOverrideFile );
+
+        try ( OutputStream outputStream = Files.newOutputStream( configOverrideFile.toPath() ) )
+        {
+            Properties properties = new Properties();
+            properties.putAll( config.getRaw() );
+            properties.store( outputStream, "" );
+        }
 
         // and we have a full backup
         final String backupName = "backupName" + recordFormat;
         String address = CausalClusteringTestHelpers.backupAddress( clusterLeader( cluster ).database() );
-        assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode(
+        assertEquals( 0, runBackupToolAndGetExitCode(
                 "--from", address,
                 "--cc-report-dir=" + backupStoreDir,
                 "--backup-dir=" + backupStoreDir,
@@ -318,10 +341,13 @@ public class OnlineBackupCommandCcIT
         transactions1M( cluster ); // rotation, second tx log file
 
         // when we perform an incremental backup
-        assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode(
+        assertEquals( 0, runBackupToolAndGetExitCode(
                 "--from", address,
                 "--cc-report-dir=" + backupStoreDir,
-                "--backup-dir=" + backupStoreDir, "--additional-config=" + configOverrideFile, "--name=" + backupName, arg( ARG_NAME_FALLBACK_FULL, false ) ) );
+                "--backup-dir=" + backupStoreDir,
+                "--additional-config=" + configOverrideFile,
+                "--name=" + backupName,
+                arg( ARG_NAME_FALLBACK_FULL, false ) ) );
 
         // then there has been a rotation
         LogFiles logFiles = BackupTransactionLogFilesHelper.readLogFiles( DatabaseLayout.of( new File( backupStoreDir, backupName ) ) );
@@ -366,7 +392,7 @@ public class OnlineBackupCommandCcIT
 
     private int runBackupOtherJvm( String customAddress, String databaseName ) throws Exception
     {
-        return runBackupToolFromOtherJvmToGetExitCode(
+        return runBackupToolAndGetExitCode(
                 "--from", customAddress,
                 "--cc-report-dir=" + backupStoreDir,
                 "--backup-dir=" + backupStoreDir,
@@ -386,7 +412,7 @@ public class OnlineBackupCommandCcIT
             String backupName = "backup_" + recordFormat;
 
             // when full backup
-            assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode(
+            assertEquals( 0, runBackupToolAndGetExitCode(
                     "--from", customAddress,
                     "--cc-report-dir=" + backupStoreDir,
                     "--backup-dir=" + backupStoreDir,
@@ -396,11 +422,12 @@ public class OnlineBackupCommandCcIT
             createSomeData( cluster );
 
             // and incremental backup
-            assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode(
+            assertEquals( 0, runBackupToolAndGetExitCode(
                     "--from", customAddress,
                     "--cc-report-dir=" + backupStoreDir,
                     "--backup-dir=" + backupStoreDir,
-                    "--name=" + backupName, arg( ARG_NAME_FALLBACK_FULL, false ) ) );
+                    "--name=" + backupName,
+                    arg( ARG_NAME_FALLBACK_FULL, false ) ) );
 
             // then
             assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( backupName, backupStoreDir ) );
@@ -562,21 +589,11 @@ public class OnlineBackupCommandCcIT
         return DbRepresentation.of( DatabaseLayout.of( storeDir, name ).databaseDirectory(), config );
     }
 
-    private int runBackupToolFromOtherJvmToGetExitCode( String... args ) throws Exception
+    private int runBackupToolAndGetExitCode( String... args ) throws Exception
     {
-        return TestHelpers.runBackupToolFromOtherJvmToGetExitCode( testDirectory.absolutePath(), args );
-    }
-
-    private int runBackupToolFromSameJvm( String... args ) throws Exception
-    {
-        return runBackupToolFromSameJvmToGetExitCode( testDirectory.absolutePath(), testDirectory.absolutePath().getName(), args );
-    }
-
-    /**
-     * This unused method is used for debugging, so don't remove
-     */
-    private static int runBackupToolFromSameJvmToGetExitCode( File backupDir, String backupName, String... args ) throws Exception
-    {
-        return new OnlineBackupCommandBuilder().withRawArgs( args ).backup( backupDir, backupName ) ? 0 : 1;
+        File neo4jHome = testDirectory.absolutePath();
+        return BACKUP_FROM_SAME_JVM
+               ? TestHelpers.runBackupToolFromSameJvm( neo4jHome, args )
+               : TestHelpers.runBackupToolFromOtherJvmToGetExitCode( neo4jHome, args );
     }
 }

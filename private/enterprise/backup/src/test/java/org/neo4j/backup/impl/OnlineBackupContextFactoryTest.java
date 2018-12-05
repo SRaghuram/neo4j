@@ -13,6 +13,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,9 +29,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.TimeUnit.HOURS;
-import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
@@ -129,7 +127,7 @@ public class OnlineBackupContextFactoryTest
         OnlineBackupContext context = handler.createContext( "--backup-dir=/", "--name=mybackup" );
         OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
 
-        assertEquals( MINUTES.toMillis( 20 ), requiredArguments.getTimeout() );
+        assertEquals( Duration.ofMinutes( 20 ), requiredArguments.getTimeout() );
     }
 
     @Test
@@ -139,7 +137,7 @@ public class OnlineBackupContextFactoryTest
         OnlineBackupContext context = handler.createContext( "--timeout=10", "--backup-dir=/", "--name=mybackup" );
         OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
 
-        assertEquals( SECONDS.toMillis( 10 ), requiredArguments.getTimeout() );
+        assertEquals( Duration.ofSeconds( 10 ), requiredArguments.getTimeout() );
     }
 
     @Test
@@ -149,7 +147,7 @@ public class OnlineBackupContextFactoryTest
         OnlineBackupContext context = handler.createContext( requiredAnd( "--timeout=10h" ) );
         OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
 
-        assertEquals( HOURS.toMillis( 10 ), requiredArguments.getTimeout() );
+        assertEquals( Duration.ofHours( 10 ), requiredArguments.getTimeout() );
     }
 
     @Test

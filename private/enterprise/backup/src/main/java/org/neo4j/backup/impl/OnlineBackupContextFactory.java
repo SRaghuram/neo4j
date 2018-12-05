@@ -8,8 +8,8 @@ package org.neo4j.backup.impl;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Optional;
-import java.util.function.BiFunction;
 
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
@@ -19,17 +19,11 @@ import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.commandline.arguments.common.MandatoryCanonicalPath;
 import org.neo4j.commandline.arguments.common.OptionalCanonicalPath;
-import org.neo4j.consistency.checking.full.ConsistencyFlags;
-import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.TimeUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.util.OptionalHostnamePort;
 
-import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_graph;
-import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_indexes;
-import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_label_scan_store;
-import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_property_owners;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.impl.util.Converters.toOptionalHostnamePortFromRawAddress;
@@ -139,25 +133,17 @@ class OnlineBackupContextFactory
             Arguments arguments = arguments();
             arguments.parse( args );
 
-            OptionalHostnamePort address = toOptionalHostnamePortFromRawAddress(
-                    arguments.get( ARG_NAME_BACKUP_SOURCE ) );
-            String databaseName = arguments.get( ARG_NAME_DATABASE_NAME );
-            Path folder = getBackupDirectory( arguments );
-            String name = arguments.get( ARG_NAME_BACKUP_NAME );
-            boolean fallbackToFull = arguments.getBoolean( ARG_NAME_FALLBACK_FULL );
-            boolean doConsistencyCheck = arguments.getBoolean( ARG_NAME_CHECK_CONSISTENCY );
-            long timeout = arguments.get( ARG_NAME_TIMEOUT, TimeUtil.parseTimeMillis );
-            String pagecacheMemory = arguments.get( ARG_NAME_PAGECACHE );
-            Optional<Path> additionalConfig = arguments.getOptionalPath( ARG_NAME_ADDITIONAL_CONFIG_DIR );
-            Path reportDir = arguments.getOptionalPath( ARG_NAME_REPORT_DIRECTORY ).orElseThrow(
-                    () -> new IllegalArgumentException( ARG_NAME_REPORT_DIRECTORY + " must be a path" ) );
+            OptionalHostnamePort address = toOptionalHostnamePortFromRawAddress( arguments.get( ARG_NAME_BACKUP_SOURCE ) );
 
-            OnlineBackupRequiredArguments requiredArguments = new OnlineBackupRequiredArguments(
-                    address, databaseName, folder, name, fallbackToFull, doConsistencyCheck, timeout, reportDir );
+            Path backupDirectory = getBackupDirectory( arguments );
+            String backupName = arguments.get( ARG_NAME_BACKUP_NAME );
+            Path logPath = backupDirectory.resolve( backupName );
+
+            String pageCacheMemory = arguments.get( ARG_NAME_PAGECACHE );
+            Optional<Path> additionalConfig = arguments.getOptionalPath( ARG_NAME_ADDITIONAL_CONFIG_DIR );
 
             Path configFile = configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME );
             Config.Builder builder = Config.fromFile( configFile );
-            Path logPath = requiredArguments.getResolvedLocationFromName();
             Config config = builder.withHome( homeDir )
                                    .withSetting( transaction_logs_root_path, logPath.toString() )
                                    .withConnectorsDisabled()
@@ -167,21 +153,26 @@ class OnlineBackupContextFactory
 
             // We only replace the page cache memory setting.
             // Any other custom page swapper, etc. settings are preserved and used.
-            config.augment( pagecache_memory, pagecacheMemory );
+            config.augment( pagecache_memory, pageCacheMemory );
 
             // Disable prometheus to avoid binding exceptions
             config.augment( "metrics.prometheus.enabled", Settings.FALSE );
 
-            // Build consistency-checker configuration.
-            // Note: We can remove the loading from config file in 4.0.
-            BiFunction<String,Setting<Boolean>,Boolean> oneOf =
-                    ( a, s ) -> arguments.has( a ) ? arguments.getBoolean( a ) : config.get( s );
-            ConsistencyFlags consistencyFlags = new ConsistencyFlags(
-                    oneOf.apply( ARG_NAME_CHECK_GRAPH, consistency_check_graph ),
-                    oneOf.apply( ARG_NAME_CHECK_INDEXES, consistency_check_indexes ),
-                    oneOf.apply( ARG_NAME_CHECK_LABELS, consistency_check_label_scan_store ),
-                    oneOf.apply( ARG_NAME_CHECK_OWNERS, consistency_check_property_owners ) );
-            return new OnlineBackupContext( requiredArguments, config, consistencyFlags );
+            return OnlineBackupContext.builder()
+                    .withHostnamePort( address )
+                    .withDatabaseName( arguments.get( ARG_NAME_DATABASE_NAME ) )
+                    .withBackupName( backupName )
+                    .withBackupDirectory( backupDirectory )
+                    .withFallbackToFullBackup( arguments.getBoolean( ARG_NAME_FALLBACK_FULL ) )
+                    .withTimeout( Duration.ofMillis( arguments.get( ARG_NAME_TIMEOUT, TimeUtil.parseTimeMillis ) ) )
+                    .withReportsDirectory( getReportDirectory( arguments ) )
+                    .withConsistencyCheck( arguments.getBoolean( ARG_NAME_CHECK_CONSISTENCY ) )
+                    .withConsistencyCheckGraph( getBoolean( arguments, ARG_NAME_CHECK_GRAPH ) )
+                    .withConsistencyCheckIndexes( getBoolean( arguments, ARG_NAME_CHECK_INDEXES ) )
+                    .withConsistencyCheckLabelScanStore( getBoolean( arguments, ARG_NAME_CHECK_LABELS ) )
+                    .withConsistencyCheckPropertyOwners( getBoolean( arguments, ARG_NAME_CHECK_OWNERS ) )
+                    .withConfig( config )
+                    .build();
         }
         catch ( IllegalArgumentException e )
         {
@@ -204,6 +195,17 @@ class OnlineBackupContextFactory
         {
             throw new CommandFailed( String.format( "Directory '%s' does not exist.", path ) );
         }
+    }
+
+    private Path getReportDirectory( Arguments arguments )
+    {
+        return arguments.getOptionalPath( ARG_NAME_REPORT_DIRECTORY )
+                .orElseThrow( () -> new IllegalArgumentException( ARG_NAME_REPORT_DIRECTORY + " must be a path" ) );
+    }
+
+    private Boolean getBoolean( Arguments arguments, String argName )
+    {
+        return arguments.has( argName ) ? arguments.getBoolean( argName ) : null;
     }
 
     private Config loadAdditionalConfigFile( Path path )

@@ -5,97 +5,32 @@
  */
 package org.neo4j.backup.impl;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.nio.file.Path;
-import java.util.Collections;
-
-import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.CommandLocator;
-import org.neo4j.commandline.admin.IncorrectUsage;
-import org.neo4j.commandline.admin.OutsideWorld;
-import org.neo4j.commandline.admin.ParameterisedOutsideWorld;
 import org.neo4j.commandline.admin.Usage;
-import org.neo4j.consistency.checking.full.ConsistencyFlags;
-import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.util.OptionalHostnamePort;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.rule.SuppressOutput;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+@ExtendWith( SuppressOutputExtension.class )
 class OnlineBackupCommandTest
 {
     @Inject
-    private FileSystemAbstraction fs;
-    @Inject
-    private TestDirectory testDirectory;
-
-    private BackupStrategyCoordinatorFactory backupStrategyCoordinatorFactory = mock( BackupStrategyCoordinatorFactory.class );
-    private BackupStrategyCoordinator backupStrategyCoordinator = mock( BackupStrategyCoordinator.class );
-
-    private ByteArrayOutputStream baosOut = new ByteArrayOutputStream();
-    private ByteArrayOutputStream baosErr = new ByteArrayOutputStream();
-    private PrintStream stdout = new PrintStream( baosOut );
-    private PrintStream stderr = new PrintStream( baosErr );
-    private OutsideWorld outsideWorld;
-
-    // Parameters and helpers
-    private final Config config = Config.defaults();
-    private OnlineBackupRequiredArguments requiredArguments;
-    private final ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true );
-
-    private Path backupDirectory;
-    private Path reportDirectory;
-    private BackupSupportingClassesFactory backupSupportingClassesFactory =
-            mock( BackupSupportingClassesFactory.class );
-
-    private final OptionalHostnamePort address = new OptionalHostnamePort( "hostname", 12, 34 );
-    private final String backupName = "backup name";
-    private final boolean fallbackToFull = true;
-    private final boolean doConsistencyCheck = true;
-    private final long timeout = 1000;
-
-    private OnlineBackupCommand subject;
-
-    @BeforeEach
-    void setup()
-    {
-        outsideWorld = new ParameterisedOutsideWorld( System.console(), stdout, stderr, System.in, fs );
-        backupDirectory = testDirectory.directory( "backupDirectory" ).toPath();
-        reportDirectory = testDirectory.directory( "reportDirectory/" ).toPath();
-        BackupSupportingClasses backupSupportingClasses =
-                new BackupSupportingClasses( mock( BackupDelegator.class ), mock( PageCache.class ), Collections.emptyList() );
-        when( backupSupportingClassesFactory.createSupportingClasses( any() ) ).thenReturn( backupSupportingClasses );
-
-        requiredArguments =
-                new OnlineBackupRequiredArguments( address, null, backupDirectory, backupName, fallbackToFull,
-                        doConsistencyCheck, timeout, reportDirectory );
-        OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
-
-        when( backupStrategyCoordinatorFactory.backupStrategyCoordinator( any(), any(), any(), any() ) ).thenReturn( backupStrategyCoordinator );
-
-        subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
-    }
+    private SuppressOutput suppressOutput;
 
     @Test
     void shouldPrintNiceHelp()
     {
         Usage usage = new Usage( "neo4j-admin", mock( CommandLocator.class ) );
-        usage.printUsageForCommand( new OnlineBackupCommandProvider(), stdout::println );
+        usage.printUsageForCommand( new OnlineBackupCommandProvider(), System.out::println );
+
+        String output = suppressOutput.getOutputVoice().toString();
 
         assertEquals( format( "usage: neo4j-admin backup --backup-dir=<backup-path> --name=<graph.db-backup>%n" +
                               "                          [--from=<address>] [--database=<graph.db>]%n" +
@@ -161,43 +96,6 @@ class OnlineBackupCommandTest
                               "  --cc-property-owners=<true|false>        Perform additional consistency checks%n" +
                               "                                           on property ownership. This check is%n" +
                               "                                           *very* expensive in time and memory.%n" +
-                              "                                           [default:false]%n" ), baosOut.toString() );
-    }
-
-    @Test
-    void protocolSupportingDatabaseNameWorksFine() throws CommandFailed, IncorrectUsage
-    {
-        // given
-        requiredArguments = new OnlineBackupRequiredArguments( address, "graph.db", backupDirectory, backupName,
-                fallbackToFull, doConsistencyCheck, timeout, reportDirectory );
-        OnlineBackupContext onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags );
-        subject = newOnlineBackupCommand( outsideWorld, onlineBackupContext, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
-
-        // when
-        execute();
-
-        // then: does not throw
-    }
-
-    private static OnlineBackupCommand newOnlineBackupCommand( OutsideWorld outsideWorld, OnlineBackupContext onlineBackupContext,
-            BackupSupportingClassesFactory backupSupportingClassesFactory, BackupStrategyCoordinatorFactory backupStrategyCoordinatorFactory )
-    {
-        OnlineBackupContextFactory contextBuilder = mock( OnlineBackupContextFactory.class );
-        try
-        {
-            when( contextBuilder.createContext( any() ) ).thenReturn( onlineBackupContext );
-        }
-        catch ( IncorrectUsage | CommandFailed e )
-        {
-            throw new RuntimeException( "Shouldn't happen", e );
-        }
-
-        return new OnlineBackupCommand( outsideWorld, contextBuilder, backupSupportingClassesFactory, backupStrategyCoordinatorFactory );
-    }
-
-    private void execute() throws IncorrectUsage, CommandFailed
-    {
-        String[] implementationDoesNotUseArguments = new String[0];
-        subject.execute( implementationDoesNotUseArguments );
+                              "                                           [default:false]%n" ), output );
     }
 }

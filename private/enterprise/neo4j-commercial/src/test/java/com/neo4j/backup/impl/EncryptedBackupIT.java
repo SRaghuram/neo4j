@@ -8,6 +8,7 @@ package com.neo4j.backup.impl;
 import com.neo4j.causalclustering.discovery.CommercialCluster;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.util.TestHelpers;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +37,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.IntSupplier;
 
-import org.neo4j.backup.impl.OnlineBackupCommandBuilder;
 import org.neo4j.backup.impl.OnlineBackupCommandCcIT;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.common.ClusterMember;
@@ -44,8 +44,6 @@ import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.discovery.IpFamily;
-import org.neo4j.commandline.admin.CommandFailed;
-import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -419,11 +417,6 @@ class EncryptedBackupIT
                     dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), allMembers( cluster ) );
                     return runBackupSameJvm( backupHome, backupName, selectedNodeAddress );
                 }
-                catch ( CommandFailed e )
-                {
-                    e.printStackTrace( System.err );
-                    return 1;
-                }
                 catch ( Exception e )
                 {
                     throw new RuntimeException( e );
@@ -498,9 +491,12 @@ class EncryptedBackupIT
         /**
          * It is necessary to run from the same jvm due to being dependant on ssl which is commercial only
          */
-        private static int runBackupSameJvm( File neo4jHome, String backupName, String host ) throws CommandFailed, IncorrectUsage
+        private static int runBackupSameJvm( File neo4jHome, String backupName, String host )
         {
-            return new OnlineBackupCommandBuilder().withHost( host ).backup( neo4jHome, backupName ) ? 0 : 1;
+            return TestHelpers.runBackupToolFromSameJvm( neo4jHome,
+                    "--from", host,
+                    "--backup-dir", neo4jHome.toString(),
+                    "--name", backupName );
         }
 
         private static void backupDataMatchesDatabase( Cluster<?> cluster, File backupDir, String backupName )

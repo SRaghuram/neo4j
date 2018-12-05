@@ -6,7 +6,6 @@
 package org.neo4j.backup.impl;
 
 import java.nio.file.Path;
-import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 
 import org.neo4j.OnlineBackupCommandSection;
@@ -14,13 +13,12 @@ import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.AdminCommandSection;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.arguments.Arguments;
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
-import static org.neo4j.backup.impl.BackupSupportingClassesFactoryProvider.getProvidersByPriority;
 
 public class OnlineBackupCommandProvider extends AdminCommand.Provider
 {
@@ -70,24 +68,16 @@ public class OnlineBackupCommandProvider extends AdminCommand.Provider
     {
         boolean debug = System.getenv().get( "NEO4J_DEBUG") != null;
         LogProvider logProvider = FormattedLogProvider.withDefaultLogLevel( debug ? Level.DEBUG : Level.NONE ).toOutputStream( outsideWorld.outStream() );
-        Monitors monitors = new Monitors();
 
         OnlineBackupContextFactory contextBuilder = new OnlineBackupContextFactory( homeDir, configDir );
-        BackupModule backupModule = new BackupModule( outsideWorld.outStream(), outsideWorld.fileSystem(), logProvider, monitors );
 
-        BackupSupportingClassesFactoryProvider classesFactoryProvider =
-                getProvidersByPriority().findFirst().orElseThrow( noProviderException() );
-        BackupSupportingClassesFactory supportingClassesFactory =
-                classesFactoryProvider.getFactory( backupModule );
-        BackupStrategyCoordinatorFactory coordinatorFactory = new BackupStrategyCoordinatorFactory( backupModule );
+        OnlineBackupExecutor backupExecutor = OnlineBackupExecutor.builder()
+                .withOutputStream( outsideWorld.outStream() )
+                .withFileSystem( outsideWorld.fileSystem() )
+                .withLogProvider( logProvider )
+                .withProgressMonitorFactory( ProgressMonitorFactory.textual( outsideWorld.errorStream() ) )
+                .build();
 
-        return new OnlineBackupCommand(
-                outsideWorld, contextBuilder, supportingClassesFactory, coordinatorFactory );
-    }
-
-    private static Supplier<IllegalStateException> noProviderException()
-    {
-        return () -> new IllegalStateException(
-                "Unable to find a suitable backup supporting classes provider in the classpath" );
+        return new OnlineBackupCommand( outsideWorld, contextBuilder, backupExecutor );
     }
 }

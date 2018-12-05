@@ -12,16 +12,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.backup.impl.OnlineBackupCommandBuilder;
+import org.neo4j.backup.impl.OnlineBackupContext;
+import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.causalclustering.common.ClusterMember;
-import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
 import static org.neo4j.helpers.Exceptions.findCauseOrSuppressed;
 import static org.neo4j.helpers.collection.Iterators.asSet;
-import static org.neo4j.io.NullOutputStream.NULL_OUTPUT_STREAM;
 
 class BackupHelper
 {
@@ -54,22 +53,26 @@ class BackupHelper
         AdvertisedSocketAddress address = member.config().get( transaction_advertised_address );
         String backupName = "backup-" + backupNumber.getAndIncrement();
 
-        OnlineBackupCommandBuilder backupCommand = new OnlineBackupCommandBuilder()
-                .withOutput( NULL_OUTPUT_STREAM )
+        OnlineBackupContext context = OnlineBackupContext.builder()
+                .withHostnamePort( address.getHostname(), address.getPort() )
+                .withDatabaseName( backupName )
+                .withBackupDirectory( baseBackupDir.toPath() )
+                .withReportsDirectory( baseBackupDir.toPath() )
                 .withConsistencyCheck( true )
-                .withHost( address.getHostname() )
-                .withPort( address.getPort() );
+                .build();
+
+        OnlineBackupExecutor executor = OnlineBackupExecutor.buildDefault();
 
         try
         {
-            backupCommand.backup( baseBackupDir, backupName );
+            executor.executeBackup( context );
             log.info( String.format( "Created backup %s from %s", backupName, member ) );
 
             successfulBackups.incrementAndGet();
 
             return Optional.of( new File( baseBackupDir, backupName ) );
         }
-        catch ( CommandFailed e )
+        catch ( Exception e )
         {
             Optional<Throwable> benignException = findCauseOrSuppressed( e, t -> BENIGN_EXCEPTIONS.contains( t.getClass() ) );
             if ( benignException.isPresent() )

@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.nio.file.Path;
 
-import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
@@ -112,7 +111,7 @@ class BackupStrategyCoordinatorTest
                 any() ) ).thenReturn( consistencyCheckResult );
 
         // when
-        CommandFailed error = assertThrows( CommandFailed.class, () -> subject.performBackup( onlineBackupContext ) );
+        ConsistencyCheckExecutionException error = assertThrows( ConsistencyCheckExecutionException.class, () -> subject.performBackup( onlineBackupContext ) );
 
         // when
         assertThat( error.getMessage(), containsString( "Inconsistencies found" ) );
@@ -125,7 +124,7 @@ class BackupStrategyCoordinatorTest
         when( fileSystem.isDirectory( reportDir.toFile() ) ).thenReturn( false );
 
         // when
-        CommandFailed error = assertThrows( CommandFailed.class, () -> subject.performBackup( onlineBackupContext ) );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> subject.performBackup( onlineBackupContext ) );
 
         // then
         assertThat( error.getMessage(), stringContainsInOrder( asList( "Directory '", "reports' does not exist." ) ) );
@@ -138,7 +137,7 @@ class BackupStrategyCoordinatorTest
         when( fileSystem.isDirectory( backupDir.toFile() ) ).thenReturn( false );
 
         // when
-        CommandFailed error = assertThrows( CommandFailed.class, () -> subject.performBackup( onlineBackupContext ) );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> subject.performBackup( onlineBackupContext ) );
 
         // then
         assertThat( error.getMessage(), stringContainsInOrder( asList( "Directory '", "backups' does not exist." ) ) );
