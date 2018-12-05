@@ -7,7 +7,6 @@ package org.neo4j.backup.stresstests;
 
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 
 import org.neo4j.backup.BackupHelper;
 import org.neo4j.backup.BackupResult;
@@ -39,7 +38,7 @@ class BackupLoad extends Workload
         }
         if ( backupResult.isTransientErrorOnBackup() )
         {
-            LockSupport.parkNanos( TimeUnit.MILLISECONDS.toNanos( 10 ) );
+            TimeUnit.MILLISECONDS.sleep( 10 );
         }
     }
 }

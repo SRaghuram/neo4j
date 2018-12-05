@@ -5,19 +5,19 @@
  */
 package org.neo4j.kernel.api.impl.fulltext;
 
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
-import com.neo4j.util.TestHelpers;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.neo4j.backup.util.SimpleOnlineBackupExecutor;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -45,7 +45,6 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATION
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 
-@Ignore( "This test will remain ignored until standalone instances get backup functionality again" )
 public class FulltextIndexBackupIT
 {
     private static final Label LABEL = Label.label( "LABEL" );
@@ -53,6 +52,7 @@ public class FulltextIndexBackupIT
     private static final RelationshipType REL = RelationshipType.withName( "REL" );
     private static final String NODE_INDEX = "nodeIndex";
     private static final String REL_INDEX = "relIndex";
+    private static final String BACKUP_DIR_NAME = "backups";
 
     private final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
     private final TestDirectory dir = TestDirectory.testDirectory();
@@ -71,8 +71,8 @@ public class FulltextIndexBackupIT
     public void setUpPorts()
     {
         backupPort = PortAuthority.allocatePort();
-        GraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
-        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( dir.storeDir() );
+        GraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
+        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( dir.databaseDir() );
         builder.setConfig( online_backup_enabled, "true" );
         builder.setConfig( online_backup_listen_address, "127.0.0.1:" + backupPort );
         db = (GraphDatabaseAPI) builder.newGraphDatabase();
@@ -84,15 +84,10 @@ public class FulltextIndexBackupIT
     {
         initializeTestData();
         verifyData( db );
-        File backup = dir.storeDir( "backup" );
-        runBackupToolFromOtherJvmToGetExitCode( backup,
-                "--from", "127.0.0.1:" + backupPort,
-                "--name=name",
-                "--cc-report-dir=" + backup,
-                "--backup-dir=" + backup );
+        Path backupDir = runBackup( backupPort );
         db.shutdown();
 
-        GraphDatabaseAPI backupDb = startBackupDatabase( backup );
+        GraphDatabaseAPI backupDb = startBackupDatabase( backupDir.toFile() );
         verifyData( backupDb );
     }
 
@@ -100,13 +95,7 @@ public class FulltextIndexBackupIT
     public void fulltextIndexesMustBeUpdatedByIncrementalBackup() throws Exception
     {
         initializeTestData();
-        File backup = dir.databaseDir( "backup" );
-
-        runBackupToolFromOtherJvmToGetExitCode( backup,
-                "--from", "127.0.0.1:" + backupPort,
-                "--name=name",
-                "--cc-report-dir=" + backup,
-                "--backup-dir=" + backup );
+        Path backupDir = runBackup( backupPort );
 
         long nodeId3;
         long nodeId4;
@@ -126,15 +115,11 @@ public class FulltextIndexBackupIT
         }
         verifyData( db );
 
-        runBackupToolFromOtherJvmToGetExitCode( backup,
-                "--from", "127.0.0.1:" + backupPort,
-                "--name=name",
-                "--cc-report-dir=" + backup,
-                "--backup-dir=" + backup );
+        runBackup( backupPort );
 
         db.shutdown();
 
-        GraphDatabaseAPI backupDb = startBackupDatabase( backup );
+        GraphDatabaseAPI backupDb = startBackupDatabase( backupDir.toFile() );
         verifyData( backupDb );
 
         try ( Transaction tx = backupDb.beginTx() )
@@ -192,7 +177,7 @@ public class FulltextIndexBackupIT
 
     private GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        return (GraphDatabaseAPI) cleanup.add( new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( backupDatabaseDir ).newGraphDatabase() );
+        return (GraphDatabaseAPI) cleanup.add( new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( backupDatabaseDir ).newGraphDatabase() );
     }
 
     private void verifyData( GraphDatabaseAPI db )
@@ -217,8 +202,10 @@ public class FulltextIndexBackupIT
             tx.success();
         }
     }
-    private int runBackupToolFromOtherJvmToGetExitCode( File backupDir, String... args ) throws Exception
+
+    private Path runBackup( int port ) throws Exception
     {
-        return TestHelpers.runBackupToolFromOtherJvmToGetExitCode( backupDir, args );
+        Path backupDir = dir.directory( BACKUP_DIR_NAME ).toPath();
+        return SimpleOnlineBackupExecutor.executeBackup( port, backupDir );
     }
 }

@@ -5,6 +5,8 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -14,7 +16,6 @@ import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.util.OptionalHostnamePort;
 
 public class OnlineBackupContext

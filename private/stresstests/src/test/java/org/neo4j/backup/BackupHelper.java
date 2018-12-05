@@ -7,15 +7,23 @@ package org.neo4j.backup;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.function.Predicate;
 
+import org.neo4j.backup.impl.BackupExecutionException;
+import org.neo4j.backup.impl.ConsistencyCheckExecutionException;
+import org.neo4j.backup.impl.OnlineBackupContext;
+import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.function.Predicates;
 import org.neo4j.helper.IsChannelClosedException;
 import org.neo4j.helper.IsConnectionException;
 import org.neo4j.helper.IsConnectionResetByPeer;
 import org.neo4j.helper.IsStoreClosed;
+import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.io.IOUtils;
+import org.neo4j.logging.FormattedLogProvider;
 
 public class BackupHelper
 {
@@ -32,11 +40,58 @@ public class BackupHelper
 
     public static BackupResult backup( String host, int port, Path targetDirectory ) throws Exception
     {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         boolean consistent = true;
         boolean transientFailure = false;
         boolean failure = false;
-        // This is where backup should happen
+        try
+        {
+            executeBackup( host, port, targetDirectory, outputStream );
+        }
+        catch ( Throwable t )
+        {
+            consistent = !(t instanceof ConsistencyCheckExecutionException);
+
+            if ( isTransientError.test( t ) )
+            {
+                transientFailure = true;
+            }
+            else
+            {
+                failure = true;
+                throw t;
+            }
+        }
+        finally
+        {
+            if ( !consistent || failure )
+            {
+                flushToStandardOutput( outputStream );
+            }
+            IOUtils.closeAllSilently( outputStream );
+        }
         return new BackupResult( consistent, transientFailure );
+    }
+
+    private static void executeBackup( String host, int port, Path targetDir, OutputStream outputStream )
+            throws BackupExecutionException, ConsistencyCheckExecutionException
+    {
+        OnlineBackupContext context = OnlineBackupContext.builder()
+                .withHostnamePort( host, port )
+                .withBackupDirectory( targetDir )
+                .withReportsDirectory( targetDir )
+                .withFallbackToFullBackup( true )
+                .withConsistencyCheck( true )
+                .withConsistencyCheckPropertyOwners( true )
+                .build();
+
+        OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
+                .withOutputStream( outputStream )
+                .withProgressMonitorFactory( ProgressMonitorFactory.textual( outputStream ) )
+                .withLogProvider( FormattedLogProvider.toOutputStream( outputStream ) )
+                .build();
+
+        executor.executeBackup( context );
     }
 
     private static void flushToStandardOutput( ByteArrayOutputStream outputStream )

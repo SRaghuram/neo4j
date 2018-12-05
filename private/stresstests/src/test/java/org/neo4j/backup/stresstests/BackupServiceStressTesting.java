@@ -5,7 +5,7 @@
  */
 package org.neo4j.backup.stresstests;
 
-import org.junit.Ignore;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import org.junit.Test;
 
 import java.io.File;
@@ -22,7 +22,6 @@ import org.neo4j.causalclustering.stresstests.Config;
 import org.neo4j.causalclustering.stresstests.Control;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.diagnostics.utils.DumpUtils;
 
@@ -41,7 +40,6 @@ import static org.neo4j.helper.StressTestingHelper.fromEnv;
 /**
  * Notice the class name: this is _not_ going to be run as part of the main build.
  */
-@Ignore( "This test will remain ignored until standalone instances get backup functionality again" )
 public class BackupServiceStressTesting
 {
     private static final String DEFAULT_WORKING_DIR = new File( getProperty( "java.io.tmpdir" ) ).getPath();
@@ -60,8 +58,8 @@ public class BackupServiceStressTesting
         boolean enableIndexes =
                 parseBoolean( fromEnv( "BACKUP_SERVICE_STRESS_ENABLE_INDEXES", DEFAULT_ENABLE_INDEXES ) );
 
-        File store = new File( directory, "db/store" );
-        File work = new File( directory, "backup/work" );
+        File store = new File( directory, "databases/graph.db" );
+        File work = new File( directory, "backups/graph.db-backup" );
         FileUtils.deleteRecursively( store );
         FileUtils.deleteRecursively( work );
         File storeDirectory = ensureExistsAndEmpty( store );
@@ -70,9 +68,9 @@ public class BackupServiceStressTesting
         final Map<String,String> config =
                 configureBackup( configureTxLogRotationAndPruning( new HashMap<>(), txPrune ), backupHostname,
                         backupPort );
-        GraphDatabaseBuilder graphDatabaseBuilder =
-                new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDirectory.getAbsoluteFile() )
-                        .setConfig( config );
+        GraphDatabaseBuilder graphDatabaseBuilder = new CommercialGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( storeDirectory.getAbsoluteFile() )
+                .setConfig( config );
 
         Control control = new Control( new Config() );
 
