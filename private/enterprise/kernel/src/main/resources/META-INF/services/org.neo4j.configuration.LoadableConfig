@@ -1,2 +1,2 @@
-org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings
-org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings
+com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings
+com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings
