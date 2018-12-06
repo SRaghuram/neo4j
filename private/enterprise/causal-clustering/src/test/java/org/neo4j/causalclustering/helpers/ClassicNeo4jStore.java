@@ -23,6 +23,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
 
 public class ClassicNeo4jStore
 {
@@ -139,7 +140,8 @@ public class ClassicNeo4jStore
                     fileSystem.deleteFile( file );
                 }
 
-                for ( File file : logFiles.logFiles() )
+                LogFiles copyLogFiles = logFilesBasedOnlyBuilder( tmpLogs, fileSystem ).build();
+                for ( File file : copyLogFiles.logFiles() )
                 {
                     fileSystem.copyToDirectory( file, logFilesDirectory );
                 }

@@ -27,6 +27,7 @@ public class RestoreDatabaseCommand
     private FileSystemAbstraction fs;
     private final File fromDatabasePath;
     private final DatabaseLayout targetDatabaseLayout;
+    private final String toDatabaseName;
     private boolean forceOverwrite;
 
     public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, String toDatabaseName,
@@ -34,8 +35,9 @@ public class RestoreDatabaseCommand
     {
         this.fs = fs;
         this.fromDatabasePath = fromDatabasePath;
+        this.toDatabaseName = toDatabaseName;
         this.forceOverwrite = forceOverwrite;
-        this.targetDatabaseLayout = DatabaseLayout.of( config.get( database_path ).getAbsoluteFile(), of( config ), toDatabaseName );
+        this.targetDatabaseLayout = DatabaseLayout.of( config.get( database_path ).getAbsoluteFile(), of( config ) );
     }
 
     public void execute() throws IOException, CommandFailed
@@ -58,7 +60,7 @@ public class RestoreDatabaseCommand
         if ( fs.fileExists( targetDatabaseLayout.databaseDirectory() ) && !forceOverwrite )
         {
             throw new IllegalArgumentException(
-                    format( "Database with name [%s] already exists at %s", targetDatabaseLayout.getDatabaseName(), targetDatabaseLayout ) );
+                    format( "Database with name [%s] already exists at %s", toDatabaseName, targetDatabaseLayout ) );
         }
 
         checkLock( targetDatabaseLayout.getStoreLayout() );

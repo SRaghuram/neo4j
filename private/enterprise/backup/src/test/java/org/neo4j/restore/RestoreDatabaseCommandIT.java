@@ -28,7 +28,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.locker.StoreLocker;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -45,6 +44,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.kernel.configuration.LayoutConfig.of;
+import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
 
 public class RestoreDatabaseCommandIT
 {
@@ -198,24 +199,24 @@ public class RestoreDatabaseCommandIT
         Config config = configWith( databaseName, directory.absolutePath().getAbsolutePath() );
         File customTxLogDirectory = directory.directory( "customLogicalLog" );
         String customTransactionLogDirectory = customTxLogDirectory.getAbsolutePath();
-        config.augmentDefaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogDirectory );
+        config.augmentDefaults( GraphDatabaseSettings.transaction_logs_root_path, customTransactionLogDirectory );
 
-        File fromPath = new File( directory.absolutePath(), "from" );
-        File toPath = config.get( GraphDatabaseSettings.database_path );
+        DatabaseLayout fromLayout = directory.databaseLayout( "from" );
+        DatabaseLayout toLayout = DatabaseLayout.of( config.get( GraphDatabaseSettings.database_path ), of( config ) );
         int fromNodeCount = 10;
         int toNodeCount = 20;
-        createDbAt( fromPath, fromNodeCount );
+        createDbAt( fromLayout.databaseDirectory(), fromNodeCount );
 
-        GraphDatabaseService db = createDatabase( toPath, customTransactionLogDirectory );
+        GraphDatabaseService db = createDatabase( toLayout.databaseDirectory(), customTxLogDirectory );
         createTestData( toNodeCount, db );
         db.shutdown();
 
         // when
-        new RestoreDatabaseCommand( fileSystemRule.get(), fromPath, config, databaseName, true ).execute();
+        new RestoreDatabaseCommand( fileSystemRule.get(), fromLayout.databaseDirectory(), config, databaseName, true ).execute();
 
-        LogFiles fromStoreLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromPath, fileSystemRule.get() ).build();
-        LogFiles toStoreLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( toPath, fileSystemRule.get() ).build();
-        LogFiles customLogLocationLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( customTxLogDirectory, fileSystemRule.get() ).build();
+        LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.getTransactionLogsDirectory(), fileSystemRule.get() ).build();
+        LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory(), fileSystemRule.get() ).build();
+        LogFiles customLogLocationLogFiles = logFilesBasedOnlyBuilder( toLayout.getTransactionLogsDirectory(), fileSystemRule.get() ).build();
         assertThat( toStoreLogFiles.logFiles(), emptyArray() );
         assertThat( customLogLocationLogFiles.logFiles(), arrayWithSize( 1 ) );
         assertEquals( fromStoreLogFiles.getLogFileForVersion( 0 ).length(),
@@ -280,18 +281,24 @@ public class RestoreDatabaseCommandIT
 
     private void createDbAt( File fromPath, int nodesToCreate )
     {
-        GraphDatabaseService db = createDatabase( fromPath, fromPath.getAbsolutePath() );
-
+        GraphDatabaseService db = createDatabase( fromPath );
         createTestData( nodesToCreate, db );
-
         db.shutdown();
     }
 
-    private GraphDatabaseService createDatabase( File fromPath, String absolutePath )
+    private GraphDatabaseService createDatabase( File path )
     {
-        return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( fromPath )
+        return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .setConfig( GraphDatabaseSettings.logical_logs_location, absolutePath )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, path.getParentFile().getAbsolutePath() )
+                .newGraphDatabase();
+    }
+
+    private GraphDatabaseService createDatabase( File path, File transactionRootLocation )
+    {
+        return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, transactionRootLocation.getAbsolutePath() )
                 .newGraphDatabase();
     }
 

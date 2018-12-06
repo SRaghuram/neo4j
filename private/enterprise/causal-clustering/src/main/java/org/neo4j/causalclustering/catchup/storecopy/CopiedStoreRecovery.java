@@ -48,14 +48,14 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         {
             throw new DatabaseShutdownException( "Abort store-copied store recovery due to database shutdown" );
         }
+        if ( !isStoreAndConfigFormatsCompatible( config, databaseLayout, fs, pageCache, NullLogProvider.getInstance() ) )
+        {
+            throw new RuntimeException( failedToStartMessage() );
+        }
 
         try
         {
             performRecovery( fs, pageCache, config, databaseLayout );
-            if ( !isStoreAndConfigFormatsCompatible( config, databaseLayout, fs, pageCache, NullLogProvider.getInstance() ) )
-            {
-                throw new RuntimeException( failedToStartMessage() );
-            }
         }
         catch ( Exception e )
         {
