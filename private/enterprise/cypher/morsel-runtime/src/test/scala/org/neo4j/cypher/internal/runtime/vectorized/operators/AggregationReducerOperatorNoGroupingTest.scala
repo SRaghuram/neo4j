@@ -26,11 +26,11 @@ class AggregationReducerOperatorNoGroupingTest extends CypherFunSuite {
     val aggregation = new AggregationReduceOperatorNoGrouping(workId, Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0))))
     val refs = new Array[AnyValue](10)
     refs(0) = Values.longArray(Array(2,4,42))
-    val in = new Morsel(Array.empty, refs, refs.length)
-    val out = new Morsel(new Array[Long](10), new Array[AnyValue](10), refs.length)
+    val in = new Morsel(Array.empty, refs)
+    val out = new Morsel(new Array[Long](10), new Array[AnyValue](10))
     // When
-    aggregation.init(null, null, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences)), cursors)
-          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
+    aggregation.init(null, null, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences, refs.length)), cursors)
+          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, refs.length), null, EmptyQueryState(), cursors)
 
     // Then
     out.refs(0) should equal(Values.longArray(Array(2,4,42)))
@@ -44,14 +44,14 @@ class AggregationReducerOperatorNoGroupingTest extends CypherFunSuite {
     val in = 1 to 10 map ( i => {
       val refs = new Array[AnyValue](10)
       refs(0) = Values.longArray(Array(2*i))
-      val morsel = new Morsel(Array.empty, refs, refs.length)
-      MorselExecutionContext(morsel, numberOfLongs, numberOfReferences)
+      val morsel = new Morsel(Array.empty, refs)
+      MorselExecutionContext(morsel, numberOfLongs, numberOfReferences, refs.length)
     })
 
-    val out = new Morsel(new Array[Long](10), new Array[AnyValue](10), 10)
+    val out = new Morsel(new Array[Long](10), new Array[AnyValue](10))
 
     // When
-    aggregation.init(null, null, in, cursors).operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
+    aggregation.init(null, null, in, cursors).operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 10), null, EmptyQueryState(), cursors)
 
     // Then
     out.refs(0) should equal(Values.longArray(Array(2,4,6,8,10,12,14,16,18,20)))

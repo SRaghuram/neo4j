@@ -53,9 +53,8 @@ class NodeIndexContainsScanOperatorTest extends CypherFunSuite with ImplicitDumm
     val outputRows = 1
     val outputMorsel = new Morsel(
       new Array[Long](numberOfLongs * outputRows),
-      new Array[AnyValue](numberOfReferences * outputRows),
-      outputRows)
-    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences)
+      new Array[AnyValue](numberOfReferences * outputRows))
+    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences, outputRows)
 
     val nDotProp = "n." + propertyKey.name
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
@@ -71,7 +70,7 @@ class NodeIndexContainsScanOperatorTest extends CypherFunSuite with ImplicitDumm
       node.id))
     outputMorsel.refs should equal(Array(
       Values.stringValue("hello")))
-    outputMorsel.validRows should equal(1)
+    outputRow.getValidRows should equal(1)
   }
 
   private def kernelScanFor(results: Iterable[NodeValueHit]): QueryContext = {

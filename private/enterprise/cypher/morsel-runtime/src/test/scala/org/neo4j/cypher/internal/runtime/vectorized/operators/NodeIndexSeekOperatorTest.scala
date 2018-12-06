@@ -55,11 +55,10 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     val numberOfLongs = 1
     val numberOfReferences = 1
     val outputRows = 2
-    val outputMorsel = new Morsel(
+    val outputMorsel =  new Morsel(
       new Array[Long](numberOfLongs * outputRows),
-      new Array[AnyValue](numberOfReferences * outputRows),
-      outputRows)
-    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences)
+      new Array[AnyValue](numberOfReferences * outputRows))
+    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences, outputRows)
 
     // operator
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
@@ -80,7 +79,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       node.id, node2.id))
     outputMorsel.refs should equal(Array(
       Values.stringValue("hello"), Values.stringValue("bye")))
-    outputMorsel.validRows should equal(2)
+    outputRow.getValidRows should equal(2)
 
   }
 
@@ -100,9 +99,8 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     val outputRows = 2
     val outputMorsel = new Morsel(
       new Array[Long](numberOfLongs * outputRows),
-      new Array[AnyValue](numberOfReferences * outputRows),
-      outputRows)
-    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences)
+      new Array[AnyValue](numberOfReferences * outputRows))
+    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences, outputRows)
 
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference("n." + propertyKeys(0).name, nullable = false, CTAny)
@@ -127,7 +125,7 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     outputMorsel.refs should equal(Array(
       Values.stringValue("hello"), Values.stringValue("world"),
       Values.stringValue("bye"), Values.stringValue("cruel")))
-    outputMorsel.validRows should equal(2)
+    outputRow.getValidRows should equal(2)
   }
 
   test("should use locking unique index provided values when available") {
@@ -146,9 +144,8 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
     val outputRows = 2
     val outputMorsel = new Morsel(
       new Array[Long](numberOfLongs * outputRows),
-      new Array[AnyValue](numberOfReferences * outputRows),
-      outputRows)
-    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences)
+      new Array[AnyValue](numberOfReferences * outputRows))
+    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences, outputRows)
 
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
@@ -167,6 +164,6 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       node2.id))
     outputMorsel.refs should equal(Array(
       Values.stringValue("hello"), Values.stringValue("bye")))
-    outputMorsel.validRows should equal(2)
+    outputRow.getValidRows should equal(2)
   }
 }

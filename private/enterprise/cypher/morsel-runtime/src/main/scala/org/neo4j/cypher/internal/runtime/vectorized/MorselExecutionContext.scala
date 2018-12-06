@@ -15,22 +15,31 @@ import org.neo4j.cypher.internal.v4_0.util.InternalException
 
 object MorselExecutionContext {
   def apply(morsel: Morsel, pipeline: Pipeline) = new MorselExecutionContext(morsel,
-    pipeline.slots.numberOfLongs, pipeline.slots.numberOfReferences, 0)
-  def apply(morsel: Morsel, numberOfLongs: Int, numberOfRows: Int) = new MorselExecutionContext(morsel,
-    numberOfLongs, numberOfRows, 0)
-  val EMPTY = new MorselExecutionContext(Morsel.create(SlotConfiguration.empty, 1), 0, 0, 0)
+    pipeline.slots.numberOfLongs, pipeline.slots.numberOfReferences, 0, 0, pipeline.slots)
+  def apply(morsel: Morsel, numberOfLongs: Int, numberOfReferences: Int) = new MorselExecutionContext(morsel,
+    numberOfLongs, numberOfReferences, 0, 0, SlotConfiguration.empty)
+  def apply(morsel: Morsel, numberOfLongs: Int, numberOfReferences: Int, validRows: Int) = new MorselExecutionContext(morsel,
+    numberOfLongs, numberOfReferences, validRows, 0, SlotConfiguration.empty)
+  val EMPTY_SINGLE_ROW = new MorselExecutionContext(Morsel.create(SlotConfiguration.empty, 1), 0, 0, 1, 0, SlotConfiguration.empty)
 
   def createSingleRow(): MorselExecutionContext =
-    EMPTY.createClone()
+    EMPTY_SINGLE_ROW.createClone()
 }
 
-class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow: Int, private val refsPerRow: Int, private var currentRow: Int) extends ExecutionContext {
+class MorselExecutionContext(private val morsel: Morsel,
+                             private val longsPerRow: Int,
+                             private val refsPerRow: Int,
+                             private var validRows: Int,
+                             private var currentRow: Int,
+                             val slots: SlotConfiguration) extends ExecutionContext {
 
-  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, currentRow)
+  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, validRows, currentRow, slots)
 
   def moveToNextRow(): Unit = {
     currentRow += 1
   }
+
+  def getValidRows: Int = validRows
 
   def getCurrentRow: Int = currentRow
 
@@ -45,20 +54,20 @@ class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow
   /**
     * Checks if the morsel has more rows
     */
-  def hasMoreRows: Boolean = currentRow < morsel.validRows
+  def hasMoreRows: Boolean = currentRow < validRows
 
-  def numberOfRows: Int = morsel.validRows
+  def numberOfRows: Int = validRows
 
   /**
     * Check so that there is at least one valid row of data
     */
-  def hasData: Boolean = morsel.validRows > 0
+  def hasData: Boolean = validRows > 0
 
   /**
     * Set the valid rows of the morsel to the current position, which usually
     * happens after one operator finishes writing to a morsel.
     */
-  def finishedWriting(): Unit = morsel.validRows = currentRow
+  def finishedWriting(): Unit = validRows = currentRow
 
   def copyAllRowsFrom(input: ExecutionContext): Unit = input match {
     case other:MorselExecutionContext =>
@@ -100,7 +109,7 @@ class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow
   override def copyCachedFrom(input: ExecutionContext): Unit = ???
 
   override def toString(): String = {
-    s"MorselExecutionContext[0x${System.identityHashCode(this).toHexString}](morsel[0x${System.identityHashCode(morsel).toHexString}]=$morsel, longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, currentRow=$currentRow)"
+    s"MorselExecutionContext[0x${System.identityHashCode(this).toHexString}]($morsel, longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, validRows=$validRows, currentRow=$currentRow)"
   }
 
   /**
@@ -117,17 +126,37 @@ class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow
 
   override def getRefAt(offset: Int): AnyValue = morsel.refs(currentRow * refsPerRow + offset)
 
-  override def set(newEntries: Seq[(String, AnyValue)]): Unit = fail()
+  // The newWith methods are called from Community pipes. We should already have allocated slots for the given keys,
+  // so we just set the values in the existing slots instead of creating a new context like in the MapExecutionContext.
+  override def set(newEntries: Seq[(String, AnyValue)]): Unit =
+    newEntries.foreach {
+      case (k, v) =>
+        setValue(k, v)
+    }
 
-  override def set(key1: String, value1: AnyValue): Unit = fail()
+  override def set(key1: String, value1: AnyValue): Unit =
+    setValue(key1, value1)
 
-  override def set(key1: String, value1: AnyValue, key2: String, value2: AnyValue): Unit = fail()
+  override def set(key1: String, value1: AnyValue, key2: String, value2: AnyValue): Unit = {
+    setValue(key1, value1)
+    setValue(key2, value2)
+  }
 
-  override def set(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): Unit = fail()
+  override def set(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): Unit = {
+    setValue(key1, value1)
+    setValue(key2, value2)
+    setValue(key3, value3)
+  }
+
+  private def setValue(key1: String, value1: AnyValue): Unit = {
+    slots.maybeSetter(key1)
+      .getOrElse(throw new InternalException(s"Ouch, no suitable slot for key $key1 = $value1\nSlots: $slots"))
+      .apply(this, value1)
+  }
 
   override def mergeWith(other: ExecutionContext): Unit = fail()
 
-  override def createClone(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, currentRow)
+  override def createClone(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, validRows, currentRow, slots)
 
   override def +=(kv: (String, AnyValue)): MorselExecutionContext.this.type = fail()
 

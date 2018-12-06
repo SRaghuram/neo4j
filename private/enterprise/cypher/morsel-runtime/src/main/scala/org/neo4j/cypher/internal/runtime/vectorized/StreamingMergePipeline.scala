@@ -64,8 +64,8 @@ class StreamingMergePipeline(val start: StreamingMergeOperator[PipelineArgument]
   // Copy argument into a single row morsel
   private def createSingleArgumentRow(from: MorselExecutionContext): MorselExecutionContext = {
     // TODO: If we move validRows from Morsel to MorselExecutionContext we can do this without creating a new Morsel
-    val argumentMorsel = new Morsel(new Array[Long](from.getLongsPerRow), new Array[AnyValue](from.getRefsPerRow), 1)
-    val argumentRow = new MorselExecutionContext(argumentMorsel, from.getLongsPerRow, from.getRefsPerRow, 0)
+    val argumentMorsel = new Morsel(new Array[Long](from.getLongsPerRow), new Array[AnyValue](from.getRefsPerRow))
+    val argumentRow = new MorselExecutionContext(argumentMorsel, from.getLongsPerRow, from.getRefsPerRow, 0, 0, from.slots)
     argumentRow.copyFrom(from, start.argumentSize.nLongs, start.argumentSize.nReferences)
     argumentRow
   }

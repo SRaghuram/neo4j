@@ -12,14 +12,14 @@ import org.neo4j.values.AnyValue
 The lifetime of a Morsel instance is entirely controlled by the Dispatcher. No operator should create Morsels - they
  should only operate on Morsels provided to them
  */
-class Morsel(val longs: Array[Long], val refs: Array[AnyValue], var validRows: Int) {
-  override def toString = s"Morsel(validRows=$validRows)"
+class Morsel(val longs: Array[Long], val refs: Array[AnyValue]) {
+  override def toString = s"Morsel[0x${System.identityHashCode(this).toHexString}](longs:${longs.length}, refs:${refs.length})"
 }
 
 object Morsel {
   def create(slots: SlotConfiguration, size: Int): Morsel = {
     val longs = new Array[Long](slots.numberOfLongs * size)
     val refs = new Array[AnyValue](slots.numberOfReferences * size)
-    new Morsel(longs, refs, size)
+    new Morsel(longs, refs)
   }
 }

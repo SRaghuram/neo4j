@@ -90,7 +90,7 @@ case class PipelineTask(start: ContinuableOperatorTask,
 
   override def executeWorkUnit(cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
     val outputMorsel = Morsel.create(slots, state.morselSize)
-    val outputRow = new MorselExecutionContext(outputMorsel, slots.numberOfLongs, slots.numberOfReferences, 0)
+    val outputRow = new MorselExecutionContext(outputMorsel, slots.numberOfLongs, slots.numberOfReferences, state.morselSize, 0, slots)
     val queryContext = getQueryContext
 
     start.operate(outputRow, queryContext, state, cursors)
@@ -104,7 +104,7 @@ case class PipelineTask(start: ContinuableOperatorTask,
       val refCount = slots.numberOfReferences
 
       dprintln(() => "Resulting rows")
-      for (i <- 0 until outputMorsel.validRows) {
+      for (i <- 0 until outputRow.getValidRows) {
         val ls = util.Arrays.toString(outputMorsel.longs.slice(i * longCount, (i + 1) * longCount))
         val rs = util.Arrays.toString(outputMorsel.refs.slice(i * refCount, (i + 1) * refCount).asInstanceOf[Array[AnyRef]])
         println(s"$ls $rs")

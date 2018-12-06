@@ -26,10 +26,10 @@ class AggregationMapperOperatorNoGroupingTest extends CypherFunSuite {
     val aggregation = new AggregationMapperOperatorNoGrouping(workId, Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0))))
     val longs = Array[Long](0,1,2,3,4,5,6,7,8,9)
     val refs = new Array[AnyValue](10)
-    val data = new Morsel(longs, refs, longs.length)
+    val data = new Morsel(longs, refs)
 
     // When
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
+    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences, longs.length), null, EmptyQueryState(), cursors)
 
     // Then
     data.refs(0) should equal(Values.longArray(Array(0,2,4,6,8)))
@@ -49,9 +49,9 @@ class AggregationMapperOperatorNoGroupingTest extends CypherFunSuite {
     //this is interpreted as n1,n2,n1,n2...
     val longs = Array[Long](0,1,2,3,4,5,6,7,8,9)
     val refs = new Array[AnyValue](5)
-    val data = new Morsel(longs, refs, 5)
+    val data = new Morsel(longs, refs)
 
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
+    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences, validRows = 5), null, EmptyQueryState(), cursors)
 
     data.refs(0) should equal(Values.longArray(Array(0,2,4,6,8)))
     data.refs(1) should equal(Values.longArray(Array.empty))

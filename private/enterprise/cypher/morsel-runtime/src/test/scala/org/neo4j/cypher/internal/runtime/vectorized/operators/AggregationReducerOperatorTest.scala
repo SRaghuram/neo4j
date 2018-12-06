@@ -36,14 +36,14 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
       refs(1) = Values.longArray(Array(2*i))
       refs(2) = Values.stringValue("k2")
       refs(3) = Values.longArray(Array(20*i))
-      val morsel = new Morsel(Array.empty, refs, 2)
-      MorselExecutionContext(morsel, numberOfLongs, numberOfReferences)
+      val morsel = new Morsel(Array.empty, refs)
+      MorselExecutionContext(morsel, numberOfLongs, numberOfReferences, 2)
     })
 
-    val out = new Morsel(Array.empty, new Array[AnyValue](20), 2)
+    val out = new Morsel(Array.empty, new Array[AnyValue](20))
     // When
     aggregation.init(null, null, in, cursors)
-          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
+          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), cursors)
 
     // Then
     out.refs(0) should equal(stringValue("k1"))
@@ -73,14 +73,14 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
       refs(3) = Values.stringValue("k21")
       refs(4) = Values.stringValue("k22")
       refs(5) = Values.longArray(Array(20*i))
-      val morsel = new Morsel(Array.empty, refs, 2)
-      MorselExecutionContext(morsel, numberOfLongs, numberOfReferences)
+      val morsel = new Morsel(Array.empty, refs)
+      MorselExecutionContext(morsel, numberOfLongs, numberOfReferences, 2)
     })
 
-    val out = new Morsel(Array.empty, new Array[AnyValue](20), 2)
+    val out = new Morsel(Array.empty, new Array[AnyValue](20))
     // When
     aggregation.init(null, null, in, cursors)
-          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
+          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), cursors)
 
     // Then
     out.refs(0) should equal(stringValue("k11"))
@@ -114,14 +114,14 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
       refs(5) = Values.stringValue("k22")
       refs(6) = Values.stringValue("k23")
       refs(7) = Values.longArray(Array(20*i))
-      val morsel = new Morsel(Array.empty, refs, 2)
-      MorselExecutionContext(morsel, numberOfLongs, numberOfReferences)
+      val morsel = new Morsel(Array.empty, refs)
+      MorselExecutionContext(morsel, numberOfLongs, numberOfReferences, 2)
     })
 
-    val out = new Morsel(Array.empty, new Array[AnyValue](20), 2)
+    val out = new Morsel(Array.empty, new Array[AnyValue](20))
     // When
     aggregation.init(null, null, in, cursors)
-          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
+          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), cursors)
 
     // Then
     out.refs(0) should equal(stringValue("k11"))
@@ -166,14 +166,14 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
       refs(9) = Values.stringValue("k24")
       refs(10) = Values.stringValue("k25")
       refs(11) = Values.longArray(Array(20*i))
-      val morsel = new Morsel(Array.empty, refs, 2)
-      MorselExecutionContext(morsel, numberOfLongs, numberOfReferences)
+      val morsel = new Morsel(Array.empty, refs)
+      MorselExecutionContext(morsel, numberOfLongs, numberOfReferences, 2)
     })
 
-    val out = new Morsel(Array.empty, new Array[AnyValue](20), 2)
+    val out = new Morsel(Array.empty, new Array[AnyValue](20))
     // When
     aggregation.init(null, null, in, cursors)
-          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences), null, EmptyQueryState(), cursors)
+          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), cursors)
 
     // Then
     out.refs(0) should equal(stringValue("k11"))

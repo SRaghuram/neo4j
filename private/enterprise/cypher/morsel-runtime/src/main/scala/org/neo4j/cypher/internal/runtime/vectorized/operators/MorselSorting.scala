@@ -59,8 +59,9 @@ object MorselSorting {
   def createSortedMorselData(inputRow: MorselExecutionContext, outputToInputIndexes: Array[Integer]): Unit = {
     // Create a temporary morsel
     // TODO: Do this without creating extra arrays
-    val tempMorsel = new Morsel(new Array[Long](inputRow.numberOfRows * inputRow.getLongsPerRow), new Array[AnyValue](inputRow.numberOfRows * inputRow.getRefsPerRow), inputRow.numberOfRows)
-    val outputRow = MorselExecutionContext(tempMorsel, inputRow.getLongsPerRow, inputRow.getRefsPerRow)
+    val tempMorsel = new Morsel(new Array[Long](inputRow.numberOfRows * inputRow.getLongsPerRow),
+                                new Array[AnyValue](inputRow.numberOfRows * inputRow.getRefsPerRow))
+    val outputRow = MorselExecutionContext(tempMorsel, inputRow.getLongsPerRow, inputRow.getRefsPerRow, inputRow.numberOfRows)
 
     while (outputRow.hasMoreRows) {
       val fromIndex = outputToInputIndexes(outputRow.getCurrentRow)

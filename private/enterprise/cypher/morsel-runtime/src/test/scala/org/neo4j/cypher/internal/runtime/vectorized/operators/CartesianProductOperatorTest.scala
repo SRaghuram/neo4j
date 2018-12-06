@@ -31,9 +31,8 @@ class CartesianProductOperatorTest extends CypherFunSuite {
       Array[Long](1, 2, 3,
                   4, 5, 6),
       Array[AnyValue](Values.stringValue("a"), Values.stringValue("b"), Values.stringValue("c"),
-                      Values.stringValue("d"), Values.stringValue("e"), Values.stringValue("f")),
-      inputRows)
-    val inputRow = MorselExecutionContext(inputMorsel, inputLongs, inputRefs)
+                      Values.stringValue("d"), Values.stringValue("e"), Values.stringValue("f")))
+    val inputRow = MorselExecutionContext(inputMorsel, inputLongs, inputRefs, inputRows)
 
     // output data (that can fit everything)
     val outputLongs = 3
@@ -41,9 +40,8 @@ class CartesianProductOperatorTest extends CypherFunSuite {
     val outputRows = 5
     val outputMorsel = new Morsel(
       new Array[Long](outputLongs * outputRows),
-      new Array[AnyValue](outputRefs * outputRows),
-      outputRows)
-    val outputRow = MorselExecutionContext(outputMorsel, outputLongs, outputRefs)
+      new Array[AnyValue](outputRefs * outputRows))
+    val outputRow = MorselExecutionContext(outputMorsel, outputLongs, outputRefs, outputRows)
 
     // operator and argument size
     val operator = new AllNodeScanOperator(workId, 2, SlotConfiguration.Size(2, 2))
@@ -74,7 +72,7 @@ class CartesianProductOperatorTest extends CypherFunSuite {
       Values.stringValue("a"), Values.stringValue("b"),
       Values.stringValue("a"), Values.stringValue("b"),
       Values.stringValue("a"), Values.stringValue("b")))
-    outputMorsel.validRows should equal(5)
+    outputRow.getValidRows should equal(5)
 
     // And when
     inputRow.moveToNextRow()
@@ -94,7 +92,7 @@ class CartesianProductOperatorTest extends CypherFunSuite {
       Values.stringValue("d"), Values.stringValue("e"),
       Values.stringValue("d"), Values.stringValue("e"),
       Values.stringValue("d"), Values.stringValue("e")))
-    outputMorsel.validRows should equal(5)
+    outputRow.getValidRows should equal(5)
   }
 
 }

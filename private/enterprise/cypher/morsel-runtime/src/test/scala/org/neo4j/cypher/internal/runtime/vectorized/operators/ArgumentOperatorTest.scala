@@ -29,18 +29,16 @@ class ArgumentOperatorTest extends CypherFunSuite {
     val inputRows = 3
     val inputMorsel = new Morsel(
       Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9),
-      Array[AnyValue](Values.stringValue("a"), Values.stringValue("b"), Values.stringValue("c")),
-      inputRows)
-    val inputRow = MorselExecutionContext(inputMorsel, inputLongs, inputRefs)
+      Array[AnyValue](Values.stringValue("a"), Values.stringValue("b"), Values.stringValue("c")))
+    val inputRow = MorselExecutionContext(inputMorsel, inputLongs, inputRefs, inputRows)
 
     // output data
     val outputLongs = 2
     val outputRefs = 2
     val outputMorsel = new Morsel(
       new Array[Long](outputLongs),
-      new Array[AnyValue](outputRefs),
-      1)
-    val outputRow = MorselExecutionContext(outputMorsel, outputLongs, outputRefs)
+      new Array[AnyValue](outputRefs))
+    val outputRow = MorselExecutionContext(outputMorsel, outputLongs, outputRefs, 1)
 
     // operator and argument size
     val operator = new ArgumentOperator(workId, SlotConfiguration.Size(1, 1))
@@ -51,7 +49,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     // Then
     outputMorsel.longs should equal(Array(1, 0))
     outputMorsel.refs should equal(Array(Values.stringValue("a"), null))
-    outputMorsel.validRows should equal(1)
+    outputRow.getValidRows should equal(1)
 
     // And when
     inputRow.moveToNextRow()
@@ -61,7 +59,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     // Then
     outputMorsel.longs should equal(Array(4, 0))
     outputMorsel.refs should equal(Array(Values.stringValue("b"), null))
-    outputMorsel.validRows should equal(1)
+    outputRow.getValidRows should equal(1)
 
     // And when
     inputRow.moveToNextRow()
@@ -71,7 +69,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     // Then
     outputMorsel.longs should equal(Array(7, 0))
     outputMorsel.refs should equal(Array(Values.stringValue("c"), null))
-    outputMorsel.validRows should equal(1)
+    outputRow.getValidRows should equal(1)
   }
 
 }
