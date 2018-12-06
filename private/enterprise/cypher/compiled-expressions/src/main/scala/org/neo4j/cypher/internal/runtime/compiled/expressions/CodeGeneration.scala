@@ -104,7 +104,7 @@ object CodeGeneration {
   private def generateConstructor(clazz: ClassGenerator, expression: IntermediateExpression): Unit = {
     using(clazz.generateConstructor()) { block =>
       block.expression(invokeSuper(OBJECT))
-      expression.fields.foreach {
+      expression.fields.distinct.foreach {
         case InstanceField(typ, name, initializer) =>
           val reference = clazz.field(typ, name)
           initializer.map(ir => compileExpression(ir, block)).foreach { value =>

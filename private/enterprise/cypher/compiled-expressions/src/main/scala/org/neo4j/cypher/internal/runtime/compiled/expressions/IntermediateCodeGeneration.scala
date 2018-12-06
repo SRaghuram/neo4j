@@ -17,13 +17,14 @@ import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
-import org.neo4j.cypher.internal.v4_0.logical.plans.{CoerceToPredicate, NestedPlanExpression}
+import org.neo4j.cypher.internal.v4_0.logical.plans.{CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTBoolean, CTDate, CTDateTime, CTDuration, CTFloat, CTGeometry, CTInteger, CTLocalDateTime, CTLocalTime, CTMap, CTNode, CTNumber, CTPath, CTPoint, CTRelationship, CTString, CTTime, CypherType, ListType}
 import org.neo4j.cypher.internal.v4_0.util.{CypherTypeException, InternalException}
 import org.neo4j.cypher.operations.{CypherBoolean, CypherCoercions, CypherFunctions, CypherMath}
-import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
+import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName}
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
+import org.neo4j.kernel.impl.util.ValueUtils.asAnyValue
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual._
@@ -1240,7 +1241,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
-        IntermediateExpression(ops, Seq.empty, map.variables ++ vCURSORS :+ local, Set(nullChecks))
+        IntermediateExpression(ops, map.fields, map.variables ++ vCURSORS :+ local, Set(nullChecks))
       }
 
     case NodeProperty(offset, token, _) =>
@@ -1415,6 +1416,40 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                            invoke(DB_ACCESS, method[DbAccess, Int, Long, Int, NodeCursor](methodName),
                                   getLongAt(offset, currentContext), loadField(f), NODE_CURSOR))
               ), Seq(f), Seq(vNODE_CURSOR), Set.empty))
+      }
+
+    case f@ResolvedFunctionInvocation(name, Some(signature), args) if !f.isAggregate =>
+      val inputArgs = args.map(Some(_))
+        .zipAll(signature.inputSignature.map(_.default.map(_.value)), None, None).flatMap {
+        case (Some(given), _) => internalCompileExpression(given, currentContext)
+        case (_, Some(default)) =>
+          val constant = staticConstant[AnyValue](namer.nextVariableName().toUpperCase(), asAnyValue(default))
+          Some(IntermediateExpression(getStatic[AnyValue](constant.name), Seq(constant), Seq.empty, Set.empty))
+        case _ => None
+      }
+      if (inputArgs.size != signature.inputSignature.size) None
+      else {
+        val variableName = namer.nextVariableName()
+        val local = variable[AnyValue](variableName, noValue)
+        val allowed = staticConstant[Array[String]](namer.nextVariableName(), signature.allowed)
+        val fields = inputArgs.flatMap(_.fields) :+ allowed
+        val variables = inputArgs.flatMap(_.variables) :+ local
+        val (ops, maybeField) = signature.id match {
+          case Some(token) =>
+            (oneTime(assign(variableName,
+              invoke(DB_ACCESS, method[DbAccess, AnyValue, Int, Array[AnyValue], Array[String]]("callFunction"),
+                   constant(token), arrayOf(inputArgs.map(_.ir):_*), getStatic[Array[String]](allowed.name)))), None)
+          case None =>
+            import scala.collection.JavaConverters._
+            val kernelName = new QualifiedName(signature.name.namespace.asJava, signature.name.name)
+
+            val name = staticConstant[QualifiedName](namer.nextVariableName(), kernelName)
+            (oneTime(assign(variableName,
+            invoke(DB_ACCESS, method[DbAccess, AnyValue, QualifiedName, Array[AnyValue], Array[String]]("callFunction"),
+                   getStatic[QualifiedName](name.name), arrayOf(inputArgs.map(_.ir):_*), getStatic[Array[String]](allowed.name)))), Some(name))
+        }
+
+        Some(IntermediateExpression(block(ops, load(variableName)), fields ++ maybeField, variables, Set(equal(load(variableName), noValue))))
       }
 
     //slotted operations

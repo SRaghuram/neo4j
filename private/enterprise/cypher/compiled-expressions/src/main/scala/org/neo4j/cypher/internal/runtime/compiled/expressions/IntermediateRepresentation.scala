@@ -354,7 +354,7 @@ object IntermediateRepresentation {
   def typeRef(manifest: Manifest[_]): TypeReference = {
     val arguments = manifest.typeArguments
     val base = TypeReference.typeReference(manifest.runtimeClass)
-    if (arguments.nonEmpty) {
+    if (arguments.nonEmpty && !manifest.runtimeClass.isArray) {
       TypeReference.parameterizedType(base, arguments.map(typeRef): _*)
     } else {
       base
@@ -502,5 +502,5 @@ object IntermediateRepresentation {
 
   def not(test: IntermediateRepresentation) = Not(test)
 
-  def oneTime(expression: IntermediateRepresentation) = OneTime(expression)(used = false)
+  def oneTime(expression: IntermediateRepresentation): IntermediateRepresentation = OneTime(expression)(used = false)
 }

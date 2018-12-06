@@ -9,7 +9,7 @@ import java.lang.Math.PI
 import java.time.{Clock, Duration}
 import java.util.concurrent.ThreadLocalRandom
 
-import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{any, anyInt}
 import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
@@ -21,10 +21,11 @@ import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions._
-import org.neo4j.cypher.internal.v4_0.logical.plans.CoerceToPredicate
+import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CypherType, ListType}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.internal.kernel.api.procs.{QualifiedName => KernelQualifiedName}
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.CoordinateReferenceSystem.{Cartesian, WGS84}
@@ -2460,6 +2461,66 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     }
   }
 
+  test("call function by id") {
+    // given
+    val udf = callByName(signature(qualifiedName("foo"), Some(42)), literalString("hello"))
+    when(db.callFunction(anyInt(), any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
+      override def answer(invocationOnMock: InvocationOnMock): AnyValue = {
+        invocationOnMock.getArgument[Int](0) should equal(42)
+        invocationOnMock.getArgument[Array[AnyValue]](1).toList should equal(List(stringValue("hello")))
+        stringValue("success")
+      }
+    })
+
+    //then
+    compile(udf).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("success"))
+  }
+
+  test("call function by id with default argument") {
+    // given
+    val udf = callByName(signature(qualifiedName("foo"), id =  Some(42), field = fieldSignature("in", default = Some("I am default"))))
+    when(db.callFunction(anyInt(), any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
+      override def answer(invocationOnMock: InvocationOnMock): AnyValue = {
+        invocationOnMock.getArgument[Int](0) should equal(42)
+        invocationOnMock.getArgument[Array[AnyValue]](1).toList should equal(List(stringValue("I am default")))
+        stringValue("success")
+      }
+    })
+
+    //then
+    compile(udf).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("success"))
+  }
+
+  test("call function by name") {
+    // given
+    val udf = callByName(signature(qualifiedName("foo")), literalString("hello"))
+    when(db.callFunction(any[KernelQualifiedName], any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
+      override def answer(invocationOnMock: InvocationOnMock): AnyValue = {
+        invocationOnMock.getArgument[KernelQualifiedName](0).name() should equal("foo")
+        invocationOnMock.getArgument[Array[AnyValue]](1).toList should equal(List(stringValue("hello")))
+        stringValue("success")
+      }
+    })
+
+    //then
+    compile(udf).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("success"))
+  }
+
+  test("call function by name with default argument") {
+    // given
+    val udf = callByName(signature(qualifiedName("foo"), field = fieldSignature("in", default = Some("I am default"))))
+    when(db.callFunction(any[KernelQualifiedName], any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
+      override def answer(invocationOnMock: InvocationOnMock): AnyValue = {
+        invocationOnMock.getArgument[KernelQualifiedName](0).name() should equal("foo")
+        invocationOnMock.getArgument[Array[AnyValue]](1).toList should equal(List(stringValue("I am default")))
+        stringValue("success")
+      }
+    })
+
+    //then
+    compile(udf).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("success"))
+  }
+
   private def mapProjection(name: String, includeAllProps: Boolean, items: (String,Expression)*) =
     DesugaredMapProjection(varFor(name), items.map(kv => LiteralEntry(PropertyKeyName(kv._1)(pos), kv._2)(pos)), includeAllProps)(pos)
 
@@ -2602,6 +2663,19 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   private def reduce(accumulator: String, init: Expression, variable: String, collection: Expression, expression: Expression) =
     ReduceExpression(varFor(accumulator), init, varFor(variable), collection,  expression)(pos)
+
+  private def callByName(ufs: UserFunctionSignature, args: Expression*) =
+    ResolvedFunctionInvocation(ufs.name, Some(ufs), args.toIndexedSeq)(pos)
+
+  private def signature(name: KernelQualifiedName, id: Option[Int] = None, field: FieldSignature = fieldSignature("foo")) =
+    UserFunctionSignature(QualifiedName(Seq.empty, name.name()), IndexedSeq(field), symbols.CTAny, None,
+                          Array.empty, None, isAggregate = false, id= id)
+
+
+  private def fieldSignature(name: String, cypherType: CypherType = symbols.CTAny, default: Option[AnyRef] = None) =
+    FieldSignature(name, cypherType, default = default.map(CypherValue(_, cypherType)))
+
+  private def qualifiedName(name: String) = new KernelQualifiedName(Array.empty[String], name)
 
   private val numericalValues: Seq[AnyRef] = Seq[Number](
     Double.NegativeInfinity,
