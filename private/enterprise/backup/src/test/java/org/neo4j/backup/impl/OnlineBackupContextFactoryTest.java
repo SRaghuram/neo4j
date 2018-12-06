@@ -5,6 +5,11 @@
  */
 package org.neo4j.backup.impl;
 
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,11 +17,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.commandline.admin.CommandFailed;
@@ -38,8 +38,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.backup.impl.SelectedBackupProtocol.ANY;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 
 public class OnlineBackupContextFactoryTest
 {
@@ -277,7 +277,7 @@ public class OnlineBackupContextFactoryTest
         Files.createDirectories( backupDir );
         OnlineBackupContextFactory builder = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = builder.createContext( "--backup-dir=" + backupDir, "--name=" + name );
-        assertThat( context.getConfig().get( logical_logs_location ).getAbsolutePath(), is( backupPath.toString() ) );
+        assertThat( context.getConfig().get( transaction_logs_root_path ).getAbsolutePath(), is( backupPath.toString() ) );
     }
 
     @Test

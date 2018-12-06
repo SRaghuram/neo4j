@@ -32,8 +32,8 @@ import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_g
 import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_indexes;
 import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_label_scan_store;
 import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_property_owners;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.impl.util.Converters.toOptionalHostnamePortFromRawAddress;
 
 class OnlineBackupContextFactory
@@ -172,7 +172,7 @@ class OnlineBackupContextFactory
             Config.Builder builder = Config.fromFile( configFile );
             Path logPath = requiredArguments.getResolvedLocationFromName();
             Config config = builder.withHome( homeDir )
-                                   .withSetting( logical_logs_location, logPath.toString() )
+                                   .withSetting( transaction_logs_root_path, logPath.toString() )
                                    .withConnectorsDisabled()
                                    .withNoThrowOnFileLoadFailure() // Online backup does not require the presence of a neo4j.conf file.
                                    .build();

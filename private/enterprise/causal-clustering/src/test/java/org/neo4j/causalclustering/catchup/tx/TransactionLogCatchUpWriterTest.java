@@ -57,6 +57,8 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.kernel.configuration.Config.defaults;
 import static org.neo4j.kernel.impl.transaction.command.Commands.createNode;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
@@ -99,21 +101,20 @@ public class TransactionLogCatchUpWriterTest
     @Test
     public void shouldCreateTransactionLogWithCheckpoint() throws Exception
     {
-        createTransactionLogWithCheckpoint( Config.defaults(), true );
+        createTransactionLogWithCheckpoint( defaults(), true );
     }
 
     @Test
     public void createTransactionLogWithCheckpointInCustomLocation() throws IOException
     {
-        createTransactionLogWithCheckpoint( Config.defaults( GraphDatabaseSettings.logical_logs_location,
-                "custom-tx-logs"), false );
+        createTransactionLogWithCheckpoint( defaults( transaction_logs_root_path, dir.directory( "custom-tx-logs" ).getAbsolutePath() ), false );
     }
 
     @Test
     public void pullRotatesWhenThresholdCrossedAndExplicitlySet() throws IOException
     {
         // given
-        Config config = Config.defaults();
+        Config config = defaults();
         config.augment( GraphDatabaseSettings.logical_log_rotation_threshold, "1M" ); // 1 mebibyte
 
         // and
@@ -143,7 +144,7 @@ public class TransactionLogCatchUpWriterTest
     public void pullDoesNotRotateWhenThresholdCrossedAndExplicitlyOff() throws IOException
     {
         // given
-        Config config = Config.defaults();
+        Config config = defaults();
         config.augment( GraphDatabaseSettings.logical_log_rotation_threshold, "1M" ); // 1 mebibyte
 
         // and

@@ -232,7 +232,7 @@ public class RestoreDatabaseCommandIT
         File relativeLogDirectory = directory.directory( "relativeDirectory" );
 
         Config config = Config.defaults( GraphDatabaseSettings.database_path, databaseFile.getAbsolutePath() );
-        config.augment( GraphDatabaseSettings.logical_logs_location, relativeLogDirectory.getAbsolutePath() );
+        config.augment( GraphDatabaseSettings.transaction_logs_root_path, relativeLogDirectory.getAbsolutePath() );
 
         createDbAt( fromPath, 10 );
 
