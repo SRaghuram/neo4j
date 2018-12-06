@@ -2463,8 +2463,9 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("call function by id") {
     // given
+    val access = mock[DbAccess]
     val udf = callByName(signature(qualifiedName("foo"), Some(42)), literalString("hello"))
-    when(db.callFunction(anyInt(), any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
+    when(access.callFunction(anyInt(), any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
       override def answer(invocationOnMock: InvocationOnMock): AnyValue = {
         invocationOnMock.getArgument[Int](0) should equal(42)
         invocationOnMock.getArgument[Array[AnyValue]](1).toList should equal(List(stringValue("hello")))
@@ -2473,13 +2474,14 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     })
 
     //then
-    compile(udf).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("success"))
+    compile(udf).evaluate(ctx, access, EMPTY_MAP, cursors) should equal(stringValue("success"))
   }
 
   test("call function by id with default argument") {
     // given
+    val access = mock[DbAccess]
     val udf = callByName(signature(qualifiedName("foo"), id =  Some(42), field = fieldSignature("in", default = Some("I am default"))))
-    when(db.callFunction(anyInt(), any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
+    when(access.callFunction(anyInt(), any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
       override def answer(invocationOnMock: InvocationOnMock): AnyValue = {
         invocationOnMock.getArgument[Int](0) should equal(42)
         invocationOnMock.getArgument[Array[AnyValue]](1).toList should equal(List(stringValue("I am default")))
@@ -2488,13 +2490,14 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     })
 
     //then
-    compile(udf).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("success"))
+    compile(udf).evaluate(ctx, access, EMPTY_MAP, cursors) should equal(stringValue("success"))
   }
 
   test("call function by name") {
     // given
+    val access = mock[DbAccess]
     val udf = callByName(signature(qualifiedName("foo")), literalString("hello"))
-    when(db.callFunction(any[KernelQualifiedName], any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
+    when(access.callFunction(any[KernelQualifiedName], any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
       override def answer(invocationOnMock: InvocationOnMock): AnyValue = {
         invocationOnMock.getArgument[KernelQualifiedName](0).name() should equal("foo")
         invocationOnMock.getArgument[Array[AnyValue]](1).toList should equal(List(stringValue("hello")))
@@ -2503,13 +2506,14 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     })
 
     //then
-    compile(udf).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("success"))
+    compile(udf).evaluate(ctx, access, EMPTY_MAP, cursors) should equal(stringValue("success"))
   }
 
   test("call function by name with default argument") {
     // given
+    val access = mock[DbAccess]
     val udf = callByName(signature(qualifiedName("foo"), field = fieldSignature("in", default = Some("I am default"))))
-    when(db.callFunction(any[KernelQualifiedName], any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
+    when(access.callFunction(any[KernelQualifiedName], any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
       override def answer(invocationOnMock: InvocationOnMock): AnyValue = {
         invocationOnMock.getArgument[KernelQualifiedName](0).name() should equal("foo")
         invocationOnMock.getArgument[Array[AnyValue]](1).toList should equal(List(stringValue("I am default")))
@@ -2518,7 +2522,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     })
 
     //then
-    compile(udf).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("success"))
+    compile(udf).evaluate(ctx, access, EMPTY_MAP, cursors) should equal(stringValue("success"))
   }
 
   private def mapProjection(name: String, includeAllProps: Boolean, items: (String,Expression)*) =
