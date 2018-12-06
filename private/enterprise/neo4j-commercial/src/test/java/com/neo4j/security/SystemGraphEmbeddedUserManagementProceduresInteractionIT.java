@@ -5,7 +5,8 @@
  */
 package com.neo4j.security;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -14,8 +15,8 @@ import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.server.security.enterprise.auth.AuthProceduresInteractionTestBase;
 import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SystemGraphEmbeddedUserManagementProceduresInteractionIT extends AuthProceduresInteractionTestBase<EnterpriseLoginContext>
 {
@@ -40,15 +41,17 @@ public class SystemGraphEmbeddedUserManagementProceduresInteractionIT extends Au
     }
 
     @Test
-    public void shouldUnassignAnyDbRolesWhenDeletingRole() throws Exception
+    void shouldUnassignAnyDbRolesWhenDeletingRole() throws Exception
     {
         userManager.newRole( "new_role" );
         userManager.addRoleToUser( "new_role", "noneSubject" );
-        assertTrue( "Should be connected to default db",
-                ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" ).contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
+        assertTrue( ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" )
+                        .contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ),
+                "Should be connected to default db" );
         assertEmpty( adminSubject, "CALL dbms.security.deleteRole('new_role')" );
-        assertFalse( "Should not be connected to default db",
-                ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" ).contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
+        assertFalse( ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" )
+                        .contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ),
+                "Should not be connected to default db" );
     }
 
 }

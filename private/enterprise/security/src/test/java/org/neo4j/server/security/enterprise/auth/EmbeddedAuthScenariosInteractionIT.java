@@ -5,19 +5,22 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
+@ExtendWith( EphemeralFileSystemExtension.class )
 public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<EnterpriseLoginContext>
 {
 
-    @Rule
-    public EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
+    @Inject
+    EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
 
     @Override
     protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable

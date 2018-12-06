@@ -5,20 +5,24 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
-import org.junit.Rule;
+
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.kernel.impl.util.ValueUtils;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
-public class BoltAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<BoltInteraction.BoltSubject>
+@ExtendWith( EphemeralFileSystemExtension.class )
+class BoltAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<BoltInteraction.BoltSubject>
 {
-    @Rule
-    public EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
+    @Inject
+    EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
 
-    public BoltAuthScenariosInteractionIT()
+    BoltAuthScenariosInteractionIT()
     {
         super();
         IS_EMBEDDED = false;
