@@ -61,7 +61,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
     protected void channelRead0( ChannelHandlerContext ctx, final TxPullRequest msg ) throws Exception
     {
         monitor.increment();
-        Prepare prepare = prepareRequest( ctx, msg );
+        Prepare prepare = prepareRequest( msg );
 
         if ( prepare.isComplete() )
         {
@@ -95,12 +95,12 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
 
     }
 
-    private Prepare prepareRequest( ChannelHandlerContext ctx, TxPullRequest msg ) throws IOException
+    private Prepare prepareRequest( TxPullRequest msg ) throws IOException
     {
         long firstTxId = msg.previousTxId() + 1;
         if ( msg.previousTxId() <= 0 )
         {
-            log.error( "Illegal tx pull request" );
+            log.error( "Illegal tx pull request. Tx id must be greater than 0" );
             return Prepare.fail( E_INVALID_REQUEST );
         }
         if ( !databaseAvailable.getAsBoolean() )
@@ -112,7 +112,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         StoreId localStoreId = storeIdSupplier.get();
         if ( localStoreId == null || !localStoreId.equals( expectedStoreId ) )
         {
-            log.info( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different " + "from this machine with %s", firstTxId,
+            log.info( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different from this machine with %s", firstTxId,
                     expectedStoreId, localStoreId );
             return Prepare.fail( E_STORE_ID_MISMATCH );
         }
@@ -131,6 +131,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         }
         catch ( IllegalStateException e )
         {
+            log.info( "Failed to serve TxPullRequest because store is not available" );
             return Prepare.fail( E_STORE_UNAVAILABLE );
         }
         if ( txIdPromise < firstTxId )
