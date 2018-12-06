@@ -88,7 +88,7 @@ public class ReplicatedTokenRequestSerializer
         }
         catch ( IOException e )
         {
-            e.printStackTrace(); // TODO: Handle or throw.
+            throw new RuntimeException( "This should never happen since the channel is backed by an in-memory buffer.", e );
         }
 
         /*
@@ -121,7 +121,7 @@ public class ReplicatedTokenRequestSerializer
         }
         catch ( IOException e )
         {
-            e.printStackTrace(); // TODO: Handle or throw.
+            throw new RuntimeException( "This should never happen since the channel is backed by an in-memory buffer.", e );
         }
 
         return commands;
