@@ -17,7 +17,9 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.neo4j.backup.util.SimpleOnlineBackupExecutor;
+import org.neo4j.backup.impl.OnlineBackupContext;
+import org.neo4j.backup.impl.OnlineBackupExecutor;
+import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -26,8 +28,9 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.helpers.HostnamePort;
+import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
@@ -37,6 +40,8 @@ import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSetting
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.neo4j.causalclustering.core.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
@@ -64,17 +69,15 @@ public class FulltextIndexBackupIT
     @Rule
     public final RuleChain rules = RuleChain.outerRule( suppressOutput ).around( dir ).around( cleanup );
 
-    private int backupPort;
     private GraphDatabaseAPI db;
 
     @Before
     public void setUpPorts()
     {
-        backupPort = PortAuthority.allocatePort();
         GraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
         GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( dir.databaseDir() );
         builder.setConfig( online_backup_enabled, "true" );
-        builder.setConfig( online_backup_listen_address, "127.0.0.1:" + backupPort );
+        builder.setConfig( online_backup_listen_address, "127.0.0.1:0" );
         db = (GraphDatabaseAPI) builder.newGraphDatabase();
         cleanup.add( db );
     }
@@ -84,7 +87,7 @@ public class FulltextIndexBackupIT
     {
         initializeTestData();
         verifyData( db );
-        Path backupDir = runBackup( backupPort );
+        Path backupDir = executeBackup();
         db.shutdown();
 
         GraphDatabaseAPI backupDb = startBackupDatabase( backupDir.toFile() );
@@ -95,7 +98,7 @@ public class FulltextIndexBackupIT
     public void fulltextIndexesMustBeUpdatedByIncrementalBackup() throws Exception
     {
         initializeTestData();
-        Path backupDir = runBackup( backupPort );
+        Path backupDir = executeBackup();
 
         long nodeId3;
         long nodeId4;
@@ -115,7 +118,7 @@ public class FulltextIndexBackupIT
         }
         verifyData( db );
 
-        runBackup( backupPort );
+        executeBackup();
 
         db.shutdown();
 
@@ -203,9 +206,26 @@ public class FulltextIndexBackupIT
         }
     }
 
-    private Path runBackup( int port ) throws Exception
+    private Path executeBackup() throws Exception
     {
+        DependencyResolver resolver = db.getDependencyResolver();
+        ConnectorPortRegister portRegister = resolver.resolveDependency( ConnectorPortRegister.class );
+        HostnamePort backupAddress = portRegister.getLocalAddress( BACKUP_SERVER_NAME );
+
+        String backupName = DEFAULT_DATABASE_NAME;
         Path backupDir = dir.directory( BACKUP_DIR_NAME ).toPath();
-        return SimpleOnlineBackupExecutor.executeBackup( port, backupDir );
+
+        OnlineBackupContext context = OnlineBackupContext.builder()
+                .withHostnamePort( backupAddress.getHost(), backupAddress.getPort() )
+                .withBackupName( backupName )
+                .withBackupDirectory( backupDir )
+                .withReportsDirectory( backupDir )
+                .withConsistencyCheck( true )
+                .withConsistencyCheckPropertyOwners( true )
+                .build();
+
+        OnlineBackupExecutor.buildDefault().executeBackup( context );
+
+        return backupDir.resolve( backupName );
     }
 }

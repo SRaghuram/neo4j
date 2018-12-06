@@ -20,8 +20,6 @@ import org.neo4j.kernel.impl.util.OptionalHostnamePort;
 
 public class OnlineBackupContext
 {
-    private static final String DEFAULT_BACKUP_NAME = "backup";
-
     private final OnlineBackupRequiredArguments requiredArguments;
     private final Config config;
     private final ConsistencyFlags consistencyFlags;
@@ -198,7 +196,7 @@ public class OnlineBackupContext
             }
             if ( backupName == null )
             {
-                backupName = DEFAULT_BACKUP_NAME;
+                backupName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
             }
             if ( reportsDirectory == null )
             {

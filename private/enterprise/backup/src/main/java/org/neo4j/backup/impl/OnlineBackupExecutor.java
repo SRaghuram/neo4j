@@ -39,6 +39,11 @@ public class OnlineBackupExecutor
         this.monitors = builder.monitors;
     }
 
+    public static OnlineBackupExecutor buildDefault()
+    {
+        return builder().build();
+    }
+
     public static Builder builder()
     {
         return new Builder();

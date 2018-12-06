@@ -13,17 +13,20 @@ import org.junit.Test;
 import java.io.File;
 import java.nio.file.Path;
 
+import org.neo4j.backup.impl.OnlineBackupContext;
+import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.commandline.admin.AdminTool;
 import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.RealOutsideWorld;
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.metrics.MetricsSettings;
-import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.SuppressOutput;
@@ -34,7 +37,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.backup.util.SimpleOnlineBackupExecutor.executeBackup;
+import static org.neo4j.causalclustering.core.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static org.neo4j.metrics.source.db.PageCacheMetrics.PC_PAGE_FAULTS;
@@ -90,11 +93,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     @Test
     public void cacheProfilesMustBeIncludedInOnlineBackups() throws Exception
     {
-        int backupPort = PortAuthority.allocatePort();
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
           .withSetting( UdcSettings.udc_enabled, Settings.FALSE )
           .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.TRUE )
-                .withSetting( OnlineBackupSettings.online_backup_listen_address, "localhost:" + backupPort )
+          .withSetting( OnlineBackupSettings.online_backup_listen_address, "localhost:0" )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" );
         db.ensureStarted();
 
@@ -105,7 +107,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         File metricsDirectory = testDirectory.cleanDirectory( "metrics" );
         File backupDir = testDirectory.cleanDirectory( "backup" );
-        executeBackup( backupPort, backupDir.toPath() );
+        executeBackup( backupDir );
         latch.release();
         DbmsRule.RestartAction useBackupDir = ( fs, storeDir ) ->
         {
@@ -127,10 +129,9 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     {
         // Here we are testing that the file modifications done by the page cache profiler,
         // does not make online backup throw any exceptions.
-        int backupPort = PortAuthority.allocatePort();
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
           .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.TRUE )
-                .withSetting( OnlineBackupSettings.online_backup_listen_address, "localhost:" + backupPort )
+          .withSetting( OnlineBackupSettings.online_backup_listen_address, "localhost:0" )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "1ms" );
         db.ensureStarted();
 
@@ -140,7 +141,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         for ( int i = 0; i < 20; i++ )
         {
             File backupDir = testDirectory.cleanDirectory( "backup" );
-            executeBackup( backupPort, backupDir.toPath() );
+            executeBackup( backupDir );
         }
     }
 
@@ -215,5 +216,18 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         logProvider.assertContainsMessageContaining( "Page cache warmup started." );
         logProvider.assertContainsMessageContaining( "Page cache warmup completed. %d pages loaded. Duration: %s." );
+    }
+
+    private void executeBackup( File backupDir ) throws Exception
+    {
+        HostnamePort address = db.resolveDependency( ConnectorPortRegister.class ).getLocalAddress( BACKUP_SERVER_NAME );
+
+        OnlineBackupContext context = OnlineBackupContext.builder()
+                .withHostnamePort( address.getHost(), address.getPort() )
+                .withBackupDirectory( backupDir.toPath() )
+                .withReportsDirectory( backupDir.toPath() )
+                .build();
+
+        OnlineBackupExecutor.buildDefault().executeBackup( context );
     }
 }

@@ -12,11 +12,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.neo4j.backup.impl.OnlineBackupContext;
+import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 
-import static org.neo4j.backup.util.SimpleOnlineBackupExecutor.executeBackup;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
 import static org.neo4j.helpers.Exceptions.findCauseOrSuppressed;
 import static org.neo4j.helpers.collection.Iterators.asSet;
@@ -54,7 +55,14 @@ class BackupHelper
 
         try
         {
-            executeBackup( address, baseBackupDir.toPath(), backupName );
+            OnlineBackupContext context = OnlineBackupContext.builder()
+                    .withHostnamePort( address.getHostname(), address.getPort() )
+                    .withBackupName( backupName )
+                    .withBackupDirectory( baseBackupDir.toPath() )
+                    .withReportsDirectory( baseBackupDir.toPath() )
+                    .build();
+
+            OnlineBackupExecutor.buildDefault().executeBackup( context );
             log.info( String.format( "Created backup %s from %s", backupName, member ) );
 
             successfulBackups.incrementAndGet();
