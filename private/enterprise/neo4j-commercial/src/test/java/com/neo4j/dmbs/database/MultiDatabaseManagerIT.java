@@ -27,9 +27,11 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -41,6 +43,7 @@ class MultiDatabaseManagerIT
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
     private AssertableLogProvider logProvider;
+    private DatabaseManager databaseManager;
 
     @BeforeEach
     void setUp()
@@ -48,6 +51,7 @@ class MultiDatabaseManagerIT
         logProvider = new AssertableLogProvider( true );
         database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider )
                 .newEmbeddedDatabase( testDirectory.databaseLayout( CUSTOM_DATABASE_NAME ).databaseDirectory() );
+        databaseManager = getDatabaseManager();
     }
 
     @AfterEach
@@ -59,7 +63,6 @@ class MultiDatabaseManagerIT
     @Test
     void createDatabase()
     {
-        DatabaseManager databaseManager = getDatabaseManager();
         String databaseName = "testDatabase";
         GraphDatabaseFacade database1 = databaseManager.createDatabase( databaseName ).getDatabaseFacade();
 
@@ -68,9 +71,143 @@ class MultiDatabaseManagerIT
     }
 
     @Test
+    void failToCreateDatabasesWithSameName()
+    {
+        String uniqueDatabaseName = "uniqueDatabaseName";
+        databaseManager.createDatabase( uniqueDatabaseName );
+
+        assertThrows( IllegalStateException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
+        assertThrows( IllegalStateException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
+        assertThrows( IllegalStateException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
+        assertThrows( IllegalStateException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
+    }
+
+    @Test
+    void failToStartUnknownDatabase()
+    {
+        String unknownDatabase = "unknownDatabase";
+        assertThrows( IllegalStateException.class, () -> databaseManager.stopDatabase( unknownDatabase ) );
+    }
+
+    @Test
+    void failToStartDroppedDatabase()
+    {
+        String databaseToDrop = "databaseToDrop";
+        databaseManager.createDatabase( databaseToDrop );
+        databaseManager.dropDatabase( databaseToDrop );
+
+        assertThrows( IllegalStateException.class, () -> databaseManager.startDatabase( databaseToDrop ) );
+    }
+
+    @Test
+    void startStartedDatabase()
+    {
+        String multiStartDatabase = "multiStartDatabase";
+        databaseManager.createDatabase( multiStartDatabase );
+
+        assertDoesNotThrow( () -> databaseManager.startDatabase( multiStartDatabase ) );
+        assertDoesNotThrow( () -> databaseManager.startDatabase( multiStartDatabase ) );
+        assertDoesNotThrow( () -> databaseManager.startDatabase( multiStartDatabase ) );
+        assertDoesNotThrow( () -> databaseManager.startDatabase( multiStartDatabase ) );
+    }
+
+    @Test
+    void stopStartDatabase()
+    {
+        String startStopDatabase = "startStopDatabase";
+        databaseManager.createDatabase( startStopDatabase );
+        for ( int i = 0; i < 10; i++ )
+        {
+            databaseManager.stopDatabase( startStopDatabase );
+            assertTrue( databaseManager.getDatabaseContext( startStopDatabase ).isPresent() );
+            databaseManager.startDatabase( startStopDatabase );
+        }
+    }
+
+    @Test
+    void failToCreateDatabaseWithStoppedDatabaseName()
+    {
+        String stoppedDatabase = "stoppedDatabase";
+        databaseManager.createDatabase( stoppedDatabase );
+
+        databaseManager.stopDatabase( stoppedDatabase );
+
+        assertThrows( IllegalStateException.class, () -> databaseManager.createDatabase( stoppedDatabase ) );
+    }
+
+    @Test
+    void stopStoppedDatabaseIsFine()
+    {
+        String stoppedDatabase = "stoppedDatabase";
+
+        databaseManager.createDatabase( stoppedDatabase );
+        databaseManager.stopDatabase( stoppedDatabase );
+
+        assertDoesNotThrow( () -> databaseManager.stopDatabase( stoppedDatabase ) );
+    }
+
+    @Test
+    void recreateDatabaseWithSameName()
+    {
+        String databaseToRecreate = "databaseToRecreate";
+
+        databaseManager.createDatabase( databaseToRecreate );
+
+        databaseManager.dropDatabase( databaseToRecreate );
+        assertFalse( databaseManager.getDatabaseContext( databaseToRecreate ).isPresent() );
+
+        assertDoesNotThrow( () -> databaseManager.createDatabase( databaseToRecreate ) );
+        assertTrue( databaseManager.getDatabaseContext( databaseToRecreate ).isPresent() );
+    }
+
+    @Test
+    void dropStartedDatabase()
+    {
+        String startedDatabase = "startedDatabase";
+
+        databaseManager.createDatabase( startedDatabase );
+        databaseManager.dropDatabase( startedDatabase );
+        assertFalse( databaseManager.getDatabaseContext( startedDatabase ).isPresent() );
+    }
+
+    @Test
+    void dropStoppedDatabase()
+    {
+        String stoppedDatabase = "stoppedDatabase";
+
+        databaseManager.createDatabase( stoppedDatabase );
+        databaseManager.stopDatabase( stoppedDatabase );
+
+        databaseManager.dropDatabase( stoppedDatabase );
+        assertFalse( databaseManager.getDatabaseContext( stoppedDatabase ).isPresent() );
+    }
+
+    @Test
+    void failToDropUnknownDatabase()
+    {
+        String unknownDatabase = "unknownDatabase";
+        assertThrows( IllegalStateException.class, () -> databaseManager.dropDatabase( unknownDatabase ) );
+    }
+
+    @Test
+    void failToStopUnknownDatabase()
+    {
+        String unknownDatabase = "unknownDatabase";
+        assertThrows( IllegalStateException.class, () -> databaseManager.stopDatabase( unknownDatabase ) );
+    }
+
+    @Test
+    void failToStopDroppedDatabase()
+    {
+        String testDatabase = "testDatabase";
+        databaseManager.createDatabase( testDatabase );
+        databaseManager.dropDatabase( testDatabase );
+        assertThrows( IllegalStateException.class, () -> databaseManager.stopDatabase( testDatabase ) );
+    }
+
+    @Test
     void lookupNotExistingDatabase()
     {
-        DatabaseManager databaseManager = getDatabaseManager();
         Optional<DatabaseContext> database = databaseManager.getDatabaseContext( "testDatabase" );
         assertFalse( database.isPresent() );
     }
@@ -78,15 +215,13 @@ class MultiDatabaseManagerIT
     @Test
     void lookupExistingDatabase()
     {
-        DatabaseManager databaseManager = getDatabaseManager();
         Optional<DatabaseContext> database = databaseManager.getDatabaseContext( CUSTOM_DATABASE_NAME );
         assertTrue( database.isPresent() );
     }
 
     @Test
-    void createAndShutdownDatabase()
+    void createAndStopDatabase()
     {
-        DatabaseManager databaseManager = getDatabaseManager();
         String databaseName = "databaseToShutdown";
         DatabaseContext context = databaseManager.createDatabase( databaseName );
 
@@ -94,25 +229,23 @@ class MultiDatabaseManagerIT
         assertTrue( databaseLookup.isPresent() );
         assertEquals( context, databaseLookup.get() );
 
-        databaseManager.shutdownDatabase( databaseName );
-        assertFalse( databaseManager.getDatabaseContext( databaseName ).isPresent() );
+        databaseManager.stopDatabase( databaseName );
+        assertTrue( databaseManager.getDatabaseContext( databaseName ).isPresent() );
     }
 
     @Test
-    void logAboutDatabaseCreationAndShutdown()
+    void logAboutDatabaseCreationAndStop()
     {
-        DatabaseManager databaseManager = getDatabaseManager();
         String logTestDb = "logTestDb";
         databaseManager.createDatabase( logTestDb );
-        databaseManager.shutdownDatabase( logTestDb );
+        databaseManager.stopDatabase( logTestDb );
         logProvider.assertLogStringContains( "Creating 'logTestDb' database." );
-        logProvider.assertLogStringContains( "Shutting down 'logTestDb' database." );
+        logProvider.assertLogStringContains( "Stop 'logTestDb' database." );
     }
 
     @Test
     void listAvailableDatabases()
     {
-        DatabaseManager databaseManager = getDatabaseManager();
         List<String> initialDatabases = databaseManager.listDatabases();
         assertThat( initialDatabases, hasSize( 1 ) );
         assertEquals( CUSTOM_DATABASE_NAME, initialDatabases.get( 0 ) );
@@ -130,7 +263,6 @@ class MultiDatabaseManagerIT
     @Test
     void listAvailableDatabaseOnShutdownManager() throws Throwable
     {
-        DatabaseManager databaseManager = getDatabaseManager();
         databaseManager.stop();
         databaseManager.shutdown();
         List<String> databases = databaseManager.listDatabases();

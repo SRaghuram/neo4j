@@ -5,10 +5,12 @@
  */
 package com.neo4j.dbms.database;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
 import org.neo4j.dbms.database.DatabaseContext;
@@ -19,19 +21,20 @@ import org.neo4j.graphdb.factory.module.DatabaseModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
-import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Logger;
 
+import static java.lang.String.format;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Objects.requireNonNull;
 
 public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseManager
 {
-    private final Map<String, DatabaseContext> databaseMap = new CopyOnWriteHashMap<>();
+    private final ConcurrentHashMap<String, DatabaseContext> databaseMap = new ConcurrentHashMap<>();
     private final PlatformModule platform;
     private final AbstractEditionModule edition;
     private final Procedures procedures;
@@ -52,22 +55,29 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     @Override
     public DatabaseContext createDatabase( String databaseName )
     {
-        requireNonNull( databaseName, "Database name should be not null" );
-        log.log( "Creating '%s' database.", databaseName );
-
-        GraphDatabaseFacade facade =
-                platform.config.get( GraphDatabaseSettings.active_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
-        DatabaseModule dataSource = new DatabaseModule( databaseName, platform, edition, procedures, facade );
-        ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
-        Database database = dataSource.database;
-        facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, database.getTokenHolders() );
-        if ( started )
+        requireNonNull( databaseName, "Database name should be not null." );
+        return databaseMap.compute( databaseName, ( key, currentContext ) ->
         {
-            database.start();
-        }
-        DatabaseContext databaseContext = new DatabaseContext( database, facade );
-        databaseMap.put( databaseName, databaseContext );
-        return databaseContext;
+            if ( currentContext != null )
+            {
+                throw new IllegalStateException( format( "Database with name `%s` already exists.", databaseName ) );
+            }
+            return createNewDatabaseContext( databaseName );
+        } );
+    }
+
+    @Override
+    public void dropDatabase( String databaseName )
+    {
+        databaseMap.compute( databaseName, ( key, currentContext ) ->
+        {
+            if ( currentContext == null )
+            {
+                throw new IllegalStateException( format( "Database with name `%s` not found.", databaseName ) );
+            }
+            dropDatabase( databaseName, currentContext );
+            return null;
+        } );
     }
 
     @Override
@@ -77,14 +87,31 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     }
 
     @Override
-    public void shutdownDatabase( String databaseName )
+    public void stopDatabase( String databaseName )
     {
-        DatabaseContext databaseContext = databaseMap.remove( databaseName );
-        if ( databaseContext != null )
+        databaseMap.compute( databaseName, ( key, currentContext ) ->
         {
-            stopDatabase( databaseName, databaseContext );
-            shutdownDatabase( databaseName, databaseContext );
-        }
+            if ( currentContext == null )
+            {
+                throw new IllegalStateException( format( "Database with name `%s` not found.", databaseName ) );
+            }
+            stopDatabase( databaseName, currentContext );
+            return currentContext;
+        } );
+    }
+
+    @Override
+    public void startDatabase( String databaseName )
+    {
+        databaseMap.compute( databaseName, ( key, currentContext ) ->
+        {
+            if ( currentContext == null )
+            {
+                throw new IllegalStateException( format( "Database with name `%s` not found.", databaseName ) );
+            }
+            startDatabase( databaseName, currentContext );
+            return currentContext;
+        } );
     }
 
     @Override
@@ -111,14 +138,9 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     }
 
     @Override
-    public void shutdown() throws Throwable
+    public void shutdown()
     {
-        Throwable shutdownException = doWithAllDatabases( this::shutdownDatabase );
         databaseMap.clear();
-        if ( shutdownException != null )
-        {
-            throw shutdownException;
-        }
     }
 
     @Override
@@ -127,6 +149,22 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         ArrayList<String> databaseNames = new ArrayList<>( databaseMap.keySet() );
         databaseNames.sort( naturalOrder() );
         return databaseNames;
+    }
+
+    private DatabaseContext createNewDatabaseContext( String databaseName )
+    {
+        log.log( "Creating '%s' database.", databaseName );
+        GraphDatabaseFacade facade =
+                platform.config.get( GraphDatabaseSettings.active_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
+        DatabaseModule dataSource = new DatabaseModule( databaseName, platform, edition, procedures, facade );
+        ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
+        Database database = dataSource.database;
+        facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, database.getTokenHolders() );
+        if ( started )
+        {
+            database.start();
+        }
+        return new DatabaseContext( database, facade );
     }
 
     private Throwable doWithAllDatabases( BiConsumer<String, DatabaseContext> consumer )
@@ -160,10 +198,21 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         database.stop();
     }
 
-    private void shutdownDatabase( String databaseName, DatabaseContext context )
+    private void dropDatabase( String databaseName, DatabaseContext context )
     {
-        log.log( "Shutting down '%s' database.", databaseName );
+        log.log( "Drop '%s' database.", databaseName );
         Database database = context.getDatabase();
+        // TODO: mark all database files as files that do not require flush and remove them.
+        // TODO: remove database transaction logs.
+        database.stop();
         database.shutdown();
+        try
+        {
+            FileUtils.deleteRecursively( database.getDatabaseLayout().databaseDirectory() );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 }

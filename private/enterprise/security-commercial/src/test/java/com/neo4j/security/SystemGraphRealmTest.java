@@ -487,13 +487,23 @@ public class SystemGraphRealmTest
         }
 
         @Override
-        public DatabaseContext createDatabase( String name )
+        public DatabaseContext createDatabase( String databaseName )
         {
             throw new UnsupportedOperationException( "Call to createDatabase not expected" );
         }
 
         @Override
-        public void shutdownDatabase( String name )
+        public void dropDatabase( String databaseName )
+        {
+        }
+
+        @Override
+        public void stopDatabase( String databaseName )
+        {
+        }
+
+        @Override
+        public void startDatabase( String databaseName )
         {
         }
 
