@@ -6,9 +6,11 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
+import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
 
-class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
+class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
+  with CypherComparisonSupport with CreateTempFileTestSupport {
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -442,6 +444,35 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       includeSomewhere.aPlan("NodeByLabelScan")
 
     result.toList should equal(List(Map("count(i)" -> 6)))
+  }
+
+  test("should use index provided values when LOAD CSV before aggregation") {
+    val url = createCSVTempFileURL({
+      writer =>
+        writer.println("Value")
+        writer.println("5")
+        writer.println("34")
+        writer.println("1337")
+    })
+
+    val query = s"LOAD CSV WITH HEADERS FROM '$url' AS row MATCH (n:Awesome) WHERE toInt(row.Value) > 20 RETURN count(n.prop1)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").containingVariables("cached[n.prop1]")
+
+    // 2 times 6 nodes
+    result.toList should equal(List(Map("count(n.prop1)" -> 12)))
+  }
+
+  test("should use index provided values when procedure call before aggregation") {
+    val query = "MATCH (n:Awesome) CALL db.labels() YIELD label RETURN count(n.prop1)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").containingVariables("cached[n.prop1]")
+
+    result.toList should equal(List(Map("count(n.prop1)" -> 6)))
   }
 
   test("should handle aggregation with label not in the semantic table") {
