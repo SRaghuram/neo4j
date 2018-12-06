@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
 
 class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -30,6 +30,10 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       """)
   }
 
+  // Compiled does not support NodeIndexScan so in cases when index provided values are used,
+  // count is not supported in compiled anymore.
+  private val countConfig: TestConfiguration = Configs.InterpretedAndSlotted + Configs.Version3_5
+
   for ((i, func, funcBody, property, supportsCompiled) <-
          List(
            (0, "min", "n.prop3", "n.prop3", false),
@@ -47,8 +51,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     // Simple aggregation functions implicitly gives exists
 
     test(s"$i-$func: should use index provided values") {
-      // Compiled does not support NodeIndexScan so this query is not supported in compiled anymore.
-      val config = if (supportsCompiled) Configs.InterpretedAndSlotted + Configs.Version3_5 else Configs.InterpretedAndSlotted
+      val config = if (supportsCompiled) countConfig else Configs.InterpretedAndSlotted
       val query = s"MATCH (n:Awesome) RETURN $func($funcBody) as aggregation"
       val result = executeWith(config, query, executeBefore = createSomeNodes)
 
@@ -258,9 +261,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("Label", "prop2")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN count(m.prop2) AS count"
-
-    // Compiled does not support NodeIndexScan so this query is not supported in compiled anymore.
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_5, query, executeBefore = createSomeNodes)
+    val result = executeWith(countConfig, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
@@ -320,9 +321,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count"
-
-    // Compiled does not support NodeIndexScan so this query is not supported in compiled anymore.
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_5, query, executeBefore = createSomeNodes)
+    val result = executeWith(countConfig, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", s"cached[n.prop2]")
@@ -401,6 +400,48 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     val result2 = executeWith(Configs.All, "MATCH (n:New) RETURN count(n)")
     result2.toList should equal(List(Map("count(n)" -> 1)))
+  }
+
+  test("should use index provided values for DISTINCT before aggregation") {
+    val query = "MATCH (n: Awesome) WITH DISTINCT n.prop2 as prop RETURN count(prop)"
+    val result = executeWith(countConfig, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").containingVariables("cached[n.prop2]")
+
+    result.toList should equal(List(Map("count(prop)" -> 2)))
+  }
+
+  test("should use index provided values when UNWIND before aggregation") {
+    val query = "UNWIND [1,2,3] AS i MATCH (n: Awesome) RETURN count(n.prop1)"
+    val result = executeWith(countConfig, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").containingVariables("cached[n.prop1]")
+
+    // 3 times 6 nodes
+    result.toList should equal(List(Map("count(n.prop1)" -> 18)))
+  }
+
+  test("should use index provided values when complex UNWIND before aggregation") {
+    val query = "MATCH (n: Awesome) UNWIND labels(n) + [n.prop1, n.prop2, 1, 'abc'] AS i RETURN count(n.prop1)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").containingVariables("cached[n.prop1]")
+
+    // 5 times 6 nodes
+    result.toList should equal(List(Map("count(n.prop1)" -> 30)))
+  }
+
+  test("cannot use index provided values when aggregating over variable from UNWIND") {
+    val query = "MATCH (n: Awesome) UNWIND [n.prop1] AS i RETURN count(i)"
+    val result = executeWith(Configs.All, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeByLabelScan")
+
+    result.toList should equal(List(Map("count(i)" -> 6)))
   }
 
   test("should handle aggregation with label not in the semantic table") {
