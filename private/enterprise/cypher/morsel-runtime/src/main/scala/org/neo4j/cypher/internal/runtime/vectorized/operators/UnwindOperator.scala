@@ -23,14 +23,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                     state: QueryState,
                     inputRow: MorselExecutionContext,
                     resources: QueryResources): ContinuableOperatorTask = {
-    val queryState = new InterpretedQueryState(context,
-                                               resources = null,
-                                               params = state.params,
-                                               resources.expressionCursors,
-                                               Array.empty[IndexReadSession])
-    val value = collection(inputRow, queryState)
-    val unwoundValues = makeTraversable(value).iterator
-    new OTask(inputRow, unwoundValues)
+    new OTask(inputRow, null)
   }
 
   class OTask(var inputRow: MorselExecutionContext,
@@ -48,7 +41,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                                                  resources.expressionCursors,
                                                  Array.empty[IndexReadSession])
 
-      do {
+      while (inputRow.hasMoreRows && outputRow.hasMoreRows) {
         if (unwoundValues == null) {
           val value = collection(inputRow, queryState)
           unwoundValues = makeTraversable(value).iterator
@@ -65,13 +58,11 @@ class UnwindOperator(val workIdentity: WorkIdentity,
           inputRow.moveToNextRow()
           unwoundValues = null
         }
-      } while (inputRow.hasMoreRows && outputRow.hasMoreRows)
+      }
 
       outputRow.finishedWriting()
     }
 
     override def canContinue: Boolean = unwoundValues != null || inputRow.hasMoreRows
   }
-
-  private case class CurrentState(unwoundValues: java.util.Iterator[AnyValue])
 }
