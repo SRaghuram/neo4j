@@ -205,7 +205,6 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         // TODO: mark all database files as files that do not require flush and remove them.
         // TODO: remove database transaction logs.
         database.stop();
-        database.shutdown();
         try
         {
             FileUtils.deleteRecursively( database.getDatabaseLayout().databaseDirectory() );
