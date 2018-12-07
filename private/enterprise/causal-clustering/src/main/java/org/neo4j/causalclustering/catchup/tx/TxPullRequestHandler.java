@@ -20,6 +20,7 @@ import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
@@ -130,7 +131,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         {
             txIdPromise = transactionIdStore.getLastCommittedTransactionId();
         }
-        catch ( RuntimeException e )
+        catch ( StoreFileClosedException e )
         {
             log.info( "Failed to serve TxPullRequest. Reason: %s", e.getMessage() );
             return Prepare.fail( E_STORE_UNAVAILABLE );

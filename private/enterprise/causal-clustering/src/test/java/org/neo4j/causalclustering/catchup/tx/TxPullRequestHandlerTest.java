@@ -7,8 +7,8 @@ package org.neo4j.causalclustering.catchup.tx;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
@@ -16,6 +16,7 @@ import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.command.Commands;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
@@ -44,7 +45,7 @@ import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
 import static org.neo4j.kernel.impl.transaction.command.Commands.createNode;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
-public class TxPullRequestHandlerTest
+class TxPullRequestHandlerTest
 {
     private final ChannelHandlerContext context = mock( ChannelHandlerContext.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
@@ -56,8 +57,8 @@ public class TxPullRequestHandlerTest
 
     private TxPullRequestHandler txPullRequestHandler;
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
         Dependencies dependencies = mock( Dependencies.class );
         when( datasource.getDependencyResolver() ).thenReturn( dependencies );
@@ -69,10 +70,10 @@ public class TxPullRequestHandlerTest
     }
 
     @Test
-    public void shouldFailWithStoreUnavailableIfTxStoreHasClosed() throws Exception
+    void shouldFailWithStoreUnavailableIfTxStoreHasClosed() throws Exception
     {
         // given
-        when( transactionIdStore.getLastCommittedTransactionId() ).thenThrow( IllegalStateException.class );
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenThrow( StoreFileClosedException.class );
         ChannelFuture channelFuture = mock( ChannelFuture.class );
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
@@ -85,7 +86,7 @@ public class TxPullRequestHandlerTest
     }
 
     @Test
-    public void shouldRespondWithCompleteStreamOfTransactions() throws Exception
+    void shouldRespondWithCompleteStreamOfTransactions() throws Exception
     {
         // given
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
@@ -101,7 +102,7 @@ public class TxPullRequestHandlerTest
     }
 
     @Test
-    public void shouldRespondWithEndOfStreamIfThereAreNoTransactions() throws Exception
+    void shouldRespondWithEndOfStreamIfThereAreNoTransactions() throws Exception
     {
         // given
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 14L );
@@ -115,7 +116,7 @@ public class TxPullRequestHandlerTest
     }
 
     @Test
-    public void shouldRespondWithoutTransactionsIfTheyDoNotExist() throws Exception
+    void shouldRespondWithoutTransactionsIfTheyDoNotExist() throws Exception
     {
         // given
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
@@ -135,7 +136,7 @@ public class TxPullRequestHandlerTest
     }
 
     @Test
-    public void shouldNotStreamTxEntriesIfStoreIdMismatches() throws Exception
+    void shouldNotStreamTxEntriesIfStoreIdMismatches() throws Exception
     {
         // given
         StoreId serverStoreId = new StoreId( 1, 2, 3, 4 );
@@ -157,7 +158,7 @@ public class TxPullRequestHandlerTest
     }
 
     @Test
-    public void shouldNotStreamTxsAndReportErrorIfTheLocalDatabaseIsNotAvailable() throws Exception
+    void shouldNotStreamTxsAndReportErrorIfTheLocalDatabaseIsNotAvailable() throws Exception
     {
         // given
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
