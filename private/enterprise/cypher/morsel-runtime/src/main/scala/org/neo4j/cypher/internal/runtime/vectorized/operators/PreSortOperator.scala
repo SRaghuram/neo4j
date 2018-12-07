@@ -29,7 +29,7 @@ class PreSortOperator(val workIdentity: WorkIdentity,
 
     override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
-      val rowCloneForComparators = currentRow.createClone()
+      val rowCloneForComparators = currentRow.shallowCopy()
       val comparator: Comparator[Integer] = orderBy
         .map(MorselSorting.compareMorselIndexesByColumnOrder(rowCloneForComparators))
         .reduce((a, b) => a.thenComparing(b))

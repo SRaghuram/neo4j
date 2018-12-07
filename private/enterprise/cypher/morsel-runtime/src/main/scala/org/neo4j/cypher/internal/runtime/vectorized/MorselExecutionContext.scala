@@ -23,7 +23,7 @@ object MorselExecutionContext {
   val EMPTY_SINGLE_ROW = new MorselExecutionContext(Morsel.create(SlotConfiguration.empty, 1), 0, 0, 1, 0, SlotConfiguration.empty)
 
   def createSingleRow(): MorselExecutionContext =
-    EMPTY_SINGLE_ROW.createClone()
+    EMPTY_SINGLE_ROW.shallowCopy()
 }
 
 class MorselExecutionContext(private val morsel: Morsel,
@@ -68,6 +68,20 @@ class MorselExecutionContext(private val morsel: Morsel,
     * happens after one operator finishes writing to a morsel.
     */
   def finishedWriting(): Unit = validRows = currentRow
+
+  def createViewOfCurrentRow(): MorselExecutionContext = {
+    val view = shallowCopy()
+    view.limitToCurrentRow()
+    view
+  }
+
+  private def limitToCurrentRow(): Unit = {
+    validRows =
+      if (currentRow < validRows)
+        currentRow+1
+      else
+        currentRow
+  }
 
   def copyAllRowsFrom(input: ExecutionContext): Unit = input match {
     case other:MorselExecutionContext =>
@@ -156,7 +170,14 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   override def mergeWith(other: ExecutionContext): Unit = fail()
 
-  override def createClone(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, validRows, currentRow, slots)
+  override def createClone(): MorselExecutionContext =
+    // REV: This is used by some expressions with the expectation of being able to overwrite an
+    // identifier inside a nested scope, without affecting the data in the original row.
+    // That would _not_ work with a shallow copy. We could re-purpose this method to handle
+    // only that case and make a copy of the current row inside the morsel
+    // (e.g. by creating a SlottedExecutionContext and copying the current row into it)
+    // Use `shallowCopy()` everywhere else.
+    new MorselExecutionContext(morsel, longsPerRow, refsPerRow, validRows, currentRow, slots)
 
   override def +=(kv: (String, AnyValue)): MorselExecutionContext.this.type = fail()
 
