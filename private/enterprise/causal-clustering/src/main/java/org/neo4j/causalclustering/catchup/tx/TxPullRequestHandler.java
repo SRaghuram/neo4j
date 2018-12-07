@@ -129,9 +129,9 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         {
             txIdPromise = transactionIdStore.getLastCommittedTransactionId();
         }
-        catch ( IllegalStateException e )
+        catch ( RuntimeException e )
         {
-            log.info( "Failed to serve TxPullRequest because store is not available" );
+            log.info( "Failed to serve TxPullRequest. Reason: %s", e.getMessage() );
             return Prepare.fail( E_STORE_UNAVAILABLE );
         }
         if ( txIdPromise < firstTxId )
