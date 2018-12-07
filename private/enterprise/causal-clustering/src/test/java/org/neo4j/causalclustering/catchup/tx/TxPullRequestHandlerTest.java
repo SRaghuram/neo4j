@@ -77,7 +77,7 @@ public class TxPullRequestHandlerTest
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
         // when
-        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId ) );
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DEFAULT_DATABASE_NAME ) );
 
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
