@@ -104,6 +104,8 @@ public class StoreMigratorTest
         actualVersions.add( StoreVersion.STANDARD_V3_2.versionString() );
         assertFalse( CountsMigrator.countStoreRebuildRequired( StoreVersion.STANDARD_V3_4.versionString() ) );
         actualVersions.add( StoreVersion.STANDARD_V3_4.versionString() );
+        assertFalse( CountsMigrator.countStoreRebuildRequired( StoreVersion.STANDARD_V4_0.versionString() ) );
+        actualVersions.add( StoreVersion.STANDARD_V4_0.versionString() );
 
         assertTrue( CountsMigrator.countStoreRebuildRequired( StoreVersion.HIGH_LIMIT_V3_0_0.versionString() ) );
         actualVersions.add( StoreVersion.HIGH_LIMIT_V3_0_0.versionString() );
@@ -115,6 +117,8 @@ public class StoreMigratorTest
         actualVersions.add( StoreVersion.HIGH_LIMIT_V3_2_0.versionString() );
         assertFalse( CountsMigrator.countStoreRebuildRequired( StoreVersion.HIGH_LIMIT_V3_4_0.versionString() ) );
         actualVersions.add( StoreVersion.HIGH_LIMIT_V3_4_0.versionString() );
+        assertFalse( CountsMigrator.countStoreRebuildRequired( StoreVersion.HIGH_LIMIT_V4_0_0.versionString() ) );
+        actualVersions.add( StoreVersion.HIGH_LIMIT_V4_0_0.versionString() );
 
         assertEquals( expectedVersions, actualVersions );
     }
