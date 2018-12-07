@@ -27,9 +27,7 @@ Feature "ConstraintAcceptance": Scenario "Works fine with index and constraint"
 Feature "ConstraintAcceptance": Scenario "Works with property repeated in literal map in set"
 Feature "ConstraintAcceptance": Scenario "Works with property in map that gets set"
 Feature "ConstraintAcceptance": Scenario "Failing when creation would violate constraint"
-// TODO: FIXME runtime failure only in parallel
 Feature "Create": Scenario "Dependencies in creating multiple nodes"
-// TODO: FIXME runtime failure only in parallel
 Feature "Create": Scenario "Dependencies in creating multiple rels"
 Feature "DeleteAcceptance": Scenario "Return properties from deleted node"
 Feature "ForeachAcceptance": Scenario "Add labels inside FOREACH"

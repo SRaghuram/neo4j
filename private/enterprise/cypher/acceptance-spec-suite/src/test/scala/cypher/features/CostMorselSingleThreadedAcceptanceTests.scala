@@ -12,18 +12,18 @@ import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
 
-class CostSlottedWithCompiledExpressionsTCKTests extends EnterpriseBaseTCKTests {
+class CostMorselSingleThreadedAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
-  // If you want to only run a specific feature or scenario, go to the BaseTCKTests
+  // If you want to only run a specific feature or scenario, go to the BaseAcceptanceTest
 
   @TestFactory
-  def runCostSlotted(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostSlottedWithCompiledExpressionsTestConfig, new TestEnterpriseGraphDatabaseFactory())
+  def runCostMorselSingleThreaded(): util.Collection[DynamicTest] = {
+    createTests(scenarios, CostMorselSingleThreadedTestConfig, new TestEnterpriseGraphDatabaseFactory())
   }
 
   @Disabled
-  def generateBlacklistCostSlotted(): Unit = {
-    printComputedBlacklist(scenarios, CostSlottedWithCompiledExpressionsTestConfig, new TestEnterpriseGraphDatabaseFactory())
+  def generateBlacklistCostMorsel(): Unit = {
+    printComputedBlacklist(scenarios, CostMorselSingleThreadedTestConfig, new TestEnterpriseGraphDatabaseFactory())
     fail("Do not forget to add @Disabled to this method")
   }
 }
