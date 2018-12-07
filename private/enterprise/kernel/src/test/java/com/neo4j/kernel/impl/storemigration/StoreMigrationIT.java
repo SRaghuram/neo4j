@@ -29,7 +29,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.Service;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -38,10 +37,6 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
-import org.neo4j.kernel.impl.store.format.standard.StandardV2_3;
-import org.neo4j.kernel.impl.store.format.standard.StandardV3_0;
-import org.neo4j.kernel.impl.store.format.standard.StandardV3_2;
-import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.storemigration.RecordStoreVersionCheck;
 import org.neo4j.kernel.impl.storemigration.UpgradableDatabase;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
@@ -145,71 +140,11 @@ public class StoreMigrationIT
         recordFormats.add( f );
     }
 
-    @Service.Implementation( RecordFormats.Factory.class )
-    public static class Standard23Factory extends RecordFormats.Factory
-    {
-        public Standard23Factory()
-        {
-            super( StandardV2_3.STORE_VERSION );
-        }
-
-        @Override
-        public RecordFormats newInstance()
-        {
-            return StandardV2_3.RECORD_FORMATS;
-        }
-    }
-
-    @Service.Implementation( RecordFormats.Factory.class )
-    public static class Standard30Factory extends RecordFormats.Factory
-    {
-        public Standard30Factory()
-        {
-            super( StandardV3_0.STORE_VERSION );
-        }
-
-        @Override
-        public RecordFormats newInstance()
-        {
-            return StandardV3_0.RECORD_FORMATS;
-        }
-    }
-
-    @Service.Implementation( RecordFormats.Factory.class )
-    public static class Standard32Factory extends RecordFormats.Factory
-    {
-        public Standard32Factory()
-        {
-            super( StandardV3_2.STORE_VERSION );
-        }
-
-        @Override
-        public RecordFormats newInstance()
-        {
-            return StandardV3_2.RECORD_FORMATS;
-        }
-    }
-
-    @Service.Implementation( RecordFormats.Factory.class )
-    public static class Standard34Factory extends RecordFormats.Factory
-    {
-        public Standard34Factory()
-        {
-            super( StandardV3_4.STORE_VERSION );
-        }
-
-        @Override
-        public RecordFormats newInstance()
-        {
-            return StandardV3_4.RECORD_FORMATS;
-        }
-    }
-
     private static void createDb( RecordFormats recordFormat, File storeDir )
     {
         GraphDatabaseService database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
-                .setConfig( GraphDatabaseSettings.record_format, recordFormat.storeVersion() ).newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.record_format, recordFormat.name() ).newGraphDatabase();
         database.shutdown();
     }
 
@@ -223,7 +158,7 @@ public class StoreMigrationIT
     public void shouldMigrate() throws Exception
     {
         DatabaseLayout databaseLayout = testDir.databaseLayout( baseDirName( to, from ) );
-        GraphDatabaseService database = getGraphDatabaseService( databaseLayout.databaseDirectory(), from.storeVersion() );
+        GraphDatabaseService database = getGraphDatabaseService( databaseLayout.databaseDirectory(), from.name() );
 
         database.execute( "CREATE INDEX ON :Person(name)" );
         database.execute( "CREATE INDEX ON :Person(born)" );
@@ -248,7 +183,7 @@ public class StoreMigrationIT
         }
         database.shutdown();
 
-        database = getGraphDatabaseService( databaseLayout.databaseDirectory(), to.storeVersion() );
+        database = getGraphDatabaseService( databaseLayout.databaseDirectory(), to.name() );
         long afterNodes;
         long afterLabels;
         long afterKeys;
@@ -277,7 +212,7 @@ public class StoreMigrationIT
         assertEquals( beforeConstraints, afterConstraints ); //1
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService( );
         ConsistencyCheckService.Result result =
-                runConsistencyChecker( databaseLayout, fileSystemRule.get(), consistencyCheckService, to.storeVersion() );
+                runConsistencyChecker( databaseLayout, fileSystemRule.get(), consistencyCheckService, to.name() );
         if ( !result.isSuccessful() )
         {
             fail( "Database is inconsistent after migration." );
@@ -290,18 +225,18 @@ public class StoreMigrationIT
     }
 
     protected static ConsistencyCheckService.Result runConsistencyChecker( DatabaseLayout databaseLayout, FileSystemAbstraction fs,
-            ConsistencyCheckService consistencyCheckService, String storeVersion )
+            ConsistencyCheckService consistencyCheckService, String formatName )
             throws ConsistencyCheckIncompleteException
     {
-        Config config = Config.defaults( GraphDatabaseSettings.record_format, storeVersion );
+        Config config = Config.defaults( GraphDatabaseSettings.record_format, formatName );
         return consistencyCheckService.runFullConsistencyCheck( databaseLayout, config, ProgressMonitorFactory.NONE,
                 NullLogProvider.getInstance(), fs, false );
     }
 
-    protected static GraphDatabaseService getGraphDatabaseService( File db, String storeVersion )
+    protected static GraphDatabaseService getGraphDatabaseService( File db, String formatName )
     {
         return new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( db )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
-                .setConfig( GraphDatabaseSettings.record_format, storeVersion ).newGraphDatabase();
+                .setConfig( GraphDatabaseSettings.record_format, formatName ).newGraphDatabase();
     }
 }
