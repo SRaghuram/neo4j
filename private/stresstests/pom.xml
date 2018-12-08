@@ -57,6 +57,11 @@
             <artifactId>hamcrest-library</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-commercial</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.hdrhistogram</groupId>
             <artifactId>HdrHistogram</artifactId>
             <version>2.1.10</version>

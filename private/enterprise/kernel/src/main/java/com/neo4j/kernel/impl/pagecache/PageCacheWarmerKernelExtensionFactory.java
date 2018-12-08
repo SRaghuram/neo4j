@@ -37,7 +37,7 @@ public class PageCacheWarmerKernelExtensionFactory
 
         FileSystemAbstraction fileSystemAbstraction();
 
-        Database getDataSource();
+        Database getDatabase();
 
         LogService logService();
 
@@ -59,13 +59,13 @@ public class PageCacheWarmerKernelExtensionFactory
         PageCache pageCache = deps.pageCache();
         FileSystemAbstraction fs = deps.fileSystemAbstraction();
         LogService logService = deps.logService();
-        Database dataSourceManager = deps.getDataSource();
+        Database database = deps.getDatabase();
         Log log = logService.getInternalLog( PageCacheWarmer.class );
         Monitors monitors = deps.monitors();
         PageCacheWarmerMonitor monitor = monitors.newMonitor( PageCacheWarmerMonitor.class );
         monitors.addMonitorListener( new PageCacheWarmerLoggingMonitor( log ) );
         Config config = deps.config();
         return new PageCacheWarmerKernelExtension(
-                scheduler, databaseAvailabilityGuard, pageCache, fs, dataSourceManager, log, monitor, config );
+                scheduler, databaseAvailabilityGuard, pageCache, fs, database, log, monitor, config );
     }
 }
