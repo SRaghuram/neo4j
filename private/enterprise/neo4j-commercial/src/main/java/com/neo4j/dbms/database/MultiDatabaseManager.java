@@ -5,7 +5,6 @@
  */
 package com.neo4j.dbms.database;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +20,6 @@ import org.neo4j.graphdb.factory.module.DatabaseModule;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.helpers.Exceptions;
-import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
@@ -202,16 +200,6 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     {
         log.log( "Drop '%s' database.", databaseName );
         Database database = context.getDatabase();
-        // TODO: mark all database files as files that do not require flush and remove them.
-        // TODO: remove database transaction logs.
-        database.stop();
-        try
-        {
-            FileUtils.deleteRecursively( database.getDatabaseLayout().databaseDirectory() );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
-        }
+        database.drop();
     }
 }
