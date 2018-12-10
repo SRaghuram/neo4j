@@ -13,6 +13,7 @@ import org.neo4j.SchemaHelper;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.helpers.Exceptions;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenNameLookup;
 import org.neo4j.internal.kernel.api.TokenWrite;
@@ -25,6 +26,7 @@ import org.neo4j.internal.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.SilentTokenNameLookup;
+import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchConstraintException;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
@@ -36,12 +38,16 @@ import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngin
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.kernel.impl.store.record.ConstraintRule;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.storageengine.api.schema.IndexDescriptor;
 import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
+import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.values.storable.Values;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptySet;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.stringContainsInOrder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -54,6 +60,15 @@ public class UniquenessConstraintCreationIT
 {
     private static final String DUPLICATED_VALUE = "apa";
     private IndexDescriptor uniqueIndex;
+    private AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
+
+    @Override
+    protected TestGraphDatabaseFactory configure( TestGraphDatabaseFactory factory )
+    {
+        factory.setUserLogProvider( assertableLogProvider );
+        factory.setInternalLogProvider( assertableLogProvider );
+        return super.configure( factory );
+    }
 
     @Override
     int initializeLabelOrRelType( TokenWrite tokenWrite, String name ) throws KernelException
@@ -241,6 +256,37 @@ public class UniquenessConstraintCreationIT
                 ConstraintDescriptorFactory.uniqueForLabel( typeId, propertyKeyId ) );
         assertEquals( constraintRule.getId(), indexRule.getOwningConstraint().longValue() );
         assertEquals( indexRule.getId(), constraintRule.getOwnedIndex() );
+    }
+
+    @Test
+    public void shouldIncludeConflictWhenThrowingOnConstraintViolation()
+    {
+        // given
+        try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
+        {
+            db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
+            db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
+            db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
+            db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
+            tx.success();
+        }
+
+        // when
+        try
+        {
+            SchemaWrite statement = schemaWriteInNewTransaction();
+            statement.uniquePropertyConstraintCreate( descriptor );
+            commit();
+            fail( "Expected to fail on constraint violation" );
+        }
+        catch ( Throwable t )
+        {
+            // then
+            Throwable rootCause = Exceptions.rootCause( t );
+            assertThat( rootCause, instanceOf( IndexEntryConflictException.class ) );
+            assertThat( rootCause.getMessage(), stringContainsInOrder( asList( "Both node", "share the property value", "smurf" ) ) );
+        }
+        assertableLogProvider.assertContainsMessageMatching( stringContainsInOrder( asList( "Failed to populate index:", KEY, PROP ) ) );
     }
 
     private NeoStores neoStores()

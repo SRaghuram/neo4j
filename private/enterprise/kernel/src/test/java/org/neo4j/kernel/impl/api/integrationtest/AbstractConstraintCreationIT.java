@@ -35,6 +35,7 @@ import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchConstraintException;
 import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
@@ -87,10 +88,9 @@ public abstract class AbstractConstraintCreationIT<Constraint extends Constraint
     }
 
     @Override
-    protected GraphDatabaseService createGraphDatabase()
+    protected TestGraphDatabaseFactory createGraphDatabaseFactory()
     {
-        return new TestEnterpriseGraphDatabaseFactory().setFileSystem( fileSystemRule.get() )
-                .newEmbeddedDatabase( testDir.storeDir() );
+        return new TestEnterpriseGraphDatabaseFactory();
     }
 
     @Test
