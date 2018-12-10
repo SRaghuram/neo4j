@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.io.File;
 import java.util.List;
 import java.util.Optional;
 
@@ -180,6 +181,32 @@ class MultiDatabaseManagerIT
 
         databaseManager.dropDatabase( stoppedDatabase );
         assertFalse( databaseManager.getDatabaseContext( stoppedDatabase ).isPresent() );
+    }
+
+    @Test
+    void dropRemovesDatabaseFiles()
+    {
+        String databaseToDrop = "databaseToDrop";
+        DatabaseContext database = databaseManager.createDatabase( databaseToDrop );
+
+        File databaseDirectory = database.getDatabase().getDatabaseLayout().databaseDirectory();
+        assertTrue( databaseDirectory.exists() );
+
+        databaseManager.dropDatabase( databaseToDrop );
+        assertFalse( databaseDirectory.exists() );
+    }
+
+    @Test
+    void stopDoesNotRemovesDatabaseFiles()
+    {
+        String databaseToStop = "databaseToStop";
+        DatabaseContext database = databaseManager.createDatabase( databaseToStop );
+
+        File databaseDirectory = database.getDatabase().getDatabaseLayout().databaseDirectory();
+        assertTrue( databaseDirectory.exists() );
+
+        databaseManager.stopDatabase( databaseToStop );
+        assertTrue( databaseDirectory.exists() );
     }
 
     @Test
