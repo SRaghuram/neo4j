@@ -205,6 +205,51 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.toList should equal(List(Map("n.prop1" -> 42), Map("n.prop1" -> 43)))
   }
 
+  test("should access the correct cached property after distinct") {
+    for (i <- 41 to 100) createLabeledNode(Map("prop1" -> i), "Super")
+    graph.createIndex("Super", "prop1")
+
+    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH DISTINCT n.prop1 as y MATCH (n:Super) WHERE n.prop1 < y RETURN n.prop1", executeBefore = createSomeNodes)
+    result.executionPlanDescription() should {
+      not(includeSomewhere.aPlan("Projection").withDBHits()) and
+        includeSomewhere.aPlan("NodeIndexSeekByRange") and
+        includeSomewhere.aPlan("NodeIndexSeek")
+    }
+    result.toList should equal(List(Map("n.prop1" -> 41)))
+  }
+
+  test("should pass cached property through distinct when it's not part of a distinct column - node and property") {
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_4, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n, n.prop2 as b MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should (
+      not(includeSomewhere.aPlan("Projection")
+        .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
+        .withExactVariables("n", "cached[n.prop1]"))
+    result.toList should equal(List(Map("n.prop1" -> 40), Map("n.prop1" -> 40)))
+  }
+
+  test("should pass cached property through distinct when it's not part of a distinct column - single node") {
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_4, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should (
+      not(includeSomewhere.aPlan("Projection")
+      .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
+        .withExactVariables("n", "cached[n.prop1]"))
+    result.toList should equal(List(Map("n.prop1" -> 40), Map("n.prop1" -> 40)))
+  }
+
+  test("should pass cached property through distinct when it's not part of a distinct column - multiple nodes") {
+    execute("MATCH (n:Awesome {prop1: 40})-[:R]-(b) MERGE (b)-[:R2]->()")
+
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_4, "PROFILE MATCH (n:Awesome {prop1: 40})-[:R]-(b) WITH DISTINCT n, b MATCH (b)-[:R2]->() RETURN n.prop1", executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should (
+      not(includeSomewhere.aPlan("Projection")
+        .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
+        .withExactVariables("n", "cached[n.prop1]"))
+    result.toList should equal(List(Map("n.prop1" -> 40)))
+  }
+
   test("should plan exists with GetValue when the property is projected") {
     val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE exists(n.prop3) RETURN n.prop3", executeBefore = createSomeNodes)
 
