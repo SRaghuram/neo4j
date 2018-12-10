@@ -186,6 +186,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case _: MapProjection => throw new InternalException("should have been rewritten away")
+    case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")
 
     case DesugaredMapProjection(name, items, includeAllProps) =>
       val expressions = items.flatMap(i => internalCompileExpression(i.exp, currentContext))
@@ -1663,7 +1664,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             in.fields, in.variables ++ vCURSORS, in.nullCheck))
         case _: PatternExpression => None//TODO
         case _: NestedPipeExpression => None//TODO?
-        case _: NestedPlanExpression => None//TODO
+        case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")
         case _ => None
       }
 
