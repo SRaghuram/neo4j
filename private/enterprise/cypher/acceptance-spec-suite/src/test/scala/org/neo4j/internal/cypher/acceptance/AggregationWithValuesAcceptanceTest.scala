@@ -145,7 +145,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result.toList should equal(List(Map("min(property)" -> 40)))
   }
 
-  test("should use index provided values after multiple renamings") {
+  test("should use index provided values after multiple renamings of property") {
     val query =
       """
         | MATCH (n: Awesome)
@@ -154,6 +154,26 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
         | RETURN min(prop)
       """.stripMargin
 
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
+
+    result.toList should equal(List(Map("min(prop)" -> 40)))
+  }
+
+  test("should use index provided values with renamed variable") {
+    val query = "MATCH (n:Awesome) WITH n as m RETURN min(m.prop1)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
+
+    result.toList should equal(List(Map("min(m.prop1)" -> 40)))
+  }
+
+  test("should use index provided values with renamed variable and property") {
+    val query = "MATCH (n:Awesome) WITH n as m WITH m.prop1 AS prop RETURN min(prop)"
     val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should

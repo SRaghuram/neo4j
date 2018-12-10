@@ -255,7 +255,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
       result.toList should equal(List(expected))
     }
 
-    test(s"$cypherToken-$functionName: should use provided index order with renamed variables") {
+    test(s"$cypherToken-$functionName: should use provided index order with renamed property") {
       val result = executeWith(Configs.InterpretedAndSlotted,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n.prop1 AS prop RETURN $functionName(prop) AS extreme", executeBefore = createSomeNodes)
 
@@ -265,6 +265,50 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
             .onTopOf(aPlan("Projection")
               .onTopOf(aPlan("Projection")
                 .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+              )
+            )
+          )
+
+      val expected = expectedOrder(List(
+        Map("extreme" -> 40), // min
+        Map("extreme" -> 44) // max
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+    test(s"$cypherToken-$functionName: should use provided index order with renamed variable") {
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n as m RETURN $functionName(m.prop1) AS extreme", executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("Optional")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("Projection")
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+              )
+            )
+          )
+
+      val expected = expectedOrder(List(
+        Map("extreme" -> 40), // min
+        Map("extreme" -> 44) // max
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+    test(s"$cypherToken-$functionName: should use provided index order with renamed variable and property") {
+      val result = executeWith(Configs.InterpretedAndSlotted,
+        s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n as m WITH m.prop1 AS prop RETURN $functionName(prop) AS extreme", executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("Optional")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("Projection")
+                .onTopOf(aPlan("Projection")
+                  .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+                )
               )
             )
           )
