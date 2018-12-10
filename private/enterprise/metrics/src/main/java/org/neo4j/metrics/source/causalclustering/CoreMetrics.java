@@ -10,8 +10,8 @@ import com.codahale.metrics.MetricRegistry;
 
 import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.core.consensus.CoreMetaData;
-import org.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.CoreMetaData;
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;

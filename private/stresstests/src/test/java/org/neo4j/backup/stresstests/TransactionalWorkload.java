@@ -7,7 +7,7 @@ package org.neo4j.backup.stresstests;
 
 import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.stresstests.Control;
+import com.neo4j.causalclustering.stresstests.Control;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;

@@ -7,8 +7,8 @@ package org.neo4j.helper;
 
 import java.util.function.Predicate;
 
-import org.neo4j.causalclustering.catchup.CatchupResult;
-import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
+import com.neo4j.causalclustering.catchup.CatchupResult;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 
 import static java.util.Objects.requireNonNull;
 

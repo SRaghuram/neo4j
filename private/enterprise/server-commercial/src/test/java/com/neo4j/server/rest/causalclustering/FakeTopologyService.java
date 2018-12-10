@@ -13,16 +13,16 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import org.neo4j.causalclustering.discovery.ClientConnectorAddresses;
-import org.neo4j.causalclustering.discovery.CoreServerInfo;
-import org.neo4j.causalclustering.discovery.CoreTopology;
-import org.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
-import org.neo4j.causalclustering.discovery.RoleInfo;
-import org.neo4j.causalclustering.discovery.TopologyService;
-import org.neo4j.causalclustering.identity.ClusterId;
-import org.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.CoreServerInfo;
+import com.neo4j.causalclustering.discovery.CoreTopology;
+import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 
 class FakeTopologyService implements TopologyService

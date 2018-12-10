@@ -13,7 +13,7 @@ import java.util.Collection;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 import static com.neo4j.server.rest.causalclustering.CausalClusteringService.BASE_PATH;

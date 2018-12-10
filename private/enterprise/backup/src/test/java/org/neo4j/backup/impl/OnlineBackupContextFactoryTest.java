@@ -17,7 +17,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.kernel.configuration.Config;

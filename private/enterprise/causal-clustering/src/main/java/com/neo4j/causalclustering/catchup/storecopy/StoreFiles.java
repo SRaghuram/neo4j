@@ -1,0 +1,156 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.causalclustering.catchup.storecopy;
+
+import com.neo4j.causalclustering.identity.StoreId;
+
+import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.StandardCopyOption;
+import java.util.Collection;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+
+import org.neo4j.io.fs.FileHandle;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.impl.store.MetaDataStore;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+
+public class StoreFiles
+{
+    private static final FilenameFilter STORE_FILE_FILTER = ( dir, name ) ->
+    {
+        // Skip log files and tx files from temporary database
+        return !name.startsWith( "metrics" ) && !name.startsWith( "temp-copy" ) &&
+               !name.startsWith( "raft-messages." ) && !name.startsWith( "debug." ) &&
+               !name.startsWith( "data" ) && !name.startsWith( "store_lock" );
+    };
+
+    private final FilenameFilter fileFilter;
+    private FileSystemAbstraction fs;
+    private PageCache pageCache;
+
+    public StoreFiles( FileSystemAbstraction fs, PageCache pageCache )
+    {
+        this( fs, pageCache, STORE_FILE_FILTER );
+    }
+
+    public StoreFiles( FileSystemAbstraction fs, PageCache pageCache, FilenameFilter fileFilter )
+    {
+        this.fs = fs;
+        this.pageCache = pageCache;
+        this.fileFilter = fileFilter;
+    }
+
+    public void delete( File storeDir, LogFiles logFiles ) throws IOException
+    {
+        // 'files' can be null if the directory doesn't exist. This is fine, we just ignore it then.
+        File[] files = fs.listFiles( storeDir, fileFilter );
+        if ( files != null )
+        {
+            for ( File file : files )
+            {
+                fs.deleteRecursively( file );
+            }
+        }
+
+        File[] txLogs = fs.listFiles( logFiles.logFilesDirectory() );
+        if ( txLogs != null )
+        {
+            for ( File txLog : txLogs )
+            {
+                fs.deleteFile( txLog );
+            }
+        }
+
+        Iterable<FileHandle> iterator = acceptedPageCachedFiles( storeDir )::iterator;
+        for ( FileHandle fh : iterator )
+        {
+            fh.delete();
+        }
+    }
+
+    private Stream<FileHandle> acceptedPageCachedFiles( File databaseDirectory ) throws IOException
+    {
+        try
+        {
+            Stream<FileHandle> stream = fs.streamFilesRecursive( databaseDirectory );
+            Predicate<FileHandle> acceptableFiles = fh -> fileFilter.accept( databaseDirectory, fh.getRelativeFile().getPath() );
+            return stream.filter( acceptableFiles );
+        }
+        catch ( NoSuchFileException e )
+        {
+            // This is fine. Just ignore empty or non-existing directories.
+            return Stream.empty();
+        }
+    }
+
+    public void moveTo( File source, File target, LogFiles logFiles ) throws IOException
+    {
+        fs.mkdirs( logFiles.logFilesDirectory() );
+        for ( File candidate : fs.listFiles( source, fileFilter ) )
+        {
+            File destination = logFiles.isLogFile( candidate) ? logFiles.logFilesDirectory() : target;
+            fs.moveToDirectory( candidate, destination );
+        }
+
+        Iterable<FileHandle> fileHandles = acceptedPageCachedFiles( source )::iterator;
+        for ( FileHandle fh : fileHandles )
+        {
+            fh.rename( new File( target, fh.getRelativeFile().getPath() ), StandardCopyOption.REPLACE_EXISTING );
+        }
+    }
+
+    public boolean isEmpty( File storeDir, Collection<File> filesToLookFor ) throws IOException
+    {
+        // 'files' can be null if the directory doesn't exist. This is fine, we just ignore it then.
+        File[] files = fs.listFiles( storeDir, fileFilter );
+        if ( files != null )
+        {
+            for ( File file : files )
+            {
+                if ( filesToLookFor.contains( file ) )
+                {
+                    return false;
+                }
+            }
+        }
+
+        Iterable<FileHandle> fileHandles = acceptedPageCachedFiles( storeDir )::iterator;
+        for ( FileHandle fh : fileHandles )
+        {
+            if ( filesToLookFor.contains( fh.getFile() ) )
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Read store ID from the metadata store.
+     *
+     * @param databaseLayout the database layout.
+     * @return store ID or {@code null} if metadata store does not exist.
+     * @throws IOException if there is an error while reading the metadata store file.
+     */
+    public StoreId readStoreId( DatabaseLayout databaseLayout ) throws IOException
+    {
+        File neoStoreFile = databaseLayout.metadataStore();
+        if ( !fs.fileExists( neoStoreFile ) )
+        {
+            return null;
+        }
+        org.neo4j.storageengine.api.StoreId kernelStoreId = MetaDataStore.getStoreId( pageCache, neoStoreFile );
+        return new StoreId( kernelStoreId.getCreationTime(), kernelStoreId.getRandomId(),
+                kernelStoreId.getUpgradeTime(), kernelStoreId.getUpgradeId() );
+    }
+}

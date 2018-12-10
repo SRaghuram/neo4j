@@ -7,7 +7,7 @@ package org.neo4j.metrics.source.causalclustering;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.causalclustering.catchup.tx.TxRetryMonitor;
+import com.neo4j.causalclustering.catchup.tx.TxRetryMonitor;
 
 
 class TxRetryMetric implements TxRetryMonitor

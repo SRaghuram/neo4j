@@ -15,8 +15,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.core.consensus.RaftMessageProcessingMonitor;
-import org.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.RaftMessageProcessingMonitor;
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
 
 public class RaftMessageProcessingMetric implements RaftMessageProcessingMonitor
 {

@@ -5,7 +5,7 @@
  */
 package org.neo4j.helper;
 
-import org.neo4j.causalclustering.stresstests.Control;
+import com.neo4j.causalclustering.stresstests.Control;
 
 public abstract class Workload implements Runnable
 {

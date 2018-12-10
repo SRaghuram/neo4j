@@ -5,7 +5,7 @@
  */
 package com.neo4j.commercial.edition;
 
-import com.neo4j.causalclustering.catchup.CommercialCatchupServerHandler;
+import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
@@ -18,11 +18,11 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.common.PipelineBuilders;
-import org.neo4j.causalclustering.core.SupportedProtocolCreator;
-import org.neo4j.causalclustering.core.TransactionBackupServiceProvider;
-import org.neo4j.causalclustering.net.InstalledProtocolHandler;
-import org.neo4j.causalclustering.net.Server;
+import com.neo4j.causalclustering.common.PipelineBuilders;
+import com.neo4j.causalclustering.core.SupportedProtocolCreator;
+import com.neo4j.causalclustering.core.TransactionBackupServiceProvider;
+import com.neo4j.causalclustering.net.InstalledProtocolHandler;
+import com.neo4j.causalclustering.net.Server;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -182,7 +182,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
                 supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
-                new CommercialCatchupServerHandler( databaseManagerSupplier, internalLogProvider, fs ),
+                new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, internalLogProvider, fs ),
                 new InstalledProtocolHandler(),
                 config.get( GraphDatabaseSettings.active_database ),
                 jobScheduler,

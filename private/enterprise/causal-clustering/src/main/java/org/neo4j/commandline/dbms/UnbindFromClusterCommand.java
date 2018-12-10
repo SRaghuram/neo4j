@@ -10,7 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
+import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;

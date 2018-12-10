@@ -1,0 +1,121 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.causalclustering.protocol.handshake;
+
+import com.neo4j.causalclustering.messaging.Channel;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.util.Collection;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
+import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
+
+@RunWith( Parameterized.class )
+public class HandshakeClientEnsureMagicTest
+{
+    private CompletableFuture<ProtocolStack> protocolStackCompletableFuture;
+
+    @Parameterized.Parameters( name = "{0}" )
+    public static Collection<ClientMessage> data()
+    {
+        return asList(
+                new ApplicationProtocolResponse( StatusCode.SUCCESS, "protocol", TestProtocols.TestApplicationProtocols.RAFT_1.implementation() ),
+                new ModifierProtocolResponse( StatusCode.SUCCESS, "modifier", TestProtocols.TestModifierProtocols.LZ4.implementation() ),
+                new SwitchOverResponse( StatusCode.SUCCESS )
+        );
+    }
+
+    @Parameterized.Parameter
+    public ClientMessage message;
+
+    private Channel channel = mock( Channel.class );
+
+    private ApplicationSupportedProtocols supportedApplicationProtocol =
+            new ApplicationSupportedProtocols( RAFT, TestProtocols.TestApplicationProtocols.listVersionsOf( RAFT ) );
+    private ApplicationProtocolRepository applicationProtocolRepository =
+            new ApplicationProtocolRepository( TestProtocols.TestApplicationProtocols.values(), supportedApplicationProtocol );
+    private ModifierProtocolRepository modifierProtocolRepository =
+            new ModifierProtocolRepository( TestProtocols.TestModifierProtocols.values(), emptyList() );
+
+    private HandshakeClient client = new HandshakeClient();
+
+    @Before
+    public void setUp()
+    {
+        client.initiate( channel, applicationProtocolRepository, modifierProtocolRepository );
+        protocolStackCompletableFuture = client.protocol();
+    }
+
+    @Test( expected = IllegalStateException.class )
+    public void shouldThrowIfMagicHasNotBeenSent()
+    {
+        message.dispatch( client );
+    }
+
+    @Test( expected = ClientHandshakeException.class )
+    public void shouldCompleteExceptionallyIfMagicHasNotBeenSent() throws Throwable
+    {
+        try
+        {
+            message.dispatch( client );
+        }
+        catch ( Exception ignored )
+        {
+            // swallow
+        }
+
+        try
+        {
+            protocolStackCompletableFuture.getNow( null );
+        }
+        catch ( CompletionException ex )
+        {
+            throw ex.getCause();
+        }
+    }
+
+    @Test
+    public void shouldNotThrowIfMagicHasBeenSent()
+    {
+        // given
+        InitialMagicMessage.instance().dispatch( client );
+
+        // when
+        message.dispatch( client );
+
+        // then pass
+    }
+
+    @Test
+    public void shouldNotCompleteExceptionallyIfMagicHasBeenSent()
+    {
+        // given
+        InitialMagicMessage.instance().dispatch( client );
+
+        // when
+        message.dispatch( client );
+
+        // then future should either not complete exceptionally or do so for non-magic reasons
+        try
+        {
+            protocolStackCompletableFuture.getNow( null );
+        }
+        catch ( CompletionException ex )
+        {
+            assertThat( ex.getMessage().toLowerCase(), not( containsString( "magic" ) ) );
+        }
+    }
+}

@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import org.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import org.neo4j.ssl.SslPolicy;
 
 public class SslSharedDiscoveryServiceFactory extends SharedDiscoveryServiceFactory implements SslDiscoveryServiceFactory

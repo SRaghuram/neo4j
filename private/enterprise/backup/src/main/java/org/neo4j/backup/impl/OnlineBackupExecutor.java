@@ -7,8 +7,8 @@ package org.neo4j.backup.impl;
 
 import java.io.OutputStream;
 
-import org.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
-import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
+import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.com.storecopy.FileMoveProvider;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;

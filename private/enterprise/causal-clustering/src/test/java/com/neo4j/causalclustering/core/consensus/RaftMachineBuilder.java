@@ -1,0 +1,191 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.causalclustering.core.consensus;
+
+import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
+import com.neo4j.causalclustering.core.consensus.log.RaftLog;
+import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
+import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
+import com.neo4j.causalclustering.core.consensus.membership.RaftGroup;
+import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
+import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
+import com.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
+import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
+import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
+import com.neo4j.causalclustering.core.consensus.term.TermState;
+import com.neo4j.causalclustering.core.consensus.vote.VoteState;
+import com.neo4j.causalclustering.core.replication.SendToMyself;
+import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
+import com.neo4j.causalclustering.core.state.storage.StateStorage;
+import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.messaging.Inbound;
+import com.neo4j.causalclustering.messaging.Outbound;
+
+import java.io.IOException;
+import java.time.Clock;
+import java.time.Duration;
+
+import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.time.Clocks;
+
+public class RaftMachineBuilder
+{
+    private final MemberId member;
+
+    private int expectedClusterSize;
+    private RaftGroup.Builder memberSetBuilder;
+
+    private TermState termState = new TermState();
+    private StateStorage<TermState> termStateStorage = new InMemoryStateStorage<>( termState );
+    private StateStorage<VoteState> voteStateStorage = new InMemoryStateStorage<>( new VoteState() );
+    private RaftLog raftLog = new InMemoryRaftLog();
+    private TimerService timerService;
+
+    private Inbound<RaftMessages.RaftMessage> inbound = handler -> {};
+    private Outbound<MemberId, RaftMessages.RaftMessage> outbound = ( to, message, block ) -> {};
+
+    private LogProvider logProvider = NullLogProvider.getInstance();
+    private Clock clock = Clocks.systemClock();
+
+    private long term = termState.currentTerm();
+
+    private long electionTimeout = 500;
+    private long heartbeatInterval = 150;
+
+    private long catchupTimeout = 30000;
+    private long retryTimeMillis = electionTimeout / 2;
+    private int catchupBatchSize = 64;
+    private int maxAllowedShippingLag = 256;
+    private StateStorage<RaftMembershipState> raftMembership =
+            new InMemoryStateStorage<>( new RaftMembershipState() );
+    private Monitors monitors = new Monitors();
+    private CommitListener commitListener = commitIndex -> {};
+    private InFlightCache inFlightCache = new ConsecutiveInFlightCache();
+
+    public RaftMachineBuilder( MemberId member, int expectedClusterSize, RaftGroup.Builder memberSetBuilder )
+    {
+        this.member = member;
+        this.expectedClusterSize = expectedClusterSize;
+        this.memberSetBuilder = memberSetBuilder;
+    }
+
+    public RaftMachine build()
+    {
+        termState.update( term );
+        LeaderAvailabilityTimers
+                leaderAvailabilityTimers = new LeaderAvailabilityTimers( Duration.ofMillis( electionTimeout ), Duration.ofMillis( heartbeatInterval ), clock,
+                timerService, logProvider );
+        SendToMyself leaderOnlyReplicator = new SendToMyself( member, outbound );
+        RaftMembershipManager membershipManager = new RaftMembershipManager( leaderOnlyReplicator,
+                memberSetBuilder, raftLog, logProvider, expectedClusterSize, leaderAvailabilityTimers.getElectionTimeout(), clock, catchupTimeout,
+                raftMembership );
+        membershipManager.setRecoverFromIndexSupplier( () -> 0 );
+        RaftLogShippingManager logShipping =
+                new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, clock, member, membershipManager,
+                        retryTimeMillis, catchupBatchSize, maxAllowedShippingLag, inFlightCache );
+        RaftMachine raft = new RaftMachine( member, termStateStorage, voteStateStorage, raftLog, leaderAvailabilityTimers, outbound, logProvider,
+                membershipManager, logShipping, inFlightCache, false, false, monitors );
+        inbound.registerHandler( incomingMessage ->
+        {
+            try
+            {
+                ConsensusOutcome outcome = raft.handle( incomingMessage );
+                commitListener.notifyCommitted( outcome.getCommitIndex() );
+            }
+            catch ( IOException e )
+            {
+                throw new RuntimeException( e );
+            }
+        } );
+
+        try
+        {
+            membershipManager.start();
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+
+        return raft;
+    }
+
+    public RaftMachineBuilder electionTimeout( long electionTimeout )
+    {
+        this.electionTimeout = electionTimeout;
+        return this;
+    }
+
+    public RaftMachineBuilder heartbeatInterval( long heartbeatInterval )
+    {
+        this.heartbeatInterval = heartbeatInterval;
+        return this;
+    }
+
+    public RaftMachineBuilder timerService( TimerService timerService )
+    {
+        this.timerService = timerService;
+        return this;
+    }
+
+    public RaftMachineBuilder outbound( Outbound<MemberId, RaftMessages.RaftMessage> outbound )
+    {
+        this.outbound = outbound;
+        return this;
+    }
+
+    public RaftMachineBuilder inbound( Inbound<RaftMessages.RaftMessage> inbound )
+    {
+        this.inbound = inbound;
+        return this;
+    }
+
+    public RaftMachineBuilder raftLog( RaftLog raftLog )
+    {
+        this.raftLog = raftLog;
+        return this;
+    }
+
+    public RaftMachineBuilder inFlightCache( InFlightCache inFlightCache )
+    {
+        this.inFlightCache = inFlightCache;
+        return this;
+    }
+
+    public RaftMachineBuilder clock( Clock clock )
+    {
+        this.clock = clock;
+        return this;
+    }
+
+    public RaftMachineBuilder commitListener( CommitListener commitListener )
+    {
+        this.commitListener = commitListener;
+        return this;
+    }
+
+    RaftMachineBuilder monitors( Monitors monitors )
+    {
+        this.monitors = monitors;
+        return this;
+    }
+
+    public RaftMachineBuilder term( long term )
+    {
+        this.term = term;
+        return this;
+    }
+
+    public interface CommitListener
+    {
+        /**
+         * Called when the highest committed index increases.
+         */
+        void notifyCommitted( long commitIndex );
+    }
+}

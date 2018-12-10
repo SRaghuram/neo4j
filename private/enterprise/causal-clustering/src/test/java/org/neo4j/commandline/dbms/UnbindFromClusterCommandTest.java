@@ -5,6 +5,7 @@
  */
 package org.neo4j.commandline.dbms;
 
+import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -20,7 +21,6 @@ import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.OutsideWorld;

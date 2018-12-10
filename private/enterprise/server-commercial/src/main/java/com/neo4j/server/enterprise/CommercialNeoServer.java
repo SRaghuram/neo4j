@@ -18,8 +18,9 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
+
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;

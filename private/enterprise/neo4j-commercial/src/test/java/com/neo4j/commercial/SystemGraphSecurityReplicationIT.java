@@ -5,7 +5,7 @@
  */
 package com.neo4j.commercial;
 
-import com.neo4j.causalclustering.discovery.CommercialCluster;
+import com.neo4j.causalclustering.common.SecureCluster;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
@@ -22,10 +22,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.causalclustering.core.CoreClusterMember;
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
-import org.neo4j.causalclustering.discovery.IpFamily;
-import org.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.causalclustering.discovery.IpFamily;
+import com.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -64,7 +64,7 @@ class SystemGraphSecurityReplicationIT
     @Inject
     private DefaultFileSystemAbstraction fs;
 
-    private CommercialCluster cluster;
+    private SecureCluster cluster;
 
     @BeforeEach
     void setup() throws Exception
@@ -77,7 +77,7 @@ class SystemGraphSecurityReplicationIT
         int noOfCoreMembers = 3;
         int noOfReadReplicas = 3;
 
-        cluster = new CommercialCluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, new SslHazelcastDiscoveryServiceFactory(), params,
+        cluster = new SecureCluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, new SslHazelcastDiscoveryServiceFactory(), params,
                 emptyMap(), params, emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
 
         cluster.start();

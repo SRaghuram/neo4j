@@ -32,8 +32,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.causalclustering.core.CoreGraphDatabase;
-import org.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;

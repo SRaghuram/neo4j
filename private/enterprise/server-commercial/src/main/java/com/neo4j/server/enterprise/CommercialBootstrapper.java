@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.neo4j.causalclustering.core.CausalClusterConfigurationValidator;
+import com.neo4j.causalclustering.core.CausalClusterConfigurationValidator;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConfigurationValidator;

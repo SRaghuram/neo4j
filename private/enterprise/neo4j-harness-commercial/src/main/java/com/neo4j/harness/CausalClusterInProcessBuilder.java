@@ -5,6 +5,7 @@
  */
 package com.neo4j.harness;
 
+import com.neo4j.causalclustering.discovery.DiscoveryImplementation;
 import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
@@ -22,8 +23,8 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.ServerControls;
 import org.neo4j.harness.TestServerBuilder;
@@ -59,7 +60,7 @@ public class CausalClusterInProcessBuilder
         private PortPickingFactory portFactory = PortPickingFactory.DEFAULT;
         private final Map<String, String> config = new HashMap<>();
         private List<String> databases = new ArrayList<>( Collections.singletonList( "default" ) );
-        private DiscoveryServiceFactorySelector.DiscoveryImplementation discoveryServiceFactory = DiscoveryServiceFactorySelector.DEFAULT;
+        private DiscoveryImplementation discoveryServiceFactory = DiscoveryServiceFactorySelector.DEFAULT;
 
         @Override
         public WithCores withBuilder( BiFunction<File,String,CommercialInProcessServerBuilder> serverBuilder )
@@ -119,7 +120,7 @@ public class CausalClusterInProcessBuilder
         }
 
         @Override
-        public Builder withDiscoveryServiceFactory( DiscoveryServiceFactorySelector.DiscoveryImplementation discoveryServiceFactory )
+        public Builder withDiscoveryServiceFactory( DiscoveryImplementation discoveryServiceFactory )
         {
             this.discoveryServiceFactory = discoveryServiceFactory;
             return this;
@@ -172,7 +173,7 @@ public class CausalClusterInProcessBuilder
 
         Builder withOptionalDatabases( List<String> databaseNames );
 
-        Builder withDiscoveryServiceFactory( DiscoveryServiceFactorySelector.DiscoveryImplementation discoveryServiceFactory );
+        Builder withDiscoveryServiceFactory( DiscoveryImplementation discoveryServiceFactory );
     }
 
     /**
@@ -260,7 +261,7 @@ public class CausalClusterInProcessBuilder
         private final Log log;
         private final PortPickingFactory portFactory;
         private final Map<String,String> config;
-        private final DiscoveryServiceFactorySelector.DiscoveryImplementation discoveryServiceFactory;
+        private final DiscoveryImplementation discoveryServiceFactory;
         private final BiFunction<File,String,CommercialInProcessServerBuilder> serverBuilder;
 
         private List<ServerControls> coreControls = synchronizedList( new ArrayList<>() );

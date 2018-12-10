@@ -20,10 +20,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.common.Cluster;
-import org.neo4j.causalclustering.common.ClusterMember;
-import org.neo4j.causalclustering.core.CoreClusterMember;
-import org.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -37,7 +37,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.causalclustering.ClusterRule;
+import com.neo4j.test.causalclustering.ClusterRule;
 
 import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;

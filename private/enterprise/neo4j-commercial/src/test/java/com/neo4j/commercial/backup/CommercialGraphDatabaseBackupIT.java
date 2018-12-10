@@ -25,7 +25,7 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
+import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
 import static org.neo4j.graphdb.Label.label;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )

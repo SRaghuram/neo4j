@@ -8,7 +8,9 @@ package org.neo4j.backup.impl;
 import org.junit.Test;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -21,19 +23,23 @@ public class BackupSupportingClassesFactoryProviderTest
     {
         assertEquals( 1, findInstancesOf( BackupSupportingClassesFactoryProvider.class,
                 allAvailableSupportingClassesFactories() ).size() );
-        assertEquals( 2, allAvailableSupportingClassesFactories().size() );
+        assertEquals( 3, allAvailableSupportingClassesFactories().size() );
     }
 
     @Test
-    public void testDefaultModuleIsPrioritisedOverDummyModule()
+    public void testAllModulesArePrioritisedOverDummyModule()
     {
-        assertEquals( BackupSupportingClassesFactoryProvider.class,
-                getProvidersByPriority().findFirst().get().getClass() );
+        assertEquals( OnlineBackupCommandProviderTest.DummyProvider.class, getLastSupportingClassesFactory().get().getClass() );
     }
 
     public static Collection<BackupSupportingClassesFactoryProvider> allAvailableSupportingClassesFactories()
     {
         return getProvidersByPriority().collect( toList() );
+    }
+
+    public static Optional<BackupSupportingClassesFactoryProvider> getLastSupportingClassesFactory()
+    {
+        return getProvidersByPriority().reduce( ( first, second ) -> second );
     }
 
     public static <DESIRED extends BackupSupportingClassesFactoryProvider> Collection<DESIRED> findInstancesOf(

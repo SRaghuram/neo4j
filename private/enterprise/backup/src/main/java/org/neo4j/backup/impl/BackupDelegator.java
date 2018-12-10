@@ -7,14 +7,14 @@ package org.neo4j.backup.impl;
 
 import java.io.IOException;
 
-import org.neo4j.causalclustering.catchup.CatchupClientFactory;
-import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import org.neo4j.causalclustering.catchup.CatchupResult;
-import org.neo4j.causalclustering.catchup.storecopy.RemoteStore;
-import org.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
-import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
-import org.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import org.neo4j.causalclustering.identity.StoreId;
+import com.neo4j.causalclustering.catchup.CatchupClientFactory;
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupResult;
+import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
+import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import com.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;

@@ -7,7 +7,7 @@ package org.neo4j.metrics.source.causalclustering;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor;
+import com.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor;
 
 public class ReplicationMetric implements ReplicationMonitor
 {

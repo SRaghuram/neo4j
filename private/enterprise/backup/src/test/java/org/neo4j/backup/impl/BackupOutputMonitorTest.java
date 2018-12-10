@@ -7,7 +7,7 @@ package org.neo4j.backup.impl;
 
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.AssertableLogProvider;
 

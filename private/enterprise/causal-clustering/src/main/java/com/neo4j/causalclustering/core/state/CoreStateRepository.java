@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.causalclustering.core.state;
+
+import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.Optional;
+
+public interface CoreStateRepository
+{
+    void augmentSnapshot( CoreSnapshot coreSnapshot );
+
+    void installSnapshot( CoreSnapshot coreSnapshot );
+
+    void flush( long lastApplied ) throws IOException;
+
+    CommandDispatcher commandDispatcher();
+
+    long getLastAppliedIndex();
+
+    long getLastFlushed();
+
+    Map<String,PerDatabaseCoreStateComponents> getAllDatabaseStates();
+
+    Optional<PerDatabaseCoreStateComponents> getDatabaseState( String databaseName );
+}

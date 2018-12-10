@@ -5,7 +5,7 @@
  */
 package org.neo4j.backup.impl;
 
-import org.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 

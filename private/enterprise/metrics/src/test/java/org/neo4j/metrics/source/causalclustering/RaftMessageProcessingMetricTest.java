@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
-import org.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

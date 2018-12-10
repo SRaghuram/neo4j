@@ -8,7 +8,7 @@ package org.neo4j.metrics.source.causalclustering;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
-import org.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
+import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 
 class PullRequestMetric implements PullRequestMonitor
 {

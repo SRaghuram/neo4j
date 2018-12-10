@@ -1,1 +1,1 @@
-org.neo4j.causalclustering.core.CausalClusteringSettings
+com.neo4j.causalclustering.core.CausalClusteringSettings

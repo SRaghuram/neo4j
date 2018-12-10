@@ -46,7 +46,7 @@ public class UnbindFromClusterCommandProvider extends AdminCommand.Provider
     public String description()
     {
         return "Removes cluster state data for the specified database, so that the " +
-               "instance can rebind to a new or recovered cluster.";
+                "instance can rebind to a new or recovered cluster.";
     }
 
     @Override

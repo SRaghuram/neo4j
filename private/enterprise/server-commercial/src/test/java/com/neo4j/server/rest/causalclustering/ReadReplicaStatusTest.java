@@ -22,10 +22,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.ws.rs.core.Response;
 
-import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import org.neo4j.causalclustering.discovery.RoleInfo;
-import org.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
+import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;

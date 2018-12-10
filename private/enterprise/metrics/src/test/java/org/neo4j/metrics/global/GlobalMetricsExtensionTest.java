@@ -11,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.core.consensus.CoreMetaData;
+import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.configuration.Config;

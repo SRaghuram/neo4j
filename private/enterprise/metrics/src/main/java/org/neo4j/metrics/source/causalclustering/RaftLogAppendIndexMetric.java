@@ -7,7 +7,7 @@ package org.neo4j.metrics.source.causalclustering;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogAppendIndexMonitor;
+import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogAppendIndexMonitor;
 
 public class RaftLogAppendIndexMetric implements RaftLogAppendIndexMonitor
 {

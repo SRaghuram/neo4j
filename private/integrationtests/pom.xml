@@ -273,7 +273,13 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-causal-clustering-commercial</artifactId>
+            <artifactId>neo4j-backup</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-causal-clustering</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>

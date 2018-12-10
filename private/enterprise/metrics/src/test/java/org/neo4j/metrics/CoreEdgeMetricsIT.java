@@ -13,23 +13,23 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.common.Cluster;
-import org.neo4j.causalclustering.core.CoreClusterMember;
-import org.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.causalclustering.ClusterRule;
+import com.neo4j.test.causalclustering.ClusterRule;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.metrics.MetricsSettings.csvPath;

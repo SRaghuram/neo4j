@@ -9,11 +9,11 @@ import java.time.Duration;
 import java.util.Collection;
 import javax.ws.rs.core.Response;
 
-import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import org.neo4j.causalclustering.discovery.RoleInfo;
-import org.neo4j.causalclustering.discovery.TopologyService;
-import org.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
+import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.server.rest.repr.OutputFormat;

@@ -19,8 +19,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.neo4j.causalclustering.stresstests.Config;
-import org.neo4j.causalclustering.stresstests.Control;
+import com.neo4j.causalclustering.stresstests.Config;
+import com.neo4j.causalclustering.stresstests.Control;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.helper.Workload;

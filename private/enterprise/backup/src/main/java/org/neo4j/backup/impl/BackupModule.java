@@ -8,7 +8,7 @@ package org.neo4j.backup.impl;
 import java.io.OutputStream;
 import java.time.Clock;
 
-import org.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
+import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;

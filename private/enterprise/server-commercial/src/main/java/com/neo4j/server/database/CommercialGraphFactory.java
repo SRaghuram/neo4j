@@ -5,10 +5,12 @@
  */
 package com.neo4j.server.database;
 
-import com.neo4j.causalclustering.core.CommercialCoreGraphDatabase;
-import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceFactorySelector;
-import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
-import com.neo4j.causalclustering.readreplica.CommercialReadReplicaGraphDatabase;
+import com.neo4j.causalclustering.core.CoreEditionModule;
+import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
+import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
+import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 
@@ -28,14 +30,14 @@ public class CommercialGraphFactory implements GraphFactory
     {
         CommercialEditionSettings.Mode mode = config.get( CommercialEditionSettings.mode );
         File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
-        SslDiscoveryServiceFactory discoveryServiceFactory = new CommercialDiscoveryServiceFactorySelector().select( config );
+        DiscoveryServiceFactory discoveryServiceFactory = new DiscoveryServiceFactorySelector().select( config );
 
         switch ( mode )
         {
         case CORE:
-            return new CommercialCoreGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
+            return new CoreGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory, CoreEditionModule::new );
         case READ_REPLICA:
-            return new CommercialReadReplicaGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
+            return new ReadReplicaGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory, ReadReplicaEditionModule::new );
         default:
             return new CommercialGraphDatabase( storeDir, config, dependencies );
         }

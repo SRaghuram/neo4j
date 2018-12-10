@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.MemberId;
 
 @JsonSerialize( include = JsonSerialize.Inclusion.NON_NULL )
 public class ClusterStatusResponse

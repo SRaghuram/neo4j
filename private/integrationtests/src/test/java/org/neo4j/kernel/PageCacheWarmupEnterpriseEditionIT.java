@@ -38,7 +38,7 @@ import static org.apache.commons.io.FileUtils.cleanDirectory;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.causalclustering.core.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
+import static com.neo4j.causalclustering.core.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.io.fs.FileUtils.deleteRecursively;

@@ -5,7 +5,7 @@
  */
 package org.neo4j.metrics.source.causalclustering;
 
-import org.neo4j.causalclustering.core.consensus.log.cache.InFlightCacheMonitor;
+import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCacheMonitor;
 
 public class InFlightCacheMetric implements InFlightCacheMonitor
 {

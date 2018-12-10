@@ -7,8 +7,8 @@ package org.neo4j.backup.impl;
 
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.causalclustering.handlers.PipelineWrapper;
-import org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
+import com.neo4j.causalclustering.handlers.PipelineWrapper;
+import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import org.neo4j.kernel.configuration.Config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,7 +22,8 @@ class OnlineBackupCommandProviderTest
     {
         BackupModule backupModule = mock( BackupModule.class );
 
-        BackupSupportingClassesFactoryProvider provider = getProvidersByPriority().findFirst().get();
+        BackupSupportingClassesFactoryProvider provider = getProvidersByPriority()
+                .filter( p -> p.getClass().equals( BackupSupportingClassesFactoryProvider.class ) ).findFirst().get();
         BackupSupportingClassesFactory factory = provider.getFactory( backupModule );
         assertEquals( VoidPipelineWrapperFactory.VOID_WRAPPER,
                 factory.createPipelineWrapper( Config.defaults() ) );
