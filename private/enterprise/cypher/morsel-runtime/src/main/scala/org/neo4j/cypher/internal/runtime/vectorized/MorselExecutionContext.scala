@@ -69,6 +69,11 @@ class MorselExecutionContext(private val morsel: Morsel,
     */
   def finishedWriting(): Unit = validRows = currentRow
 
+  /**
+    * Set the valid rows of the morsel to the current position of another morsel
+    */
+  def finishedWritingUsing(otherContext: MorselExecutionContext): Unit = validRows = otherContext.currentRow
+
   def createViewOfCurrentRow(): MorselExecutionContext = {
     val view = shallowCopy()
     view.limitToCurrentRow()
@@ -170,14 +175,16 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   override def mergeWith(other: ExecutionContext): Unit = fail()
 
-  override def createClone(): MorselExecutionContext =
-    // REV: This is used by some expressions with the expectation of being able to overwrite an
+  override def createClone(): ExecutionContext = {
+    // This is used by some expressions with the expectation of being able to overwrite an
     // identifier inside a nested scope, without affecting the data in the original row.
-    // That would _not_ work with a shallow copy. We could re-purpose this method to handle
-    // only that case and make a copy of the current row inside the morsel
-    // (e.g. by creating a SlottedExecutionContext and copying the current row into it)
-    // Use `shallowCopy()` everywhere else.
-    new MorselExecutionContext(morsel, longsPerRow, refsPerRow, validRows, currentRow, slots)
+    // That would not work with a shallow copy, so here we make a copy of the data of
+    // the current row inside the morsel.
+    // (If you just need a copy of the view/iteration state of the morsel, use `shallowCopy()` instead)
+    val slottedRow = SlottedExecutionContext(slots)
+    copyTo(slottedRow)
+    slottedRow
+  }
 
   override def +=(kv: (String, AnyValue)): MorselExecutionContext.this.type = fail()
 

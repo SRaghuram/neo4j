@@ -21,7 +21,7 @@ class FilterOperator(val workIdentity: WorkIdentity,
 
     override def operate(readingRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
 
-      val writingRow = readingRow.createClone()
+      val writingRow = readingRow.shallowCopy()
       val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
 
       while (readingRow.hasMoreRows) {
@@ -33,6 +33,8 @@ class FilterOperator(val workIdentity: WorkIdentity,
         readingRow.moveToNextRow()
       }
 
-      writingRow.finishedWriting()
+      // We need to set validRows of the provided context
+      // to the current row of the local writing context
+      readingRow.finishedWritingUsing(writingRow)
   }
 }
