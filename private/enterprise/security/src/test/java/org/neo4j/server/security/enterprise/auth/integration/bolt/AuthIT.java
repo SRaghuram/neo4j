@@ -19,11 +19,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -313,7 +311,8 @@ public class AuthIT extends AuthTestBase
     public void setup() throws Exception
     {
         super.setup();
-        ldapServerRule.getLdapServer().setConfidentialityRequired( confidentialityRequired );
+        LdapServer ldapServer = ldapServerRule.getLdapServer();
+        ldapServer.setConfidentialityRequired( confidentialityRequired );
 
         EnterpriseAuthAndUserManager authManager = dbRule.resolveDependency( EnterpriseAuthAndUserManager.class );
         EnterpriseUserManager userManager = authManager.getUserManager();
@@ -327,6 +326,7 @@ public class AuthIT extends AuthTestBase
             userManager.addRoleToUser( PredefinedRoles.PUBLISHER, WRITE_USER );
             userManager.newRole( "role1", PROC_USER );
         }
+        checkIfLdapServerIsReachable( ldapServer.getSaslHost(), ldapServer.getPort() );
     }
 
     @Override
