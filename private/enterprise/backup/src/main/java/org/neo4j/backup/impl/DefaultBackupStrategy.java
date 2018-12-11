@@ -75,17 +75,15 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     }
 
     @Override
-    public void start() throws Throwable
+    public void start()
     {
-        super.start();
         backupDelegator.start();
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop()
     {
         backupDelegator.stop();
-        super.stop();
     }
 
     private BackupInfo prepareForBackup( DatabaseLayout databaseLayout, Config config, OptionalHostnamePort userProvidedAddress )
