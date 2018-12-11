@@ -2480,7 +2480,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   test("call function by id with default argument") {
     // given
     val access = mock[DbAccess]
-    val udf = callByName(signature(qualifiedName("foo"), id =  Some(42), field = fieldSignature("in", default = Some("I am default"))))
+    val udf = callByName(
+      signature(qualifiedName("foo"), id = Some(42), field = fieldSignature("in", default = Some("I am default"))))
     when(access.callFunction(anyInt(), any[Array[AnyValue]], any[Array[String]])).thenAnswer(new Answer[AnyValue] {
       override def answer(invocationOnMock: InvocationOnMock): AnyValue = {
         invocationOnMock.getArgument[Int](0) should equal(42)

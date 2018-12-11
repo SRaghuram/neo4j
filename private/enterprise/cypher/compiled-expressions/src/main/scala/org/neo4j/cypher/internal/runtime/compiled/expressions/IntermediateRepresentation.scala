@@ -276,7 +276,7 @@ case class BooleanOr(lhs: IntermediateRepresentation, rhs: IntermediateRepresent
 
 /**
   * Loads a static field
-  * @param owner Either the owning class or None if it is a local constant
+  * @param owner Either the owning class or None if it is a local static field
   * @param output The type of the static field
   * @param name The name of the static field
   */
