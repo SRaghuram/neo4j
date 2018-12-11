@@ -95,6 +95,7 @@ class BackupStrategyWrapper
     private boolean tryIncrementalBackup( DatabaseLayout backupLayout, Config config, OptionalHostnamePort address, boolean fallbackToFullAllowed )
             throws BackupExecutionException
     {
+        Throwable incrementalBackupError;
         try
         {
             backupStrategy.performIncrementalBackup( backupLayout, config, address );
@@ -102,23 +103,24 @@ class BackupStrategyWrapper
             clearIdFiles( backupLayout );
             return true;
         }
-        catch ( Throwable t )
+        catch ( BackupExecutionException e )
         {
-            if ( fallbackToFullAllowed )
+            if ( !fallbackToFullAllowed )
             {
-                Throwable cause = t;
-                if ( t instanceof BackupExecutionException && t.getCause() != null )
-                {
-                    cause = t.getCause();
-                }
-                log.warn( "Incremental backup failed", cause );
-                return false;
+                throw e;
             }
-            else
-            {
-                throw t;
-            }
+            incrementalBackupError = e.getCause() != null ? e.getCause() : e;
         }
+        catch ( Exception e )
+        {
+            if ( !fallbackToFullAllowed )
+            {
+                throw e;
+            }
+            incrementalBackupError = e;
+        }
+        log.warn( "Incremental backup failed", incrementalBackupError );
+        return false;
     }
 
     /**
