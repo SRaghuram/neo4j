@@ -38,7 +38,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
-import static org.neo4j.metrics.MetricsTestHelper.readLongValue;
+import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static org.neo4j.metrics.source.db.PageCacheMetrics.PC_PAGE_FAULTS;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -65,7 +65,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     private static void verifyEventuallyWarmsUp( long pagesInMemory, File metricsDirectory ) throws Exception
     {
         assertEventually( "Metrics report should include page cache page faults",
-                () -> readLongValue( metricsCsv( metricsDirectory, PC_PAGE_FAULTS ) ),
+                () -> readLongCounterValue( metricsCsv( metricsDirectory, PC_PAGE_FAULTS ) ),
                 greaterThanOrEqualTo( pagesInMemory ), 20, SECONDS );
     }
 

@@ -14,6 +14,7 @@ import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.metrics.metric.MetricsCounter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -75,35 +76,27 @@ public class TransactionMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
-        registry.register( TX_STARTED, (Gauge<Long>) transactionCounters::getNumberOfStartedTransactions );
-        registry.register( TX_PEAK_CONCURRENT,
-                (Gauge<Long>) transactionCounters::getPeakConcurrentNumberOfTransactions );
+        registry.register( TX_STARTED, new MetricsCounter( transactionCounters::getNumberOfStartedTransactions ) );
+        registry.register( TX_PEAK_CONCURRENT, new MetricsCounter( transactionCounters::getPeakConcurrentNumberOfTransactions ) );
 
         registry.register( TX_ACTIVE, (Gauge<Long>) transactionCounters::getNumberOfActiveTransactions );
         registry.register( READ_TX_ACTIVE, (Gauge<Long>) transactionCounters::getNumberOfActiveReadTransactions );
         registry.register( WRITE_TX_ACTIVE, (Gauge<Long>) transactionCounters::getNumberOfActiveWriteTransactions );
 
-        registry.register( TX_COMMITTED, (Gauge<Long>) transactionCounters::getNumberOfCommittedTransactions );
-        registry.register( READ_TX_COMMITTED, (Gauge<Long>) transactionCounters::getNumberOfCommittedReadTransactions );
-        registry.register( WRITE_TX_COMMITTED,
-                (Gauge<Long>) transactionCounters::getNumberOfCommittedWriteTransactions );
+        registry.register( TX_COMMITTED, new MetricsCounter( transactionCounters::getNumberOfCommittedTransactions ) );
+        registry.register( READ_TX_COMMITTED, new MetricsCounter( transactionCounters::getNumberOfCommittedReadTransactions ) );
+        registry.register( WRITE_TX_COMMITTED, new MetricsCounter( transactionCounters::getNumberOfCommittedWriteTransactions ) );
 
-        registry.register( TX_ROLLBACKS, (Gauge<Long>) transactionCounters::getNumberOfRolledBackTransactions );
-        registry.register( READ_TX_ROLLBACKS,
-                (Gauge<Long>) transactionCounters::getNumberOfRolledBackReadTransactions );
-        registry.register( WRITE_TX_ROLLBACKS,
-                (Gauge<Long>) transactionCounters::getNumberOfRolledBackWriteTransactions );
+        registry.register( TX_ROLLBACKS, new MetricsCounter(  transactionCounters::getNumberOfRolledBackTransactions ) );
+        registry.register( READ_TX_ROLLBACKS, new MetricsCounter( transactionCounters::getNumberOfRolledBackReadTransactions ) );
+        registry.register( WRITE_TX_ROLLBACKS, new MetricsCounter( transactionCounters::getNumberOfRolledBackWriteTransactions ) );
 
-        registry.register( TX_TERMINATED, (Gauge<Long>) transactionCounters::getNumberOfTerminatedTransactions );
-        registry.register( READ_TX_TERMINATED,
-                (Gauge<Long>) transactionCounters::getNumberOfTerminatedReadTransactions );
-        registry.register( WRITE_TX_TERMINATED,
-                (Gauge<Long>) transactionCounters::getNumberOfTerminatedWriteTransactions );
+        registry.register( TX_TERMINATED, new MetricsCounter( transactionCounters::getNumberOfTerminatedTransactions ) );
+        registry.register( READ_TX_TERMINATED, new MetricsCounter( transactionCounters::getNumberOfTerminatedReadTransactions ) );
+        registry.register( WRITE_TX_TERMINATED, new MetricsCounter( transactionCounters::getNumberOfTerminatedWriteTransactions ) );
 
-        registry.register( LAST_COMMITTED_TX_ID, (Gauge<Long>) () ->
-                transactionIdStore.get().getLastCommittedTransactionId() );
-        registry.register( LAST_CLOSED_TX_ID, (Gauge<Long>) () ->
-                transactionIdStore.get().getLastClosedTransactionId() );
+        registry.register( LAST_COMMITTED_TX_ID, new MetricsCounter( () -> transactionIdStore.get().getLastCommittedTransactionId() ) );
+        registry.register( LAST_CLOSED_TX_ID, new MetricsCounter( () -> transactionIdStore.get().getLastClosedTransactionId() ) );
     }
 
     @Override

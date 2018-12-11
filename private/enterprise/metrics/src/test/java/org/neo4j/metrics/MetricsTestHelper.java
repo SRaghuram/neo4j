@@ -44,6 +44,30 @@ public class MetricsTestHelper
         }
     }
 
+    enum CounterField implements CsvField
+    {
+        TIME_STAMP( "t" ),
+        COUNT( "count" ),
+        MEAN_RATE( "mean_rate" ),
+        M1_RATE( "m1_rate" ),
+        M5_RATE( "m5_rate" ),
+        M15_RATE( "m15_rate" ),
+        RATE_UNIt( "rate_unit" );
+
+        private final String header;
+
+        CounterField( String header )
+        {
+            this.header = header;
+        }
+
+        @Override
+        public String header()
+        {
+            return header;
+        }
+    }
+
     enum TimerField implements CsvField
     {
         T,
@@ -64,26 +88,32 @@ public class MetricsTestHelper
     {
     }
 
-    public static long readLongValue( File metricFile ) throws IOException, InterruptedException
+    public static long readLongCounterValue( File metricFile ) throws IOException, InterruptedException
     {
-        return readLongValueAndAssert( metricFile, ( one, two ) -> true );
+        return readLongCounterAndAssert( metricFile, ( one, two ) -> true );
     }
 
-    public static long readLongValueAndAssert( File metricFile, BiPredicate<Long,Long> assumption )
+    public static long readLongGaugeValue( File metricFile ) throws IOException, InterruptedException
+    {
+        return readLongGaugeAndAssert( metricFile, ( one, two ) -> true );
+    }
+
+    public static long readLongGaugeAndAssert( File metricFile, BiPredicate<Long,Long> assumption )
             throws IOException, InterruptedException
     {
         return readValueAndAssert( metricFile, 0L, GaugeField.TIME_STAMP, GaugeField.METRICS_VALUE, Long::parseLong, assumption );
     }
 
-    static double readDoubleValue( File metricFile ) throws IOException, InterruptedException
+    public static long readLongCounterAndAssert( File metricFile, BiPredicate<Long,Long> assumption )
+            throws IOException, InterruptedException
+    {
+        return readValueAndAssert( metricFile, 0L, CounterField.TIME_STAMP, CounterField.COUNT, Long::parseLong, assumption );
+    }
+
+    static double readDoubleGaugeValue( File metricFile ) throws IOException, InterruptedException
     {
         return readValueAndAssert( metricFile, 0d, GaugeField.TIME_STAMP, GaugeField.METRICS_VALUE,
                 Double::parseDouble, ( one, two ) -> true );
-    }
-
-    static long readTimerLongValue( File metricFile, TimerField field ) throws IOException, InterruptedException
-    {
-        return readTimerLongValueAndAssert( metricFile, ( a, b ) -> true, field );
     }
 
     static long readTimerLongValueAndAssert( File metricFile, BiPredicate<Long,Long> assumption, TimerField field ) throws IOException, InterruptedException
@@ -96,7 +126,7 @@ public class MetricsTestHelper
         return readTimerDoubleValueAndAssert( metricFile, ( a, b ) -> true, field );
     }
 
-    static double readTimerDoubleValueAndAssert( File metricFile, BiPredicate<Double,Double> assumption, TimerField field )
+    private static double readTimerDoubleValueAndAssert( File metricFile, BiPredicate<Double,Double> assumption, TimerField field )
             throws IOException, InterruptedException
     {
         return readValueAndAssert( metricFile, 0d, TimerField.T, field, Double::parseDouble, assumption );

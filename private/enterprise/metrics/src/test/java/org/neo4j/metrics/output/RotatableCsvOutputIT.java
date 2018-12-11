@@ -29,7 +29,7 @@ import static org.junit.Assert.fail;
 import static org.neo4j.metrics.MetricsSettings.csvMaxArchives;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
 import static org.neo4j.metrics.MetricsSettings.csvRotationThreshold;
-import static org.neo4j.metrics.MetricsTestHelper.readLongValueAndAssert;
+import static org.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class RotatableCsvOutputIT
@@ -69,7 +69,7 @@ public class RotatableCsvOutputIT
 
         // Latest file should now have recorded the transaction
         File metricsFile = metricsCsv( outputPath, TransactionMetrics.TX_COMMITTED );
-        long committedTransactions = readLongValueAndAssert( metricsFile, MONOTONIC );
+        long committedTransactions = readLongCounterAndAssert( metricsFile, MONOTONIC );
         assertEquals( 1, committedTransactions );
 
         // Commit yet another transaction and wait for rotation to happen again
@@ -78,7 +78,7 @@ public class RotatableCsvOutputIT
 
         // Latest file should now have recorded the new transaction
         File metricsFile2 = metricsCsv( outputPath, TransactionMetrics.TX_COMMITTED );
-        long committedTransactions2 = readLongValueAndAssert( metricsFile2, MONOTONIC );
+        long committedTransactions2 = readLongCounterAndAssert( metricsFile2, MONOTONIC );
         assertEquals( 2, committedTransactions2 );
     }
 

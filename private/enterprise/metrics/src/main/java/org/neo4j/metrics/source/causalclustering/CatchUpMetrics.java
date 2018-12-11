@@ -5,12 +5,12 @@
  */
 package org.neo4j.metrics.source.causalclustering;
 
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.metrics.metric.MetricsCounter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -36,7 +36,7 @@ public class CatchUpMetrics extends LifecycleAdapter
     public void start()
     {
         monitors.addMonitorListener( txPullRequestsMetric );
-        registry.register( TX_PULL_REQUESTS_RECEIVED, (Gauge<Long>) txPullRequestsMetric::txPullRequestsReceived );
+        registry.register( TX_PULL_REQUESTS_RECEIVED, new MetricsCounter( txPullRequestsMetric::txPullRequestsReceived ) );
     }
 
     @Override

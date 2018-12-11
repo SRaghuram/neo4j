@@ -5,12 +5,12 @@
  */
 package org.neo4j.metrics.source.causalclustering;
 
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.metrics.metric.MetricsCounter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -44,9 +44,9 @@ public class ReadReplicaMetrics extends LifecycleAdapter
     {
         monitors.addMonitorListener( pullRequestMetric );
 
-        registry.register( PULL_UPDATES, (Gauge<Long>) pullRequestMetric::numberOfRequests );
-        registry.register( PULL_UPDATE_HIGHEST_TX_ID_REQUESTED, (Gauge<Long>) pullRequestMetric::lastRequestedTxId );
-        registry.register( PULL_UPDATE_HIGHEST_TX_ID_RECEIVED, (Gauge<Long>) pullRequestMetric::lastReceivedTxId );
+        registry.register( PULL_UPDATES, new MetricsCounter( pullRequestMetric::numberOfRequests ) );
+        registry.register( PULL_UPDATE_HIGHEST_TX_ID_REQUESTED, new MetricsCounter(  pullRequestMetric::lastRequestedTxId ) );
+        registry.register( PULL_UPDATE_HIGHEST_TX_ID_RECEIVED, new MetricsCounter(  pullRequestMetric::lastReceivedTxId ) );
     }
 
     @Override

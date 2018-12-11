@@ -51,7 +51,8 @@ import static org.neo4j.metrics.MetricsSettings.csvPath;
 import static org.neo4j.metrics.MetricsSettings.graphiteInterval;
 import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
-import static org.neo4j.metrics.MetricsTestHelper.readLongValueAndAssert;
+import static org.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
+import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 
 public class MetricsKernelExtensionFactoryIT
 {
@@ -95,7 +96,7 @@ public class MetricsKernelExtensionFactoryIT
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
-        long committedTransactions = readLongValueAndAssert( metricsFile,
+        long committedTransactions = readLongCounterAndAssert( metricsFile,
                 ( newValue, currentValue ) -> newValue >= currentValue );
 
         // THEN
@@ -113,7 +114,7 @@ public class MetricsKernelExtensionFactoryIT
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
-        long committedTransactions = readLongValueAndAssert( metricsFile,
+        long committedTransactions = readLongGaugeAndAssert( metricsFile,
                 ( newValue, currentValue ) -> newValue >= currentValue );
 
         // THEN
@@ -153,8 +154,8 @@ public class MetricsKernelExtensionFactoryIT
         long events = 0;
         while ( currentTimeMillis() < endTime && events == 0 )
         {
-            readLongValueAndAssert( replanWaitMetricFile, ( newValue, currentValue ) -> newValue >= currentValue );
-            events = readLongValueAndAssert( replanCountMetricFile, ( newValue, currentValue ) -> newValue >= currentValue );
+            readLongCounterAndAssert( replanWaitMetricFile, ( newValue, currentValue ) -> newValue >= currentValue );
+            events = readLongCounterAndAssert( replanCountMetricFile, ( newValue, currentValue ) -> newValue >= currentValue );
             if ( events == 0 )
             {
                 Thread.sleep( 300 );
@@ -176,7 +177,7 @@ public class MetricsKernelExtensionFactoryIT
         // wait for the file to be written before shutting down the cluster
         File metricFile = metricsCsv( outputPath, CheckPointingMetrics.CHECK_POINT_DURATION );
 
-        long result = readLongValueAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long result = readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
 
         // THEN
         assertThat( result, greaterThanOrEqualTo( 0L ) );
@@ -192,8 +193,8 @@ public class MetricsKernelExtensionFactoryIT
         File threadTotalFile = metricsCsv( outputPath, ThreadMetrics.THREAD_TOTAL );
         File threadCountFile = metricsCsv( outputPath, ThreadMetrics.THREAD_COUNT );
 
-        long threadTotalResult = readLongValueAndAssert( threadTotalFile, ( newValue, currentValue ) -> newValue >= 0 );
-        long threadCountResult = readLongValueAndAssert( threadCountFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long threadTotalResult = readLongGaugeAndAssert( threadTotalFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long threadCountResult = readLongGaugeAndAssert( threadCountFile, ( newValue, currentValue ) -> newValue >= 0 );
 
         // THEN
         assertThat( threadTotalResult, greaterThanOrEqualTo( 0L ) );

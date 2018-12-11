@@ -23,7 +23,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
-import static org.neo4j.metrics.MetricsTestHelper.readLongValue;
+import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static org.neo4j.metrics.MetricsTestHelper.readTimerDoubleValue;
 import static org.neo4j.metrics.MetricsTestHelper.readTimerLongValueAndAssert;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -63,7 +63,7 @@ public class RaftMessageProcessingMetricIT
         File coreMetricsDir = new File( leader.homeDir(), csvPath.getDefaultValue() );
 
         assertEventually( "message delay eventually recorded",
-                () -> readLongValue( metricsCsv( coreMetricsDir, CoreMetrics.DELAY ) ),
+                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, CoreMetrics.DELAY ) ),
                 greaterThanOrEqualTo( 0L ), TIMEOUT, TimeUnit.SECONDS );
 
         assertEventually( "message timer count eventually recorded",
