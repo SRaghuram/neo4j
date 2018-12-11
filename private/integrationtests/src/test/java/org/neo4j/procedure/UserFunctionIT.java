@@ -58,6 +58,7 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertEquals;
@@ -838,6 +839,22 @@ public class UserFunctionIT
         // Then
         assertThat( res.next().get( "result" ), equalTo( 1337 + 2.718281828 + 3.1415 ) );
         assertFalse( res.hasNext() );
+    }
+
+    @Test
+    public void shouldNotSupportMorselRuntime()
+    {
+        // Given
+        try ( Transaction ignore = db.beginTx() )
+        {
+            // When
+            Result res = db.execute( "CYPHER runtime=MORSEL RETURN org.neo4j.procedure.squareLong(2) AS someVal" );
+
+            // Then
+            assertThat( res.next(), equalTo( map( "someVal", 4L ) ) );
+            assertFalse( res.hasNext() );
+            assertThat(res.getExecutionPlanDescription().getArguments().get("runtime"), not(equalTo( "MORSEL" )));
+        }
     }
 
     @Before
