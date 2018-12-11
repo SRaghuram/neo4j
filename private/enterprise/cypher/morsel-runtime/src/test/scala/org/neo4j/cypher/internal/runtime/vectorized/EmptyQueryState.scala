@@ -10,8 +10,8 @@ import org.neo4j.values.virtual.VirtualValues
 import org.scalatest.mock.MockitoSugar
 
 object EmptyQueryState extends MockitoSugar {
-  val session = mock[IndexReadSession]
+  val session: IndexReadSession = mock[IndexReadSession]
   def apply(): QueryState = {
-    QueryState(VirtualValues.EMPTY_MAP, null, 10000, Array(session), singeThreaded = true)
+    QueryState(VirtualValues.EMPTY_MAP, null, 10000, Array(session), NO_TRANSACTION_BINDER)
   }
 }

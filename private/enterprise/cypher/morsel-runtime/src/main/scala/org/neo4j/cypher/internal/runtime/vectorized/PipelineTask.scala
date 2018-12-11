@@ -15,18 +15,20 @@ import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
 abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
                                     slots: SlotConfiguration,
                                     workIdentity: WorkIdentity,
-                                    originalQueryContext: QueryContext,
+                                    queryContext: QueryContext,
                                     state: QueryState,
                                     downstream: Option[Pipeline]) extends Task[QueryResources] {
 
   def ownerPipeline: Pipeline
   def pipelineArgument: PipelineArgument
+  def doExecuteWorkUnit(cursors: QueryResources): Seq[Task[QueryResources]]
 
-  protected def getQueryContext: QueryContext = {
-    if (state.singeThreaded) {
-      originalQueryContext
-    } else {
-      originalQueryContext.createNewQueryContext()
+  override final def executeWorkUnit(expressionCursors: QueryResources): Seq[Task[QueryResources]] = {
+    try {
+      state.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)
+      doExecuteWorkUnit(expressionCursors)
+    } finally {
+      state.transactionBinder.unbindFromThread()
     }
   }
 
@@ -84,17 +86,16 @@ case class PipelineTask(start: ContinuableOperatorTask,
                         operators: IndexedSeq[OperatorTask],
                         slots: SlotConfiguration,
                         workIdentity: WorkIdentity,
-                        originalQueryContext: QueryContext,
+                        queryContext: QueryContext,
                         state: QueryState,
                         pipelineArgument: PipelineArgument,
                         ownerPipeline: Pipeline,
                         downstream: Option[Pipeline])
-  extends AbstractPipelineTask(operators, slots, workIdentity, originalQueryContext, state, downstream) {
+  extends AbstractPipelineTask(operators, slots, workIdentity, queryContext, state, downstream) {
 
-  override def executeWorkUnit(resources: QueryResources): Seq[Task[QueryResources]] = {
+  override def doExecuteWorkUnit(resources: QueryResources): Seq[Task[QueryResources]] = {
     val outputMorsel = Morsel.create(slots, state.morselSize)
     val outputRow = new MorselExecutionContext(outputMorsel, slots.numberOfLongs, slots.numberOfReferences, state.morselSize, 0, slots)
-    val queryContext = getQueryContext
 
     start.operate(outputRow, queryContext, state, resources)
 
@@ -143,15 +144,14 @@ case class LazyReducePipelineTask(start: LazyReduceOperatorTask,
                                   operators: IndexedSeq[OperatorTask],
                                   slots: SlotConfiguration,
                                   workIdentity: WorkIdentity,
-                                  originalQueryContext: QueryContext,
+                                  queryContext: QueryContext,
                                   state: QueryState,
                                   pipelineArgument: PipelineArgument,
                                   ownerPipeline: Pipeline,
                                   downstream: Option[Pipeline])
-  extends AbstractPipelineTask(operators, slots, workIdentity, originalQueryContext, state, downstream) {
+  extends AbstractPipelineTask(operators, slots, workIdentity, queryContext, state, downstream) {
 
-  override def executeWorkUnit(resources: QueryResources): Seq[Task[QueryResources]] = {
-    val queryContext = getQueryContext
+  override def doExecuteWorkUnit(resources: QueryResources): Seq[Task[QueryResources]] = {
     val morsels = start.operate(queryContext, state, resources)
     morsels.foreach(doStatelessOperators(resources, _, queryContext))
     morsels.flatMap(getDownstreamTasks(resources, _, queryContext))

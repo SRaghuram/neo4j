@@ -6,12 +6,12 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.parallel.{Scheduler, SchedulerTracer, SingleThreadScheduler}
+import org.neo4j.cypher.internal.runtime.parallel.{Scheduler, SchedulerTracer}
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.MapValue
 
-class Dispatcher(morselSize: Int, scheduler: Scheduler[QueryResources]) {
+class Dispatcher(morselSize: Int, scheduler: Scheduler[QueryResources], transactionBinder: TransactionBinder) {
 
   def execute[E <: Exception](pipeline: Pipeline,
                               queryContext: QueryContext,
@@ -21,7 +21,11 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[QueryResources]) {
                              (visitor: QueryResultVisitor[E]): Unit = {
     val leafPipeline = pipeline.getUpstreamLeafPipeline
 
-    val state = QueryState(params, visitor, morselSize, queryIndexes, singeThreaded = scheduler.isInstanceOf[SingleThreadScheduler[_]])
+    val state = QueryState(params,
+                           visitor,
+                           morselSize,
+                           queryIndexes,
+                           transactionBinder)
 
     // instead of creating new cursors here only for initializing the query, we could
     //    a) delegate the task of finding the initial task to the scheduler, and use the schedulers cursors

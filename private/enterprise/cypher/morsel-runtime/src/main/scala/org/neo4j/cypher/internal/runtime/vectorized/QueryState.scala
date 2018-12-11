@@ -16,5 +16,5 @@ case class QueryState(params: MapValue,
                       visitor: QueryResultVisitor[_],
                       morselSize: Int,
                       queryIndexes: Array[IndexReadSession],
-                      singeThreaded: Boolean, // hack until we solve [Transaction 1 - * Threads] problem
+                      transactionBinder: TransactionBinder, // hack until we stop prePopulate from using NodeProxy logic
                       reduceCollector: Option[ReduceCollector] = None)
