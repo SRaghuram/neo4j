@@ -10,8 +10,10 @@ import com.neo4j.causalclustering.common.DefaultCluster;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -77,9 +79,14 @@ public class TrackingClusterFactory implements ClusterFactory
         return "cluster-" + idCounter.getAndIncrement();
     }
 
-    TestDirectory testDirectory()
+    void prepareDirectory( ExtensionContext context ) throws IOException
     {
-        return testDirectory;
+        testDirectory.prepareDirectory( context.getRequiredTestClass(), context.getRequiredTestMethod().getName() );
+    }
+
+    void completeDirectory() throws IOException
+    {
+        testDirectory.complete( initialFailure == null );
     }
 
     boolean disallowContinue()

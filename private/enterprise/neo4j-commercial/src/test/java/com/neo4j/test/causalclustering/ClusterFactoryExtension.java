@@ -41,11 +41,16 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
         TrackingClusterFactory clusterFactory = (TrackingClusterFactory) removeStoredValue( context );
         if ( clusterFactory != null )
         {
-            try ( ErrorHandler errorHandler = new ErrorHandler( "Shutting down cluster contexts" ) )
-            {
-                errorHandler.execute( clusterFactory::shutdownAll );
-                errorHandler.execute( () -> clusterFactory.testDirectory().complete( !context.getExecutionException().isPresent() ) );
-            }
+            shutdownAndComplete( clusterFactory );
+        }
+    }
+
+    private void shutdownAndComplete( TrackingClusterFactory clusterFactory )
+    {
+        try ( ErrorHandler errorHandler = new ErrorHandler( "Shutting down cluster contexts" ) )
+        {
+            errorHandler.execute( clusterFactory::shutdownAll );
+            errorHandler.execute( clusterFactory::completeDirectory );
         }
     }
 
@@ -55,7 +60,7 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
         TrackingClusterFactory clusterFactory = (TrackingClusterFactory) getStoredValue( context );
         if ( clusterFactory.getLifecycle() == TestInstance.Lifecycle.PER_METHOD )
         {
-            clusterFactory.testDirectory().prepareDirectory( context.getRequiredTestClass(), context.getRequiredTestMethod().getName() );
+            clusterFactory.prepareDirectory( context );
         }
     }
 
@@ -66,13 +71,10 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
     public void afterEach( ExtensionContext context )
     {
         TrackingClusterFactory clusterFactory = (TrackingClusterFactory) getStoredValue( context );
+        context.getExecutionException().ifPresent( e -> clusterFactory.setFailed( context.getDisplayName() ) );
         if ( clusterFactory.getLifecycle() == TestInstance.Lifecycle.PER_METHOD )
         {
-            clusterFactory.shutdownAll();
-        }
-        else
-        {
-            context.getExecutionException().ifPresent( e -> clusterFactory.setFailed( context.getDisplayName() ) );
+            shutdownAndComplete( clusterFactory );
         }
     }
 
