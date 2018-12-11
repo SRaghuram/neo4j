@@ -60,7 +60,7 @@ public class BackupSupportingClassesFactory
         this.fileSystemAbstraction = backupModule.getFileSystem();
         this.transactionLogCatchUpFactory = backupModule.getTransactionLogCatchUpFactory();
         this.jobScheduler = backupModule.jobScheduler();
-        this.logDestination = backupModule.getStdOut();
+        this.logDestination = backupModule.getOutputStream();
     }
 
     /**

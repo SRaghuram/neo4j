@@ -18,7 +18,7 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 public class BackupModule
 {
-    private final OutputStream stdOut;
+    private final OutputStream outputStream;
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
     private final Monitors monitors;
@@ -29,14 +29,14 @@ public class BackupModule
     /**
      * Dependencies that can be resolved immediately after launching the backup tool
      *
-     * @param stdOut output streams for backup monitoring
+     * @param outputStream output streams for backup monitoring
      * @param fs the file system for backup
      * @param logProvider made available to subsequent dependency resolution classes
      * @param monitors will become shared across all resolved dependencies
      */
-    BackupModule( OutputStream stdOut, FileSystemAbstraction fs, LogProvider logProvider, Monitors monitors )
+    BackupModule( OutputStream outputStream, FileSystemAbstraction fs, LogProvider logProvider, Monitors monitors )
     {
-        this.stdOut = stdOut;
+        this.outputStream = outputStream;
         this.logProvider = logProvider;
         this.monitors = monitors;
         this.clock = Clock.systemDefaultZone();
@@ -70,9 +70,9 @@ public class BackupModule
         return transactionLogCatchUpFactory;
     }
 
-    public OutputStream getStdOut()
+    public OutputStream getOutputStream()
     {
-        return stdOut;
+        return outputStream;
     }
 
     public JobScheduler jobScheduler()
