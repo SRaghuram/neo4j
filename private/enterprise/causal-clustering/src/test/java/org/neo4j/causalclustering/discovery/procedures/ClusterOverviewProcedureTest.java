@@ -98,15 +98,6 @@ public class ClusterOverviewProcedureTest
         private final Set<String> groups;
         private final String dbName;
 
-        IsRecord( UUID memberId, int boltPort, RoleInfo role, Set<String> groups, String dbName )
-        {
-            this.memberId = memberId;
-            this.boltPort = boltPort;
-            this.role = role;
-            this.groups = groups;
-            this.dbName = dbName;
-        }
-
         IsRecord( UUID memberId, int boltPort, RoleInfo role, Set<String> groups )
         {
             this.memberId = memberId;

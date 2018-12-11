@@ -30,8 +30,6 @@ import static org.neo4j.helpers.collection.Iterables.iterable;
 
 public class UpstreamDatabaseStrategySelectorTest
 {
-    private MemberId dummyMemberId = new MemberId( UUID.randomUUID() );
-
     @Test
     public void shouldReturnTheMemberIdFromFirstSuccessfulStrategy() throws Exception
     {

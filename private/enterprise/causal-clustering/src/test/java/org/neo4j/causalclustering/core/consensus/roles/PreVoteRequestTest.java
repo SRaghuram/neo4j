@@ -44,7 +44,6 @@ public class PreVoteRequestTest
 
     private MemberId myself = member( 0 );
     private MemberId member1 = member( 1 );
-    private MemberId member2 = member( 2 );
 
     @Test
     public void shouldDenyForCandidateInLaterTermWhenPreVoteNotActive() throws Exception

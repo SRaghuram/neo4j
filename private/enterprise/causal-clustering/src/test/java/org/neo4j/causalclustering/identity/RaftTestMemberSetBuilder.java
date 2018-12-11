@@ -26,14 +26,4 @@ public class RaftTestMemberSetBuilder implements RaftGroup.Builder
     {
         return new RaftTestGroup( members );
     }
-
-    public static RaftGroup memberSet( int... ids )
-    {
-        HashSet members = new HashSet<>();
-        for ( int id : ids )
-        {
-            members.add( member( id ) );
-        }
-        return new RaftTestGroup( members );
-    }
 }

@@ -10,5 +10,4 @@ package org.neo4j.causalclustering.messaging;
  */
 public interface Message
 {
-    byte CURRENT_VERSION = 0;
 }
