@@ -2322,7 +2322,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     //Given
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
-    //When, extract(bar IN ["a", "aa", "aaa"] | size(bar))
+    //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH 'aa' | bar + 'A']
     val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
                                              predicate = Some(startsWith(varFor("bar"), literalString("aa"))),
                                              extractExpression = Some(add(varFor("bar"), literalString("A")))))
@@ -2331,11 +2331,11 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(list(stringValue("aaA"), stringValue("aaaA")))
   }
 
-  test("list comprehension with no predicate and extract expression") {
+  test("list comprehension with no predicate but an extract expression") {
     //Given
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
-    //When, extract(bar IN ["a", "aa", "aaa"] | size(bar))
+    //When, [bar IN ["a", "aa", "aaa"] | bar + 'A']
     val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
                                              predicate = None,
                                              extractExpression = Some(add(varFor("bar"), literalString("A")))))
@@ -2344,11 +2344,11 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(list(stringValue("aA"), stringValue("aaA"), stringValue("aaaA")))
   }
 
-  test("list comprehension with predicate and no extract expression") {
+  test("list comprehension with predicate but no extract expression") {
     //Given
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
-    //When, extract(bar IN ["a", "aa", "aaa"] | size(bar))
+    //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH 'aa']
     val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
                                              predicate = Some(startsWith(varFor("bar"), literalString("aa"))),
                                              extractExpression = None))
@@ -2357,11 +2357,11 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(list(stringValue("aa"), stringValue("aaa")))
   }
 
-  test("list comprehension with no predicate and no extract expression") {
+  test("list comprehension with no predicate nor extract expression") {
     //Given
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
-    //When, extract(bar IN ["a", "aa", "aaa"] | size(bar))
+    //When, [bar IN ["a", "aa", "aaa"]]
     val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
                                              predicate = None,
                                              extractExpression = None))
