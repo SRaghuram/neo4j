@@ -42,6 +42,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan, converters: ExpressionConverte
           argumentSize)
 
       case plans.NodeByLabelScan(column, label, _) =>
+        queryIndexes.registerLabelScan()
         new LabelScanOperator(
           WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),

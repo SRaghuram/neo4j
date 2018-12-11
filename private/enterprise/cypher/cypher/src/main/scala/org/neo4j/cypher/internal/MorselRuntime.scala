@@ -85,6 +85,9 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                      params: MapValue,
                      prePopulateResults: Boolean): RuntimeResult = {
 
+      if (queryIndexes.hasLabelScan)
+        queryContext.transactionalContext.dataRead.prepareForLabelScans()
+
       new VectorizedRuntimeResult(operators,
                                   queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
                                   logicalPlan,

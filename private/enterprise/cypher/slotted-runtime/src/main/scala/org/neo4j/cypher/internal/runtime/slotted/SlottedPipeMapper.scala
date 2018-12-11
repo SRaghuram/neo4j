@@ -66,6 +66,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
           queryIndexes.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id = id)
 
       case NodeByLabelScan(column, label, _) =>
+        queryIndexes.registerLabelScan()
         NodesByLabelScanSlottedPipe(column, LazyLabel(label), slots, argumentSize)(id)
 
       case _: Argument =>
