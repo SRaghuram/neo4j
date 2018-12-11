@@ -13,7 +13,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.util.OptionalHostnamePort;
-import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -50,16 +50,9 @@ class BackupStrategyWrapper
      */
     void doBackup( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
     {
-        LifeSupport lifeSupport = new LifeSupport();
-        try
+        try ( Lifespan ignore = new Lifespan( backupStrategy ) )
         {
-            lifeSupport.add( backupStrategy );
-            lifeSupport.start();
             performBackupWithoutLifecycle( onlineBackupContext );
-        }
-        finally
-        {
-            lifeSupport.shutdown();
         }
     }
 
