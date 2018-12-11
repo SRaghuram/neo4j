@@ -8,7 +8,6 @@ package org.neo4j.causalclustering.catchup.tx;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -31,6 +30,8 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_log_rotation_threshold;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier.EMPTY;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
@@ -80,18 +81,16 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
     private Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean forceTransactionRotations )
     {
-        Config config = Config.builder().build();
-        if ( !keepTxLogsInStoreDir )
+        Config.Builder builder = Config.builder();
+        if ( !keepTxLogsInStoreDir && original.isConfigured( transaction_logs_root_path ) )
         {
-            original.getValue( GraphDatabaseSettings.transaction_logs_root_path.name() ).ifPresent(
-                    v -> config.augment( GraphDatabaseSettings.transaction_logs_root_path, v.toString() ) );
+            builder.withSetting( transaction_logs_root_path, original.get( transaction_logs_root_path ).toString() );
         }
-        if ( forceTransactionRotations )
+        if ( forceTransactionRotations && original.isConfigured( logical_log_rotation_threshold ) )
         {
-            original.getRaw( GraphDatabaseSettings.logical_log_rotation_threshold.name() )
-                    .ifPresent( v -> config.augment( GraphDatabaseSettings.logical_log_rotation_threshold, v ) );
+            builder.withSetting( logical_log_rotation_threshold, original.get( logical_log_rotation_threshold ).toString() );
         }
-        return config;
+        return builder.build();
     }
 
     @Override
