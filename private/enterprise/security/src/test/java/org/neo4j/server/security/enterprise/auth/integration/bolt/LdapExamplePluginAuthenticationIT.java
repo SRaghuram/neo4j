@@ -14,13 +14,12 @@ import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
 import org.apache.directory.server.core.annotations.LoadSchema;
 import org.apache.directory.server.core.integ.FrameworkRunner;
+import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
@@ -70,7 +69,9 @@ public class LdapExamplePluginAuthenticationIT extends EnterpriseAuthenticationT
     public void setup() throws Exception
     {
         super.setup();
-        getLdapServer().setConfidentialityRequired( false );
+        LdapServer ldapServer = getLdapServer();
+        ldapServer.setConfidentialityRequired( false );
+        checkIfLdapServerIsReachable(ldapServer.getSaslHost(), ldapServer.getPort());
     }
 
     @Override

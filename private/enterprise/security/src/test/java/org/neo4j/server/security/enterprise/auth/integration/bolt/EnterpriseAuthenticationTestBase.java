@@ -18,6 +18,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -93,21 +95,25 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         dbRule.restartDatabase( configChanges );
     }
 
-     void checkIfLdapServerIsReachable()
-     {
-         //import org.apache.shiro.realm.ldap.JndiLdapContextFactory;
-         //JndiLdapContextFactory jndiLdapContextFactory = new JndiLdapContextFactory();
-         try
-         {
-             //connecting to ldap server
-             //ldap bind?
-             // something about the queryForAuthenticationInfoUsingStartTls ?
-         }
-         catch ( Throwable e ) //what error we now might get...
-         {
-             //throw exception with message about the ldap server being down
-         }
-     }
+    void checkIfLdapServerIsReachable( String host, int port )
+    {
+        if ( !portIsReachable( host, port, 10000 ) )
+        {
+            throw new IllegalStateException( "Ldap Server is not reachable on " + host + ":" + port + "." );
+        }
+    }
+
+    private boolean portIsReachable( String host, int port, int timeOutMS )
+    {
+        try ( Socket serverSocket = new Socket(); )
+        {
+            serverSocket.connect( new InetSocketAddress( host, port ), timeOutMS );
+            return true;
+        }
+        catch ( final IOException e )
+        { /* Ignore, Port not reachable */ }
+        return false;
+    }
 
     void assertAuth( String username, String password )
     {
