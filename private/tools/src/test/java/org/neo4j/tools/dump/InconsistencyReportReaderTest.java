@@ -14,14 +14,16 @@ import java.io.StringReader;
 import org.neo4j.consistency.RecordType;
 import org.neo4j.consistency.report.InconsistencyMessageLogger;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
+import org.neo4j.consistency.store.synthetic.LabelScanDocument;
 import org.neo4j.internal.kernel.api.schema.IndexProviderDescriptor;
+import org.neo4j.kernel.api.labelscan.NodeLabelRange;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.storageengine.api.schema.IndexDescriptorFactory;
-import org.neo4j.tools.dump.inconsistency.ReportInconsistencies;
+import org.neo4j.tools.dump.InconsistentRecords.Type;
 
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.kernel.api.schema.SchemaDescriptorFactory.forLabel;
@@ -38,6 +40,7 @@ public class InconsistencyReportReaderTest
         long nodeId = 5;
         long indexNodeId = 7;
         long nodeNotInTheIndexId = 17;
+        long nodeNotInTheLabelIndexId = 18;
         long indexId = 99;
         long relationshipGroupId = 10;
         long relationshipId = 15;
@@ -54,28 +57,31 @@ public class InconsistencyReportReaderTest
         logger.error( RecordType.NODE, new NodeRecord( nodeNotInTheIndexId ), "Some index error",
                       IndexDescriptorFactory.forSchema( forLabel( 1, 2 ),
                                               new IndexProviderDescriptor( "key", "version" ) ).withId( indexId ).toString() );
+        logger.error( RecordType.LABEL_SCAN_DOCUMENT, new LabelScanDocument( new NodeLabelRange( 0, new long[0][] ) ),
+                "Some label index error", new NodeRecord( nodeNotInTheLabelIndexId ) );
         String text = out.toString();
 
         // WHEN
-        ReportInconsistencies inconsistencies = new ReportInconsistencies();
+        InconsistentRecords inconsistencies = new InconsistentRecords();
         InconsistencyReportReader reader = new InconsistencyReportReader( inconsistencies );
         reader.read( new BufferedReader( new StringReader( text ) ) );
 
         // THEN
-        assertTrue( inconsistencies.containsNodeId( nodeId ) );
-        assertTrue( inconsistencies.containsNodeId( indexNodeId ) );
-        assertTrue( inconsistencies.containsNodeId( nodeNotInTheIndexId ) );
-        assertTrue( inconsistencies.containsRelationshipId( relationshipId ) );
-        assertTrue( inconsistencies.containsRelationshipGroupId( relationshipGroupId ) );
-        assertTrue( inconsistencies.containsPropertyId( propertyId ) );
-        assertTrue( inconsistencies.containsSchemaIndexId( indexId ) );
+        assertTrue( inconsistencies.containsId( Type.NODE, nodeId ) );
+        assertTrue( inconsistencies.containsId( Type.NODE, indexNodeId ) );
+        assertTrue( inconsistencies.containsId( Type.NODE, nodeNotInTheIndexId ) );
+        assertTrue( inconsistencies.containsId( Type.NODE, nodeNotInTheLabelIndexId ) );
+        assertTrue( inconsistencies.containsId( Type.RELATIONSHIP, relationshipId ) );
+        assertTrue( inconsistencies.containsId( Type.RELATIONSHIP_GROUP, relationshipGroupId ) );
+        assertTrue( inconsistencies.containsId( Type.PROPERTY, propertyId ) );
+        assertTrue( inconsistencies.containsId( Type.SCHEMA_INDEX, indexId ) );
     }
 
     @Test
     public void shouldParseRelationshipGroupInconsistencies() throws Exception
     {
         // Given
-        ReportInconsistencies inconsistencies = new ReportInconsistencies();
+        InconsistentRecords inconsistencies = new InconsistentRecords();
         String text =
                 "ERROR: The first outgoing relationship is not the first in its chain.\n" +
                 "\tRelationshipGroup[1337,type=1,out=2,in=-1,loop=-1,prev=-1,next=3,used=true,owner=4,secondaryUnitId=-1]\n" +
@@ -87,7 +93,7 @@ public class InconsistencyReportReaderTest
         reader.read( new BufferedReader( new StringReader( text ) ) );
 
         // Then
-        assertTrue( inconsistencies.containsRelationshipGroupId( 1337 ) );
-        assertTrue( inconsistencies.containsRelationshipGroupId( 4242 ) );
+        assertTrue( inconsistencies.containsId( Type.RELATIONSHIP_GROUP, 1337 ) );
+        assertTrue( inconsistencies.containsId( Type.RELATIONSHIP_GROUP, 4242 ) );
     }
 }
