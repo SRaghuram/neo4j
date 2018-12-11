@@ -494,8 +494,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @SuppressWarnings( "unchecked" )
-    @DisabledOnOs( OS.WINDOWS )
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     void shouldListQueriesEvenIfUsingPeriodicCommit() throws Throwable
     {
         for ( int i = 8; i <= 11; i++ )
@@ -770,6 +770,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
     @SuppressWarnings( "unchecked" )
     @Test
+    @DisabledOnOs( OS.WINDOWS )
     void shouldTerminateQueriesEvenIfUsingPeriodicCommit() throws Throwable
     {
         for ( int batchSize = 8; batchSize <= 11; batchSize++ )
