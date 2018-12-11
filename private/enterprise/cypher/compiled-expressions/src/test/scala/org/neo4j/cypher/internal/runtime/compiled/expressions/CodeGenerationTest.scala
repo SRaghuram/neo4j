@@ -2318,6 +2318,58 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(Values.intValue(42))
   }
 
+  test("list comprehension with predicate and extract expression") {
+    //Given
+    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
+
+    //When, extract(bar IN ["a", "aa", "aaa"] | size(bar))
+    val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+                                             predicate = Some(startsWith(varFor("bar"), literalString("aa"))),
+                                             extractExpression = Some(add(varFor("bar"), literalString("A")))))
+
+    //Then
+    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(list(stringValue("aaA"), stringValue("aaaA")))
+  }
+
+  test("list comprehension with no predicate and extract expression") {
+    //Given
+    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
+
+    //When, extract(bar IN ["a", "aa", "aaa"] | size(bar))
+    val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+                                             predicate = None,
+                                             extractExpression = Some(add(varFor("bar"), literalString("A")))))
+
+    //Then
+    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(list(stringValue("aA"), stringValue("aaA"), stringValue("aaaA")))
+  }
+
+  test("list comprehension with predicate and no extract expression") {
+    //Given
+    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
+
+    //When, extract(bar IN ["a", "aa", "aaa"] | size(bar))
+    val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+                                             predicate = Some(startsWith(varFor("bar"), literalString("aa"))),
+                                             extractExpression = None))
+
+    //Then
+    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(list(stringValue("aa"), stringValue("aaa")))
+  }
+
+  test("list comprehension with no predicate and no extract expression") {
+    //Given
+    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
+
+    //When, extract(bar IN ["a", "aa", "aaa"] | size(bar))
+    val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+                                             predicate = None,
+                                             extractExpression = None))
+
+    //Then
+    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(list(stringValue("a"), stringValue("aa"), stringValue("aaa")))
+  }
+
   test("simple case expressions") {
     val alts = List(literalInt(42) -> literalString("42"), literalInt(1337) -> literalString("1337"))
 
@@ -2668,6 +2720,12 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   private def reduce(accumulator: String, init: Expression, variable: String, collection: Expression, expression: Expression) =
     ReduceExpression(varFor(accumulator), init, varFor(variable), collection,  expression)(pos)
+
+  private def listComprehension(variable: String,
+                                collection: Expression,
+                                predicate: Option[Expression],
+                                extractExpression: Option[Expression]) =
+    ListComprehension(varFor(variable), collection, predicate, extractExpression)(pos)
 
   private def callByName(ufs: UserFunctionSignature, args: Expression*) =
     ResolvedFunctionInvocation(ufs.name, Some(ufs), args.toIndexedSeq)(pos)

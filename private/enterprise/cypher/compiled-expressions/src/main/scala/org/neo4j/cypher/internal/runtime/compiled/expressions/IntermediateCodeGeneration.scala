@@ -591,137 +591,24 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case FilterExpression(scope, collectionExpression) =>
-      /*
-        ListValue list = [evaluate collection expression];
-        ExecutionContext innerContext = context.createClone();
-        ArrayList<AnyValue> filtered = new ArrayList<>();
-        Iterator<AnyValue> listIterator = list.iterator();
-        while( listIterator.hasNext() )
-        {
-            AnyValue currentValue = listIterator.next();
-            innerContext.set([name from scope], currentValue);
-            Value isFiltered = [result from inner expression using innerContext]
-            if (isFiltered == Values.TRUE)
-            {
-                filtered.add(currentValue);
-            }
-        }
-        return VirtualValues.fromList(filtered);
-       */
-      val innerContext = namer.nextVariableName()
-      val iterVariable = namer.nextVariableName()
-      for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           inner <- internalCompileExpression(scope.innerPredicate.get,
-                                              Some(load(innerContext))) //Note we update the context here
-      } yield {
-        val listVar = namer.nextVariableName()
-        val filteredVars = namer.nextVariableName()
-        val currentValue = namer.nextVariableName()
-        val isFiltered = namer.nextVariableName()
-        val ops = Seq(
-          // ListValue list = [evaluate collection expression];
-          // ExecutionContext innerContext = context.createClone();
-          // ArrayList<AnyValue> filtered = new ArrayList<>();
-          declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-          declare[ExecutionContext](innerContext),
-          assign(innerContext,
-                 invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
-          declare[java.util.ArrayList[AnyValue]](filteredVars),
-          assign(filteredVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
-          // Iterator<AnyValue> listIterator = list.iterator();
-          // while( listIterator.hasNext() )
-          // {
-          //    AnyValue currentValue = listIterator.next();
-          declare[java.util.Iterator[AnyValue]](iterVariable),
-          assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-          loop(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
-            block(Seq(
-              declare[AnyValue](currentValue),
-              assign(currentValue,
-                     cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              //innerContext.set([name from scope], currentValue);
-              contextSet(scope.variable.name, load(innerContext), load(currentValue)),
-              declare[Value](isFiltered),
-              // Value isFiltered = [result from inner expression using innerContext]
-              assign(isFiltered, nullCheck(inner)(inner.ir)),
-              // if (isFiltered == Values.TRUE)
-              // {
-              //    filtered.add(currentValue);
-              // }
-              condition(equal(load(isFiltered), truthValue))(
-                invokeSideEffect(load(filteredVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
-                                 load(currentValue))
-              )): _*)
-          },
-          // }
-          // return VirtualValues.fromList(extracted);
-          invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue]]("fromList"), load(filteredVars))
-        )
-        IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
-                               collection.variables ++ inner.variables,
-                               collection.nullCheck)
+     filterExpression(internalCompileExpression(collectionExpression, currentContext),
+                      scope.innerPredicate.get, scope.variable.name, currentContext)
+
+    case ListComprehension(scope, list) =>
+       val filter = scope.innerPredicate match {
+         case Some(_: True) | None => internalCompileExpression(list, currentContext)
+         case Some(inner) => filterExpression(internalCompileExpression(list, currentContext),
+                                              inner, scope.variable.name, currentContext)
+       }
+      scope.extractExpression match {
+        case None => filter
+        case Some(extract) =>
+          extractExpression(filter, extract, scope.variable.name, currentContext)
       }
 
     case ExtractExpression(scope, collectionExpression) =>
-      /*
-        extract is tricky because it modifies the scope for future expressions. The generated code will be something
-        along the line of:
-
-        ListValue list = [evaluate collection expression];
-        ExecutionContext innerContext = context.createClone();
-        ArrayList<AnyValue> extracted = new ArrayList<>();
-        for ( AnyValue currentValue : list ) {
-            innerContext.set([name from scope], currentValue);
-            extracted.add([result from inner expression using innerContext]);
-        }
-        return VirtualValues.fromList(extracted);
-       */
-      //this is the context inner expressions should see
-      val innerContext = namer.nextVariableName()
-      val iterVariable = namer.nextVariableName()
-      for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           inner <- internalCompileExpression(scope.extractExpression.get,
-                                              Some(load(innerContext))) //Note we update the context here
-      } yield {
-        val listVar = namer.nextVariableName()
-        val extractedVars = namer.nextVariableName()
-        val currentValue = namer.nextVariableName()
-        val ops = Seq(
-          //ListValue list = [evaluate collection expression];
-          //ExecutionContext innerContext = context.createClone();
-          //ArrayList<AnyValue> extracted = new ArrayList<>();
-          declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-          declare[ExecutionContext](innerContext),
-          assign(innerContext,
-                 invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
-          declare[java.util.ArrayList[AnyValue]](extractedVars),
-          assign(extractedVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
-          //Iterator<AnyValue> iter = list.iterator();
-          //while (iter.hasNext) {
-          //   AnyValue currentValue = iter.next();
-          declare[java.util.Iterator[AnyValue]](iterVariable),
-          assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-          loop(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
-            block(Seq(
-              declare[AnyValue](currentValue),
-              assign(currentValue,
-                     cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              //innerContext.set([name from scope], currentValue);
-              contextSet(scope.variable.name, load(innerContext), load(currentValue)),
-              //extracted.add([result from inner expression using innerContext]);
-              invokeSideEffect(load(extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
-                               nullCheck(inner)(inner.ir))): _*)
-          },
-          // }
-          // return VirtualValues.fromList(extracted);
-          invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue]]("fromList"), load(extractedVars))
-        )
-        IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
-                               collection.variables ++ inner.variables,
-                               collection.nullCheck)
-      }
+      extractExpression(internalCompileExpression(collectionExpression, currentContext),
+                        scope.extractExpression.get, scope.variable.name, currentContext)
 
     case ReduceExpression(scope, initExpression, collectionExpression) =>
       /*
@@ -2223,6 +2110,146 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                    method[CompiledHelpers, AnyValue, ExecutionContext, String]("loadVariable"),
                    loadContext(currentContext), constant(name)))), load(local)),
         Some(equal(load(local), noValue)), Some(variable[AnyValue](local, constant(null))))
+  }
+
+  private def filterExpression(collectionExpression: Option[IntermediateExpression],
+                               innerPredicate: Expression,
+                               scopeVariable: String,
+                               currentContext: Option[IntermediateRepresentation]): Option[IntermediateExpression] = {
+    /*
+       ListValue list = [evaluate collection expression];
+       ExecutionContext innerContext = context.createClone();
+       ArrayList<AnyValue> filtered = new ArrayList<>();
+       Iterator<AnyValue> listIterator = list.iterator();
+       while( listIterator.hasNext() )
+       {
+           AnyValue currentValue = listIterator.next();
+           innerContext.set([name from scope], currentValue);
+           Value isFiltered = [result from inner expression using innerContext]
+           if (isFiltered == Values.TRUE)
+           {
+               filtered.add(currentValue);
+           }
+       }
+       return VirtualValues.fromList(filtered);
+      */
+    val innerContext = namer.nextVariableName()
+    val iterVariable = namer.nextVariableName()
+    for {collection <- collectionExpression
+         inner <- internalCompileExpression(innerPredicate,
+                                            Some(load(innerContext))) //Note we update the context here
+    } yield {
+      val listVar = namer.nextVariableName()
+      val filteredVars = namer.nextVariableName()
+      val currentValue = namer.nextVariableName()
+      val isFiltered = namer.nextVariableName()
+      val ops = Seq(
+        // ListValue list = [evaluate collection expression];
+        // ExecutionContext innerContext = context.createClone();
+        // ArrayList<AnyValue> filtered = new ArrayList<>();
+        declare[ListValue](listVar),
+        assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
+        declare[ExecutionContext](innerContext),
+        assign(innerContext,
+               invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
+        declare[java.util.ArrayList[AnyValue]](filteredVars),
+        assign(filteredVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
+        // Iterator<AnyValue> listIterator = list.iterator();
+        // while( listIterator.hasNext() )
+        // {
+        //    AnyValue currentValue = listIterator.next();
+        declare[java.util.Iterator[AnyValue]](iterVariable),
+        assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+        loop(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
+          block(Seq(
+            declare[AnyValue](currentValue),
+            assign(currentValue,
+                   cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
+            //innerContext.set([name from scope], currentValue);
+            contextSet(scopeVariable, load(innerContext), load(currentValue)),
+            declare[Value](isFiltered),
+            // Value isFiltered = [result from inner expression using innerContext]
+            assign(isFiltered, nullCheck(inner)(inner.ir)),
+            // if (isFiltered == Values.TRUE)
+            // {
+            //    filtered.add(currentValue);
+            // }
+            condition(equal(load(isFiltered), truthValue))(
+              invokeSideEffect(load(filteredVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
+                               load(currentValue))
+            )): _*)
+        },
+        // }
+        // return VirtualValues.fromList(extracted);
+        invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue]]("fromList"), load(filteredVars))
+      )
+      IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
+                             collection.variables ++ inner.variables,
+                             collection.nullCheck)
+    }
+  }
+  private def extractExpression(collectionExpression: Option[IntermediateExpression],
+                                extractExpression: Expression,
+                                scopeVariable: String,
+                                currentContext: Option[IntermediateRepresentation]): Option[IntermediateExpression] = {
+    /*
+        extract is tricky because it modifies the scope for future expressions. The generated code will be something
+        along the line of:
+
+        ListValue list = [evaluate collection expression];
+        ExecutionContext innerContext = context.createClone();
+        ArrayList<AnyValue> extracted = new ArrayList<>();
+        for ( AnyValue currentValue : list ) {
+            innerContext.set([name from scope], currentValue);
+            extracted.add([result from inner expression using innerContext]);
+        }
+        return VirtualValues.fromList(extracted);
+       */
+    //this is the context inner expressions should see
+    val innerContext = namer.nextVariableName()
+    val iterVariable = namer.nextVariableName()
+    for {collection <- collectionExpression
+         inner <- internalCompileExpression(extractExpression,
+                                            Some(load(innerContext))) //Note we update the context here
+    } yield {
+      val listVar = namer.nextVariableName()
+      val extractedVars = namer.nextVariableName()
+      val currentValue = namer.nextVariableName()
+      val ops = Seq(
+        //ListValue list = [evaluate collection expression];
+        //ExecutionContext innerContext = context.createClone();
+        //ArrayList<AnyValue> extracted = new ArrayList<>();
+        declare[ListValue](listVar),
+        assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
+        declare[ExecutionContext](innerContext),
+        assign(innerContext,
+               invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
+        declare[java.util.ArrayList[AnyValue]](extractedVars),
+        assign(extractedVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
+        //Iterator<AnyValue> iter = list.iterator();
+        //while (iter.hasNext) {
+        //   AnyValue currentValue = iter.next();
+        declare[java.util.Iterator[AnyValue]](iterVariable),
+        assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
+        loop(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext"))) {
+          block(Seq(
+            declare[AnyValue](currentValue),
+            assign(currentValue,
+                   cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
+            //innerContext.set([name from scope], currentValue);
+            contextSet(scopeVariable, load(innerContext), load(currentValue)),
+            //extracted.add([result from inner expression using innerContext]);
+            invokeSideEffect(load(extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
+                             nullCheck(inner)(inner.ir))): _*)
+        },
+        // }
+        // return VirtualValues.fromList(extracted);
+        invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue]]("fromList"), load(extractedVars))
+      )
+      IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
+                             collection.variables ++ inner.variables,
+                             collection.nullCheck)
+    }
   }
 }
 
