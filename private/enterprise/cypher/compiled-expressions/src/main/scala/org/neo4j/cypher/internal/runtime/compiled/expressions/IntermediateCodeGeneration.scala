@@ -312,7 +312,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           // int matches = 0;
           // boolean isNull = false;
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("makeTraversable"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
           declare[ExecutionContext](innerContext),
           assign(innerContext,
                  invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
@@ -400,7 +400,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           // Value isMatch = Values.NO_VALUE;
           // boolean isNull = false;
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("makeTraversable"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
           declare[ExecutionContext](innerContext),
           assign(innerContext,
                  invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
@@ -482,7 +482,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           // Value isMatch = Values.FALSE;
           // boolean isNull = false;
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("makeTraversable"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
           declare[ExecutionContext](innerContext),
           assign(innerContext,
                  invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
@@ -554,7 +554,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           // ExecutionContext innerContext = context.createClone();
           // Value isMatch = Values.TRUE;
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("makeTraversable"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
           declare[ExecutionContext](innerContext),
           assign(innerContext,
                  invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
@@ -620,7 +620,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           // ExecutionContext innerContext = context.createClone();
           // ArrayList<AnyValue> filtered = new ArrayList<>();
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("makeTraversable"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
           declare[ExecutionContext](innerContext),
           assign(innerContext,
                  invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
@@ -689,7 +689,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           //ExecutionContext innerContext = context.createClone();
           //ArrayList<AnyValue> extracted = new ArrayList<>();
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("makeTraversable"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
           declare[ExecutionContext](innerContext),
           assign(innerContext,
                  invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
@@ -748,7 +748,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           //ListValue list = [evaluate collection expression];
           //ExecutionContext innerContext = context.copyWith(acc, init);
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("makeTraversable"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
           declare[ExecutionContext](innerContext),
           assign(innerContext,
                  invoke(loadContext(currentContext),
@@ -1020,7 +1020,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case In(lhs, rhs) =>
       for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)  } yield {
+           r <- internalCompileExpression(rhs, currentContext)} yield {
 
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)

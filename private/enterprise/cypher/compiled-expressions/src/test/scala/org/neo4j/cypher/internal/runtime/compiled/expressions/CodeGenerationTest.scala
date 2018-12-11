@@ -1159,7 +1159,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("in") {
-    val compiled= compile(in(parameter("a"), parameter("b")))
+    val compiled = compile(in(parameter("a"), parameter("b")))
 
     compiled.evaluate(ctx, db, map(Array("a", "b"), Array(intValue(3), list(intValue(1), intValue(2), intValue(3)))), cursors) should equal(Values.TRUE)
     compiled.evaluate(ctx, db, map(Array("a", "b"), Array(intValue(4), list(intValue(1), intValue(2), intValue(3)))), cursors) should equal(Values.FALSE)
