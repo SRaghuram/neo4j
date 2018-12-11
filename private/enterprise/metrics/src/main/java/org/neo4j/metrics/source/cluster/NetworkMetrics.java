@@ -5,7 +5,6 @@
  */
 package org.neo4j.metrics.source.cluster;
 
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.com.storecopy.ToNetworkStoreWriter;
@@ -14,6 +13,7 @@ import org.neo4j.kernel.ha.com.master.MasterServer;
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.metrics.metric.MetricsCounter;
 import org.neo4j.metrics.source.ByteCountsMetric;
 
 import static com.codahale.metrics.MetricRegistry.name;
@@ -52,9 +52,9 @@ public class NetworkMetrics extends LifecycleAdapter
                 ToNetworkStoreWriter.STORE_COPIER_MONITOR_TAG );
         monitors.addMonitorListener( slaveNetworkTransactionWrites, MasterClient320.class.getName() );
 
-        registry.register( MASTER_NETWORK_TX_WRITES, (Gauge<Long>) masterNetworkTransactionWrites::getBytesWritten );
-        registry.register( MASTER_NETWORK_STORE_WRITES, (Gauge<Long>) masterNetworkStoreWrites::getBytesWritten );
-        registry.register( SLAVE_NETWORK_TX_WRITES, (Gauge<Long>) slaveNetworkTransactionWrites::getBytesWritten );
+        registry.register( MASTER_NETWORK_TX_WRITES, new MetricsCounter( masterNetworkTransactionWrites::getBytesWritten ) );
+        registry.register( MASTER_NETWORK_STORE_WRITES, new MetricsCounter( masterNetworkStoreWrites::getBytesWritten ) );
+        registry.register( SLAVE_NETWORK_TX_WRITES, new MetricsCounter( slaveNetworkTransactionWrites::getBytesWritten ) );
     }
 
     @Override

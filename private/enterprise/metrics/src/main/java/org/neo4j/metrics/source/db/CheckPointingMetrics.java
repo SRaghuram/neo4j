@@ -16,6 +16,7 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.DefaultCheckPointerTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.metrics.metric.MetricsCounter;
 import org.neo4j.metrics.output.EventReporter;
 
 import static com.codahale.metrics.MetricRegistry.name;
@@ -58,9 +59,8 @@ public class CheckPointingMetrics extends LifecycleAdapter
         monitors.addMonitorListener( listener );
 
         CheckPointerMonitor checkPointerMonitor = checkPointerMonitorSupplier.get();
-        registry.register( CHECK_POINT_EVENTS, (Gauge<Long>) checkPointerMonitor::numberOfCheckPointEvents );
-        registry.register( CHECK_POINT_TOTAL_TIME,
-                (Gauge<Long>) checkPointerMonitor::checkPointAccumulatedTotalTimeMillis );
+        registry.register( CHECK_POINT_EVENTS, new MetricsCounter( checkPointerMonitor::numberOfCheckPointEvents ) );
+        registry.register( CHECK_POINT_TOTAL_TIME, new MetricsCounter( checkPointerMonitor::checkPointAccumulatedTotalTimeMillis ) );
     }
 
     @Override

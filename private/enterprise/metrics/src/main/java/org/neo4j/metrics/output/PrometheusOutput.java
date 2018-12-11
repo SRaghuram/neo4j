@@ -88,13 +88,31 @@ public class PrometheusOutput implements Lifecycle, EventReporter
     public void report( SortedMap<String,Gauge> gauges, SortedMap<String,Counter> counters,
             SortedMap<String,Histogram> histograms, SortedMap<String,Meter> meters, SortedMap<String,Timer> timers )
     {
-        // Prometheus does not support events, just output the latest event that occurred
-        String metricKey = gauges.firstKey();
-        if ( !registeredEvents.containsKey( metricKey ) )
+        if ( !gauges.isEmpty() )
         {
-            eventRegistry.register( metricKey, (Gauge) () -> registeredEvents.get( metricKey ) );
+            String gaugeKey = gauges.firstKey();
+            if ( !registeredEvents.containsKey( gaugeKey ) )
+            {
+                eventRegistry.register( gaugeKey, (Gauge) () -> registeredEvents.get( gaugeKey ) );
+            }
+            registeredEvents.put( gaugeKey, gauges.get( gaugeKey ).getValue() );
         }
 
-        registeredEvents.put( metricKey, gauges.get( metricKey ).getValue() );
+        if ( !meters.isEmpty() )
+        {
+            String meterKey = meters.firstKey();
+            if ( !registeredEvents.containsKey( meterKey ) )
+            {
+                eventRegistry.register( meterKey, new Counter()
+                {
+                    @Override
+                    public long getCount()
+                    {
+                        return ((Number) registeredEvents.get( meterKey )).longValue();
+                    }
+                } );
+            }
+            registeredEvents.put( meterKey, meters.get( meterKey ).getCount() );
+        }
     }
 }

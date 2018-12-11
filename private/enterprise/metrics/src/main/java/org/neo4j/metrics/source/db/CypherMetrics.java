@@ -5,13 +5,13 @@
  */
 package org.neo4j.metrics.source.db;
 
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.cypher.PlanCacheMetricsMonitor;
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.metrics.metric.MetricsCounter;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -40,8 +40,8 @@ public class CypherMetrics extends LifecycleAdapter
     public void start()
     {
         monitors.addMonitorListener( cacheMonitor );
-        registry.register( REPLAN_EVENTS, (Gauge<Long>) cacheMonitor::numberOfReplans );
-        registry.register( REPLAN_WAIT_TIME, (Gauge<Long>) cacheMonitor::replanWaitTime );
+        registry.register( REPLAN_EVENTS, new MetricsCounter( cacheMonitor::numberOfReplans ) );
+        registry.register( REPLAN_WAIT_TIME, new MetricsCounter( cacheMonitor::replanWaitTime ) );
     }
 
     @Override

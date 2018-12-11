@@ -40,22 +40,22 @@ public class ReplicationMetric implements ReplicationMonitor
         fail.getAndIncrement();
     }
 
-    public long newReplicationCount()
+    long newReplicationCount()
     {
         return newReplication.get();
     }
 
-    public long attemptCount()
+    long attemptCount()
     {
         return attempts.get();
     }
 
-    public long successCount()
+    long successCount()
     {
         return success.get();
     }
 
-    public long failCount()
+    long failCount()
     {
         return fail.get();
     }

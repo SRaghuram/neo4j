@@ -52,7 +52,7 @@ public class RotatableCsvReporter extends ScheduledReporter
         this.writers = new ConcurrentHashMap<>();
     }
 
-    public static Builder forRegistry( MetricRegistry registry )
+    static Builder forRegistry( MetricRegistry registry )
     {
         return new Builder( registry );
     }
@@ -146,7 +146,6 @@ public class RotatableCsvReporter extends ScheduledReporter
         File file = new File( directory, name + ".csv" );
         CsvRotatableWriter csvRotatableWriter = writers.computeIfAbsent( file,
                 new RotatingCsvWriterSupplier( header, fileSupplierStreamCreator, writers ) );
-        //noinspection SynchronizationOnLocalVariableOrMethodParameter
         csvRotatableWriter.writeValues( locale, timestamp, line, values );
     }
 
@@ -169,25 +168,25 @@ public class RotatableCsvReporter extends ScheduledReporter
             this.clock = Clock.defaultClock();
         }
 
-        public Builder formatFor( Locale locale )
+        Builder formatFor( Locale locale )
         {
             this.locale = locale;
             return this;
         }
 
-        public Builder convertRatesTo( TimeUnit rateUnit )
+        Builder convertRatesTo( TimeUnit rateUnit )
         {
             this.rateUnit = rateUnit;
             return this;
         }
 
-        public Builder convertDurationsTo( TimeUnit durationUnit )
+        Builder convertDurationsTo( TimeUnit durationUnit )
         {
             this.durationUnit = durationUnit;
             return this;
         }
 
-        public Builder outputStreamSupplierFactory(
+        Builder outputStreamSupplierFactory(
                 BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> outputStreamSupplierFactory )
         {
             this.outputStreamSupplierFactory = outputStreamSupplierFactory;
