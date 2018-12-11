@@ -144,7 +144,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     private final CoreServerModule coreServerModule;
     private final CoreStateService coreStateService;
     protected final DefaultDatabaseService<CoreLocalDatabase> databaseService;
-    protected final Map<String,DatabaseInitializer> databaseInitializers = new HashMap<>();
+    protected final Map<String,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
     //TODO: Find a way to be more generic about this to help with 4.0 plans
     private final String activeDatabaseName;
     private final PlatformModule platformModule;
@@ -222,7 +222,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         watcherServiceFactory = layout ->
                 createDatabaseFileSystemWatcher( platformModule.fileSystemWatcher.getFileWatcher(), layout, logging, fileWatcherFileNameFilter() );
 
-        IdentityModule identityModule = new IdentityModule( platformModule, clusterStateDirectory.get() );
+        IdentityModule identityModule = new IdentityModule( platformModule, storage );
 
         //Build local databases object
         final Supplier<DatabaseManager> databaseManagerSupplier = () -> platformModule.dependencies.resolveDependency( DatabaseManager.class );
@@ -364,7 +364,7 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
             CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies )
     {
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService, databaseInitializers );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService, databaseInitializerMap::get );
     }
 
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()

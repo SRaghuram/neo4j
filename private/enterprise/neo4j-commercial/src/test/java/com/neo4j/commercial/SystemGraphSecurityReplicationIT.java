@@ -10,10 +10,13 @@ import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.causalclustering.core.CoreClusterMember;
@@ -38,10 +41,16 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
+import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
+import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
+import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
+import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -57,19 +66,9 @@ class SystemGraphSecurityReplicationIT
 
     private CommercialCluster cluster;
 
-    @AfterEach
-    void cleanup()
+    @BeforeEach
+    void setup() throws Exception
     {
-        if ( cluster != null )
-        {
-            cluster.shutdown();
-        }
-    }
-
-    @Test
-    void shouldReplicateSecurityData() throws Exception
-    {
-        // given
         Map<String,String> params = stringMap(
                 GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
                 SecuritySettings.auth_provider.name(), SYSTEM_GRAPH_REALM_NAME
@@ -82,7 +81,36 @@ class SystemGraphSecurityReplicationIT
                 emptyMap(), params, emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
 
         cluster.start();
+    }
 
+    @AfterEach
+    void cleanup()
+    {
+        if ( cluster != null )
+        {
+            cluster.shutdown();
+        }
+    }
+
+    @Test
+    void shouldHaveInitialRoles() throws Exception
+    {
+        Set<String> expectedRoles = new HashSet<>( asList( ADMIN, ARCHITECT, EDITOR, PUBLISHER, READER ) );
+
+        for ( CoreClusterMember core : cluster.coreMembers() )
+        {
+            await( () -> getAllRoleNames( core.database() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+        }
+
+        for ( ReadReplica replica : cluster.readReplicas() )
+        {
+            await( () -> getAllRoleNames( replica.database() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+        }
+    }
+
+    @Test
+    void shouldReplicateNewUser() throws Exception
+    {
         String username = "martin";
         String password = "235711";
 
@@ -108,6 +136,18 @@ class SystemGraphSecurityReplicationIT
         try
         {
             userManager( db ).newUser( username, UTF8.encode( password ), false );
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
+    private Set<String> getAllRoleNames( GraphDatabaseFacade db )
+    {
+        try
+        {
+            return userManager( db ).getAllRoleNames();
         }
         catch ( Exception e )
         {
@@ -148,7 +188,6 @@ class SystemGraphSecurityReplicationIT
 
     private EnterpriseAuthManager authManager( GraphDatabaseFacade db )
     {
-        //noinspection deprecation
         return db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
     }
 }

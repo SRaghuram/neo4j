@@ -22,7 +22,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 import static org.mockito.Mockito.mock;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class StubLocalDatabaseService implements DatabaseService
 {
@@ -69,9 +68,9 @@ public class StubLocalDatabaseService implements DatabaseService
         databases.put( databaseName, db );
     }
 
-    public NeedsDatabaseDirectory givenDatabaseWithConfig()
+    public NeedsDatabaseLayout newDatabase( String databaseName )
     {
-        return new LocalDatabaseConfig();
+        return new LocalDatabaseConfig( databaseName );
     }
 
     public void registerAllDatabases( Map<String,LocalDatabase> registeredDbs )
@@ -125,9 +124,9 @@ public class StubLocalDatabaseService implements DatabaseService
                 config.logProvider, config.isAvailable, config.monitors, config.jobScheduler );
     }
 
-    public class LocalDatabaseConfig implements NeedsDatabaseDirectory
+    public class LocalDatabaseConfig implements NeedsDatabaseLayout
     {
-        private String databaseName = DEFAULT_DATABASE_NAME;
+        private String databaseName;
         private DatabaseManager databaseManager = StubLocalDatabaseService.this.databaseManager;
         private DatabaseLayout databaseLayout;
         private LogProvider logProvider = NullLogProvider.getInstance();
@@ -135,20 +134,15 @@ public class StubLocalDatabaseService implements DatabaseService
         private Monitors monitors;
         private JobScheduler jobScheduler = new FakeJobScheduler();
 
-        private LocalDatabaseConfig()
+        private LocalDatabaseConfig( String databaseName )
         {
+            this.databaseName = databaseName;
         }
 
         @Override
         public LocalDatabaseConfig withDatabaseLayout( DatabaseLayout databaseLayout )
         {
             this.databaseLayout = databaseLayout;
-            return this;
-        }
-
-        public LocalDatabaseConfig withDatabaseName( String databaseName )
-        {
-            this.databaseName = databaseName;
             return this;
         }
 
@@ -184,11 +178,15 @@ public class StubLocalDatabaseService implements DatabaseService
 
         public void register()
         {
-            databases.put( databaseName, stubDatabaseFromConfig( this ) );
+            LocalDatabase previous = databases.putIfAbsent( databaseName, stubDatabaseFromConfig( this ) );
+            if ( previous != null )
+            {
+                throw new IllegalStateException( "Already had database with name " + databaseName );
+            }
         }
     }
 
-    public interface NeedsDatabaseDirectory
+    public interface NeedsDatabaseLayout
     {
         LocalDatabaseConfig withDatabaseLayout( DatabaseLayout databaseLayout );
     }

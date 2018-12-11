@@ -5,17 +5,14 @@
  */
 package org.neo4j.causalclustering.core;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
+import org.neo4j.causalclustering.core.state.CoreStateStorageService;
 import org.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.graphdb.factory.module.PlatformModule;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.CORE_MEMBER_ID;
 
@@ -23,15 +20,11 @@ public class IdentityModule
 {
     private MemberId myself;
 
-    IdentityModule( PlatformModule platformModule, File clusterStateDirectory )
+    IdentityModule( PlatformModule platformModule, CoreStateStorageService storage )
     {
-        FileSystemAbstraction fileSystem = platformModule.fileSystem;
-        LogProvider logProvider = platformModule.logService.getInternalLogProvider();
+        Log log = platformModule.logService.getInternalLogProvider().getLog( getClass() );
 
-        Log log = logProvider.getLog( getClass() );
-
-        SimpleStorage<MemberId> memberIdStorage = new SimpleFileStorage<>( fileSystem, CORE_MEMBER_ID.at( clusterStateDirectory ),
-                new MemberId.Marshal(), logProvider );
+        SimpleStorage<MemberId> memberIdStorage = storage.simpleStorage( CORE_MEMBER_ID );
 
         try
         {

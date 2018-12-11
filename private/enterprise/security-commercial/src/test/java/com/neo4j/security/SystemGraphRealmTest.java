@@ -426,6 +426,7 @@ public class SystemGraphRealmTest
         SystemGraphRealm realm = new SystemGraphRealm(
                 systemGraphOperations,
                 new SystemGraphInitializer( executor, systemGraphOperations, importOptions, secureHasher, securityLog ),
+                true,
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 newRateLimitedAuthStrategy(),

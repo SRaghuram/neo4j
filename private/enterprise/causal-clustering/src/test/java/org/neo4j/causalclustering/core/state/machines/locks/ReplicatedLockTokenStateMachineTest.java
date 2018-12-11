@@ -38,7 +38,7 @@ public class ReplicatedLockTokenStateMachineTest
     {
         // given
         ReplicatedLockTokenStateMachine stateMachine = new ReplicatedLockTokenStateMachine(
-                new InMemoryStateStorage<>( new ReplicatedLockTokenState() ) );
+                new InMemoryStateStorage<>( ReplicatedLockTokenState.INITIAL_LOCK_TOKEN ) );
 
         // when
         int initialTokenId = stateMachine.snapshot().candidateId();
@@ -52,7 +52,7 @@ public class ReplicatedLockTokenStateMachineTest
     {
         // given
         ReplicatedLockTokenStateMachine stateMachine = new ReplicatedLockTokenStateMachine(
-                new InMemoryStateStorage<>( new ReplicatedLockTokenState() ) );
+                new InMemoryStateStorage<>( ReplicatedLockTokenState.INITIAL_LOCK_TOKEN ) );
         int firstCandidateId = LockToken.nextCandidateId( stateMachine.snapshot().candidateId() );
 
         // when
@@ -67,7 +67,7 @@ public class ReplicatedLockTokenStateMachineTest
     {
         // given
         ReplicatedLockTokenStateMachine stateMachine = new ReplicatedLockTokenStateMachine(
-                new InMemoryStateStorage<>( new ReplicatedLockTokenState() ) );
+                new InMemoryStateStorage<>( ReplicatedLockTokenState.INITIAL_LOCK_TOKEN ) );
         int firstCandidateId = LockToken.nextCandidateId( stateMachine.snapshot().candidateId() );
 
         // when
@@ -88,7 +88,7 @@ public class ReplicatedLockTokenStateMachineTest
     {
         // given
         ReplicatedLockTokenStateMachine stateMachine = new ReplicatedLockTokenStateMachine(
-                new InMemoryStateStorage<>( new ReplicatedLockTokenState() ) );
+                new InMemoryStateStorage<>( ReplicatedLockTokenState.INITIAL_LOCK_TOKEN ) );
         int firstCandidateId = LockToken.nextCandidateId( stateMachine.snapshot().candidateId() );
 
         // when
@@ -109,7 +109,7 @@ public class ReplicatedLockTokenStateMachineTest
     {
         // given
         ReplicatedLockTokenStateMachine stateMachine = new ReplicatedLockTokenStateMachine(
-                new InMemoryStateStorage<>( new ReplicatedLockTokenState() ) );
+                new InMemoryStateStorage<>( ReplicatedLockTokenState.INITIAL_LOCK_TOKEN ) );
         int firstCandidateId = LockToken.nextCandidateId( stateMachine.snapshot().candidateId() );
 
         // when
@@ -134,7 +134,7 @@ public class ReplicatedLockTokenStateMachineTest
     {
         // given
         ReplicatedLockTokenStateMachine stateMachine = new ReplicatedLockTokenStateMachine(
-                new InMemoryStateStorage<>( new ReplicatedLockTokenState() ) );
+                new InMemoryStateStorage<>( ReplicatedLockTokenState.INITIAL_LOCK_TOKEN ) );
         int firstCandidateId = LockToken.nextCandidateId( stateMachine.snapshot().candidateId() );
 
         // when

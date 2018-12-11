@@ -77,6 +77,7 @@ class SystemGraphInternalsTest
         realm = new SystemGraphRealm(
                 systemGraphOperations,
                 new SystemGraphInitializer( systemGraphExecutor, systemGraphOperations, importOptions, secureHasher, securityLog ),
+                true,
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 Mockito.mock( AuthenticationStrategy.class ),

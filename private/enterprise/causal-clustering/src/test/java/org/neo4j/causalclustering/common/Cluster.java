@@ -575,8 +575,16 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
     {
         List<Future<CoreGraphDatabase>> futures = invokeAll( "cluster-starter", members, cm ->
         {
-            cm.start();
-            return cm.database();
+            try
+            {
+                cm.start();
+                return cm.database();
+            }
+            catch ( Throwable e )
+            {
+                e.printStackTrace();
+                throw e;
+            }
         } );
         for ( Future<CoreGraphDatabase> future : futures )
         {

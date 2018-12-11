@@ -5,8 +5,11 @@
  */
 package com.neo4j.security;
 
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+
 import java.io.File;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
@@ -48,7 +51,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     public static final String ROLE_IMPORT_FILENAME = ".roles.import";
 
     private DatabaseManager databaseManager;
-    private boolean useExternalBootstrapping;
+    private boolean initSystemGraphOnStart;
     private Config config;
     private LogProvider logProvider;
     private FileSystemAbstraction fileSystem;
@@ -72,6 +75,16 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         this.fileSystem = dependencies.fileSystem();
         this.accessCapability = dependencies.accessCapability();
 
+        if ( config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.CORE ||
+                config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.READ_REPLICA )
+        {
+            initSystemGraphOnStart = false;
+        }
+        else
+        {
+            initSystemGraphOnStart = true;
+        }
+
         super.setup( dependencies );
     }
 
@@ -91,14 +104,14 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         return internalRealm;
     }
 
-    /**
-     * To be used in clusters.
-     */
-    public DatabaseInitializer markForExternalBootstrappingAndGetInitializer()
+    public Optional<DatabaseInitializer> getDatabaseInitializer()
     {
-        useExternalBootstrapping = true;
+        if ( !((CommercialSecurityConfig) securityConfig).hasSystemGraphProvider )
+        {
+            return Optional.empty();
+        }
 
-        return database ->
+        return Optional.of( database ->
         {
             QueryExecutor queryExecutor = new QueryExecutor()
             {
@@ -135,7 +148,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
             {
                 throw new RuntimeException( e );
             }
-        };
+        } );
     }
 
     private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog,
@@ -147,12 +160,13 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
 
-        SystemGraphInitializer systemGraphInitializer = useExternalBootstrapping ? null : new SystemGraphInitializer( queryExecutor, systemGraphOperations,
-                configureImportOptions( config, logProvider, fileSystem, accessCapability ), secureHasher, securityLog );
+        SystemGraphInitializer systemGraphInitializer = initSystemGraphOnStart ? new SystemGraphInitializer( queryExecutor, systemGraphOperations,
+                configureImportOptions( config, logProvider, fileSystem, accessCapability ), secureHasher, securityLog ) : null;
 
         return new SystemGraphRealm(
                 systemGraphOperations,
                 systemGraphInitializer,
+                initSystemGraphOnStart,
                 secureHasher,
                 new BasicPasswordPolicy(),
                 createAuthenticationStrategy( config ),
@@ -296,6 +310,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
         return new SystemGraphRealm(
                 systemGraphOperations,
                 systemGraphInitializer,
+                true,
                 new SecureHasher(),
                 new BasicPasswordPolicy(),
                 createAuthenticationStrategy( config ),
