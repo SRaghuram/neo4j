@@ -51,7 +51,6 @@ import org.neo4j.logging.LogProvider;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.ignore_store_lock;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 import static org.neo4j.kernel.configuration.Settings.FALSE;
 import static org.neo4j.kernel.configuration.Settings.TRUE;
@@ -178,7 +177,7 @@ public class CoreBootstrapper
 
         /* This adhoc inheritance of configuration options is unfortunate and fragile, but there really aren't any better options currently. */
         params.put( GraphDatabaseSettings.record_format.name(), activeDatabaseConfig.get( record_format ) );
-        params.put( GraphDatabaseSettings.logical_logs_location.name(), activeDatabaseConfig.get( logical_logs_location ).getAbsolutePath() );
+        params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
         params.put( GraphDatabaseSettings.active_database.name(), activeDatabase.databaseName() );
 
         augmentWithCommonParams( params );

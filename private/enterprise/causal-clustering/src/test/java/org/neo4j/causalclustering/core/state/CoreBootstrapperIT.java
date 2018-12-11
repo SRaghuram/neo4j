@@ -5,9 +5,8 @@
  */
 package org.neo4j.causalclustering.core.state;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,10 +26,11 @@ import org.neo4j.causalclustering.helpers.ClassicNeo4jStore;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
-import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.LayoutConfig;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionStore;
@@ -38,49 +38,52 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static java.lang.Integer.parseInt;
 import static java.util.UUID.randomUUID;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState.INITIAL_LOCK_TOKEN;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
-public class CoreBootstrapperIT
+@PageCacheExtension
+class CoreBootstrapperIT
 {
-    private final TestDirectory testDirectory = TestDirectory.testDirectory();
-    private final PageCacheRule pageCacheRule = new PageCacheRule();
-    private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private PageCache pageCache;
+    @Inject
+    private DefaultFileSystemAbstraction fileSystem;
     private final Config activeDatabaseConfig = Config.defaults();
-
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( pageCacheRule ).around( testDirectory );
-
-    private final FileSystemAbstraction fileSystem = fileSystemRule.get();
-    private final PageCache pageCache = pageCacheRule.getPageCache( fileSystem );
 
     private final StubLocalDatabaseService databaseService = new StubLocalDatabaseService();
 
-    private final TemporaryDatabase.Factory temporaryDatabaseFactory = new TemporaryDatabase.Factory( pageCache );
-
+    private TemporaryDatabase.Factory temporaryDatabaseFactory;
     private final Function<String,DatabaseInitializer> databaseInitializers = databaseName -> null;
     private final Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
 
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final Monitors monitors = new Monitors();
 
+    @BeforeEach
+    void setUp()
+    {
+        temporaryDatabaseFactory = new TemporaryDatabase.Factory( pageCache );
+    }
+
     @Test
-    public void shouldBootstrapWhenNoDirectoryExists() throws Exception
+    void shouldBootstrapWhenNoDirectoryExists() throws Exception
     {
         // given
         File notExistingDirectory = new File( testDirectory.directory(), DEFAULT_DATABASE_NAME );
@@ -101,7 +104,7 @@ public class CoreBootstrapperIT
     }
 
     @Test
-    public void shouldBootstrapWhenEmptyDirectoryExists() throws Exception
+    void shouldBootstrapWhenEmptyDirectoryExists() throws Exception
     {
         File databaseDirectory = new File( testDirectory.directory(), DEFAULT_DATABASE_NAME );
         fileSystem.mkdir( databaseDirectory );
@@ -122,7 +125,7 @@ public class CoreBootstrapperIT
     }
 
     @Test
-    public void shouldBootstrapFromSeed() throws Exception
+    void shouldBootstrapFromSeed() throws Exception
     {
         // given
         int nodeCount = 100;
@@ -148,15 +151,15 @@ public class CoreBootstrapperIT
     }
 
     @Test
-    public void shouldBootstrapWithCustomTransationLogsLocation() throws Exception
+    void shouldBootstrapWithCustomTransactionLogsLocation() throws Exception
     {
         // given
         int nodeCount = 100;
-        String customTransactionLogsLocation = "transaction-logs";
+        String customTransactionLogsLocation = testDirectory.directory( "transaction-logs" ).getAbsolutePath();
         File classicNeo4jStore = ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
-                .logicalLogsLocation( customTransactionLogsLocation )
+                .logicalLogsRootLocation( customTransactionLogsLocation )
                 .build()
                 .getStoreDir();
 
@@ -165,7 +168,7 @@ public class CoreBootstrapperIT
                 .withDatabaseLayout( DatabaseLayout.of( classicNeo4jStore ) )
                 .register();
 
-        Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
+        Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.transaction_logs_root_path, customTransactionLogsLocation );
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, activeDatabaseConfig, logProvider, pageCache );
 
@@ -177,7 +180,7 @@ public class CoreBootstrapperIT
     }
 
     @Test
-    public void shouldFailToBootstrapWithUnrecoveredStore() throws Exception
+    void shouldFailToBootstrapWithUnrecoveredStore() throws Exception
     {
         // given
         int nodeCount = 100;
@@ -200,38 +203,30 @@ public class CoreBootstrapperIT
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
-        try
-        {
-            bootstrapper.bootstrap( membership );
-            fail();
-        }
-        catch ( IllegalStateException e )
-        {
-            assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( e.getMessage() ) );
-        }
+        IllegalStateException exception = assertThrows( IllegalStateException.class, () -> bootstrapper.bootstrap( membership ) );
+        assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( exception.getMessage() ) );
     }
 
     @Test
-    public void shouldFailToBootstrapWithUnrecoveredStoreWithCustomTransactionLogsLocation() throws IOException
+    void shouldFailToBootstrapWithUnrecoveredStoreWithCustomTransactionLogsLocation() throws IOException
     {
         // given
         int nodeCount = 100;
-        String customTransactionLogsLocation = "transaction-logs";
+        String customTransactionLogsLocation = testDirectory.directory( "transaction-logs" ).getAbsolutePath();
+        Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.transaction_logs_root_path, customTransactionLogsLocation );
         File storeInNeedOfRecovery = ClassicNeo4jStore
                 .builder( testDirectory.directory(), fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
-                .logicalLogsLocation( customTransactionLogsLocation )
+                .logicalLogsRootLocation( customTransactionLogsLocation )
                 .needToRecover()
                 .build()
                 .getStoreDir();
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( storeInNeedOfRecovery ) )
+                .withDatabaseLayout( DatabaseLayout.of( storeInNeedOfRecovery, LayoutConfig.of( activeDatabaseConfig ) ) )
                 .register();
-
-        Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
@@ -239,15 +234,8 @@ public class CoreBootstrapperIT
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
-        try
-        {
-            bootstrapper.bootstrap( membership );
-            fail();
-        }
-        catch ( Exception e )
-        {
-            assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( e.getMessage() ) );
-        }
+        Exception exception = assertThrows( Exception.class, () -> bootstrapper.bootstrap( membership ) );
+        assertableLogProvider.assertExactly( AssertableLogProvider.inLog( CoreBootstrapper.class ).error( exception.getMessage() ) );
     }
 
     private void verifySnapshot( CoreSnapshot snapshot, Set<MemberId> expectedMembership, Config activeDatabaseConfig, int nodeCount ) throws IOException
