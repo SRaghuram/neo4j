@@ -24,6 +24,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 
 public class CatchupComponentsService implements CatchupComponentsRepository, CatchupComponentsFactory
@@ -32,6 +33,7 @@ public class CatchupComponentsService implements CatchupComponentsRepository, Ca
     private final CatchupClientFactory catchupClient;
     private final CopiedStoreRecovery copiedStoreRecovery;
     private final TimeoutStrategy storeCopyBackoffStrategy;
+    private final Monitors monitors;
     private final FileSystemAbstraction fileSystem;
     private final PageCache pageCache;
     private final Config config;
@@ -39,9 +41,8 @@ public class CatchupComponentsService implements CatchupComponentsRepository, Ca
     private final Map<String, PerDatabaseCatchupComponents> components;
 
     CatchupComponentsService( DatabaseService databaseService, CatchupClientFactory catchupClient, CopiedStoreRecovery copiedStoreRecovery,
-            FileSystemAbstraction fileSystem, PageCache pageCache, Config config, LogProvider logProvider )
+            FileSystemAbstraction fileSystem, PageCache pageCache, Config config, LogProvider logProvider, Monitors monitors )
     {
-
         this.databaseService = databaseService;
         this.catchupClient = catchupClient;
         this.copiedStoreRecovery = copiedStoreRecovery;
@@ -51,6 +52,7 @@ public class CatchupComponentsService implements CatchupComponentsRepository, Ca
         this.logProvider = logProvider;
         storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
                 config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
+        this.monitors = monitors;
         this.components = new CopyOnWriteHashMap<>();
     }
 
@@ -64,13 +66,13 @@ public class CatchupComponentsService implements CatchupComponentsRepository, Ca
     @Override
     public PerDatabaseCatchupComponents createPerDatabaseComponents( LocalDatabase localDatabase )
     {
-        StoreCopyClient storeCopyClient = new StoreCopyClient( catchupClient, localDatabase.databaseName(), localDatabase::monitors,
+        StoreCopyClient storeCopyClient = new StoreCopyClient( catchupClient, localDatabase.databaseName(), () -> monitors,
                 logProvider, storeCopyBackoffStrategy );
         TransactionLogCatchUpFactory transactionLogFactory = new TransactionLogCatchUpFactory();
-        TxPullClient txPullClient = new TxPullClient( catchupClient, localDatabase.databaseName(), localDatabase::monitors, logProvider );
+        TxPullClient txPullClient = new TxPullClient( catchupClient, localDatabase.databaseName(), () -> monitors, logProvider );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystem, pageCache,
-                storeCopyClient, txPullClient, transactionLogFactory, config, localDatabase::monitors );
+                storeCopyClient, txPullClient, transactionLogFactory, config, () -> monitors );
 
         StoreCopyProcess storeCopy = new StoreCopyProcess( fileSystem, pageCache, localDatabase,
                 copiedStoreRecovery, remoteStore, logProvider );

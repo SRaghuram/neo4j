@@ -64,7 +64,7 @@ public abstract class CatchupServersModule
         CopiedStoreRecovery copiedStoreRecovery = lifeSupport.add( new CopiedStoreRecovery( config, platformModule.pageCache,
                 platformModule.fileSystem ) );
         this.databaseComponents = new CatchupComponentsService( databaseService, catchupClientFactory, copiedStoreRecovery,
-                platformModule.fileSystem, platformModule.pageCache, config, logProvider );
+                platformModule.fileSystem, platformModule.pageCache, config, logProvider, platformModule.monitors );
     }
 
     private CatchupClientFactory createCatchupClient()
