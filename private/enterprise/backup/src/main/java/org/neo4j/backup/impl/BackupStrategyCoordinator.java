@@ -82,9 +82,9 @@ class BackupStrategyCoordinator
                     requiredArgs.getReportDir().toFile(),
                     consistencyFlags );
         }
-        catch ( Throwable t )
+        catch ( Exception e )
         {
-            throw new ConsistencyCheckExecutionException( "Failed to do consistency check on the backup", t, true );
+            throw new ConsistencyCheckExecutionException( "Failed to do consistency check on the backup", e, true );
         }
 
         if ( !ccResult.isSuccessful() )
