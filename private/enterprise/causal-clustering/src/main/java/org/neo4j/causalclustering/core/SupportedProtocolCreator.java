@@ -17,7 +17,7 @@ import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import org.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import org.neo4j.helpers.collection.Pair;
-import org.neo4j.helpers.collection.Streams;
+import org.neo4j.collection.Streams;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

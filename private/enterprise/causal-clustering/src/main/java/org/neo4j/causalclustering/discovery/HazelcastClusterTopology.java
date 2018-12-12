@@ -32,7 +32,7 @@ import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.helpers.collection.Pair;
-import org.neo4j.helpers.collection.Streams;
+import org.neo4j.collection.Streams;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 
