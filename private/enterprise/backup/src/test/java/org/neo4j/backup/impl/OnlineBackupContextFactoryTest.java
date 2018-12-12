@@ -56,7 +56,7 @@ public class OnlineBackupContextFactoryTest
         homeDir = testDirectory.directory( "home" ).toPath();
         configDir = testDirectory.directory( "config" ).toPath();
         configFile = configDir.resolve( "neo4j.conf" );
-        String neo4jConfContents = "dbms.backup.address = localhost:1234";
+        String neo4jConfContents = "dbms.backup.listen_address = localhost:1234";
         Files.write( configFile, singletonList( neo4jConfContents ) );
     }
 
