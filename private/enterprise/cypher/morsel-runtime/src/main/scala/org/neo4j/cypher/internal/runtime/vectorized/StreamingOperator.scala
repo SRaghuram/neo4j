@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.parallel.{HasWorkIdentity, Task, WorkId
   * results in a new task.
   */
 trait StreamingOperator extends HasWorkIdentity {
-  def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask
+  def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, resources: QueryResources): ContinuableOperatorTask
 }
 
 /**
@@ -34,9 +34,9 @@ trait StreamingOperator extends HasWorkIdentity {
   * it eventually arrives in the initFromRhs.
   */
 trait StreamingMergeOperator[ARG <: PipelineArgument] extends HasWorkIdentity {
-  def initFromLhs(context: QueryContext, state: QueryState, inputLhsMorsel: MorselExecutionContext, cursors: ExpressionCursors):
+  def initFromLhs(context: QueryContext, state: QueryState, inputLhsMorsel: MorselExecutionContext, resources: QueryResources):
     (Option[ContinuableOperatorTask], Option[ARG])
-  def initFromRhs(context: QueryContext, state: QueryState, inputRhsMorsel: MorselExecutionContext, cursors: ExpressionCursors, pipelineArgument: ARG):
+  def initFromRhs(context: QueryContext, state: QueryState, inputRhsMorsel: MorselExecutionContext, resources: QueryResources, pipelineArgument: ARG):
     Option[ContinuableOperatorTask]
   def argumentSize: SlotConfiguration.Size
 }
@@ -49,7 +49,7 @@ trait StreamingMergeOperator[ARG <: PipelineArgument] extends HasWorkIdentity {
   * have to be collected before the reduce can start.
   */
 trait EagerReduceOperator extends HasWorkIdentity {
-  def init(context: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask
+  def init(context: QueryContext, state: QueryState, inputMorsels: Seq[MorselExecutionContext], resources: QueryResources): ContinuableOperatorTask
 }
 
 /**
@@ -66,7 +66,7 @@ trait LazyReduceOperator extends HasWorkIdentity {
            state: QueryState,
            messageQueue: util.Queue[MorselExecutionContext],
            collector: LazyReduceCollector,
-           cursors: ExpressionCursors): LazyReduceOperatorTask
+           resources: QueryResources): LazyReduceOperatorTask
 }
 
 /**
@@ -79,7 +79,7 @@ trait StatelessOperator extends OperatorTask with HasWorkIdentity
   * Operator related task.
   */
 trait OperatorTask {
-  def operate(data: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit
+  def operate(data: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit
 }
 
 /**
@@ -100,19 +100,25 @@ object NOTHING_TO_CLOSE extends AutoCloseable {
 trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
   val inputRow: MorselExecutionContext
 
-  protected def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable
-  protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit
+  protected def initializeInnerLoop(inputRow: MorselExecutionContext,
+                                    context: QueryContext,
+                                    state: QueryState,
+                                    resources: QueryResources): AutoCloseable
+
+  protected def innerLoop(outputRow: MorselExecutionContext,
+                          context: QueryContext,
+                          state: QueryState): Unit
 
   private var innerLoop: AutoCloseable = _
 
   override def operate(outputRow: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
-                       cursors: ExpressionCursors): Unit = {
+                       resources: QueryResources): Unit = {
 
     while ((inputRow.hasMoreRows || innerLoop != null) && outputRow.hasMoreRows) {
       if (innerLoop == null) {
-        innerLoop = initializeInnerLoop(inputRow, context, state, cursors)
+        innerLoop = initializeInnerLoop(inputRow, context, state, resources)
       }
       // Do we have any output rows for this input row?
       if (innerLoop != null) {
@@ -164,10 +170,15 @@ trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
   */
 trait ReduceCollector {
 
-  def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                   from: AbstractPipelineTask): Seq[Task[ExpressionCursors]]
+  def acceptMorsel(inputMorsel: MorselExecutionContext,
+                   context: QueryContext,
+                   state: QueryState,
+                   resources: QueryResources,
+                   from: AbstractPipelineTask): Seq[Task[QueryResources]]
 
   def produceTaskScheduled(): Unit
 
-  def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Seq[Task[ExpressionCursors]]
+  def produceTaskCompleted(context: QueryContext,
+                           state: QueryState,
+                           resources: QueryResources): Seq[Task[QueryResources]]
 }

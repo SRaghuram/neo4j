@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.ListSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => InterpretedQueryState}
@@ -19,8 +19,15 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                      offset: Int)
   extends StreamingOperator with ListSupport {
 
-  override def init(context: QueryContext, state: QueryState, inputRow: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
-    val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+  override def init(context: QueryContext,
+                    state: QueryState,
+                    inputRow: MorselExecutionContext,
+                    resources: QueryResources): ContinuableOperatorTask = {
+    val queryState = new InterpretedQueryState(context,
+                                               resources = null,
+                                               params = state.params,
+                                               resources.expressionCursors,
+                                               Array.empty[IndexReadSession])
     val value = collection(inputRow, queryState)
     val unwoundValues = makeTraversable(value).iterator
     new OTask(inputRow, unwoundValues)
@@ -30,9 +37,16 @@ class UnwindOperator(val workIdentity: WorkIdentity,
               var unwoundValues: java.util.Iterator[AnyValue]
              ) extends ContinuableOperatorTask {
 
-    override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
+    override def operate(outputRow: MorselExecutionContext,
+                         context: QueryContext,
+                         state: QueryState,
+                         resources: QueryResources): Unit = {
 
-      val queryState = new InterpretedQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+      val queryState = new InterpretedQueryState(context,
+                                                 resources = null,
+                                                 params = state.params,
+                                                 resources.expressionCursors,
+                                                 Array.empty[IndexReadSession])
 
       do {
         if (unwoundValues == null) {

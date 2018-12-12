@@ -29,11 +29,18 @@ class AggregationMapperOperator(val workIdentity: WorkIdentity,
   private val groupingFunction = AggregationHelper.groupingFunction(groupings)
   private val addGroupingValuesToResult = AggregationHelper.computeGroupingSetter(groupings)(_.mapperOutputSlot)
 
-  override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
+  override def operate(currentRow: MorselExecutionContext,
+                       context: QueryContext,
+                       state: QueryState,
+                       resources: QueryResources): Unit = {
 
     val result = mutable.LinkedHashMap[AnyValue, Array[(Int,AggregationMapper)]]()
 
-    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+    val queryState = new OldQueryState(context,
+                                       resources = null,
+                                       params = state.params,
+                                       resources.expressionCursors,
+                                       Array.empty[IndexReadSession])
 
     //loop over the entire morsel and apply the aggregation
     while (currentRow.hasMoreRows) {

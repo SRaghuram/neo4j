@@ -35,10 +35,10 @@ class LazyReducePipeline(start: LazyReduceOperator,
   override def acceptMorsel(inputMorsel: MorselExecutionContext,
                             context: QueryContext,
                             state: QueryState,
-                            cursors: ExpressionCursors,
+                            resources: QueryResources,
                             pipelineArgument: PipelineArgument,
-                            from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] = {
-    state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, cursors, from)
+                            from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
+    state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, resources, from)
   }
 
   override def initCollector(): Collector = new Collector
@@ -54,8 +54,8 @@ class LazyReducePipeline(start: LazyReduceOperator,
       */
     private val reduceTaskState = new AtomicReference[ReduceTaskState](NoTaskScheduled)
 
-    override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                              from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] = {
+    override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources,
+                              from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
       // First we put the next morsel in the queue
       queue.add(inputMorsel)
 
@@ -66,7 +66,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
         reduceTaskState.get() match {
           case NoTaskScheduled =>
             // We have to try and schedule the first task
-            val firstTask = start.init(context, state, queue, this, cursors)
+            val firstTask = start.init(context, state, queue, this, resources)
             maybeNextTask = Some(firstTask)
             updatedState = reduceTaskState.compareAndSet(NoTaskScheduled, ScheduledAndGoing(firstTask, 1))
           case s@ScheduledAndGoing(reduceTask, morselsArrived) =>
@@ -112,7 +112,7 @@ class LazyReducePipeline(start: LazyReduceOperator,
       }
     }
 
-    override def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
+    override def produceTaskCompleted(context: QueryContext, state: QueryState, resources: QueryResources): Seq[Task[QueryResources]] = {
       val tasksLeft = taskCount.decrementAndGet()
       if (Pipeline.DEBUG) {
         dprintln(() => "taskCount [%3d]: completed %s".format(tasksLeft, toString))

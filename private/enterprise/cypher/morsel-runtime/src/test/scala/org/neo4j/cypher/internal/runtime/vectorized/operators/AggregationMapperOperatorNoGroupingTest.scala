@@ -5,17 +5,16 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
-import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext, QueryResources}
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class AggregationMapperOperatorNoGroupingTest extends CypherFunSuite {
 
-  private val cursors = new ExpressionCursors(mock[CursorFactory])
+  private val resources = new QueryResources(mock[CursorFactory])
 
   private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
@@ -29,7 +28,7 @@ class AggregationMapperOperatorNoGroupingTest extends CypherFunSuite {
     val data = new Morsel(longs, refs)
 
     // When
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences, longs.length), null, EmptyQueryState(), cursors)
+    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences, longs.length), null, EmptyQueryState(), resources)
 
     // Then
     data.refs(0) should equal(Values.longArray(Array(0,2,4,6,8)))
@@ -51,7 +50,7 @@ class AggregationMapperOperatorNoGroupingTest extends CypherFunSuite {
     val refs = new Array[AnyValue](5)
     val data = new Morsel(longs, refs)
 
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences, validRows = 5), null, EmptyQueryState(), cursors)
+    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences, validRows = 5), null, EmptyQueryState(), resources)
 
     data.refs(0) should equal(Values.longArray(Array(0,2,4,6,8)))
     data.refs(1) should equal(Values.longArray(Array.empty))

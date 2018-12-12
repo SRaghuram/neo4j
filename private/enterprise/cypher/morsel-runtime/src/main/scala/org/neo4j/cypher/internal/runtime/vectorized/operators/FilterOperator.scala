@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
@@ -19,10 +19,17 @@ import org.neo4j.values.storable.Values
 class FilterOperator(val workIdentity: WorkIdentity,
                      predicate: Predicate) extends StatelessOperator {
 
-    override def operate(readingRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
+    override def operate(readingRow: MorselExecutionContext,
+                         context: QueryContext,
+                         state: QueryState,
+                         resources: QueryResources): Unit = {
 
       val writingRow = readingRow.shallowCopy()
-      val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+      val queryState = new OldQueryState(context,
+                                         resources = null,
+                                         params = state.params,
+                                         resources.expressionCursors,
+                                         Array.empty[IndexReadSession])
 
       while (readingRow.hasMoreRows) {
         val matches = predicate(readingRow, queryState) == Values.TRUE

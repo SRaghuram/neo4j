@@ -31,9 +31,13 @@ class ProjectOperator(val workIdentity: WorkIdentity,
   override def operate(currentRow: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
-                       cursors: ExpressionCursors): Unit = {
+                       resources: QueryResources): Unit = {
 
-    val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+    val queryState = new OldQueryState(context,
+                                       resources = null,
+                                       params = state.params,
+                                       resources.expressionCursors,
+                                       Array.empty[IndexReadSession])
 
     while (currentRow.hasMoreRows) {
       project.foreach(p => p(currentRow, queryState))

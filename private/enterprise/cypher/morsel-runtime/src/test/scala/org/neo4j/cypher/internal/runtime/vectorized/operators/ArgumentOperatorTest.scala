@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class ArgumentOperatorTest extends CypherFunSuite {
 
-  private val cursors = new ExpressionCursors(mock[CursorFactory])
+  private val resources = new QueryResources(mock[CursorFactory])
 
   private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
@@ -44,7 +44,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     val operator = new ArgumentOperator(workId, SlotConfiguration.Size(1, 1))
 
     // When
-    operator.init(null, null, inputRow, cursors).operate(outputRow, null, EmptyQueryState(), cursors)
+    operator.init(null, null, inputRow, resources).operate(outputRow, null, EmptyQueryState(), resources)
 
     // Then
     outputMorsel.longs should equal(Array(1, 0))
@@ -54,7 +54,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     // And when
     inputRow.moveToNextRow()
     outputRow.resetToFirstRow()
-    operator.init(null, null, inputRow, cursors).operate(outputRow, null, EmptyQueryState(), cursors)
+    operator.init(null, null, inputRow, resources).operate(outputRow, null, EmptyQueryState(), resources)
 
     // Then
     outputMorsel.longs should equal(Array(4, 0))
@@ -64,7 +64,7 @@ class ArgumentOperatorTest extends CypherFunSuite {
     // And when
     inputRow.moveToNextRow()
     outputRow.resetToFirstRow()
-    operator.init(null, null, inputRow, cursors).operate(outputRow, null, EmptyQueryState(), cursors)
+    operator.init(null, null, inputRow, resources).operate(outputRow, null, EmptyQueryState(), resources)
 
     // Then
     outputMorsel.longs should equal(Array(7, 0))

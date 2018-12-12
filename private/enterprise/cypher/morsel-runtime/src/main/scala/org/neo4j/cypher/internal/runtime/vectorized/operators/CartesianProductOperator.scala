@@ -16,7 +16,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
   override def initFromLhs(queryContext: QueryContext,
                            state: QueryState,
                            lhsInputMorsel: MorselExecutionContext,
-                           cursors: ExpressionCursors): (Option[ContinuableOperatorTask], Option[RhsPipelineArgument]) = {
+                           resources: QueryResources): (Option[ContinuableOperatorTask], Option[RhsPipelineArgument]) = {
     if (lhsInputMorsel.hasMoreRows) {
       val pipelineArgument = RhsPipelineArgument(lhsInputMorsel)
       (None, Some(pipelineArgument)) // Returning Some argument here will make the pipeline schedule a task for the right-hand side
@@ -30,7 +30,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
   override def initFromRhs(queryContext: QueryContext,
                            state: QueryState,
                            rhsInputMorsel: MorselExecutionContext,
-                           cursors: ExpressionCursors,
+                           resources: QueryResources,
                            pipelineArgument: RhsPipelineArgument): Option[ContinuableOperatorTask] = {
     val lhsInputMorsel = pipelineArgument.lhsMorsel
 
@@ -43,7 +43,10 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
 
   class MergeOTask(lhsInputRow: MorselExecutionContext, rhsInputRow: MorselExecutionContext) extends ContinuableOperatorTask {
 
-    override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
+    override def operate(outputRow: MorselExecutionContext,
+                         context: QueryContext,
+                         state: QueryState,
+                         resources: QueryResources): Unit = {
       // Checking rhsInputRow.hasMoreRows in the outer loop may not appear to be strictly necessary, but it will prevent an infinite loop
       // in case we for some reason would receive an empty morsel in lhsInputRow
       while ((lhsInputRow.hasMoreRows || rhsInputRow.hasMoreRows) && outputRow.hasMoreRows) {

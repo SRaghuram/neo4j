@@ -6,18 +6,18 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState => SlottedQueryState}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 
 class LazySlottedPipeLeafOperator(val workIdentity: WorkIdentity, val initialSource: Pipe, argumentSize: SlotConfiguration.Size)
   extends LazySlottedPipeStreamingOperator {
 
-  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
-    val slottedQueryState: SlottedQueryState = LazySlottedPipeStreamingOperator.createSlottedQueryState(context, state, cursors)
+  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, resources: QueryResources): ContinuableOperatorTask = {
+    val slottedQueryState: SlottedQueryState = LazySlottedPipeStreamingOperator.createSlottedQueryState(context, state, resources.expressionCursors)
     new OTask(inputMorsel, slottedQueryState)
   }
 
@@ -27,7 +27,7 @@ class LazySlottedPipeLeafOperator(val workIdentity: WorkIdentity, val initialSou
     override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
                                                context: QueryContext,
                                                state: QueryState,
-                                               cursors: ExpressionCursors): AutoCloseable = {
+                                               resources: QueryResources): AutoCloseable = {
       iterator = finalPipe.createResults(slottedQueryState.withInitialContext(inputRow))
       NOTHING_TO_CLOSE
     }

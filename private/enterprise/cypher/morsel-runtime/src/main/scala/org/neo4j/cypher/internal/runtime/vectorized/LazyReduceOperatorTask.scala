@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.vectorized
 
 import java.util
 
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
 
 import scala.collection.mutable.ArrayBuffer
@@ -23,7 +22,7 @@ abstract class LazyReduceOperatorTask(messageQueue: util.Queue[MorselExecutionCo
     */
   def operate(context: QueryContext,
               state: QueryState,
-              cursors: ExpressionCursors): IndexedSeq[MorselExecutionContext] = {
+              resources: QueryResources): IndexedSeq[MorselExecutionContext] = {
     // Outer loop until trySetTaskDone succeeds
     do {
       // Inner loop until there is currently no more data

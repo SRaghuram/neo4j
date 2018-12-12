@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class AggregationReducerOperatorTest extends CypherFunSuite {
 
-  private val cursors = new ExpressionCursors(mock[CursorFactory])
+  private val resources = new QueryResources(mock[CursorFactory])
 
   private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
@@ -42,8 +42,8 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
 
     val out = new Morsel(Array.empty, new Array[AnyValue](20))
     // When
-    aggregation.init(null, null, in, cursors)
-          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), cursors)
+    aggregation.init(null, null, in, resources)
+          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), resources)
 
     // Then
     out.refs(0) should equal(stringValue("k1"))
@@ -79,8 +79,8 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
 
     val out = new Morsel(Array.empty, new Array[AnyValue](20))
     // When
-    aggregation.init(null, null, in, cursors)
-          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), cursors)
+    aggregation.init(null, null, in, resources)
+          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), resources)
 
     // Then
     out.refs(0) should equal(stringValue("k11"))
@@ -120,8 +120,8 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
 
     val out = new Morsel(Array.empty, new Array[AnyValue](20))
     // When
-    aggregation.init(null, null, in, cursors)
-          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), cursors)
+    aggregation.init(null, null, in, resources)
+          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), resources)
 
     // Then
     out.refs(0) should equal(stringValue("k11"))
@@ -172,8 +172,8 @@ class AggregationReducerOperatorTest extends CypherFunSuite {
 
     val out = new Morsel(Array.empty, new Array[AnyValue](20))
     // When
-    aggregation.init(null, null, in, cursors)
-          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), cursors)
+    aggregation.init(null, null, in, resources)
+          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 2), null, EmptyQueryState(), resources)
 
     // Then
     out.refs(0) should equal(stringValue("k11"))

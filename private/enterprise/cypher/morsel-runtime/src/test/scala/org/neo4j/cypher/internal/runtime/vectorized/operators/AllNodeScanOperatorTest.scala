@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class AllNodeScanOperatorTest extends CypherFunSuite {
 
-  private val cursors = new ExpressionCursors(mock[CursorFactory])
+  private val resources = new QueryResources(mock[CursorFactory])
 
   private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
@@ -58,7 +58,7 @@ class AllNodeScanOperatorTest extends CypherFunSuite {
     when(context.transactionalContext.cursors.allocateNodeCursor()).thenReturn(cursor1, cursor2)
 
     // When
-    operator.init(context, null, inputRow, cursors).operate(outputRow, context, EmptyQueryState(), cursors)
+    operator.init(context, null, inputRow, resources).operate(outputRow, context, EmptyQueryState(), resources)
 
     // Then
     outputMorsel.longs should equal(Array(
@@ -78,7 +78,7 @@ class AllNodeScanOperatorTest extends CypherFunSuite {
     // And when
     inputRow.moveToNextRow()
     outputRow.resetToFirstRow()
-    operator.init(context, null, inputRow, cursors).operate(outputRow, context, EmptyQueryState(), cursors)
+    operator.init(context, null, inputRow, resources).operate(outputRow, context, EmptyQueryState(), resources)
 
     // Then
     outputMorsel.longs should equal(Array(

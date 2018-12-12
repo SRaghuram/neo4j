@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
-import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext, QueryResources}
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class AggregationReducerOperatorNoGroupingTest extends CypherFunSuite {
 
-  private val cursors = new ExpressionCursors(mock[CursorFactory])
+  private val resources = new QueryResources(mock[CursorFactory])
 
   private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
@@ -29,8 +29,8 @@ class AggregationReducerOperatorNoGroupingTest extends CypherFunSuite {
     val in = new Morsel(Array.empty, refs)
     val out = new Morsel(new Array[Long](10), new Array[AnyValue](10))
     // When
-    aggregation.init(null, null, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences, refs.length)), cursors)
-          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, refs.length), null, EmptyQueryState(), cursors)
+    aggregation.init(null, null, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences, refs.length)), resources)
+          .operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, refs.length), null, EmptyQueryState(), resources)
 
     // Then
     out.refs(0) should equal(Values.longArray(Array(2,4,42)))
@@ -51,7 +51,7 @@ class AggregationReducerOperatorNoGroupingTest extends CypherFunSuite {
     val out = new Morsel(new Array[Long](10), new Array[AnyValue](10))
 
     // When
-    aggregation.init(null, null, in, cursors).operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 10), null, EmptyQueryState(), cursors)
+    aggregation.init(null, null, in, resources).operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 10), null, EmptyQueryState(), resources)
 
     // Then
     out.refs(0) should equal(Values.longArray(Array(2,4,6,8,10,12,14,16,18,20)))

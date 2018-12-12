@@ -31,7 +31,10 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
+  override def init(context: QueryContext,
+                    state: QueryState,
+                    inputMorsel: MorselExecutionContext,
+                    resources: QueryResources): ContinuableOperatorTask = {
     new OTask(inputMorsel)
   }
 
@@ -60,8 +63,15 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
       false // because scala compiler doesn't realize that this line is unreachable
       }
 
-    override protected def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
-      val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+    override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
+                                               context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources): AutoCloseable = {
+      val queryState = new OldQueryState(context,
+                                         resources = null,
+                                         params = state.params,
+                                         resources.expressionCursors,
+                                         Array.empty[IndexReadSession])
       nodeCursors = indexSeek(queryState, state.queryIndexes(queryIndexId), needsValues, indexOrder, inputRow)
       closeCursorsWhenFinished
     }

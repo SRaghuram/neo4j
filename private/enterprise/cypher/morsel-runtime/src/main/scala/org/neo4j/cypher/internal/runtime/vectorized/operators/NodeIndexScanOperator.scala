@@ -20,7 +20,10 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
                             argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, property.maybeCachedNodePropertySlot) {
 
-  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
+  override def init(context: QueryContext,
+                    state: QueryState,
+                    inputMorsel: MorselExecutionContext,
+                    resources: QueryResources): ContinuableOperatorTask = {
     val indexSession = state.queryIndexes(queryIndexId)
     new OTask(inputMorsel, indexSession)
   }
@@ -28,7 +31,10 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
   class OTask(val inputRow: MorselExecutionContext, index: IndexReadSession) extends StreamingContinuableOperatorTask {
     var valueIndexCursor: NodeValueIndexCursor = _
 
-    protected override def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+    protected override def initializeInnerLoop(inputRow: MorselExecutionContext,
+                                               context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources): AutoCloseable = {
       valueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
       val read = context.transactionalContext.dataRead
       read.nodeIndexScan(index, valueIndexCursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined)

@@ -26,7 +26,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
   override def init(context: QueryContext,
                     state: QueryState,
                     inputMorsel: MorselExecutionContext,
-                    cursors: ExpressionCursors): ContinuableOperatorTask = {
+                    resources: QueryResources): ContinuableOperatorTask = {
     val index = context.transactionalContext.schemaRead.index(label, property.propertyKeyId)
     val indexSession = context.transactionalContext.dataRead.indexReadSession(index)
     new OTask(inputMorsel, indexSession)
@@ -36,14 +36,21 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
 
     private var valueIndexCursor: NodeValueIndexCursor = _
 
-    override def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+    override def initializeInnerLoop(inputRow: MorselExecutionContext,
+                                     context: QueryContext,
+                                     state: QueryState,
+                                     resources: QueryResources): AutoCloseable = {
       valueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
 
       val read = context.transactionalContext.dataRead
 
       var nullExpression: Boolean = false
 
-      val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+      val queryState = new OldQueryState(context,
+                                         resources = null,
+                                         params = state.params,
+                                         resources.expressionCursors,
+                                         Array.empty[IndexReadSession])
       val value = valueExpr(inputRow, queryState)
 
       value match {

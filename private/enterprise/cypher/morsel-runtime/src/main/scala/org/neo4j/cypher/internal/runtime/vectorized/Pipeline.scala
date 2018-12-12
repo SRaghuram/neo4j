@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity, WorkIdentityImpl, HasWorkIdentity}
 
@@ -36,10 +35,14 @@ abstract class Pipeline() extends HasWorkIdentity {
   self =>
 
   // abstract
-  def upstream: Option[Pipeline]
-  def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                   pipelineArgument: PipelineArgument, from: AbstractPipelineTask): Seq[Task[ExpressionCursors]]
   def slots: SlotConfiguration
+  def upstream: Option[Pipeline]
+  def acceptMorsel(inputMorsel: MorselExecutionContext,
+                   context: QueryContext,
+                   state: QueryState,
+                   resources: QueryResources,
+                   pipelineArgument: PipelineArgument,
+                   from: AbstractPipelineTask): Seq[Task[QueryResources]]
 
   protected def composeWorkIdentities(first: HasWorkIdentity, others: Seq[HasWorkIdentity]): WorkIdentity = {
     val workIdentities = (Seq(first) ++ others).map(_.workIdentity)

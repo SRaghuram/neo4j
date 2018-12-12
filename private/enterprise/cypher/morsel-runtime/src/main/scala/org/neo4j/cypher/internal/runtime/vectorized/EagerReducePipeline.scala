@@ -65,9 +65,13 @@ class EagerReducePipeline(start: EagerReduceOperator,
 
   override val workIdentity: WorkIdentity = composeWorkIdentities(start, operators)
 
-  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                            pipelineArgument: PipelineArgument, from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] = {
-    state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, cursors, from)
+  override def acceptMorsel(inputMorsel: MorselExecutionContext,
+                            context: QueryContext,
+                            state: QueryState,
+                            resources: QueryResources,
+                            pipelineArgument: PipelineArgument,
+                            from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
+    state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, resources, from)
   }
 
   override def initCollector(): ReduceCollector = new Collector
@@ -77,8 +81,11 @@ class EagerReducePipeline(start: EagerReduceOperator,
     private val eagerData = new java.util.concurrent.ConcurrentLinkedQueue[MorselExecutionContext]()
     private val taskCount = new AtomicInteger(0)
 
-    override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                             from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] = {
+    override def acceptMorsel(inputMorsel: MorselExecutionContext,
+                              context: QueryContext,
+                              state: QueryState,
+                              resources: QueryResources,
+                              from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
       eagerData.add(inputMorsel)
       Seq.empty
     }
@@ -89,14 +96,16 @@ class EagerReducePipeline(start: EagerReduceOperator,
         dprintln(() => "taskCount [%3d]: scheduled %s".format(tasks, toString))
     }
 
-    override def produceTaskCompleted(context: QueryContext, state: QueryState, cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
+    override def produceTaskCompleted(context: QueryContext,
+                                      state: QueryState,
+                                      resources: QueryResources): Seq[Task[QueryResources]] = {
       val tasksLeft = taskCount.decrementAndGet()
       if (Pipeline.DEBUG)
         dprintln(() => "taskCount [%3d]: completed %s".format(tasksLeft, toString))
 
       if (tasksLeft == 0) {
         val inputMorsels: Array[MorselExecutionContext] = eagerData.asScala.toArray
-        val reduceTask = start.init(context, state, inputMorsels, cursors)
+        val reduceTask = start.init(context, state, inputMorsels, resources)
         // init next reduce
         val nextState = initDownstreamReduce(state)
         Seq(pipelineTask(reduceTask, context, nextState, PipelineArgument.EMPTY))

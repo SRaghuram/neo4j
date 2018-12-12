@@ -27,7 +27,10 @@ class PreSortOperator(val workIdentity: WorkIdentity,
                       orderBy: Seq[ColumnOrder],
                       countExpression: Option[Expression] = None) extends StatelessOperator {
 
-    override def operate(currentRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
+    override def operate(currentRow: MorselExecutionContext,
+                         context: QueryContext,
+                         state: QueryState,
+                         resources: QueryResources): Unit = {
 
       val rowCloneForComparators = currentRow.shallowCopy()
       val comparator: Comparator[Integer] = orderBy
@@ -40,7 +43,11 @@ class PreSortOperator(val workIdentity: WorkIdentity,
 
       // potentially calculate the limit
       val maybeLimit = countExpression.map { count =>
-        val queryState = new OldQueryState(context, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+        val queryState = new OldQueryState(context,
+                                           resources = null,
+                                           params = state.params,
+                                           resources.expressionCursors,
+                                           Array.empty[IndexReadSession])
         count(currentRow, queryState).asInstanceOf[NumberValue].longValue().toInt
       }
 

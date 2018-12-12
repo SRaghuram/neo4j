@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.{HasWorkIdentity, Task, WorkIdentity}
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 
 import scala.collection.mutable.ArrayBuffer
@@ -24,16 +24,22 @@ abstract class AbstractStreamingPipeline(override val slots: SlotConfiguration,
                                          override val upstream: Option[Pipeline]) extends Pipeline {
   def start: StreamingOperator
 
-  def init(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): PipelineTask = {
-    val streamTask = start.init(context, state, inputMorsel, cursors)
+  def init(inputMorsel: MorselExecutionContext,
+           context: QueryContext,
+           state: QueryState,
+           resources: QueryResources): PipelineTask = {
+    val streamTask = start.init(context, state, inputMorsel, resources)
     // init next reduce
     val nextState = initDownstreamReduce(state)
     pipelineTask(streamTask, context, nextState, PipelineArgument.EMPTY)
   }
 
-  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                            pipelineArgument: PipelineArgument, from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] =
-    Seq(pipelineTask(start.init(context, state, inputMorsel, cursors), context, state, pipelineArgument))
+  override def acceptMorsel(inputMorsel: MorselExecutionContext,
+                            context: QueryContext,
+                            state: QueryState,
+                            resources: QueryResources,
+                            pipelineArgument: PipelineArgument, from: AbstractPipelineTask): Seq[Task[QueryResources]] =
+    Seq(pipelineTask(start.init(context, state, inputMorsel, resources), context, state, pipelineArgument))
 
   override val workIdentity: WorkIdentity = composeWorkIdentities(start, operators)
 }

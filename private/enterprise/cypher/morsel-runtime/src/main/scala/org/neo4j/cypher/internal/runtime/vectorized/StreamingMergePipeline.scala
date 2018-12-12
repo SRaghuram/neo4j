@@ -27,32 +27,40 @@ class StreamingMergePipeline(val start: StreamingMergeOperator[PipelineArgument]
     this.rhsUpstream.connectPipeline(Some(this), getThisOrDownstreamReduce(downstreamReduce))
   }
 
-  override def acceptMorsel(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                            pipelineArgument: PipelineArgument, from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] = {
+  override def acceptMorsel(inputMorsel: MorselExecutionContext,
+                            context: QueryContext,
+                            state: QueryState,
+                            resources: QueryResources,
+                            pipelineArgument: PipelineArgument,
+                            from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
     if (from.ownerPipeline.eq(rhsUpstream)) {
-      val maybeTask = start.initFromRhs(context, state, inputMorsel, cursors, pipelineArgument)
+      val maybeTask = start.initFromRhs(context, state, inputMorsel, resources, pipelineArgument)
       maybeTask.map(pipelineTask(_, context, state, PipelineArgument.EMPTY)).toSeq
     } else {
       // We got a morsel from the lhs, which is the primary input to the whole join
-      val (maybeTask, maybePipelineArgument) = start.initFromLhs(context, state, inputMorsel, cursors)
+      val (maybeTask, maybePipelineArgument) = start.initFromLhs(context, state, inputMorsel, resources)
 
       // Did we get a new task for the LHS?
-      val lhsTasks: Seq[Task[ExpressionCursors]] = maybeTask.map(pipelineTask(_, context, state, PipelineArgument.EMPTY)).toSeq
+      val lhsTasks: Seq[Task[QueryResources]] = maybeTask.map(pipelineTask(_, context, state, PipelineArgument.EMPTY)).toSeq
 
       // If a PipelineArgument was returned we should start new tasks from the RHS pipeline
-      val rhsTasks: Seq[Task[ExpressionCursors]] = maybePipelineArgument.map { pipelineArgument =>
+      val rhsTasks: Seq[Task[QueryResources]] = maybePipelineArgument.map { pipelineArgument =>
         val argumentRow = createSingleArgumentRow(from = inputMorsel)
-        startRhsPipelineTasks(argumentRow, context, state, cursors, pipelineArgument, from)
+        startRhsPipelineTasks(argumentRow, context, state, resources, pipelineArgument, from)
       }.getOrElse(Seq.empty)
 
       lhsTasks ++ rhsTasks
     }
   }
 
-  private def startRhsPipelineTasks(inputMorsel: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors,
-                                    pipelineArgument: PipelineArgument, from: AbstractPipelineTask): Seq[Task[ExpressionCursors]] = {
+  private def startRhsPipelineTasks(inputMorsel: MorselExecutionContext,
+                                    context: QueryContext,
+                                    state: QueryState,
+                                    resources: QueryResources,
+                                    pipelineArgument: PipelineArgument,
+                                    from: AbstractPipelineTask): Seq[Task[QueryResources]] = {
     val startPipeline = rhsUpstream.getUpstreamLeafPipeline
-    val rhsTasks = startPipeline.acceptMorsel(inputMorsel, context, state, cursors, pipelineArgument, from)
+    val rhsTasks = startPipeline.acceptMorsel(inputMorsel, context, state, resources, pipelineArgument, from)
 
     if (rhsTasks.isEmpty) {
       throw new IllegalStateException(s"RHS pipeline $rhsUpstream did not produce a PipelineTask")

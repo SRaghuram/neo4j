@@ -28,7 +28,10 @@ class MergeSortOperator(val workIdentity: WorkIdentity,
     .map(MorselSorting.createMorselComparator)
     .reduce((a: Comparator[MorselExecutionContext], b: Comparator[MorselExecutionContext]) => a.thenComparing(b))
 
-  override def init(queryContext: QueryContext, state: QueryState, inputs: Seq[MorselExecutionContext], cursors: ExpressionCursors): ContinuableOperatorTask = {
+  override def init(queryContext: QueryContext,
+                    state: QueryState,
+                    inputs: Seq[MorselExecutionContext],
+                    resources: QueryResources): ContinuableOperatorTask = {
 
     val sortedInputs = new PriorityQueue[MorselExecutionContext](inputs.length, comparator)
     inputs.foreach { row =>
@@ -37,7 +40,11 @@ class MergeSortOperator(val workIdentity: WorkIdentity,
 
     val limit = countExpression.map { count =>
       val firstRow = sortedInputs.peek()
-      val queryState = new OldQueryState(queryContext, resources = null, params = state.params, cursors, Array.empty[IndexReadSession])
+      val queryState = new OldQueryState(queryContext,
+                                         resources = null,
+                                         params = state.params,
+                                         resources.expressionCursors,
+                                         Array.empty[IndexReadSession])
       count(firstRow, queryState).asInstanceOf[NumberValue].longValue()
     }
 
@@ -53,7 +60,10 @@ class MergeSortOperator(val workIdentity: WorkIdentity,
 
     var totalPos = 0
 
-    override def operate(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): Unit = {
+    override def operate(outputRow: MorselExecutionContext,
+                         context: QueryContext,
+                         state: QueryState,
+                         resources: QueryResources): Unit = {
 
       while(!sortedInputs.isEmpty && outputRow.hasMoreRows && totalPos < limit) {
         val nextRow: MorselExecutionContext = sortedInputs.poll()

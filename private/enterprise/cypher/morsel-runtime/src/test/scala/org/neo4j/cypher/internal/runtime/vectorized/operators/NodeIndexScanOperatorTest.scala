@@ -10,20 +10,20 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, 
 import org.neo4j.cypher.internal.runtime.interpreted.ImplicitDummyPos
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexMockingHelp
 import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
-import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext}
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, NodeValueHit, QueryContext}
-import org.neo4j.internal.kernel.api.CursorFactory
-import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.NodeValue
+import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext, QueryResources}
+import org.neo4j.cypher.internal.runtime.{NodeValueHit, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, LabelToken, PropertyKeyName, PropertyKeyToken}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTNode}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.v4_0.util.{LabelId, PropertyKeyId}
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.NodeValue
 
 class NodeIndexScanOperatorTest extends CypherFunSuite with ImplicitDummyPos with IndexMockingHelp {
 
-  private val cursors = new ExpressionCursors(mock[CursorFactory])
+  private val resources = new QueryResources(mock[CursorFactory])
 
   private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
@@ -61,7 +61,7 @@ class NodeIndexScanOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       SlottedIndexedProperty(propertyKey.nameId.id, Some(slots.getReferenceOffsetFor(nDotProp))), 0, SlotConfiguration.Size.zero)
 
     // When
-    operator.init(queryContext, EmptyQueryState(), inputRow, cursors).operate(outputRow, queryContext, EmptyQueryState(), cursors)
+    operator.init(queryContext, EmptyQueryState(), inputRow, resources).operate(outputRow, queryContext, EmptyQueryState(), resources)
 
     // then
     outputMorsel.longs should equal(Array(

@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.NodeCursor
 
@@ -18,7 +18,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
   override def init(queryContext: QueryContext,
                     state: QueryState,
                     inputMorsel: MorselExecutionContext,
-                    cursors: ExpressionCursors): ContinuableOperatorTask = {
+                    resources: QueryResources): ContinuableOperatorTask = {
     new OTask(inputMorsel)
   }
 
@@ -26,7 +26,10 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     var nodeCursor: NodeCursor = _
 
-    protected override def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+    protected override def initializeInnerLoop(inputRow: MorselExecutionContext,
+                                               context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources): AutoCloseable = {
       nodeCursor = context.transactionalContext.cursors.allocateNodeCursor()
       context.transactionalContext.dataRead.allNodesScan(nodeCursor)
       nodeCursor

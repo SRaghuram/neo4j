@@ -8,9 +8,8 @@ package org.neo4j.cypher.internal.runtime.vectorized
 import java.util
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity}
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.parallel.{Task, WorkIdentity}
 import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
 
 abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
@@ -18,7 +17,7 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
                                     workIdentity: WorkIdentity,
                                     originalQueryContext: QueryContext,
                                     state: QueryState,
-                                    downstream: Option[Pipeline]) extends Task[ExpressionCursors] {
+                                    downstream: Option[Pipeline]) extends Task[QueryResources] {
 
   def ownerPipeline: Pipeline
   def pipelineArgument: PipelineArgument
@@ -31,16 +30,20 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
     }
   }
 
-  protected def doStatelessOperators(cursors: ExpressionCursors, outputRow: MorselExecutionContext, queryContext: QueryContext): Unit = {
+  protected def doStatelessOperators(resources: QueryResources,
+                                     outputRow: MorselExecutionContext,
+                                     queryContext: QueryContext): Unit = {
     for (op <- operators) {
       outputRow.resetToFirstRow()
-      op.operate(outputRow, queryContext, state, cursors)
+      op.operate(outputRow, queryContext, state, resources)
     }
   }
 
-  protected def getDownstreamTasks(cursors: ExpressionCursors, outputRow: MorselExecutionContext, queryContext: QueryContext): Seq[Task[ExpressionCursors]] = {
+  protected def getDownstreamTasks(resources: QueryResources,
+                                   outputRow: MorselExecutionContext,
+                                   queryContext: QueryContext): Seq[Task[QueryResources]] = {
     outputRow.resetToFirstRow()
-    val downstreamTasks = downstream.map(_.acceptMorsel(outputRow, queryContext, state, cursors, pipelineArgument, this)).getOrElse(Seq.empty)
+    val downstreamTasks = downstream.map(_.acceptMorsel(outputRow, queryContext, state, resources, pipelineArgument, this)).getOrElse(Seq.empty)
 
     if (org.neo4j.cypher.internal.runtime.vectorized.Pipeline.DEBUG && downstreamTasks.nonEmpty) {
       dprintln(() => s">>> downstream tasks=$downstreamTasks")
@@ -51,7 +54,7 @@ abstract class AbstractPipelineTask(operators: IndexedSeq[OperatorTask],
       case Some(x) if !canContinue =>
         // Signal the downstream reduce collector that we have completed. This may produce new tasks from the
         // downstream reduce pipeline if it has received enough completed tasks to proceed.
-        val downstreamReduceTasks = x.produceTaskCompleted(queryContext, state, cursors)
+        val downstreamReduceTasks = x.produceTaskCompleted(queryContext, state, resources)
         downstreamTasks ++ downstreamReduceTasks
 
       case _ =>
@@ -88,14 +91,14 @@ case class PipelineTask(start: ContinuableOperatorTask,
                         downstream: Option[Pipeline])
   extends AbstractPipelineTask(operators, slots, workIdentity, originalQueryContext, state, downstream) {
 
-  override def executeWorkUnit(cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
+  override def executeWorkUnit(resources: QueryResources): Seq[Task[QueryResources]] = {
     val outputMorsel = Morsel.create(slots, state.morselSize)
     val outputRow = new MorselExecutionContext(outputMorsel, slots.numberOfLongs, slots.numberOfReferences, state.morselSize, 0, slots)
     val queryContext = getQueryContext
 
-    start.operate(outputRow, queryContext, state, cursors)
+    start.operate(outputRow, queryContext, state, resources)
 
-    doStatelessOperators(cursors, outputRow, queryContext)
+    doStatelessOperators(resources, outputRow, queryContext)
 
     if (org.neo4j.cypher.internal.runtime.vectorized.Pipeline.DEBUG) {
       dprintln(() => s"Pipeline: $toString")
@@ -114,7 +117,7 @@ case class PipelineTask(start: ContinuableOperatorTask,
       dprintln(() => "-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/-*/")
     }
 
-    getDownstreamTasks(cursors, outputRow, queryContext)
+    getDownstreamTasks(resources, outputRow, queryContext)
   }
 
   override def canContinue: Boolean = start.canContinue
@@ -147,11 +150,11 @@ case class LazyReducePipelineTask(start: LazyReduceOperatorTask,
                                   downstream: Option[Pipeline])
   extends AbstractPipelineTask(operators, slots, workIdentity, originalQueryContext, state, downstream) {
 
-  override def executeWorkUnit(cursors: ExpressionCursors): Seq[Task[ExpressionCursors]] = {
+  override def executeWorkUnit(resources: QueryResources): Seq[Task[QueryResources]] = {
     val queryContext = getQueryContext
-    val morsels = start.operate(queryContext, state, cursors)
-    morsels.foreach(doStatelessOperators(cursors, _, queryContext))
-    morsels.flatMap(getDownstreamTasks(cursors, _, queryContext))
+    val morsels = start.operate(queryContext, state, resources)
+    morsels.foreach(doStatelessOperators(resources, _, queryContext))
+    morsels.flatMap(getDownstreamTasks(resources, _, queryContext))
   }
 
   override def canContinue: Boolean = false

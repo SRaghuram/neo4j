@@ -20,7 +20,10 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                         dir: SemanticDirection,
                         types: LazyTypes) extends StreamingOperator {
 
-  override def init(queryContext: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask =
+  override def init(queryContext: QueryContext,
+                    state: QueryState,
+                    inputMorsel: MorselExecutionContext,
+                    resources: QueryResources): ContinuableOperatorTask =
     new OTask(inputMorsel)
 
   class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
@@ -32,7 +35,10 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
      */
     private var relationships: RelationshipSelectionCursor = _
 
-    protected override def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+    protected override def initializeInnerLoop(inputRow: MorselExecutionContext,
+                                               context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources): AutoCloseable = {
       val fromNode = inputRow.getLongAt(fromOffset)
       if (entityIsNull(fromNode))
         null

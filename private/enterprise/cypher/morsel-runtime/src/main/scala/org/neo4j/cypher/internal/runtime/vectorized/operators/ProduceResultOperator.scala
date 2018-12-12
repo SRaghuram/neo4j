@@ -11,7 +11,6 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.LongSlot
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.RefSlot
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.result.QueryResult
@@ -24,7 +23,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity, slots: SlotConfigura
                     state: QueryState,
                     messageQueue: util.Queue[MorselExecutionContext],
                     collector: LazyReduceCollector,
-                    cursors: ExpressionCursors): LazyReduceOperatorTask = new OTask(messageQueue, collector)
+                    resources: QueryResources): LazyReduceOperatorTask = new OTask(messageQueue, collector)
 
   class OTask(messageQueue: util.Queue[MorselExecutionContext], collector: LazyReduceCollector) extends LazyReduceOperatorTask(messageQueue, collector) {
 

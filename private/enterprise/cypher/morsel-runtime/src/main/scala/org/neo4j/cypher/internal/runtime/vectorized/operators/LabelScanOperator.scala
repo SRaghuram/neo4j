@@ -18,7 +18,10 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
                         argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperator[NodeLabelIndexCursor](offset) {
 
-  override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, cursors: ExpressionCursors): ContinuableOperatorTask = {
+  override def init(context: QueryContext,
+                    state: QueryState,
+                    inputMorsel: MorselExecutionContext,
+                    resources: QueryResources): ContinuableOperatorTask = {
     new OTask(inputMorsel)
   }
 
@@ -26,7 +29,10 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
 
     private var cursor: NodeLabelIndexCursor = _
 
-    override protected def initializeInnerLoop(inputRow: MorselExecutionContext, context: QueryContext, state: QueryState, cursors: ExpressionCursors): AutoCloseable = {
+    override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
+                                               context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources): AutoCloseable = {
       val maybeLabelId = label.getOptId(context)
       maybeLabelId match {
         case Some(id) =>
