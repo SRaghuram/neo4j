@@ -30,19 +30,19 @@ public class RegularCatchupServerHandler implements CatchupServerHandler
     private final Monitors monitors;
     private final LogProvider logProvider;
     private final Supplier<StoreId> storeIdSupplier;
-    private final Supplier<Database> dataSourceSupplier;
+    private final Supplier<Database> databaseSupplier;
     private final BooleanSupplier dataSourceAvailabilitySupplier;
     private final FileSystemAbstraction fs;
     private final CoreSnapshotService snapshotService;
 
     public RegularCatchupServerHandler( Monitors monitors, LogProvider logProvider, Supplier<StoreId> storeIdSupplier,
-            Supplier<Database> dataSourceSupplier, BooleanSupplier dataSourceAvailabilitySupplier, FileSystemAbstraction fs,
+            Supplier<Database> databaseSupplier, BooleanSupplier dataSourceAvailabilitySupplier, FileSystemAbstraction fs,
             CoreSnapshotService snapshotService )
     {
         this.monitors = monitors;
         this.logProvider = logProvider;
         this.storeIdSupplier = storeIdSupplier;
-        this.dataSourceSupplier = dataSourceSupplier;
+        this.databaseSupplier = databaseSupplier;
         this.dataSourceAvailabilitySupplier = dataSourceAvailabilitySupplier;
         this.fs = fs;
         this.snapshotService = snapshotService;
@@ -51,7 +51,7 @@ public class RegularCatchupServerHandler implements CatchupServerHandler
     @Override
     public ChannelHandler txPullRequestHandler( CatchupServerProtocol catchupServerProtocol )
     {
-        return new TxPullRequestHandler( catchupServerProtocol, storeIdSupplier, dataSourceAvailabilitySupplier, dataSourceSupplier,
+        return new TxPullRequestHandler( catchupServerProtocol, storeIdSupplier, dataSourceAvailabilitySupplier, databaseSupplier,
                 monitors, logProvider );
     }
 
@@ -64,20 +64,20 @@ public class RegularCatchupServerHandler implements CatchupServerHandler
     @Override
     public ChannelHandler storeListingRequestHandler( CatchupServerProtocol catchupServerProtocol )
     {
-        return new PrepareStoreCopyRequestHandler( catchupServerProtocol, dataSourceSupplier, new PrepareStoreCopyFilesProvider( fs ) );
+        return new PrepareStoreCopyRequestHandler( catchupServerProtocol, databaseSupplier, new PrepareStoreCopyFilesProvider( fs ) );
     }
 
     @Override
     public ChannelHandler getStoreFileRequestHandler( CatchupServerProtocol catchupServerProtocol )
     {
-        return new StoreCopyRequestHandler.GetStoreFileRequestHandler( catchupServerProtocol, dataSourceSupplier,
+        return new StoreCopyRequestHandler.GetStoreFileRequestHandler( catchupServerProtocol, databaseSupplier,
                 new StoreFileStreamingProtocol(), fs, logProvider );
     }
 
     @Override
     public ChannelHandler getIndexSnapshotRequestHandler( CatchupServerProtocol catchupServerProtocol )
     {
-        return new StoreCopyRequestHandler.GetIndexSnapshotRequestHandler( catchupServerProtocol, dataSourceSupplier,
+        return new StoreCopyRequestHandler.GetIndexSnapshotRequestHandler( catchupServerProtocol, databaseSupplier,
                 new StoreFileStreamingProtocol(), fs, logProvider );
     }
 

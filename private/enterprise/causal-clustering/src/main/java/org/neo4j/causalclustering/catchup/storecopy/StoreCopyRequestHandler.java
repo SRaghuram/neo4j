@@ -39,18 +39,18 @@ import static org.neo4j.io.fs.FileUtils.relativePath;
 public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extends SimpleChannelInboundHandler<T>
 {
     private final CatchupServerProtocol protocol;
-    private final Supplier<Database> dataSource;
+    private final Supplier<Database> databaseSupplier;
     private final StoreFileStreamingProtocol storeFileStreamingProtocol;
 
     private final FileSystemAbstraction fs;
     private final Log log;
 
-    StoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource, StoreFileStreamingProtocol storeFileStreamingProtocol,
+    StoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> databaseSupplier, StoreFileStreamingProtocol storeFileStreamingProtocol,
             FileSystemAbstraction fs, LogProvider logProvider, Class<T> clazz )
     {
         super( clazz );
         this.protocol = protocol;
-        this.dataSource = dataSource;
+        this.databaseSupplier = databaseSupplier;
         this.storeFileStreamingProtocol = storeFileStreamingProtocol;
         this.fs = fs;
         this.log = logProvider.getLog( StoreCopyRequestHandler.class );
@@ -63,7 +63,7 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         StoreCopyFinishedResponse.Status responseStatus = StoreCopyFinishedResponse.Status.E_UNKNOWN;
         try
         {
-            Database database = dataSource.get();
+            Database database = databaseSupplier.get();
             CheckPointer checkPointer = database.getDependencyResolver().resolveDependency( CheckPointer.class );
             if ( !hasSameStoreId( request.expectedStoreId(), database ) )
             {
@@ -130,10 +130,10 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
 
     public static class GetStoreFileRequestHandler extends StoreCopyRequestHandler<GetStoreFileRequest>
     {
-        public GetStoreFileRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource,
+        public GetStoreFileRequestHandler( CatchupServerProtocol protocol, Supplier<Database> databaseSupplier,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
+            super( protocol, databaseSupplier, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
@@ -150,10 +150,10 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
 
     public static class GetIndexSnapshotRequestHandler extends StoreCopyRequestHandler<GetIndexFilesRequest>
     {
-        public GetIndexSnapshotRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource,
+        public GetIndexSnapshotRequestHandler( CatchupServerProtocol protocol, Supplier<Database> databaseSupplier,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, storeFileStreamingProtocol, fs, logProvider, GetIndexFilesRequest.class );
+            super( protocol, databaseSupplier, storeFileStreamingProtocol, fs, logProvider, GetIndexFilesRequest.class );
         }
 
         @Override

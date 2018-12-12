@@ -27,15 +27,15 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
 {
     private final CatchupServerProtocol protocol;
     private final PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider;
-    private final Supplier<Database> dataSourceSupplier;
+    private final Supplier<Database> databaseSupplier;
     private final StoreFileStreamingProtocol streamingProtocol = new StoreFileStreamingProtocol();
 
-    public PrepareStoreCopyRequestHandler( CatchupServerProtocol catchupServerProtocol, Supplier<Database> dataSourceSupplier,
+    public PrepareStoreCopyRequestHandler( CatchupServerProtocol catchupServerProtocol, Supplier<Database> databaseSupplier,
             PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider )
     {
         this.protocol = catchupServerProtocol;
         this.prepareStoreCopyFilesProvider = prepareStoreCopyFilesProvider;
-        this.dataSourceSupplier = dataSourceSupplier;
+        this.databaseSupplier = databaseSupplier;
     }
 
     @Override
@@ -45,7 +45,7 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
         PrepareStoreCopyResponse response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_LISTING_STORE );
         try
         {
-            Database database = dataSourceSupplier.get();
+            Database database = databaseSupplier.get();
             if ( !hasSameStoreId( prepareStoreCopyRequest.getStoreId(), database ) )
             {
                 channelHandlerContext.write( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE );
@@ -84,6 +84,6 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
 
     private Resource tryCheckpointAndAcquireMutex( CheckPointer checkPointer ) throws IOException
     {
-        return dataSourceSupplier.get().getStoreCopyCheckPointMutex().storeCopy( () -> checkPointer.tryCheckPoint( new SimpleTriggerInfo( "Store copy" ) ) );
+        return databaseSupplier.get().getStoreCopyCheckPointMutex().storeCopy( () -> checkPointer.tryCheckPoint( new SimpleTriggerInfo( "Store copy" ) ) );
     }
 }

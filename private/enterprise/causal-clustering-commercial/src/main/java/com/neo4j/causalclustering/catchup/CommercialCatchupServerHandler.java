@@ -28,7 +28,6 @@ import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestHandler;
 import org.neo4j.causalclustering.identity.StoreId;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.Database;
@@ -61,31 +60,36 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
     @Override
     public ChannelHandler txPullRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildTxPullRequestHandler( db, protocol ), TxPullRequest.class );
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildTxPullRequestHandler( db, protocol ),
+                TxPullRequest.class );
     }
 
     @Override
     public ChannelHandler getStoreIdRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildStoreIdRequestHandler( db, protocol ), GetStoreIdRequest.class );
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreIdRequestHandler( db, protocol ),
+                GetStoreIdRequest.class );
     }
 
     @Override
     public ChannelHandler storeListingRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildStoreListingRequestHandler( db, protocol ), PrepareStoreCopyRequest.class );
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreListingRequestHandler( db, protocol ),
+                PrepareStoreCopyRequest.class );
     }
 
     @Override
     public ChannelHandler getStoreFileRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildStoreFileRequestHandler( db, protocol ), GetStoreFileRequest.class );
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreFileRequestHandler( db, protocol ),
+                GetStoreFileRequest.class );
     }
 
     @Override
     public ChannelHandler getIndexSnapshotRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildIndexSnapshotRequestHandler( db, protocol ), GetIndexFilesRequest.class );
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildIndexSnapshotRequestHandler( db, protocol ),
+                GetIndexFilesRequest.class );
     }
 
     @Override
@@ -94,65 +98,32 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
         return Optional.ofNullable( snapshotService ).map( svc -> new CoreSnapshotRequestHandler( catchupServerProtocol, svc ) );
     }
 
-    private TxPullRequestHandler buildTxPullRequestHandler( String databaseName, CatchupServerProtocol protocol )
+    private TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        Database db = database( databaseName );
-        if ( db == null )
-        {
-            return null;
-        }
-        return new TxPullRequestHandler( protocol, storeIdSupplier( db ), databaseAvailable( db ), databaseSupplier( db ), db.getMonitors(), logProvider );
+        return new TxPullRequestHandler( protocol, storeIdSupplier( db ), databaseAvailable( db ), () -> db, db.getMonitors(), logProvider );
     }
 
-    private GetStoreIdRequestHandler buildStoreIdRequestHandler( String databaseName, CatchupServerProtocol protocol )
+    private GetStoreIdRequestHandler buildStoreIdRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        Database db = database( databaseName );
-        if ( db == null )
-        {
-            return null;
-        }
         return new GetStoreIdRequestHandler( protocol, storeIdSupplier( db ) );
     }
 
-    private PrepareStoreCopyRequestHandler buildStoreListingRequestHandler( String databaseName, CatchupServerProtocol protocol )
+    private PrepareStoreCopyRequestHandler buildStoreListingRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        Database db = database( databaseName );
-        if ( db == null )
-        {
-            return null;
-        }
-        return new PrepareStoreCopyRequestHandler( protocol, databaseSupplier( db ), new PrepareStoreCopyFilesProvider( fs ) );
+        return new PrepareStoreCopyRequestHandler( protocol, () -> db, new PrepareStoreCopyFilesProvider( fs ) );
     }
 
-    private GetStoreFileRequestHandler buildStoreFileRequestHandler( String databaseName, CatchupServerProtocol protocol )
+    private GetStoreFileRequestHandler buildStoreFileRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        Database db = database( databaseName );
-        if ( db == null )
-        {
-            return null;
-        }
-        return new GetStoreFileRequestHandler( protocol, databaseSupplier( db ), new StoreFileStreamingProtocol(), fs, logProvider );
+        return new GetStoreFileRequestHandler( protocol, () -> db, new StoreFileStreamingProtocol(), fs, logProvider );
     }
 
-    private GetIndexSnapshotRequestHandler buildIndexSnapshotRequestHandler( String databaseName, CatchupServerProtocol protocol )
+    private GetIndexSnapshotRequestHandler buildIndexSnapshotRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        Database db = database( databaseName );
-        if ( db == null )
-        {
-            return null;
-        }
-        return new GetIndexSnapshotRequestHandler( protocol, databaseSupplier( db ), new StoreFileStreamingProtocol(), fs, logProvider );
+        return new GetIndexSnapshotRequestHandler( protocol, () -> db, new StoreFileStreamingProtocol(), fs, logProvider );
     }
 
-    private Database database( String databaseName )
-    {
-        DatabaseManager databaseManager = databaseManagerSupplier.get();
-        return databaseManager.getDatabaseContext( databaseName )
-                .map( DatabaseContext::getDatabase )
-                .orElse( null );
-    }
-
-    private Supplier<StoreId> storeIdSupplier( Database db )
+    private static Supplier<StoreId> storeIdSupplier( Database db )
     {
         return () -> new StoreId(
                 db.getStoreId().getCreationTime(),
@@ -161,13 +132,8 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
                 db.getStoreId().getUpgradeId() );
     }
 
-    private BooleanSupplier databaseAvailable( Database db )
+    private static BooleanSupplier databaseAvailable( Database db )
     {
         return db.getDatabaseAvailabilityGuard()::isAvailable;
-    }
-
-    private Supplier<Database> databaseSupplier( Database db )
-    {
-        return () -> db;
     }
 }
