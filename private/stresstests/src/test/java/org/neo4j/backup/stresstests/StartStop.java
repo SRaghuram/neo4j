@@ -17,14 +17,12 @@ import static org.junit.Assert.assertTrue;
 
 class StartStop extends Workload
 {
-    private static final long SLEEP_BETWEEN_RUNS_MS = TimeUnit.SECONDS.toMillis( 10 );
-
     private final AtomicReference<GraphDatabaseService> dbRef;
     private final Factory<GraphDatabaseService> factory;
 
     StartStop( Control control, Factory<GraphDatabaseService> factory, AtomicReference<GraphDatabaseService> dbRef )
     {
-        super( control, SLEEP_BETWEEN_RUNS_MS );
+        super( control );
         this.factory = factory;
         this.dbRef = dbRef;
     }
@@ -32,6 +30,7 @@ class StartStop extends Workload
     @Override
     protected void doWork() throws Exception
     {
+        TimeUnit.SECONDS.sleep( 10 ); // sleep between runs
         GraphDatabaseService db = dbRef.get();
         db.shutdown();
         TimeUnit.SECONDS.sleep( 2 ); // sleep a bit while db is shutdown to let backup fail

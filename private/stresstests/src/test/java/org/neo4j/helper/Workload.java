@@ -10,18 +10,10 @@ import org.neo4j.causalclustering.stresstests.Control;
 public abstract class Workload implements Runnable
 {
     protected final Control control;
-    private final long sleepTimeMillis;
 
     public Workload( Control control )
     {
-        this( control, 0 );
-    }
-
-    @SuppressWarnings( "WeakerAccess" )
-    public Workload( Control control, long sleepTimeMillis )
-    {
         this.control = control;
-        this.sleepTimeMillis = sleepTimeMillis;
     }
 
     @Override
@@ -32,15 +24,11 @@ public abstract class Workload implements Runnable
             while ( control.keepGoing() )
             {
                 doWork();
-                if ( sleepTimeMillis != 0 )
-                {
-                    Thread.sleep( sleepTimeMillis );
-                }
             }
         }
         catch ( InterruptedException e )
         {
-            Thread.interrupted();
+            Thread.currentThread().interrupt();
         }
         catch ( Throwable t )
         {
