@@ -81,8 +81,6 @@ import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
 @RunWith( Parameterized.class )
 public class OnlineBackupCommandCcIT
 {
-    private static final boolean BACKUP_FROM_SAME_JVM = false;
-
     private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
     private final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystemRule );
     private final PageCacheRule pageCacheRule = new PageCacheRule();
@@ -592,8 +590,6 @@ public class OnlineBackupCommandCcIT
     private int runBackupToolAndGetExitCode( String... args ) throws Exception
     {
         File neo4jHome = testDirectory.absolutePath();
-        return BACKUP_FROM_SAME_JVM
-               ? TestHelpers.runBackupToolFromSameJvm( neo4jHome, args )
-               : TestHelpers.runBackupToolFromOtherJvmToGetExitCode( neo4jHome, args );
+        return TestHelpers.runBackupToolFromOtherJvmToGetExitCode( neo4jHome, args );
     }
 }
