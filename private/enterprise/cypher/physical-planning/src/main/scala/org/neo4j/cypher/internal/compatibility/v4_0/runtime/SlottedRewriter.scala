@@ -118,6 +118,8 @@ class SlottedRewriter(tokenContext: TokenContext) {
       resultPlan.findByAllClass[Variable].foreach(v => throw new CantCompileQueryException(s"Failed to rewrite away $v\n$resultPlan"))
     }
 
+    resultPlan.hasLoadCSV = in.hasLoadCSV
+
     resultPlan
   }
 
