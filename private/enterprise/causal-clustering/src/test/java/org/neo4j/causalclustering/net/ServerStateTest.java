@@ -12,11 +12,11 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,16 +29,16 @@ import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * More generalized state tests of SuspendableLifeCycle can be found {@link SuspendableLifeCycleLifeStateChangeTest} and
  * {@link SuspendableLifeCycleSuspendedStateChangeTest}
  */
-public class ServerStateTest
+class ServerStateTest
 {
     private static final String SERVER_NAME = "serverName";
 
@@ -50,8 +50,8 @@ public class ServerStateTest
     private Server server;
     private Channel channel;
 
-    @BeforeClass
-    public static void initialSetup()
+    @BeforeAll
+    static void initialSetup()
     {
         clientGroup = new NioEventLoopGroup();
         bootstrap = new Bootstrap()
@@ -67,8 +67,8 @@ public class ServerStateTest
                 } );
     }
 
-    @Before
-    public void setUp() throws Throwable
+    @BeforeEach
+    void setUp() throws Throwable
     {
         executor = Executors.newCachedThreadPool();
         server = createServer();
@@ -76,8 +76,8 @@ public class ServerStateTest
         assertFalse( canConnect() );
     }
 
-    @After
-    public void tearDown() throws Throwable
+    @AfterEach
+    void tearDown() throws Throwable
     {
         if ( server != null )
         {
@@ -91,21 +91,21 @@ public class ServerStateTest
         executor.shutdown();
     }
 
-    @AfterClass
-    public static void finalTearDown()
+    @AfterAll
+    static void finalTearDown()
     {
         clientGroup.shutdownGracefully();
     }
 
     @Test
-    public void shouldStartServerNormally() throws Throwable
+    void shouldStartServerNormally() throws Throwable
     {
         server.start();
         assertTrue( canConnect() );
     }
 
     @Test
-    public void canDisableAndEnableServer() throws Throwable
+    void canDisableAndEnableServer() throws Throwable
     {
         server.start();
         assertTrue( canConnect() );
@@ -118,7 +118,7 @@ public class ServerStateTest
     }
 
     @Test
-    public void serverCannotBeEnabledIfLifeCycleHasNotStarted() throws Throwable
+    void serverCannotBeEnabledIfLifeCycleHasNotStarted() throws Throwable
     {
         server.enable();
         assertFalse( canConnect() );
@@ -128,7 +128,7 @@ public class ServerStateTest
     }
 
     @Test
-    public void serverCannotStartIfDisabled() throws Throwable
+    void serverCannotStartIfDisabled() throws Throwable
     {
         server.disable();
 
@@ -140,7 +140,7 @@ public class ServerStateTest
     }
 
     @Test
-    public void shouldRegisterAddressInPortRegister() throws Throwable
+    void shouldRegisterAddressInPortRegister() throws Throwable
     {
         String name = "TheServer";
         ConnectorPortRegister portRegister = new ConnectorPortRegister();

@@ -6,10 +6,10 @@
 package org.neo4j.kernel.api.impl.fulltext;
 
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -31,8 +31,9 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.rule.CleanupRule;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
@@ -50,7 +51,8 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATION
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 
-public class FulltextIndexBackupIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class FulltextIndexBackupIT
 {
     private static final Label LABEL = Label.label( "LABEL" );
     private static final String PROP = "prop";
@@ -59,43 +61,53 @@ public class FulltextIndexBackupIT
     private static final String REL_INDEX = "relIndex";
     private static final String BACKUP_DIR_NAME = "backups";
 
-    private final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    private final TestDirectory dir = TestDirectory.testDirectory();
-    private final CleanupRule cleanup = new CleanupRule();
+    @Inject
+    private TestDirectory dir;
+
     private long nodeId1;
     private long nodeId2;
     private long relId1;
 
-    @Rule
-    public final RuleChain rules = RuleChain.outerRule( suppressOutput ).around( dir ).around( cleanup );
-
     private GraphDatabaseAPI db;
+    private GraphDatabaseAPI backupDb;
 
-    @Before
-    public void setUpPorts()
+    @BeforeEach
+    void setUpPorts()
     {
         GraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
         GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( dir.databaseDir() );
         builder.setConfig( online_backup_enabled, "true" );
         builder.setConfig( online_backup_listen_address, "127.0.0.1:0" );
         db = (GraphDatabaseAPI) builder.newGraphDatabase();
-        cleanup.add( db );
+    }
+
+    @AfterEach
+    void tearDown()
+    {
+        if ( db != null )
+        {
+            db.shutdown();
+        }
+        if ( backupDb != null )
+        {
+            backupDb.shutdown();
+        }
     }
 
     @Test
-    public void fulltextIndexesMustBeTransferredInBackup() throws Exception
+    void fulltextIndexesMustBeTransferredInBackup() throws Exception
     {
         initializeTestData();
         verifyData( db );
         Path backupDir = executeBackup();
         db.shutdown();
 
-        GraphDatabaseAPI backupDb = startBackupDatabase( backupDir.toFile() );
+        backupDb = startBackupDatabase( backupDir.toFile() );
         verifyData( backupDb );
     }
 
     @Test
-    public void fulltextIndexesMustBeUpdatedByIncrementalBackup() throws Exception
+    void fulltextIndexesMustBeUpdatedByIncrementalBackup() throws Exception
     {
         initializeTestData();
         Path backupDir = executeBackup();
@@ -122,7 +134,7 @@ public class FulltextIndexBackupIT
 
         db.shutdown();
 
-        GraphDatabaseAPI backupDb = startBackupDatabase( backupDir.toFile() );
+        backupDb = startBackupDatabase( backupDir.toFile() );
         verifyData( backupDb );
 
         try ( Transaction tx = backupDb.beginTx() )
@@ -180,7 +192,7 @@ public class FulltextIndexBackupIT
 
     private GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        return (GraphDatabaseAPI) cleanup.add( new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( backupDatabaseDir ).newGraphDatabase() );
+        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( backupDatabaseDir ).newGraphDatabase();
     }
 
     private void verifyData( GraphDatabaseAPI db )

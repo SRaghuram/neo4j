@@ -5,8 +5,8 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -18,12 +18,12 @@ import org.neo4j.causalclustering.net.Server;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
 
-public class ConnectionInfoIT
+class ConnectionInfoIT
 {
     private Socket testSocket;
 
-    @After
-    public void teardown() throws IOException
+    @AfterEach
+    void teardown() throws IOException
     {
         if ( testSocket != null )
         {
@@ -32,7 +32,7 @@ public class ConnectionInfoIT
     }
 
     @Test
-    public void testAddressAlreadyBoundMessage() throws Throwable
+    void testAddressAlreadyBoundMessage() throws Throwable
     {
         // given
         testSocket = bindPort( "localhost", 0 );

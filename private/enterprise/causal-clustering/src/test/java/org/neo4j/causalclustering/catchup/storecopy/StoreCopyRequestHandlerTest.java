@@ -6,8 +6,8 @@
 package org.neo4j.causalclustering.catchup.storecopy;
 
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Optional;
@@ -33,15 +33,15 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 //TODO: Update tests with database name related cases.
-public class StoreCopyRequestHandlerTest
+class StoreCopyRequestHandlerTest
 {
     private static final StoreId STORE_ID_MISMATCHING = new StoreId( 1, 1, 1, 1 );
     private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4 );
@@ -53,8 +53,8 @@ public class StoreCopyRequestHandlerTest
     private CatchupServerProtocol catchupServerProtocol;
     private JobScheduler jobScheduler = new FakeJobScheduler();
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         catchupServerProtocol = new CatchupServerProtocol();
         catchupServerProtocol.expect( CatchupServerProtocol.State.GET_STORE_FILE );
@@ -71,7 +71,7 @@ public class StoreCopyRequestHandlerTest
     }
 
     @Test
-    public void shouldGiveProperErrorOnStoreIdMismatch()
+    void shouldGiveProperErrorOnStoreIdMismatch()
     {
         embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MISMATCHING,
                 new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) );
@@ -84,7 +84,7 @@ public class StoreCopyRequestHandlerTest
     }
 
     @Test
-    public void shouldGiveProperErrorOnTxBehind()
+    void shouldGiveProperErrorOnTxBehind()
     {
         embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING,
                 new File( "some-file" ), 2, DEFAULT_DATABASE_NAME ) );
@@ -97,20 +97,13 @@ public class StoreCopyRequestHandlerTest
     }
 
     @Test
-    public void shouldResetProtocolAndGiveErrorOnUncheckedException()
+    void shouldResetProtocolAndGiveErrorOnUncheckedException()
     {
         when( database.getStoreId() ).thenThrow( new IllegalStateException() );
 
-        try
-        {
-            embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING,
-                    new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) );
-            fail();
-        }
-        catch ( IllegalStateException ignore )
-        {
+        assertThrows( IllegalStateException.class,
+                () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) ) );
 
-        }
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_UNKNOWN );
         assertEquals( expectedResponse, embeddedChannel.readOutbound() );
@@ -119,21 +112,15 @@ public class StoreCopyRequestHandlerTest
     }
 
     @Test
-    public void shoulResetProtocolAndGiveErrorIfFilesThrowException()
+    void shoulResetProtocolAndGiveErrorIfFilesThrowException()
     {
         EmbeddedChannel alternativeChannel = new EmbeddedChannel(
                 new EvilStoreCopyRequestHandler( catchupServerProtocol, () -> database, new StoreFileStreamingProtocol(),
                         fileSystemAbstraction, NullLogProvider.getInstance() ) );
-        try
-        {
-            alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING,
-                    new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) );
-            fail();
-        }
-        catch ( IllegalStateException ignore )
-        {
-            // do nothing
-        }
+
+        assertThrows( IllegalStateException.class,
+                () -> alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) ) );
+
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, alternativeChannel.readOutbound() );
         StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_UNKNOWN );
         assertEquals( expectedResponse, alternativeChannel.readOutbound() );
@@ -142,22 +129,16 @@ public class StoreCopyRequestHandlerTest
     }
 
     @Test
-    public void transactionsTooFarBehindStartCheckpointAsynchronously()
+    void transactionsTooFarBehindStartCheckpointAsynchronously()
     {
         // given checkpoint will fail if performed
         checkPointer._tryCheckPoint = Optional.empty();
 
         // when
-        try
-        {
-            embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING,
-                    new File( "some-file" ), 123, DEFAULT_DATABASE_NAME ) );
-            fail();
-        }
-        catch ( RuntimeException e )
-        {
-            assertEquals( "FakeCheckPointer", e.getMessage() );
-        }
+        RuntimeException error = assertThrows( RuntimeException.class,
+                () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 123, DEFAULT_DATABASE_NAME ) ) );
+
+        assertEquals( "FakeCheckPointer", error.getMessage() );
 
         // then should have received error message
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );

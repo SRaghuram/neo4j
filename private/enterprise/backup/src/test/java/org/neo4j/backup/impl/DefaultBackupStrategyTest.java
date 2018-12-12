@@ -240,7 +240,7 @@ class DefaultBackupStrategyTest
                 () -> strategy.performIncrementalBackup( desiredBackupLayout, config, userProvidedAddress ) );
 
         // then
-        assertEquals( StoreIdDownloadFailedException.class, error.getCause().getClass() );
+        assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
     }
 
     @Test
@@ -254,6 +254,6 @@ class DefaultBackupStrategyTest
                 () -> strategy.performFullBackup( desiredBackupLayout, config, userProvidedAddress ) );
 
         // then
-        assertEquals( StoreIdDownloadFailedException.class, error.getCause().getClass() );
+        assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
     }
 }

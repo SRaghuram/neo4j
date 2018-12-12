@@ -5,7 +5,7 @@
  */
 package org.neo4j.causalclustering.common;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 import java.time.Clock;
@@ -22,10 +22,10 @@ import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -35,11 +35,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class DatabaseServiceTest
+class DatabaseServiceTest
 {
 
     @Test
-    public void availabilityGuardRaisedOnCreation()
+    void availabilityGuardRaisedOnCreation()
     {
         AvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
@@ -50,7 +50,7 @@ public class DatabaseServiceTest
     }
 
     @Test
-    public void availabilityGuardDroppedOnStart() throws Throwable
+    void availabilityGuardDroppedOnStart() throws Throwable
     {
         AvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
@@ -63,7 +63,7 @@ public class DatabaseServiceTest
     }
 
     @Test
-    public void availabilityGuardRaisedOnStop() throws Throwable
+    void availabilityGuardRaisedOnStop() throws Throwable
     {
         AvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
@@ -80,7 +80,7 @@ public class DatabaseServiceTest
     }
 
     @Test
-    public void availabilityGuardRaisedOnStopForStoreCopy() throws Throwable
+    void availabilityGuardRaisedOnStopForStoreCopy() throws Throwable
     {
         DatabaseAvailabilityGuard guard = newAvailabilityGuard();
         assertTrue( guard.isAvailable() );
@@ -97,7 +97,7 @@ public class DatabaseServiceTest
     }
 
     @Test
-    public void availabilityGuardRaisedBeforeDataSourceManagerIsStopped() throws Throwable
+    void availabilityGuardRaisedBeforeDataSourceManagerIsStopped() throws Throwable
     {
         AvailabilityGuard guard = mock( DatabaseAvailabilityGuard.class );
         DatabaseManager databaseManager = mock( DatabaseManager.class );
@@ -112,7 +112,7 @@ public class DatabaseServiceTest
     }
 
     @Test
-    public void availabilityGuardRaisedBeforeDataSourceManagerIsStoppedForStoreCopy() throws Throwable
+    void availabilityGuardRaisedBeforeDataSourceManagerIsStoppedForStoreCopy() throws Throwable
     {
         AvailabilityGuard guard = mock( DatabaseAvailabilityGuard.class );
         DatabaseManager databaseManager = mock( DatabaseManager.class );
@@ -127,7 +127,7 @@ public class DatabaseServiceTest
     }
 
     @Test
-    public void doNotRestartServicesIfAlreadyStarted() throws Throwable
+    void doNotRestartServicesIfAlreadyStarted() throws Throwable
     {
         DatabaseManager databaseManager = mock( DatabaseManager.class );
         DatabaseService databaseService = newLocalDatabaseService( newAvailabilityGuard(), databaseManager );
@@ -143,12 +143,12 @@ public class DatabaseServiceTest
         verify( databaseManager, never() ).start();
     }
 
-    protected DatabaseAvailabilityGuard newAvailabilityGuard()
+    DatabaseAvailabilityGuard newAvailabilityGuard()
     {
         return new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, Clock.systemUTC(), NullLog.getInstance() );
     }
 
-    protected DatabaseService newLocalDatabaseService( AvailabilityGuard availabilityGuard, DatabaseManager databaseManager )
+    DatabaseService newLocalDatabaseService( AvailabilityGuard availabilityGuard, DatabaseManager databaseManager )
     {
         return new DefaultDatabaseService<>( StubLocalDatabase::new, () -> databaseManager, mock( StoreLayout.class ), availabilityGuard,
                 () -> mock( DatabaseHealth.class ), mock( FileSystemAbstraction.class ), mock( PageCache.class ),
