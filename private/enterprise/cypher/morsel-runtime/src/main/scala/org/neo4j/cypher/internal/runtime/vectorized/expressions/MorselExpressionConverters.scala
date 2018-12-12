@@ -35,7 +35,10 @@ object MorselExpressionConverters extends ExpressionConverter {
     //Queries containing these expression cant be handled by morsel runtime yet
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => throw new CantCompileQueryException()
     case e: NestedPlanExpression => throw new CantCompileQueryException(s"$e is not yet supported by the morsel runtime")
-    case _: ResolvedFunctionInvocation => throw new CantCompileQueryException(s"User-defined functions is not yet supported by the morsel runtime")
+
+    //UDFs may contain arbitrary CORE API reads which are not thread-safe. We only allow those that are explicitly marked as such
+    case ResolvedFunctionInvocation(namespace, Some(signature), _) if signature.threadSafe || namespace.namespace.isEmpty => None
+    case _:ResolvedFunctionInvocation => throw new CantCompileQueryException(s"User-defined functions is not yet supported by the morsel runtime")
 
     case _ => None
   }

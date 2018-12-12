@@ -12,8 +12,8 @@ import org.opencypher.tools.tck.api.{CypherTCK, Scenario}
 abstract class EnterpriseBaseTCKTests extends BaseFeatureTest {
 
   // these two should be empty on commit!
-  val featureToRun = ""
-  val scenarioToRun = ""
+  val featureToRun = "DurationBetweenAcceptance"
+  val scenarioToRun = "Should compute duration between two temporals in days"
 
   val scenarios: Seq[Scenario] = filterScenarios(CypherTCK.allTckScenarios, featureToRun, scenarioToRun)
 
