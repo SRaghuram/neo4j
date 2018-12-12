@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 import org.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.collection.Pair;
-import org.neo4j.helpers.collection.Streams;
+import org.neo4j.collection.Streams;
 
 public class ReconnectingChannels
 {

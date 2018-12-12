@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.protocol.Protocol;
 import org.neo4j.helpers.collection.Pair;
-import org.neo4j.helpers.collection.Streams;
+import org.neo4j.collection.Streams;
 
 public abstract class ProtocolRepository<U extends Comparable<U>,T extends Protocol<U>>
 {

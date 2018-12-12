@@ -14,7 +14,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.neo4j.helpers.collection.Streams;
+import org.neo4j.collection.Streams;
 import org.neo4j.util.VisibleForTesting;
 
 import static java.util.Collections.unmodifiableMap;

@@ -18,7 +18,7 @@ import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.helpers.collection.Pair;
-import org.neo4j.helpers.collection.Streams;
+import org.neo4j.collection.Streams;
 
 class ReadReplicaViewMessage
 {
