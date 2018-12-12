@@ -249,6 +249,11 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
         }
     }
 
+    public File getParentDir()
+    {
+        return parentDir;
+    }
+
     @SuppressWarnings( "unchecked" )
     private static void shutdownMembers( Collection<? extends ClusterMember> clusterMembers, ErrorHandler errorHandler )
     {
