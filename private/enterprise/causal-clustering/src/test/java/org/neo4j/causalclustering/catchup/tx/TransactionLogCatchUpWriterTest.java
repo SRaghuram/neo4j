@@ -23,7 +23,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageCommandReaderFactory;
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.ServiceLoadingCommandReaderFactory;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.command.Commands;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
@@ -202,7 +202,7 @@ public class TransactionLogCatchUpWriterTest
     private void verifyCheckpointInLog( LogFiles logFiles, boolean shouldExist )
     {
         LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader = new VersionAwareLogEntryReader<>(
-                new RecordStorageCommandReaderFactory(), InvalidLogEntryHandler.STRICT );
+                new ServiceLoadingCommandReaderFactory(), InvalidLogEntryHandler.STRICT );
         final LogTailScanner logTailScanner = new LogTailScanner( logFiles, logEntryReader, new Monitors() );
 
         LogTailInformation tailInformation = logTailScanner.getTailInformation();

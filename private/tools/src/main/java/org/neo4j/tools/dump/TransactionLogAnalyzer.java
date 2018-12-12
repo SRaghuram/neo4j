@@ -9,7 +9,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageCommandReaderFactory;
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.ServiceLoadingCommandReaderFactory;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
@@ -145,7 +145,7 @@ public class TransactionLogAnalyzer
 
         channel = new ReadAheadLogChannel( openVersionedChannel( fileSystem, firstFile ), bridge );
         entryReader =
-                new VersionAwareLogEntryReader<>( new RecordStorageCommandReaderFactory(), invalidLogEntryHandler );
+                new VersionAwareLogEntryReader<>( new ServiceLoadingCommandReaderFactory(), invalidLogEntryHandler );
         positionMarker = new LogPositionMarker();
         try ( TransactionLogEntryCursor cursor = new TransactionLogEntryCursor( new LogEntryCursor( entryReader, channel ) ) )
         {

@@ -16,7 +16,7 @@ import java.util.List;
 
 import org.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import org.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
-import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageCommandReaderFactory;
+import org.neo4j.kernel.impl.storageengine.impl.recordstorage.ServiceLoadingCommandReaderFactory;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
@@ -57,7 +57,7 @@ public class StorageCommandMarshal
         NetworkReadableClosableChannelNetty4 channel = new NetworkReadableClosableChannelNetty4( txBuffer );
 
         LogEntryReader<ReadableClosablePositionAwareChannel> reader = new VersionAwareLogEntryReader<>(
-                new RecordStorageCommandReaderFactory(), InvalidLogEntryHandler.STRICT );
+                new ServiceLoadingCommandReaderFactory(), InvalidLogEntryHandler.STRICT );
 
         LogEntryCommand entryRead;
         List<StorageCommand> commands = new LinkedList<>();
