@@ -116,6 +116,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         }
         catch ( IOException e )
         {
+            log.warn( "Unable to read store ID from metadata store in " + databaseLayout, e );
             return null;
         }
     }

@@ -134,9 +134,20 @@ public class StoreFiles
         return true;
     }
 
+    /**
+     * Read store ID from the metadata store.
+     *
+     * @param databaseLayout the database layout.
+     * @return store ID or {@code null} if metadata store does not exist.
+     * @throws IOException if there is an error while reading the metadata store file.
+     */
     public StoreId readStoreId( DatabaseLayout databaseLayout ) throws IOException
     {
         File neoStoreFile = databaseLayout.metadataStore();
+        if ( !fs.fileExists( neoStoreFile ) )
+        {
+            return null;
+        }
         org.neo4j.storageengine.api.StoreId kernelStoreId = MetaDataStore.getStoreId( pageCache, neoStoreFile );
         return new StoreId( kernelStoreId.getCreationTime(), kernelStoreId.getRandomId(),
                 kernelStoreId.getUpgradeTime(), kernelStoreId.getUpgradeId() );

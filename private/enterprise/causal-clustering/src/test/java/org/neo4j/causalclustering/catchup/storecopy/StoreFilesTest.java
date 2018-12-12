@@ -35,6 +35,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -270,5 +271,15 @@ public class StoreFilesTest
         assertThat( storeId.getRandomId(), is( randomNumber ) );
         assertThat( storeId.getUpgradeTime(), is( upgradeTime ) );
         assertThat( storeId.getUpgradeId(), is( upgradeTransactionId ) );
+    }
+
+    @Test
+    public void readStoreIdWhenMetadataStoreDoesNotExist() throws Exception
+    {
+        DatabaseLayout databaseLayout = testDirectory.databaseLayout();
+
+        StoreId storeId = storeFiles.readStoreId( databaseLayout );
+
+        assertNull( storeId );
     }
 }
