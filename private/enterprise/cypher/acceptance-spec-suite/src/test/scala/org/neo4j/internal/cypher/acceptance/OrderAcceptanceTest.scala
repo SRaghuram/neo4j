@@ -532,4 +532,25 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
                             errorType = Seq("SyntaxException"))
   }
 
+  test("Should be able to reuse unprojected variable after WITH ORDER BY") {
+
+    val query = "MATCH (a) WITH a.name AS n ORDER BY a.foo MATCH (a) RETURN a.age"
+    val result = executeWith(Configs.All, query)
+
+    // a.prop is written as `a`.prop in the plan due to the reuse of the variable
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Projection").containingArgument("{n : `a`.name}")
+      .onTopOf(aPlan("Sort")
+        .onTopOf(aPlan("Projection").containingArgument("{ : `a`.foo}"))
+      )
+
+    result.toSet should equal(Set(
+      Map("a.age" -> 10),
+      Map("a.age" -> 9),
+      Map("a.age" -> 12),
+      Map("a.age" -> 16),
+      Map("a.age" -> 14),
+      Map("a.age" -> 4)
+    ))
+  }
 }
