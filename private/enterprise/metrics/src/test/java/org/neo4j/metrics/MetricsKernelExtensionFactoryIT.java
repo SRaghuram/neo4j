@@ -249,8 +249,8 @@ public class MetricsKernelExtensionFactoryIT
         QualifiedName qualifiedName = ProcedureSignature.procedureName( "metricsQuery" );
         JmxQueryProcedure procedure = new JmxQueryProcedure( qualifiedName, mBeanServer );
 
-        String ljmxQuery = "metrics." + GraphDatabaseSettings.DEFAULT_DATABASE_NAME + ":*";
-        RawIterator<Object[],ProcedureException> result = procedure.apply( null, new Object[]{ljmxQuery}, resourceTracker );
+        String jmxQuery = "metrics." + GraphDatabaseSettings.DEFAULT_DATABASE_NAME + ":*";
+        RawIterator<Object[],ProcedureException> result = procedure.apply( null, new Object[]{jmxQuery}, resourceTracker );
 
         List<Object[]> queryResult = asList( result );
         assertThat( queryResult, hasItem( new MetricsRecordMatcher() ) );
