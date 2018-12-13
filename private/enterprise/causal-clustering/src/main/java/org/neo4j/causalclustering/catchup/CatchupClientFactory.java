@@ -14,6 +14,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.net.ConnectException;
 import java.time.Clock;
+import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.Function;
@@ -32,7 +34,6 @@ import org.neo4j.scheduler.JobScheduler;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.causalclustering.protocol.handshake.ChannelAttribute.PROTOCOL_STACK;
 
-// TODO: inactivity timeout
 public class CatchupClientFactory extends LifecycleAdapter
 {
     private final Log log;
@@ -41,22 +42,24 @@ public class CatchupClientFactory extends LifecycleAdapter
     private final Function<CatchupResponseHandler,HandshakeClientInitializer> channelInitializerFactory;
     private final String defaultDatabaseName;
     private final JobScheduler scheduler;
+    private final Duration inactivityTimeout;
 
     private NioEventLoopGroup eventLoopGroup;
 
     public CatchupClientFactory( LogProvider logProvider, Clock clock, Function<CatchupResponseHandler,HandshakeClientInitializer> channelInitializerFactory,
-            String defaultDatabaseName, JobScheduler scheduler )
+            String defaultDatabaseName, Duration inactivityTimeout, JobScheduler scheduler )
     {
         this.log = logProvider.getLog( getClass() );
         this.clock = clock;
         this.channelInitializerFactory = channelInitializerFactory;
         this.defaultDatabaseName = defaultDatabaseName;
         this.scheduler = scheduler;
+        this.inactivityTimeout = inactivityTimeout;
     }
 
     public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream ) throws Exception
     {
-        return new CatchupClient( upstream, pool, defaultDatabaseName );
+        return new CatchupClient( upstream, pool, defaultDatabaseName, inactivityTimeout );
     }
 
     class CatchupChannel implements CatchupChannelPool.Channel
@@ -97,6 +100,11 @@ public class CatchupClientFactory extends LifecycleAdapter
             }
             nettyChannel.write( request.messageType() );
             nettyChannel.writeAndFlush( request );
+        }
+
+        Optional<Long> millisSinceLastResponse()
+        {
+            return handler.lastResponseTime().map( responseMillis -> clock.millis() - responseMillis );
         }
 
         @Override

@@ -6,22 +6,25 @@
 package org.neo4j.causalclustering.catchup;
 
 import java.io.File;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
-import org.neo4j.causalclustering.catchup.tx.TxPullResult;
+import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
 import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
+import org.neo4j.causalclustering.helper.TimeoutRetrier;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
+import org.neo4j.logging.Log;
 import org.neo4j.util.concurrent.Futures;
 
 import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_1;
@@ -125,17 +128,22 @@ public class MockCatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public CompletableFuture<RESULT> request()
+        public RESULT request( Log log ) throws Exception
         {
             if ( protocol.equals( CATCHUP_1 ) )
             {
-                return v1Request.apply( v1Client ).execute( null );
+                return retrying( v1Request.apply( v1Client ).execute( null ) ).get( log );
             }
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_2 ) )
             {
-                return v2Request.apply( v2Client ).execute( null );
+                return retrying( v2Request.apply( v2Client ).execute( null ) ).get( log );
             }
-            return Futures.failedFuture( new Exception( "Unrecognised protocol" ) );
+            return retrying( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
+        }
+
+        private TimeoutRetrier<RESULT> retrying( CompletableFuture<RESULT> request )
+        {
+            return TimeoutRetrier.of( request, 1, () -> Optional.of( 0L ) );
         }
     }
 
@@ -163,10 +171,10 @@ public class MockCatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<TxPullResult> pullTransactions( StoreId storeId, long previousTxId )
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId )
         {
-            TxPullResult txPullResult = responses.txPullResult.apply( new TxPullRequest( previousTxId, storeId, DEFAULT_DATABASE_NAME ) );
-            return handler -> CompletableFuture.completedFuture( txPullResult );
+            TxStreamFinishedResponse pullResponse = responses.txPullResponse.apply( new TxPullRequest( previousTxId, storeId, DEFAULT_DATABASE_NAME ) );
+            return handler -> CompletableFuture.completedFuture( pullResponse );
         }
 
         @Override
@@ -218,10 +226,10 @@ public class MockCatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<TxPullResult> pullTransactions( StoreId storeId, long previousTxId, String databaseName )
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName )
         {
-            TxPullResult txPullResult = responses.txPullResult.apply( new TxPullRequest( previousTxId, storeId, databaseName ) );
-            return handler -> CompletableFuture.completedFuture( txPullResult );
+             TxStreamFinishedResponse pullResponse = responses.txPullResponse.apply( new TxPullRequest( previousTxId, storeId, databaseName ) );
+            return handler -> CompletableFuture.completedFuture( pullResponse );
         }
 
         @Override
@@ -254,7 +262,7 @@ public class MockCatchupClient implements VersionedCatchupClients
 
         private Supplier<CoreSnapshot> coreSnapshot;
         private Function<GetStoreIdRequest,StoreId> storeId;
-        private Function<TxPullRequest,TxPullResult> txPullResult;
+        private Function<TxPullRequest,TxStreamFinishedResponse> txPullResponse;
         private Function<PrepareStoreCopyRequest,PrepareStoreCopyResponse> prepareStoreCopyResponse;
         private Function<GetIndexFilesRequest,StoreCopyFinishedResponse> indexFiles;
         private Function<GetStoreFileRequest,StoreCopyFinishedResponse> storeFiles;
@@ -283,15 +291,15 @@ public class MockCatchupClient implements VersionedCatchupClients
             return this;
         }
 
-        public MockClientResponses withTxPullResult( TxPullResult txPullResult )
+        public MockClientResponses withTxPullResponse( TxStreamFinishedResponse txPullResponse )
         {
-            this.txPullResult = ignored -> txPullResult;
+            this.txPullResponse = ignored -> txPullResponse;
             return this;
         }
 
-        public MockClientResponses withTxPullResult( Function<TxPullRequest,TxPullResult> txPullResult )
+        public MockClientResponses withTxPullResponse( Function<TxPullRequest,TxStreamFinishedResponse> txPullResponse )
         {
-            this.txPullResult = txPullResult;
+            this.txPullResponse = txPullResponse;
             return this;
         }
 

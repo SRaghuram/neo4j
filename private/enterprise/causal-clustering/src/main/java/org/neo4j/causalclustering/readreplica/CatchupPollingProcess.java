@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.causalclustering.catchup.tx;
+package org.neo4j.causalclustering.readreplica;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -16,6 +16,9 @@ import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import org.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
+import org.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
+import org.neo4j.causalclustering.catchup.tx.TxPullResponse;
+import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
@@ -34,16 +37,14 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
-import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.CANCELLED;
-import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.PANIC;
-import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.STORE_COPYING;
-import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.TX_PULLING;
+import static org.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.CANCELLED;
+import static org.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PANIC;
+import static org.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
+import static org.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
 
 /**
  * This class is responsible for pulling transactions from a core server and queuing
  * them to be applied with the {@link BatchingTxApplier}.
- *
- * TODO: This is Read Replica only, move packages?
  */
 public class CatchupPollingProcess extends LifecycleAdapter
 {
@@ -229,23 +230,23 @@ public class CatchupPollingProcess extends LifecycleAdapter
         pullRequestMonitor.txPullRequest( lastQueuedTxId );
         log.debug( "Pull transactions from %s where tx id > %d [batch #%d]", upstream, lastQueuedTxId, batchCount );
 
-        CatchupResponseAdaptor<TxPullResult> responseHandler = new CatchupResponseAdaptor<TxPullResult>()
+        CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<TxStreamFinishedResponse>()
         {
             @Override
-            public void onTxPullResponse( CompletableFuture<TxPullResult> signal, TxPullResponse response )
+            public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxPullResponse response )
             {
                 handleTransaction( response.tx() );
             }
 
             @Override
-            public void onTxStreamFinishedResponse( CompletableFuture<TxPullResult> signal, TxStreamFinishedResponse response )
+            public void onTxStreamFinishedResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxStreamFinishedResponse response )
             {
                 streamComplete();
-                signal.complete( new TxPullResult( response.status(), response.lastTxId() ) );
+                signal.complete( response );
             }
         };
 
-        TxPullResult result;
+        TxStreamFinishedResponse result;
         try
         {
             AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( upstream );
@@ -253,8 +254,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
                     .v1( c -> c.pullTransactions( localStoreId, lastQueuedTxId ) )
                     .v2( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseName ) )
                     .withResponseHandler( responseHandler )
-                    .request()
-                    .get();
+                    .request( log );
         }
         catch ( Exception e )
         {

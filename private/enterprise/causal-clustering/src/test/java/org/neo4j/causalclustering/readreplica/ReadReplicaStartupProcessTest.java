@@ -128,6 +128,7 @@ public class ReadReplicaStartupProcessTest
         DatabaseLayout databaseLayout = DatabaseLayout.of( new File( databaseName + "-store-dir" ) );
         when( localDatabase.storeId() ).thenReturn( storeId );
         when( localDatabase.databaseLayout() ).thenReturn( databaseLayout );
+        when( localDatabase.databaseName() ).thenReturn( databaseName );
         return localDatabase;
     }
 

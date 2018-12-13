@@ -13,40 +13,43 @@ import org.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.logging.LogProvider;
 
 public class TxPullClient
 {
     private final CatchupClientFactory catchUpClient;
     private final String databaseName;
     private final Supplier<Monitors> monitors;
+    private final LogProvider logProvider;
 
     private PullRequestMonitor pullRequestMonitor = new PullRequestMonitor();
 
-    public TxPullClient( CatchupClientFactory catchUpClient, String databaseName, Supplier<Monitors> monitors )
+    public TxPullClient( CatchupClientFactory catchUpClient, String databaseName, Supplier<Monitors> monitors, LogProvider logProvider )
     {
         this.catchUpClient = catchUpClient;
         this.databaseName = databaseName;
         this.monitors = monitors;
+        this.logProvider = logProvider;
     }
 
-    public TxPullResult pullTransactions( AdvertisedSocketAddress fromAddress, StoreId storeId, long previousTxId,
+    public TxStreamFinishedResponse pullTransactions( AdvertisedSocketAddress fromAddress, StoreId storeId, long previousTxId,
                                                  TxPullResponseListener txPullResponseListener ) throws Exception
     {
-        CatchupResponseAdaptor<TxPullResult> responseHandler = new CatchupResponseAdaptor<TxPullResult>()
+        CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<TxStreamFinishedResponse>()
         {
             private long lastTxIdReceived = previousTxId;
 
             @Override
-            public void onTxPullResponse( CompletableFuture<TxPullResult> signal, TxPullResponse response )
+            public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxPullResponse response )
             {
                 this.lastTxIdReceived = response.tx().getCommitEntry().getTxId();
                 txPullResponseListener.onTxReceived( response );
             }
 
             @Override
-            public void onTxStreamFinishedResponse( CompletableFuture<TxPullResult> signal, TxStreamFinishedResponse response )
+            public void onTxStreamFinishedResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxStreamFinishedResponse response )
             {
-                signal.complete( new TxPullResult( response.status(), lastTxIdReceived ) );
+                signal.complete( response );
             }
         };
 
@@ -56,8 +59,7 @@ public class TxPullClient
                 .v1( c -> c.pullTransactions( storeId, previousTxId ) )
                 .v2( c -> c.pullTransactions( storeId, previousTxId, databaseName ) )
                 .withResponseHandler( responseHandler )
-                .request()
-                .get();
+                .request( logProvider.getLog( this.getClass() ) );
     }
 
     private class PullRequestMonitor

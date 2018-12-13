@@ -27,11 +27,6 @@ public class CoreGraphDatabase extends GraphDatabaseFacade
                 .initFacade( storeDir, config, dependencies, this );
     }
 
-    //TODO: Refactor - the interaction between this and CommercialCoreGraphDatabase is gross
-    protected CoreGraphDatabase()
-    { //no-op
-    }
-
     public Role getRole()
     {
         return editionModule
@@ -40,7 +35,7 @@ public class CoreGraphDatabase extends GraphDatabaseFacade
                 .currentRole();
     }
 
-    private EnterpriseCoreEditionModule cachingFactory( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory )
+    protected EnterpriseCoreEditionModule cachingFactory( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory )
     {
         if ( editionModule == null )
         {

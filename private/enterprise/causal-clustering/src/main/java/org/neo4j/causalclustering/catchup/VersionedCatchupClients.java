@@ -11,11 +11,12 @@ import java.util.function.Function;
 
 import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
-import org.neo4j.causalclustering.catchup.tx.TxPullResult;
+import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
+import org.neo4j.logging.Log;
 
 /**
  * This class defines a client which "speaks" the various versions of the Catchup protocol. Basically wraps a builder for {@link CatchupProtocolMessage}s.
@@ -75,7 +76,7 @@ public interface VersionedCatchupClients extends AutoCloseable
     /** {@link CatchupRequestBuilder} Final step */
     interface IsPrepared<RESULT>
     {
-        CompletableFuture<RESULT> request();
+        RESULT request( Log log ) throws Exception;
     }
 
     /* Interfaces for CatchupClients (and their helper return type, PreparedRequest) below here. These
@@ -92,7 +93,7 @@ public interface VersionedCatchupClients extends AutoCloseable
     {
        PreparedRequest<StoreId> getStoreId();
 
-       PreparedRequest<TxPullResult> pullTransactions( StoreId storeId, long previousTxId );
+       PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId );
 
        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId );
 
@@ -105,7 +106,7 @@ public interface VersionedCatchupClients extends AutoCloseable
     {
        PreparedRequest<StoreId> getStoreId( String databaseName );
 
-       PreparedRequest<TxPullResult> pullTransactions( StoreId storeId, long previousTxId, String databaseName );
+       PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName );
 
        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName );
 

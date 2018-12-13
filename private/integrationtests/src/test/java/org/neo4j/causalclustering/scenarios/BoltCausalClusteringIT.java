@@ -19,14 +19,13 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 
-import org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess;
-import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
+import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.driver.internal.logging.JULogging;
 import org.neo4j.driver.v1.AccessMode;

@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntFunction;
 
-import org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess;
 import org.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.ClientConnectorAddresses;

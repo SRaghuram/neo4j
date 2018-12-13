@@ -56,7 +56,6 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     @Override
     public void getOrCreateIds( String[] names, int[] ids )
     {
-        // TODO: This could be optimised, but doing so requires a protocol change.
         for ( int i = 0; i < names.length; i++ )
         {
             ids[i] = getOrCreateId( names[i] );
@@ -100,4 +99,5 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
 
         return StorageCommandMarshal.commandsToBytes( commands );
     }
+
 }

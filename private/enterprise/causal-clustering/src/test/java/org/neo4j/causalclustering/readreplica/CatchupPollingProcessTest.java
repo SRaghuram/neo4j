@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.causalclustering.catchup.tx;
+package org.neo4j.causalclustering.readreplica;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -21,6 +21,7 @@ import org.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV2;
 import org.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
 import org.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
+import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.StubLocalDatabaseService;
 import org.neo4j.causalclustering.discovery.TopologyService;
@@ -49,8 +50,8 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.STORE_COPYING;
-import static org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess.State.TX_PULLING;
+import static org.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
+import static org.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 
 public class CatchupPollingProcessTest
@@ -100,7 +101,7 @@ public class CatchupPollingProcessTest
     public void shouldSendPullRequestOnTickForAllVersions() throws Exception
     {
         // given
-        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.SUCCESS_END_OF_STREAM, 10 ) );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 10 ) );
         txPuller.start();
         long lastAppliedTxId = 99L;
         when( txApplier.lastQueuedTxId() ).thenReturn( lastAppliedTxId );
@@ -119,7 +120,7 @@ public class CatchupPollingProcessTest
     {
         //TODO make a real test
         // given
-        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.SUCCESS_END_OF_STREAM, 10 ) );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 10 ) );
         txPuller.start();
         long lastAppliedTxId = 99L;
         when( txApplier.lastQueuedTxId() ).thenReturn( lastAppliedTxId );
@@ -144,7 +145,7 @@ public class CatchupPollingProcessTest
     {
         // when
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
-        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
 
         // when
@@ -159,7 +160,7 @@ public class CatchupPollingProcessTest
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
-        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
         catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
 
@@ -175,7 +176,7 @@ public class CatchupPollingProcessTest
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
-        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
 
         // when (tx pull)
@@ -200,7 +201,7 @@ public class CatchupPollingProcessTest
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
-        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
         catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
 
@@ -226,7 +227,7 @@ public class CatchupPollingProcessTest
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
-        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
 
         // when
         txPuller.start();
@@ -236,7 +237,7 @@ public class CatchupPollingProcessTest
         txPuller.tick().get(); // realises we need a store copy
         assertFalse( operationalFuture.isDone() );
 
-        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.SUCCESS_END_OF_STREAM, 15 ) );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 15 ) );
 
         txPuller.tick().get(); // does the store copy
         assertFalse( operationalFuture.isDone() );
@@ -254,7 +255,7 @@ public class CatchupPollingProcessTest
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
-        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
 
         // when
@@ -265,7 +266,7 @@ public class CatchupPollingProcessTest
         txPuller.tick().get(); // realises we need a store copy
         assertFalse( operationalFuture.isDone() );
 
-        clientResponses.withTxPullResult( new TxPullResult( CatchupResult.SUCCESS_END_OF_STREAM, 15 ) );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 15 ) );
 
         txPuller.tick().get(); // does the store copy
         assertFalse( operationalFuture.isDone() );

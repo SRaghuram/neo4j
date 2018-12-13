@@ -17,8 +17,6 @@ import java.util.stream.Collectors;
 import org.neo4j.causalclustering.catchup.CatchupClientFactory;
 import org.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import org.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabaseCatchupComponents;
-import org.neo4j.causalclustering.catchup.tx.BatchingTxApplier;
-import org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess;
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -130,7 +128,7 @@ public class CatchupProcessManager extends SafeLifecycle
     public void start0() throws Throwable
     {
         catchupProcesses = databaseService.registeredDatabases().entrySet().stream()
-                .collect( Collectors.toMap( Map.Entry::getKey, e -> catchupProcessFactory.create( e.getKey(), e.getValue() ) ) );
+                .collect( Collectors.toMap( Map.Entry::getKey, e -> catchupProcessFactory.create( e.getValue() ) ) );
         initDatabaseHealth();
         txPulling.start();
         initTimer();
@@ -172,10 +170,11 @@ public class CatchupProcessManager extends SafeLifecycle
         isPanicked = true;
     }
 
-    private CatchupPollingProcess createCatchupProcess( String databaseName, LocalDatabase localDatabase  )
+    private CatchupPollingProcess createCatchupProcess( LocalDatabase localDatabase  )
     {
-        PerDatabaseCatchupComponents dbCatchupComponents = catchupComponents.componentsFor( databaseName )
-                .orElseThrow( () -> new IllegalArgumentException( String.format( "No StoreCopyProcess instance exists for database %s.", databaseName ) ) );
+        PerDatabaseCatchupComponents dbCatchupComponents = catchupComponents.componentsFor( localDatabase.databaseName() )
+                .orElseThrow( () -> new IllegalArgumentException(
+                        String.format( "No StoreCopyProcess instance exists for database %s.", localDatabase.databaseName() ) ) );
 
         Supplier<TransactionCommitProcess> writableCommitProcess = () -> new TransactionRepresentationCommitProcess(
                 localDatabase.database().getDependencyResolver().resolveDependency( TransactionAppender.class ),
@@ -186,7 +185,7 @@ public class CatchupProcessManager extends SafeLifecycle
                 maxBatchSize, () -> localDatabase.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ),
                 writableCommitProcess, localDatabase.monitors(), pageCursorTracerSupplier, versionContextSupplier, commandIndexTracker, logProvider );
 
-        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseName, databaseService, servicesToStopOnStoreCopy,
+        CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, localDatabase.databaseName(), databaseService, servicesToStopOnStoreCopy,
                 catchupClient, selectionStrategyPipeline, batchingTxApplier, localDatabase.monitors(),
                 dbCatchupComponents.storeCopyProcess(), topologyService, logProvider, this::panic );
 
@@ -236,6 +235,6 @@ public class CatchupProcessManager extends SafeLifecycle
     @FunctionalInterface
     interface CatchupProcessFactory
     {
-        CatchupPollingProcess create( String databaseName, LocalDatabase localDatabase );
+        CatchupPollingProcess create( LocalDatabase localDatabase );
     }
 }

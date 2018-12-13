@@ -152,8 +152,6 @@ public class StoreCopyClientTest
         storeIdMap.put( new GetStoreIdRequest( altDbName ), altDbStoreId );
         clientResponses.withStoreId( storeIdMap::get );
 
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
-
         StoreCopyClient subjectA = subject;
         StoreCopyClient subjectB = new StoreCopyClient( catchupClientFactory, altDbName, () -> monitors, logProvider, backOffStrategy );
 

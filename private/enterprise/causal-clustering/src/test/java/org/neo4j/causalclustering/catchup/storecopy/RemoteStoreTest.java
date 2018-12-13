@@ -12,10 +12,10 @@ import java.io.IOException;
 
 import org.neo4j.causalclustering.catchup.CatchUpClientException;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import org.neo4j.causalclustering.catchup.tx.TxPullResult;
 import org.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import org.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import org.neo4j.causalclustering.catchup.tx.TxPullClient;
+import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -46,7 +46,7 @@ public class RemoteStoreTest
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         TxPullClient txPullClient = mock( TxPullClient.class );
         when( txPullClient.pullTransactions( any(), any(), anyLong(), any() ) )
-                .thenReturn( new TxPullResult( SUCCESS_END_OF_STREAM, 13 ) );
+                .thenReturn( new TxStreamFinishedResponse( SUCCESS_END_OF_STREAM, 13 ) );
         TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ),
@@ -77,7 +77,7 @@ public class RemoteStoreTest
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         when( txPullClient.pullTransactions( eq( localhost ), eq( wantedStoreId ), anyLong(), any() ) )
-                .thenReturn( new TxPullResult( SUCCESS_END_OF_STREAM, 13 ) );
+                .thenReturn( new TxStreamFinishedResponse( SUCCESS_END_OF_STREAM, 13 ) );
 
         TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 

@@ -53,7 +53,6 @@ public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory
         return openGenerator( fileName, grabSize, idType, highId, maxId, idTypeConfiguration.allowAggressiveReuse() );
     }
 
-    // TODO: Investigate why maxId is not used.
     private IdGenerator openGenerator( File file, int grabSize, IdType idType, LongSupplier highId, long maxId, boolean aggressiveReuse )
     {
         ReplicatedIdGenerator other = generators.get( Pair.of( databaseName, idType ) );

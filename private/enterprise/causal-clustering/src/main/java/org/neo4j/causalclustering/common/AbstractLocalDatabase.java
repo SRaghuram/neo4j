@@ -144,7 +144,6 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
                 .getDatabase();
     }
 
-    //TODO: Find places where both LocalDatabase and String databaseName are passed as params, as this is no longer necessary
     @Override
     public String databaseName()
     {

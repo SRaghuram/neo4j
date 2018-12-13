@@ -56,12 +56,13 @@ import org.neo4j.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.CoreMatchers.both;
-import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.getCatchupServer;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class StoreCopyClientIT
 {
@@ -314,8 +315,8 @@ public class StoreCopyClientIT
         }
         catch ( StoreCopyFailedException e )
         {
-            assertableLogProvider.assertContainsExactlyOneMessageMatching(
-                    both( startsWith( "Connection refused:" ) ).and( containsString( "localhost/127.0.0.1:" + port ) ) );
+            assertableLogProvider.containsMatchingLogCall( inLog( StoreCopyClient.class )
+                    .warn( anyString(), equalTo( "Connection refused: localhost/127.0.0.1:" + port ) ) );
         }
     }
 

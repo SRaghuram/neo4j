@@ -32,7 +32,6 @@ import org.neo4j.scheduler.JobScheduler;
 
 import static org.neo4j.time.Clocks.systemClock;
 
-// TODO: inactivity timeout
 public final class CatchupClientBuilder
 {
     private CatchupClientBuilder()
@@ -45,7 +44,7 @@ public final class CatchupClientBuilder
     }
 
     private static class StepBuilder implements NeedsDefaultDatabaseName, NeedsCatchupProtocols,
-            NeedsModifierProtocols, NeedsPipelineBuilder, NeedsScheduler, AcceptsOptionalParams
+            NeedsModifierProtocols, NeedsPipelineBuilder, NeedsInactivityTimeout, NeedsScheduler, AcceptsOptionalParams
     {
         private String defaultDatabaseName;
         private NettyPipelineBuilderFactory pipelineBuilder;
@@ -54,6 +53,7 @@ public final class CatchupClientBuilder
         private JobScheduler scheduler;
         private LogProvider debugLogProvider = NullLogProvider.getInstance();
         private LogProvider userLogProvider = NullLogProvider.getInstance();
+        private Duration inactivityTimeout;
         private Duration handshakeTimeout = Duration.ofSeconds( 5 );
         private Clock clock = systemClock();
 
@@ -83,9 +83,16 @@ public final class CatchupClientBuilder
         }
 
         @Override
-        public NeedsScheduler pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder )
+        public NeedsInactivityTimeout pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder )
         {
             this.pipelineBuilder = pipelineBuilder;
+            return this;
+        }
+
+        @Override
+        public NeedsScheduler inactivityTimeout( Duration inactivityTimeout )
+        {
+            this.inactivityTimeout = inactivityTimeout;
             return this;
         }
 
@@ -143,7 +150,7 @@ public final class CatchupClientBuilder
                         handshakeTimeout, debugLogProvider, userLogProvider );
             };
 
-            return new CatchupClientFactory( debugLogProvider, clock, channelInitializerFactory, defaultDatabaseName, scheduler );
+            return new CatchupClientFactory( debugLogProvider, clock, channelInitializerFactory, defaultDatabaseName, inactivityTimeout, scheduler );
         }
     }
 
@@ -164,12 +171,17 @@ public final class CatchupClientBuilder
 
     public interface NeedsPipelineBuilder
     {
-        NeedsScheduler pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder );
+        NeedsInactivityTimeout pipelineBuilder( NettyPipelineBuilderFactory pipelineBuilder );
     }
 
     public interface NeedsScheduler
     {
         AcceptsOptionalParams scheduler( JobScheduler scheduler );
+    }
+
+    public interface NeedsInactivityTimeout
+    {
+        NeedsScheduler inactivityTimeout( Duration inactivityTimeout );
     }
 
     public interface AcceptsOptionalParams

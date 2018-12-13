@@ -162,7 +162,7 @@ class ReadReplicaStartupProcess implements Lifecycle
         {
             String dbName = nameDbEntry.getKey();
             CompletableFuture<AsyncResult> stage =
-                    CompletableFuture.supplyAsync( () -> doSyncStoreCopyWithUpstream( dbName, nameDbEntry.getValue(), source ), executor );
+                    CompletableFuture.supplyAsync( () -> doSyncStoreCopyWithUpstream( nameDbEntry.getValue(), source ), executor );
             combinedFuture = combinedFuture.thenCombineAsync( stage, ( stringAsyncResultMap, asyncResult ) ->
             {
                 stringAsyncResultMap.put( dbName, asyncResult );
@@ -172,11 +172,11 @@ class ReadReplicaStartupProcess implements Lifecycle
         return combinedFuture;
     }
 
-    private AsyncResult doSyncStoreCopyWithUpstream( String databaseName, LocalDatabase localDatabase, MemberId source )
+    private AsyncResult doSyncStoreCopyWithUpstream( LocalDatabase localDatabase, MemberId source )
     {
         try
         {
-            syncStoreWithUpstream( databaseName, localDatabase, source );
+            syncStoreWithUpstream(localDatabase, source );
             return AsyncResult.SUCCESS;
         }
         catch ( TopologyLookupException e )
@@ -201,11 +201,12 @@ class ReadReplicaStartupProcess implements Lifecycle
         }
     }
 
-    private void syncStoreWithUpstream( String databaseName, LocalDatabase localDatabase, MemberId source ) throws IOException,
+    private void syncStoreWithUpstream( LocalDatabase localDatabase, MemberId source ) throws IOException,
             StoreIdDownloadFailedException, StoreCopyFailedException, TopologyLookupException, DatabaseShutdownException
     {
-        PerDatabaseCatchupComponents catchup = catchupComponents.componentsFor( databaseName )
-                .orElseThrow( () -> new IllegalStateException( String.format( "No per database catchup components exist for database %s.", databaseName ) ) );
+        PerDatabaseCatchupComponents catchup = catchupComponents.componentsFor( localDatabase.databaseName() )
+                .orElseThrow( () -> new IllegalStateException(
+                        String.format( "No per database catchup components exist for database %s.", localDatabase.databaseName() ) ) );
 
         if ( localDatabase.isEmpty() )
         {
@@ -223,11 +224,11 @@ class ReadReplicaStartupProcess implements Lifecycle
         }
         else
         {
-            ensureStoreIsPresentAt( databaseName, localDatabase, catchup.remoteStore(), source );
+            ensureStoreIsPresentAt( localDatabase, catchup.remoteStore(), source );
         }
     }
 
-    private void ensureStoreIsPresentAt( String databaseName, LocalDatabase localDatabase, RemoteStore remoteStore, MemberId upstream )
+    private void ensureStoreIsPresentAt( LocalDatabase localDatabase, RemoteStore remoteStore, MemberId upstream )
             throws StoreIdDownloadFailedException, TopologyLookupException
     {
         StoreId localStoreId = localDatabase.storeId();
@@ -237,7 +238,7 @@ class ReadReplicaStartupProcess implements Lifecycle
         {
             throw new IllegalStateException( format( "This read replica cannot join the cluster. " +
                     "The local version of database %s is not empty and has a mismatching storeId: " +
-                    "expected %s actual %s.", databaseName, remoteStoreId, localStoreId ) );
+                    "expected %s actual %s.", localDatabase.databaseName(), remoteStoreId, localStoreId ) );
         }
     }
 

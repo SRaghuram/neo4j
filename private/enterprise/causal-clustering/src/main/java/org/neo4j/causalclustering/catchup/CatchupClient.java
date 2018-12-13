@@ -6,13 +6,14 @@
 package org.neo4j.causalclustering.catchup;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
-import org.neo4j.causalclustering.catchup.tx.TxPullResult;
+import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
@@ -20,11 +21,13 @@ import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
+import org.neo4j.causalclustering.helper.TimeoutRetrier;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.logging.Log;
 import org.neo4j.util.concurrent.Futures;
 
 class CatchupClient implements VersionedCatchupClients
@@ -33,9 +36,12 @@ class CatchupClient implements VersionedCatchupClients
     private final ApplicationProtocol protocol;
     private final CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool;
     private final String defaultDatabaseName;
+    private final Duration inactivityTimeout;
 
-    CatchupClient( AdvertisedSocketAddress upstream, CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool, String defaultDatabaseName ) throws Exception
+    CatchupClient( AdvertisedSocketAddress upstream, CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool, String defaultDatabaseName,
+            Duration inactivityTimeout ) throws Exception
     {
+        this.inactivityTimeout = inactivityTimeout;
         this.channel = pool.acquire( upstream );
         this.protocol = channel.protocol().get();
         this.pool = pool;
@@ -90,9 +96,7 @@ class CatchupClient implements VersionedCatchupClients
     @Override
     public void close()
     {
-        //TODO: The interface should probably implement Autoclosable still, to account for future alternative implementations, but shouldn't this
-        // method be a no-op? We already release the channel from the pool in ReleaseOnComplete.
-        //pool.release( channel );
+        pool.release( channel );
     }
 
     private class Builder<RESULT> implements CatchupRequestBuilder<RESULT>
@@ -144,22 +148,22 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public CompletableFuture<RESULT> request()
+        public RESULT request( Log log ) throws Exception
         {
             if ( protocol.equals( ApplicationProtocols.CATCHUP_1 ) )
             {
                 V1 v1 = new CatchupClient.V1( channel, pool, defaultDatabaseName );
                 if ( v1Request != null )
                 {
-                    return v1Request.apply( v1 ).execute( responseHandler );
+                    return retrying( v1Request.apply( v1 ).execute( responseHandler ) ).get( log );
                 }
                 else if ( allVersionsRequest != null )
                 {
-                    return allVersionsRequest.apply( v1 ).execute( responseHandler );
+                    return retrying( allVersionsRequest.apply( v1 ).execute( responseHandler ) ).get( log );
                 }
                 else
                 {
-                    Futures.failedFuture( new Exception( "No V1 action specified" ) );
+                    retrying( Futures.failedFuture( new Exception( "No V1 action specified" ) ) );
                 }
             }
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_2 ) )
@@ -167,19 +171,24 @@ class CatchupClient implements VersionedCatchupClients
                 V2 v2 = new CatchupClient.V2( channel, pool );
                 if ( v2Request != null )
                 {
-                    return v2Request.apply( v2 ).execute( responseHandler );
+                    return retrying( v2Request.apply( v2 ).execute( responseHandler ) ).get( log );
                 }
                 else if ( allVersionsRequest != null )
                 {
-                    return allVersionsRequest.apply( v2 ).execute( responseHandler );
+                    return retrying( allVersionsRequest.apply( v2 ).execute( responseHandler ) ).get( log );
                 }
                 else
                 {
-                    return Futures.failedFuture( new Exception( "No V2 action specified" ) );
+                    return retrying( Futures.failedFuture( new Exception( "No V2 action specified" ) ) ).get( log );
                 }
             }
 
-            return Futures.failedFuture( new Exception( "Unrecognised protocol" ) );
+            return retrying( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
+        }
+
+        private TimeoutRetrier<RESULT> retrying( CompletableFuture<RESULT> request )
+        {
+            return TimeoutRetrier.of( request, inactivityTimeout.toMillis(), channel::millisSinceLastResponse );
         }
     }
 
@@ -209,7 +218,7 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<TxPullResult> pullTransactions( StoreId storeId, long previousTxId )
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId )
         {
             return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, defaultDatabaseName ), handler, channel, pool );
         }
@@ -258,7 +267,7 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<TxPullResult> pullTransactions( StoreId storeId, long previousTxId, String databaseName )
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName )
         {
             return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, databaseName ), handler, channel, pool );
         }

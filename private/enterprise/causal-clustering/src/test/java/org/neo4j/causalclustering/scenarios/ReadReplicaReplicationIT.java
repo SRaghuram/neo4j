@@ -27,7 +27,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.catchup.tx.CatchupPollingProcess;
+import org.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import org.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.common.ClusterMember;

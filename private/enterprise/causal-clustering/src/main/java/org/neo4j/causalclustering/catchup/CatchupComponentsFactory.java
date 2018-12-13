@@ -10,5 +10,5 @@ import org.neo4j.causalclustering.common.LocalDatabase;
 
 public interface CatchupComponentsFactory
 {
-    PerDatabaseCatchupComponents createPerDatabaseComponents( String databaseName, LocalDatabase localDatabase );
+    PerDatabaseCatchupComponents createPerDatabaseComponents( LocalDatabase localDatabase );
 }
