@@ -5,7 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.stream.Stream;
@@ -22,10 +23,10 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.internal.kernel.api.security.AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
@@ -45,7 +46,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- General tests over all procedures -----------
 
     @Test
-    public void shouldHaveDescriptionsOnAllSecurityProcedures()
+    void shouldHaveDescriptionsOnAllSecurityProcedures()
     {
         assertSuccess( readSubject, "CALL dbms.procedures", r ->
         {
@@ -72,7 +73,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     // Enterprise version of test in BuiltInProceduresIT.callChangePasswordWithAccessModeInDbmsMode.
     // Uses community edition procedure in BuiltInProcedures
     @Test
-    public void shouldChangeOwnPassword()
+    void shouldChangeOwnPassword()
     {
         assertEmpty( readSubject, "CALL dbms.security.changePassword( '321' )" );
         // Because RESTSubject caches an auth token that is sent with every request
@@ -82,7 +83,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldChangeOwnPasswordEvenIfHasNoAuthorization()
+    void shouldChangeOwnPasswordEvenIfHasNoAuthorization()
     {
         neo.assertAuthenticated( noneSubject );
         assertEmpty( noneSubject, "CALL dbms.security.changePassword( '321' )" );
@@ -92,7 +93,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotChangeOwnPasswordIfNewPasswordInvalid()
+    void shouldNotChangeOwnPasswordIfNewPasswordInvalid()
     {
         assertFail( readSubject, "CALL dbms.security.changePassword( '' )", "A password cannot be empty." );
         assertFail( readSubject, "CALL dbms.security.changePassword( '123' )",
@@ -103,7 +104,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
     // Should change password for admin subject and valid user
     @Test
-    public void shouldChangeUserPassword() throws Throwable
+    void shouldChangeUserPassword() throws Throwable
     {
         assertEmpty( adminSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '321', false )" );
         // TODO: uncomment and fix
@@ -114,7 +115,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldChangeUserPasswordAndRequirePasswordChangeOnNextLoginByDefault() throws Throwable
+    void shouldChangeUserPasswordAndRequirePasswordChangeOnNextLoginByDefault() throws Throwable
     {
         assertEmpty( adminSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '321' )" );
         neo.assertInitFailed( neo.login( "readSubject", "123" ) );
@@ -122,7 +123,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldChangeUserPasswordAndRequirePasswordChangeOnNextLoginOnRequest() throws Throwable
+    void shouldChangeUserPasswordAndRequirePasswordChangeOnNextLoginOnRequest() throws Throwable
     {
         assertEmpty( adminSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '321', true )" );
         neo.assertInitFailed( neo.login( "readSubject", "123" ) );
@@ -131,7 +132,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
     // Should fail vaguely to change password for non-admin subject, regardless of user and password
     @Test
-    public void shouldNotChangeUserPasswordIfNotAdmin()
+    void shouldNotChangeUserPasswordIfNotAdmin()
     {
         assertFail( schemaSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '321' )", PERMISSION_DENIED );
         assertFail( schemaSubject, "CALL dbms.security.changeUserPassword( 'jake', '321' )", PERMISSION_DENIED );
@@ -140,7 +141,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
     // Should change own password for non-admin or admin subject
     @Test
-    public void shouldChangeUserPasswordIfSameUser()
+    void shouldChangeUserPasswordIfSameUser()
     {
         assertEmpty( readSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '321', false )" );
         // Because RESTSubject caches an auth token that is sent with every request
@@ -157,7 +158,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
     // Should fail nicely to change own password for non-admin or admin subject if password invalid
     @Test
-    public void shouldFailToChangeUserPasswordIfSameUserButInvalidPassword()
+    void shouldFailToChangeUserPasswordIfSameUserButInvalidPassword()
     {
         assertFail( readSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '123' )",
                 "Old password and new password cannot be the same." );
@@ -168,7 +169,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
     // Should fail nicely to change password for admin subject and non-existing user
     @Test
-    public void shouldNotChangeUserPasswordIfNonExistentUser()
+    void shouldNotChangeUserPasswordIfNonExistentUser()
     {
         assertFail( adminSubject, "CALL dbms.security.changeUserPassword( 'jake', '321' )",
                 "User 'jake' does not exist." );
@@ -176,7 +177,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
     // Should fail nicely to change password for admin subject and empty password
     @Test
-    public void shouldNotChangeUserPasswordIfEmptyPassword()
+    void shouldNotChangeUserPasswordIfEmptyPassword()
     {
         assertFail( adminSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '' )",
                 "A password cannot be empty." );
@@ -184,7 +185,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
     // Should fail to change password for admin subject and same password
     @Test
-    public void shouldNotChangeUserPasswordIfSamePassword()
+    void shouldNotChangeUserPasswordIfSamePassword()
     {
         assertFail( adminSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '123' )",
                 "Old password and new password cannot be the same." );
@@ -193,7 +194,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- create user -----------
 
     @Test
-    public void shouldCreateUserAndRequirePasswordChangeByDefault() throws Exception
+    void shouldCreateUserAndRequirePasswordChangeByDefault() throws Exception
     {
         assertEmpty( adminSubject, "CALL dbms.security.createUser('craig', '1234' )" );
         userManager.getUser( "craig" );
@@ -202,7 +203,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldCreateUserAndRequirePasswordChangeIfRequested() throws Exception
+    void shouldCreateUserAndRequirePasswordChangeIfRequested() throws Exception
     {
         assertEmpty( adminSubject, "CALL dbms.security.createUser('craig', '1234', true)" );
         userManager.getUser( "craig" );
@@ -211,7 +212,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldCreateUserAndRequireNoPasswordChangeIfRequested() throws Exception
+    void shouldCreateUserAndRequireNoPasswordChangeIfRequested() throws Exception
     {
         assertEmpty( adminSubject, "CALL dbms.security.createUser('craig', '1234', false)" );
         userManager.getUser( "craig" );
@@ -219,7 +220,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotCreateUserIfInvalidUsername()
+    void shouldNotCreateUserIfInvalidUsername()
     {
         assertFail( adminSubject, "CALL dbms.security.createUser(null, '1234', true)",
                 "The provided username is empty." );
@@ -232,14 +233,14 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotCreateUserIfInvalidPassword()
+    void shouldNotCreateUserIfInvalidPassword()
     {
         assertFail( adminSubject, "CALL dbms.security.createUser('craig', '', true)", "A password cannot be empty." );
         assertFail( adminSubject, "CALL dbms.security.createUser('craig', null, true)", "A password cannot be empty." );
     }
 
     @Test
-    public void shouldNotCreateExistingUser()
+    void shouldNotCreateExistingUser()
     {
         assertFail( adminSubject, "CALL dbms.security.createUser('readSubject', '1234', true)",
                 "The specified user 'readSubject' already exists" );
@@ -248,7 +249,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotAllowNonAdminCreateUser()
+    void shouldNotAllowNonAdminCreateUser()
     {
         testFailCreateUser( pwdSubject, CHANGE_PWD_ERR_MSG );
         testFailCreateUser( readSubject, PERMISSION_DENIED );
@@ -259,7 +260,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- delete user -----------
 
     @Test
-    public void shouldDeleteUser() throws Exception
+    void shouldDeleteUser() throws Exception
     {
         assertEmpty( adminSubject, "CALL dbms.security.deleteUser('noneSubject')" );
         try
@@ -269,8 +270,8 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         }
         catch ( InvalidArgumentsException e )
         {
-            assertTrue( "User noneSubject should not exist",
-                    e.getMessage().contains( "User 'noneSubject' does not exist." ) );
+            assertTrue( e.getMessage().contains( "User 'noneSubject' does not exist." ),
+                    "User noneSubject should not exist" );
         }
 
         userManager.addRoleToUser( PUBLISHER, "readSubject" );
@@ -282,15 +283,15 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         }
         catch ( InvalidArgumentsException e )
         {
-            assertTrue( "User readSubject should not exist",
-                    e.getMessage().contains( "User 'readSubject' does not exist." ) );
+            assertTrue( e.getMessage().contains( "User 'readSubject' does not exist." ),
+                    "User readSubject should not exist" );
         }
         assertFalse( userManager.getUsernamesForRole( READER ).contains( "readSubject" ) );
         assertFalse( userManager.getUsernamesForRole( PUBLISHER ).contains( "readSubject" ) );
     }
 
     @Test
-    public void shouldNotDeleteUserIfNotAdmin()
+    void shouldNotDeleteUserIfNotAdmin()
     {
         testFailDeleteUser( pwdSubject, "readSubject", CHANGE_PWD_ERR_MSG );
         testFailDeleteUser( readSubject, "readSubject", PERMISSION_DENIED );
@@ -302,26 +303,26 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotAllowDeletingNonExistentUser()
+    void shouldNotAllowDeletingNonExistentUser()
     {
         testFailDeleteUser( adminSubject, "Craig", "User 'Craig' does not exist." );
         testFailDeleteUser( adminSubject, "", "User '' does not exist." );
     }
 
     @Test
-    public void shouldNotAllowDeletingYourself()
+    void shouldNotAllowDeletingYourself()
     {
         testFailDeleteUser( adminSubject, "adminSubject", "Deleting yourself (user 'adminSubject') is not allowed." );
     }
 
     @Test
-    public void shouldTerminateTransactionsOnUserDeletion() throws Throwable
+    void shouldTerminateTransactionsOnUserDeletion() throws Throwable
     {
         shouldTerminateTransactionsForUser( writeSubject, "dbms.security.deleteUser( '%s' )" );
     }
 
     @Test
-    public void shouldTerminateConnectionsOnUserDeletion() throws Exception
+    void shouldTerminateConnectionsOnUserDeletion() throws Exception
     {
         TransportConnection conn = startBoltSession( "writeSubject", "abc" );
 
@@ -339,14 +340,14 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- suspend user -----------
 
     @Test
-    public void shouldSuspendUser() throws Exception
+    void shouldSuspendUser() throws Exception
     {
         assertEmpty( adminSubject, "CALL dbms.security.suspendUser('readSubject')" );
         assertTrue( userManager.getUser( "readSubject" ).hasFlag( IS_SUSPENDED ) );
     }
 
     @Test
-    public void shouldSuspendSuspendedUser() throws Exception
+    void shouldSuspendSuspendedUser() throws Exception
     {
         assertEmpty( adminSubject, "CALL dbms.security.suspendUser('readSubject')" );
         assertEmpty( adminSubject, "CALL dbms.security.suspendUser('readSubject')" );
@@ -354,13 +355,13 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldFailToSuspendNonExistentUser()
+    void shouldFailToSuspendNonExistentUser()
     {
         assertFail( adminSubject, "CALL dbms.security.suspendUser('Craig')", "User 'Craig' does not exist." );
     }
 
     @Test
-    public void shouldFailToSuspendIfNotAdmin()
+    void shouldFailToSuspendIfNotAdmin()
     {
         assertFail( schemaSubject, "CALL dbms.security.suspendUser('readSubject')", PERMISSION_DENIED );
         assertFail( schemaSubject, "CALL dbms.security.suspendUser('Craig')", PERMISSION_DENIED );
@@ -368,20 +369,20 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldFailToSuspendYourself()
+    void shouldFailToSuspendYourself()
     {
         assertFail( adminSubject, "CALL dbms.security.suspendUser('adminSubject')",
                 "Suspending yourself (user 'adminSubject') is not allowed." );
     }
 
     @Test
-    public void shouldTerminateTransactionsOnUserSuspension() throws Throwable
+    void shouldTerminateTransactionsOnUserSuspension() throws Throwable
     {
         shouldTerminateTransactionsForUser( writeSubject, "dbms.security.suspendUser( '%s' )" );
     }
 
     @Test
-    public void shouldTerminateConnectionsOnUserSuspension() throws Exception
+    void shouldTerminateConnectionsOnUserSuspension() throws Exception
     {
         TransportConnection conn = startBoltSession( "writeSubject", "abc" );
 
@@ -399,7 +400,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- activate user -----------
 
     @Test
-    public void shouldActivateUserAndRequirePasswordChangeByDefault() throws Exception
+    void shouldActivateUserAndRequirePasswordChangeByDefault() throws Exception
     {
         userManager.suspendUser( "readSubject" );
         assertEmpty( adminSubject, "CALL dbms.security.activateUser('readSubject')" );
@@ -409,7 +410,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldActivateUserAndRequirePasswordChangeIfRequested() throws Exception
+    void shouldActivateUserAndRequirePasswordChangeIfRequested() throws Exception
     {
         userManager.suspendUser( "readSubject" );
         assertEmpty( adminSubject, "CALL dbms.security.activateUser('readSubject', true)" );
@@ -419,7 +420,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldActivateUserAndRequireNoPasswordChangeIfRequested() throws Exception
+    void shouldActivateUserAndRequireNoPasswordChangeIfRequested() throws Exception
     {
         userManager.suspendUser( "readSubject" );
         assertEmpty( adminSubject, "CALL dbms.security.activateUser('readSubject', false)" );
@@ -427,7 +428,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldActivateActiveUser() throws Exception
+    void shouldActivateActiveUser() throws Exception
     {
         userManager.suspendUser( "readSubject" );
         assertEmpty( adminSubject, "CALL dbms.security.activateUser('readSubject')" );
@@ -436,13 +437,13 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldFailToActivateNonExistentUser()
+    void shouldFailToActivateNonExistentUser()
     {
         assertFail( adminSubject, "CALL dbms.security.activateUser('Craig')", "User 'Craig' does not exist." );
     }
 
     @Test
-    public void shouldFailToActivateIfNotAdmin() throws Exception
+    void shouldFailToActivateIfNotAdmin() throws Exception
     {
         userManager.suspendUser( "readSubject" );
         assertFail( schemaSubject, "CALL dbms.security.activateUser('readSubject')", PERMISSION_DENIED );
@@ -451,7 +452,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldFailToActivateYourself()
+    void shouldFailToActivateYourself()
     {
         assertFail( adminSubject, "CALL dbms.security.activateUser('adminSubject')",
                 "Activating yourself (user 'adminSubject') is not allowed." );
@@ -460,23 +461,23 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- add user to role -----------
 
     @Test
-    public void shouldAddRoleToUser() throws Exception
+    void shouldAddRoleToUser() throws Exception
     {
-        assertFalse( "Should not have role publisher", userHasRole( "readSubject", PUBLISHER ) );
+        assertFalse( userHasRole( "readSubject", PUBLISHER ), "Should not have role publisher" );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + PUBLISHER + "', 'readSubject' )" );
-        assertTrue( "Should have role publisher", userHasRole( "readSubject", PUBLISHER ) );
+        assertTrue( userHasRole( "readSubject", PUBLISHER ), "Should have role publisher" );
     }
 
     @Test
-    public void shouldAddRetainUserInRole() throws Exception
+    void shouldAddRetainUserInRole() throws Exception
     {
-        assertTrue( "Should have role reader", userHasRole( "readSubject", READER ) );
+        assertTrue( userHasRole( "readSubject", READER ), "Should have role reader" );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + READER + "', 'readSubject')" );
-        assertTrue( "Should have still have role reader", userHasRole( "readSubject", READER ) );
+        assertTrue( userHasRole( "readSubject", READER ), "Should have still have role reader" );
     }
 
     @Test
-    public void shouldFailToAddNonExistentUserToRole()
+    void shouldFailToAddNonExistentUserToRole()
     {
         testFailAddRoleToUser( adminSubject, PUBLISHER, "Olivia", "User 'Olivia' does not exist." );
         testFailAddRoleToUser( adminSubject, "thisRoleDoesNotExist", "Olivia", "User 'Olivia' does not exist." );
@@ -484,7 +485,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldFailToAddUserToNonExistentRole()
+    void shouldFailToAddUserToNonExistentRole()
     {
         testFailAddRoleToUser( adminSubject, "thisRoleDoesNotExist", "readSubject",
                 "Role 'thisRoleDoesNotExist' does not exist." );
@@ -492,7 +493,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldFailToAddRoleToUserIfNotAdmin()
+    void shouldFailToAddRoleToUserIfNotAdmin()
     {
         testFailAddRoleToUser( pwdSubject, PUBLISHER, "readSubject", CHANGE_PWD_ERR_MSG );
         testFailAddRoleToUser( readSubject, PUBLISHER, "readSubject", PERMISSION_DENIED );
@@ -506,22 +507,22 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- remove user from role -----------
 
     @Test
-    public void shouldRemoveRoleFromUser() throws Exception
+    void shouldRemoveRoleFromUser() throws Exception
     {
         assertEmpty( adminSubject, "CALL dbms.security.removeRoleFromUser('" + READER + "', 'readSubject')" );
-        assertFalse( "Should not have role reader", userHasRole( "readSubject", READER ) );
+        assertFalse( userHasRole( "readSubject", READER ),  "Should not have role reader" );
     }
 
     @Test
-    public void shouldKeepUserOutOfRole() throws Exception
+    void shouldKeepUserOutOfRole() throws Exception
     {
-        assertFalse( "Should not have role publisher", userHasRole( "readSubject", PUBLISHER ) );
+        assertFalse( userHasRole( "readSubject", PUBLISHER ), "Should not have role publisher" );
         assertEmpty( adminSubject, "CALL dbms.security.removeRoleFromUser('" + PUBLISHER + "', 'readSubject')" );
-        assertFalse( "Should not have role publisher", userHasRole( "readSubject", PUBLISHER ) );
+        assertFalse( userHasRole( "readSubject", PUBLISHER ), "Should not have role publisher" );
     }
 
     @Test
-    public void shouldFailToRemoveNonExistentUserFromRole()
+    void shouldFailToRemoveNonExistentUserFromRole()
     {
         testFailRemoveRoleFromUser( adminSubject, PUBLISHER, "Olivia", "User 'Olivia' does not exist." );
         testFailRemoveRoleFromUser( adminSubject, "thisRoleDoesNotExist", "Olivia", "User 'Olivia' does not exist." );
@@ -531,7 +532,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldFailToRemoveUserFromNonExistentRole()
+    void shouldFailToRemoveUserFromNonExistentRole()
     {
         testFailRemoveRoleFromUser( adminSubject, "thisRoleDoesNotExist", "readSubject",
                 "Role 'thisRoleDoesNotExist' does not exist." );
@@ -539,7 +540,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldFailToRemoveRoleFromUserIfNotAdmin()
+    void shouldFailToRemoveRoleFromUserIfNotAdmin()
     {
         testFailRemoveRoleFromUser( pwdSubject, PUBLISHER, "readSubject", CHANGE_PWD_ERR_MSG );
         testFailRemoveRoleFromUser( readSubject, PUBLISHER, "readSubject", PERMISSION_DENIED );
@@ -551,7 +552,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldFailToRemoveYourselfFromAdminRole()
+    void shouldFailToRemoveYourselfFromAdminRole()
     {
         assertFail( adminSubject, "CALL dbms.security.removeRoleFromUser('" + ADMIN + "', 'adminSubject')",
                 "Removing yourself (user 'adminSubject') from the admin role is not allowed." );
@@ -560,24 +561,24 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- manage multiple roles -----------
 
     @Test
-    public void shouldAllowAddingAndRemovingUserFromMultipleRoles() throws Exception
+    void shouldAllowAddingAndRemovingUserFromMultipleRoles() throws Exception
     {
-        assertFalse( "Should not have role publisher", userHasRole( "readSubject", PUBLISHER ) );
-        assertFalse( "Should not have role architect", userHasRole( "readSubject", ARCHITECT ) );
+        assertFalse( userHasRole( "readSubject", PUBLISHER ), "Should not have role publisher" );
+        assertFalse( userHasRole( "readSubject", ARCHITECT ), "Should not have role architect" );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + PUBLISHER + "', 'readSubject')" );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + ARCHITECT + "', 'readSubject')" );
-        assertTrue( "Should have role publisher", userHasRole( "readSubject", PUBLISHER ) );
-        assertTrue( "Should have role architect", userHasRole( "readSubject", ARCHITECT ) );
+        assertTrue( userHasRole( "readSubject", PUBLISHER ), "Should have role publisher" );
+        assertTrue( userHasRole( "readSubject", ARCHITECT ), "Should have role architect" );
         assertEmpty( adminSubject, "CALL dbms.security.removeRoleFromUser('" + PUBLISHER + "', 'readSubject')" );
         assertEmpty( adminSubject, "CALL dbms.security.removeRoleFromUser('" + ARCHITECT + "', 'readSubject')" );
-        assertFalse( "Should not have role publisher", userHasRole( "readSubject", PUBLISHER ) );
-        assertFalse( "Should not have role architect", userHasRole( "readSubject", ARCHITECT ) );
+        assertFalse( userHasRole( "readSubject", PUBLISHER ), "Should not have role publisher" );
+        assertFalse( userHasRole( "readSubject", ARCHITECT ), "Should not have role architect" );
     }
 
     //---------- create role -----------
 
     @Test
-    public void shouldCreateRole() throws Exception
+    void shouldCreateRole() throws Exception
     {
         assertEmpty( adminSubject, "CALL dbms.security.createRole('new_role')" );
         userManager.assertRoleExists( "new_role" );
@@ -585,7 +586,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotCreateRoleIfInvalidRoleName()
+    void shouldNotCreateRoleIfInvalidRoleName()
     {
         assertFail( adminSubject, "CALL dbms.security.createRole('')", "The provided role name is empty." );
         assertFail( adminSubject, "CALL dbms.security.createRole('&%ss!')",
@@ -595,7 +596,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotCreateExistingRole()
+    void shouldNotCreateExistingRole()
     {
         assertFail( adminSubject, format( "CALL dbms.security.createRole('%s')", ARCHITECT ),
                 "The specified role 'architect' already exists" );
@@ -605,7 +606,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotAllowNonAdminCreateRole()
+    void shouldNotAllowNonAdminCreateRole()
     {
         testFailCreateRole( pwdSubject, CHANGE_PWD_ERR_MSG );
         testFailCreateRole( readSubject, PERMISSION_DENIED );
@@ -616,7 +617,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- delete role -----------
 
     @Test
-    public void shouldThrowIfTryingToDeletePredefinedRole()
+    void shouldThrowIfTryingToDeletePredefinedRole()
     {
         testFailDeleteRole( adminSubject, ADMIN,
                 format( "'%s' is a predefined role and can not be deleted.", ADMIN ) );
@@ -629,7 +630,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldThrowIfNonAdminTryingToDeleteRole()
+    void shouldThrowIfNonAdminTryingToDeleteRole()
     {
         assertEmpty( adminSubject, format( "CALL dbms.security.createRole('%s')", "new_role" ) );
         testFailDeleteRole( schemaSubject, "new_role", PERMISSION_DENIED );
@@ -639,13 +640,13 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldThrowIfDeletingNonExistentRole()
+    void shouldThrowIfDeletingNonExistentRole()
     {
         testFailDeleteRole( adminSubject, "nonExistent", "Role 'nonExistent' does not exist." );
     }
 
     @Test
-    public void shouldDeleteRole() throws Exception
+    void shouldDeleteRole() throws Exception
     {
         neo.getLocalUserManager().newRole( "new_role" );
         assertEmpty( adminSubject, format( "CALL dbms.security.deleteRole('%s')", "new_role" ) );
@@ -654,7 +655,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void deletingRoleAssignedToSelfShouldWork() throws Exception
+    void deletingRoleAssignedToSelfShouldWork() throws Exception
     {
         assertEmpty( adminSubject, format( "CALL dbms.security.createRole('%s')", "new_role" ) );
         assertEmpty( adminSubject,
@@ -669,14 +670,14 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- list users -----------
 
     @Test
-    public void shouldListUsers()
+    void shouldListUsers()
     {
         assertSuccess( adminSubject, "CALL dbms.security.listUsers() YIELD username",
                 r -> assertKeyIs( r, "username", initialUsers ) );
     }
 
     @Test
-    public void shouldReturnUsersWithRoles() throws Exception
+    void shouldReturnUsersWithRoles() throws Exception
     {
         Map<String,Object> expected = map(
                 "adminSubject", listOf( ADMIN ),
@@ -694,7 +695,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldReturnUsersWithFlags() throws Exception
+    void shouldReturnUsersWithFlags() throws Exception
     {
         Map<String,Object> expected = map(
                 "adminSubject", listOf(),
@@ -713,7 +714,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldShowCurrentUser() throws Exception
+    void shouldShowCurrentUser() throws Exception
     {
         userManager.addRoleToUser( READER, "writeSubject" );
         assertSuccess( adminSubject, "CALL dbms.showCurrentUser()",
@@ -730,7 +731,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotAllowNonAdminListUsers()
+    void shouldNotAllowNonAdminListUsers()
     {
         testFailListUsers( pwdSubject, 5, CHANGE_PWD_ERR_MSG );
         testFailListUsers( readSubject, 5, PERMISSION_DENIED );
@@ -741,14 +742,14 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- list roles -----------
 
     @Test
-    public void shouldListRoles()
+    void shouldListRoles()
     {
         assertSuccess( adminSubject, "CALL dbms.security.listRoles() YIELD role",
                 r -> assertKeyIs( r, "role", initialRoles ) );
     }
 
     @Test
-    public void shouldReturnRolesWithUsers()
+    void shouldReturnRolesWithUsers()
     {
         Map<String,Object> expected = map(
                 ADMIN, listOf( "adminSubject", "neo4j" ),
@@ -763,7 +764,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotAllowNonAdminListRoles()
+    void shouldNotAllowNonAdminListRoles()
     {
         testFailListRoles( pwdSubject, CHANGE_PWD_ERR_MSG );
         testFailListRoles( readSubject, PERMISSION_DENIED );
@@ -774,7 +775,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- list roles for user -----------
 
     @Test
-    public void shouldListRolesForUser()
+    void shouldListRolesForUser()
     {
         assertSuccess( adminSubject,
                 "CALL dbms.security.listRolesForUser('adminSubject') YIELD value as roles RETURN roles",
@@ -785,14 +786,14 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldListNoRolesForUserWithNoRoles()
+    void shouldListNoRolesForUserWithNoRoles()
     {
         assertEmpty( adminSubject, "CALL dbms.security.createUser('Henrik', 'bar', false)" );
         assertEmpty( adminSubject, "CALL dbms.security.listRolesForUser('Henrik') YIELD value as roles RETURN roles" );
     }
 
     @Test
-    public void shouldNotListRolesForNonExistentUser()
+    void shouldNotListRolesForNonExistentUser()
     {
         assertFail( adminSubject, "CALL dbms.security.listRolesForUser('Petra') YIELD value as roles RETURN roles",
                 "User 'Petra' does not exist." );
@@ -801,7 +802,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldListOwnRolesRoles()
+    void shouldListOwnRolesRoles()
     {
         assertSuccess( adminSubject,
                 "CALL dbms.security.listRolesForUser('adminSubject') YIELD value as roles RETURN roles",
@@ -812,7 +813,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotAllowNonAdminListUserRoles()
+    void shouldNotAllowNonAdminListUserRoles()
     {
         testFailListUserRoles( pwdSubject, "adminSubject", CHANGE_PWD_ERR_MSG );
         testFailListUserRoles( readSubject, "adminSubject", PERMISSION_DENIED );
@@ -823,20 +824,20 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- list users for role -----------
 
     @Test
-    public void shouldListUsersForRole()
+    void shouldListUsersForRole()
     {
         assertSuccess( adminSubject, "CALL dbms.security.listUsersForRole('admin') YIELD value as users RETURN users",
                 r -> assertKeyIs( r, "users", "adminSubject", "neo4j" ) );
     }
 
     @Test
-    public void shouldListNoUsersForRoleWithNoUsers()
+    void shouldListNoUsersForRoleWithNoUsers()
     {
         assertEmpty( adminSubject, "CALL dbms.security.listUsersForRole('empty') YIELD value as users RETURN users" );
     }
 
     @Test
-    public void shouldNotListUsersForNonExistentRole()
+    void shouldNotListUsersForNonExistentRole()
     {
         assertFail( adminSubject, "CALL dbms.security.listUsersForRole('poodle') YIELD value as users RETURN users",
                 "Role 'poodle' does not exist." );
@@ -845,7 +846,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldNotListUsersForRoleIfNotAdmin()
+    void shouldNotListUsersForRoleIfNotAdmin()
     {
         testFailListRoleUsers( pwdSubject, ADMIN, CHANGE_PWD_ERR_MSG );
         testFailListRoleUsers( readSubject, ADMIN, PERMISSION_DENIED );
@@ -856,13 +857,13 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- clearing authentication cache -----------
 
     @Test
-    public void shouldAllowClearAuthCacheIfAdmin()
+    void shouldAllowClearAuthCacheIfAdmin()
     {
         assertEmpty( adminSubject, "CALL dbms.security.clearAuthCache()" );
     }
 
     @Test
-    public void shouldNotClearAuthCacheIfNotAdmin()
+    void shouldNotClearAuthCacheIfNotAdmin()
     {
         assertFail( pwdSubject, "CALL dbms.security.clearAuthCache()", CHANGE_PWD_ERR_MSG );
         assertFail( readSubject, "CALL dbms.security.clearAuthCache()", PERMISSION_DENIED );
@@ -873,7 +874,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     //---------- permissions -----------
 
     @Test
-    public void shouldPrintUserAndRolesWhenPermissionDenied() throws Throwable
+    void shouldPrintUserAndRolesWhenPermissionDenied() throws Throwable
     {
         userManager.newUser( "mats", password( "foo" ), false );
         userManager.newRole( "failer", "mats" );
@@ -893,7 +894,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldAllowProcedureStartingTransactionInNewThread()
+    void shouldAllowProcedureStartingTransactionInNewThread()
     {
         exceptionsInProcedure.clear();
         DoubleLatch latch = new DoubleLatch( 2 );
@@ -907,7 +908,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldInheritSecurityContextWhenProcedureStartingTransactionInNewThread()
+    void shouldInheritSecurityContextWhenProcedureStartingTransactionInNewThread()
     {
         exceptionsInProcedure.clear();
         DoubleLatch latch = new DoubleLatch( 2 );
@@ -922,7 +923,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldSetCorrectUnAuthenticatedPermissions() throws Throwable
+    void shouldSetCorrectUnAuthenticatedPermissions() throws Throwable
     {
         S unknownUser = neo.login( "Batman", "Matban" );
         assertFail( unknownUser, "MATCH (n) RETURN n", "" );
@@ -941,7 +942,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldSetCorrectPasswordChangeRequiredPermissions() throws Throwable
+    void shouldSetCorrectPasswordChangeRequiredPermissions() throws Throwable
     {
         testFailRead( pwdSubject, 3, pwdReqErrMsg( READ_OPS_NOT_ALLOWED ) );
         testFailWrite( pwdSubject, pwdReqErrMsg( WRITE_OPS_NOT_ALLOWED ) );
@@ -969,7 +970,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldSetCorrectNoRolePermissions()
+    void shouldSetCorrectNoRolePermissions()
     {
         testFailRead( noneSubject, 3 );
         testFailWrite( noneSubject );
@@ -979,7 +980,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldSetCorrectReaderPermissions()
+    void shouldSetCorrectReaderPermissions()
     {
         testSuccessfulRead( readSubject, 3 );
         testFailWrite( readSubject );
@@ -990,7 +991,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldSetCorrectEditorPermissions()
+    void shouldSetCorrectEditorPermissions()
     {
         testSuccessfulRead( editorSubject, 3 );
         testSuccessfulWrite( editorSubject );
@@ -1001,7 +1002,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldSetCorrectPublisherPermissions()
+    void shouldSetCorrectPublisherPermissions()
     {
         testSuccessfulRead( writeSubject, 3 );
         testSuccessfulWrite( writeSubject );
@@ -1012,7 +1013,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldSetCorrectSchemaPermissions()
+    void shouldSetCorrectSchemaPermissions()
     {
         testSuccessfulRead( schemaSubject, 3 );
         testSuccessfulWrite( schemaSubject );
@@ -1023,7 +1024,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldSetCorrectAdminPermissions()
+    void shouldSetCorrectAdminPermissions()
     {
         testSuccessfulRead( adminSubject, 3 );
         testSuccessfulWrite( adminSubject );
@@ -1034,7 +1035,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    public void shouldSetCorrectMultiRolePermissions()
+    void shouldSetCorrectMultiRolePermissions()
     {
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + READER + "', 'schemaSubject')" );
 
