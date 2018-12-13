@@ -6,7 +6,9 @@
 package org.neo4j.metrics.output;
 
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.jmx.JmxReporter;
 
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
@@ -74,6 +76,12 @@ public class EventReporterBuilder
             PrometheusOutput prometheusOutput = new PrometheusOutput( server, registry, logger, portRegister );
             reporter.add( prometheusOutput );
             life.add( prometheusOutput );
+        }
+
+        if ( config.get( MetricsSettings.jmxEnabled ) )
+        {
+            JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( "metrics." + config.get( GraphDatabaseSettings.active_database ) ).build();
+            life.add( new JmxOutput( jmxReporter ) );
         }
 
         return reporter;
