@@ -430,7 +430,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should be able to find indexes from built-in-procedure") {
     // Given
-    graph.createIndex("A", "prop")
+    val index = graph.createIndex("A", "prop")
 
     //When
     val result = executeWith(Configs.All, "CALL db.indexes")
@@ -438,7 +438,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // Then
     result.toList should equal(
       List(Map("description" -> "INDEX ON :A(prop)",
-        "indexName" -> "Unnamed index",
+        "indexName" -> index.getName,
         "tokenNames" -> List("A"),
         "properties" -> List("prop"),
         "state" -> "ONLINE",
@@ -470,6 +470,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     )
 
     graph.execute("CALL db.awaitIndexes(10)")
+    val index = graph.getIndex("Person", Seq("name"))
 
     // when
     val listResult = executeWith(Configs.All, "CALL db.indexes()")
@@ -477,7 +478,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // Then
     listResult.toList should equal(
       List(Map("description" -> "INDEX ON :Person(name)",
-        "indexName" -> "Unnamed index",
+        "indexName" -> index.getName,
         "tokenNames" -> List("Person"),
         "properties" -> List("name"),
         "state" -> "ONLINE",
