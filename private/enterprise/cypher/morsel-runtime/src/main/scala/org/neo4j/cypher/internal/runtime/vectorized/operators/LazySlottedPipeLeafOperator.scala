@@ -27,9 +27,9 @@ class LazySlottedPipeLeafOperator(val workIdentity: WorkIdentity, val initialSou
     override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
                                                context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources): AutoCloseable = {
+                                               resources: QueryResources): Boolean = {
       iterator = finalPipe.createResults(slottedQueryState.withInitialContext(inputRow))
-      NOTHING_TO_CLOSE
+      true
     }
 
     override def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
@@ -39,5 +39,7 @@ class LazySlottedPipeLeafOperator(val workIdentity: WorkIdentity, val initialSou
         outputRow.moveToNextRow()
       }
     }
+
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {}
   }
 }

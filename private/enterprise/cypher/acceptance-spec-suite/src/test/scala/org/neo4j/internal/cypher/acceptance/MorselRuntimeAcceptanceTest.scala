@@ -9,12 +9,13 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.graphdb.Result
+import org.neo4j.graphdb.{Node, Result}
 import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 
 import scala.collection.Map
+import scala.collection.mutable.ArrayBuffer
 
 abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
 
@@ -395,6 +396,33 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
         true
       }
     })
+  }
+
+  test("should big expand query without crashing") {
+    // Given a big network
+    val SIZE = 30
+    val ns = new ArrayBuffer[Node]()
+    val ms = new ArrayBuffer[Node]()
+
+    graph.inTx {
+      for (i <- 1 to SIZE) ns += createLabeledNode("N")
+      for (i <- 1 to SIZE) ms += createLabeledNode("M")
+    }
+
+    graph.inTx {
+      for {n <- ns; m <- ms} {
+        relate(n, m, "R")
+      }
+    }
+
+    val result = graph.execute("CYPHER runtime=morsel MATCH (n1:N)--(m1)--(n2)--(m2) RETURN id(m2)")
+
+    var count = 0L
+    while (result.hasNext) {
+      result.next()
+      count += 1
+    }
+    count should be(756900)
   }
 
   test("should not duplicate results in queries with multiple eager pipelines") {

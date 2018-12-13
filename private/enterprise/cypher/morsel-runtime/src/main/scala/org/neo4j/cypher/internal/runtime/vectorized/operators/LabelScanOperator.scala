@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
@@ -32,22 +32,27 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
     override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
                                                context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources): AutoCloseable = {
+                                               resources: QueryResources): Boolean = {
       val maybeLabelId = label.getOptId(context)
       maybeLabelId match {
         case Some(id) =>
-          cursor = context.transactionalContext.cursors.allocateNodeLabelIndexCursor()
+          cursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
           val read = context.transactionalContext.dataRead
           read.nodeLabelScan(id, cursor)
-          cursor
+          true
 
         case _ =>
-          null // No data to iterate
+          false // No data to iterate
       }
     }
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
       iterate(inputRow, outputRow, cursor, argumentSize)
+    }
+
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {
+      resources.cursorPools.nodeLabelIndexCursorPool.free(cursor)
+      cursor = null
     }
   }
 }

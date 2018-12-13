@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeek, IndexSeekMode, NodeIndexSeeker, QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
@@ -45,11 +45,6 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
     private var nodeCursors: Iterator[NodeValueIndexCursor] = _
     private var nodeCursor: NodeValueIndexCursor = _
 
-    private val closeCursorsWhenFinished = new AutoCloseable {
-      override def close(): Unit =
-        nodeCursors.foreach(_.close())
-    }
-
     private def next(): Boolean = {
       while (true) {
         if (nodeCursor != null && nodeCursor.next())
@@ -61,19 +56,19 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
         }
       }
       false // because scala compiler doesn't realize that this line is unreachable
-      }
+    }
 
     override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
                                                context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources): AutoCloseable = {
+                                               resources: QueryResources): Boolean = {
       val queryState = new OldQueryState(context,
                                          resources = null,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession])
       nodeCursors = indexSeek(queryState, state.queryIndexes(queryIndexId), needsValues, indexOrder, inputRow)
-      closeCursorsWhenFinished
+      true
     }
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
@@ -86,6 +81,14 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
         }
         outputRow.moveToNextRow()
       }
+    }
+
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {
+      nodeCursors.foreach(cursor =>
+        resources.cursorPools.nodeValueIndexCursorPool.free(cursor)
+      )
+      nodeCursors = null
+      nodeCursor = null
     }
   }
 }

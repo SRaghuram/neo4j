@@ -7,17 +7,17 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.internal.kernel.api.{CursorFactory, NodeCursor}
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class AllNodeScanOperatorTest extends CypherFunSuite {
 
-  private val resources = new QueryResources(mock[CursorFactory])
+  private val resources = mock[QueryResources](RETURNS_DEEP_STUBS)
 
   private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
@@ -55,7 +55,7 @@ class AllNodeScanOperatorTest extends CypherFunSuite {
     when(cursor2.next()).thenReturn(true, true, true, true, true, false)
     when(cursor1.nodeReference()).thenReturn(10, 11, 12, 13, 14)
     when(cursor2.nodeReference()).thenReturn(10, 11, 12, 13, 14)
-    when(context.transactionalContext.cursors.allocateNodeCursor()).thenReturn(cursor1, cursor2)
+    when(resources.cursorPools.nodeCursorPool.allocate()).thenReturn(cursor1, cursor2)
 
     // When
     operator.init(context, null, inputRow, resources).operate(outputRow, context, EmptyQueryState(), resources)

@@ -5,13 +5,16 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyTypes
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
+import org.neo4j.internal.kernel.api.{NodeCursor, RelationshipGroupCursor, RelationshipTraversalCursor}
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.{allCursor, incomingCursor, outgoingCursor}
 
 class ExpandAllOperator(val workIdentity: WorkIdentity,
                         fromOffset: Int,
@@ -33,22 +36,28 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
     picked up at any point again - all without impacting the tight loop.
     The mutable state is an unfortunate cost for this feature.
      */
+    private var nodeCursor: NodeCursor = _
+    private var groupCursor: RelationshipGroupCursor = _
+    private var traversalCursor: RelationshipTraversalCursor = _
     private var relationships: RelationshipSelectionCursor = _
 
     protected override def initializeInnerLoop(inputRow: MorselExecutionContext,
                                                context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources): AutoCloseable = {
+                                               resources: QueryResources): Boolean = {
       val fromNode = inputRow.getLongAt(fromOffset)
       if (entityIsNull(fromNode))
-        null
+        false
       else {
-        relationships = context.getRelationshipsCursor(fromNode, dir, types.types(context))
-        relationships
+        nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
+        groupCursor = resources.cursorPools.relationshipGroupCursorPool.allocate()
+        traversalCursor = resources.cursorPools.relationshipTraversalCursorPool.allocate()
+        relationships = getRelationshipsCursor(context, fromNode, dir, types.types(context))
+        true
       }
     }
 
-    override def innerLoop(outputRow: MorselExecutionContext,
+    override protected def innerLoop(outputRow: MorselExecutionContext,
                            context: QueryContext,
                            state: QueryState): Unit = {
 
@@ -61,6 +70,31 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
         outputRow.setLongAt(relOffset, relId)
         outputRow.setLongAt(toOffset, otherSide)
         outputRow.moveToNextRow()
+      }
+    }
+
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {
+      val pools = resources.cursorPools
+      pools.nodeCursorPool.free(nodeCursor)
+      pools.relationshipGroupCursorPool.free(groupCursor)
+      pools.relationshipTraversalCursorPool.free(traversalCursor)
+      relationships = null
+    }
+
+    private def getRelationshipsCursor(context: QueryContext,
+                                       node: Long,
+                                       dir: SemanticDirection,
+                                       types: Option[Array[Int]]): RelationshipSelectionCursor = {
+
+      val read = context.transactionalContext.dataRead
+      read.singleNode(node, nodeCursor)
+      if (!nodeCursor.next()) RelationshipSelectionCursor.EMPTY
+      else {
+        dir match {
+          case OUTGOING => outgoingCursor(groupCursor, traversalCursor, nodeCursor, types.orNull)
+          case INCOMING => incomingCursor(groupCursor, traversalCursor, nodeCursor, types.orNull)
+          case BOTH => allCursor(groupCursor, traversalCursor, nodeCursor, types.orNull)
+        }
       }
     }
   }

@@ -17,7 +17,6 @@ import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, LabelToken, Proper
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTNode}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.v4_0.util.{LabelId, PropertyKeyId}
-import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.helpers.StubNodeValueIndexCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -25,7 +24,7 @@ import org.neo4j.values.virtual.NodeValue
 
 class NodeIndexContainsScanOperatorTest extends CypherFunSuite with ImplicitDummyPos with IndexMockingHelp {
 
-  private val resources = new QueryResources(mock[CursorFactory])
+  private val resources = mock[QueryResources](RETURNS_DEEP_STUBS)
 
   private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
 
@@ -82,7 +81,7 @@ class NodeIndexContainsScanOperatorTest extends CypherFunSuite with ImplicitDumm
 
     val cursor = new StubNodeValueIndexCursor(jIterator)
     when(context.transactionalContext.schemaRead.index(label.nameId.id, propertyKey.nameId.id).properties()).thenReturn(Array(propertyKey.nameId.id))
-    when(context.transactionalContext.cursors.allocateNodeValueIndexCursor).thenReturn(cursor)
+    when(resources.cursorPools.nodeValueIndexCursorPool.allocate()).thenReturn(cursor)
     context
   }
 }

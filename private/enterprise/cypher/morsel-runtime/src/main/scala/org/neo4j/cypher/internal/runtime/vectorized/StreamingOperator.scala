@@ -89,10 +89,6 @@ trait ContinuableOperatorTask extends OperatorTask {
   def canContinue: Boolean
 }
 
-object NOTHING_TO_CLOSE extends AutoCloseable {
-  override def close(): Unit = {}
-}
-
 /**
   * Streaming operator task which takes an input morsel and produces one or many output rows
   * for each input row, and might require several operate calls to be fully executed.
@@ -100,28 +96,41 @@ object NOTHING_TO_CLOSE extends AutoCloseable {
 trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
   val inputRow: MorselExecutionContext
 
+  /**
+    * Initialize the inner loop for the current input row.
+    *
+    * @return true iff the inner loop might result it output rows
+    */
   protected def initializeInnerLoop(inputRow: MorselExecutionContext,
                                     context: QueryContext,
                                     state: QueryState,
-                                    resources: QueryResources): AutoCloseable
+                                    resources: QueryResources): Boolean
 
+  /**
+    * Execute the inner loop for the current input row, and write results to the output.
+    */
   protected def innerLoop(outputRow: MorselExecutionContext,
                           context: QueryContext,
                           state: QueryState): Unit
 
-  private var innerLoop: AutoCloseable = _
+  /**
+    * Close any resources used by the inner loop.
+    */
+  protected def closeInnerLoop(resources: QueryResources): Unit
+
+  private var innerLoop: Boolean = false
 
   override def operate(outputRow: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    while ((inputRow.hasMoreRows || innerLoop != null) && outputRow.hasMoreRows) {
-      if (innerLoop == null) {
+    while ((inputRow.hasMoreRows || innerLoop) && outputRow.hasMoreRows) {
+      if (!innerLoop) {
         innerLoop = initializeInnerLoop(inputRow, context, state, resources)
       }
       // Do we have any output rows for this input row?
-      if (innerLoop != null) {
+      if (innerLoop) {
         // Implementor is responsible for advancing both `outputRow` and `innerLoop`.
         // Typically the loop will look like this:
         //        while (outputRow.hasMoreRows && cursor.next()) {
@@ -138,8 +147,8 @@ trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
           // an additional empty work unit that will just close the innerLoop. This could be avoided if we changed the innerLoop interface to something
           // slightly more complicated, but since innerLoop iterations and output morsel size will have to match exactly for this to happen it is
           // probably not a big problem in practice, and the additional checks required may not be worthwhile.
-          innerLoop.close()
-          innerLoop = null
+          closeInnerLoop(resources)
+          innerLoop = false
           inputRow.moveToNextRow()
         }
       }
@@ -153,7 +162,7 @@ trait StreamingContinuableOperatorTask extends ContinuableOperatorTask {
   }
 
   override def canContinue: Boolean =
-    inputRow.hasMoreRows || innerLoop != null
+    inputRow.hasMoreRows || innerLoop
 }
 
 /**

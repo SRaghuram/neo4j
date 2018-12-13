@@ -5,12 +5,21 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized
 
-import org.neo4j.internal.kernel.api.{Cursor, CursorFactory, NodeCursor}
+import org.neo4j.internal.kernel.api._
 import org.neo4j.io.IOUtils
 
 class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
 
-  val nodeCursorPool = new CursorPool[NodeCursor](() => cursorFactory.allocateNodeCursor())
+  val nodeCursorPool = new CursorPool[NodeCursor](
+    () => cursorFactory.allocateNodeCursor())
+  val relationshipGroupCursorPool = new CursorPool[RelationshipGroupCursor](
+    () => cursorFactory.allocateRelationshipGroupCursor())
+  val relationshipTraversalCursorPool = new CursorPool[RelationshipTraversalCursor](
+    () => cursorFactory.allocateRelationshipTraversalCursor())
+  val nodeValueIndexCursorPool = new CursorPool[NodeValueIndexCursor](
+    () => cursorFactory.allocateNodeValueIndexCursor())
+  val nodeLabelIndexCursorPool = new CursorPool[NodeLabelIndexCursor](
+    () => cursorFactory.allocateNodeLabelIndexCursor())
 
   override def close(): Unit = {
     IOUtils.closeAll(nodeCursorPool)
@@ -19,7 +28,7 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
 
 class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoCloseable {
 
-  var cached: CURSOR = _
+  private var cached: CURSOR = _
 
   def allocate(): CURSOR = {
     if (cached != null) {

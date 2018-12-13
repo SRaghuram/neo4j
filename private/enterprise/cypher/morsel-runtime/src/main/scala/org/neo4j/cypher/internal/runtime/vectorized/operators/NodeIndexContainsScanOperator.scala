@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
@@ -34,17 +34,15 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
 
   class OTask(val inputRow: MorselExecutionContext, index: IndexReadSession) extends StreamingContinuableOperatorTask {
 
-    private var valueIndexCursor: NodeValueIndexCursor = _
+    private var cursor: NodeValueIndexCursor = _
 
-    override def initializeInnerLoop(inputRow: MorselExecutionContext,
-                                     context: QueryContext,
-                                     state: QueryState,
-                                     resources: QueryResources): AutoCloseable = {
-      valueIndexCursor = context.transactionalContext.cursors.allocateNodeValueIndexCursor()
+    override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
+                                               context: QueryContext,
+                                               state: QueryState,
+                                               resources: QueryResources): Boolean = {
+      cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
 
       val read = context.transactionalContext.dataRead
-
-      var nullExpression: Boolean = false
 
       val queryState = new OldQueryState(context,
                                          resources = null,
@@ -56,23 +54,23 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
       value match {
         case value: TextValue =>
           val indexQuery = IndexQuery.stringContains(property.propertyKeyId, value)
-          read.nodeIndexSeek(index, valueIndexCursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
+          read.nodeIndexSeek(index, cursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
+          true
 
         case Values.NO_VALUE =>
-          // CONTAINS null does not produce any rows
-          nullExpression = true
+          false // CONTAINS null does not produce any rows
 
         case x => throw new CypherTypeException(s"Expected a string value, but got $x")
       }
-
-      if (nullExpression)
-        null
-      else
-        valueIndexCursor
     }
 
-    override def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
-      iterate(inputRow, outputRow, valueIndexCursor, argumentSize)
+    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      iterate(inputRow, outputRow, cursor, argumentSize)
+    }
+
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {
+      resources.cursorPools.nodeValueIndexCursorPool.free(cursor)
+      cursor = null
     }
   }
 }

@@ -24,23 +24,28 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
   class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
 
-    var nodeCursor: NodeCursor = _
+    var cursor: NodeCursor = _
 
-    protected override def initializeInnerLoop(inputRow: MorselExecutionContext,
+    override protected def initializeInnerLoop(inputRow: MorselExecutionContext,
                                                context: QueryContext,
                                                state: QueryState,
-                                               resources: QueryResources): AutoCloseable = {
-      nodeCursor = context.transactionalContext.cursors.allocateNodeCursor()
-      context.transactionalContext.dataRead.allNodesScan(nodeCursor)
-      nodeCursor
+                                               resources: QueryResources): Boolean = {
+      cursor = resources.cursorPools.nodeCursorPool.allocate()
+      context.transactionalContext.dataRead.allNodesScan(cursor)
+      true
     }
 
-    override def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
-      while (outputRow.hasMoreRows && nodeCursor.next()) {
+    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      while (outputRow.hasMoreRows && cursor.next()) {
         outputRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
-        outputRow.setLongAt(offset, nodeCursor.nodeReference())
+        outputRow.setLongAt(offset, cursor.nodeReference())
         outputRow.moveToNextRow()
       }
+    }
+
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {
+      resources.cursorPools.nodeCursorPool.free(cursor)
+      cursor = null
     }
   }
 }
