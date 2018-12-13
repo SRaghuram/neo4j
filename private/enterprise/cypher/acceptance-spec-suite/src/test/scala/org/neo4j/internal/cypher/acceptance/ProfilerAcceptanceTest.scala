@@ -64,7 +64,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
                   includeSomewhere.aPlan("AllNodesScan").withTime()
                 )
             ),
-        Configs.InterpretedAndSlotted)
+        Configs.InterpretedAndSlottedAndMorsel)
     )
   }
 

@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance.comparisonsupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.CompiledBytecode
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.CompiledSource
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Interpreted
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.MorselSingleThreaded
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Slotted
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.SlottedWithCompiledExpressions
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_5
@@ -18,7 +19,7 @@ object Configs {
   // Configurations with runtimes
   def Compiled: TestConfiguration = TestConfiguration(V3_5 -> V4_0, Planners.all, Runtimes(CompiledSource, CompiledBytecode))
 
-  def Morsel: TestConfiguration = TestConfiguration(V3_5 -> V4_0, Planners.all, Runtimes(Runtimes.Morsel))
+  def Morsel: TestConfiguration = TestConfiguration(V3_5 -> V4_0, Planners.all, Runtimes(Runtimes.Morsel, MorselSingleThreaded))
 
   def InterpretedRuntime: TestConfiguration =
     TestConfiguration(Versions.all, Planners.all, Runtimes(Interpreted))

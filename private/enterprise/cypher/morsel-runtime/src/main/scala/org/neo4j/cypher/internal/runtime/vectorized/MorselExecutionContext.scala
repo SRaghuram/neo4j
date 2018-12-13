@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, ResourceLinenumber}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{Value, Values}
@@ -31,7 +31,7 @@ class MorselExecutionContext(private val morsel: Morsel,
                              private val refsPerRow: Int,
                              private var validRows: Int,
                              private var currentRow: Int,
-                             val slots: SlotConfiguration) extends ExecutionContext {
+                             val slots: SlotConfiguration) extends ExecutionContext with SlottedCompatible {
 
   def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, validRows, currentRow, slots)
 
@@ -123,6 +123,11 @@ class MorselExecutionContext(private val morsel: Morsel,
         System.arraycopy(other.refs, 0, morsel.refs, refsAtCurrentRow, nRefs)
       }
     case _ => fail()
+  }
+
+  override def copyToSlottedExecutionContext(other: SlottedExecutionContext, nLongs: Int, nRefs: Int): Unit = {
+    System.arraycopy(morsel.longs, longsAtCurrentRow, other.longs, 0, nLongs)
+    System.arraycopy(morsel.refs, refsAtCurrentRow, other.refs, 0, nRefs)
   }
 
   override def copyCachedFrom(input: ExecutionContext): Unit = ???

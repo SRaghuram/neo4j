@@ -508,6 +508,26 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     morselResultList shouldEqual slottedResultList
   }
 
+  test("don't stall for nested plan expressions") {
+    // Given
+    graph.execute( """CREATE (a:A)
+                     |CREATE (a)-[:T]->(:B),
+                     |       (a)-[:T]->(:C)""".stripMargin)
+
+
+    // When
+    val result =
+      graph.execute( """ CYPHER runtime=morsel
+                       | MATCH (n)
+                       | RETURN CASE
+                       |          WHEN id(n) >= 0 THEN (n)-->()
+                       |          ELSE 42
+                       |        END AS p""".stripMargin)
+
+    // Then
+    asScalaResult(result).toList should not be empty
+  }
+
   private def sortedScalaListOfABTuples(result: Result): Seq[(String, String)] = {
     import scala.collection.JavaConverters._
 
@@ -555,34 +575,12 @@ class MorselRuntimeNotSupportedAcceptanceTest extends MorselRuntimeAcceptanceTes
 
   test("should fallback if morsel doesn't support query") {
     //Given
-    val result = graph.execute("CYPHER runtime=morsel MATCH (n)-[*]->(m) RETURN n")
+    val result = graph.execute("CYPHER runtime=morsel MATCH (n)-[*]->(m) RETURN n SKIP 1")
 
     // When (exhaust result)
     result.resultAsString()
 
     //Then
     result.getExecutionPlanDescription.getArguments.get("runtime") should not equal "MORSEL"
-  }
-
-  test("don't stall for nested plan expressions") {
-    // Given
-    graph.execute( """CREATE (a:A)
-                     |CREATE (a)-[:T]->(:B),
-                     |       (a)-[:T]->(:C)""".stripMargin)
-
-
-    // When
-    val result =
-      graph.execute( """ CYPHER runtime=morsel
-                       | MATCH (n)
-                       | RETURN CASE
-                       |          WHEN id(n) >= 0 THEN (n)-->()
-                       |          ELSE 42
-                       |        END AS p""".stripMargin)
-
-    // Then
-    //note that this query is currently not using morsel, however there was a bug leading to
-    //a blocked threads for nested queries
-    asScalaResult(result).toList should not be empty
   }
 }

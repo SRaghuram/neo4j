@@ -30,6 +30,8 @@ object Runtimes {
   // Not included in `all`
   object Morsel extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel")
 
+  object MorselSingleThreaded extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel debug=singlethreaded")
+
 }
 
 case class Runtime(acceptedRuntimeNames: Set[String], preparserOption: String) {

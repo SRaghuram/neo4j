@@ -18,7 +18,9 @@ class CostSlottedWithCompiledExpressionsTCKTests extends EnterpriseBaseTCKTests 
 
   @TestFactory
   def runCostSlotted(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostSlottedWithCompiledExpressionsTestConfig, new TestEnterpriseGraphDatabaseFactory())
+    //TODO this is a temporary measure, use CostSlottedWithCompiledExpressionsTestConfig here when TCK is fixed
+    createTests(scenarios, new TestConfig(Some("cost-slotted-compiled-expressions.txt"),
+                                          "CYPHER planner=cost runtime=slotted expressionEngine=COMPILED"), new TestEnterpriseGraphDatabaseFactory())
   }
 
   @Disabled

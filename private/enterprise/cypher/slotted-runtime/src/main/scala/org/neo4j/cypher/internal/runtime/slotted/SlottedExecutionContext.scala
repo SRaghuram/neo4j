@@ -22,6 +22,10 @@ object SlottedExecutionContext {
   def empty = new SlottedExecutionContext(SlotConfiguration.empty)
 }
 
+trait SlottedCompatible {
+  def copyToSlottedExecutionContext(target: SlottedExecutionContext, nLongs: Int, nRefs: Int): Unit
+}
+
 /**
   * Execution context which uses a slot configuration to store values in two arrays.
   *
@@ -62,17 +66,20 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
       case _ => fail()
     }
 
-  override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit = input match {
-    case other@SlottedExecutionContext(otherPipeline) =>
-      if (nLongs > slots.numberOfLongs || nRefs > slots.numberOfReferences)
-        throw new InternalException("Tried to copy more data into less.")
-      else {
+  override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit =
+    if (nLongs > slots.numberOfLongs || nRefs > slots.numberOfReferences)
+      throw new InternalException("Tried to copy more data into less.")
+    else input match {
+      case other@SlottedExecutionContext(otherPipeline) =>
         System.arraycopy(other.longs, 0, longs, 0, nLongs)
         System.arraycopy(other.refs, 0, refs, 0, nRefs)
         setLinenumber(other.getLinenumber)
-      }
-    case _ => fail()
-  }
+
+      case other: SlottedCompatible =>
+        other.copyToSlottedExecutionContext(this, nLongs, nRefs)
+
+      case _ => fail()
+    }
 
   def copyCachedFrom(input: ExecutionContext): Unit = input match {
     case other@SlottedExecutionContext(otherPipeline) =>
