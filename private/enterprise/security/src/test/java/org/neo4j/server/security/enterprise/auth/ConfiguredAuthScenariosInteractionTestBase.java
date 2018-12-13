@@ -5,7 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -38,7 +39,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
     }
 
     @Test
-    public void shouldAllowRoleCallCreateNewTokensProceduresWhenConfigured() throws Throwable
+    void shouldAllowRoleCallCreateNewTokensProceduresWhenConfigured() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "role1" ) );
         userManager.newRole( "role1", "noneSubject" );
@@ -48,7 +49,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
     }
 
     @Test
-    public void shouldWarnWhenUsingInternalAndOtherProvider() throws Throwable
+    void shouldWarnWhenUsingInternalAndOtherProvider() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.auth_providers.name(), internalSecurityName() + " ,LDAP" ) );
         assertSuccess( adminSubject, "CALL dbms.security.listUsers",
@@ -66,7 +67,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
     }
 
     @Test
-    public void shouldNotWarnWhenOnlyUsingInternalProvider() throws Throwable
+    void shouldNotWarnWhenOnlyUsingInternalProvider() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.auth_provider.name(), internalSecurityName() ) );
         assertSuccess( adminSubject, "CALL dbms.security.listUsers",

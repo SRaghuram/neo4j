@@ -14,7 +14,10 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -55,14 +58,14 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.startsWith;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.isA;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.helpers.collection.Iterables.single;
 import static org.neo4j.helpers.collection.MapUtil.map;
@@ -79,14 +82,14 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     //---------- list running transactions -----------
 
     @Test
-    public void shouldListSelfTransaction()
+    void shouldListSelfTransaction()
     {
         assertSuccess( adminSubject, "CALL dbms.listTransactions()",
                 r -> assertKeyIs( r, "username", "adminSubject" ) );
     }
 
     @Test
-    public void listBlockedTransactions() throws Throwable
+    void listBlockedTransactions() throws Throwable
     {
         assertEmpty( adminSubject, "CREATE (:MyNode {prop: 2})" );
         String firstModifier = "MATCH (n:MyNode) set n.prop=3";
@@ -125,17 +128,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         blockedModifierLatch.finishAndWaitForAllToFinish();
     }
 
-    private static void waitTransactionToStartWaitingForTheLock() throws InterruptedException
-    {
-        while ( Thread.getAllStackTraces().keySet().stream().noneMatch(
-                ThreadingRule.waitingWhileIn( Operations.class, "acquireExclusiveNodeLock" ) ) )
-        {
-            TimeUnit.MILLISECONDS.sleep( 10 );
-        }
-    }
-
     @Test
-    public void listTransactionWithMetadata() throws Throwable
+    void listTransactionWithMetadata() throws Throwable
     {
         String setMetaDataQuery = "CALL dbms.setTXMetaData( { realUser: 'MyMan' } )";
         String matchQuery = "MATCH (n) RETURN n";
@@ -165,7 +159,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void listAllTransactionsWhenRunningAsAdmin() throws Throwable
+    void listAllTransactionsWhenRunningAsAdmin() throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 3, true );
         OffsetDateTime startTime = getStartTime();
@@ -196,7 +190,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldOnlyListOwnTransactionsWhenNotRunningAsAdmin() throws Throwable
+    void shouldOnlyListOwnTransactionsWhenNotRunningAsAdmin() throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 3, true );
         OffsetDateTime startTime = getStartTime();
@@ -225,7 +219,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldListAllTransactionsWithAuthDisabled() throws Throwable
+    void shouldListAllTransactionsWithAuthDisabled() throws Throwable
     {
         neo.tearDown();
         neo = setUpNeoServer( stringMap( GraphDatabaseSettings.auth_enabled.name(), "false" ) );
@@ -258,7 +252,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void killAlreadyTerminatedTransactionEndsSuccesfully()
+    void killAlreadyTerminatedTransactionEndsSuccesfully()
     {
         DoubleLatch latch = new DoubleLatch( 2, true );
         try
@@ -295,7 +289,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void failToKillTransactionForOtherUserByNonAdmin()
+    void failToKillTransactionForOtherUserByNonAdmin()
     {
         DoubleLatch latch = new DoubleLatch( 2, true );
         try
@@ -323,7 +317,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void killAnyTransactionWithAuthDisabled() throws Throwable
+    void killAnyTransactionWithAuthDisabled() throws Throwable
     {
         neo.tearDown();
         neo = setUpNeoServer( stringMap( GraphDatabaseSettings.auth_enabled.name(), "false" ) );
@@ -353,7 +347,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void killTransactionMarksTransactionForTermination()
+    void killTransactionMarksTransactionForTermination()
     {
         DoubleLatch latch = new DoubleLatch( 2, true );
         try
@@ -394,7 +388,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void killNotExistingTransaction()
+    void killNotExistingTransaction()
     {
         String query = "CALL dbms.killTransaction('17')";
         assertSuccess( readSubject, query, r ->
@@ -409,7 +403,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     //---------- list running queries -----------
 
     @Test
-    public void shouldListAllQueryIncludingMetaData() throws Throwable
+    void shouldListAllQueryIncludingMetaData() throws Throwable
     {
         String setMetaDataQuery = "CALL dbms.setTXMetaData( { realUser: 'MyMan' } )";
         String matchQuery = "MATCH (n) RETURN n";
@@ -440,7 +434,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
     @SuppressWarnings( "unchecked" )
     @Test
-    public void shouldListAllQueriesWhenRunningAsAdmin() throws Throwable
+    void shouldListAllQueriesWhenRunningAsAdmin() throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 3, true );
         OffsetDateTime startTime = getStartTime();
@@ -471,7 +465,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldOnlyListOwnQueriesWhenNotRunningAsAdmin() throws Throwable
+    void shouldOnlyListOwnQueriesWhenNotRunningAsAdmin() throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 3, true );
         OffsetDateTime startTime = getStartTime();
@@ -501,7 +495,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
     @SuppressWarnings( "unchecked" )
     @Test
-    public void shouldListQueriesEvenIfUsingPeriodicCommit() throws Throwable
+    @DisabledOnOs( OS.WINDOWS )
+    void shouldListQueriesEvenIfUsingPeriodicCommit() throws Throwable
     {
         for ( int i = 8; i <= 11; i++ )
         {
@@ -556,7 +551,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldListAllQueriesWithAuthDisabled() throws Throwable
+    void shouldListAllQueriesWithAuthDisabled() throws Throwable
     {
         neo.tearDown();
         neo = setUpNeoServer( stringMap( GraphDatabaseSettings.auth_enabled.name(), "false" ) );
@@ -591,7 +586,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     //---------- Create Tokens query -------
 
     @Test
-    public void shouldCreateLabel()
+    void shouldCreateLabel()
     {
         assertFail( editorSubject, "CREATE (:MySpecialLabel)", TOKEN_CREATE_OPS_NOT_ALLOWED );
         assertFail( editorSubject, "CALL db.createLabel('MySpecialLabel')", TOKEN_CREATE_OPS_NOT_ALLOWED );
@@ -602,7 +597,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldCreateRelationshipType()
+    void shouldCreateRelationshipType()
     {
         assertEmpty( writeSubject, "CREATE (a:Node {id:0}) CREATE ( b:Node {id:1} )" );
         assertFail( editorSubject,
@@ -618,7 +613,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldCreateProperty()
+    void shouldCreateProperty()
     {
         assertFail( editorSubject, "CREATE (a) SET a.MySpecialProperty = 'a'", TOKEN_CREATE_OPS_NOT_ALLOWED );
         assertFail( editorSubject, "CALL db.createProperty('MySpecialProperty')", TOKEN_CREATE_OPS_NOT_ALLOWED );
@@ -638,7 +633,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
      * query2 is immediately terminated, even though locks have not been released.
      */
     @Test
-    public void queryWaitingForLocksShouldBeKilledBeforeLocksAreReleased() throws Throwable
+    void queryWaitingForLocksShouldBeKilledBeforeLocksAreReleased() throws Throwable
     {
         assertEmpty( adminSubject, "CREATE (:MyNode {prop: 2})" );
 
@@ -676,13 +671,13 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldKillQueryAsAdmin() throws Throwable
+    void shouldKillQueryAsAdmin() throws Throwable
     {
         executeTwoQueriesAndKillTheFirst( readSubject, readSubject, adminSubject );
     }
 
     @Test
-    public void shouldKillQueryAsUser() throws Throwable
+    void shouldKillQueryAsUser() throws Throwable
     {
         executeTwoQueriesAndKillTheFirst( readSubject, writeSubject, readSubject );
     }
@@ -722,7 +717,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldSelfKillQuery()
+    void shouldSelfKillQuery()
     {
         String result = neo.executeQuery(
                 readSubject,
@@ -741,7 +736,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldFailToTerminateOtherUsersQuery() throws Throwable
+    void shouldFailToTerminateOtherUsersQuery() throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 3, true );
         ThreadedTransaction<S> read = new ThreadedTransaction<>( neo, latch );
@@ -775,7 +770,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
     @SuppressWarnings( "unchecked" )
     @Test
-    public void shouldTerminateQueriesEvenIfUsingPeriodicCommit() throws Throwable
+    @DisabledOnOs( OS.WINDOWS )
+    void shouldTerminateQueriesEvenIfUsingPeriodicCommit() throws Throwable
     {
         for ( int batchSize = 8; batchSize <= 11; batchSize++ )
         {
@@ -838,7 +834,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldKillMultipleUserQueries() throws Throwable
+    void shouldKillMultipleUserQueries() throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 5 );
         ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
@@ -894,13 +890,13 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     //---------- set tx meta data -----------
 
     @Test
-    public void shouldHaveSetTXMetaDataProcedure()
+    void shouldHaveSetTXMetaDataProcedure()
     {
         assertEmpty( writeSubject, "CALL dbms.setTXMetaData( { aKey: 'aValue' } )" );
     }
 
     @Test
-    public void readUpdatedMetadataValue() throws Throwable
+    void readUpdatedMetadataValue() throws Throwable
     {
         String testValue = "testValue";
         String testKey = "test";
@@ -916,7 +912,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void readEmptyMetadataInOtherTransaction()
+    void readEmptyMetadataInOtherTransaction()
     {
         String testValue = "testValue";
         String testKey = "test";
@@ -933,7 +929,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     //---------- config manipulation -----------
 
     @Test
-    public void setConfigValueShouldBeAccessibleOnlyToAdmins()
+    void setConfigValueShouldBeAccessibleOnlyToAdmins()
     {
         String call = "CALL dbms.setConfigValue('dbms.logs.query.enabled', 'false')";
         assertFail( writeSubject, call, PERMISSION_DENIED );
@@ -946,7 +942,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     //---------- procedure guard -----------
 
     @Test
-    public void shouldTerminateLongRunningProcedureThatChecksTheGuardRegularlyIfKilled() throws Throwable
+    void shouldTerminateLongRunningProcedureThatChecksTheGuardRegularlyIfKilled() throws Throwable
     {
         final DoubleLatch latch = new DoubleLatch( 2, true );
         ClassWithProcedures.volatileLatch = latch;
@@ -990,7 +986,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldHandleWriteAfterAllowedReadProcedureForWriteUser() throws Throwable
+    void shouldHandleWriteAfterAllowedReadProcedureForWriteUser() throws Throwable
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "role1Subject", password( "abc" ), false );
@@ -1002,7 +998,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldNotAllowNonWriterToWriteAfterCallingAllowedWriteProc() throws Exception
+    void shouldNotAllowNonWriterToWriteAfterCallingAllowedWriteProc() throws Exception
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "nopermission", password( "abc" ), false );
@@ -1017,7 +1013,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldNotAllowUnauthorizedAccessToProcedure() throws Exception
+    void shouldNotAllowUnauthorizedAccessToProcedure() throws Exception
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "nopermission", password( "abc" ), false );
@@ -1028,7 +1024,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldNotAllowNonReaderToReadAfterCallingAllowedReadProc() throws Exception
+    void shouldNotAllowNonReaderToReadAfterCallingAllowedReadProc() throws Exception
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "nopermission", password( "abc" ), false );
@@ -1042,7 +1038,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldHandleNestedReadProcedures() throws Throwable
+    void shouldHandleNestedReadProcedures() throws Throwable
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "role1Subject", password( "abc" ), false );
@@ -1054,7 +1050,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldHandleDoubleNestedReadProcedures() throws Throwable
+    void shouldHandleDoubleNestedReadProcedures() throws Throwable
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "role1Subject", password( "abc" ), false );
@@ -1066,7 +1062,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldFailNestedAllowedWriteProcedureFromAllowedReadProcedure() throws Throwable
+    void shouldFailNestedAllowedWriteProcedureFromAllowedReadProcedure() throws Throwable
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "role1Subject", password( "abc" ), false );
@@ -1078,7 +1074,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldFailNestedAllowedWriteProcedureFromAllowedReadProcedureEvenIfAdmin() throws Throwable
+    void shouldFailNestedAllowedWriteProcedureFromAllowedReadProcedureEvenIfAdmin() throws Throwable
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "role1Subject", password( "abc" ), false );
@@ -1091,7 +1087,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldRestrictNestedReadProcedureFromAllowedWriteProcedures() throws Throwable
+    void shouldRestrictNestedReadProcedureFromAllowedWriteProcedures() throws Throwable
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "role1Subject", password( "abc" ), false );
@@ -1103,7 +1099,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldHandleNestedReadProcedureWithDifferentAllowedRole() throws Throwable
+    void shouldHandleNestedReadProcedureWithDifferentAllowedRole() throws Throwable
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "role1Subject", password( "abc" ), false );
@@ -1116,7 +1112,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldFailNestedAllowedWriteProcedureFromNormalReadProcedure() throws Throwable
+    void shouldFailNestedAllowedWriteProcedureFromNormalReadProcedure() throws Throwable
     {
         userManager = neo.getLocalUserManager();
         userManager.newUser( "role1Subject", password( "abc" ), false );
@@ -1130,7 +1126,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldHandleFunctionWithAllowed() throws Throwable
+    void shouldHandleFunctionWithAllowed() throws Throwable
     {
         userManager = neo.getLocalUserManager();
 
@@ -1143,7 +1139,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldHandleNestedFunctionsWithAllowed() throws Throwable
+    void shouldHandleNestedFunctionsWithAllowed() throws Throwable
     {
         userManager = neo.getLocalUserManager();
 
@@ -1156,7 +1152,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldHandleNestedFunctionWithDifferentAllowedRole() throws Throwable
+    void shouldHandleNestedFunctionWithDifferentAllowedRole() throws Throwable
     {
         userManager = neo.getLocalUserManager();
 
@@ -1172,7 +1168,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     //---------- clearing query cache -----------
 
     @Test
-    public void shouldNotClearQueryCachesIfNotAdmin()
+    void shouldNotClearQueryCachesIfNotAdmin()
     {
         assertFail( noneSubject, "CALL dbms.clearQueryCaches()", PERMISSION_DENIED );
         assertFail( readSubject, "CALL dbms.clearQueryCaches()", PERMISSION_DENIED );
@@ -1181,7 +1177,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    public void shouldClearQueryCachesIfAdmin()
+    void shouldClearQueryCachesIfAdmin()
     {
         assertSuccess( adminSubject,"CALL dbms.clearQueryCaches()", ResourceIterator::close );
         // any answer is okay, as long as it isn't denied. That is why we don't care about the actual result here
@@ -1194,8 +1190,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
     //---------- terminate transactions for user -----------
 
-    //@Test
-    public void shouldTerminateTransactionForUser() throws Throwable
+    @Disabled
+    void shouldTerminateTransactionForUser() throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 2 );
         ThreadedTransaction<S> write = new ThreadedTransaction<>( neo, latch );
@@ -1215,8 +1211,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertEmpty( adminSubject, "MATCH (n:Test) RETURN n.name AS name" );
     }
 
-    //@Test
-    public void shouldTerminateOnlyGivenUsersTransaction() throws Throwable
+    @Disabled
+    void shouldTerminateOnlyGivenUsersTransaction() throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 3 );
         ThreadedTransaction<S> schema = new ThreadedTransaction<>( neo, latch );
@@ -1242,8 +1238,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 r -> assertKeyIs( r, "name", "writeSubject-node" ) );
     }
 
-    //@Test
-    public void shouldTerminateAllTransactionsForGivenUser() throws Throwable
+    @Disabled
+    void shouldTerminateAllTransactionsForGivenUser() throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 3 );
         ThreadedTransaction<S> schema1 = new ThreadedTransaction<>( neo, latch );
@@ -1267,8 +1263,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertEmpty( adminSubject, "MATCH (n:Test) RETURN n.name AS name" );
     }
 
-    //@Test
-    public void shouldNotTerminateTerminationTransaction()
+    @Disabled
+    void shouldNotTerminateTerminationTransaction()
     {
         assertSuccess( adminSubject, "CALL dbms.terminateTransactionsForUser( 'adminSubject' )",
                 r -> assertKeyIsMap( r, "username", "transactionsTerminated", map( "adminSubject", "0" ) ) );
@@ -1276,14 +1272,14 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 r -> assertKeyIsMap( r, "username", "transactionsTerminated", map( "readSubject", "0" ) ) );
     }
 
-    //@Test
-    public void shouldTerminateSelfTransactionsExceptTerminationTransactionIfAdmin() throws Throwable
+    @Disabled
+    void shouldTerminateSelfTransactionsExceptTerminationTransactionIfAdmin() throws Throwable
     {
         shouldTerminateSelfTransactionsExceptTerminationTransaction( adminSubject );
     }
 
-    //@Test
-    public void shouldTerminateSelfTransactionsExceptTerminationTransactionIfNotAdmin() throws Throwable
+    @Disabled
+    void shouldTerminateSelfTransactionsExceptTerminationTransactionIfNotAdmin() throws Throwable
     {
         shouldTerminateSelfTransactionsExceptTerminationTransaction( writeSubject );
     }
@@ -1307,15 +1303,15 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertEmpty( adminSubject, "MATCH (n:Test) RETURN n.name AS name" );
     }
 
-    //@Test
-    public void shouldNotTerminateTransactionsIfNonExistentUser()
+    @Disabled
+    void shouldNotTerminateTransactionsIfNonExistentUser()
     {
         assertFail( adminSubject, "CALL dbms.terminateTransactionsForUser( 'Petra' )", "User 'Petra' does not exist" );
         assertFail( adminSubject, "CALL dbms.terminateTransactionsForUser( '' )", "User '' does not exist" );
     }
 
-    //@Test
-    public void shouldNotTerminateTransactionsIfNotAdmin() throws Throwable
+    @Disabled
+    void shouldNotTerminateTransactionsIfNotAdmin() throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 2 );
         ThreadedTransaction<S> write = new ThreadedTransaction<>( neo, latch );
@@ -1338,8 +1334,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 r -> assertKeyIs( r, "name", "writeSubject-node" ) );
     }
 
-    //@Test
-    public void shouldTerminateRestrictedTransaction()
+    @Disabled
+    void shouldTerminateRestrictedTransaction()
     {
         final DoubleLatch doubleLatch = new DoubleLatch( 2 );
 
@@ -1618,5 +1614,14 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     private static OffsetDateTime getStartTime()
     {
         return ofInstant( Instant.ofEpochMilli( now().toEpochSecond() ), ZoneOffset.UTC );
+    }
+
+    private static void waitTransactionToStartWaitingForTheLock() throws InterruptedException
+    {
+        while ( Thread.getAllStackTraces().keySet().stream().noneMatch(
+                ThreadingRule.waitingWhileIn( Operations.class, "acquireExclusiveNodeLock" ) ) )
+        {
+            TimeUnit.MILLISECONDS.sleep( 10 );
+        }
     }
 }

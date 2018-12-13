@@ -5,7 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
@@ -26,8 +27,8 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.DoubleLatch;
 
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
@@ -54,7 +55,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
     }
 
     @Test
-    public void shouldNotListAnyQueriesIfNotAuthenticated()
+    void shouldNotListAnyQueriesIfNotAuthenticated()
     {
         EnterpriseLoginContext unAuthSubject = createFakeAnonymousEnterpriseLoginContext();
         GraphDatabaseFacade graph = neo.getLocalGraph();
@@ -69,7 +70,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
     }
 
     @Test
-    public void shouldNotKillQueryIfNotAuthenticated() throws Throwable
+    void shouldNotKillQueryIfNotAuthenticated() throws Throwable
     {
         EnterpriseLoginContext unAuthSubject = createFakeAnonymousEnterpriseLoginContext();
 

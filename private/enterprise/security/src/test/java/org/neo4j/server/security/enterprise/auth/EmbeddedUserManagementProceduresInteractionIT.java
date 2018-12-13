@@ -5,6 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import org.junit.jupiter.api.Disabled;
+
 import java.util.List;
 import java.util.Map;
 
@@ -38,7 +40,7 @@ public class EmbeddedUserManagementProceduresInteractionIT extends AuthProcedure
     /*
       This test is too slow for unit testing, but might be useful for local stress testing.
      */
-    //@Test
+    @Disabled
     public void shouldAllowOptionalMatch()
     {
         assertEmpty( adminSubject, ADD_MOVIE_DATASET_QUERY );

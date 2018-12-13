@@ -5,7 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -30,7 +31,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.internal.util.collections.Sets.newSet;
 import static org.neo4j.helpers.collection.MapUtil.genericMap;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -50,7 +51,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldTerminateLongRunningProcedureThatChecksTheGuardRegularlyOnTimeout() throws Throwable
+    void shouldTerminateLongRunningProcedureThatChecksTheGuardRegularlyOnTimeout() throws Throwable
     {
         configuredSetup( stringMap( GraphDatabaseSettings.transaction_timeout.name(), "4s" ) );
 
@@ -64,7 +65,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldSetAllowedToConfigSetting() throws Throwable
+    void shouldSetAllowedToConfigSetting() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "nonEmpty" ) );
         Procedures procedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class );
@@ -74,7 +75,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldSetAllowedToDefaultValueAndRunningWorks() throws Throwable
+    void shouldSetAllowedToDefaultValueAndRunningWorks() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "role1" ) );
 
@@ -83,7 +84,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldRunProcedureWithMatchingWildcardAllowed() throws Throwable
+    void shouldRunProcedureWithMatchingWildcardAllowed() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "test.*:role1" ) );
 
@@ -92,7 +93,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldNotRunProcedureWithMismatchingWildCardAllowed() throws Throwable
+    void shouldNotRunProcedureWithMismatchingWildCardAllowed() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "tes.*:role1" ) );
 
@@ -105,7 +106,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldNotSetProcedureAllowedIfSettingNotSet() throws Throwable
+    void shouldNotSetProcedureAllowedIfSettingNotSet() throws Throwable
     {
         configuredSetup( defaultConfiguration() );
         Procedures procedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class );
@@ -116,7 +117,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
 
     @SuppressWarnings( "OptionalGetWithoutIsPresent" )
     @Test
-    public void shouldSetAllowedToConfigSettingForUDF() throws Throwable
+    void shouldSetAllowedToConfigSettingForUDF() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "nonEmpty" ) );
         Procedures procedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class );
@@ -127,7 +128,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldSetAllowedToDefaultValueAndRunningWorksForUDF() throws Throwable
+    void shouldSetAllowedToDefaultValueAndRunningWorksForUDF() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "role1" ) );
 
@@ -138,7 +139,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
 
     @SuppressWarnings( "OptionalGetWithoutIsPresent" )
     @Test
-    public void shouldNotSetProcedureAllowedIfSettingNotSetForUDF() throws Throwable
+    void shouldNotSetProcedureAllowedIfSettingNotSetForUDF() throws Throwable
     {
         configuredSetup( defaultConfiguration() );
         Procedures procedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class );
@@ -149,7 +150,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldSetWildcardRoleConfigOnlyIfNotAnnotated() throws Throwable
+    void shouldSetWildcardRoleConfigOnlyIfNotAnnotated() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "test.*:tester" ) );
 
@@ -159,7 +160,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldSetAllMatchingWildcardRoleConfigs() throws Throwable
+    void shouldSetAllMatchingWildcardRoleConfigs() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "test.*:tester;test.create*:other" ) );
 
@@ -173,7 +174,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldSetAllMatchingWildcardRoleConfigsWithDefaultForUDFs() throws Throwable
+    void shouldSetAllMatchingWildcardRoleConfigsWithDefaultForUDFs() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "test.*:tester;test.create*:other",
                 SecuritySettings.default_allowed.name(), "default" ) );
@@ -188,7 +189,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldHandleWriteAfterAllowedReadProcedureWithAuthDisabled() throws Throwable
+    void shouldHandleWriteAfterAllowedReadProcedureWithAuthDisabled() throws Throwable
     {
         neo = setUpNeoServer( stringMap( GraphDatabaseSettings.auth_enabled.name(), "false" ) );
 
@@ -200,7 +201,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldHandleMultipleRolesSpecifiedForMapping() throws Throwable
+    void shouldHandleMultipleRolesSpecifiedForMapping() throws Throwable
     {
         // Given
         configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "test.*:tester, other" ) );
@@ -215,7 +216,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldListCorrectRolesForDBMSProcedures() throws Throwable
+    void shouldListCorrectRolesForDBMSProcedures() throws Throwable
     {
         configuredSetup( defaultConfiguration() );
 
@@ -251,7 +252,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldShowAllowedRolesWhenListingProcedures() throws Throwable
+    void shouldShowAllowedRolesWhenListingProcedures() throws Throwable
     {
         configuredSetup( stringMap(
                 SecuritySettings.procedure_roles.name(), "test.numNodes:counter,user",
@@ -278,7 +279,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldShowAllowedRolesWhenListingFunctions() throws Throwable
+    void shouldShowAllowedRolesWhenListingFunctions() throws Throwable
     {
         configuredSetup( stringMap(
                 SecuritySettings.procedure_roles.name(), "test.allowedFunc:counter,user",
@@ -297,7 +298,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldGiveNiceMessageAtFailWhenTryingToKill() throws Throwable
+    void shouldGiveNiceMessageAtFailWhenTryingToKill() throws Throwable
     {
         configuredSetup( stringMap( GraphDatabaseSettings.kill_query_verbose.name(), "true" ) );
 
@@ -310,7 +311,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldNotGiveNiceMessageAtFailWhenTryingToKillWhenConfigured() throws Throwable
+    void shouldNotGiveNiceMessageAtFailWhenTryingToKillWhenConfigured() throws Throwable
     {
         configuredSetup( stringMap( GraphDatabaseSettings.kill_query_verbose.name(), "false" ) );
         String query = "CALL dbms.killQuery('query-9999999999')";
@@ -320,7 +321,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    public void shouldGiveNiceMessageAtFailWhenTryingToKillMoreThenOne() throws Throwable
+    void shouldGiveNiceMessageAtFailWhenTryingToKillMoreThenOne() throws Throwable
     {
         //Given
         configuredSetup( stringMap( GraphDatabaseSettings.kill_query_verbose.name(), "true" ) );
