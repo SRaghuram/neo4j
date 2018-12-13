@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
@@ -70,7 +71,7 @@ public class CoreStateStorageServiceTest
     private File makeFile( File baseDirectory, String fileName ) throws IOException
     {
         File file = new File( baseDirectory, fileName );
-        fs.create( file );
+        fs.create( file ).close();
         return file;
     }
 
