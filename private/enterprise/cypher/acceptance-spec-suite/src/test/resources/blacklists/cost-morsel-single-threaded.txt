@@ -106,7 +106,7 @@ Feature "ReturnAcceptance": Scenario "Filter should work"
 Feature "ReturnAcceptance": Scenario "LIMIT 0 should stop side effects"
 Feature "ShortestPathAcceptance": Scenario "Find a combination of a shortest path and a pattern expression"
 // TODO: FIXME Flaky planner... - If we get an `Optional` in the plan this query is not supported
-//Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate on all relationships"
+?Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate on all relationships"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path in an expression context"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path without loosing context information at runtime"
