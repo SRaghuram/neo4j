@@ -5,15 +5,28 @@
  */
 package org.neo4j.metrics;
 
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
+import java.lang.management.ManagementFactory;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import javax.management.MBeanServer;
+import javax.management.MBeanServerFactory;
+
+import org.neo4j.collection.RawIterator;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -21,6 +34,13 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
+import org.neo4j.internal.kernel.api.procs.QualifiedName;
+import org.neo4j.kernel.api.ResourceManager;
+import org.neo4j.kernel.api.ResourceTracker;
+import org.neo4j.kernel.api.StubResourceManager;
+import org.neo4j.kernel.builtinprocs.JmxQueryProcedure;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.ha.HighlyAvailableGraphDatabase;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
@@ -34,15 +54,21 @@ import org.neo4j.metrics.source.db.EntityCountMetrics;
 import org.neo4j.metrics.source.db.TransactionMetrics;
 import org.neo4j.metrics.source.jvm.ThreadMetrics;
 import org.neo4j.test.ha.ClusterRule;
+import org.neo4j.test.mockito.matcher.CollectionMatcher;
 
 import static java.lang.System.currentTimeMillis;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.cypher_min_replan_interval;
+import static org.neo4j.helpers.collection.Iterators.asList;
+import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.impl.ha.ClusterManager.clusterOfSize;
 import static org.neo4j.metrics.MetricsSettings.csvEnabled;
@@ -61,6 +87,7 @@ public class MetricsKernelExtensionFactoryIT
 
     private HighlyAvailableGraphDatabase db;
     private File outputPath;
+    private final ResourceTracker resourceTracker = new StubResourceManager();
 
     @Before
     public void setup()
@@ -240,6 +267,21 @@ public class MetricsKernelExtensionFactoryIT
         // We assert that no exception is thrown during startup or the operation of the database.
     }
 
+    @Test
+    public void metricsAccessibleOverJmx() throws ProcedureException
+    {
+        MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+
+        QualifiedName qualifiedName = ProcedureSignature.procedureName( "metricsQuery" );
+        JmxQueryProcedure procedure = new JmxQueryProcedure( qualifiedName, mBeanServer );
+
+        String ljmxQuery = "metrics." + GraphDatabaseSettings.DEFAULT_DATABASE_NAME + ":*";
+        RawIterator<Object[],ProcedureException> result = procedure.apply( null, new Object[]{ljmxQuery}, resourceTracker );
+
+        List<Object[]> queryResult = asList( result );
+        assertThat( queryResult, hasItem( new MetricsRecordMatcher() ) );
+    }
+
     private void addNodes( int numberOfNodes )
     {
         for ( int i = 0; i < numberOfNodes; i++ )
@@ -250,6 +292,22 @@ public class MetricsKernelExtensionFactoryIT
                 node.setProperty( "name", UUID.randomUUID().toString() );
                 tx.success();
             }
+        }
+    }
+
+    private static class MetricsRecordMatcher extends TypeSafeMatcher<Object[]>
+    {
+        @Override
+        protected boolean matchesSafely( Object[] item )
+        {
+            return item.length > 2 && "metrics.graph.db:name=neo4j.transaction.rollbacks_read".equals( item[0] ) &&
+                    "Information on the management interface of the MBean".equals( item[1] );
+        }
+
+        @Override
+        public void describeTo( Description description )
+        {
+            description.appendText( "Expected to see neo4j.transaction.rollbacks_read in result set" );
         }
     }
 }
