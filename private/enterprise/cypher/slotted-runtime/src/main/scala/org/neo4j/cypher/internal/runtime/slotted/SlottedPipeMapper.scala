@@ -17,15 +17,14 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Aggreg
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{Predicate, True}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{KeyTokenResolver, expressions => commandExpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, ColumnOrder => _, _}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.generateSlotAccessorFunctions
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v4_0.expressions.{Equals, SignedDecimalIntegerLiteral}
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions.Equals
-import org.neo4j.cypher.internal.v4_0.expressions.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -241,11 +240,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
           // Primitive pipe that leverages that the fact that grouping can be done a single array of longs
           EagerAggregationSlottedPrimitivePipe(source, slots, groupingColumnsIncoming, groupingColumnsOutgoing, aggregation)(id)
         } else {
-          val grouping = groupingExpressions.map {
-            case (key, expression) =>
-              slots(key) -> convertExpressions(expression)
-          }
-          EagerAggregationSlottedPipe(source, slots, grouping, aggregation)(id)
+          EagerAggregationSlottedPipe(source, slots, expressionConverters.toGroupingExpression(id, groupingExpressions),
+                                      aggregation)(id)
         }
 
       case Distinct(_, groupingExpressions) =>
@@ -518,10 +514,11 @@ class SlottedPipeMapper(fallback: PipeMapper,
         DistinctSlottedSinglePrimitivePipe(source, slots, toSlot, offsets.head, runtimeExpression)(id)
 
       case AllPrimitive(offsets) =>
-        DistinctSlottedPrimitivePipe(source, slots, offsets.sorted.toArray, runtimeProjections)(id)
+        DistinctSlottedPrimitivePipe(source, slots, offsets.sorted.toArray,
+                                     expressionConverters.toGroupingExpression(id, groupingExpressions))(id)
 
       case References =>
-        DistinctSlottedPipe(source, slots, runtimeProjections)(id)
+        DistinctSlottedPipe(source, slots, expressionConverters.toGroupingExpression(id, groupingExpressions))(id)
     }
   }
 

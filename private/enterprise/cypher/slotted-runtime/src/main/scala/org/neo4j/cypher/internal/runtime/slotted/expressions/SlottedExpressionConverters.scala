@@ -7,10 +7,11 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{ast => runtimeAst}
-import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commands}
+import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath._
+import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => runtimeExpression}
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -23,6 +24,19 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
     val slots = physicalPlan.slotConfigurations(id)
     val projected = for {(k, v) <- projections} yield slots.get(k).get.offset -> self.toCommandExpression(id, v)
     Some(SlottedCommandProjection(projected))
+  }
+
+  override def toGroupingExpression(id: Id, projections: Map[String, Expression],
+                                    self: ExpressionConverters): Option[GroupingExpression] = {
+    val slots = physicalPlan.slotConfigurations(id)
+    val projected = for {(k, v) <- projections} yield slots.get(k).get -> self.toCommandExpression(id, v)
+    projected.toList match {
+      case Nil => Some(EmptyGroupingExpression)
+      case (slot, e)::Nil => Some(SlottedGroupingExpression1(slot, e))
+      case (s1, e1)::(s2, e2)::Nil => Some(SlottedGroupingExpression2(s1, e1, s2, e2))
+      case (s1, e1)::(s2, e2)::(s3, e3)::Nil => Some(SlottedGroupingExpression3(s1, e1, s2, e2, s3, e3))
+      case _ => Some(SlottedGroupingExpression(projected))
+    }
   }
 
   override def toCommandExpression(id: Id, expression: ast.Expression, self: ExpressionConverters): Option[commands.Expression] =

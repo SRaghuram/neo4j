@@ -7,18 +7,18 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledExpression, CompiledProjection, IntermediateCodeGeneration}
+import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
-import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, ExecutionContext}
+import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, ExecutionContext, GroupingExpression}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter.COMPILE_LIMIT
-import org.neo4j.logging.Log
-import org.neo4j.values.AnyValue
 import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
+import org.neo4j.logging.Log
+import org.neo4j.values.AnyValue
 
 class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenContext: TokenContext) extends ExpressionConverter {
 
@@ -82,10 +82,55 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         None
     }
   }
+
+//  def toDistinctCommandProjection(id: Id, projections: Map[String, ast.Expression],
+//                          self: ExpressionConverters): Option[DistinctGroupingExpression] = {
+//    try {
+//      val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
+//      if (totalSize > COMPILE_LIMIT) {
+//        val slots = physicalPlan.slotConfigurations(id)
+//        val compiler = new IntermediateCodeGeneration(slots)
+//        val compiled = for {(k, v) <- projections
+//                            c <- compiler.compileExpression(v)} yield slots(k) -> c
+//        if (compiled.size < projections.size) None
+//        else {
+//          log.debug(s" Compiling projection: $projections")
+//          val (setter, getter) = compiler.compileDistinct(compiled)
+//          Some(CompileWrappingDistinctGroupingExpression(CodeGeneration.compileDistinctProjection(setter, getter),
+//                                                         projections.isEmpty))
+//        }
+//      } else None
+//    }
+//    catch {
+//      case t: Throwable =>
+//        //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
+//        //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
+//        //converter
+//        log.debug(s"Failed to compile projection: $projections", t)
+//        None
+//    }
+//  }
+  override def toGroupingExpression(id: Id,
+                                    groupings: Map[String, ast.Expression],
+                                    self: ExpressionConverters): Option[GroupingExpression] = None
 }
 
 object CompiledExpressionConverter {
   private val COMPILE_LIMIT = 2
+}
+
+case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
+
+  override def registerOwningPipe(pipe: Pipe): Unit = {}
+
+  override type T = AnyValue
+
+  override def groupingKey(context: ExecutionContext,
+                           state: QueryState): AnyValue =
+    projection.groupingKey(context, state.query, state.params, state.cursors)
+
+  override def project(context: ExecutionContext, groupingKey: AnyValue): Unit =
+    projection.project(context, groupingKey.asInstanceOf[AnyValue])
 }
 
 case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Boolean) extends CommandProjection {

@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 import java.util.regex
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.compiler.v4_0.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{invoke, load, method, variable}
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
@@ -65,6 +65,34 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     }
     IntermediateExpression(block(all:_*), projections.values.flatMap(_.fields).toSeq,
                                 projections.values.flatMap(_.variables).toSeq, Set.empty)
+  }
+
+  def compileDistinctSetter(projections: Map[Slot, IntermediateExpression]): IntermediateExpression = {
+    val setter = projections.toSeq.map {
+      case (LongSlot(offset, _, _), value) => setLongAt(offset, Some(load("outgoing")),
+                                                               if (value.nullCheck.isEmpty) value.ir
+                                                               else ternary(value.nullCheck.reduceLeft(
+                                                                 (acc, current) => or(acc, current)), noValue, value.ir))
+
+      case (RefSlot(offset, _, _), value) => setRefAt(offset,
+                                                             Some(load("outgoing")),
+                                                             if (value.nullCheck.isEmpty) value.ir
+                                                             else ternary(value.nullCheck.reduceLeft(
+                                                               (acc, current) => or(acc, current)), noValue, value.ir))
+    }
+
+    val getter = projections.toSeq.map {
+      case (LongSlot(offset, nullable, CTNode), _) =>
+        invokeStatic(method[VirtualValues, NodeValue, Long]("node"), getLongAt(offset, None))
+
+      case (RefSlot(offset, _, _), _) => setRefAt(offset,
+                                                      None,
+                                                      if (value.nullCheck.isEmpty) value.ir
+                                                      else ternary(value.nullCheck.reduceLeft(
+                                                        (acc, current) => or(acc, current)), noValue, value.ir))
+    }
+    IntermediateExpression(block(setter:_*), projections.values.flatMap(_.fields).toSeq,
+                           projections.values.flatMap(_.variables).toSeq, Set.empty)
   }
 
   def compileExpression(expression: Expression): Option[IntermediateExpression] = internalCompileExpression(expression, None)

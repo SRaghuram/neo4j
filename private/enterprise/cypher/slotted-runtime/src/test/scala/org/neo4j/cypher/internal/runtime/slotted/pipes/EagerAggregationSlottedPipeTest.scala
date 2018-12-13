@@ -9,10 +9,10 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfigura
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{CountStar, Expression}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.ReferenceFromSlot
-import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.Values.{intValue, longValue}
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Values.{intValue, longValue}
 
 class EagerAggregationSlottedPipeTest extends CypherFunSuite with SlottedPipeTestHelper {
   test("should aggregate count(*) on two grouping columns") {
@@ -29,7 +29,8 @@ class EagerAggregationSlottedPipeTest extends CypherFunSuite with SlottedPipeTes
 
     val grouping = createReturnItemsFor(slots,"a", "b")
     val aggregation = Map(slots("count(*)").offset -> CountStar())
-    def aggregationPipe = EagerAggregationSlottedPipe(source, slots, grouping, aggregation)()
+    def aggregationPipe = EagerAggregationSlottedPipe(source, slots,
+                                                      SlottedGroupingExpression(grouping), aggregation)()
 
     testableResult(aggregationPipe.createResults(QueryStateHelper.empty), slots) should be(List(
       Map[String, AnyValue]("a" -> intValue(1), "b" -> intValue(1), "count(*)" -> longValue(2)),

@@ -11,6 +11,9 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{Expressio
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandexpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{NestedPipeExpression, Pipe, QueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.expressions.{functions, _}
 import org.neo4j.cypher.internal.v4_0.logical.plans.{NestedPlanExpression, ResolvedFunctionInvocation}
@@ -56,6 +59,10 @@ object MorselExpressionConverters extends ExpressionConverter {
 
   override def toCommandProjection(id: Id, projections: Map[String, ast.Expression],
                                    self: ExpressionConverters): Option[CommandProjection] = None
+
+  override def toGroupingExpression(id: Id,
+                                    groupings: Map[String, ast.Expression],
+                                    self: ExpressionConverters): Option[GroupingExpression] = None
 
   private class NoPipe() extends Pipe {
     override def id: Id = Id.INVALID_ID

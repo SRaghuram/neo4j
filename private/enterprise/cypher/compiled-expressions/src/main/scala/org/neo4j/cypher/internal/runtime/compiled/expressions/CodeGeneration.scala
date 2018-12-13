@@ -38,6 +38,7 @@ object CodeGeneration {
   private val PACKAGE_NAME = "org.neo4j.codegen"
   private val EXPRESSION = classOf[CompiledExpression]
   private val PROJECTION = classOf[CompiledProjection]
+  private val DISTINCT_PROJECTION = classOf[CompiledDistinctProjection]
   private val COMPUTE_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "evaluate",
                                                                  param(classOf[ExecutionContext], "context"),
                                                                  param(classOf[DbAccess], "dbAccess"),
@@ -49,12 +50,21 @@ object CodeGeneration {
                                                                  param(classOf[MapValue], "params"),
                                                                  param(classOf[ExpressionCursors], "cursors"))
 
+  private val DISTINCT_SET_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "project",
+                                                                      param(classOf[ExecutionContext], "context"),
+                                                                      param(classOf[DbAccess], "dbAccess"),
+                                                                      param(classOf[MapValue], "params"),
+                                                                      param(classOf[ExpressionCursors], "cursors"),
+                                                                      param(classOf[ExecutionContext], "outgoing"))
+
+  private val DISTINCT_GET_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "get", param(classOf[ExecutionContext], "context"))
+
   private def className(): String = "Expression" + System.nanoTime()
 
   def compileExpression(expression: IntermediateExpression): CompiledExpression = {
     val handle = using(generator.generateClass(PACKAGE_NAME, className(), EXPRESSION)) { clazz: ClassGenerator =>
 
-      generateConstructor(clazz, expression)
+      generateConstructor(clazz, expression.fields)
       using(clazz.generate(COMPUTE_METHOD)) { block =>
         expression.variables.distinct.foreach{ v =>
           block.assign(v.typ, v.name, compileExpression(v.value, block))
@@ -79,7 +89,7 @@ object CodeGeneration {
   def compileProjection(expression: IntermediateExpression): CompiledProjection = {
     val handle = using(generator.generateClass(PACKAGE_NAME, className(), PROJECTION)) { clazz: ClassGenerator =>
 
-      generateConstructor(clazz, expression)
+      generateConstructor(clazz, expression.fields)
       using(clazz.generate(PROJECT_METHOD)) { block =>
         expression.variables.distinct.foreach { v =>
           block.assign(v.typ, v.name, compileExpression(v.value, block))
@@ -93,18 +103,47 @@ object CodeGeneration {
     clazz.newInstance().asInstanceOf[CompiledProjection]
   }
 
-  private def setConstants(clazz: Class[_], fields: Seq[Field]) = {
-    fields.foreach {
+  def compileDistinctProjection(setter: IntermediateExpression, getter: IntermediateExpression): CompiledDistinctProjection = {
+    val handle = using(generator.generateClass(PACKAGE_NAME, className(), DISTINCT_PROJECTION)) { clazz: ClassGenerator =>
+
+      generateConstructor(clazz, setter.fields ++ getter.fields)
+      using(clazz.generate(DISTINCT_SET_METHOD)) { block =>
+        setter.variables.distinct.foreach { v =>
+          block.assign(v.typ, v.name, compileExpression(v.value, block))
+        }
+        block.expression(compileExpression(setter.ir, block))
+      }
+      using(clazz.generate(DISTINCT_GET_METHOD)) { block =>
+        getter.variables.distinct.foreach { v =>
+          block.assign(v.typ, v.name, compileExpression(v.value, block))
+        }
+        val noValue = getStatic(staticField(classOf[Values], classOf[Value], "NO_VALUE"))
+        if (getter.nullCheck.nonEmpty) {
+          val test = getter.nullCheck.map(e => compileExpression(e, block))
+            .reduceLeft((acc, current) => Expression.or(acc, current))
+
+          block.returns(Expression.ternary(test, noValue, compileExpression(getter.ir, block)))
+        } else block.returns(compileExpression(getter.ir, block))
+      }
+      clazz.handle()
+    }
+    val clazz = handle.loadAnonymousClass()
+    setConstants(clazz, setter.fields ++ getter.fields)
+    clazz.newInstance().asInstanceOf[CompiledDistinctProjection]
+  }
+
+  private def setConstants(clazz: Class[_], fields: Seq[Field]): Unit = {
+    fields.distinct.foreach {
       case StaticField(_, name, Some(value)) =>
         clazz.getDeclaredField(name).set(null, value)
       case _ =>
     }
   }
 
-  private def generateConstructor(clazz: ClassGenerator, expression: IntermediateExpression): Unit = {
+  private def generateConstructor(clazz: ClassGenerator, fields: Seq[Field]): Unit = {
     using(clazz.generateConstructor()) { block =>
       block.expression(invokeSuper(OBJECT))
-      expression.fields.distinct.foreach {
+      fields.distinct.foreach {
         case InstanceField(typ, name, initializer) =>
           val reference = clazz.field(typ, name)
           initializer.map(ir => compileExpression(ir, block)).foreach { value =>
