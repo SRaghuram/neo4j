@@ -7,6 +7,7 @@ package com.neo4j.harness.internal;
 
 import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.CommercialNeoServer;
+import org.apache.commons.lang3.SystemUtils;
 
 import java.io.File;
 
@@ -24,7 +25,7 @@ public class CommercialInProcessServerBuilder extends AbstractInProcessServerBui
 
     public CommercialInProcessServerBuilder()
     {
-        this( new File( System.getProperty( "java.io.tmpdir" ) ) );
+        this( SystemUtils.getJavaIoTmpDir() );
     }
 
     public CommercialInProcessServerBuilder( File workingDir )
