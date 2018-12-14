@@ -224,7 +224,10 @@ public class CommandApplicationProcess
             {
                 if ( !sessionTracker.validateOperation( operation.globalSession(), operation.operationId() ) )
                 {
-                    sessionTracker.validateOperation( operation.globalSession(), operation.operationId() );
+                    if ( log.isDebugEnabled() )
+                    {
+                        log.debug( "Skipped an invalid distributed operation: " + operation + ". Session tracker state: " + sessionTracker.snapshot() );
+                    }
                     commandIndex++;
                     continue;
                 }
