@@ -5,7 +5,7 @@
  */
 package com.neo4j.harness;
 
-import com.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
+import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
 
 import java.io.File;
 
@@ -14,7 +14,7 @@ import org.neo4j.harness.TestServerBuilder;
 /**
  * Factories for creating {@link TestServerBuilder} instances.
  */
-public final class EnterpriseTestServerBuilders
+public final class CommercialTestServerBuilders
 {
     /**
      * Create a builder capable of starting an in-process Neo4j instance. This builder will use the standard java temp
@@ -22,7 +22,7 @@ public final class EnterpriseTestServerBuilders
      */
     public static TestServerBuilder newInProcessBuilder()
     {
-        return new EnterpriseInProcessServerBuilder();
+        return new CommercialInProcessServerBuilder();
     }
 
     /**
@@ -30,8 +30,8 @@ public final class EnterpriseTestServerBuilders
      */
     public static TestServerBuilder newInProcessBuilder( File workingDirectory )
     {
-        return new EnterpriseInProcessServerBuilder( workingDirectory );
+        return new CommercialInProcessServerBuilder( workingDirectory );
     }
 
-    private EnterpriseTestServerBuilders(){}
+    private CommercialTestServerBuilders(){}
 }

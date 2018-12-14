@@ -6,7 +6,7 @@
 package com.neo4j.server.enterprise;
 
 import com.neo4j.harness.CausalClusterInProcessBuilder;
-import com.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
+import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import org.apache.commons.lang.StringUtils;
@@ -264,7 +264,7 @@ class CausalClusterStatusEndpointIT
     {
         File clusterDirectory = testDirectory.directory( "CLUSTER" );
         CausalClusterInProcessBuilder.CausalCluster cluster = CausalClusterInProcessBuilder.init()
-                .withBuilder( EnterpriseInProcessServerBuilder::new )
+                .withBuilder( CommercialInProcessServerBuilder::new )
                 .withCores( 3 )
                 .withReplicas( 2 )
                 .withLogger( LOG_PROVIDER )

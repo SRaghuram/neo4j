@@ -12,14 +12,25 @@ import java.io.File;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
+import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
+import org.neo4j.harness.internal.AbstractInProcessServerBuilder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.database.GraphFactory;
 
-public class CommercialInProcessServerBuilder extends EnterpriseInProcessServerBuilder
+public class CommercialInProcessServerBuilder extends AbstractInProcessServerBuilder
 {
     private DiscoveryServiceFactorySelector.DiscoveryImplementation discoveryServiceFactory = DiscoveryServiceFactorySelector.DEFAULT;
+
+    public CommercialInProcessServerBuilder()
+    {
+        this( new File( System.getProperty( "java.io.tmpdir" ) ) );
+    }
+
+    public CommercialInProcessServerBuilder( File workingDir )
+    {
+        super( workingDir );
+    }
 
     public CommercialInProcessServerBuilder( File workingDir, String dataSubDir )
     {
@@ -27,15 +38,15 @@ public class CommercialInProcessServerBuilder extends EnterpriseInProcessServerB
     }
 
     @Override
-    protected AbstractNeoServer createNeoServer( GraphFactory graphFactory, Config config, GraphDatabaseFacadeFactory.Dependencies dependencies )
-    {
-        config.augment( CausalClusteringSettings.discovery_implementation, discoveryServiceFactory.name() );
-        return new CommercialNeoServer( config, graphFactory, dependencies );
-    }
-
-    @Override
     protected GraphFactory createGraphFactory( Config config )
     {
         return new CommercialGraphFactory();
+    }
+
+    @Override
+    protected AbstractNeoServer createNeoServer( GraphFactory graphFactory, Config config, Dependencies dependencies )
+    {
+        config.augment( CausalClusteringSettings.discovery_implementation, discoveryServiceFactory.name() );
+        return new CommercialNeoServer( config, graphFactory, dependencies );
     }
 }

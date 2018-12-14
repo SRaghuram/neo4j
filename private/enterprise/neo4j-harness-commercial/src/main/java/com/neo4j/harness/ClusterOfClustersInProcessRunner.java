@@ -5,7 +5,7 @@
  */
 package com.neo4j.harness;
 
-import com.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
+import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,7 +25,7 @@ public class ClusterOfClustersInProcessRunner
 
             CausalClusterInProcessBuilder.CausalCluster cluster =
                     CausalClusterInProcessBuilder.init()
-                            .withBuilder( EnterpriseInProcessServerBuilder::new )
+                            .withBuilder( CommercialInProcessServerBuilder::new )
                             .withCores( 9 )
                             .withReplicas( 6 )
                             .withLogger( toOutputStream( System.out ) )

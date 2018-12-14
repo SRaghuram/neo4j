@@ -5,7 +5,7 @@
  */
 package org.neo4j.harness.internal;
 
-import com.neo4j.harness.EnterpriseTestServerBuilders;
+import com.neo4j.harness.CommercialTestServerBuilders;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,7 +25,7 @@ import org.neo4j.test.server.HTTP;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
-public class EnterpriseInProcessServerBuilderIT
+public class CommercialInProcessServerBuilderIT
 {
     @Rule
     public final TestDirectory testDir = TestDirectory.testDirectory();
@@ -60,7 +60,7 @@ public class EnterpriseInProcessServerBuilderIT
                 LegacySslPolicyConfig.certificates_directory
         );
 
-        return EnterpriseTestServerBuilders.newInProcessBuilder( workDir )
+        return CommercialTestServerBuilders.newInProcessBuilder( workDir )
                 .withConfig( certificatesDirectoryKey, certificatesDirectoryValue )
                 .withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }

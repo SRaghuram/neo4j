@@ -5,7 +5,7 @@
  */
 package com.neo4j.harness;
 
-import com.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
+import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
@@ -51,7 +51,7 @@ public class CausalClusterInProcessBuilder
     public static class Builder implements WithServerBuilder, WithCores, WithReplicas, WithLogger, WithPath, WithOptionalDatabasesAndPorts
     {
 
-        private BiFunction<File,String,EnterpriseInProcessServerBuilder> serverBuilder;
+        private BiFunction<File,String,CommercialInProcessServerBuilder> serverBuilder;
         private int numCoreHosts;
         private int numReadReplicas;
         private Log log;
@@ -62,7 +62,7 @@ public class CausalClusterInProcessBuilder
         private DiscoveryServiceFactorySelector.DiscoveryImplementation discoveryServiceFactory = DiscoveryServiceFactorySelector.DEFAULT;
 
         @Override
-        public WithCores withBuilder( BiFunction<File,String,EnterpriseInProcessServerBuilder> serverBuilder )
+        public WithCores withBuilder( BiFunction<File,String,CommercialInProcessServerBuilder> serverBuilder )
         {
             this.serverBuilder = serverBuilder;
             return this;
@@ -143,7 +143,7 @@ public class CausalClusterInProcessBuilder
      */
     public interface WithServerBuilder
     {
-        WithCores withBuilder( BiFunction<File,String,EnterpriseInProcessServerBuilder> serverBuilder );
+        WithCores withBuilder( BiFunction<File,String,CommercialInProcessServerBuilder> serverBuilder );
     }
 
     public interface WithCores
@@ -261,7 +261,7 @@ public class CausalClusterInProcessBuilder
         private final PortPickingFactory portFactory;
         private final Map<String,String> config;
         private final DiscoveryServiceFactorySelector.DiscoveryImplementation discoveryServiceFactory;
-        private final BiFunction<File,String,EnterpriseInProcessServerBuilder> serverBuilder;
+        private final BiFunction<File,String,CommercialInProcessServerBuilder> serverBuilder;
 
         private List<ServerControls> coreControls = synchronizedList( new ArrayList<>() );
         private List<ServerControls> replicaControls = synchronizedList( new ArrayList<>() );
@@ -323,7 +323,7 @@ public class CausalClusterInProcessBuilder
 
                 String homeDir = "core-" + coreId;
 
-                EnterpriseInProcessServerBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
+                CommercialInProcessServerBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
 
                 String homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath().toString();
                 builder.withConfig( GraphDatabaseSettings.neo4j_home.name(), homePath );
@@ -377,7 +377,7 @@ public class CausalClusterInProcessBuilder
                 int httpsPort = portFactory.httpsReadReplicaPort( replicaId );
 
                 String homeDir = "replica-" + replicaId;
-                EnterpriseInProcessServerBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
+                CommercialInProcessServerBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
 
                 String homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath().toString();
                 builder.withConfig( GraphDatabaseSettings.neo4j_home.name(), homePath );

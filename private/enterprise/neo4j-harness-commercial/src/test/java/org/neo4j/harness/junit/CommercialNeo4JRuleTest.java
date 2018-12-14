@@ -5,7 +5,7 @@
  */
 package org.neo4j.harness.junit;
 
-import com.neo4j.harness.junit.EnterpriseNeo4jRule;
+import com.neo4j.harness.junit.CommercialNeo4jRule;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.Rule;
@@ -22,10 +22,10 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.neo4j.server.ServerTestUtils.getRelativePath;
 import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
 
-public class EnterpriseNeo4jRuleTest
+public class CommercialNeo4JRuleTest
 {
     @Rule
-    public Neo4jRule neo4j = new EnterpriseNeo4jRule()
+    public Neo4jRule neo4j = new CommercialNeo4jRule()
             .withConfig( LegacySslPolicyConfig.certificates_directory.name(),
                     getRelativePath( getSharedTestTemporaryFolder(), LegacySslPolicyConfig.certificates_directory ) )
             .withExtension( "/test", MyEnterpriseUnmanagedExtension.class )
