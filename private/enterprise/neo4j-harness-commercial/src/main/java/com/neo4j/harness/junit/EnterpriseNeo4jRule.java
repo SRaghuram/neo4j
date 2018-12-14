@@ -3,11 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.harness.junit;
+package com.neo4j.harness.junit;
+
+import com.neo4j.harness.EnterpriseTestServerBuilders;
 
 import java.io.File;
 
-import org.neo4j.harness.EnterpriseTestServerBuilders;
+import org.neo4j.harness.junit.Neo4jRule;
 
 public class EnterpriseNeo4jRule extends Neo4jRule
 {

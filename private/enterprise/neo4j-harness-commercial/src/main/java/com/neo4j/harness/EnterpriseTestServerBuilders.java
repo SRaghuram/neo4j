@@ -3,11 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.harness;
+package com.neo4j.harness;
+
+import com.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 
 import java.io.File;
 
-import org.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
+import org.neo4j.harness.TestServerBuilder;
 
 /**
  * Factories for creating {@link TestServerBuilder} instances.

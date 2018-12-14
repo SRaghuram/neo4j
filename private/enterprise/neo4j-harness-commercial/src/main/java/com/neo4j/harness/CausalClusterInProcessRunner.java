@@ -3,19 +3,20 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.harness;
+package com.neo4j.harness;
+
+import com.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-
-import org.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 
 import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 
-public class ClusterOfClustersInProcessRunner
+/**
+ * Simple main class for manual testing of the complete causal cluster stack, including server etc.
+ */
+public class CausalClusterInProcessRunner
 {
-
     public static void main( String[] args )
     {
         try
@@ -26,17 +27,16 @@ public class ClusterOfClustersInProcessRunner
             CausalClusterInProcessBuilder.CausalCluster cluster =
                     CausalClusterInProcessBuilder.init()
                             .withBuilder( EnterpriseInProcessServerBuilder::new )
-                            .withCores( 9 )
-                            .withReplicas( 6 )
+                            .withCores( 3 )
+                            .withReplicas( 3 )
                             .withLogger( toOutputStream( System.out ) )
                             .atPath( clusterPath )
-                            .withOptionalDatabases( Arrays.asList("foo", "bar", "baz") )
                             .build();
 
             System.out.println( "Waiting for cluster to boot up..." );
             cluster.boot();
 
-            System.out.println( "Press ENTER to exit ..." );
+            System.out.println( "Press ENTER to exit..." );
             //noinspection ResultOfMethodCallIgnored
             System.in.read();
 
@@ -50,5 +50,4 @@ public class ClusterOfClustersInProcessRunner
         }
         System.exit( 0 );
     }
-
 }

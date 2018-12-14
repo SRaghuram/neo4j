@@ -5,6 +5,7 @@
  */
 package org.neo4j.harness.internal;
 
+import com.neo4j.harness.EnterpriseTestServerBuilders;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
@@ -12,7 +13,6 @@ import org.junit.Test;
 import java.io.File;
 import java.util.Arrays;
 
-import org.neo4j.harness.EnterpriseTestServerBuilders;
 import org.neo4j.harness.ServerControls;
 import org.neo4j.harness.TestServerBuilder;
 import org.neo4j.kernel.configuration.Settings;

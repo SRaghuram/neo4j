@@ -5,12 +5,13 @@
  */
 package org.neo4j.harness;
 
+import com.neo4j.harness.CausalClusterInProcessBuilder;
+import com.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.nio.file.Path;
 
-import org.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.TestDirectory;
 

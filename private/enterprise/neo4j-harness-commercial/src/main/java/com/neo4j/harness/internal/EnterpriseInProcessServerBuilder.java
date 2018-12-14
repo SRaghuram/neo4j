@@ -3,11 +3,12 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.harness.internal;
+package com.neo4j.harness.internal;
 
 import java.io.File;
 
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
+import org.neo4j.harness.internal.AbstractInProcessServerBuilder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.database.EnterpriseGraphFactory;

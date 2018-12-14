@@ -3,8 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.harness;
+package com.neo4j.harness;
 
+import com.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
@@ -24,7 +25,8 @@ import java.util.stream.IntStream;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
+import org.neo4j.harness.ServerControls;
+import org.neo4j.harness.TestServerBuilder;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.Settings;

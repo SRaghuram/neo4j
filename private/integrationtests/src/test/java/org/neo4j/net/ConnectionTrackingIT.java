@@ -5,6 +5,7 @@
  */
 package org.neo4j.net;
 
+import com.neo4j.harness.junit.EnterpriseNeo4jRule;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -42,7 +43,6 @@ import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.harness.junit.EnterpriseNeo4jRule;
 import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;

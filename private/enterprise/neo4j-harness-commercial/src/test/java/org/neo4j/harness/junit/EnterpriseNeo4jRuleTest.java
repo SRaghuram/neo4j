@@ -5,6 +5,7 @@
  */
 package org.neo4j.harness.junit;
 
+import com.neo4j.harness.junit.EnterpriseNeo4jRule;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.Rule;

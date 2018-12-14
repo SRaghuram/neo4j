@@ -5,6 +5,8 @@
  */
 package com.neo4j.server.enterprise;
 
+import com.neo4j.harness.CausalClusterInProcessBuilder;
+import com.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import org.apache.commons.lang.StringUtils;
@@ -36,10 +38,8 @@ import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.harness.CausalClusterInProcessBuilder;
 import org.neo4j.harness.PortAuthorityPortPickingStrategy;
 import org.neo4j.harness.ServerControls;
-import org.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
