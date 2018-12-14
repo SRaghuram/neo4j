@@ -36,8 +36,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.neo4j.test</groupId>
-            <artifactId>neo4j-harness-enterprise</artifactId>
+            <groupId>org.neo4j.test</groupId>
+            <artifactId>neo4j-harness</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -56,13 +56,6 @@
         <dependency>
             <groupId>org.junit.vintage</groupId>
             <artifactId>junit-vintage-engine</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.neo4j.test</groupId>
-            <artifactId>neo4j-harness-enterprise</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-            <type>test-jar</type>
         </dependency>
     </dependencies>
 

@@ -221,13 +221,13 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j.test</groupId>
-            <artifactId>neo4j-harness-enterprise</artifactId>
+            <artifactId>neo4j-harness-commercial</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.neo4j.test</groupId>
-            <artifactId>neo4j-harness-enterprise</artifactId>
+            <artifactId>neo4j-harness-commercial</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
