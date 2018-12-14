@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -33,7 +34,7 @@ class CommercialGraphDatabaseBackupIT
     @Inject
     private TestDirectory testDirectory;
 
-    private GraphDatabaseService db;
+    private GraphDatabaseAPI db;
 
     @AfterEach
     void tearDown()
@@ -75,9 +76,9 @@ class CommercialGraphDatabaseBackupIT
         return new File( backupsDir, backupDirName );
     }
 
-    private GraphDatabaseService newCommercialDb( File storeDir, boolean backupEnabled )
+    private GraphDatabaseAPI newCommercialDb( File storeDir, boolean backupEnabled )
     {
-        return new TestCommercialGraphDatabaseFactory()
+        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.toString( backupEnabled ) )
                 .setConfig( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:0" )

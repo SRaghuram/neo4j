@@ -13,12 +13,10 @@ import java.io.Reader;
 import java.nio.CharBuffer;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -31,7 +29,6 @@ import org.neo4j.causalclustering.core.TransactionBackupServiceProvider;
 import org.neo4j.causalclustering.net.Server;
 import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import org.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
@@ -111,10 +108,9 @@ public final class CausalClusteringTestHelpers
         return String.format( "%s:%s", hostnamePort.getHostname(), hostnamePort.getPort() );
     }
 
-    public static String backupAddress( GraphDatabaseService db )
+    public static String backupAddress( GraphDatabaseAPI db )
     {
-        return ((GraphDatabaseAPI) db)
-                .getDependencyResolver()
+        return db.getDependencyResolver()
                 .resolveDependency( ConnectorPortRegister.class )
                 .getLocalAddress( TransactionBackupServiceProvider.BACKUP_SERVER_NAME )
                 .toString();
